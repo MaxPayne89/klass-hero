@@ -43,6 +43,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
           socket
           |> assign(
             page_title: gettext("Report an Incident"),
+            active_nav: :programs,
             provider: provider,
             programs: programs,
             preselected: preselected,
