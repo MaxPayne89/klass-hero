@@ -35,7 +35,9 @@
     "pr_696_superseded_note": "PR #696 (BulkEnrollmentInviteMapper tests) had string status values. Superseded by PR #779 with atom fixes.",
     "pr_781_note": "PR #781 (carry owner email+name on incident_reported payload) - already tested by maintainer (test files updated in same PR).",
     "missing_tests_assessed_2026-05-02": "Scanned for missing test files 2026-05-02. Confirmed: messaging commands (schedule_email_content_fetch, update_inbound_email_content, update_inbound_email_status) are trivial pass-throughs. messaging queries (get_conversation_context, resolver_queries) are pass-throughs. Family queries (child_queries, consent_queries, parent_profile_queries) are pass-throughs. verify_provider/unverify_provider covered by provider_verification_test.exs. Family.AnonymizeUserData covered by anonymize_data_for_user_test.exs. No new high-value test targets found.",
-    "greeting_helper_note": "PR #806 adds helpers/greeting.ex (time-of-day + first name greeting logic). Worth testing once merged to main."
+    "greeting_helper_note": "PR #806 merged 2026-05-08. helpers/greeting.ex already has greeting_test.exs written by maintainer on main. No action needed.",
+    "child_presenter_note": "ChildPresenter has non-trivial age calculation logic (birthday before/after today branch) + extract_initials + children_summary. PR #811 adds 14 pure unit tests (ExUnit.Case async:true, struct! helpers).",
+    "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago (always passed); birthday_in_future(n) = Dec 31 n years ago (always upcoming). More robust than Date.add(today, 1) which breaks at year boundary."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -43,24 +45,26 @@
       "id": "e2e-messaging-pubsub-fanout",
       "priority": "medium",
       "description": "E2E scale tests for messaging PubSub fan-out (Issue #515)"
-    },
-    {
-      "id": "greeting-helper",
-      "priority": "low",
-      "description": "helpers/greeting.ex (time-of-day greeting) — pending merge of PR #806 to main"
     }
   ],
   "tasks_last_run": {
     "task_1": "2026-05-05",
     "task_2": "2026-05-04",
-    "task_3": "2026-04-29",
-    "task_4": "2026-05-07",
+    "task_3": "2026-05-08",
+    "task_4": "2026-05-08",
     "task_5": "2026-05-05",
     "task_6": "2026-05-02",
-    "task_7": "2026-05-07"
+    "task_7": "2026-05-08"
   },
   "work_in_progress": null,
   "completed_work": [
+    {
+      "date": "2026-05-08",
+      "run_id": "25580535704",
+      "description": "14 pure unit tests for ChildPresenter: to_simple_view (age calc branches), to_extended_view, to_profile_view (initials), children_summary",
+      "tests_added": 14,
+      "pr_number": null
+    },
     {
       "date": "2026-04-30",
       "run_id": "25190300701",
@@ -106,7 +110,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "Full sweep complete 2026-05-02: All remaining untested paths are trivial pass-throughs not worth testing per guidelines. Backlog exhausted.",
+    "task_2_last_file": "Full sweep complete 2026-05-02. After PR #806 merged: greeting_test.exs already on main. ChildPresenter tested in PR #811. Backlog exhausted.",
     "task_5_last_issue": 705
   },
   "open_prs": [779, 771, 764, 759, 750, 733, 723, 719, 713, 707, 696]
