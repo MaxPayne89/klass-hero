@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
 
   setup :register_and_log_in_provider
@@ -419,6 +420,30 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       # The "Add Note" button should not appear since a note already exists
       refute has_element?(view, "#add-note-btn-#{record.id}")
+    end
+
+    test "submit_note with a record_id from another session is rejected", %{
+      conn: conn,
+      session: session,
+      record: record,
+      user: user
+    } do
+      check_in_record(%{record: record, user: user})
+
+      foreign_record = insert(:participation_record_schema)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      render_hook(view, "submit_note", %{
+        "id" => to_string(foreign_record.id),
+        "note" => %{"content" => "Should be blocked"}
+      })
+
+      assert_flash(view, :error, "Record not found")
+
+      refute KlassHero.Repo.get_by(BehavioralNoteSchema,
+               participation_record_id: foreign_record.id
+             )
     end
   end
 

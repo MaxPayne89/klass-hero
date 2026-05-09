@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
 
   describe "authentication and authorization" do
@@ -248,6 +249,34 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       assert reloaded.status == :checked_out
       assert reloaded.check_out_at == expected_check_out
       assert reloaded.check_out_notes == "Mum collected"
+    end
+
+    test "submit_note with a record_id from another session is rejected", %{
+      conn: conn,
+      session: session,
+      record: record,
+      user: user
+    } do
+      {:ok, _} =
+        KlassHero.Participation.record_check_in(%{
+          record_id: record.id,
+          checked_in_by: user.id
+        })
+
+      foreign_record = insert(:participation_record_schema)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
+
+      render_hook(view, "submit_note", %{
+        "id" => to_string(foreign_record.id),
+        "note" => %{"content" => "Should be blocked"}
+      })
+
+      assert_flash(view, :error, "Record not found")
+
+      refute KlassHero.Repo.get_by(BehavioralNoteSchema,
+               participation_record_id: foreign_record.id
+             )
     end
   end
 end
