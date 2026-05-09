@@ -17,27 +17,23 @@
     "struct_helper_pattern": "Use struct!(ModuleName, Map.merge(defaults, overrides)) NOT Map.merge on a struct",
     "query_builder_test_pattern": "Inspect query.from.source, length(query.wheres), length(query.order_bys). No DB needed.",
     "nil_guard_test_pattern": "Use length(query.wheres) == 0 for no-op guard tests",
-    "enrollment_policy_queries_note": "EnrollmentPolicyQueries tested with real DB (DataCase async:true); EnrollmentPolicyRepository.upsert/1 to create policies; 14 tests",
+    "enrollment_policy_queries_note": "EnrollmentPolicyQueries tested with real DB (DataCase async:true); 14 tests",
     "expire_staff_invitation_note": "ExpireStaffInvitation: only :sent->:expired valid; others return {:error, :invalid_invitation_transition}",
     "invite_field_validations_note": "InviteFieldValidations tested via embedded_schema in ExUnit.Case async:true; 18 tests",
     "global_publisher_race_705": "Issue #705: :participation_seed_roster_subscriber causes race; Mox fix recommended",
     "accounts_command_test_pattern": "RegisterUser/AnonymizeUser/ChangeEmail: DataCase async:true, AccountsFixtures, real UserRepository, no event assertions needed",
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
-    "provider_program_mapper_skip": "ProviderProgramMapper is trivial pass-through - not worth testing per guidelines",
-    "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Domain events via DomainEventBus — need DomainEventBus.subscribe + TestEventPublisher bridge for assertions. Use async:false.",
-    "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe(Context, :event, fn event -> TestEventPublisher.publish(event); :ok end) in setup. Use async:false.",
-    "coverage_saturation_note": "As of 2026-05-02, codebase has 342+ test files. Backlog near-exhausted. Missing test paths are mostly pass-through one-liners (not worth testing) or covered by pending Test Improver PRs.",
-    "mark_invite_registered_test_note": "MarkInviteRegistered handler tests already exist on main as of 2026-04-27 (not created by Test Improver - already there).",
+    "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:false.",
+    "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
+    "coverage_saturation_note": "As of 2026-05-09, backlog exhausted. Missing test paths are trivial pass-throughs or covered by pending TI PRs.",
     "create_program_rejected_note": "PR #634 with CreateProgram/UpdateProgram tests was closed without merge by maintainer. Do not re-attempt.",
-    "ci_check_runs_note": "No CI check runs appear on Test Improver PRs (total_count: 0 on all checked PRs as of 2026-04-28). CI may only run on push to main or may require maintainer trigger.",
-    "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html. Tests: 15 pure unit tests in ExUnit.Case async:true.",
-    "ecto_enum_status_note": "After PR #769 (2026-04-30): BulkEnrollmentInviteSchema.status and EnrollmentSchema.status are Ecto.Enum fields. All test code must use atoms (:pending, :invite_sent, :registered, :enrolled, :failed) not strings.",
-    "pr_696_superseded_note": "PR #696 (BulkEnrollmentInviteMapper tests) had string status values. Superseded by PR #779 with atom fixes.",
-    "pr_781_note": "PR #781 (carry owner email+name on incident_reported payload) - already tested by maintainer (test files updated in same PR).",
-    "missing_tests_assessed_2026-05-02": "Scanned for missing test files 2026-05-02. Confirmed: messaging commands (schedule_email_content_fetch, update_inbound_email_content, update_inbound_email_status) are trivial pass-throughs. messaging queries (get_conversation_context, resolver_queries) are pass-throughs. Family queries (child_queries, consent_queries, parent_profile_queries) are pass-throughs. verify_provider/unverify_provider covered by provider_verification_test.exs. Family.AnonymizeUserData covered by anonymize_data_for_user_test.exs. No new high-value test targets found.",
-    "greeting_helper_note": "PR #806 merged 2026-05-08. helpers/greeting.ex already has greeting_test.exs written by maintainer on main. No action needed.",
-    "child_presenter_note": "ChildPresenter has non-trivial age calculation logic (birthday before/after today branch) + extract_initials + children_summary. PR #811 adds 14 pure unit tests (ExUnit.Case async:true, struct! helpers).",
-    "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago (always passed); birthday_in_future(n) = Dec 31 n years ago (always upcoming). More robust than Date.add(today, 1) which breaks at year boundary."
+    "ci_check_runs_note": "No CI check runs appear on Test Improver PRs. CI may only run on push to main or require maintainer trigger.",
+    "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html.",
+    "ecto_enum_status_note": "BulkEnrollmentInviteSchema.status and EnrollmentSchema.status are Ecto.Enum fields. Tests must use atoms (:pending, :invite_sent, :registered, :enrolled, :failed).",
+    "pr_779_superseded_note": "PR #779 superseded by #696 being merged to main on 2026-05-09. Same files: attachment_mapper_test.exs + bulk_enrollment_invite_mapper_test.exs. Close #779.",
+    "child_presenter_note": "ChildPresenter: non-trivial age calc, extract_initials, children_summary. PR #811 adds 14 pure unit tests.",
+    "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago; birthday_in_future(n) = Dec 31 n years ago. Robust against year boundary.",
+    "submit_note_guard_note": "PR #761: find_participation_record guard added to submit_note handlers; tests included in same PR."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -49,12 +45,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-05",
-    "task_2": "2026-05-04",
+    "task_2": "2026-05-09",
     "task_3": "2026-05-08",
-    "task_4": "2026-05-08",
+    "task_4": "2026-05-09",
     "task_5": "2026-05-05",
     "task_6": "2026-05-02",
-    "task_7": "2026-05-08"
+    "task_7": "2026-05-09"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -63,42 +59,35 @@
       "run_id": "25580535704",
       "description": "14 pure unit tests for ChildPresenter: to_simple_view (age calc branches), to_extended_view, to_profile_view (initials), children_summary",
       "tests_added": 14,
-      "pr_number": null
+      "pr_number": 811
     },
     {
       "date": "2026-04-30",
       "run_id": "25190300701",
-      "description": "Replacement PR #779: corrected all status string literals to atoms in BulkEnrollmentInviteMapper tests after #769 Ecto.Enum refactor. 14 tests: 8 AttachmentMapper + 6 BulkEnrollmentInviteMapper.",
+      "description": "PR #779: Ecto.Enum-corrected BulkEnrollmentInviteMapper + AttachmentMapper tests (superseded by #696 merged 2026-05-09)",
       "tests_added": 14,
       "pr_number": 779
     },
     {
       "date": "2026-04-29",
       "run_id": "25135035818",
-      "description": "15 pure unit tests for EmailHtml.esc/1 (all 5 HTML entities, XSS input, UTF-8, non-binary coercion) and wrap/2 (structure, default/custom footer escaping)",
+      "description": "15 pure unit tests for EmailHtml.esc/1 and wrap/2",
       "tests_added": 15,
       "pr_number": 771
     },
     {
       "date": "2026-04-26",
       "run_id": "24967349898",
-      "description": "11 DataCase tests for LoginByMagicLink command (3 paths: confirmed user, unconfirmed user with event dispatch, error cases)",
+      "description": "11 DataCase tests for LoginByMagicLink command",
       "tests_added": 11,
       "pr_number": 764
     },
     {
       "date": "2026-04-25",
       "run_id": "24940953876",
-      "description": "19 pure unit tests for IncidentReportMapper (14) and IncidentReportSummaryMapper (5)",
+      "description": "19 pure unit tests for IncidentReportMapper and IncidentReportSummaryMapper",
       "tests_added": 19,
       "pr_number": 759
-    },
-    {
-      "date": "2026-04-24",
-      "run_id": "24912656952",
-      "description": "11 DataCase tests for RegisterUser, AnonymizeUser, ChangeEmail accounts commands",
-      "tests_added": 11,
-      "pr_number": 750
     }
   ],
   "monthly_summary_issue": {
@@ -110,8 +99,9 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "Full sweep complete 2026-05-02. After PR #806 merged: greeting_test.exs already on main. ChildPresenter tested in PR #811. Backlog exhausted.",
+    "task_2_last_file": "Full sweep complete 2026-05-09. PRs #713/#707/#696 merged. Backlog exhausted; all remaining untested files are trivial.",
     "task_5_last_issue": 705
   },
-  "open_prs": [779, 771, 764, 759, 750, 733, 723, 719, 713, 707, 696]
+  "open_prs": [811, 779, 771, 764, 759, 750, 733, 723, 719],
+  "merged_prs": [713, 707, 696]
 }
