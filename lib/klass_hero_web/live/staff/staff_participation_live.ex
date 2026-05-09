@@ -170,34 +170,40 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
 
   @impl true
   def handle_event("submit_note", %{"id" => record_id, "note" => params}, socket) do
-    content = Map.get(params, "content", "")
+    case find_participation_record(socket, record_id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
 
-    case Participation.submit_behavioral_note(%{
-           participation_record_id: record_id,
-           provider_id: socket.assigns.provider_id,
-           content: content
-         }) do
-      {:ok, _note} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, gettext("Behavioral note submitted for review"))
-         |> assign(:note_form_expanded, nil)
-         |> assign(:note_forms, Map.delete(socket.assigns.note_forms, record_id))
-         |> load_session_data()}
+      _record ->
+        content = Map.get(params, "content", "")
 
-      {:error, :blank_content} ->
-        {:noreply, put_flash(socket, :error, gettext("Note content cannot be blank"))}
+        case Participation.submit_behavioral_note(%{
+               participation_record_id: record_id,
+               provider_id: socket.assigns.provider_id,
+               content: content
+             }) do
+          {:ok, _note} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, gettext("Behavioral note submitted for review"))
+             |> assign(:note_form_expanded, nil)
+             |> assign(:note_forms, Map.delete(socket.assigns.note_forms, record_id))
+             |> load_session_data()}
 
-      {:error, :duplicate_note} ->
-        {:noreply, put_flash(socket, :error, gettext("You already submitted a note for this record"))}
+          {:error, :blank_content} ->
+            {:noreply, put_flash(socket, :error, gettext("Note content cannot be blank"))}
 
-      {:error, reason} ->
-        Logger.error("[StaffParticipationLive.submit_note] Failed",
-          record_id: record_id,
-          reason: inspect(reason)
-        )
+          {:error, :duplicate_note} ->
+            {:noreply, put_flash(socket, :error, gettext("You already submitted a note for this record"))}
 
-        {:noreply, put_flash(socket, :error, gettext("Failed to submit note"))}
+          {:error, reason} ->
+            Logger.error("[StaffParticipationLive.submit_note] Failed",
+              record_id: record_id,
+              reason: inspect(reason)
+            )
+
+            {:noreply, put_flash(socket, :error, gettext("Failed to submit note"))}
+        end
     end
   end
 
