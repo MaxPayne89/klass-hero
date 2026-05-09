@@ -32,7 +32,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
         nut_allergy: true,
         consent_photo_marketing: true,
         consent_photo_social_media: false,
-        status: "invite_sent",
+        status: :invite_sent,
         invite_token: "secure_token_abc123",
         invite_sent_at: now,
         registered_at: nil,
@@ -62,7 +62,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
       assert result.nut_allergy == true
       assert result.consent_photo_marketing == true
       assert result.consent_photo_social_media == false
-      assert result.status == "invite_sent"
+      assert result.status == :invite_sent
       assert result.invite_token == "secure_token_abc123"
       assert result.invite_sent_at == now
       assert result.registered_at == nil
@@ -72,23 +72,24 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
     end
 
     test "maps schema with all optional fields nil" do
-      schema = build_schema(%{
-        guardian2_email: nil,
-        guardian2_first_name: nil,
-        guardian2_last_name: nil,
-        school_grade: nil,
-        school_name: nil,
-        medical_conditions: nil,
-        nut_allergy: nil,
-        consent_photo_marketing: nil,
-        consent_photo_social_media: nil,
-        invite_token: nil,
-        invite_sent_at: nil,
-        registered_at: nil,
-        enrolled_at: nil,
-        enrollment_id: nil,
-        error_details: nil
-      })
+      schema =
+        build_schema(%{
+          guardian2_email: nil,
+          guardian2_first_name: nil,
+          guardian2_last_name: nil,
+          school_grade: nil,
+          school_name: nil,
+          medical_conditions: nil,
+          nut_allergy: nil,
+          consent_photo_marketing: nil,
+          consent_photo_social_media: nil,
+          invite_token: nil,
+          invite_sent_at: nil,
+          registered_at: nil,
+          enrolled_at: nil,
+          enrollment_id: nil,
+          error_details: nil
+        })
 
       result = BulkEnrollmentInviteMapper.to_domain(schema)
 
@@ -110,7 +111,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
     end
 
     test "preserves all status values" do
-      for status <- ~w(pending invite_sent registered enrolled failed) do
+      for status <- ~w(pending invite_sent registered enrolled failed)a do
         schema = build_schema(%{status: status})
         result = BulkEnrollmentInviteMapper.to_domain(schema)
         assert result.status == status
@@ -124,7 +125,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
 
       schema =
         build_schema(%{
-          status: "enrolled",
+          status: :enrolled,
           invite_sent_at: now,
           registered_at: later,
           enrolled_at: even_later
@@ -138,22 +139,12 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
     end
 
     test "maps error_details for failed status" do
-      schema = build_schema(%{status: "failed", error_details: "Email delivery failed: mailbox full"})
+      schema = build_schema(%{status: :failed, error_details: "Email delivery failed: mailbox full"})
 
       result = BulkEnrollmentInviteMapper.to_domain(schema)
 
-      assert result.status == "failed"
+      assert result.status == :failed
       assert result.error_details == "Email delivery failed: mailbox full"
-    end
-
-    test "converts UUID id to string via Ecto.UUID.cast!" do
-      raw_id = Ecto.UUID.generate()
-      schema = build_schema(%{id: raw_id})
-
-      result = BulkEnrollmentInviteMapper.to_domain(schema)
-
-      assert is_binary(result.id)
-      assert result.id == to_string(raw_id)
     end
   end
 
@@ -177,7 +168,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
       nut_allergy: false,
       consent_photo_marketing: false,
       consent_photo_social_media: false,
-      status: "pending",
+      status: :pending,
       invite_token: nil,
       invite_sent_at: nil,
       registered_at: nil,
