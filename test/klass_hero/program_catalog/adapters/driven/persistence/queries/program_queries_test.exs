@@ -111,21 +111,17 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Queries.ProgramQu
 
   describe "filter_by_category/2" do
     test "returns query unchanged when category is nil" do
-      query =
-        ProgramQueries.base_query()
-        |> ProgramQueries.filter_by_category(nil)
+      base = ProgramQueries.base_query()
+      query = ProgramQueries.filter_by_category(base, nil)
 
-      assert %Ecto.Query{} = query
-      assert length(query.wheres) == 0
+      assert query == base
     end
 
     test "returns query unchanged when category is \"all\"" do
-      query =
-        ProgramQueries.base_query()
-        |> ProgramQueries.filter_by_category("all")
+      base = ProgramQueries.base_query()
+      query = ProgramQueries.filter_by_category(base, "all")
 
-      assert %Ecto.Query{} = query
-      assert length(query.wheres) == 0
+      assert query == base
     end
 
     test "adds WHERE clause for a specific category" do
@@ -147,7 +143,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Queries.ProgramQu
       end
     end
 
-    test "filter_by_category composes with cursor pagination" do
+    test "composes with cursor pagination" do
       cursor_ts = ~U[2024-01-15 12:00:00Z]
       cursor_id = Ecto.UUID.generate()
 
