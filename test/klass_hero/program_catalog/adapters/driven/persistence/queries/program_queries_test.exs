@@ -109,6 +109,53 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Queries.ProgramQu
     end
   end
 
+  describe "filter_by_category/2" do
+    test "returns query unchanged when category is nil" do
+      base = ProgramQueries.base_query()
+      query = ProgramQueries.filter_by_category(base, nil)
+
+      assert query == base
+    end
+
+    test "returns query unchanged when category is \"all\"" do
+      base = ProgramQueries.base_query()
+      query = ProgramQueries.filter_by_category(base, "all")
+
+      assert query == base
+    end
+
+    test "adds WHERE clause for a specific category" do
+      query =
+        ProgramQueries.base_query()
+        |> ProgramQueries.filter_by_category("sports")
+
+      assert %Ecto.Query{} = query
+      assert length(query.wheres) == 1
+    end
+
+    test "adds WHERE clause for any non-nil, non-all category value" do
+      for category <- ["music", "arts", "stem", "dance"] do
+        query =
+          ProgramQueries.base_query()
+          |> ProgramQueries.filter_by_category(category)
+
+        assert length(query.wheres) == 1, "expected 1 WHERE clause for category #{category}"
+      end
+    end
+
+    test "composes with cursor pagination" do
+      cursor_ts = ~U[2024-01-15 12:00:00Z]
+      cursor_id = Ecto.UUID.generate()
+
+      query =
+        ProgramQueries.base_query()
+        |> ProgramQueries.filter_by_category("sports")
+        |> ProgramQueries.paginate_after_cursor({cursor_ts, cursor_id}, :desc)
+
+      assert length(query.wheres) == 2
+    end
+  end
+
   describe "query composition" do
     test "can compose all query functions together" do
       cursor_ts = ~U[2024-01-15 12:00:00Z]
