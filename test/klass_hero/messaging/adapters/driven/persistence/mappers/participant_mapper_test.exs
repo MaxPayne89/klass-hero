@@ -5,7 +5,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
   Covers:
   - `to_domain/1`: full field mapping and nil optional passthrough
   - `to_schema_attrs/1`: selects the 6 writable fields; excludes inserted_at/updated_at
-  - `to_create_attrs/1`: key filtering, default joined_at injection, and override preservation
+  - `to_create_attrs/1`: exact attrs shape, key filtering, default joined_at
+    injection, override preservation, and the empty-input degenerate case
 
   No database required — schemas and domain structs are constructed inline.
   """
@@ -24,7 +25,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
   @inserted_at ~U[2025-06-01 10:00:00Z]
   @updated_at ~U[2025-06-02 12:00:00Z]
 
-  defp valid_schema(overrides \\ %{}) do
+  defp valid_schema(overrides) do
     defaults = %{
       id: Ecto.UUID.generate(),
       conversation_id: @conversation_id,
@@ -56,7 +57,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
 
   describe "to_domain/1" do
     test "maps all fields from schema to domain struct" do
-      schema = valid_schema(left_at: @left_at)
+      schema = valid_schema(%{left_at: @left_at})
 
       participant = ParticipantMapper.to_domain(schema)
 
@@ -72,7 +73,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
     end
 
     test "nil optional fields pass through as nil" do
-      schema = valid_schema(last_read_at: nil, left_at: nil)
+      schema = valid_schema(%{last_read_at: nil, left_at: nil})
 
       participant = ParticipantMapper.to_domain(schema)
 
@@ -83,7 +84,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
 
   describe "to_schema_attrs/1" do
     test "extracts the six writable fields" do
-      participant = valid_participant(left_at: @left_at)
+      participant = valid_participant(%{left_at: @left_at})
 
       attrs = ParticipantMapper.to_schema_attrs(participant)
 
@@ -105,7 +106,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
     end
 
     test "nil optional fields are preserved in attrs" do
-      participant = valid_participant(last_read_at: nil, left_at: nil)
+      participant = valid_participant(%{last_read_at: nil, left_at: nil})
 
       attrs = ParticipantMapper.to_schema_attrs(participant)
 
@@ -115,7 +116,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
   end
 
   describe "to_create_attrs/1" do
-    test "retains conversation_id, user_id, joined_at, and last_read_at" do
+    test "returns the exact attrs shape when all four take-keys are provided" do
       attrs = %{
         conversation_id: @conversation_id,
         user_id: @user_id,
@@ -123,12 +124,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
         last_read_at: @last_read_at
       }
 
-      result = ParticipantMapper.to_create_attrs(attrs)
-
-      assert result.conversation_id == @conversation_id
-      assert result.user_id == @user_id
-      assert result.joined_at == @joined_at
-      assert result.last_read_at == @last_read_at
+      assert ParticipantMapper.to_create_attrs(attrs) == %{
+               conversation_id: @conversation_id,
+               user_id: @user_id,
+               joined_at: @joined_at,
+               last_read_at: @last_read_at
+             }
     end
 
     test "injects a default joined_at when not provided" do
@@ -164,6 +165,17 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ParticipantMap
       refute Map.has_key?(result, :id)
       refute Map.has_key?(result, :left_at)
       refute Map.has_key?(result, :extra)
+    end
+
+    test "returns only the default joined_at when given an empty map" do
+      before_call = DateTime.utc_now()
+      result = ParticipantMapper.to_create_attrs(%{})
+      after_call = DateTime.utc_now()
+
+      assert Map.keys(result) == [:joined_at]
+      assert %DateTime{} = result.joined_at
+      assert DateTime.compare(result.joined_at, before_call) in [:gt, :eq]
+      assert DateTime.compare(result.joined_at, after_call) in [:lt, :eq]
     end
   end
 end
