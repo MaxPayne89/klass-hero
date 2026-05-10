@@ -484,12 +484,14 @@ staff_by_provider =
 Logger.info("Seeding UI test staff user...")
 
 uitest_staff_user =
-  User.registration_changeset(%User{}, %{
+  %User{}
+  |> Ecto.Changeset.change(%{
+    name: "UI TestStaff",
     email: "uitest-staff@example.com",
-    password: "password"
+    hashed_password: hashed_pw,
+    confirmed_at: now,
+    intended_roles: [:staff_provider, :provider]
   })
-  |> Ecto.Changeset.put_change(:intended_roles, [:staff_provider])
-  |> Ecto.Changeset.put_change(:confirmed_at, now)
   |> Repo.insert!()
 
 uitest_staff_member =
