@@ -21,6 +21,21 @@ defmodule KlassHero.Messaging.Domain.Ports.ForManagingParticipants do
               {:ok, Participant.t()} | {:error, :already_participant | term()}
 
   @doc """
+  Adds a participant if not already present, or returns the existing one.
+
+  Idempotent variant of `add/1`. Safe to call inside a `Repo.transaction` for
+  a `(conversation_id, user_id)` pair that may already exist — the underlying
+  insert uses `on_conflict: :nothing` so the unique-constraint violation never
+  fires and the surrounding transaction is not poisoned.
+
+  Returns:
+  - `{:ok, Participant.t()}` - Either the newly inserted or the pre-existing participant
+  - `{:error, :not_found}` - Insert was skipped on conflict but the row could not be re-fetched
+  """
+  @callback add_or_get(attrs :: map()) ::
+              {:ok, Participant.t()} | {:error, term()}
+
+  @doc """
   Updates the last_read_at timestamp for a participant.
 
   Returns:

@@ -121,7 +121,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
       with {:ok, _participants} <-
              @participant_repo.add_batch(conversation.id, parent_user_ids),
            {:ok, _} <-
-             @participant_repo.add(%{
+             @participant_repo.add_or_get(%{
                conversation_id: conversation.id,
                user_id: scope.user.id
              }),
