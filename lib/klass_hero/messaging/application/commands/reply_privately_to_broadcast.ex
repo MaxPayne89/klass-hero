@@ -64,7 +64,8 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
            find_or_create_direct_conversation(
              scope,
              broadcast.provider_id,
-             provider_user_id
+             provider_user_id,
+             broadcast.program_id
            ),
          :ok <-
            maybe_insert_system_note(
@@ -98,20 +99,23 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   #      is the initiator (it would match any provider conversation).
   #      We handle find and create separately to get the correct lookup semantics.
   # Outcome: returns the unique direct conversation between this parent and provider
-  defp find_or_create_direct_conversation(scope, provider_id, provider_user_id) do
+  defp find_or_create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
     case @conversation_reader.find_direct_conversation(provider_id, scope.user.id) do
       {:ok, existing} ->
         {:ok, existing}
 
       {:error, :not_found} ->
-        create_direct_conversation(scope, provider_id, provider_user_id)
+        create_direct_conversation(scope, provider_id, provider_user_id, program_id)
     end
   end
 
-  defp create_direct_conversation(scope, provider_id, provider_user_id) do
+  defp create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
     Repo.transaction(fn ->
-      with {:ok, conversation} <-
-             @conversation_repo.create(%{type: :direct, provider_id: provider_id}),
+      attrs =
+        %{type: :direct, provider_id: provider_id}
+        |> maybe_put_program_id(program_id)
+
+      with {:ok, conversation} <- @conversation_repo.create(attrs),
            {:ok, _} <-
              @participant_repo.add(%{
                conversation_id: conversation.id,
@@ -121,7 +125,8 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
              @participant_repo.add(%{
                conversation_id: conversation.id,
                user_id: provider_user_id
-             }) do
+             }),
+           :ok <- Shared.add_assigned_staff(conversation.id, program_id, provider_user_id) do
         publish_conversation_created(conversation, scope.user.id, provider_user_id, provider_id)
         conversation
       else
@@ -130,13 +135,17 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
     end)
   end
 
+  defp maybe_put_program_id(attrs, nil), do: attrs
+  defp maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
+
   defp publish_conversation_created(conversation, parent_user_id, provider_user_id, provider_id) do
     event =
       MessagingEvents.conversation_created(
         conversation.id,
         conversation.type,
         provider_id,
-        [parent_user_id, provider_user_id]
+        [parent_user_id, provider_user_id],
+        conversation.program_id
       )
 
     DomainEventBus.dispatch(@context, event)

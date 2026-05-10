@@ -51,6 +51,39 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
   end
 
   @impl true
+  def add_or_get(attrs) do
+    span do
+      set_attributes("db", operation: "upsert", entity: "messaging_participant")
+
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      entry =
+        attrs
+        |> ParticipantMapper.to_create_attrs()
+        |> Map.put(:id, Ecto.UUID.generate())
+        |> Map.put(:joined_at, now)
+        |> Map.put(:inserted_at, now)
+        |> Map.put(:updated_at, now)
+
+      case Repo.insert_all(ParticipantSchema, [entry],
+             returning: true,
+             on_conflict: :nothing,
+             conflict_target: [:conversation_id, :user_id]
+           ) do
+        {1, [schema]} ->
+          {:ok, ParticipantMapper.to_domain(schema)}
+
+        # Trigger: row already existed; on_conflict: :nothing skipped the insert
+        # Why: callers (BroadcastToProgram follow-up) need to keep going inside Repo.transaction
+        #      without poisoning it via a unique-constraint failure
+        # Outcome: fetch the existing row so the caller gets a Participant.t() either way
+        {0, _} ->
+          get(attrs.conversation_id, attrs.user_id)
+      end
+    end
+  end
+
+  @impl true
   def get(conversation_id, user_id) do
     span do
       set_attributes("db", operation: "select", entity: "messaging_participant")

@@ -227,6 +227,49 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     end
   end
 
+  describe "execute/4 — follow-up broadcasts" do
+    # Trigger: provider sends a second broadcast on a program they have already broadcast to
+    # Why: get_or_create_broadcast_conversation reuses the existing conversation, so the
+    #      sender is already a participant when execute_broadcast_transaction runs the
+    #      participant adds. Pre-fix, the sender's add hit a unique constraint and rolled
+    #      back the entire transaction, surfacing as a generic "Failed to send broadcast".
+    # Outcome: both calls succeed, the same broadcast conversation is reused, both messages
+    #          are persisted, no duplicate participant rows.
+    test "second broadcast on the same program reuses the conversation and persists both messages" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, first_conv, first_msg, 1} =
+               BroadcastToProgram.execute(scope, program.id, "First announcement")
+
+      assert {:ok, second_conv, second_msg, 1} =
+               BroadcastToProgram.execute(scope, program.id, "Second announcement")
+
+      assert second_conv.id == first_conv.id
+      refute second_msg.id == first_msg.id
+
+      # Sender stays a single participant — no duplicate insert
+      assert ParticipantRepository.is_participant?(first_conv.id, scope.user.id)
+
+      sender_rows =
+        first_conv.id
+        |> ParticipantRepository.list_for_conversation()
+        |> Enum.filter(&(&1.user_id == scope.user.id))
+
+      assert length(sender_rows) == 1
+    end
+  end
+
   defp build_scope_with_provider(provider_schema, tier) do
     user = AccountsFixtures.user_fixture()
 

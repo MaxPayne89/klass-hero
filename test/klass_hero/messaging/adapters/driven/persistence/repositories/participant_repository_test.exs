@@ -51,6 +51,76 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
     end
   end
 
+  describe "add_or_get/1" do
+    test "inserts when no participant exists" do
+      conversation = insert(:conversation_schema)
+      user = AccountsFixtures.user_fixture()
+
+      attrs = %{conversation_id: conversation.id, user_id: user.id}
+
+      assert {:ok, %Participant{} = participant} = ParticipantRepository.add_or_get(attrs)
+      assert participant.conversation_id == conversation.id
+      assert participant.user_id == user.id
+      assert participant.joined_at != nil
+
+      assert KlassHero.Repo.get_by(ParticipantSchema,
+               conversation_id: conversation.id,
+               user_id: user.id
+             )
+    end
+
+    test "returns existing participant when already present, no error" do
+      conversation = insert(:conversation_schema)
+      user = AccountsFixtures.user_fixture()
+
+      attrs = %{conversation_id: conversation.id, user_id: user.id}
+
+      assert {:ok, first} = ParticipantRepository.add_or_get(attrs)
+      assert {:ok, second} = ParticipantRepository.add_or_get(attrs)
+
+      assert second.id == first.id
+      assert second.joined_at == first.joined_at
+    end
+
+    test "remains idempotent across many calls" do
+      conversation = insert(:conversation_schema)
+      user = AccountsFixtures.user_fixture()
+
+      attrs = %{conversation_id: conversation.id, user_id: user.id}
+
+      ids =
+        for _ <- 1..5 do
+          {:ok, p} = ParticipantRepository.add_or_get(attrs)
+          p.id
+        end
+
+      assert Enum.uniq(ids) |> length() == 1
+    end
+
+    # Trigger: caller runs add_or_get inside a Repo.transaction for a user that may already be a participant
+    # Why: a unique-constraint failure under Repo.insert would mark the Postgres transaction
+    #      as aborted (25P02) and poison every subsequent query — exactly the BroadcastToProgram
+    #      follow-up bug we are fixing. add_or_get must use insert_all with on_conflict: :nothing
+    #      so the constraint never fires.
+    # Outcome: transaction commits cleanly even after multiple adds for the same (conversation, user)
+    test "does not poison the surrounding Repo.transaction" do
+      conversation = insert(:conversation_schema)
+      user = AccountsFixtures.user_fixture()
+      attrs = %{conversation_id: conversation.id, user_id: user.id}
+
+      result =
+        KlassHero.Repo.transaction(fn ->
+          {:ok, _} = ParticipantRepository.add_or_get(attrs)
+          {:ok, _} = ParticipantRepository.add_or_get(attrs)
+          {:ok, _} = ParticipantRepository.add_or_get(attrs)
+          KlassHero.Repo.query!("SELECT 1")
+          :committed
+        end)
+
+      assert {:ok, :committed} = result
+    end
+  end
+
   describe "get/2" do
     test "returns participant when found" do
       conversation = insert(:conversation_schema)

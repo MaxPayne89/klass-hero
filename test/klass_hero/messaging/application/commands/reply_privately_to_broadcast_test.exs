@@ -6,7 +6,10 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast
 
   describe "execute/2" do
@@ -163,6 +166,108 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
 
       assert {:error, :not_participant} =
                ReplyPrivatelyToBroadcast.execute(non_participant_scope, ctx.broadcast.id)
+    end
+  end
+
+  describe "execute/2 — staff auto-inclusion" do
+    setup do
+      provider_user = AccountsFixtures.user_fixture()
+      provider = insert(:provider_profile_schema, identity_id: provider_user.id)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      broadcast =
+        insert(:conversation_schema,
+          type: "program_broadcast",
+          provider_id: provider.id,
+          program_id: program.id,
+          subject: "Schedule Change"
+        )
+
+      parent_user = AccountsFixtures.user_fixture()
+
+      insert(:participant_schema,
+        conversation_id: broadcast.id,
+        user_id: parent_user.id
+      )
+
+      parent_profile = %ParentProfile{
+        id: Ecto.UUID.generate(),
+        identity_id: parent_user.id,
+        subscription_tier: :explorer
+      }
+
+      scope = %Scope{
+        user: parent_user,
+        roles: [:parent],
+        parent: parent_profile,
+        provider: nil
+      }
+
+      %{
+        scope: scope,
+        broadcast: broadcast,
+        provider: provider,
+        provider_user: provider_user,
+        program: program,
+        parent_user: parent_user
+      }
+    end
+
+    test "adds assigned staff as participants when broadcast has program context", ctx do
+      staff_user = AccountsFixtures.user_fixture()
+
+      :ok =
+        ProgramStaffParticipantRepository.upsert_active(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.program.id,
+          staff_user_id: staff_user.id
+        })
+
+      assert {:ok, direct_conversation_id} =
+               ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
+
+      assert ParticipantRepository.is_participant?(direct_conversation_id, staff_user.id)
+    end
+
+    test "sets program_id on the new direct conversation", ctx do
+      assert {:ok, direct_conversation_id} =
+               ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
+
+      assert {:ok, conversation} = ConversationRepository.get_by_id(direct_conversation_id)
+      assert conversation.program_id == ctx.program.id
+    end
+
+    test "does not error when provider owner is also assigned as program staff", ctx do
+      :ok =
+        ProgramStaffParticipantRepository.upsert_active(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.program.id,
+          staff_user_id: ctx.provider_user.id
+        })
+
+      assert {:ok, direct_conversation_id} =
+               ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
+
+      assert ParticipantRepository.is_participant?(direct_conversation_id, ctx.provider_user.id)
+    end
+
+    test "does not retroactively add staff to a reused direct conversation", ctx do
+      assert {:ok, first_id} =
+               ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
+
+      staff_user = AccountsFixtures.user_fixture()
+
+      :ok =
+        ProgramStaffParticipantRepository.upsert_active(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.program.id,
+          staff_user_id: staff_user.id
+        })
+
+      assert {:ok, ^first_id} =
+               ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
+
+      refute ParticipantRepository.is_participant?(first_id, staff_user.id)
     end
   end
 end
