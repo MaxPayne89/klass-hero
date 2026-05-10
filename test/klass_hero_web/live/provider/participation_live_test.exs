@@ -45,6 +45,16 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     end
   end
 
+  describe "sidebar navigation" do
+    setup [:create_session_with_child]
+
+    test "highlights Sessions in the sidebar", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      assert has_element?(view, "a[aria-current='page']", "Sessions")
+    end
+  end
+
   describe "consent-gated safety info" do
     setup [:create_session_with_child]
 

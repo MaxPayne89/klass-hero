@@ -58,6 +58,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
           socket =
             socket
             |> assign(:page_title, gettext("Send Broadcast"))
+            |> assign(:active_nav, :messages)
             |> assign(:program, program)
             |> assign(:provider, provider)
             |> assign(:form, form)

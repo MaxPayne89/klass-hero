@@ -83,6 +83,18 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLiveTest do
     end
   end
 
+  describe "sidebar navigation" do
+    setup :register_and_log_in_provider
+
+    test "highlights Programs in the sidebar", %{conn: conn, provider: provider} do
+      program_id = insert_owned_program!(provider.id, "Robotics")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program_id}/incidents")
+
+      assert has_element?(view, "a[aria-current='page']", "Programs")
+    end
+  end
+
   describe "list" do
     setup :register_and_log_in_provider
 

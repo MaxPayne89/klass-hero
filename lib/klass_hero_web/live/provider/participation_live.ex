@@ -15,6 +15,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     socket =
       socket
       |> assign(:page_title, gettext("Manage Participation"))
+      |> assign(:active_nav, :roster)
       |> assign(:session_id, session_id)
       |> assign(:provider_id, provider_id)
       |> assign(:session, nil)
