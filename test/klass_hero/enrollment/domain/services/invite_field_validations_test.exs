@@ -30,13 +30,9 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
       guardian_first_name guardian_last_name guardian2_email guardian2_first_name
       guardian2_last_name school_grade school_name)a
 
-    # `empty_values: []` keeps `""` as a real change instead of coercing it
-    # to `nil` (Ecto's default). Lets us exercise the validator's `min: 1`
-    # rule directly; production callers using default `cast/3` will see
-    # the nil coercion, but that's a caller-shape concern, not this unit's.
     def changeset(attrs, today \\ Date.utc_today()) do
       %__MODULE__{}
-      |> cast(attrs, @all_fields, empty_values: [])
+      |> cast(attrs, @all_fields)
       |> InviteFieldValidations.apply(today)
     end
   end
@@ -83,20 +79,10 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
       end
     end
 
-    # Empty / at-limit boundaries that don't fit the over-limit table
-    test "rejects child_first_name shorter than 1 character" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, ""))
-      assert errors_on(cs)[:child_first_name]
-    end
-
+    # At-limit boundaries that don't fit the over-limit table
     test "accepts child_first_name at the 100-character limit" do
       cs = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, String.duplicate("a", 100)))
       refute errors_on(cs)[:child_first_name]
-    end
-
-    test "rejects child_last_name shorter than 1 character" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_last_name, ""))
-      assert errors_on(cs)[:child_last_name]
     end
 
     test "accepts child_last_name at the 100-character limit" do

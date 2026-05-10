@@ -8,6 +8,10 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidations do
   Operates on any `Ecto.Changeset` whose fields include the invite field
   set; does not cast — callers decide what to cast first.
 
+  Presence/required-field checks belong to the **caller** (cast pipeline
+  + `validate_required/2`). This module assumes any value it sees is
+  non-nil and validates field shape only.
+
   The optional second arg `today` is injected so tests can pin the clock
   for `child_date_of_birth` boundary checks; production callers omit it
   and get `Date.utc_today/0`.
@@ -20,8 +24,8 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidations do
   @spec apply(Ecto.Changeset.t(), Date.t()) :: Ecto.Changeset.t()
   def apply(%Ecto.Changeset{} = changeset, today \\ Date.utc_today()) do
     changeset
-    |> validate_length(:child_first_name, min: 1, max: 100)
-    |> validate_length(:child_last_name, min: 1, max: 100)
+    |> validate_length(:child_first_name, max: 100)
+    |> validate_length(:child_last_name, max: 100)
     |> validate_length(:guardian_email, max: 160)
     |> validate_format(:guardian_email, @email_regex, message: "must be a valid email")
     |> validate_length(:guardian_first_name, max: 100)
