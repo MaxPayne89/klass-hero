@@ -144,7 +144,8 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
         conversation.id,
         conversation.type,
         provider_id,
-        [parent_user_id, provider_user_id]
+        [parent_user_id, provider_user_id],
+        conversation.program_id
       )
 
     DomainEventBus.dispatch(@context, event)
