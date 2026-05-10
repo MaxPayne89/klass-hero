@@ -22,6 +22,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     socket =
       socket
       |> assign(:page_title, gettext("My Sessions"))
+      |> assign(:active_nav, :roster)
       |> assign(:provider_id, provider_id)
       |> assign(:staff_member, staff_member)
       |> assign(:selected_date, selected_date)

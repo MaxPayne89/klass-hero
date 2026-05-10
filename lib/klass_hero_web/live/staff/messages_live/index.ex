@@ -13,7 +13,10 @@ defmodule KlassHeroWeb.Staff.MessagesLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    MessagingLiveHelper.mount_conversation_index(socket, navigate_base: "/staff/messages")
+    {:ok, socket} =
+      MessagingLiveHelper.mount_conversation_index(socket, navigate_base: "/staff/messages")
+
+    {:ok, assign(socket, active_nav: :messages)}
   end
 
   @impl true

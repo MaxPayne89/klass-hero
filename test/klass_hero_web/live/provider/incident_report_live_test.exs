@@ -42,6 +42,12 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
       assert html =~ "Report an Incident"
     end
 
+    test "highlights Programs in the sidebar", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/incidents/new")
+
+      assert has_element?(view, "a[aria-current='page']", "Programs")
+    end
+
     test "preselects a program when ?program_id= is valid", %{conn: conn, provider: provider} do
       row = insert_provider_program!(%{provider_id: provider.id, name: "Robotics"})
 

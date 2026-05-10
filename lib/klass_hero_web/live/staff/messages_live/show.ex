@@ -13,10 +13,13 @@ defmodule KlassHeroWeb.Staff.MessagesLive.Show do
 
   @impl true
   def mount(%{"id" => conversation_id}, _session, socket) do
-    MessagingLiveHelper.mount_conversation_show(socket, conversation_id,
-      back_path: ~p"/staff/messages",
-      variant: :staff
-    )
+    {:ok, socket} =
+      MessagingLiveHelper.mount_conversation_show(socket, conversation_id,
+        back_path: ~p"/staff/messages",
+        variant: :staff
+      )
+
+    {:ok, assign(socket, active_nav: :messages)}
   end
 
   @impl true

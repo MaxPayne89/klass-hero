@@ -25,6 +25,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
         socket =
           socket
           |> assign(:page_title, gettext("Staff Dashboard"))
+          |> assign(:active_nav, :home)
           |> assign(:provider, provider)
           |> assign(:staff_member, staff_member)
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))

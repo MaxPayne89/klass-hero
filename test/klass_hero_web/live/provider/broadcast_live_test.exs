@@ -198,4 +198,16 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       assert has_element?(view, "a", "Cancel")
     end
   end
+
+  describe "sidebar navigation" do
+    setup :register_and_log_in_provider
+
+    test "highlights Comms in the sidebar", %{conn: conn} do
+      program = insert(:program_schema)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
+
+      assert has_element?(view, "a[aria-current='page']", "Comms")
+    end
+  end
 end
