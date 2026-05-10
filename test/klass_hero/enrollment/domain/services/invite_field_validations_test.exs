@@ -3,13 +3,13 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
 
   alias KlassHero.Enrollment.Domain.Services.InviteFieldValidations
 
-  import Ecto.Changeset
-
   # Minimal embedded schema to test InviteFieldValidations in isolation,
-  # without coupling to any specific caller schema.
+  # without coupling to any specific caller schema. Keep field list in
+  # sync with InviteFieldValidations source if new fields are added.
   defmodule TestSchema do
     @moduledoc false
     use Ecto.Schema
+
     import Ecto.Changeset
 
     embedded_schema do
@@ -30,10 +30,14 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
       guardian_first_name guardian_last_name guardian2_email guardian2_first_name
       guardian2_last_name school_grade school_name)a
 
-    def changeset(attrs) do
+    # `empty_values: []` keeps `""` as a real change instead of coercing it
+    # to `nil` (Ecto's default). Lets us exercise the validator's `min: 1`
+    # rule directly; production callers using default `cast/3` will see
+    # the nil coercion, but that's a caller-shape concern, not this unit's.
+    def changeset(attrs, today \\ Date.utc_today()) do
       %__MODULE__{}
-      |> cast(attrs, @all_fields)
-      |> InviteFieldValidations.apply()
+      |> cast(attrs, @all_fields, empty_values: [])
+      |> InviteFieldValidations.apply(today)
     end
   end
 
@@ -48,113 +52,119 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
   @valid_attrs %{
     child_first_name: "Emma",
     child_last_name: "Schmidt",
-    child_date_of_birth: Date.add(Date.utc_today(), -365),
+    child_date_of_birth: ~D[2025-05-10],
     guardian_email: "parent@example.com"
   }
+
+  @length_max_cases [
+    {:child_first_name, 100},
+    {:child_last_name, 100},
+    {:guardian_first_name, 100},
+    {:guardian_last_name, 100},
+    {:guardian_email, 160},
+    {:guardian2_email, 160},
+    {:guardian2_first_name, 100},
+    {:guardian2_last_name, 100},
+    {:school_name, 255}
+  ]
 
   describe "apply/1" do
     test "returns valid changeset for all valid inputs" do
       assert TestSchema.changeset(@valid_attrs).valid?
     end
 
-    # child_first_name length: min 1, max 100
-    test "rejects child_first_name shorter than 1 character" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, ""))
-      assert errors_on(changeset)[:child_first_name]
+    test "rejects field over its max length" do
+      for {field, max} <- @length_max_cases do
+        over = String.duplicate("a", max + 1)
+        cs = TestSchema.changeset(Map.put(@valid_attrs, field, over))
+
+        assert errors_on(cs)[field],
+               "expected length error on #{field} at #{max + 1} chars, got: #{inspect(errors_on(cs))}"
+      end
     end
 
-    test "rejects child_first_name longer than 100 characters" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, String.duplicate("a", 101)))
-      assert errors_on(changeset)[:child_first_name]
+    # Empty / at-limit boundaries that don't fit the over-limit table
+    test "rejects child_first_name shorter than 1 character" do
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, ""))
+      assert errors_on(cs)[:child_first_name]
     end
 
     test "accepts child_first_name at the 100-character limit" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, String.duplicate("a", 100)))
-      refute errors_on(changeset)[:child_first_name]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, String.duplicate("a", 100)))
+      refute errors_on(cs)[:child_first_name]
     end
 
-    # child_last_name length: min 1, max 100
-    test "rejects child_last_name longer than 100 characters" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :child_last_name, String.duplicate("a", 101)))
-      assert errors_on(changeset)[:child_last_name]
+    test "rejects child_last_name shorter than 1 character" do
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_last_name, ""))
+      assert errors_on(cs)[:child_last_name]
     end
 
-    # guardian_email length: max 160; also format-validated
-    test "rejects guardian_email longer than 160 characters" do
-      long_email = String.duplicate("a", 155) <> "@b.com"
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian_email, long_email))
-      assert errors_on(changeset)[:guardian_email]
+    test "accepts child_last_name at the 100-character limit" do
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_last_name, String.duplicate("a", 100)))
+      refute errors_on(cs)[:child_last_name]
     end
 
+    # Format validation is a distinct semantic from length
     test "rejects guardian_email with invalid format" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian_email, "not-an-email"))
-      assert errors_on(changeset)[:guardian_email] == ["must be a valid email"]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian_email, "not-an-email"))
+      assert errors_on(cs)[:guardian_email] == ["must be a valid email"]
     end
 
     # guardian2_email: conditional validation via maybe_validate_guardian2_email/1
     # nil and "" skip the format check; a non-empty value must match the regex
     test "accepts nil guardian2_email without format check" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, nil))
-      refute errors_on(changeset)[:guardian2_email]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, nil))
+      refute errors_on(cs)[:guardian2_email]
     end
 
     test "accepts empty guardian2_email without format check" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, ""))
-      refute errors_on(changeset)[:guardian2_email]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, ""))
+      refute errors_on(cs)[:guardian2_email]
     end
 
     test "accepts guardian2_email with valid email format" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, "second@example.com"))
-      refute errors_on(changeset)[:guardian2_email]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, "second@example.com"))
+      refute errors_on(cs)[:guardian2_email]
     end
 
     test "rejects non-empty guardian2_email with invalid format" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, "nope"))
-      assert errors_on(changeset)[:guardian2_email] == ["must be a valid email"]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, "nope"))
+      assert errors_on(cs)[:guardian2_email] == ["must be a valid email"]
     end
 
-    # child_date_of_birth: must be a date strictly before today
+    # child_date_of_birth: must be strictly before the injected `today`
     test "rejects child_date_of_birth set to today" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :child_date_of_birth, Date.utc_today()))
-      assert errors_on(changeset)[:child_date_of_birth] == ["must be in the past"]
+      today = ~D[2026-05-10]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_date_of_birth, today), today)
+      assert errors_on(cs)[:child_date_of_birth] == ["must be in the past"]
     end
 
     test "accepts child_date_of_birth set to yesterday" do
-      yesterday = Date.add(Date.utc_today(), -1)
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :child_date_of_birth, yesterday))
-      refute errors_on(changeset)[:child_date_of_birth]
+      today = ~D[2026-05-10]
+      yesterday = Date.add(today, -1)
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_date_of_birth, yesterday), today)
+      refute errors_on(cs)[:child_date_of_birth]
     end
 
     # school_grade: valid range is 1..13
     test "rejects school_grade below 1" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 0))
-      assert errors_on(changeset)[:school_grade]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 0))
+      assert errors_on(cs)[:school_grade]
     end
 
     test "rejects school_grade above 13" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 14))
-      assert errors_on(changeset)[:school_grade]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 14))
+      assert errors_on(cs)[:school_grade]
     end
 
     test "accepts school_grade at lower bound 1" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 1))
-      refute errors_on(changeset)[:school_grade]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 1))
+      refute errors_on(cs)[:school_grade]
     end
 
     test "accepts school_grade at upper bound 13" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 13))
-      refute errors_on(changeset)[:school_grade]
-    end
-
-    # guardian2 optional name field length limits
-    test "rejects guardian2_first_name longer than 100 characters" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_first_name, String.duplicate("a", 101)))
-      assert errors_on(changeset)[:guardian2_first_name]
-    end
-
-    test "rejects guardian2_last_name longer than 100 characters" do
-      changeset = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_last_name, String.duplicate("a", 101)))
-      assert errors_on(changeset)[:guardian2_last_name]
+      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 13))
+      refute errors_on(cs)[:school_grade]
     end
   end
 end
