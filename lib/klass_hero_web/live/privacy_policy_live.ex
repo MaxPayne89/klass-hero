@@ -17,7 +17,7 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
   defp last_updated, do: "February 1, 2026"
 
   defp privacy_sections do
-    email = Contact.email()
+    email = Contact.email() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
     [
       %{

@@ -17,7 +17,7 @@ defmodule KlassHeroWeb.TermsOfServiceLive do
   defp last_updated, do: "December 12, 2025"
 
   defp terms_sections do
-    email = Contact.email()
+    email = Contact.email() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
     [
       %{
