@@ -114,7 +114,7 @@ admin =
   %User{}
   |> Ecto.Changeset.change(%{
     name: "Klass Hero Admin",
-    email: "app@primeyouth.de",
+    email: "app@klasshero.com",
     hashed_password: hashed_pw,
     confirmed_at: now,
     is_admin: true

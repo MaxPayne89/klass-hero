@@ -81,10 +81,11 @@ defmodule KlassHeroWeb.PrivacyPolicyLiveTest do
     end
 
     test "includes contact information", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/privacy")
+      {:ok, view, html} = live(conn, ~p"/privacy")
 
-      assert html =~ "privacy@primeyouth.com"
+      assert html =~ "info@mail.klasshero.com"
       assert html =~ "Contact Us"
+      assert has_element?(view, ~s|a[href="mailto:info@mail.klasshero.com"]|)
     end
 
     test "accessible without authentication", %{conn: conn} do

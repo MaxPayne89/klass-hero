@@ -87,10 +87,11 @@ defmodule KlassHeroWeb.TermsOfServiceLiveTest do
     end
 
     test "includes contact information", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/terms")
+      {:ok, view, html} = live(conn, ~p"/terms")
 
-      assert html =~ "hello@primeyouth.com"
+      assert html =~ "info@mail.klasshero.com"
       assert html =~ "Contact Information"
+      assert has_element?(view, ~s|a[href="mailto:info@mail.klasshero.com"]|)
     end
 
     test "accessible without authentication", %{conn: conn} do

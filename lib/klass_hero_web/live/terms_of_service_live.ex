@@ -1,6 +1,7 @@
 defmodule KlassHeroWeb.TermsOfServiceLive do
   use KlassHeroWeb, :live_view
 
+  alias KlassHero.Contact
   alias KlassHeroWeb.Theme
 
   @impl true
@@ -16,6 +17,8 @@ defmodule KlassHeroWeb.TermsOfServiceLive do
   defp last_updated, do: "December 12, 2025"
 
   defp terms_sections do
+    email = Contact.email() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
     [
       %{
         id: "agreement",
@@ -219,7 +222,7 @@ defmodule KlassHeroWeb.TermsOfServiceLive do
         title: gettext("Dispute Resolution"),
         content: """
         <h4 class="font-semibold text-gray-900 mb-2">Contact Us First:</h4>
-        <p class="mb-4">If you have a dispute or concern, please contact us first at hello@primeyouth.com. We are committed to resolving issues amicably and will work with you in good faith.</p>
+        <p class="mb-4">If you have a dispute or concern, please contact us first at #{email}. We are committed to resolving issues amicably and will work with you in good faith.</p>
         <h4 class="font-semibold text-gray-900 mb-2">Informal Resolution:</h4>
         <p class="mb-4">Most concerns can be resolved through direct communication. We will respond to disputes within 5 business days and work toward a fair resolution.</p>
         <h4 class="font-semibold text-gray-900 mb-2">Governing Law:</h4>
@@ -237,8 +240,8 @@ defmodule KlassHeroWeb.TermsOfServiceLive do
         content: """
         <p class="mb-4">If you have questions about these Terms of Service, please contact us:</p>
         <div class="space-y-2">
-          <p><strong>Email:</strong> <a href="mailto:hello@primeyouth.com" class="text-blue-600 hover:underline">hello@primeyouth.com</a></p>
-          <p><strong>Privacy Questions:</strong> <a href="mailto:privacy@primeyouth.com" class="text-blue-600 hover:underline">privacy@primeyouth.com</a></p>
+          <p><strong>Email:</strong> <a href="mailto:#{email}" class="text-blue-600 hover:underline">#{email}</a></p>
+          <p><strong>Privacy Questions:</strong> <a href="mailto:#{email}" class="text-blue-600 hover:underline">#{email}</a></p>
         </div>
         <p class="mt-4">You can also reach us through our <a href="/contact" class="text-blue-600 hover:underline">Contact Page</a>.</p>
         <p class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">

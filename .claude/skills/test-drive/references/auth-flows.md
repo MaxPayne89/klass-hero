@@ -33,7 +33,7 @@ All seed users share password: `password`
 
 | Name | Email |
 |------|-------|
-| Klass Hero Admin | app@primeyouth.de |
+| Klass Hero Admin | app@klasshero.com |
 
 ## Login Procedure
 
@@ -50,6 +50,6 @@ All seed users share password: `password`
 | Provider dashboard, sessions, programs | Provider | claudia.wolf (professional) |
 | Entitlement-gated features | Provider | lena.hartmann (starter, should be denied) |
 | Parent dashboard, enrollment, booking | Parent | anna.mueller |
-| Admin panel, Backpex | Admin | app@primeyouth.de |
+| Admin panel, Backpex | Admin | app@klasshero.com |
 | Staff dashboard, sessions, check-in/out | Staff | uitest-staff |
 | Cross-role messaging | Both provider + parent in separate steps |
