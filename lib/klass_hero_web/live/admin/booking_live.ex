@@ -44,7 +44,7 @@ defmodule KlassHeroWeb.Admin.BookingLive do
   # Trigger: cancel action should only be available for cancellable statuses
   # Why: completed and cancelled enrollments cannot be cancelled again
   # Outcome: cancel button only appears for pending/confirmed enrollments
-  def can?(_assigns, :cancel_booking, item), do: item.status in ~w(pending confirmed)
+  def can?(_assigns, :cancel_booking, item), do: item.status in [:pending, :confirmed]
   def can?(_assigns, _action, _item), do: false
 
   @impl Backpex.LiveResource

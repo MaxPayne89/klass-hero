@@ -5,6 +5,7 @@ defmodule KlassHeroWeb.Admin.BookingLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
+  alias KlassHeroWeb.Admin.BookingLive
 
   describe "admin access control" do
     setup :register_and_log_in_admin
@@ -65,6 +66,43 @@ defmodule KlassHeroWeb.Admin.BookingLiveTest do
 
       assert html =~ "Confirmed"
       assert html =~ "Allergic to nuts"
+    end
+  end
+
+  describe "can?/3 cancel_booking visibility" do
+    @cancel_cases [
+      {:pending, true},
+      {:confirmed, true},
+      {:completed, false},
+      {:cancelled, false}
+    ]
+
+    test "is permitted only for pending and confirmed statuses" do
+      for {status, expected} <- @cancel_cases do
+        assert BookingLive.can?(%{}, :cancel_booking, %{status: status}) == expected,
+               "can?(:cancel_booking, status: #{inspect(status)}) should be #{expected}"
+      end
+    end
+  end
+
+  describe "can?/3 fixed-action gates" do
+    @fixed_cases [
+      {:new, false},
+      {:edit, false},
+      {:delete, false},
+      {:index, true},
+      {:show, true}
+    ]
+
+    test "denies new/edit/delete and permits index/show" do
+      for {action, expected} <- @fixed_cases do
+        assert BookingLive.can?(%{}, action, %{}) == expected,
+               "can?(#{inspect(action)}) should be #{expected}"
+      end
+    end
+
+    test "denies unknown actions regardless of status" do
+      refute BookingLive.can?(%{}, :unknown_action, %{status: :pending})
     end
   end
 end
