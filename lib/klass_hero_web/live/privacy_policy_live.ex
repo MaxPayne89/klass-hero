@@ -1,6 +1,7 @@
 defmodule KlassHeroWeb.PrivacyPolicyLive do
   use KlassHeroWeb, :live_view
 
+  alias KlassHero.Contact
   alias KlassHeroWeb.Theme
 
   @impl true
@@ -16,6 +17,8 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
   defp last_updated, do: "February 1, 2026"
 
   defp privacy_sections do
+    email = Contact.email()
+
     [
       %{
         id: "introduction",
@@ -120,9 +123,9 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
         <h4 class="font-semibold text-gray-900 mb-2">Right to Data Portability:</h4>
         <p class="mb-4">Your exported data is provided in a standard JSON format that can be used with other services.</p>
         <h4 class="font-semibold text-gray-900 mb-2">Right to Object:</h4>
-        <p class="mb-4">You can object to certain types of data processing. Contact us at privacy@primeyouth.com to discuss your concerns.</p>
+        <p class="mb-4">You can object to certain types of data processing. Contact us at #{email} to discuss your concerns.</p>
         <p class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <strong class="text-blue-900">To exercise any of these rights:</strong> Visit your Settings page or contact us at <a href="mailto:privacy@primeyouth.com" class="text-blue-600 hover:underline">privacy@primeyouth.com</a>
+          <strong class="text-blue-900">To exercise any of these rights:</strong> Visit your Settings page or contact us at <a href="mailto:#{email}" class="text-blue-600 hover:underline">#{email}</a>
         </p>
         """
       },
@@ -219,8 +222,8 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
         content: """
         <p class="mb-4">If you have any questions about this Privacy Policy or how we handle your data, please contact us:</p>
         <div class="space-y-2">
-          <p><strong>Email:</strong> <a href="mailto:privacy@primeyouth.com" class="text-blue-600 hover:underline">privacy@primeyouth.com</a></p>
-          <p><strong>General Inquiries:</strong> <a href="mailto:hello@primeyouth.com" class="text-blue-600 hover:underline">hello@primeyouth.com</a></p>
+          <p><strong>Email:</strong> <a href="mailto:#{email}" class="text-blue-600 hover:underline">#{email}</a></p>
+          <p><strong>General Inquiries:</strong> <a href="mailto:#{email}" class="text-blue-600 hover:underline">#{email}</a></p>
         </div>
         <p class="mt-4">You can also reach us through our <a href="/contact" class="text-blue-600 hover:underline">Contact Page</a>.</p>
         """

@@ -89,7 +89,7 @@ defmodule KlassHeroWeb.TermsOfServiceLiveTest do
     test "includes contact information", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/terms")
 
-      assert html =~ "hello@primeyouth.com"
+      assert html =~ "info@mail.klasshero.com"
       assert html =~ "Contact Information"
     end
 

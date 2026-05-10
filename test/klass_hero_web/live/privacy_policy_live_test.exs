@@ -83,7 +83,7 @@ defmodule KlassHeroWeb.PrivacyPolicyLiveTest do
     test "includes contact information", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/privacy")
 
-      assert html =~ "privacy@primeyouth.com"
+      assert html =~ "info@mail.klasshero.com"
       assert html =~ "Contact Us"
     end
 
