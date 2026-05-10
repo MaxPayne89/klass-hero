@@ -19,13 +19,13 @@
     "nil_guard_test_pattern": "Use length(query.wheres) == 0 for no-op guard tests",
     "enrollment_policy_queries_note": "EnrollmentPolicyQueries tested with real DB (DataCase async:true); 14 tests",
     "expire_staff_invitation_note": "ExpireStaffInvitation: only :sent->:expired valid; others return {:error, :invalid_invitation_transition}",
-    "invite_field_validations_note": "InviteFieldValidations tested via embedded_schema in ExUnit.Case async:true; 18 tests",
+    "invite_field_validations_note": "InviteFieldValidations tested via embedded_schema in ExUnit.Case async:true; 18 tests (PR #719 merged 2026-05-10)",
     "global_publisher_race_705": "Issue #705: :participation_seed_roster_subscriber causes race; Mox fix recommended",
     "accounts_command_test_pattern": "RegisterUser/AnonymizeUser/ChangeEmail: DataCase async:true, AccountsFixtures, real UserRepository, no event assertions needed",
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
     "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:false.",
     "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
-    "coverage_saturation_note": "As of 2026-05-09, backlog exhausted. Missing test paths are trivial pass-throughs or covered by pending TI PRs.",
+    "coverage_saturation_note": "As of 2026-05-10, backlog exhausted. Missing test paths are trivial pass-throughs or covered by pending TI PRs.",
     "create_program_rejected_note": "PR #634 with CreateProgram/UpdateProgram tests was closed without merge by maintainer. Do not re-attempt.",
     "ci_check_runs_note": "No CI check runs appear on Test Improver PRs. CI may only run on push to main or require maintainer trigger.",
     "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html.",
@@ -33,7 +33,8 @@
     "pr_779_superseded_note": "PR #779 superseded by #696 being merged to main on 2026-05-09. Same files: attachment_mapper_test.exs + bulk_enrollment_invite_mapper_test.exs. Close #779.",
     "child_presenter_note": "ChildPresenter: non-trivial age calc, extract_initials, children_summary. PR #811 adds 14 pure unit tests.",
     "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago; birthday_in_future(n) = Dec 31 n years ago. Robust against year boundary.",
-    "submit_note_guard_note": "PR #761: find_participation_record guard added to submit_note handlers; tests included in same PR."
+    "pr_818_maintainer_tests_note": "PR #818 (broadcast participants fix): maintainer added comprehensive tests for participant_repository add_or_get/1, broadcast_to_program, reply_privately_to_broadcast. Already fully covered.",
+    "pr_774_copilot_tests_note": "PR #774 (booking_live atom fix): Copilot added BookingLive.can?/3 and StatusFilter.query/4 regression tests. Already fully covered."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -45,12 +46,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-05",
-    "task_2": "2026-05-09",
+    "task_2": "2026-05-10",
     "task_3": "2026-05-08",
-    "task_4": "2026-05-09",
+    "task_4": "2026-05-10",
     "task_5": "2026-05-05",
     "task_6": "2026-05-02",
-    "task_7": "2026-05-09"
+    "task_7": "2026-05-10"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -99,9 +100,9 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "Full sweep complete 2026-05-09. PRs #713/#707/#696 merged. Backlog exhausted; all remaining untested files are trivial.",
+    "task_2_last_file": "Full sweep complete 2026-05-10. PRs #719/#713/#707/#696 merged. Backlog exhausted; all remaining untested files are trivial.",
     "task_5_last_issue": 705
   },
-  "open_prs": [811, 779, 771, 764, 759, 750, 733, 723, 719],
-  "merged_prs": [713, 707, 696]
+  "open_prs": [811, 779, 771, 764, 759, 750, 733, 723],
+  "merged_prs": [719, 713, 707, 696]
 }
