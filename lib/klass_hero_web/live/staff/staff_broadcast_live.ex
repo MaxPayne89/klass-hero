@@ -9,9 +9,12 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Domain.Models.Attachment
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Shared.Entitlements
+  alias KlassHeroWeb.MessagingComponents
+  alias KlassHeroWeb.MessagingLiveHelper
 
   require Logger
 
@@ -63,6 +66,11 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
             |> assign(:provider, provider)
             |> assign(:form, form)
             |> assign(:sending, false)
+            |> allow_upload(:attachments,
+              accept: ~w(.jpg .jpeg .png .gif .webp),
+              max_entries: Attachment.max_per_message(),
+              max_file_size: Attachment.max_file_size_bytes()
+            )
 
           {:ok, socket}
         else
@@ -102,50 +110,72 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
   end
 
   @impl true
+  def handle_event("cancel-upload", %{"ref" => ref}, socket) do
+    {:noreply, MessagingLiveHelper.cancel_attachment_upload(socket, ref)}
+  end
+
+  @impl true
   def handle_event("send_broadcast", %{"subject" => subject, "content" => content}, socket) do
     content = String.trim(content)
     subject = String.trim(subject)
+    attachments = MessagingLiveHelper.consume_attachment_uploads(socket)
 
-    if content == "" do
+    if content == "" and attachments == [] do
       {:noreply, put_flash(socket, :error, gettext("Message content is required"))}
     else
-      socket = assign(socket, :sending, true)
-      scope = socket.assigns.current_scope
-      program_id = socket.assigns.program.id
-      provider_id = socket.assigns.provider.id
+      send_broadcast(socket, subject, content, attachments)
+    end
+  end
 
-      opts =
-        [provider_id: provider_id, skip_entitlement_check: true] ++
-          if(subject == "", do: [], else: [subject: subject])
+  defp send_broadcast(socket, subject, content, attachments) do
+    socket = assign(socket, :sending, true)
+    scope = socket.assigns.current_scope
+    program_id = socket.assigns.program.id
+    provider_id = socket.assigns.provider.id
 
-      case Messaging.broadcast_to_program(scope, program_id, content, opts) do
-        {:ok, conversation, _message, recipient_count} ->
-          {:noreply,
-           socket
-           |> put_flash(
-             :info,
-             gettext("Broadcast sent to %{count} parents", count: recipient_count)
-           )
-           |> push_navigate(to: ~p"/staff/messages/#{conversation.id}")}
+    opts =
+      [provider_id: provider_id, skip_entitlement_check: true, attachments: attachments] ++
+        if(subject == "", do: [], else: [subject: subject])
 
-        {:error, :no_enrollments} ->
-          {:noreply,
-           socket
-           |> assign(:sending, false)
-           |> put_flash(:error, gettext("No parents are enrolled in this program"))}
+    case Messaging.broadcast_to_program(scope, program_id, content, opts) do
+      {:ok, conversation, _message, recipient_count} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :info,
+           gettext("Broadcast sent to %{count} parents", count: recipient_count)
+         )
+         |> push_navigate(to: ~p"/staff/messages/#{conversation.id}")}
 
-        {:error, reason} ->
-          Logger.error("Failed to send staff broadcast",
-            reason: inspect(reason),
-            program_id: program_id,
-            provider_id: provider_id
-          )
+      {:error, :no_enrollments} ->
+        {:noreply,
+         socket
+         |> assign(:sending, false)
+         |> put_flash(:error, gettext("No parents are enrolled in this program"))}
 
-          {:noreply,
-           socket
-           |> assign(:sending, false)
-           |> put_flash(:error, gettext("Failed to send broadcast"))}
-      end
+      {:error, reason}
+      when reason in [
+             :too_many_attachments,
+             :invalid_attachment_type,
+             :attachment_too_large,
+             :upload_failed
+           ] ->
+        {:noreply,
+         socket
+         |> assign(:sending, false)
+         |> put_flash(:error, MessagingLiveHelper.upload_error_message(reason))}
+
+      {:error, reason} ->
+        Logger.error("Failed to send staff broadcast",
+          reason: inspect(reason),
+          program_id: program_id,
+          provider_id: provider_id
+        )
+
+        {:noreply,
+         socket
+         |> assign(:sending, false)
+         |> put_flash(:error, gettext("Failed to send broadcast"))}
     end
   end
 
@@ -202,6 +232,8 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
                 placeholder={gettext("Write your message to all enrolled parents...")}
               >{Phoenix.HTML.Form.input_value(@form, :content)}</textarea>
             </div>
+
+            <MessagingComponents.attachment_uploader uploads={@uploads} />
 
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div class="flex gap-3">

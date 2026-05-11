@@ -5,22 +5,20 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   This use case:
   1. Checks if the provider can send broadcasts (entitlement check)
   2. Creates or retrieves the program broadcast conversation
-  3. Adds all enrolled parents as participants
-  4. Sends the broadcast message
-  5. Publishes events for real-time updates
+  3. Adds all enrolled parents (and assigned staff) as participants
+  4. Delegates message creation to `SendMessage`, which handles validation,
+     attachment uploads, transactional persistence, and `:message_sent` event
+     publication
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Application.Shared
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Messaging.Domain.Models.Message
-  alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
 
   require Logger
 
-  @context KlassHero.Messaging
   @conversation_repo Application.compile_env!(:klass_hero, [
                        :messaging,
                        :for_managing_conversations
@@ -33,7 +31,6 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
                          :messaging,
                          :for_querying_enrollments
                        ])
-  @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
   @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
 
   @doc """
@@ -45,6 +42,8 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   - content: The message content
   - opts: Optional parameters
     - subject: Subject line for the broadcast
+    - attachments: List of `%{binary, filename, content_type, size}` maps,
+      forwarded verbatim to `SendMessage`
     - provider_id: Explicit provider ID (defaults to scope.provider.id).
       Required when scope.provider is nil (e.g. staff member scopes).
     - skip_entitlement_check: When true, skips the entitlement check.
@@ -54,13 +53,24 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   - `{:ok, conversation, message, recipient_count}` - Broadcast sent
   - `{:error, :not_entitled}` - Provider cannot send broadcasts
   - `{:error, :no_enrollments}` - No enrolled parents to broadcast to
-  - `{:error, reason}` - Other errors
+  - `{:error, :missing_provider_id}` - Could not resolve a provider_id
+  - `{:error, reason}` - Errors surfaced from `SendMessage` (validation, upload, persistence)
   """
   @spec execute(Scope.t(), String.t(), String.t(), keyword()) ::
           {:ok, Conversation.t(), Message.t(), non_neg_integer()}
-          | {:error, :not_entitled | :no_enrollments | term()}
+          | {:error,
+             :not_entitled
+             | :no_enrollments
+             | :missing_provider_id
+             | :empty_message
+             | :too_many_attachments
+             | :invalid_attachment_type
+             | :attachment_too_large
+             | :upload_failed
+             | :not_participant
+             | :broadcast_reply_not_allowed
+             | term()}
   def execute(%Scope{} = scope, program_id, content, opts \\ []) do
-    subject = Keyword.get(opts, :subject)
     provider_id = Keyword.get(opts, :provider_id) || (scope.provider && scope.provider.id)
 
     if is_nil(provider_id) do
@@ -71,18 +81,30 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
 
       {:error, :missing_provider_id}
     else
-      execute_broadcast(scope, program_id, subject, content, provider_id, opts)
+      execute_broadcast(scope, program_id, content, provider_id, opts)
     end
   end
 
-  defp execute_broadcast(scope, program_id, subject, content, provider_id, opts) do
+  defp execute_broadcast(scope, program_id, content, provider_id, opts) do
+    subject = Keyword.get(opts, :subject)
+    attachments = Keyword.get(opts, :attachments, [])
+    # Trigger: attachment-only broadcast composer submits an empty content string
+    # Why: SendMessage.trim_content/1 preserves "", so the persisted message would
+    #      carry content: "" while attachment-only direct messages carry content: nil
+    # Outcome: attachment-only broadcasts match direct-message behaviour
+    normalized_content = normalize_content(content, attachments)
+
     with :ok <- Shared.maybe_check_entitlement(scope, opts, provider_id: provider_id),
          {:ok, parent_user_ids} <- get_enrolled_parent_user_ids(program_id),
          :ok <- verify_has_recipients(parent_user_ids),
-         {:ok, conversation, message} <-
-           create_broadcast(scope, program_id, subject, content, parent_user_ids, provider_id) do
+         {:ok, conversation} <- get_or_create_broadcast_conversation(provider_id, program_id, subject),
+         :ok <- setup_participants(conversation, scope, parent_user_ids),
+         {:ok, message} <-
+           SendMessage.execute(conversation.id, scope.user.id, normalized_content,
+             conversation: conversation,
+             attachments: attachments
+           ) do
       recipient_count = length(parent_user_ids)
-      publish_event(conversation, program_id, provider_id, message.id, recipient_count)
 
       Logger.info("Broadcast sent to program",
         program_id: program_id,
@@ -95,50 +117,36 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   end
 
   defp get_enrolled_parent_user_ids(program_id) do
-    parent_ids = @enrollment_resolver.get_enrolled_parent_user_ids(program_id)
-    {:ok, parent_ids}
+    {:ok, @enrollment_resolver.get_enrolled_parent_user_ids(program_id)}
   end
 
   defp verify_has_recipients([]), do: {:error, :no_enrollments}
   defp verify_has_recipients(_), do: :ok
 
-  defp create_broadcast(scope, program_id, subject, content, parent_user_ids, provider_id) do
-    # Trigger: get-or-create runs OUTSIDE the transaction
-    # Why: unique constraint violation inside Repo.transaction aborts the Postgres
-    #      transaction — subsequent queries fail with 25P02 (in_failed_sql_transaction)
-    # Outcome: conversation lookup/creation is isolated; only participant + message
-    #          creation needs transactional consistency
-    with {:ok, conversation} <-
-           get_or_create_broadcast_conversation(provider_id, program_id, subject),
-         {:ok, {conversation, message}} <-
-           execute_broadcast_transaction(conversation, scope, content, parent_user_ids) do
-      {:ok, conversation, message}
+  defp normalize_content(nil, _attachments), do: nil
+
+  defp normalize_content(content, attachments) when is_binary(content) do
+    case {String.trim(content), attachments} do
+      {"", [_ | _]} -> nil
+      {trimmed, _} -> trimmed
     end
   end
 
-  defp execute_broadcast_transaction(conversation, scope, content, parent_user_ids) do
-    Repo.transaction(fn ->
-      with {:ok, _participants} <-
-             @participant_repo.add_batch(conversation.id, parent_user_ids),
-           {:ok, _} <-
-             @participant_repo.add_or_get(%{
-               conversation_id: conversation.id,
-               user_id: scope.user.id
-             }),
-           :ok <-
-             Shared.add_assigned_staff(conversation.id, conversation.program_id, scope.user.id),
-           {:ok, message} <-
-             @message_repo.create(%{
-               conversation_id: conversation.id,
-               sender_id: scope.user.id,
-               content: String.trim(content),
-               message_type: :text
-             }) do
-        {conversation, message}
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+  # Trigger: broadcast participants need to be present before SendMessage runs
+  # Why: SendMessage.verify_participant rejects senders not in the conversation —
+  #      provider/staff sender must be added before delegation
+  # Outcome: parents, sender, and assigned staff are participants; partial failure
+  #          is recoverable via idempotent retry (add_batch, add_or_get, projection
+  #          lookup all heal on re-run)
+  defp setup_participants(conversation, scope, parent_user_ids) do
+    with {:ok, _} <- @participant_repo.add_batch(conversation.id, parent_user_ids),
+         {:ok, _} <-
+           @participant_repo.add_or_get(%{
+             conversation_id: conversation.id,
+             user_id: scope.user.id
+           }) do
+      Shared.add_assigned_staff(conversation.id, conversation.program_id, scope.user.id)
+    end
   end
 
   defp get_or_create_broadcast_conversation(provider_id, program_id, subject) do
@@ -169,19 +177,5 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
             @conversation_reader.find_active_broadcast_for_program(provider_id, program_id)
         end
     end
-  end
-
-  defp publish_event(conversation, program_id, provider_id, message_id, recipient_count) do
-    event =
-      MessagingEvents.broadcast_sent(
-        conversation.id,
-        program_id,
-        provider_id,
-        message_id,
-        recipient_count
-      )
-
-    DomainEventBus.dispatch(@context, event)
-    :ok
   end
 end

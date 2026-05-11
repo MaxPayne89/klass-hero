@@ -185,6 +185,53 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
     end
   end
 
+  describe "broadcast with attachments" do
+    setup :register_and_log_in_provider
+
+    @png_bytes <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+    test "renders the attachment uploader trigger", %{conn: conn} do
+      program = insert(:program_schema)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
+
+      assert has_element?(view, "label", "Attach photo")
+      assert has_element?(view, "input[type='file']")
+    end
+
+    test "sends broadcast with photo attachment and navigates to conversation", %{conn: conn} do
+      program = insert(:program_schema)
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
+
+      photo =
+        file_input(view, "#broadcast-form", :attachments, [
+          %{name: "announcement.jpg", content: @png_bytes, type: "image/jpeg"}
+        ])
+
+      render_upload(photo, "announcement.jpg")
+
+      view
+      |> form("#broadcast-form", %{
+        "subject" => "",
+        "content" => "Check this out"
+      })
+      |> render_submit()
+
+      {path, flash} = assert_redirect(view)
+      assert path =~ "/provider/messages/"
+      assert flash["info"] =~ "Broadcast sent"
+    end
+  end
+
   describe "cancel navigation" do
     setup :register_and_log_in_provider
 

@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
   import KlassHero.AccountsFixtures
   import KlassHero.Factory, only: [insert: 2]
   import KlassHero.ProviderFixtures
+  import Phoenix.LiveViewTest
 
   describe "staff broadcast (entitled)" do
     setup %{conn: conn} do
@@ -67,6 +68,38 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
 
       {path, _flash} = assert_redirect(view)
       assert path =~ "/staff/messages/"
+    end
+
+    @png_bytes <<137, 80, 78, 71, 13, 10, 26, 10>>
+
+    test "renders the attachment uploader trigger", %{conn: conn, program: program} do
+      {:ok, view, _html} = live(conn, ~p"/staff/programs/#{program.id}/broadcast")
+
+      assert has_element?(view, "label", "Attach photo")
+      assert has_element?(view, "input[type='file']")
+    end
+
+    test "sends broadcast with photo attachment and navigates to staff messages",
+         %{conn: conn, program: program} do
+      {:ok, view, _html} = live(conn, ~p"/staff/programs/#{program.id}/broadcast")
+
+      photo =
+        file_input(view, "#staff-broadcast-form", :attachments, [
+          %{name: "team_photo.jpg", content: @png_bytes, type: "image/jpeg"}
+        ])
+
+      render_upload(photo, "team_photo.jpg")
+
+      view
+      |> form("#staff-broadcast-form", %{
+        "subject" => "",
+        "content" => "Look at the team!"
+      })
+      |> render_submit()
+
+      {path, flash} = assert_redirect(view)
+      assert path =~ "/staff/messages/"
+      assert flash["info"] =~ "Broadcast sent"
     end
 
     test "rejects broadcast for non-assigned program", %{conn: conn, provider: provider} do

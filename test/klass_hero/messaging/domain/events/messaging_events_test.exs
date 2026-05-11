@@ -88,32 +88,6 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
     end
   end
 
-  describe "broadcast_sent/5" do
-    test "creates event with correct type and payload" do
-      conversation_id = Ecto.UUID.generate()
-      program_id = Ecto.UUID.generate()
-      provider_id = Ecto.UUID.generate()
-      message_id = Ecto.UUID.generate()
-
-      event =
-        MessagingEvents.broadcast_sent(
-          conversation_id,
-          program_id,
-          provider_id,
-          message_id,
-          15
-        )
-
-      assert event.event_type == :broadcast_sent
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
-      assert event.payload.program_id == program_id
-      assert event.payload.provider_id == provider_id
-      assert event.payload.message_id == message_id
-      assert event.payload.recipient_count == 15
-    end
-  end
-
   describe "conversation_archived/2" do
     test "creates event with correct type and payload" do
       conversation_id = Ecto.UUID.generate()

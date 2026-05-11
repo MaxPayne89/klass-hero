@@ -48,25 +48,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveVi
     end
   end
 
-  describe "handle/1 — :broadcast_sent" do
-    test "publishes to conversation topic" do
-      conversation_id = Ecto.UUID.generate()
-
-      event =
-        DomainEvent.new(:broadcast_sent, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          program_id: Ecto.UUID.generate(),
-          provider_id: Ecto.UUID.generate(),
-          message_id: Ecto.UUID.generate(),
-          recipient_count: 5
-        })
-
-      assert :ok = NotifyLiveViews.handle(event)
-
-      assert_event_published(:broadcast_sent, %{conversation_id: conversation_id})
-    end
-  end
-
   describe "handle/1 — :conversation_created" do
     test "fans out to user topic for each participant" do
       conversation_id = Ecto.UUID.generate()

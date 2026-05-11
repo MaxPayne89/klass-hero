@@ -229,6 +229,73 @@ defmodule KlassHeroWeb.MessagingComponents do
   end
 
   @doc """
+  Renders attachment upload affordances for forms outside the chat dock.
+
+  Three stacked sections: per-entry error list, preview chips with cancel +
+  progress, and a labeled "Attach photo" trigger that opens the file picker.
+  Designed to be embedded inside the caller's `<.form>`, sharing the live
+  socket's `:attachments` upload. The caller owns the textarea and submit
+  button.
+  """
+  attr :uploads, :any, required: true
+  attr :label, :string, default: nil
+
+  def attachment_uploader(assigns) do
+    ~H"""
+    <div class="space-y-2">
+      <div :if={upload_errors(@uploads.attachments) != []}>
+        <p
+          :for={err <- upload_errors(@uploads.attachments)}
+          class="text-xs text-red-600"
+        >
+          {upload_error_to_string(err)}
+        </p>
+      </div>
+      <div
+        :if={@uploads.attachments.entries != []}
+        class="flex gap-2 overflow-x-auto"
+      >
+        <div
+          :for={entry <- @uploads.attachments.entries}
+          class="relative flex-shrink-0"
+        >
+          <.live_img_preview
+            entry={entry}
+            class={[
+              "w-16 h-16 rounded-lg object-cover",
+              upload_errors(@uploads.attachments, entry) != [] && "ring-2 ring-red-400"
+            ]}
+          />
+          <button
+            type="button"
+            phx-click="cancel-upload"
+            phx-value-ref={entry.ref}
+            aria-label={gettext("Remove attachment")}
+            class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs shadow-sm"
+          >
+            &times;
+          </button>
+          <div
+            :if={entry.progress > 0 and entry.progress < 100}
+            class="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden"
+          >
+            <div class="h-full bg-hero-blue-600 transition-all" style={"width: #{entry.progress}%"} />
+          </div>
+        </div>
+      </div>
+      <label
+        for={@uploads.attachments.ref}
+        class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-hero-blue-600 cursor-pointer"
+      >
+        <.icon name="hero-paper-clip" class="w-5 h-5" />
+        <span>{@label || gettext("Attach photo")}</span>
+        <.live_file_input upload={@uploads.attachments} class="hidden" />
+      </label>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a message input form with optional upload support.
 
   When `uploads` is provided, renders attachment previews, a file input button,

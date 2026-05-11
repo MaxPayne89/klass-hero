@@ -68,8 +68,8 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
         Query.css("[data-role=message]", text: "Field trip tomorrow at 9am!")
       )
 
-      # Rebuild summaries — broadcast_sent events don't yet emit the
-      # integration events the CQRS projection listens to
+      # Test event publishers don't use PubSub, so the ConversationSummaries
+      # projection never receives the integration event in E2E — rebuild manually.
       rebuild_summaries()
 
       parent_session
@@ -92,6 +92,8 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
         Query.css("[data-role=message]", text: "Reminder: bring sunscreen")
       )
 
+      # Test event publishers don't use PubSub, so the ConversationSummaries
+      # projection never receives the integration event in E2E — rebuild manually.
       rebuild_summaries()
 
       parent_session

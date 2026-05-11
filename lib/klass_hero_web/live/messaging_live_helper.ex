@@ -465,7 +465,14 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     cancel_upload(socket, :attachments, ref)
   end
 
-  defp consume_attachment_uploads(socket) do
+  @doc """
+  Consumes pending `:attachments` uploads on the socket, reads each file
+  into memory, and returns a list of file-data maps in the shape expected
+  by `Messaging.send_message/4` and `Messaging.broadcast_to_program/4`:
+  `%{binary, filename, content_type, size}`. Files that fail to read are
+  logged and dropped.
+  """
+  def consume_attachment_uploads(socket) do
     results =
       consume_uploaded_entries(socket, :attachments, fn %{path: path}, entry ->
         case File.read(path) do
@@ -491,18 +498,22 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     Enum.reject(results, &is_nil/1)
   end
 
-  defp upload_error_message(:empty_message), do: gettext("Please enter a message or attach a photo.")
+  @doc """
+  Translates attachment / message error atoms into user-facing flash messages.
+  Unknown reasons fall through to a generic message.
+  """
+  def upload_error_message(:empty_message), do: gettext("Please enter a message or attach a photo.")
 
-  defp upload_error_message(:too_many_attachments),
+  def upload_error_message(:too_many_attachments),
     do: gettext("Too many files (max %{max}).", max: Attachment.max_per_message())
 
-  defp upload_error_message(:invalid_attachment_type), do: gettext("Only images are accepted (JPG, PNG, GIF, WebP).")
+  def upload_error_message(:invalid_attachment_type), do: gettext("Only images are accepted (JPG, PNG, GIF, WebP).")
 
-  defp upload_error_message(:attachment_too_large),
+  def upload_error_message(:attachment_too_large),
     do: gettext("File is too large (max %{mb} MB).", mb: div(Attachment.max_file_size_bytes(), 1_048_576))
 
-  defp upload_error_message(:upload_failed), do: gettext("Failed to upload files. Please try again.")
-  defp upload_error_message(_), do: gettext("Something went wrong. Please try again.")
+  def upload_error_message(:upload_failed), do: gettext("Failed to upload files. Please try again.")
+  def upload_error_message(_), do: gettext("Something went wrong. Please try again.")
 
   defp subscribe_to_conversation(conversation_id) do
     topic = Messaging.conversation_topic(conversation_id)

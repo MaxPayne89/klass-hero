@@ -254,6 +254,15 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
   defp build_scope_with_provider(provider_schema, tier) do
     user = AccountsFixtures.user_fixture()
 
+    # Trigger: factory binds provider row to a throwaway unconfirmed user
+    # Why: SendMessage's provider_owner? check compares scope.user.id against the
+    #      provider row's identity_id; mismatch surfaces as :broadcast_reply_not_allowed
+    # Outcome: rebind the row to our confirmed user so ownership checks pass
+    {:ok, _} =
+      provider_schema
+      |> Ecto.Changeset.change(identity_id: user.id)
+      |> KlassHero.Repo.update()
+
     provider_profile = %ProviderProfile{
       id: provider_schema.id,
       identity_id: user.id,
