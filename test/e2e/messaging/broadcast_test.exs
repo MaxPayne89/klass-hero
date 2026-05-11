@@ -68,6 +68,10 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
         Query.css("[data-role=message]", text: "Field trip tomorrow at 9am!")
       )
 
+      # Test event publishers don't use PubSub, so the ConversationSummaries
+      # projection never receives the integration event in E2E — rebuild manually.
+      rebuild_summaries()
+
       parent_session
       |> visit_conversations(:parent)
       |> assert_has(Query.css("[data-role=conversation-card]", text: "Field trip tomorrow at 9am!"))
@@ -87,6 +91,10 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
         provider_session,
         Query.css("[data-role=message]", text: "Reminder: bring sunscreen")
       )
+
+      # Test event publishers don't use PubSub, so the ConversationSummaries
+      # projection never receives the integration event in E2E — rebuild manually.
+      rebuild_summaries()
 
       parent_session
       |> visit_conversations(:parent)
