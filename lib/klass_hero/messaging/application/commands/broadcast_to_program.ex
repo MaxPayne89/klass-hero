@@ -88,6 +88,11 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   defp execute_broadcast(scope, program_id, content, provider_id, opts) do
     subject = Keyword.get(opts, :subject)
     attachments = Keyword.get(opts, :attachments, [])
+    # Trigger: attachment-only broadcast composer submits an empty content string
+    # Why: SendMessage.trim_content/1 preserves "", so the persisted message would
+    #      carry content: "" while attachment-only direct messages carry content: nil
+    # Outcome: attachment-only broadcasts match direct-message behaviour
+    normalized_content = normalize_content(content, attachments)
 
     with :ok <- Shared.maybe_check_entitlement(scope, opts, provider_id: provider_id),
          {:ok, parent_user_ids} <- get_enrolled_parent_user_ids(program_id),
@@ -95,7 +100,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
          {:ok, conversation} <- get_or_create_broadcast_conversation(provider_id, program_id, subject),
          :ok <- setup_participants(conversation, scope, parent_user_ids),
          {:ok, message} <-
-           SendMessage.execute(conversation.id, scope.user.id, content,
+           SendMessage.execute(conversation.id, scope.user.id, normalized_content,
              conversation: conversation,
              attachments: attachments
            ) do
@@ -117,6 +122,15 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
 
   defp verify_has_recipients([]), do: {:error, :no_enrollments}
   defp verify_has_recipients(_), do: :ok
+
+  defp normalize_content(nil, _attachments), do: nil
+
+  defp normalize_content(content, attachments) when is_binary(content) do
+    case {String.trim(content), attachments} do
+      {"", [_ | _]} -> nil
+      {trimmed, _} -> trimmed
+    end
+  end
 
   # Trigger: broadcast participants need to be present before SendMessage runs
   # Why: SendMessage.verify_participant rejects senders not in the conversation —

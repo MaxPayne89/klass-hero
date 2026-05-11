@@ -300,6 +300,30 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
       assert hd(message.attachments).original_filename == "announcement.jpg"
     end
 
+    test "attachment-only broadcast persists nil content" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      for content <- ["", "   "] do
+        assert {:ok, _conversation, message, _count} =
+                 BroadcastToProgram.execute(scope, program.id, content, attachments: [@photo]),
+               "expected attachment-only broadcast to succeed for content #{inspect(content)}"
+
+        assert message.content == nil,
+               "expected content nil for attachment-only broadcast, got #{inspect(message.content)}"
+      end
+    end
+
     test "surfaces SendMessage validation errors" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
