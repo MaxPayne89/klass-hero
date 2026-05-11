@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.1](https://github.com/MaxPayne89/klass-hero/compare/v0.50.0...v0.50.1) (2026-05-10)
+
+
+### Bug Fixes
+
+* add find_participation_record guard to submit_note handlers ([#761](https://github.com/MaxPayne89/klass-hero/issues/761)) ([721e62a](https://github.com/MaxPayne89/klass-hero/commit/721e62ab617cf1a11d346cc2c47076bd9141626a))
+* include assigned staff as participants in private broadcast replies ([#818](https://github.com/MaxPayne89/klass-hero/issues/818)) ([d2cd0d8](https://github.com/MaxPayne89/klass-hero/commit/d2cd0d8b1a1afe4d7a86d802fce1eaf4b0d047e0))
+* replace primeyouth.com emails with KlassHero contact address ([#815](https://github.com/MaxPayne89/klass-hero/issues/815)) ([a075169](https://github.com/MaxPayne89/klass-hero/commit/a075169e5dd8e8732da4a64b82fc5b6cb0bb676f))
+* seeds.exs uitest-staff registration missing :name and :password ([#816](https://github.com/MaxPayne89/klass-hero/issues/816)) ([42de3ca](https://github.com/MaxPayne89/klass-hero/commit/42de3ca1e2ef8997ffbf4feac381d809ac2dba11)), closes [#710](https://github.com/MaxPayne89/klass-hero/issues/710)
+* set active_nav in provider sidebar pages missing highlight ([#809](https://github.com/MaxPayne89/klass-hero/issues/809)) ([4961dd3](https://github.com/MaxPayne89/klass-hero/commit/4961dd3fe1d742166b451fcbd24fefe766f101d1))
+* use atom list in booking_live can?/3 status check ([#774](https://github.com/MaxPayne89/klass-hero/issues/774)) ([77de305](https://github.com/MaxPayne89/klass-hero/commit/77de305d92f3c87c784f97ba1ea035e1d1f28e89))
+
 ## [0.50.0](https://github.com/MaxPayne89/klass-hero/compare/v0.49.0...v0.50.0) (2026-05-08)
 
 
