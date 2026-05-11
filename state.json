@@ -34,7 +34,8 @@
     "child_presenter_note": "ChildPresenter: non-trivial age calc, extract_initials, children_summary. PR #811 adds 14 pure unit tests.",
     "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago; birthday_in_future(n) = Dec 31 n years ago. Robust against year boundary.",
     "pr_818_maintainer_tests_note": "PR #818 (broadcast participants fix): maintainer added comprehensive tests for participant_repository add_or_get/1, broadcast_to_program, reply_privately_to_broadcast. Already fully covered.",
-    "pr_774_copilot_tests_note": "PR #774 (booking_live atom fix): Copilot added BookingLive.can?/3 and StatusFilter.query/4 regression tests. Already fully covered."
+    "pr_774_copilot_tests_note": "PR #774 (booking_live atom fix): Copilot added BookingLive.can?/3 and StatusFilter.query/4 regression tests. Already fully covered.",
+    "pr_823_attachments_note": "PR #823 (attachments in broadcasts): maintainer-written tests included; 4767 tests passed precommit. No TI opportunity. Dropped :broadcast_sent event in favor of :message_sent."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -46,12 +47,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-05",
-    "task_2": "2026-05-10",
+    "task_2": "2026-05-11",
     "task_3": "2026-05-08",
-    "task_4": "2026-05-10",
-    "task_5": "2026-05-05",
+    "task_4": "2026-05-11",
+    "task_5": "2026-05-11",
     "task_6": "2026-05-02",
-    "task_7": "2026-05-10"
+    "task_7": "2026-05-11"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -100,7 +101,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "Full sweep complete 2026-05-10. PRs #719/#713/#707/#696 merged. Backlog exhausted; all remaining untested files are trivial.",
+    "task_2_last_file": "Full sweep complete 2026-05-11. PR #823 (attachments in broadcasts) already tested. Backlog exhausted; all remaining untested files are trivial.",
     "task_5_last_issue": 705
   },
   "open_prs": [811, 779, 771, 764, 759, 750, 733, 723],
