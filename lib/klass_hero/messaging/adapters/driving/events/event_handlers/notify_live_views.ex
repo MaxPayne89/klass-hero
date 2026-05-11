@@ -15,7 +15,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveVi
 
   - `:message_sent`           → `"conversation:{id}"`
   - `:messages_read`          → `"conversation:{id}"`
-  - `:broadcast_sent`         → `"conversation:{id}"`
   - `:conversation_created`   → `"user:{id}:messages"` per participant (fan-out)
   - `:conversations_archived` → `"messaging:bulk_operations"`
   - `:retention_enforced`     → `"messaging:bulk_operations"`
@@ -41,11 +40,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveVi
   end
 
   def handle(%DomainEvent{event_type: :messages_read} = event) do
-    topic = conversation_topic(event.payload.conversation_id)
-    SharedNotifyLiveViews.safe_publish(event, topic)
-  end
-
-  def handle(%DomainEvent{event_type: :broadcast_sent} = event) do
     topic = conversation_topic(event.payload.conversation_id)
     SharedNotifyLiveViews.safe_publish(event, topic)
   end

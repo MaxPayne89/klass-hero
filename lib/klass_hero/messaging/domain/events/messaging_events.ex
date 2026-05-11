@@ -101,33 +101,6 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   end
 
   @doc """
-  Creates a broadcast_sent event.
-
-  Published when a program broadcast is sent.
-  """
-  @spec broadcast_sent(
-          conversation_id :: String.t(),
-          program_id :: String.t(),
-          provider_id :: String.t(),
-          message_id :: String.t(),
-          recipient_count :: non_neg_integer()
-        ) :: DomainEvent.t()
-  def broadcast_sent(conversation_id, program_id, provider_id, message_id, recipient_count) do
-    DomainEvent.new(
-      :broadcast_sent,
-      conversation_id,
-      @aggregate_type,
-      %{
-        conversation_id: conversation_id,
-        program_id: program_id,
-        provider_id: provider_id,
-        message_id: message_id,
-        recipient_count: recipient_count
-      }
-    )
-  end
-
-  @doc """
   Creates a conversation_archived event.
 
   Published when a conversation is archived.

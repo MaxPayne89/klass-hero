@@ -185,7 +185,6 @@ defmodule KlassHero.Application do
             priority: 10},
            {:conversations_archived,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:broadcast_sent, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
            {:retention_enforced, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}}
          ]},
         id: :messaging_domain_event_bus

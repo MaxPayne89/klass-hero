@@ -1,6 +1,7 @@
 defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
   use KlassHero.DataCase, async: true
 
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
 
   alias KlassHero.Accounts.Scope
@@ -270,8 +271,138 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     end
   end
 
+  describe "execute/4 — attachments" do
+    @photo %{
+      binary: "fake-image-bytes",
+      filename: "announcement.jpg",
+      content_type: "image/jpeg",
+      size: 1_000
+    }
+
+    test "persists attachments alongside the broadcast message" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, _conversation, message, _count} =
+               BroadcastToProgram.execute(scope, program.id, "Look at this!", attachments: [@photo])
+
+      assert length(message.attachments) == 1
+      assert hd(message.attachments).original_filename == "announcement.jpg"
+    end
+
+    test "surfaces SendMessage validation errors" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      too_many =
+        for i <- 1..6 do
+          %{binary: "x", filename: "p#{i}.jpg", content_type: "image/jpeg", size: 1_000}
+        end
+
+      pdf = [%{binary: "x", filename: "doc.pdf", content_type: "application/pdf", size: 1_000}]
+
+      oversized =
+        [%{binary: "x", filename: "huge.jpg", content_type: "image/jpeg", size: 11_000_000}]
+
+      cases = [
+        {too_many, :too_many_attachments},
+        {pdf, :invalid_attachment_type},
+        {oversized, :attachment_too_large}
+      ]
+
+      for {attachments, expected_error} <- cases do
+        assert {:error, ^expected_error} =
+                 BroadcastToProgram.execute(scope, program.id, "Hi", attachments: attachments),
+               "expected #{inspect(expected_error)} for #{length(attachments)} files of type " <>
+                 "#{inspect(Enum.map(attachments, & &1.content_type))}"
+      end
+    end
+  end
+
+  describe "execute/4 — event publishing" do
+    setup do
+      setup_test_events()
+      :ok
+    end
+
+    test "publishes :message_sent with conversation, sender, and content" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, conversation, message, _count} =
+               BroadcastToProgram.execute(scope, program.id, "Announcement")
+
+      assert_event_published(:message_sent, %{
+        conversation_id: conversation.id,
+        message_id: message.id,
+        sender_id: scope.user.id,
+        content: "Announcement"
+      })
+    end
+
+    test "does not publish :broadcast_sent" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, _conv, _msg, _count} =
+               BroadcastToProgram.execute(scope, program.id, "Announcement")
+
+      published_types = Enum.map(get_published_events(), & &1.event_type)
+      refute :broadcast_sent in published_types
+    end
+  end
+
   defp build_scope_with_provider(provider_schema, tier) do
     user = AccountsFixtures.user_fixture()
+
+    # Trigger: factory binds provider row to a throwaway unconfirmed user
+    # Why: SendMessage's provider_owner? check compares scope.user.id against the
+    #      provider row's identity_id; mismatch surfaces as :broadcast_reply_not_allowed
+    # Outcome: rebind the row to our confirmed user so ownership checks pass
+    {:ok, _} =
+      provider_schema
+      |> Ecto.Changeset.change(identity_id: user.id)
+      |> KlassHero.Repo.update()
 
     provider_profile = %ProviderProfile{
       id: provider_schema.id,

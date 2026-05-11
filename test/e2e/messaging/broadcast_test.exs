@@ -68,10 +68,6 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
         Query.css("[data-role=message]", text: "Field trip tomorrow at 9am!")
       )
 
-      # Rebuild summaries — broadcast_sent events don't yet emit the
-      # integration events the CQRS projection listens to
-      rebuild_summaries()
-
       parent_session
       |> visit_conversations(:parent)
       |> assert_has(Query.css("[data-role=conversation-card]", text: "Field trip tomorrow at 9am!"))
@@ -91,8 +87,6 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
         provider_session,
         Query.css("[data-role=message]", text: "Reminder: bring sunscreen")
       )
-
-      rebuild_summaries()
 
       parent_session
       |> visit_conversations(:parent)
