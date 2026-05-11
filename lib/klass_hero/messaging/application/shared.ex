@@ -74,6 +74,15 @@ defmodule KlassHero.Messaging.Application.Shared do
   end
 
   @doc """
+  Conditionally puts a `:program_id` key into a map.
+
+  Returns the map unchanged when `program_id` is `nil`.
+  """
+  @spec maybe_put_program_id(map(), String.t() | nil) :: map()
+  def maybe_put_program_id(attrs, nil), do: attrs
+  def maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
+
+  @doc """
   Adds active assigned staff as participants to a conversation.
 
   Queries the program staff projection for active staff user IDs and adds
