@@ -35,7 +35,9 @@
     "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago; birthday_in_future(n) = Dec 31 n years ago. Robust against year boundary.",
     "pr_818_maintainer_tests_note": "PR #818 (broadcast participants fix): maintainer added comprehensive tests for participant_repository add_or_get/1, broadcast_to_program, reply_privately_to_broadcast. Already fully covered.",
     "pr_774_copilot_tests_note": "PR #774 (booking_live atom fix): Copilot added BookingLive.can?/3 and StatusFilter.query/4 regression tests. Already fully covered.",
-    "pr_823_attachments_note": "PR #823 (attachments in broadcasts): maintainer-written tests included; 4767 tests passed precommit. No TI opportunity. Dropped :broadcast_sent event in favor of :message_sent."
+    "pr_823_attachments_note": "PR #823 (attachments in broadcasts): maintainer-written tests included; 4767 tests passed precommit. No TI opportunity. Dropped :broadcast_sent event in favor of :message_sent.",
+    "pr_827_single_day_note": "PR #827 (allow single-day workshops): maintainer updated program_test.exs and program_schema_test.exs. No TI opportunity.",
+    "pr_832_participant_restrictions_note": "PR #832 (clear participant restrictions on edit): maintainer added program_components_test.exs and updated dashboard_live_test.exs. No TI opportunity."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -47,12 +49,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-05",
-    "task_2": "2026-05-11",
+    "task_2": "2026-05-12",
     "task_3": "2026-05-08",
-    "task_4": "2026-05-11",
+    "task_4": "2026-05-12",
     "task_5": "2026-05-11",
     "task_6": "2026-05-02",
-    "task_7": "2026-05-11"
+    "task_7": "2026-05-12"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -101,7 +103,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "Full sweep complete 2026-05-11. PR #823 (attachments in broadcasts) already tested. Backlog exhausted; all remaining untested files are trivial.",
+    "task_2_last_file": "Full sweep complete 2026-05-12. PRs #827 and #832 already tested by maintainer. Backlog exhausted; all remaining untested files are trivial.",
     "task_5_last_issue": 705
   },
   "open_prs": [811, 779, 771, 764, 759, 750, 733, 723],
