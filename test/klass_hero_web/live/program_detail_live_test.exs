@@ -222,6 +222,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
 
       {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
 
+      assert has_element?(view, "#hero-card-staff-#{staff.id}")
       assert html =~ "Coach Smith"
       assert html =~ "Head Coach"
       assert has_element?(view, "h3", "Meet the Hero")
@@ -262,7 +263,118 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       assert has_element?(view, "h3", "Meet the Heroes")
     end
 
-    test "program without staff hides instructor section", %{conn: conn} do
+    test "program with assigned instructor (no staff assignments) renders Lead Instructor card",
+         %{conn: conn} do
+      provider = provider_profile_fixture()
+
+      instructor =
+        staff_member_fixture(
+          provider_id: provider.id,
+          first_name: "Dr.",
+          last_name: "Strange"
+        )
+
+      program =
+        insert(:program_schema,
+          provider_id: provider.id,
+          title: "Music for Kids",
+          instructor_id: instructor.id,
+          instructor_name: "Dr. Strange",
+          instructor_headshot_url: nil
+        )
+
+      {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
+
+      assert has_element?(view, "#hero-card-instructor-#{instructor.id}")
+      assert html =~ "Dr. Strange"
+      assert html =~ "Lead Instructor"
+      assert has_element?(view, "h3", "Meet the Hero")
+    end
+
+    test "program with instructor and staff renders instructor first", %{conn: conn} do
+      provider = provider_profile_fixture()
+
+      instructor =
+        staff_member_fixture(
+          provider_id: provider.id,
+          first_name: "Marie",
+          last_name: "Curie"
+        )
+
+      program =
+        insert(:program_schema,
+          provider_id: provider.id,
+          title: "Combined Camp",
+          instructor_id: instructor.id,
+          instructor_name: "Marie Curie",
+          instructor_headshot_url: nil
+        )
+
+      staff =
+        staff_member_fixture(
+          provider_id: provider.id,
+          first_name: "Coach",
+          last_name: "Smith",
+          role: "Assistant"
+        )
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: staff.id
+      )
+
+      {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
+
+      assert has_element?(view, "#hero-card-instructor-#{instructor.id}")
+      assert has_element?(view, "#hero-card-staff-#{staff.id}")
+
+      instructor_pos = :binary.match(html, "hero-card-instructor-#{instructor.id}") |> elem(0)
+      staff_pos = :binary.match(html, "hero-card-staff-#{staff.id}") |> elem(0)
+
+      assert instructor_pos < staff_pos,
+             "expected instructor card to render before staff card; got instructor at #{instructor_pos}, staff at #{staff_pos}"
+    end
+
+    test "instructor who is also an assigned staff renders one merged card", %{conn: conn} do
+      provider = provider_profile_fixture()
+
+      lead =
+        staff_member_fixture(
+          provider_id: provider.id,
+          first_name: "Alice",
+          last_name: "Lead",
+          role: "Head Coach",
+          bio: "10 years experience"
+        )
+
+      program =
+        insert(:program_schema,
+          provider_id: provider.id,
+          instructor_id: lead.id,
+          instructor_name: "Alice Lead",
+          instructor_headshot_url: nil
+        )
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: lead.id
+      )
+
+      {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
+
+      assert has_element?(view, "#hero-card-staff-#{lead.id}")
+      refute has_element?(view, "#hero-card-instructor-#{lead.id}")
+
+      assert html =~ "Head Coach"
+      assert html =~ "10 years experience"
+      assert html =~ "Lead Instructor"
+
+      assert has_element?(view, "h3", "Meet the Hero")
+    end
+
+    test "program without instructor or staff hides hero section", %{conn: conn} do
       program = insert(:program_schema, title: "Art Class")
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
 

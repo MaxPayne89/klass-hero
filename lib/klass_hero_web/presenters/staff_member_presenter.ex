@@ -42,6 +42,32 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenter do
   end
 
   @doc """
+  Builds the prop shape consumed by `KlassHeroWeb.ProgramComponents.hero_card/1`.
+
+  Mirrors the card view but renames `:full_name -> :name`, adds a stable DOM id,
+  and leaves `:badge` nil (staff are not "Lead Instructor").
+  """
+  @spec to_hero_card(StaffMember.t()) :: map()
+  def to_hero_card(%StaffMember{} = staff) do
+    %{
+      id: "hero-card-staff-#{staff.id}",
+      name: StaffMember.full_name(staff),
+      initials: StaffMember.initials(staff),
+      headshot_url: staff.headshot_url,
+      role: staff.role,
+      bio: staff.bio,
+      tags: staff.tags || [],
+      qualifications: staff.qualifications || [],
+      badge: nil
+    }
+  end
+
+  @spec to_hero_card_list([StaffMember.t()]) :: [map()]
+  def to_hero_card_list(staff_members) when is_list(staff_members) do
+    Enum.map(staff_members, &to_hero_card/1)
+  end
+
+  @doc """
   Business-owner-facing view. Extends the card view with pay_rate + formatted rate_label.
   """
   @spec to_admin_view(StaffMember.t()) :: map()

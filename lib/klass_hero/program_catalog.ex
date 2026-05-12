@@ -36,6 +36,7 @@ defmodule KlassHero.ProgramCatalog do
     top_level?: true,
     deps: [KlassHero, KlassHero.Provider, KlassHero.Shared, KlassHero.Enrollment],
     exports: [
+      Domain.Models.Instructor,
       Domain.Models.Program,
       Domain.ReadModels.ProgramListing,
       Domain.Services.ProgramCategories
