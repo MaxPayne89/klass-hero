@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.3](https://github.com/MaxPayne89/klass-hero/compare/v0.50.2...v0.50.3) (2026-05-12)
+
+
+### Bug Fixes
+
+* allow single-day workshops in program date validation ([#794](https://github.com/MaxPayne89/klass-hero/issues/794)) ([#827](https://github.com/MaxPayne89/klass-hero/issues/827)) ([dbab7d1](https://github.com/MaxPayne89/klass-hero/commit/dbab7d1c78ead073c6cf293ee9045331be66af31))
+* clear participant restrictions on edit ([#795](https://github.com/MaxPayne89/klass-hero/issues/795)) ([#832](https://github.com/MaxPayne89/klass-hero/issues/832)) ([1ce9570](https://github.com/MaxPayne89/klass-hero/commit/1ce9570b6863093c66563372157df8e4050d3ea4))
+
 ## [0.50.2](https://github.com/MaxPayne89/klass-hero/compare/v0.50.1...v0.50.2) (2026-05-11)
 
 
