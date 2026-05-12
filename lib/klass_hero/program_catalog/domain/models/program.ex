@@ -350,10 +350,10 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
   defp validate_date_range(errors, _, nil), do: errors
 
   defp validate_date_range(errors, %Date{} = start_date, %Date{} = end_date) do
-    if Date.before?(start_date, end_date) do
-      errors
+    if Date.after?(start_date, end_date) do
+      ["start_date must be on or before end_date" | errors]
     else
-      ["start_date must be before end_date" | errors]
+      errors
     end
   end
 

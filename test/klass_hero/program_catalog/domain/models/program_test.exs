@@ -827,7 +827,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.ProgramTest do
       assert Enum.any?(errors, &String.contains?(&1, "time"))
     end
 
-    test "rejects start_date after end_date" do
+    test "rejects start_date strictly after end_date" do
       attrs =
         scheduling_attrs(%{
           start_date: ~D[2026-06-30],
@@ -835,20 +835,18 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.ProgramTest do
         })
 
       assert {:error, errors} = Program.create(attrs)
-      assert Enum.any?(errors, &String.contains?(&1, "date"))
+      assert "start_date must be on or before end_date" in errors
     end
 
-    test "rejects equal start_date and end_date (single-day programs not allowed)" do
+    test "accepts equal start_date and end_date (single-day workshop)" do
       attrs =
         scheduling_attrs(%{
           start_date: ~D[2026-03-15],
           end_date: ~D[2026-03-15]
         })
 
-      # Trigger: Date.before?/2 returns false for equal dates
-      # Why: documents that the validation intentionally rejects same-day ranges
-      assert {:error, errors} = Program.create(attrs)
-      assert Enum.any?(errors, &String.contains?(&1, "date"))
+      assert {:ok, %Program{start_date: ~D[2026-03-15], end_date: ~D[2026-03-15]}} =
+               Program.create(attrs)
     end
 
     test "rejects invalid date types" do
