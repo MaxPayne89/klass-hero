@@ -274,21 +274,22 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     end
   end
 
-  # Trigger: start_date is on or after end_date
-  # Why: a program's start must precede its end for a valid date range
+  # Trigger: start_date is strictly after end_date
+  # Why: a program's start must be on or before its end (single-day programs allowed)
   # Outcome: changeset error on start_date
   defp validate_date_range(changeset) do
     start_date = get_field(changeset, :start_date)
     end_date = get_field(changeset, :end_date)
 
-    if is_nil(start_date) or is_nil(end_date) do
-      changeset
-    else
-      if Date.before?(start_date, end_date) do
+    cond do
+      is_nil(start_date) or is_nil(end_date) ->
         changeset
-      else
-        add_error(changeset, :start_date, "must be before end date")
-      end
+
+      Date.after?(start_date, end_date) ->
+        add_error(changeset, :start_date, "must be on or before end date")
+
+      true ->
+        changeset
     end
   end
 

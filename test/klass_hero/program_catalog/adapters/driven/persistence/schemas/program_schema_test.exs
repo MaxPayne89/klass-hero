@@ -221,7 +221,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
       assert changeset.valid?
     end
 
-    test "rejects start_date on or after end_date" do
+    test "rejects start_date strictly after end_date" do
       attrs =
         valid_changeset_attrs(%{
           start_date: ~D[2026-07-01],
@@ -230,7 +230,18 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
 
       changeset = ProgramSchema.changeset(%ProgramSchema{}, attrs)
       refute changeset.valid?
-      assert "must be before end date" in errors_on(changeset).start_date
+      assert "must be on or before end date" in errors_on(changeset).start_date
+    end
+
+    test "accepts equal start_date and end_date (single-day workshop)" do
+      attrs =
+        valid_changeset_attrs(%{
+          start_date: ~D[2026-06-15],
+          end_date: ~D[2026-06-15]
+        })
+
+      changeset = ProgramSchema.changeset(%ProgramSchema{}, attrs)
+      assert changeset.valid?
     end
 
     test "allows start_date without end_date" do
