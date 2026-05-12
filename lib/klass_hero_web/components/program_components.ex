@@ -515,12 +515,15 @@ defmodule KlassHeroWeb.ProgramComponents do
 
   def restriction_info(assigns) do
     ~H"""
-    <div class={[
-      Theme.bg(:surface),
-      Theme.rounded(:xl),
-      "shadow-sm border overflow-hidden",
-      Theme.border_color(:light)
-    ]}>
+    <div
+      :if={has_any_restriction?(@policy)}
+      class={[
+        Theme.bg(:surface),
+        Theme.rounded(:xl),
+        "shadow-sm border overflow-hidden",
+        Theme.border_color(:light)
+      ]}
+    >
       <div class={["p-4 border-b", Theme.border_color(:light)]}>
         <h3 class={["font-semibold flex items-center gap-2", Theme.text_color(:heading)]}>
           <.icon name="hero-shield-check" class="w-5 h-5 text-hero-blue-500" />
@@ -549,6 +552,20 @@ defmodule KlassHeroWeb.ProgramComponents do
     </div>
     """
   end
+
+  # Trigger: every restriction field on the policy is empty
+  # Why: rendering the card heading with no body confuses providers (issue #795)
+  # Outcome: caller renders nothing when the policy carries no restrictions
+  defp has_any_restriction?(%{
+         min_age_months: nil,
+         max_age_months: nil,
+         min_grade: nil,
+         max_grade: nil,
+         allowed_genders: genders
+       })
+       when genders in [nil, []], do: false
+
+  defp has_any_restriction?(_policy), do: true
 
   @doc false
   defp format_age_restriction(%{min_age_months: min, max_age_months: max}) when not is_nil(min) and not is_nil(max) do

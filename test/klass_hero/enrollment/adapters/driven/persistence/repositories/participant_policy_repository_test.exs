@@ -58,6 +58,38 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Particip
                  max_age_months: 120
                })
     end
+
+    test "clears all restriction fields when subsequent upsert passes nils" do
+      program = insert(:program_schema)
+
+      {:ok, _initial} =
+        ParticipantPolicyRepository.upsert(%{
+          program_id: program.id,
+          eligibility_at: "program_start",
+          min_age_months: 60,
+          max_age_months: 144,
+          allowed_genders: ["female"],
+          min_grade: 1,
+          max_grade: 4
+        })
+
+      {:ok, cleared} =
+        ParticipantPolicyRepository.upsert(%{
+          program_id: program.id,
+          min_age_months: nil,
+          max_age_months: nil,
+          allowed_genders: [],
+          min_grade: nil,
+          max_grade: nil
+        })
+
+      assert cleared.min_age_months == nil
+      assert cleared.max_age_months == nil
+      assert cleared.allowed_genders == []
+      assert cleared.min_grade == nil
+      assert cleared.max_grade == nil
+      assert cleared.eligibility_at in ["program_start", "registration"]
+    end
   end
 
   describe "get_by_program_id/1" do
