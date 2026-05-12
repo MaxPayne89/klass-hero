@@ -949,7 +949,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     with {:ok, attrs} <- maybe_add_instructor(attrs, program_params["instructor_id"], socket),
          {:ok, program} <- ProgramCatalog.create_program(attrs, socket.assigns.current_scope.provider) do
       policy_result = maybe_set_enrollment_policy(program.id, enrollment_params)
-      maybe_set_participant_policy(program.id, participant_policy_params)
+      set_participant_policy_on_create(program.id, participant_policy_params)
       capacity = resolve_capacity(policy_result, enrollment_params)
 
       new_enrollment_data = %{
@@ -1007,7 +1007,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     with {:ok, attrs} <- maybe_add_instructor(attrs, program_params["instructor_id"], socket),
          {:ok, updated} <- ProgramCatalog.update_program(program_id, attrs) do
       policy_result = maybe_set_enrollment_policy(program_id, enrollment_params)
-      maybe_set_participant_policy(program_id, participant_policy_params)
+      set_participant_policy_on_update(program_id, participant_policy_params)
 
       # Trigger: need enrollment data for the table view
       # Why: preserve existing enrollment count, update capacity from policy
@@ -2169,44 +2169,78 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
-  # Trigger: all restriction fields are empty/nil
-  # Why: no policy needed when provider doesn't set any participant restrictions
-  # Outcome: skip policy creation, return :ok
-  defp maybe_set_participant_policy(program_id, params) do
-    case build_participant_policy_attrs(program_id, params) do
+  # Trigger: program just created and has no policy row yet
+  # Why: avoid persisting an all-nil policy when the provider set no restrictions
+  # Outcome: skip the upsert entirely if every restriction field is empty
+  defp set_participant_policy_on_create(program_id, params) do
+    parsed = parse_participant_policy_params(params)
+
+    case build_create_policy_attrs(program_id, parsed) do
       nil -> :ok
       attrs -> save_participant_policy(attrs, program_id)
     end
   end
 
-  defp build_participant_policy_attrs(program_id, params) do
-    min_age = parse_integer(params["min_age_months"])
-    max_age = parse_integer(params["max_age_months"])
-    min_grade = parse_integer(params["min_grade"])
-    max_grade = parse_integer(params["max_grade"])
-    eligibility_at = presence(params["eligibility_at"])
+  # Trigger: existing program edit — must allow clearing previously stored restrictions
+  # Why: short-circuiting on all-empty would leave stale DB values in place (issue #795)
+  # Outcome: always upsert, carrying explicit nils so on_conflict replaces stored values
+  defp set_participant_policy_on_update(program_id, params) do
+    parsed = parse_participant_policy_params(params)
 
-    # Trigger: hidden input for checkboxes sends [""] when none checked
-    # Why: must filter out empty strings to detect truly empty gender selection
-    # Outcome: clean list of selected gender values
-    allowed_genders =
-      (params["allowed_genders"] || [])
-      |> Enum.reject(&(&1 == ""))
+    program_id
+    |> build_update_policy_attrs(parsed)
+    |> save_participant_policy(program_id)
+  end
 
-    has_any_restriction =
-      !is_nil(min_age) or !is_nil(max_age) or !is_nil(min_grade) or
-        !is_nil(max_grade) or allowed_genders != []
+  defp parse_participant_policy_params(params) do
+    %{
+      eligibility_at: presence(params["eligibility_at"]),
+      min_age_months: parse_integer(params["min_age_months"]),
+      max_age_months: parse_integer(params["max_age_months"]),
+      min_grade: parse_integer(params["min_grade"]),
+      max_grade: parse_integer(params["max_grade"]),
+      # Trigger: hidden input for checkbox group sends [""] when none checked
+      # Why: must filter empty strings to detect truly empty gender selection
+      # Outcome: clean list of selected gender values
+      allowed_genders: Enum.reject(params["allowed_genders"] || [], &(&1 == ""))
+    }
+  end
 
-    if has_any_restriction do
-      %{program_id: program_id}
-      |> maybe_put(:eligibility_at, eligibility_at)
-      |> maybe_put(:min_age_months, min_age)
-      |> maybe_put(:max_age_months, max_age)
-      |> maybe_put(:allowed_genders, if(allowed_genders != [], do: allowed_genders))
-      |> maybe_put(:min_grade, min_grade)
-      |> maybe_put(:max_grade, max_grade)
+  defp build_create_policy_attrs(program_id, parsed) do
+    if any_restriction?(parsed) do
+      parsed
+      |> Map.put(:program_id, program_id)
+      |> drop_nil_eligibility_at()
     end
   end
+
+  defp build_update_policy_attrs(program_id, parsed) do
+    parsed
+    |> Map.put(:program_id, program_id)
+    |> drop_nil_eligibility_at()
+  end
+
+  defp any_restriction?(%{
+         min_age_months: nil,
+         max_age_months: nil,
+         min_grade: nil,
+         max_grade: nil,
+         allowed_genders: []
+       }), do: false
+
+  defp any_restriction?(_parsed), do: true
+
+  # Trigger: eligibility_at parsed as nil — only reachable via malformed callers;
+  #   the LiveView form always submits one of the radio values
+  # Why: forwarding `nil` would violate the column's NOT NULL + check constraint;
+  #   the repo's on_conflict {:replace, [:eligibility_at, ...]} would *not* preserve
+  #   any stored value either, so we don't pretend to.
+  # Outcome: drop the key so the INSERT falls back to the schema default
+  #   ("registration"); on conflict that default still replaces any stored value,
+  #   which is acceptable because the form makes nil unreachable in practice.
+  defp drop_nil_eligibility_at(%{eligibility_at: nil} = attrs), do: Map.delete(attrs, :eligibility_at)
+
+  defp drop_nil_eligibility_at(attrs), do: attrs
 
   defp save_participant_policy(attrs, program_id) do
     case Enrollment.set_participant_policy(attrs) do
@@ -2246,9 +2280,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       gettext("Program created, but enrollment capacity could not be saved. Edit the program to retry.")
     )
   end
-
-  defp maybe_put(map, _key, nil), do: map
-  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp parse_integer(nil), do: nil
   defp parse_integer(""), do: nil

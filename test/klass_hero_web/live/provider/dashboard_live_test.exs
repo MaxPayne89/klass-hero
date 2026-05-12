@@ -1161,6 +1161,125 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
     end
   end
 
+  describe "edit program - clearing participant restrictions" do
+    setup %{provider: provider} do
+      provider
+      |> Ecto.Changeset.change(
+        verified: true,
+        verified_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+      |> KlassHero.Repo.update!()
+
+      %{}
+    end
+
+    test "clears stored restrictions when all fields submitted blank", %{
+      conn: conn,
+      provider: provider
+    } do
+      program =
+        insert_program_with_listing(
+          provider_id: provider.id,
+          title: "Restricted Program"
+        )
+
+      {:ok, _policy} =
+        KlassHero.Enrollment.set_participant_policy(%{
+          program_id: program.id,
+          eligibility_at: "registration",
+          min_age_months: 60,
+          max_age_months: 144,
+          allowed_genders: ["female"],
+          min_grade: 1,
+          max_grade: 4
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+
+      assert has_element?(view, "#program-form")
+
+      view
+      |> render_submit("save_program", %{
+        "program_schema" =>
+          valid_program_params(%{
+            "title" => "Restricted Program",
+            "meeting_start_time" => "09:00",
+            "meeting_end_time" => "11:00"
+          }),
+        "enrollment_policy" => %{},
+        "participant_policy" => %{
+          "eligibility_at" => "registration",
+          "min_age_months" => "",
+          "max_age_months" => "",
+          "allowed_genders" => [""],
+          "min_grade" => "",
+          "max_grade" => ""
+        }
+      })
+
+      assert_flash(view, :info, "Program updated successfully.")
+
+      assert {:ok, cleared} = KlassHero.Enrollment.get_participant_policy(to_string(program.id))
+      assert cleared.min_age_months == nil
+      assert cleared.max_age_months == nil
+      assert cleared.allowed_genders == []
+      assert cleared.min_grade == nil
+      assert cleared.max_grade == nil
+    end
+
+    test "upserts an empty policy when no prior policy existed", %{
+      conn: conn,
+      provider: provider
+    } do
+      program =
+        insert_program_with_listing(
+          provider_id: provider.id,
+          title: "Unrestricted Program"
+        )
+
+      assert {:error, :not_found} =
+               KlassHero.Enrollment.get_participant_policy(to_string(program.id))
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+
+      view
+      |> render_submit("save_program", %{
+        "program_schema" =>
+          valid_program_params(%{
+            "title" => "Unrestricted Program",
+            "meeting_start_time" => "09:00",
+            "meeting_end_time" => "11:00"
+          }),
+        "enrollment_policy" => %{},
+        "participant_policy" => %{
+          "eligibility_at" => "registration",
+          "min_age_months" => "",
+          "max_age_months" => "",
+          "allowed_genders" => [""],
+          "min_grade" => "",
+          "max_grade" => ""
+        }
+      })
+
+      assert_flash(view, :info, "Program updated successfully.")
+
+      assert {:ok, policy} = KlassHero.Enrollment.get_participant_policy(to_string(program.id))
+      assert policy.min_age_months == nil
+      assert policy.max_age_months == nil
+      assert policy.allowed_genders == []
+      assert policy.min_grade == nil
+      assert policy.max_grade == nil
+    end
+  end
+
   # ===========================================================================
   # T4: roster send message button
   # ===========================================================================
