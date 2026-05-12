@@ -2230,9 +2230,14 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   defp any_restriction?(_parsed), do: true
 
-  # Trigger: eligibility_at is NOT NULL with a check constraint at the DB layer
-  # Why: forwarding `nil` would null-out the column on conflict and violate the constraint
-  # Outcome: dropping the key lets the mapper preserve the existing value / schema default
+  # Trigger: eligibility_at parsed as nil — only reachable via malformed callers;
+  #   the LiveView form always submits one of the radio values
+  # Why: forwarding `nil` would violate the column's NOT NULL + check constraint;
+  #   the repo's on_conflict {:replace, [:eligibility_at, ...]} would *not* preserve
+  #   any stored value either, so we don't pretend to.
+  # Outcome: drop the key so the INSERT falls back to the schema default
+  #   ("registration"); on conflict that default still replaces any stored value,
+  #   which is acceptable because the form makes nil unreachable in practice.
   defp drop_nil_eligibility_at(%{eligibility_at: nil} = attrs), do: Map.delete(attrs, :eligibility_at)
 
   defp drop_nil_eligibility_at(attrs), do: attrs
