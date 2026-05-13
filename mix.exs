@@ -56,7 +56,7 @@ defmodule KlassHero.MixProject do
       {:fun_with_flags, "~> 1.12"},
       {:usage_rules, "~> 1.0", only: [:dev]},
       {:bcrypt_elixir, "~> 3.0"},
-      {:live_debugger, "~> 0.4", only: [:dev]},
+      {:live_debugger, "~> 1.0", only: [:dev]},
       {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
@@ -82,7 +82,7 @@ defmodule KlassHero.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:tzdata, "~> 1.1"},
+      {:tz, "~> 0.28"},
       {:tidewave, "~> 0.5", only: :dev},
       {:quokka, "~> 2.11", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
@@ -109,7 +109,11 @@ defmodule KlassHero.MixProject do
       # Fitness Functions
       {:boundary, "~> 0.10", runtime: false},
       # Admin dashboard
-      {:backpex, "~> 0.17"}
+      {:backpex, "~> 0.17"},
+      # Override decimal to 3.0+ for CVE-2026-32686 (unbounded exponent DoS).
+      # Backpex's transitive `number` lib still declares ~> 2.0, but its usage
+      # is currency formatting which fits decimal128 (precision 34) easily.
+      {:decimal, "~> 3.0", override: true}
     ]
   end
 

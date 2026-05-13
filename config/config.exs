@@ -79,9 +79,9 @@ config :backpex,
   translator_function: {KlassHeroWeb.CoreComponents, :translate_backpex},
   error_translator_function: {KlassHeroWeb.CoreComponents, :translate_error}
 
-# Use IANA timezone database (Tzdata) so DateTime.shift_zone!/2 supports
+# Use IANA timezone database (tz) so DateTime.shift_zone!/2 supports
 # Europe/Berlin and other named zones with DST.
-config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
 config :error_tracker, repo: KlassHero.Repo, otp_app: :klass_hero, enabled: true
 
