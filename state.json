@@ -37,7 +37,8 @@
     "pr_774_copilot_tests_note": "PR #774 (booking_live atom fix): Copilot added BookingLive.can?/3 and StatusFilter.query/4 regression tests. Already fully covered.",
     "pr_823_attachments_note": "PR #823 (attachments in broadcasts): maintainer-written tests included; 4767 tests passed precommit. No TI opportunity. Dropped :broadcast_sent event in favor of :message_sent.",
     "pr_827_single_day_note": "PR #827 (allow single-day workshops): maintainer updated program_test.exs and program_schema_test.exs. No TI opportunity.",
-    "pr_832_participant_restrictions_note": "PR #832 (clear participant restrictions on edit): maintainer added program_components_test.exs and updated dashboard_live_test.exs. No TI opportunity."
+    "pr_832_participant_restrictions_note": "PR #832 (clear participant restrictions on edit): maintainer added program_components_test.exs and updated dashboard_live_test.exs. No TI opportunity.",
+    "pr_841_instructor_note": "PR #841 (display instructor on program detail): maintainer added hero_cards_presenter_test.exs and program_components_hero_card_test.exs. Instructor.initials/1 and StaffMemberPresenter.to_hero_card/1 had no direct tests — TI PR #846 adds them."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -49,15 +50,22 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-05",
-    "task_2": "2026-05-12",
-    "task_3": "2026-05-08",
-    "task_4": "2026-05-12",
+    "task_2": "2026-05-13",
+    "task_3": "2026-05-13",
+    "task_4": "2026-05-13",
     "task_5": "2026-05-11",
     "task_6": "2026-05-02",
-    "task_7": "2026-05-12"
+    "task_7": "2026-05-13"
   },
   "work_in_progress": null,
   "completed_work": [
+    {
+      "date": "2026-05-13",
+      "run_id": "25828053672",
+      "description": "4 initials/1 tests for Instructor domain model + 5 to_hero_card/to_hero_card_list tests for StaffMemberPresenter",
+      "tests_added": 9,
+      "pr_number": "pending"
+    },
     {
       "date": "2026-05-08",
       "run_id": "25580535704",
@@ -103,7 +111,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "Full sweep complete 2026-05-12. PRs #827 and #832 already tested by maintainer. Backlog exhausted; all remaining untested files are trivial.",
+    "task_2_last_file": "PR #841 (2026-05-13): Instructor.initials/1 and StaffMemberPresenter.to_hero_card/1 lacked tests. TI PR created.",
     "task_5_last_issue": 705
   },
   "open_prs": [811, 779, 771, 764, 759, 750, 733, 723],
