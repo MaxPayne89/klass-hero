@@ -9,10 +9,10 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHeroWeb.Helpers.TaskHelpers
+  alias KlassHeroWeb.Presenters.HeroCardsPresenter
   alias KlassHeroWeb.Presenters.ParticipantPolicyPresenter
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
-  alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme
 
   @impl true
@@ -45,8 +45,8 @@ defmodule KlassHeroWeb.ProgramDetailLive do
             load_provider_profile(program.provider_id)
           end)
 
-        team_members =
-          TaskHelpers.safe_await(team_task, [], label: "ProgramDetailLive.team_members")
+        staff_members =
+          TaskHelpers.safe_await(team_task, [], label: "ProgramDetailLive.staff_members")
 
         participant_policy =
           TaskHelpers.safe_await(policy_task, nil, label: "ProgramDetailLive.participant_policy")
@@ -54,12 +54,14 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         provider_profile =
           TaskHelpers.safe_await(provider_task, nil, label: "ProgramDetailLive.provider_profile")
 
+        hero_cards = HeroCardsPresenter.for_program(program.instructor, staff_members)
+
         socket =
           socket
           |> assign(page_title: program.title)
           |> assign(program: program)
           |> assign(program_icon_name: ProgramPresenter.icon_name(program.category))
-          |> assign(team_members: team_members)
+          |> assign(hero_cards: hero_cards)
           |> assign(registration_status: ProgramCatalog.registration_status(program))
           |> assign(participant_policy: participant_policy)
           |> assign(provider_profile: provider_profile)
@@ -124,9 +126,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   end
 
   defp load_team_members(program_id) when is_binary(program_id) do
-    program_id
-    |> Provider.list_active_staff_for_program()
-    |> StaffMemberPresenter.to_card_view_list()
+    Provider.list_active_staff_for_program(program_id)
   end
 
   defp load_provider_profile(nil), do: nil
@@ -418,8 +418,8 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         <%!-- Participant Requirements Section --%>
         <.restriction_info :if={@participant_policy} policy={@participant_policy} />
 
-        <%!-- Meet the Heroes Section — only shown when real team members exist --%>
-        <section :if={@team_members != []}>
+        <%!-- Meet the Heroes Section — renders the assigned instructor (first) and any program staff --%>
+        <section :if={@hero_cards != []}>
           <div class={[
             Theme.bg(:surface),
             Theme.rounded(:xl),
@@ -429,68 +429,12 @@ defmodule KlassHeroWeb.ProgramDetailLive do
             <div class={["p-4 border-b", Theme.border_color(:light)]}>
               <h3 class={["font-semibold flex items-center gap-2", Theme.text_color(:heading)]}>
                 <.icon name="hero-user" class="w-5 h-5 text-hero-blue-500" />
-                {ngettext("Meet the Hero", "Meet the Heroes", length(@team_members))}
+                {ngettext("Meet the Hero", "Meet the Heroes", length(@hero_cards))}
               </h3>
             </div>
             <div class="p-6">
               <div class="space-y-6">
-                <div :for={member <- @team_members} class="flex items-start space-x-4">
-                  <img
-                    :if={member.headshot_url}
-                    src={member.headshot_url}
-                    alt={member.full_name}
-                    class={[
-                      "w-16 h-16 object-cover flex-shrink-0",
-                      Theme.rounded(:full)
-                    ]}
-                  />
-                  <div
-                    :if={!member.headshot_url}
-                    class={[
-                      "w-16 h-16 flex items-center justify-center text-white text-xl font-bold flex-shrink-0",
-                      Theme.rounded(:full),
-                      Theme.gradient(:primary)
-                    ]}
-                  >
-                    {member.initials}
-                  </div>
-                  <div class="flex-1">
-                    <h4 class={["font-semibold", Theme.text_color(:heading)]}>
-                      {member.full_name}
-                    </h4>
-                    <p :if={member.role} class={["text-sm mb-2", Theme.text_color(:muted)]}>
-                      {member.role}
-                    </p>
-                    <p
-                      :if={member.bio}
-                      class={["text-sm leading-relaxed mb-3", Theme.text_color(:secondary)]}
-                    >
-                      {member.bio}
-                    </p>
-                    <div :if={member.tags != []} class="flex flex-wrap gap-1.5 mb-2">
-                      <span
-                        :for={tag <- member.tags}
-                        class={[
-                          "px-2 py-0.5 text-xs font-medium bg-hero-cyan-100 text-hero-cyan",
-                          Theme.rounded(:full)
-                        ]}
-                      >
-                        {tag}
-                      </span>
-                    </div>
-                    <div :if={member.qualifications != []} class="flex flex-wrap gap-1.5">
-                      <span
-                        :for={qual <- member.qualifications}
-                        class={[
-                          "px-2 py-0.5 text-xs font-medium border border-hero-grey-300 text-hero-grey-600",
-                          Theme.rounded(:md)
-                        ]}
-                      >
-                        {qual}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <.hero_card :for={card <- @hero_cards} {card} />
               </div>
             </div>
           </div>

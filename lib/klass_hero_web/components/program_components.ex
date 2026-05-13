@@ -615,6 +615,101 @@ defmodule KlassHeroWeb.ProgramComponents do
     end
   end
 
+  @doc """
+  Renders a hero card for an instructor or staff member on the program detail page.
+
+  Accepts a plain prop map so both `Instructor` (sparse: only `id`/`name`/`initials`)
+  and `StaffMember` (rich: role/bio/tags/qualifications) can share one component.
+  Optional fields are gracefully hidden when `nil` or `[]`.
+
+  ## Examples
+
+      <.hero_card
+        id="hero-card-instructor-abc123"
+        name="Ada Lovelace"
+        initials="AL"
+        headshot_url={nil}
+        badge="Lead Instructor"
+      />
+  """
+  attr :id, :string, required: true
+  attr :name, :string, required: true
+  attr :initials, :string, required: true
+  attr :headshot_url, :string, default: nil
+  attr :role, :string, default: nil
+  attr :bio, :string, default: nil
+  attr :tags, :list, default: []
+  attr :qualifications, :list, default: []
+  attr :badge, :string, default: nil
+
+  def hero_card(assigns) do
+    ~H"""
+    <div id={@id} class="flex items-start space-x-4">
+      <img
+        :if={@headshot_url}
+        src={@headshot_url}
+        alt={@name}
+        class={["w-16 h-16 object-cover flex-shrink-0", Theme.rounded(:full)]}
+      />
+      <div
+        :if={!@headshot_url}
+        class={[
+          "w-16 h-16 flex items-center justify-center text-white text-xl font-bold flex-shrink-0",
+          Theme.rounded(:full),
+          Theme.gradient(:primary)
+        ]}
+      >
+        {@initials}
+      </div>
+      <div class="flex-1">
+        <span
+          :if={@badge}
+          class={[
+            "inline-block px-2 py-0.5 mb-1 text-xs font-semibold uppercase tracking-wide bg-hero-blue-100 text-hero-blue-700",
+            Theme.rounded(:full)
+          ]}
+        >
+          {@badge}
+        </span>
+        <h4 class={["font-semibold", Theme.text_color(:heading)]}>
+          {@name}
+        </h4>
+        <p :if={@role} class={["text-sm mb-2", Theme.text_color(:muted)]}>
+          {@role}
+        </p>
+        <p
+          :if={@bio}
+          class={["text-sm leading-relaxed mb-3", Theme.text_color(:secondary)]}
+        >
+          {@bio}
+        </p>
+        <div :if={@tags != []} class="flex flex-wrap gap-1.5 mb-2">
+          <span
+            :for={tag <- @tags}
+            class={[
+              "px-2 py-0.5 text-xs font-medium bg-hero-cyan-100 text-hero-cyan",
+              Theme.rounded(:full)
+            ]}
+          >
+            {tag}
+          </span>
+        </div>
+        <div :if={@qualifications != []} class="flex flex-wrap gap-1.5">
+          <span
+            :for={qual <- @qualifications}
+            class={[
+              "px-2 py-0.5 text-xs font-medium border border-hero-grey-300 text-hero-grey-600",
+              Theme.rounded(:md)
+            ]}
+          >
+            {qual}
+          </span>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   defp humanize_gender("female"), do: gettext("Female")
   defp humanize_gender("male"), do: gettext("Male")
   defp humanize_gender("diverse"), do: gettext("Diverse")
