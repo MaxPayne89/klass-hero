@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Helpers.Greeting do
 
   All `DateTime` inputs are UTC; the helper shifts to the display timezone
   (default `Europe/Berlin`, configurable via `:default_tz`) so DST is
-  handled by `tzdata`.
+  handled by `tz`.
 
   Pure functions — no side effects, no DB. Composition lives in the caller
   (typically a LiveView mount) so this module stays trivially testable.
