@@ -19,6 +19,14 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Instructor do
           headshot_url: String.t() | nil
         }
 
+  @spec initials(t()) :: String.t()
+  def initials(%__MODULE__{name: name}) do
+    name
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.take(2)
+    |> Enum.map_join("", fn token -> token |> String.first() |> String.upcase() end)
+  end
+
   @spec new(map()) :: {:ok, t()} | {:error, [String.t()]}
   def new(attrs) when is_map(attrs) do
     attrs_with_defaults = Map.put_new(attrs, :headshot_url, nil)

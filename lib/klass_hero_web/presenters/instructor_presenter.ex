@@ -3,13 +3,10 @@ defmodule KlassHeroWeb.Presenters.InstructorPresenter do
   Transforms a Program's `Instructor` value object into the prop shape consumed by
   `KlassHeroWeb.ProgramComponents.hero_card/1`.
 
-  The Instructor value object is intentionally thin (id, name, optional headshot).
-  This presenter widens it into the same prop shape the staff-member card uses,
-  filling rich fields with `nil` / `[]` and tagging the card with a "Lead Instructor"
-  badge so it is visually distinguished from staff cards.
+  Pure transform — no badge or i18n logic. The `Lead Instructor` semantic is
+  applied by `KlassHeroWeb.Presenters.HeroCardsPresenter`, which is the only
+  caller of this module.
   """
-
-  use Gettext, backend: KlassHeroWeb.Gettext
 
   alias KlassHero.ProgramCatalog.Domain.Models.Instructor
 
@@ -20,20 +17,13 @@ defmodule KlassHeroWeb.Presenters.InstructorPresenter do
     %{
       id: "hero-card-instructor-#{instructor.id}",
       name: instructor.name,
-      initials: initials_from_name(instructor.name),
+      initials: Instructor.initials(instructor),
       headshot_url: instructor.headshot_url,
       role: nil,
       bio: nil,
       tags: [],
       qualifications: [],
-      badge: gettext("Lead Instructor")
+      badge: nil
     }
-  end
-
-  defp initials_from_name(name) do
-    name
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.take(2)
-    |> Enum.map_join("", fn token -> token |> String.first() |> String.upcase() end)
   end
 end

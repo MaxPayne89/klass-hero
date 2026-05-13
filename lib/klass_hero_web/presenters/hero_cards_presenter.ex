@@ -30,18 +30,13 @@ defmodule KlassHeroWeb.Presenters.HeroCardsPresenter do
   def for_program(%Instructor{} = instructor, staff_members) when is_list(staff_members) do
     {matching, others} = Enum.split_with(staff_members, &(&1.id == instructor.id))
 
-    case matching do
-      [lead | _] ->
-        [merge_lead(lead) | StaffMemberPresenter.to_hero_card_list(others)]
+    lead_card =
+      case matching do
+        [lead | _] -> StaffMemberPresenter.to_hero_card(lead)
+        [] -> InstructorPresenter.to_hero_card(instructor)
+      end
+      |> Map.put(:badge, gettext("Lead Instructor"))
 
-      [] ->
-        [InstructorPresenter.to_hero_card(instructor) | StaffMemberPresenter.to_hero_card_list(others)]
-    end
-  end
-
-  defp merge_lead(%StaffMember{} = staff) do
-    staff
-    |> StaffMemberPresenter.to_hero_card()
-    |> Map.put(:badge, gettext("Lead Instructor"))
+    [lead_card | StaffMemberPresenter.to_hero_card_list(others)]
   end
 end

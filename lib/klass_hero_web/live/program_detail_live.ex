@@ -45,8 +45,8 @@ defmodule KlassHeroWeb.ProgramDetailLive do
             load_provider_profile(program.provider_id)
           end)
 
-        team_members =
-          TaskHelpers.safe_await(team_task, [], label: "ProgramDetailLive.team_members")
+        staff_members =
+          TaskHelpers.safe_await(team_task, [], label: "ProgramDetailLive.staff_members")
 
         participant_policy =
           TaskHelpers.safe_await(policy_task, nil, label: "ProgramDetailLive.participant_policy")
@@ -54,7 +54,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         provider_profile =
           TaskHelpers.safe_await(provider_task, nil, label: "ProgramDetailLive.provider_profile")
 
-        hero_cards = HeroCardsPresenter.for_program(program.instructor, team_members)
+        hero_cards = HeroCardsPresenter.for_program(program.instructor, staff_members)
 
         socket =
           socket
