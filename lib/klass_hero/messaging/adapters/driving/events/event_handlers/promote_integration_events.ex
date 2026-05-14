@@ -88,4 +88,30 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
       aggregate_id: event.aggregate_id
     )
   end
+
+  def handle(%DomainEvent{event_type: :participant_added} = event) do
+    # Trigger: participant_added domain event dispatched from AddAssignedStaff command
+    # Why: CQRS projection must upsert summary rows for newly added participants;
+    #      missing this leaves staff inboxes empty until a server restart re-derives
+    # Outcome: publish critical integration event; propagate failure so the
+    #          enclosing transaction rolls back the participant insert
+    event.aggregate_id
+    |> MessagingIntegrationEvents.participant_added(event.payload)
+    |> IntegrationEventPublishing.publish_critical("participant_added",
+      conversation_id: event.aggregate_id
+    )
+  end
+
+  def handle(%DomainEvent{event_type: :participant_removed} = event) do
+    # Trigger: participant_removed domain event dispatched from RemoveAssignedStaff command
+    # Why: CQRS projection must soft-remove (archive) the participant's summary row
+    #      so the conversation disappears from their inbox immediately
+    # Outcome: publish critical integration event; propagate failure so the
+    #          enclosing transaction rolls back the participant deletion
+    event.aggregate_id
+    |> MessagingIntegrationEvents.participant_removed(event.payload)
+    |> IntegrationEventPublishing.publish_critical("participant_removed",
+      conversation_id: event.aggregate_id
+    )
+  end
 end

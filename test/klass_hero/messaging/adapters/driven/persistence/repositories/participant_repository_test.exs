@@ -404,7 +404,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
       assert ParticipantRepository.is_participant?(conv3.id, user.id)
     end
 
-    test "skips conversations where user is already a participant" do
+    test "preserves active rows untouched while inserting missing ones" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
       user = AccountsFixtures.user_fixture()
@@ -412,19 +412,71 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
       conv1 = insert(:conversation_schema, provider_id: provider.id, program_id: program.id)
       conv2 = insert(:conversation_schema, provider_id: provider.id, program_id: program.id)
 
-      insert(:participant_schema, conversation_id: conv1.id, user_id: user.id)
+      original_joined_at =
+        DateTime.utc_now()
+        |> DateTime.add(-3600, :second)
+        |> DateTime.truncate(:second)
 
-      assert {:ok, 1} =
+      insert(:participant_schema,
+        conversation_id: conv1.id,
+        user_id: user.id,
+        joined_at: original_joined_at
+      )
+
+      # Returned count includes the active-row no-op update + the new insert.
+      # The semantic guarantee for callers is that BOTH conversations end up
+      # with the user as an active participant — see assertions below.
+      assert {:ok, 2} =
                ParticipantRepository.add_to_conversations_batch(user.id, [conv1.id, conv2.id])
 
       assert ParticipantRepository.is_participant?(conv1.id, user.id)
       assert ParticipantRepository.is_participant?(conv2.id, user.id)
+
+      # The already-active row keeps its original joined_at — no clobber.
+      assert {:ok, reloaded} = ParticipantRepository.get(conv1.id, user.id)
+      assert reloaded.left_at == nil
+      assert DateTime.compare(reloaded.joined_at, original_joined_at) == :eq
     end
 
     test "returns {:ok, 0} for empty conversation list" do
       user = AccountsFixtures.user_fixture()
 
       assert {:ok, 0} = ParticipantRepository.add_to_conversations_batch(user.id, [])
+    end
+
+    test "re-activates a soft-left participant (clears left_at, preserves joined_at)" do
+      # Why this matters: when staff is unassigned via the new flow, their
+      # row is soft-left (left_at set). On re-assignment, this batch must
+      # bring the row back to active without rewriting the original join
+      # time — the audit trail of "first joined at" stays authoritative;
+      # `updated_at` captures the re-activation moment.
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      user = AccountsFixtures.user_fixture()
+      conv = insert(:conversation_schema, provider_id: provider.id, program_id: program.id)
+
+      original_joined_at =
+        DateTime.utc_now()
+        |> DateTime.add(-3600, :second)
+        |> DateTime.truncate(:second)
+
+      insert(:participant_schema,
+        conversation_id: conv.id,
+        user_id: user.id,
+        joined_at: original_joined_at,
+        left_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+
+      refute ParticipantRepository.is_participant?(conv.id, user.id)
+
+      assert {:ok, _count} =
+               ParticipantRepository.add_to_conversations_batch(user.id, [conv.id])
+
+      assert ParticipantRepository.is_participant?(conv.id, user.id)
+
+      assert {:ok, reloaded} = ParticipantRepository.get(conv.id, user.id)
+      assert reloaded.left_at == nil
+      assert DateTime.compare(reloaded.joined_at, original_joined_at) == :eq
     end
   end
 end

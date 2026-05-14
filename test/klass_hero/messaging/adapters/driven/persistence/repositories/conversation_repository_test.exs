@@ -636,5 +636,37 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
       assert result == []
     end
+
+    test "treats soft-left participations as 'not a participant' so the conversation is returned" do
+      # Why this matters: the staff-unassignment flow now soft-removes (sets
+      # `left_at`) instead of deleting. A subsequent re-assignment must see
+      # those conversations again — otherwise the staff is permanently locked
+      # out of every program conversation they've ever left.
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      user = AccountsFixtures.user_fixture()
+
+      conv =
+        insert(:conversation_schema,
+          provider_id: provider.id,
+          program_id: program.id,
+          type: "direct"
+        )
+
+      insert(:participant_schema,
+        conversation_id: conv.id,
+        user_id: user.id,
+        left_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+
+      result =
+        ConversationRepository.list_active_program_conversation_ids_without_participant(
+          program.id,
+          user.id
+        )
+
+      assert result == [conv.id],
+             "left-but-recorded participations must NOT block re-assignment"
+    end
   end
 end

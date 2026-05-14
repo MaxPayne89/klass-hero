@@ -12,12 +12,17 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Repo
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
+
+  @context KlassHero.Messaging
 
   @conversation_repo Application.compile_env!(:klass_hero, [
                        :messaging,
@@ -134,18 +139,34 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
 
   # Trigger: broadcast participants need to be present before SendMessage runs
   # Why: SendMessage.verify_participant rejects senders not in the conversation —
-  #      provider/staff sender must be added before delegation
-  # Outcome: parents, sender, and assigned staff are participants; partial failure
-  #          is recoverable via idempotent retry (add_batch, add_or_get, projection
-  #          lookup all heal on re-run)
+  #      provider/staff sender must be added before delegation. AddAssignedStaff
+  #      now returns its :participant_added domain event as data; dispatch
+  #      happens after the transaction commits so the projection on a separate
+  #      DB connection can read-your-own-writes.
+  # Outcome: parents, sender, and assigned staff added in a single transaction;
+  #          on commit, all collected events fan out via EventDispatchHelper.
   defp setup_participants(conversation, scope, parent_user_ids) do
-    with {:ok, _} <- @participant_repo.add_batch(conversation.id, parent_user_ids),
-         {:ok, _} <-
-           @participant_repo.add_or_get(%{
-             conversation_id: conversation.id,
-             user_id: scope.user.id
-           }) do
-      Shared.add_assigned_staff(conversation.id, conversation.program_id, scope.user.id)
+    Repo.transaction(fn ->
+      with {:ok, _} <- @participant_repo.add_batch(conversation.id, parent_user_ids),
+           {:ok, _} <-
+             @participant_repo.add_or_get(%{
+               conversation_id: conversation.id,
+               user_id: scope.user.id
+             }),
+           {:ok, {_staff_ids, staff_events}} <-
+             AddAssignedStaff.execute(conversation.id, conversation.program_id, scope.user.id) do
+        staff_events
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> case do
+      {:ok, events} ->
+        Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

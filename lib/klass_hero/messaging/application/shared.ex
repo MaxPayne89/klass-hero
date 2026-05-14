@@ -1,15 +1,16 @@
 defmodule KlassHero.Messaging.Application.Shared do
   @moduledoc """
   Shared utilities for Messaging use cases.
+
+  Hosts cross-cutting helpers (participant verification, entitlement checks)
+  used by multiple commands. Staff-addition is owned by
+  `KlassHero.Messaging.Application.Commands.AddAssignedStaff`.
   """
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Shared.Entitlements
 
   require Logger
-
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @staff_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_program_staff])
 
   @doc """
   Verifies that a user is a participant in a conversation.
@@ -70,31 +71,6 @@ defmodule KlassHero.Messaging.Application.Shared do
       :ok
     else
       check_entitlement(scope, metadata)
-    end
-  end
-
-  @doc """
-  Adds active assigned staff as participants to a conversation.
-
-  Queries the program staff projection for active staff user IDs and adds
-  them as conversation participants via batch insert. Excludes the owner
-  to avoid duplicate participant errors.
-
-  Returns `:ok` if program_id is nil (no program context) or after adding staff.
-  """
-  @spec add_assigned_staff(String.t(), String.t() | nil, String.t()) :: :ok | {:error, term()}
-  def add_assigned_staff(_conversation_id, nil, _owner_user_id), do: :ok
-
-  def add_assigned_staff(conversation_id, program_id, owner_user_id) do
-    staff_user_ids = @staff_resolver.get_active_staff_user_ids(program_id)
-    new_staff_ids = Enum.reject(staff_user_ids, &(&1 == owner_user_id))
-
-    case new_staff_ids do
-      [] ->
-        :ok
-
-      ids ->
-        with {:ok, _} <- @participant_repo.add_batch(conversation_id, ids), do: :ok
     end
   end
 end

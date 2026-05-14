@@ -9,11 +9,12 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -61,22 +62,43 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
     Repo.transaction(fn ->
       with {:ok, conversation} <- @conversation_repo.create(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, owner_user_id),
-           :ok <- Shared.add_assigned_staff(conversation.id, program_id, scope.user.id) do
-        publish_event(conversation, [scope.user.id, owner_user_id], provider_id)
+           {:ok, {_staff_ids, staff_events}} <-
+             AddAssignedStaff.execute(conversation.id, program_id, scope.user.id) do
+        created_event =
+          MessagingEvents.conversation_created(
+            conversation.id,
+            conversation.type,
+            provider_id,
+            [scope.user.id, owner_user_id],
+            conversation.program_id
+          )
 
-        Logger.info("Created program-scoped direct conversation",
-          conversation_id: conversation.id,
-          provider_id: provider_id,
-          program_id: program_id,
-          initiator_id: scope.user.id
-        )
-
-        conversation
+        {conversation, [created_event | staff_events]}
       else
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
+    |> handle_commit(scope, provider_id, program_id)
   end
+
+  # Trigger: Repo.transaction returns {:ok, {conversation, events}}
+  # Why: events fire post-commit so the projection's separate-connection
+  #      read sees the conversation row.
+  # Outcome: events fan out via EventDispatchHelper.dispatch/2.
+  defp handle_commit({:ok, {conversation, events}}, scope, provider_id, program_id) do
+    Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+
+    Logger.info("Created program-scoped direct conversation",
+      conversation_id: conversation.id,
+      provider_id: provider_id,
+      program_id: program_id,
+      initiator_id: scope.user.id
+    )
+
+    {:ok, conversation}
+  end
+
+  defp handle_commit({:error, reason}, _scope, _provider_id, _program_id), do: {:error, reason}
 
   defp add_participants(conversation_id, user_id_1, user_id_2) do
     with {:ok, _} <-
@@ -85,19 +107,5 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
            @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_2}) do
       :ok
     end
-  end
-
-  defp publish_event(conversation, participant_ids, provider_id) do
-    event =
-      MessagingEvents.conversation_created(
-        conversation.id,
-        conversation.type,
-        provider_id,
-        participant_ids,
-        conversation.program_id
-      )
-
-    DomainEventBus.dispatch(@context, event)
-    :ok
   end
 end

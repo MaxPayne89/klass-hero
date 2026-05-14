@@ -99,10 +99,13 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
                  )
                )
 
-      # 6. Staff is still a participant in the existing conversation (soft unassign)
-      assert ParticipantRepository.is_participant?(conversation.id, ctx.staff_user.id)
+      # 6. Staff is removed from the existing conversation — #817 closes the
+      #    inbox-visibility gap symmetrically: on unassignment the handler
+      #    drops the participant row and emits :participant_removed so the
+      #    projection archives the staff's summary row.
+      refute ParticipantRepository.is_participant?(conversation.id, ctx.staff_user.id)
 
-      # 7. But projection is deactivated
+      # 7. And projection is deactivated
       assert [] = ProgramStaffParticipantRepository.get_active_staff_user_ids(ctx.program.id)
     end
   end

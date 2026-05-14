@@ -4,17 +4,28 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   On assignment:
   1. Upserts the `program_staff_participants` projection (sets active=true).
-  2. Adds the staff user as a participant to all existing active conversations
-     for that program (where they are not already a participant).
+  2. Adds the staff user as a participant to every active program conversation
+     where they are not already an active participant. The participant inserts
+     and one `:participant_added` domain event per back-filled conversation
+     are collected inside a single `Repo.transaction`; events dispatch
+     *after* the transaction commits so the `ConversationSummaries` projection
+     can read-your-own-writes on a separate DB connection.
 
   On unassignment:
   1. Deactivates the projection entry (sets active=false).
-  2. Does NOT remove staff from existing conversations (soft unassign).
+  2. Delegates to `RemoveAssignedStaff` to soft-leave the staff in every
+     active program conversation; the returned `:participant_removed` events
+     are dispatched after the wrapping transaction commits.
   """
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
+  alias KlassHero.Messaging
+  alias KlassHero.Messaging.Application.Commands.RemoveAssignedStaff
+  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -27,6 +38,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
                       :messaging,
                       :for_resolving_program_staff
                     ])
+  @context Messaging
 
   @impl true
   def subscribed_events, do: [:staff_assigned_to_program, :staff_unassigned_from_program]
@@ -61,7 +73,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
       })
 
       add_staff_to_existing_conversations(payload.program_id, payload.staff_user_id)
-      :ok
     end
 
     context = %{
@@ -76,7 +87,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   defp handle_unassignment_with_retry(payload) do
     operation = fn ->
       @staff_projection.deactivate(payload.program_id, payload.staff_user_id)
-      :ok
+      remove_staff_from_existing_conversations(payload.program_id, payload.staff_user_id)
     end
 
     context = %{
@@ -88,6 +99,13 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
     RetryHelpers.retry_and_normalize(operation, context)
   end
 
+  # Trigger: staff assigned to a program may need to back-fill participants
+  #          in every active conversation for that program.
+  # Why: events-as-data + post-commit dispatch — the projection lives on a
+  #      separate DB connection and can only see committed writes.
+  # Outcome: participants inserted inside a single transaction; one
+  #          `:participant_added` event per back-filled conversation is
+  #          dispatched after commit.
   defp add_staff_to_existing_conversations(program_id, staff_user_id) do
     conversation_ids =
       @conversation_reader.list_active_program_conversation_ids_without_participant(
@@ -95,6 +113,55 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
         staff_user_id
       )
 
-    {:ok, _count} = @participant_repo.add_to_conversations_batch(staff_user_id, conversation_ids)
+    case conversation_ids do
+      [] ->
+        :ok
+
+      ids ->
+        Repo.transaction(fn ->
+          case @participant_repo.add_to_conversations_batch(staff_user_id, ids) do
+            {:ok, _count} ->
+              Enum.map(ids, fn conversation_id ->
+                MessagingEvents.participant_added(
+                  conversation_id,
+                  [staff_user_id],
+                  :later_assignment
+                )
+              end)
+
+            {:error, reason} ->
+              Repo.rollback(reason)
+          end
+        end)
+        |> case do
+          {:ok, events} ->
+            Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+            :ok
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+    end
+  end
+
+  # Trigger: staff unassigned from a program; existing participation rows must
+  #          be soft-removed so the user loses inbox visibility.
+  # Why: symmetric to add — RemoveAssignedStaff returns events as data; we
+  #      dispatch them after the wrapping transaction commits.
+  defp remove_staff_from_existing_conversations(program_id, staff_user_id) do
+    Repo.transaction(fn ->
+      case RemoveAssignedStaff.execute(program_id, staff_user_id) do
+        {:ok, {_removals, events}} -> events
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+    |> case do
+      {:ok, events} ->
+        Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end

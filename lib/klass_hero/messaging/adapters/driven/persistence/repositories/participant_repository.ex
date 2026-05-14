@@ -295,7 +295,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
       {count, _} =
         Repo.insert_all(ParticipantSchema, entries,
-          on_conflict: :nothing,
+          # Re-activation semantics for soft-left rows:
+          # - clear `left_at` so the participant becomes active again
+          # - bump `updated_at` to capture the re-activation moment
+          # - preserve original `joined_at` (audit trail of first-join time stays authoritative)
+          on_conflict:
+            from(p in ParticipantSchema,
+              update: [set: [left_at: nil, updated_at: fragment("EXCLUDED.updated_at")]]
+            ),
           conflict_target: [:conversation_id, :user_id]
         )
 

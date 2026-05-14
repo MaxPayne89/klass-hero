@@ -19,6 +19,10 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
     Entity type: `:conversation`.
   - `:conversations_archived` - Emitted when multiple conversations are archived
     in bulk. Entity type: `:conversation`.
+  - `:participant_added` - Emitted when one or more users are added to a
+    conversation's `participants` table (critical). Entity type: `:conversation`.
+  - `:participant_removed` - Emitted when one or more users are removed from a
+    conversation's `participants` table (critical). Entity type: `:conversation`.
   """
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -72,6 +76,28 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           required(:conversation_ids) => [String.t()],
           optional(:reason) => String.t() | nil,
           optional(:count) => non_neg_integer(),
+          optional(atom()) => term()
+        }
+
+  @typedoc "Source of a `:participant_added` event."
+  @type participant_added_source :: :initial_staff | :later_assignment
+
+  @typedoc "Payload for `:participant_added` events."
+  @type participant_added_payload :: %{
+          required(:participant_user_ids) => [String.t()],
+          required(:source) => participant_added_source(),
+          optional(:conversation_id) => String.t(),
+          optional(atom()) => term()
+        }
+
+  @typedoc "Source of a `:participant_removed` event."
+  @type participant_removed_source :: :staff_unassignment
+
+  @typedoc "Payload for `:participant_removed` events."
+  @type participant_removed_payload :: %{
+          required(:participant_user_ids) => [String.t()],
+          required(:source) => participant_removed_source(),
+          optional(:conversation_id) => String.t(),
           optional(atom()) => term()
         }
 
@@ -370,5 +396,128 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
   def conversations_archived(aggregate_id, _payload, _opts) do
     raise ArgumentError,
           "conversations_archived/3 requires a non-empty aggregate_id string, got: #{inspect(aggregate_id)}"
+  end
+
+  # ---------------------------------------------------------------------------
+  # participant_added (entity type: :conversation)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Creates a `participant_added` integration event.
+
+  Published when one or more users are added to a conversation's
+  `participants` table (e.g., assigned staff joining a conversation at
+  creation time, or back-filled when staff are assigned to a program after
+  the conversation already exists).
+
+  Marked critical so CQRS projections receive every participant addition
+  durably — without this, late participants would be missing from
+  read-model summaries until a server restart re-derives them.
+
+  ## Parameters
+
+  - `conversation_id` - The conversation users were added to
+  - `payload` - Event-specific data (participant_user_ids, source)
+  - `opts` - Metadata options (correlation_id, causation_id)
+
+  ## Raises
+
+  - `ArgumentError` if `conversation_id` is nil or empty
+  - `ArgumentError` if `participant_user_ids` or `source` payload keys are missing
+  - `ArgumentError` if `participant_user_ids` is an empty list
+  """
+  def participant_added(conversation_id, payload \\ %{}, opts \\ [])
+
+  def participant_added(conversation_id, %{participant_user_ids: [_ | _] = _ids, source: _source} = payload, opts)
+      when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
+    base_payload = %{conversation_id: conversation_id}
+    opts = Keyword.put_new(opts, :criticality, :critical)
+
+    IntegrationEvent.new(
+      :participant_added,
+      @source_context,
+      :conversation,
+      conversation_id,
+      Map.merge(payload, base_payload),
+      opts
+    )
+  end
+
+  def participant_added(conversation_id, %{participant_user_ids: []}, _opts)
+      when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
+    raise ArgumentError, "participant_added requires a non-empty participant_user_ids list"
+  end
+
+  def participant_added(conversation_id, payload, _opts)
+      when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
+    missing = [:participant_user_ids, :source] -- Map.keys(payload)
+
+    raise ArgumentError,
+          "participant_added missing required payload keys: #{inspect(missing)}"
+  end
+
+  def participant_added(conversation_id, _payload, _opts) do
+    raise ArgumentError,
+          "participant_added/3 requires a non-empty conversation_id string, got: #{inspect(conversation_id)}"
+  end
+
+  # ---------------------------------------------------------------------------
+  # participant_removed (entity type: :conversation)
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Creates a `participant_removed` integration event.
+
+  Published when one or more users are removed from a conversation's
+  `participants` table (e.g., staff unassigned from a program).
+
+  Marked critical so CQRS projections soft-remove (archive) the read-model
+  summary rows durably.
+
+  ## Parameters
+
+  - `conversation_id` - The conversation users were removed from
+  - `payload` - Event-specific data (participant_user_ids, source)
+  - `opts` - Metadata options (correlation_id, causation_id)
+
+  ## Raises
+
+  - `ArgumentError` if `conversation_id` is nil or empty
+  - `ArgumentError` if `participant_user_ids` or `source` payload keys are missing
+  - `ArgumentError` if `participant_user_ids` is an empty list
+  """
+  def participant_removed(conversation_id, payload \\ %{}, opts \\ [])
+
+  def participant_removed(conversation_id, %{participant_user_ids: [_ | _] = _ids, source: _source} = payload, opts)
+      when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
+    base_payload = %{conversation_id: conversation_id}
+    opts = Keyword.put_new(opts, :criticality, :critical)
+
+    IntegrationEvent.new(
+      :participant_removed,
+      @source_context,
+      :conversation,
+      conversation_id,
+      Map.merge(payload, base_payload),
+      opts
+    )
+  end
+
+  def participant_removed(conversation_id, %{participant_user_ids: []}, _opts)
+      when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
+    raise ArgumentError, "participant_removed requires a non-empty participant_user_ids list"
+  end
+
+  def participant_removed(conversation_id, payload, _opts)
+      when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
+    missing = [:participant_user_ids, :source] -- Map.keys(payload)
+
+    raise ArgumentError,
+          "participant_removed missing required payload keys: #{inspect(missing)}"
+  end
+
+  def participant_removed(conversation_id, _payload, _opts) do
+    raise ArgumentError,
+          "participant_removed/3 requires a non-empty conversation_id string, got: #{inspect(conversation_id)}"
   end
 end

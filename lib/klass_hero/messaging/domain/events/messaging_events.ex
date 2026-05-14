@@ -186,4 +186,60 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
       %{user_id: user_id}
     )
   end
+
+  @typedoc "Provenance of a participant_added event."
+  @type participant_added_source :: :initial_staff | :later_assignment
+
+  @doc """
+  Creates a participant_added event.
+
+  Published after one or more users are inserted into a conversation's
+  `participants` table. Promoted to a critical integration event for
+  CQRS projections.
+  """
+  @spec participant_added(
+          conversation_id :: String.t(),
+          participant_user_ids :: [String.t()],
+          source :: participant_added_source()
+        ) :: DomainEvent.t()
+  def participant_added(conversation_id, participant_user_ids, source) do
+    DomainEvent.new(
+      :participant_added,
+      conversation_id,
+      @aggregate_type,
+      %{
+        conversation_id: conversation_id,
+        participant_user_ids: participant_user_ids,
+        source: source
+      }
+    )
+  end
+
+  @typedoc "Provenance of a participant_removed event."
+  @type participant_removed_source :: :staff_unassignment
+
+  @doc """
+  Creates a participant_removed event.
+
+  Published after one or more users are removed from a conversation's
+  `participants` table. Promoted to a critical integration event for
+  CQRS projections (soft-archives summary rows).
+  """
+  @spec participant_removed(
+          conversation_id :: String.t(),
+          participant_user_ids :: [String.t()],
+          source :: participant_removed_source()
+        ) :: DomainEvent.t()
+  def participant_removed(conversation_id, participant_user_ids, source) do
+    DomainEvent.new(
+      :participant_removed,
+      conversation_id,
+      @aggregate_type,
+      %{
+        conversation_id: conversation_id,
+        participant_user_ids: participant_user_ids,
+        source: source
+      }
+    )
+  end
 end

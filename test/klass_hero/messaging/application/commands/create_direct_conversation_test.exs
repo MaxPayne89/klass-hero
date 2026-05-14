@@ -1,6 +1,7 @@
 defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest do
-  use KlassHero.DataCase, async: true
+  use KlassHero.DataCase, async: false
 
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
 
   alias KlassHero.Accounts.Scope
@@ -11,6 +12,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
   alias KlassHero.Messaging.Application.Commands.CreateDirectConversation
   alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "execute/4 with opts" do
     test "skips entitlement check when skip_entitlement_check: true" do
@@ -115,6 +117,11 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
   end
 
   describe "staff auto-inclusion" do
+    setup do
+      setup_test_integration_events()
+      :ok
+    end
+
     test "adds assigned staff as participants when conversation has program context" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
@@ -131,6 +138,66 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
       assert {:ok, conversation} =
                CreateDirectConversation.execute(scope, provider.id, target_user.id, program_id: program.id)
 
+      assert ParticipantRepository.is_participant?(conversation.id, staff_user.id)
+    end
+
+    test "publishes :participant_added integration event when staff are added" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      scope = build_scope_with_provider(provider, :professional)
+      target_user = AccountsFixtures.user_fixture()
+      staff_user = AccountsFixtures.user_fixture()
+
+      ProgramStaffParticipantRepository.upsert_active(%{
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_user_id: staff_user.id
+      })
+
+      assert {:ok, conversation} =
+               CreateDirectConversation.execute(
+                 scope,
+                 provider.id,
+                 target_user.id,
+                 program_id: program.id
+               )
+
+      event = assert_integration_event_published(:participant_added)
+      assert event.entity_id == conversation.id
+      assert event.payload.participant_user_ids == [staff_user.id]
+      assert event.payload.source == :initial_staff
+    end
+
+    test "post-commit dispatch contract: publish failure does NOT roll back the conversation" do
+      # Why this matters: events are dispatched *after* Repo.transaction commits,
+      # so a publish failure (e.g. PubSub down) cannot poison the user's flow.
+      # The persisted state stays consistent; Oban retries the publish for
+      # critical events.
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      scope = build_scope_with_provider(provider, :professional)
+      target_user = AccountsFixtures.user_fixture()
+      staff_user = AccountsFixtures.user_fixture()
+
+      ProgramStaffParticipantRepository.upsert_active(%{
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_user_id: staff_user.id
+      })
+
+      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
+
+      assert {:ok, conversation} =
+               CreateDirectConversation.execute(
+                 scope,
+                 provider.id,
+                 target_user.id,
+                 program_id: program.id
+               )
+
+      # Conversation persists despite the publish failure
+      assert ParticipantRepository.is_participant?(conversation.id, scope.user.id)
+      assert ParticipantRepository.is_participant?(conversation.id, target_user.id)
       assert ParticipantRepository.is_participant?(conversation.id, staff_user.id)
     end
 

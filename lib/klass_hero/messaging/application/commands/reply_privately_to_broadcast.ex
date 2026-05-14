@@ -11,10 +11,11 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -126,30 +127,40 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
                conversation_id: conversation.id,
                user_id: provider_user_id
              }),
-           :ok <- Shared.add_assigned_staff(conversation.id, program_id, provider_user_id) do
-        publish_conversation_created(conversation, scope.user.id, provider_user_id, provider_id)
-        conversation
+           {:ok, {_staff_ids, staff_events}} <-
+             AddAssignedStaff.execute(conversation.id, program_id, provider_user_id) do
+        created_event =
+          MessagingEvents.conversation_created(
+            conversation.id,
+            conversation.type,
+            provider_id,
+            [scope.user.id, provider_user_id],
+            conversation.program_id
+          )
+
+        {conversation, [created_event | staff_events]}
       else
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
+    |> handle_commit()
   end
+
+  # Trigger: Repo.transaction returns {:ok, {conversation, events}}
+  # Why: dispatching events post-commit lets the ConversationSummaries
+  #      projection (separate DB connection) read the committed conversation
+  #      when it processes the events.
+  # Outcome: each event fans out via EventDispatchHelper.dispatch/2; critical
+  #          events get Oban-backed retry on publish failure.
+  defp handle_commit({:ok, {conversation, events}}) do
+    Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+    {:ok, conversation}
+  end
+
+  defp handle_commit({:error, reason}), do: {:error, reason}
 
   defp maybe_put_program_id(attrs, nil), do: attrs
   defp maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
-
-  defp publish_conversation_created(conversation, parent_user_id, provider_user_id, provider_id) do
-    event =
-      MessagingEvents.conversation_created(
-        conversation.id,
-        conversation.type,
-        provider_id,
-        [parent_user_id, provider_user_id],
-        conversation.program_id
-      )
-
-    DomainEventBus.dispatch(@context, event)
-  end
 
   # Trigger: parent initiates a private reply to a broadcast
   # Why: inserts a system note in the direct conversation so the provider

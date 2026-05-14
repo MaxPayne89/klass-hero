@@ -138,4 +138,48 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
       assert event.payload.user_id == user_id
     end
   end
+
+  describe "participant_added/3" do
+    test "creates event with correct type and payload" do
+      conversation_id = Ecto.UUID.generate()
+      user_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
+
+      event = MessagingEvents.participant_added(conversation_id, user_ids, :initial_staff)
+
+      assert event.event_type == :participant_added
+      assert event.aggregate_id == conversation_id
+      assert event.aggregate_type == :conversation
+      assert event.payload.conversation_id == conversation_id
+      assert event.payload.participant_user_ids == user_ids
+      assert event.payload.source == :initial_staff
+    end
+
+    test "accepts :later_assignment source" do
+      event =
+        MessagingEvents.participant_added(
+          Ecto.UUID.generate(),
+          [Ecto.UUID.generate()],
+          :later_assignment
+        )
+
+      assert event.payload.source == :later_assignment
+    end
+  end
+
+  describe "participant_removed/3" do
+    test "creates event with correct type and payload" do
+      conversation_id = Ecto.UUID.generate()
+      user_ids = [Ecto.UUID.generate()]
+
+      event =
+        MessagingEvents.participant_removed(conversation_id, user_ids, :staff_unassignment)
+
+      assert event.event_type == :participant_removed
+      assert event.aggregate_id == conversation_id
+      assert event.aggregate_type == :conversation
+      assert event.payload.conversation_id == conversation_id
+      assert event.payload.participant_user_ids == user_ids
+      assert event.payload.source == :staff_unassignment
+    end
+  end
 end
