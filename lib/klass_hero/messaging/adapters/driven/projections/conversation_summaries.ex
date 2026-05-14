@@ -57,6 +57,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   @conversation_archived_topic "integration:messaging:conversation_archived"
   @conversations_archived_topic "integration:messaging:conversations_archived"
   @message_data_anonymized_topic "integration:messaging:message_data_anonymized"
+  @participant_added_topic "integration:messaging:participant_added"
+  @participant_removed_topic "integration:messaging:participant_removed"
   @enrolled_children_changed_topic "messaging:enrolled_children_changed"
   @broadcast_token_regex ~r/\[broadcast:[^\]]+\]/
 
@@ -99,6 +101,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     Phoenix.PubSub.subscribe(KlassHero.PubSub, @conversation_archived_topic)
     Phoenix.PubSub.subscribe(KlassHero.PubSub, @conversations_archived_topic)
     Phoenix.PubSub.subscribe(KlassHero.PubSub, @message_data_anonymized_topic)
+    Phoenix.PubSub.subscribe(KlassHero.PubSub, @participant_added_topic)
+    Phoenix.PubSub.subscribe(KlassHero.PubSub, @participant_removed_topic)
     Phoenix.PubSub.subscribe(KlassHero.PubSub, @enrolled_children_changed_topic)
 
     {:ok, %{bootstrapped: false}, {:continue, :bootstrap}}
@@ -207,6 +211,38 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     )
 
     project_message_data_anonymized(event)
+    {:noreply, state}
+  end
+
+  # Trigger: Received a participant_added integration event
+  # Why: one or more users joined a conversation after creation; each needs
+  #      their own summary row so the conversation appears in their inbox
+  # Outcome: one row per new participant_user_id upserted into conversation_summaries
+  @impl true
+  def handle_info({:integration_event, %IntegrationEvent{event_type: :participant_added} = event}, state) do
+    Logger.debug("ConversationSummaries projecting participant_added",
+      conversation_id: event.entity_id,
+      event_id: event.event_id
+    )
+
+    project_participant_added(event)
+    {:noreply, state}
+  end
+
+  # Trigger: Received a participant_removed integration event
+  # Why: one or more users were removed from a conversation; their summary
+  #      rows must be soft-archived so the conversation disappears from
+  #      their inbox immediately
+  # Outcome: archived_at set on each affected (conversation_id, user_id) row,
+  #          preserving the first removal's timestamp on replay (COALESCE)
+  @impl true
+  def handle_info({:integration_event, %IntegrationEvent{event_type: :participant_removed} = event}, state) do
+    Logger.debug("ConversationSummaries projecting participant_removed",
+      conversation_id: event.entity_id,
+      event_id: event.event_id
+    )
+
+    project_participant_removed(event)
     {:noreply, state}
   end
 
@@ -461,11 +497,151 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         %ConversationSummarySchema{}
         |> Ecto.Changeset.change(attrs)
         |> Repo.insert!(
-          on_conflict: {:replace_all_except, [:id, :inserted_at]},
+          # Idempotency: on replay, refresh conversation metadata only.
+          # Read-state fields (unread_count, last_read_at), message-state
+          # fields (latest_message_*, has_attachments, system_notes,
+          # enrolled_child_names) and archived_at MUST be preserved —
+          # those are owned by other event handlers (:message_sent,
+          # :messages_read, :conversation_archived).
+          on_conflict:
+            {:replace,
+             [
+               :conversation_type,
+               :provider_id,
+               :program_id,
+               :subject,
+               :other_participant_name,
+               :participant_count,
+               :updated_at
+             ]},
           conflict_target: [:conversation_id, :user_id]
         )
       end)
     end)
+  end
+
+  # Trigger: participant_added event received
+  # Why: one or more new participants joined a conversation; each needs a
+  #      summary row back-filled from the current write-model state
+  # Outcome: one row per new user_id upserted; meta refreshed on replay,
+  #          read-state fields preserved
+  defp project_participant_added(event) do
+    payload = event.payload
+    conversation_id = payload.conversation_id
+    new_user_ids = Map.get(payload, :participant_user_ids, [])
+
+    case load_conversation_with_participants(conversation_id) do
+      nil ->
+        Logger.warning(
+          "ConversationSummaries: skipping participant_added — conversation missing",
+          conversation_id: conversation_id,
+          event_id: event.event_id
+        )
+
+        :ok
+
+      conversation ->
+        upsert_participant_summary_rows(conversation, new_user_ids)
+    end
+  end
+
+  defp load_conversation_with_participants(conversation_id) do
+    from(c in ConversationSchema,
+      where: c.id == ^conversation_id,
+      preload: [:participants]
+    )
+    |> Repo.one()
+  end
+
+  defp upsert_participant_summary_rows(conversation, new_user_ids) do
+    active_participants = Enum.filter(conversation.participants, &is_nil(&1.left_at))
+    new_participants = Enum.filter(active_participants, &(&1.user_id in new_user_ids))
+
+    if new_participants == [] do
+      :ok
+    else
+      context = build_participant_context(conversation, active_participants)
+
+      entries =
+        Enum.map(new_participants, fn participant ->
+          build_summary_entry(conversation, participant, context)
+        end)
+
+      Repo.insert_all(ConversationSummarySchema, entries,
+        # Idempotency: read-state and message-state preserved on replay.
+        # `archived_at` IS in the replace list: the entry's value comes from
+        # the conversation row (via build_summary_entry). For an active
+        # conversation this is `nil`, which un-archives a row that was
+        # previously archived by `:participant_removed` — exactly what
+        # staff re-assignment needs. For an archived conversation, the
+        # entry carries the conversation's archive timestamp, so the
+        # archive state is preserved across re-events.
+        on_conflict:
+          {:replace,
+           [
+             :conversation_type,
+             :provider_id,
+             :program_id,
+             :subject,
+             :other_participant_name,
+             :participant_count,
+             :archived_at,
+             :updated_at
+           ]},
+        conflict_target: [:conversation_id, :user_id]
+      )
+
+      :ok
+    end
+  end
+
+  defp build_participant_context(conversation, active_participants) do
+    user_names = fetch_user_names(Enum.map(active_participants, & &1.user_id))
+    latest_messages = fetch_latest_messages([conversation.id])
+    unread_counts = fetch_unread_counts([conversation])
+    system_notes = fetch_system_notes([conversation.id])
+    attachment_message_ids = fetch_attachment_message_ids(latest_messages)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    %{
+      active_participants: active_participants,
+      user_names: user_names,
+      latest_message: Map.get(latest_messages, conversation.id),
+      unread_counts: unread_counts,
+      system_notes: Map.get(system_notes, conversation.id, %{}),
+      attachment_message_ids: attachment_message_ids,
+      now: now
+    }
+  end
+
+  # Trigger: participant_removed event received
+  # Why: removed users should not see the conversation in their inbox
+  # Outcome: archived_at stamped on each affected row, preserving the first
+  #          removal's timestamp on replay via COALESCE
+  defp project_participant_removed(event) do
+    payload = event.payload
+    conversation_id = payload.conversation_id
+    user_ids = Map.get(payload, :participant_user_ids, [])
+
+    if user_ids == [] do
+      :ok
+    else
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      from(s in ConversationSummarySchema,
+        where: s.conversation_id == ^conversation_id and s.user_id in ^user_ids,
+        update: [
+          set: [
+            # COALESCE preserves the first removal's timestamp on replay
+            archived_at: fragment("COALESCE(?, ?)", s.archived_at, ^now),
+            updated_at: ^now
+          ]
+        ]
+      )
+      |> Repo.update_all([])
+
+      :ok
+    end
   end
 
   # Trigger: message_sent event received

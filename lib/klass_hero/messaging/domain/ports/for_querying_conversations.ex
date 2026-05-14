@@ -93,6 +93,20 @@ defmodule KlassHero.Messaging.Domain.Ports.ForQueryingConversations do
             ) :: [binary()]
 
   @doc """
+  Lists IDs of active conversations for a program where a specific user
+  IS an active participant.
+
+  Used by the staff-unassignment flow to find conversations from which a
+  newly-removed staff member must be detached.
+
+  Returns a list of conversation ID strings (may be empty).
+  """
+  @callback list_active_program_conversation_ids_with_participant(
+              program_id :: binary(),
+              user_id :: binary()
+            ) :: [binary()]
+
+  @doc """
   Lists IDs of conversations whose retention period has expired.
 
   Returns IDs for archived conversations where `retention_until` is

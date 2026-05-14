@@ -220,4 +220,82 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
       assert_no_integration_events_published()
     end
   end
+
+  describe "handle/1 — :participant_added" do
+    test "promotes to participant_added integration event" do
+      conversation_id = Ecto.UUID.generate()
+      user_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
+
+      domain_event =
+        DomainEvent.new(:participant_added, conversation_id, :conversation, %{
+          conversation_id: conversation_id,
+          participant_user_ids: user_ids,
+          source: :initial_staff
+        })
+
+      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+
+      event = assert_integration_event_published(:participant_added)
+      assert event.entity_id == conversation_id
+      assert event.source_context == :messaging
+      assert event.entity_type == :conversation
+      assert event.payload.participant_user_ids == user_ids
+      assert event.payload.source == :initial_staff
+      assert IntegrationEvent.critical?(event)
+    end
+
+    test "propagates publish failures as {:error, reason}" do
+      conversation_id = Ecto.UUID.generate()
+
+      domain_event =
+        DomainEvent.new(:participant_added, conversation_id, :conversation, %{
+          conversation_id: conversation_id,
+          participant_user_ids: [Ecto.UUID.generate()],
+          source: :later_assignment
+        })
+
+      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
+
+      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+    end
+  end
+
+  describe "handle/1 — :participant_removed" do
+    test "promotes to participant_removed integration event" do
+      conversation_id = Ecto.UUID.generate()
+      user_ids = [Ecto.UUID.generate()]
+
+      domain_event =
+        DomainEvent.new(:participant_removed, conversation_id, :conversation, %{
+          conversation_id: conversation_id,
+          participant_user_ids: user_ids,
+          source: :staff_unassignment
+        })
+
+      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+
+      event = assert_integration_event_published(:participant_removed)
+      assert event.entity_id == conversation_id
+      assert event.source_context == :messaging
+      assert event.entity_type == :conversation
+      assert event.payload.participant_user_ids == user_ids
+      assert event.payload.source == :staff_unassignment
+      assert IntegrationEvent.critical?(event)
+    end
+
+    test "propagates publish failures as {:error, reason}" do
+      conversation_id = Ecto.UUID.generate()
+
+      domain_event =
+        DomainEvent.new(:participant_removed, conversation_id, :conversation, %{
+          conversation_id: conversation_id,
+          participant_user_ids: [Ecto.UUID.generate()],
+          source: :staff_unassignment
+        })
+
+      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
+
+      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+    end
+  end
 end

@@ -185,6 +185,16 @@ defmodule KlassHero.Application do
             priority: 10},
            {:conversations_archived,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
+           # participant_added: promote to integration event so CQRS projection
+           # upserts a summary row for the newly added participant
+           {:participant_added,
+            {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
+            priority: 10},
+           # participant_removed: promote to integration event so CQRS projection
+           # archives the removed participant's summary row
+           {:participant_removed,
+            {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
+            priority: 10},
            {:retention_enforced, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}}
          ]},
         id: :messaging_domain_event_bus

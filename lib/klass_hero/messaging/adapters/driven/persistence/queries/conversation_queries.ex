@@ -76,12 +76,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   end
 
   @doc """
-  Filter conversations where user is NOT a participant.
+  Filter conversations where user is NOT an *active* participant.
+
+  Soft-left participations (where `left_at` is set) are treated as absent so
+  the staff-reassignment flow can re-add a user who was previously removed.
+  Without this, the LEFT JOIN would match the left row, set `p.id` to
+  non-null, and the WHERE `is_nil(p.id)` would exclude the conversation
+  forever — locking unassigned staff out of every program conversation
+  they've ever left.
   """
   def where_user_is_not_participant(query, user_id) do
     query
     |> join(:left, [conversation: c], p in ParticipantSchema,
-      on: p.conversation_id == c.id and p.user_id == ^user_id,
+      on:
+        p.conversation_id == c.id and
+          p.user_id == ^user_id and
+          is_nil(p.left_at),
       as: :excluded_participant
     )
     |> where([excluded_participant: p], is_nil(p.id))

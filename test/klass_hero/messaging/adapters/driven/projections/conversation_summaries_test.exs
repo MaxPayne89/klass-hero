@@ -405,6 +405,80 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert summary_2.other_participant_name == "Alice Smith"
       assert summary_2.participant_count == 2
     end
+
+    test "re-firing event preserves last_read_at and unread_count (idempotent)" do
+      user_1 = user_fixture(name: "Alice Smith")
+      user_2 = user_fixture(name: "Bob Jones")
+
+      conversation_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :conversation_created,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            type: "direct",
+            provider_id: provider_id,
+            program_id: nil,
+            subject: nil,
+            participant_ids: [user_1.id, user_2.id]
+          }
+        )
+
+      # First firing — creates baseline rows
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:conversation_created",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      # Simulate user_1 having read messages: messages_read flow would set
+      # last_read_at and reset unread_count. Mutate directly to isolate the
+      # idempotency assertion from the messages_read code path.
+      read_at = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      {1, _} =
+        Repo.update_all(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
+          ),
+          set: [last_read_at: read_at, unread_count: 7]
+        )
+
+      # Re-fire the same event — simulates an at-least-once redelivery
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:conversation_created",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      summary_1 =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
+          )
+        )
+
+      assert summary_1.last_read_at == read_at,
+             "last_read_at must survive a :conversation_created replay"
+
+      assert summary_1.unread_count == 7,
+             "unread_count must survive a :conversation_created replay"
+
+      # Meta fields should still be in sync with the event payload
+      assert summary_1.conversation_type == "direct"
+      assert summary_1.provider_id == provider_id
+      assert summary_1.other_participant_name == "Bob Jones"
+      assert summary_1.participant_count == 2
+    end
   end
 
   describe "handle message_sent event" do
@@ -1155,6 +1229,524 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert staff_summary != nil
       # Staff sees the first non-staff participant, which is parent
       assert staff_summary.other_participant_name == "Parent User"
+    end
+  end
+
+  describe "handle participant_added event" do
+    test "upserts a summary row for each newly added participant on a direct conversation" do
+      _ = :sys.get_state(@test_server_name)
+
+      provider = insert(:provider_profile_schema)
+      parent = user_fixture(name: "Parent One")
+      provider_user = user_fixture(name: "Provider Owner")
+      staff = user_fixture(name: "Staff Late")
+
+      conversation_id = Ecto.UUID.generate()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      Repo.insert!(%ConversationSchema{
+        id: conversation_id,
+        type: "direct",
+        provider_id: provider.id
+      })
+
+      for {uid, ts} <- [{parent.id, now}, {provider_user.id, DateTime.add(now, 1, :second)}] do
+        Repo.insert!(%ParticipantSchema{
+          id: Ecto.UUID.generate(),
+          conversation_id: conversation_id,
+          user_id: uid,
+          joined_at: ts
+        })
+      end
+
+      # Seed an existing message so the new participant's summary back-fills
+      # last-message data and unread_count
+      Repo.insert!(%MessageSchema{
+        id: Ecto.UUID.generate(),
+        conversation_id: conversation_id,
+        sender_id: parent.id,
+        content: "Hi there",
+        message_type: "text",
+        inserted_at: now,
+        updated_at: now
+      })
+
+      # Add staff participant in write model — projection event follows
+      Repo.insert!(%ParticipantSchema{
+        id: Ecto.UUID.generate(),
+        conversation_id: conversation_id,
+        user_id: staff.id,
+        joined_at: DateTime.add(now, 2, :second)
+      })
+
+      event =
+        IntegrationEvent.new(
+          :participant_added,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_user_ids: [staff.id],
+            source: :later_assignment
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_added",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      summary =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
+          )
+        )
+
+      assert summary != nil, "staff summary row must exist after :participant_added"
+      assert summary.conversation_type == "direct"
+      assert summary.provider_id == provider.id
+      assert summary.participant_count == 3
+      assert summary.latest_message_content == "Hi there"
+      assert summary.latest_message_sender_id == parent.id
+      assert summary.unread_count == 1
+      assert summary.archived_at == nil
+    end
+
+    test "re-firing event preserves last_read_at and unread_count (idempotent replay)" do
+      _ = :sys.get_state(@test_server_name)
+
+      provider = insert(:provider_profile_schema)
+      parent = user_fixture(name: "Parent One")
+      staff = user_fixture(name: "Staff Late")
+
+      conversation_id = Ecto.UUID.generate()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      Repo.insert!(%ConversationSchema{
+        id: conversation_id,
+        type: "direct",
+        provider_id: provider.id
+      })
+
+      Repo.insert!(%ParticipantSchema{
+        id: Ecto.UUID.generate(),
+        conversation_id: conversation_id,
+        user_id: parent.id,
+        joined_at: now
+      })
+
+      Repo.insert!(%ParticipantSchema{
+        id: Ecto.UUID.generate(),
+        conversation_id: conversation_id,
+        user_id: staff.id,
+        joined_at: DateTime.add(now, 1, :second)
+      })
+
+      event =
+        IntegrationEvent.new(
+          :participant_added,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_user_ids: [staff.id],
+            source: :later_assignment
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_added",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      # Staff reads the conversation: simulate by setting last_read_at + zeroing unread
+      read_at = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      {1, _} =
+        Repo.update_all(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
+          ),
+          set: [last_read_at: read_at, unread_count: 0]
+        )
+
+      # Replay the same event
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_added",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      summary =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
+          )
+        )
+
+      assert summary.last_read_at == read_at,
+             "last_read_at must survive a :participant_added replay"
+
+      assert summary.unread_count == 0,
+             "unread_count must survive a :participant_added replay"
+    end
+
+    test "inserts one summary row per user_id when payload carries a batch" do
+      _ = :sys.get_state(@test_server_name)
+
+      provider = insert(:provider_profile_schema)
+      parent = user_fixture(name: "Parent One")
+      staff_a = user_fixture(name: "Staff A")
+      staff_b = user_fixture(name: "Staff B")
+
+      conversation_id = Ecto.UUID.generate()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      Repo.insert!(%ConversationSchema{
+        id: conversation_id,
+        type: "direct",
+        provider_id: provider.id
+      })
+
+      for {uid, ts} <- [
+            {parent.id, now},
+            {staff_a.id, DateTime.add(now, 1, :second)},
+            {staff_b.id, DateTime.add(now, 2, :second)}
+          ] do
+        Repo.insert!(%ParticipantSchema{
+          id: Ecto.UUID.generate(),
+          conversation_id: conversation_id,
+          user_id: uid,
+          joined_at: ts
+        })
+      end
+
+      event =
+        IntegrationEvent.new(
+          :participant_added,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_user_ids: [staff_a.id, staff_b.id],
+            source: :initial_staff
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_added",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      summaries =
+        Repo.all(
+          from(s in ConversationSummarySchema,
+            where:
+              s.conversation_id == ^conversation_id and
+                s.user_id in ^[staff_a.id, staff_b.id],
+            order_by: s.user_id
+          )
+        )
+
+      assert length(summaries) == 2
+      assert Enum.all?(summaries, &(&1.participant_count == 3))
+      assert Enum.all?(summaries, &(&1.conversation_type == "direct"))
+    end
+
+    test "inserts row for broadcast conversation with nil other_participant_name" do
+      _ = :sys.get_state(@test_server_name)
+
+      provider = insert(:provider_profile_schema)
+      staff = user_fixture(name: "Staff Late")
+
+      conversation_id = Ecto.UUID.generate()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      Repo.insert!(%ConversationSchema{
+        id: conversation_id,
+        type: "program_broadcast",
+        provider_id: provider.id
+      })
+
+      Repo.insert!(%ParticipantSchema{
+        id: Ecto.UUID.generate(),
+        conversation_id: conversation_id,
+        user_id: staff.id,
+        joined_at: now
+      })
+
+      event =
+        IntegrationEvent.new(
+          :participant_added,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_user_ids: [staff.id],
+            source: :later_assignment
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_added",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      summary =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
+          )
+        )
+
+      assert summary != nil
+      assert summary.conversation_type == "program_broadcast"
+      assert summary.other_participant_name == nil
+    end
+  end
+
+  describe "handle participant_removed event" do
+    test "soft-archives the summary row for the removed user" do
+      _ = :sys.get_state(@test_server_name)
+
+      user_1 = user_fixture(name: "Alice Smith")
+      staff = user_fixture(name: "Staff Out")
+
+      conversation_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      created =
+        IntegrationEvent.new(
+          :conversation_created,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            type: "direct",
+            provider_id: provider_id,
+            participant_ids: [user_1.id, staff.id]
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:conversation_created",
+        {:integration_event, created}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      removed =
+        IntegrationEvent.new(
+          :participant_removed,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_user_ids: [staff.id],
+            source: :staff_unassignment
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_removed",
+        {:integration_event, removed}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      staff_summary =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
+          )
+        )
+
+      assert staff_summary != nil
+      assert staff_summary.archived_at != nil
+
+      # Non-removed users keep their row intact
+      user_1_summary =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
+          )
+        )
+
+      assert user_1_summary.archived_at == nil
+    end
+
+    test "replay preserves the first archived_at timestamp (COALESCE idempotency)" do
+      _ = :sys.get_state(@test_server_name)
+
+      user_1 = user_fixture(name: "Alice Smith")
+      staff = user_fixture(name: "Staff Out")
+
+      conversation_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      created =
+        IntegrationEvent.new(
+          :conversation_created,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            type: "direct",
+            provider_id: provider_id,
+            participant_ids: [user_1.id, staff.id]
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:conversation_created",
+        {:integration_event, created}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      removed =
+        IntegrationEvent.new(
+          :participant_removed,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_user_ids: [staff.id],
+            source: :staff_unassignment
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_removed",
+        {:integration_event, removed}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      first =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id,
+            select: s.archived_at
+          )
+        )
+
+      # Replay later — the second archived_at would differ if the handler
+      # blindly overwrote. COALESCE keeps the original.
+      Process.sleep(1_100)
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_removed",
+        {:integration_event, removed}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      second =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id,
+            select: s.archived_at
+          )
+        )
+
+      assert second == first, "first removal's archived_at must win on replay"
+    end
+
+    test "archives multiple users in a single batch event" do
+      _ = :sys.get_state(@test_server_name)
+
+      user_1 = user_fixture(name: "Alice Smith")
+      staff_a = user_fixture(name: "Staff A")
+      staff_b = user_fixture(name: "Staff B")
+
+      conversation_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      created =
+        IntegrationEvent.new(
+          :conversation_created,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            type: "direct",
+            provider_id: provider_id,
+            participant_ids: [user_1.id, staff_a.id, staff_b.id]
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:conversation_created",
+        {:integration_event, created}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      removed =
+        IntegrationEvent.new(
+          :participant_removed,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_user_ids: [staff_a.id, staff_b.id],
+            source: :staff_unassignment
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:participant_removed",
+        {:integration_event, removed}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      archived_count =
+        Repo.aggregate(
+          from(s in ConversationSummarySchema,
+            where:
+              s.conversation_id == ^conversation_id and
+                s.user_id in ^[staff_a.id, staff_b.id] and
+                not is_nil(s.archived_at)
+          ),
+          :count,
+          :id
+        )
+
+      assert archived_count == 2
     end
   end
 

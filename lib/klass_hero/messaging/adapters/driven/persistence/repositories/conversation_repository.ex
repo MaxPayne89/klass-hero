@@ -257,6 +257,20 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
   end
 
   @impl true
+  def list_active_program_conversation_ids_with_participant(program_id, user_id) do
+    span do
+      set_attributes("db", operation: "select", entity: "conversation")
+
+      ConversationQueries.base()
+      |> ConversationQueries.by_program(program_id)
+      |> ConversationQueries.active_only()
+      |> ConversationQueries.where_user_is_participant(user_id)
+      |> ConversationQueries.select_ids()
+      |> Repo.all()
+    end
+  end
+
+  @impl true
   def list_expired_ids(before) do
     span do
       set_attributes("db", operation: "select", entity: "conversation")

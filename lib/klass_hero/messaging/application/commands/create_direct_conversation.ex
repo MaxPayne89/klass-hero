@@ -3,21 +3,26 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
   Use case for creating a direct 1-on-1 conversation between a provider and a parent.
 
   This use case:
-  1. Checks if the initiator can start conversations (entitlement check)
-  2. Checks if a direct conversation already exists
-  3. Creates a new conversation if none exists
-  4. Adds both parties as participants
-  5. Publishes a conversation_created event
+  1. Checks if the initiator can start conversations (entitlement check).
+  2. Returns an existing direct conversation if one is found.
+  3. Otherwise inserts the conversation, the two parties, and (if a
+     `:program_id` is provided) the program's assigned staff — all inside a
+     single `Repo.transaction`.
+  4. After the transaction commits, dispatches the collected domain events
+     (`:conversation_created` plus any `:participant_added`) so the
+     `ConversationSummaries` projection can read-your-own-writes on a
+     separate DB connection.
 
   Free-tier parents cannot initiate conversations but can receive and reply to them.
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -81,22 +86,44 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
 
       with {:ok, conversation} <- @conversation_repo.create(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, target_user_id),
-           :ok <- Shared.add_assigned_staff(conversation.id, program_id, scope.user.id) do
-        publish_event(conversation, [scope.user.id, target_user_id], provider_id)
+           {:ok, {_staff_ids, staff_events}} <-
+             AddAssignedStaff.execute(conversation.id, program_id, scope.user.id) do
+        created_event =
+          MessagingEvents.conversation_created(
+            conversation.id,
+            conversation.type,
+            provider_id,
+            [scope.user.id, target_user_id],
+            conversation.program_id
+          )
 
-        Logger.info("Created direct conversation",
-          conversation_id: conversation.id,
-          provider_id: provider_id,
-          initiator_id: scope.user.id
-        )
-
-        conversation
+        {conversation, [created_event | staff_events]}
       else
-        {:error, reason} ->
-          Repo.rollback(reason)
+        {:error, reason} -> Repo.rollback(reason)
       end
     end)
+    |> handle_commit(scope, provider_id)
   end
+
+  # Trigger: Repo.transaction returns {:ok, {conversation, events}}
+  # Why: events must be dispatched *after* commit so the projection — which
+  #      reads the write tables from a separate DB connection — can see the
+  #      committed conversation row when it processes the integration event.
+  # Outcome: events fan out via EventDispatchHelper.dispatch/2 (fire-and-
+  #          forget; critical events get Oban-backed retry on publish failure).
+  defp handle_commit({:ok, {conversation, events}}, scope, provider_id) do
+    Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+
+    Logger.info("Created direct conversation",
+      conversation_id: conversation.id,
+      provider_id: provider_id,
+      initiator_id: scope.user.id
+    )
+
+    {:ok, conversation}
+  end
+
+  defp handle_commit({:error, reason}, _scope, _provider_id), do: {:error, reason}
 
   defp maybe_put_program_id(attrs, nil), do: attrs
   defp maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
@@ -108,19 +135,5 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
            @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_2}) do
       :ok
     end
-  end
-
-  defp publish_event(conversation, participant_ids, provider_id) do
-    event =
-      MessagingEvents.conversation_created(
-        conversation.id,
-        conversation.type,
-        provider_id,
-        participant_ids,
-        conversation.program_id
-      )
-
-    DomainEventBus.dispatch(@context, event)
-    :ok
   end
 end
