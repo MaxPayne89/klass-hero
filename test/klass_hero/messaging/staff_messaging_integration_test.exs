@@ -99,10 +99,12 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
                  )
                )
 
-      # 6. Staff is removed from the existing conversation — #817 closes the
+      # 6. Staff is no longer an active participant — #817 closes the
       #    inbox-visibility gap symmetrically: on unassignment the handler
-      #    drops the participant row and emits :participant_removed so the
-      #    projection archives the staff's summary row.
+      #    soft-leaves the participant row (sets `left_at` via leave/2; the
+      #    row is preserved so re-assignment can re-activate it) and emits
+      #    :participant_removed so the projection archives the staff's
+      #    summary row.
       refute ParticipantRepository.is_participant?(conversation.id, ctx.staff_user.id)
 
       # 7. And projection is deactivated

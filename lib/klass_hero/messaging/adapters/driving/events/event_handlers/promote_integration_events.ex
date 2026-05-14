@@ -40,7 +40,10 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   def handle(%DomainEvent{event_type: :conversation_created} = event) do
     # Trigger: conversation_created domain event dispatched from CreateDirectConversation use case
     # Why: CQRS projections need this to build denormalized conversation summaries
-    # Outcome: publish integration event; propagate failure so use case is aware
+    # Outcome: publish critical integration event; the conversation is already
+    #          committed before dispatch (post-commit pattern), and a publish
+    #          failure is caught by EventDispatchHelper which enqueues an
+    #          Oban retry for this handler.
     event.aggregate_id
     |> MessagingIntegrationEvents.conversation_created(event.payload)
     |> IntegrationEventPublishing.publish_critical("conversation_created",
@@ -51,7 +54,11 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   def handle(%DomainEvent{event_type: :message_sent} = event) do
     # Trigger: message_sent domain event dispatched from SendMessage use case
     # Why: CQRS projections need this to update last-message summaries and unread counts
-    # Outcome: publish integration event; propagate failure so use case is aware
+    # Outcome: publish critical integration event; the message persistence is
+    #          already committed before this fires. Dispatch failures are
+    #          retried by EventDispatchHelper once issue #849 lands; until
+    #          then SendMessage uses the lower-level bus which logs failures
+    #          but does not retry.
     event.aggregate_id
     |> MessagingIntegrationEvents.message_sent(event.payload)
     |> IntegrationEventPublishing.publish_critical("message_sent",
@@ -93,8 +100,10 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
     # Trigger: participant_added domain event dispatched from AddAssignedStaff command
     # Why: CQRS projection must upsert summary rows for newly added participants;
     #      missing this leaves staff inboxes empty until a server restart re-derives
-    # Outcome: publish critical integration event; propagate failure so the
-    #          enclosing transaction rolls back the participant insert
+    # Outcome: publish critical integration event; the participant insert is
+    #          already committed before dispatch (post-commit pattern). A
+    #          publish failure does NOT roll back — EventDispatchHelper
+    #          enqueues an Oban retry so the projection eventually catches up.
     event.aggregate_id
     |> MessagingIntegrationEvents.participant_added(event.payload)
     |> IntegrationEventPublishing.publish_critical("participant_added",
@@ -106,8 +115,10 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
     # Trigger: participant_removed domain event dispatched from RemoveAssignedStaff command
     # Why: CQRS projection must soft-remove (archive) the participant's summary row
     #      so the conversation disappears from their inbox immediately
-    # Outcome: publish critical integration event; propagate failure so the
-    #          enclosing transaction rolls back the participant deletion
+    # Outcome: publish critical integration event; the leave write is already
+    #          committed before dispatch (post-commit pattern). A publish
+    #          failure does NOT roll back — EventDispatchHelper enqueues an
+    #          Oban retry so the archive eventually lands.
     event.aggregate_id
     |> MessagingIntegrationEvents.participant_removed(event.payload)
     |> IntegrationEventPublishing.publish_critical("participant_removed",
