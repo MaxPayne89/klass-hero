@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.4](https://github.com/MaxPayne89/klass-hero/compare/v0.50.3...v0.50.4) (2026-05-14)
+
+
+### Bug Fixes
+
+* display assigned instructor on program detail page ([#841](https://github.com/MaxPayne89/klass-hero/issues/841)) ([09b8c96](https://github.com/MaxPayne89/klass-hero/commit/09b8c962bcd3e5d7dca3266547af15894b8b35cc))
+* staff inbox visibility via event-driven CQRS ([#817](https://github.com/MaxPayne89/klass-hero/issues/817)) ([#848](https://github.com/MaxPayne89/klass-hero/issues/848)) ([16b4f14](https://github.com/MaxPayne89/klass-hero/commit/16b4f14acf339502aa8d393aee804e7ee5190fe7))
+
 ## [0.50.3](https://github.com/MaxPayne89/klass-hero/compare/v0.50.2...v0.50.3) (2026-05-12)
 
 
