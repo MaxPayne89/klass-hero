@@ -17,6 +17,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   alias KlassHero.ProgramCatalog.Domain.Models.Program
   alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.Shared.NameUtils
 
   require Logger
 
@@ -292,7 +293,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
     %{
       id: instructor.id,
       name: instructor.name,
-      initials: build_initials(instructor.name),
+      initials: NameUtils.initials_from_name(instructor.name),
       headshot_url: instructor.headshot_url
     }
   end
@@ -306,21 +307,10 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
     %{
       id: nil,
       name: listing.instructor_name,
-      initials: build_initials(listing.instructor_name),
+      initials: NameUtils.initials_from_name(listing.instructor_name),
       headshot_url: listing.instructor_headshot_url
     }
   end
-
-  defp build_initials(name) when is_binary(name) do
-    name
-    |> String.split()
-    |> Enum.map(&String.first/1)
-    |> Enum.take(2)
-    |> Enum.join()
-    |> String.upcase()
-  end
-
-  defp build_initials(_), do: "?"
 
   @doc """
   Formats a category slug for display by splitting on hyphens and capitalizing each word.

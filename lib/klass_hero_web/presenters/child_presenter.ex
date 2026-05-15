@@ -20,6 +20,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
   use Gettext, backend: KlassHeroWeb.Gettext
 
   alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Shared.NameUtils
 
   @doc """
   Transforms a Child domain model to a simple view format.
@@ -75,7 +76,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
       id: child.id,
       name: Child.full_name(child),
       age: calculate_age(child.date_of_birth),
-      initials: extract_initials(Child.full_name(child))
+      initials: NameUtils.initials_from_name(Child.full_name(child))
     }
   end
 
@@ -115,15 +116,4 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
       years
     end
   end
-
-  defp extract_initials(name) when is_binary(name) do
-    name
-    |> String.split(" ")
-    |> Enum.map(&String.first/1)
-    |> Enum.take(2)
-    |> Enum.join()
-    |> String.upcase()
-  end
-
-  defp extract_initials(_), do: "?"
 end
