@@ -2,9 +2,8 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Participation
-  alias KlassHero.ProgramCatalog
-  alias KlassHero.Provider
   alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -15,9 +14,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     provider_id = staff_member.provider_id
     selected_date = Date.utc_today()
 
-    all_programs = ProgramCatalog.list_programs_for_provider(provider_id)
-    assigned_programs = Provider.list_assigned_programs(staff_member, all_programs)
-    assigned_program_ids = MapSet.new(assigned_programs, & &1.id)
+    {_programs, assigned_program_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
     socket =
       socket
