@@ -25,21 +25,17 @@
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
     "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:false.",
     "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
-    "coverage_saturation_note": "As of 2026-05-14, backlog exhausted. Maintainer writing comprehensive tests for all new code (#848 CQRS staff inbox: 4835 tests).",
+    "coverage_saturation_note": "As of 2026-05-15, backlog exhausted. Maintainer writing comprehensive tests for all new code. PR #852 (NameUtils) shipped with 56-line name_utils_test.exs; PR #855 (StaffLiveHelpers) open with 4 maintainer tests.",
     "create_program_rejected_note": "PR #634 with CreateProgram/UpdateProgram tests was closed without merge by maintainer. Do not re-attempt.",
     "ci_check_runs_note": "No CI check runs appear on Test Improver PRs. CI may only run on push to main or require maintainer trigger.",
     "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html.",
     "ecto_enum_status_note": "BulkEnrollmentInviteSchema.status and EnrollmentSchema.status are Ecto.Enum fields. Tests must use atoms (:pending, :invite_sent, :registered, :enrolled, :failed).",
     "pr_779_superseded_note": "PR #779 superseded by #696 being merged to main on 2026-05-09. Same files: attachment_mapper_test.exs + bulk_enrollment_invite_mapper_test.exs. Close #779.",
-    "child_presenter_note": "ChildPresenter: non-trivial age calc, extract_initials, children_summary. PR #811 adds 14 pure unit tests.",
+    "child_presenter_note": "ChildPresenter: non-trivial age calc, extract_initials (now NameUtils.initials_from_name/1), children_summary. PR #811 adds 14 pure unit tests.",
     "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago; birthday_in_future(n) = Dec 31 n years ago. Robust against year boundary.",
-    "pr_818_maintainer_tests_note": "PR #818 (broadcast participants fix): maintainer added comprehensive tests for participant_repository add_or_get/1, broadcast_to_program, reply_privately_to_broadcast. Already fully covered.",
-    "pr_774_copilot_tests_note": "PR #774 (booking_live atom fix): Copilot added BookingLive.can?/3 and StatusFilter.query/4 regression tests. Already fully covered.",
-    "pr_823_attachments_note": "PR #823 (attachments in broadcasts): maintainer-written tests included; 4767 tests passed precommit. No TI opportunity. Dropped :broadcast_sent event in favor of :message_sent.",
-    "pr_827_single_day_note": "PR #827 (allow single-day workshops): maintainer updated program_test.exs and program_schema_test.exs. No TI opportunity.",
-    "pr_832_participant_restrictions_note": "PR #832 (clear participant restrictions on edit): maintainer added program_components_test.exs and updated dashboard_live_test.exs. No TI opportunity.",
-    "pr_841_instructor_note": "PR #841 (display instructor on program detail): maintainer added hero_cards_presenter_test.exs and program_components_hero_card_test.exs. Instructor.initials/1 and StaffMemberPresenter.to_hero_card/1 had no direct tests — TI PR #846 adds them.",
-    "pr_848_cqrs_inbox_note": "PR #848 (staff inbox visibility via CQRS): 4835 tests, maintainer wrote 339-line LiveView integration test, unit tests for AddAssignedStaff, RemoveAssignedStaff, ConversationSummaries projection, promote_integration_events. No TI opportunity."
+    "pr_852_name_utils_note": "PR #852 (2026-05-15): extracted name-to-initials to Shared.NameUtils.initials_from_name/1. Maintainer added name_utils_test.exs (56 lines). instructor.ex, child_presenter.ex, program_presenter.ex, provider_presenter.ex all delegate to NameUtils.",
+    "pr_846_still_valid_note": "PR #846 tests Instructor.initials/1 delegation to NameUtils. mergeable_state: clean after PR #852. Still valid - tests delegation and edge cases at Instructor level.",
+    "pr_811_still_valid_note": "PR #811 tests ChildPresenter.to_profile_view/1 external behaviour (not extract_initials directly). Valid after #852 (ChildPresenter now uses NameUtils internally but external contract unchanged)."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -51,12 +47,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-05",
-    "task_2": "2026-05-14",
+    "task_2": "2026-05-15",
     "task_3": "2026-05-13",
-    "task_4": "2026-05-14",
+    "task_4": "2026-05-15",
     "task_5": "2026-05-11",
     "task_6": "2026-05-02",
-    "task_7": "2026-05-14"
+    "task_7": "2026-05-15"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -112,7 +108,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #848 (2026-05-14): CQRS staff inbox — maintainer wrote comprehensive tests (4835 total); no TI opportunity",
+    "task_2_last_file": "PR #852 (2026-05-15): NameUtils extraction — maintainer wrote 56-line name_utils_test.exs; PR #855 (StaffLiveHelpers) open with 4 maintainer tests; no TI opportunity",
     "task_5_last_issue": 705
   },
   "open_prs": [846, 811, 779, 771, 764, 759, 750, 733, 723],
