@@ -9,6 +9,8 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Instructor do
   Populated at creation time from Provider data via the web layer.
   """
 
+  alias KlassHero.Shared.NameUtils
+
   @enforce_keys [:id, :name]
 
   defstruct [:id, :name, :headshot_url]
@@ -20,12 +22,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Instructor do
         }
 
   @spec initials(t()) :: String.t()
-  def initials(%__MODULE__{name: name}) do
-    name
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.take(2)
-    |> Enum.map_join("", fn token -> token |> String.first() |> String.upcase() end)
-  end
+  def initials(%__MODULE__{name: name}), do: NameUtils.initials_from_name(name)
 
   @spec new(map()) :: {:ok, t()} | {:error, [String.t()]}
   def new(attrs) when is_map(attrs) do

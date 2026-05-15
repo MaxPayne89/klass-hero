@@ -17,6 +17,7 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
 
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Shared.Entitlements
+  alias KlassHero.Shared.NameUtils
   alias KlassHeroWeb.Presenters.TierPresenter
 
   @doc """
@@ -45,7 +46,7 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
       program_slots_total: tier_info[:max_programs],
       team_seats_used: 0,
       team_seats_total: tier_info[:team_seats],
-      initials: build_initials(provider.business_name),
+      initials: NameUtils.initials_from_name(provider.business_name),
       logo_url: provider.logo_url,
       verification_status: :not_started
     }
@@ -66,7 +67,7 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
       business_name: provider.business_name,
       description: provider.description,
       logo_url: provider.logo_url,
-      initials: build_initials(provider.business_name)
+      initials: NameUtils.initials_from_name(provider.business_name)
     }
   end
 
@@ -128,21 +129,4 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   def document_type_label("tax_certificate"), do: gettext("Tax Certificate")
   def document_type_label("other"), do: gettext("Other")
   def document_type_label(type), do: type
-
-  @doc """
-  Builds initials from a business name for avatar display.
-
-  Takes the first letter of the first two words and uppercases them.
-  Returns "?" if name is nil.
-  """
-  @spec build_initials(String.t() | nil) :: String.t()
-  def build_initials(nil), do: "?"
-
-  def build_initials(name) do
-    name
-    |> String.split()
-    |> Enum.take(2)
-    |> Enum.map_join(&String.first/1)
-    |> String.upcase()
-  end
 end
