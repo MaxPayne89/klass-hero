@@ -7,6 +7,7 @@ defmodule KlassHero.Shared.ProjectionTest do
   alias KlassHero.Shared.Projection
   alias KlassHero.Shared.ProjectionTest.AlwaysFailAgent
   alias KlassHero.Shared.ProjectionTest.FlakyAgent
+  alias KlassHero.Shared.ProjectionTest.InstantSuccessAgent
 
   @agent_name __MODULE__.Agent
 
@@ -155,6 +156,23 @@ defmodule KlassHero.Shared.ProjectionTest do
     def handle_event(_, _), do: :ok
   end
 
+  defmodule InstantSuccessProjection do
+    use Projection, topics: ["test:instant_success:event"]
+
+    use KlassHero.Shared.Projection.WithBootstrapRetry,
+      max_attempts: 3,
+      base_delay_ms: 100
+
+    @impl Projection
+    def bootstrap_impl do
+      Agent.update(InstantSuccessAgent, fn n -> n + 1 end)
+      7
+    end
+
+    @impl Projection
+    def handle_event(_, _), do: :ok
+  end
+
   defmodule AlwaysFailingProjection do
     use Projection, topics: ["test:always_fails:event"]
 
@@ -188,15 +206,27 @@ defmodule KlassHero.Shared.ProjectionTest do
         capture_log(fn ->
           {:ok, pid} = FlakyProjection.start_link(name: unique_name())
 
+          # No synchronous signal for async handle_continue completion via :retry_bootstrap.
           # First attempt rescues; retry scheduled at base_delay * attempt = 10ms.
-          Process.sleep(50)
-          :sys.get_state(pid)
-
+          Process.sleep(100)
           assert %{bootstrapped: true} = :sys.get_state(pid)
         end)
 
       assert log =~ "bootstrap failed, scheduling retry"
       assert Agent.get(FlakyAgent, & &1) == 2
+    end
+
+    test "succeeds on first attempt without retry without crashing" do
+      {:ok, _} = Agent.start_link(fn -> 0 end, name: InstantSuccessAgent)
+      {:ok, pid} = InstantSuccessProjection.start_link(name: unique_name())
+
+      # Drain handle_continue. With the bug present, the GenServer crashes here
+      # with KeyError because state lacks :retry_count and the success path
+      # used %{state | retry_count: 0}.
+      :sys.get_state(pid)
+
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+      assert Agent.get(InstantSuccessAgent, & &1) == 1
     end
 
     test "reraises after max_attempts consecutive failures" do

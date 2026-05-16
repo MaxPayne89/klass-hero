@@ -24,7 +24,7 @@ defmodule KlassHero.Shared.Projection.WithBootstrapRetry do
       defp apply_bootstrap(state) do
         count = bootstrap_impl()
         Logger.info("#{inspect(__MODULE__)} projection started", count: count)
-        {:noreply, %{state | bootstrapped: true, retry_count: 0}}
+        {:noreply, Map.merge(state, %{bootstrapped: true, retry_count: 0})}
       rescue
         error ->
           retry_count = Map.get(state, :retry_count, 0) + 1
