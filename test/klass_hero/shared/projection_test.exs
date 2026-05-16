@@ -3,6 +3,7 @@ defmodule KlassHero.Shared.ProjectionTest do
 
   # TestProjection lives inside this file deliberately: the macro must be
   # exercised against a synthetic module backed by an Agent, not a real schema.
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
 
   @agent_name __MODULE__.Agent
@@ -53,6 +54,33 @@ defmodule KlassHero.Shared.ProjectionTest do
 
       assert %{bootstrapped: true} = :sys.get_state(pid)
       assert agent_state().bootstraps == 1
+    end
+  end
+
+  describe "init/1 with default opts" do
+    test "subscribes to every topic in :topics" do
+      name = unique_name()
+      {:ok, pid} = TestProjection.start_link(name: name)
+      :sys.get_state(pid)
+
+      # If subscription works, broadcasting to the topic delivers to the GenServer mailbox.
+      event = %IntegrationEvent{
+        event_id: Ecto.UUID.generate(),
+        event_type: :event_a,
+        source_context: :test,
+        entity_type: :thing,
+        entity_id: "id-1",
+        occurred_at: DateTime.utc_now(),
+        payload: %{},
+        metadata: %{},
+        version: 1
+      }
+
+      Phoenix.PubSub.broadcast(KlassHero.PubSub, "test:projection:event_a", {:integration_event, event})
+      :sys.get_state(pid)
+
+      # If the event was received, handle_event was called and recorded it.
+      assert [{:event_a, ^event}] = agent_state().events
     end
   end
 end

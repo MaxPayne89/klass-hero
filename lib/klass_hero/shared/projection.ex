@@ -37,6 +37,7 @@ defmodule KlassHero.Shared.Projection do
         if Keyword.get(opts, :skip_bootstrap, false) do
           {:ok, %{bootstrapped: false}}
         else
+          Enum.each(@projection_topics, &Phoenix.PubSub.subscribe(KlassHero.PubSub, &1))
           {:ok, %{bootstrapped: false}, {:continue, :bootstrap}}
         end
       end
