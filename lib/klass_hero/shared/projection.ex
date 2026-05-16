@@ -56,6 +56,17 @@ defmodule KlassHero.Shared.Projection do
         {:noreply, %{state | bootstrapped: true}}
       end
 
+      def rebuild(name \\ __MODULE__) do
+        GenServer.call(name, :rebuild, :infinity)
+      end
+
+      @impl true
+      def handle_call(:rebuild, _from, state) do
+        count = bootstrap_impl()
+        Logger.info("#{inspect(__MODULE__)} rebuilt", count: count)
+        {:reply, :ok, %{state | bootstrapped: true}}
+      end
+
       @impl true
       def handle_info({:integration_event, %IntegrationEvent{event_type: type} = event}, state) do
         Logger.debug("#{inspect(__MODULE__)} projecting #{type}",

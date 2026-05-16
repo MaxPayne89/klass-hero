@@ -57,6 +57,19 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
   end
 
+  describe "rebuild/1" do
+    test "re-invokes bootstrap_impl/0 and stays bootstrapped" do
+      {:ok, pid} = TestProjection.start_link(name: unique_name())
+      :sys.get_state(pid)
+      assert agent_state().bootstraps == 1
+
+      assert :ok = TestProjection.rebuild(pid)
+
+      assert agent_state().bootstraps == 2
+      assert %{bootstrapped: true} = :sys.get_state(pid)
+    end
+  end
+
   describe "init/1 with default opts" do
     test "subscribes to every topic in :topics" do
       name = unique_name()
