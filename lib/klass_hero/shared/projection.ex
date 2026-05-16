@@ -39,7 +39,10 @@ defmodule KlassHero.Shared.Projection do
         if Keyword.get(opts, :skip_bootstrap, false) do
           {:ok, %{bootstrapped: false}}
         else
-          Enum.each(@projection_topics, &Phoenix.PubSub.subscribe(KlassHero.PubSub, &1))
+          for topic <- @projection_topics do
+            Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
+          end
+
           {:ok, %{bootstrapped: false}, {:continue, :bootstrap}}
         end
       end
@@ -55,7 +58,11 @@ defmodule KlassHero.Shared.Projection do
 
       @impl true
       def handle_info({:integration_event, %IntegrationEvent{event_type: type} = event}, state) do
-        Logger.debug("#{inspect(__MODULE__)} projecting #{type}", event_id: event.event_id)
+        Logger.debug("#{inspect(__MODULE__)} projecting #{type}",
+          entity_id: event.entity_id,
+          event_id: event.event_id
+        )
+
         handle_event(type, event)
         {:noreply, state}
       end
