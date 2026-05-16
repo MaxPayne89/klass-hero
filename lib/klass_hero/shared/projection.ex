@@ -23,6 +23,8 @@ defmodule KlassHero.Shared.Projection do
 
       use GenServer
 
+      alias KlassHero.Shared.Domain.Events.IntegrationEvent
+
       require Logger
 
       @projection_topics topics
@@ -49,6 +51,13 @@ defmodule KlassHero.Shared.Projection do
         count = bootstrap_impl()
         Logger.info("#{inspect(__MODULE__)} projection started", count: count)
         {:noreply, %{state | bootstrapped: true}}
+      end
+
+      @impl true
+      def handle_info({:integration_event, %IntegrationEvent{event_type: type} = event}, state) do
+        Logger.debug("#{inspect(__MODULE__)} projecting #{type}", event_id: event.event_id)
+        handle_event(type, event)
+        {:noreply, state}
       end
 
       defoverridable apply_bootstrap: 1
