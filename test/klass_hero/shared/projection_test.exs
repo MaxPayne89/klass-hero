@@ -96,4 +96,34 @@ defmodule KlassHero.Shared.ProjectionTest do
       assert [{:event_a, ^event}] = agent_state().events
     end
   end
+
+  describe ":retry_bootstrap message" do
+    test "re-enters handle_continue(:bootstrap, _)" do
+      {:ok, pid} = TestProjection.start_link(name: unique_name())
+      :sys.get_state(pid)
+      assert agent_state().bootstraps == 1
+
+      send(pid, :retry_bootstrap)
+      :sys.get_state(pid)
+
+      assert agent_state().bootstraps == 2
+    end
+  end
+
+  describe "catch-all handle_info/2" do
+    import ExUnit.CaptureLog
+
+    test "logs a warning and continues" do
+      {:ok, pid} = TestProjection.start_link(name: unique_name(), skip_bootstrap: true)
+
+      log =
+        capture_log(fn ->
+          send(pid, {:wat, "unexpected"})
+          :sys.get_state(pid)
+        end)
+
+      assert log =~ "received unexpected message"
+      assert Process.alive?(pid)
+    end
+  end
 end

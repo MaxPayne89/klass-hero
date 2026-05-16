@@ -79,6 +79,20 @@ defmodule KlassHero.Shared.Projection do
         {:noreply, state}
       end
 
+      @impl true
+      def handle_info(:retry_bootstrap, state) do
+        {:noreply, state, {:continue, :bootstrap}}
+      end
+
+      @impl true
+      def handle_info(msg, state) do
+        Logger.warning("#{inspect(__MODULE__)} received unexpected message",
+          message: inspect(msg, limit: 200)
+        )
+
+        {:noreply, state}
+      end
+
       defoverridable apply_bootstrap: 1
     end
   end
