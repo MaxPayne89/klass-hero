@@ -137,4 +137,41 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
       assert music.sessions_completed_count == 2
     end
   end
+
+  describe "macro invariants after happy-path startup" do
+    test "state.retry_count == 0 after first event projects successfully" do
+      # Start WITHOUT skip_bootstrap to exercise the real subscribe + handle_continue path.
+      # If a KeyError-class bug got swallowed by the retry mixin's rescue, retry_count
+      # would be > 0 even though the test event still projects correctly.
+      pid =
+        start_supervised!(
+          {ProviderSessionStats, name: :"reg_#{System.unique_integer([:positive])}"},
+          id: :regression_projection
+        )
+
+      # Explicit sandbox allowance so bootstrap's ACL call (and any DB work it does)
+      # runs against the test connection even if this file later migrates to async: true.
+      Sandbox.allow(Repo, self(), pid)
+
+      # Drain handle_continue; bootstrap should succeed on the first attempt.
+      :sys.get_state(pid)
+
+      # If any rescue path was triggered during bootstrap, retry_count would be > 0.
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+
+      # Send one well-formed event; confirm the dispatcher path doesn't trip an internal raise.
+      event =
+        build_session_completed_event(
+          provider_id: Ecto.UUID.generate(),
+          program_id: Ecto.UUID.generate(),
+          program_title: "Regression Class"
+        )
+
+      send(pid, {:integration_event, event})
+      :sys.get_state(pid)
+
+      # No retry scheduled by handle_event. State invariant preserved.
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+    end
+  end
 end
