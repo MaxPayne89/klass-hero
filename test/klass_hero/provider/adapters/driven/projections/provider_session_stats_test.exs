@@ -149,8 +149,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
           id: :regression_projection
         )
 
-      # Explicit sandbox allowance so bootstrap's ACL call (and any DB work it does)
-      # runs against the test connection even if this file later migrates to async: true.
+      # Sandbox.allow lands synchronously in the test process before :sys.get_state
+      # below blocks and yields the GenServer scheduler slot — so by the time the
+      # {:continue, :bootstrap} handler runs ACL queries, the sandbox is already
+      # transferred. This relies on BEAM not preempting the test process mid-call;
+      # if CI ever flakes here, replace with a Mox stub for the ACL.
       Sandbox.allow(Repo, self(), pid)
 
       # Drain handle_continue; bootstrap should succeed on the first attempt.
