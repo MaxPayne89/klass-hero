@@ -56,6 +56,7 @@ defmodule KlassHero.Shared.Projection do
         {:noreply, %{state | bootstrapped: true}}
       end
 
+      @spec rebuild(GenServer.name()) :: :ok
       def rebuild(name \\ __MODULE__) do
         GenServer.call(name, :rebuild, :infinity)
       end
