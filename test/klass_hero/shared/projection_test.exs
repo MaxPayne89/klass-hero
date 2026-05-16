@@ -5,6 +5,8 @@ defmodule KlassHero.Shared.ProjectionTest do
   # exercised against a synthetic module backed by an Agent, not a real schema.
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
+  alias KlassHero.Shared.ProjectionTest.AlwaysFailAgent
+  alias KlassHero.Shared.ProjectionTest.FlakyAgent
 
   @agent_name __MODULE__.Agent
 
@@ -124,6 +126,102 @@ defmodule KlassHero.Shared.ProjectionTest do
 
       assert log =~ "received unexpected message"
       assert Process.alive?(pid)
+    end
+  end
+
+  defmodule FlakyProjection do
+    use Projection, topics: ["test:flaky:event"]
+
+    use KlassHero.Shared.Projection.WithBootstrapRetry,
+      max_attempts: 2,
+      base_delay_ms: 10
+
+    @impl Projection
+    def bootstrap_impl do
+      attempts =
+        Agent.get_and_update(
+          FlakyAgent,
+          fn n -> {n + 1, n + 1} end
+        )
+
+      if attempts == 1 do
+        raise "first attempt fails"
+      else
+        attempts
+      end
+    end
+
+    @impl Projection
+    def handle_event(_, _), do: :ok
+  end
+
+  defmodule AlwaysFailingProjection do
+    use Projection, topics: ["test:always_fails:event"]
+
+    use KlassHero.Shared.Projection.WithBootstrapRetry,
+      max_attempts: 2,
+      base_delay_ms: 5
+
+    @impl Projection
+    def bootstrap_impl do
+      Agent.update(AlwaysFailAgent, fn n -> n + 1 end)
+      raise "always fails"
+    end
+
+    @impl Projection
+    def handle_event(_, _), do: :ok
+  end
+
+  describe "WithBootstrapRetry mixin" do
+    setup do
+      {:ok, flaky_pid} =
+        Agent.start_link(fn -> 0 end, name: FlakyAgent)
+
+      on_exit(fn -> if Process.alive?(flaky_pid), do: Agent.stop(flaky_pid) end)
+      :ok
+    end
+
+    test "retries after a transient bootstrap failure and eventually succeeds" do
+      import ExUnit.CaptureLog
+
+      log =
+        capture_log(fn ->
+          {:ok, pid} = FlakyProjection.start_link(name: unique_name())
+
+          # First attempt rescues; retry scheduled at base_delay * attempt = 10ms.
+          Process.sleep(50)
+          :sys.get_state(pid)
+
+          assert %{bootstrapped: true} = :sys.get_state(pid)
+        end)
+
+      assert log =~ "bootstrap failed, scheduling retry"
+      assert Agent.get(FlakyAgent, & &1) == 2
+    end
+
+    test "reraises after max_attempts consecutive failures" do
+      import ExUnit.CaptureLog
+
+      {:ok, always_fail_pid} =
+        Agent.start_link(fn -> 0 end, name: AlwaysFailAgent)
+
+      on_exit(fn ->
+        if Process.alive?(always_fail_pid), do: Agent.stop(always_fail_pid)
+      end)
+
+      Process.flag(:trap_exit, true)
+
+      capture_log(fn ->
+        {:ok, pid} = AlwaysFailingProjection.start_link(name: unique_name())
+
+        # First attempt fails inside handle_continue. Retry mixin reschedules
+        # at base_delay_ms * 1 = 5ms; second attempt fails and reschedules at 10ms;
+        # third attempt fails — reraises and crashes the GenServer.
+        assert_receive {:EXIT, ^pid, _reason}, 200
+      end)
+
+      # 3 attempts total: initial + 2 retries.
+      assert Agent.get(AlwaysFailAgent, & &1) == 3
     end
   end
 end
