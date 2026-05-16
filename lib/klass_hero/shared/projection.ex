@@ -40,6 +40,17 @@ defmodule KlassHero.Shared.Projection do
           {:ok, %{bootstrapped: false}, {:continue, :bootstrap}}
         end
       end
+
+      @impl true
+      def handle_continue(:bootstrap, state), do: apply_bootstrap(state)
+
+      defp apply_bootstrap(state) do
+        count = bootstrap_impl()
+        Logger.info("#{inspect(__MODULE__)} projection started", count: count)
+        {:noreply, %{state | bootstrapped: true}}
+      end
+
+      defoverridable apply_bootstrap: 1
     end
   end
 end
