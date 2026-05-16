@@ -438,11 +438,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           id: :regression_projection
         )
 
-      # Explicit sandbox allowance so bootstrap's Repo.all runs against the test connection
-      # even if this file is later migrated to async: true.
-      Ecto.Adapters.SQL.Sandbox.allow(KlassHero.Repo, self(), pid)
-
       # Drain handle_continue; bootstrap should succeed on the first attempt.
+      # Shared sandbox (async: false) covers the GenServer pid automatically.
       :sys.get_state(pid)
 
       # If any rescue path was triggered during bootstrap, retry_count would be > 0.

@@ -1,9 +1,11 @@
 defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTest do
-  use KlassHero.DataCase, async: true
+  # async: false: projection GenServers run DB queries during {:continue, :bootstrap}
+  # before the test process can Sandbox.allow the spawned pid. Shared sandbox mode
+  # (DataCase default when not async) covers any spawned process automatically.
+  use KlassHero.DataCase, async: false
 
   import Ecto.Query
 
-  alias Ecto.Adapters.SQL.Sandbox
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
   alias KlassHero.Repo
@@ -35,7 +37,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
         skip_bootstrap: true
       )
 
-    Sandbox.allow(Repo, self(), pid)
     pid
   end
 
@@ -149,14 +150,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
           id: :regression_projection
         )
 
-      # Sandbox.allow lands synchronously in the test process before :sys.get_state
-      # below blocks and yields the GenServer scheduler slot — so by the time the
-      # {:continue, :bootstrap} handler runs ACL queries, the sandbox is already
-      # transferred. This relies on BEAM not preempting the test process mid-call;
-      # if CI ever flakes here, replace with a Mox stub for the ACL.
-      Sandbox.allow(Repo, self(), pid)
-
       # Drain handle_continue; bootstrap should succeed on the first attempt.
+      # Shared sandbox (async: false) covers the GenServer pid automatically.
       :sys.get_state(pid)
 
       # If any rescue path was triggered during bootstrap, retry_count would be > 0.
