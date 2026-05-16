@@ -25,7 +25,7 @@
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
     "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:false.",
     "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
-    "coverage_saturation_note": "As of 2026-05-15, backlog exhausted. Maintainer writing comprehensive tests for all new code. PR #852 (NameUtils) shipped with 56-line name_utils_test.exs; PR #855 (StaffLiveHelpers) open with 4 maintainer tests.",
+    "coverage_saturation_note": "As of 2026-05-16, backlog exhausted. Maintainer writing comprehensive tests for all new code. PR #852 (NameUtils) shipped with 56-line name_utils_test.exs; PR #855 (StaffLiveHelpers) merged 2026-05-16 with maintainer tests.",
     "create_program_rejected_note": "PR #634 with CreateProgram/UpdateProgram tests was closed without merge by maintainer. Do not re-attempt.",
     "ci_check_runs_note": "No CI check runs appear on Test Improver PRs. CI may only run on push to main or require maintainer trigger.",
     "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html.",
@@ -35,7 +35,9 @@
     "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago; birthday_in_future(n) = Dec 31 n years ago. Robust against year boundary.",
     "pr_852_name_utils_note": "PR #852 (2026-05-15): extracted name-to-initials to Shared.NameUtils.initials_from_name/1. Maintainer added name_utils_test.exs (56 lines). instructor.ex, child_presenter.ex, program_presenter.ex, provider_presenter.ex all delegate to NameUtils.",
     "pr_846_still_valid_note": "PR #846 tests Instructor.initials/1 delegation to NameUtils. mergeable_state: clean after PR #852. Still valid - tests delegation and edge cases at Instructor level.",
-    "pr_811_still_valid_note": "PR #811 tests ChildPresenter.to_profile_view/1 external behaviour (not extract_initials directly). Valid after #852 (ChildPresenter now uses NameUtils internally but external contract unchanged)."
+    "pr_811_still_valid_note": "PR #811 tests ChildPresenter.to_profile_view/1 external behaviour (not extract_initials directly). Valid after #852 (ChildPresenter now uses NameUtils internally but external contract unchanged).",
+    "participation_edit_helpers_note": "ParticipationEditHelpers (pure logic, no DB): default_edit_notes/1 has 4-clause pattern match; build_edit_correction/3 has 3-branch cond. PR submitted 2026-05-16 on branch test-assist/participation-edit-helpers-tests (PR number assigned at session end).",
+    "pr_855_merged_note": "PR #855 (StaffLiveHelpers refactor+tests) merged 2026-05-16. Changed: staff_live_helpers.ex (new), staff_dashboard_live.ex, staff_participation_live.ex, staff_sessions_live.ex, staff_live_helpers_test.exs. No conflict with any open TI PRs."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -48,14 +50,22 @@
   "tasks_last_run": {
     "task_1": "2026-05-05",
     "task_2": "2026-05-15",
-    "task_3": "2026-05-13",
-    "task_4": "2026-05-15",
-    "task_5": "2026-05-11",
-    "task_6": "2026-05-02",
-    "task_7": "2026-05-15"
+    "task_3": "2026-05-16",
+    "task_4": "2026-05-16",
+    "task_5": "2026-05-16",
+    "task_6": "2026-05-16",
+    "task_7": "2026-05-16"
   },
   "work_in_progress": null,
   "completed_work": [
+    {
+      "date": "2026-05-16",
+      "run_id": "25973360467",
+      "description": "12 pure unit tests for ParticipationEditHelpers (default_edit_notes/1 + build_edit_correction/3)",
+      "tests_added": 12,
+      "pr_number": null,
+      "pr_note": "PR submitted on branch test-assist/participation-edit-helpers-tests; number TBD - add to open_prs next run"
+    },
     {
       "date": "2026-05-13",
       "run_id": "25828053672",
@@ -108,9 +118,10 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #852 (2026-05-15): NameUtils extraction — maintainer wrote 56-line name_utils_test.exs; PR #855 (StaffLiveHelpers) open with 4 maintainer tests; no TI opportunity",
+    "task_2_last_file": "PR #855 (2026-05-16, StaffLiveHelpers refactor+tests merged): maintainer wrote staff_live_helpers_test.exs; no TI opportunity",
     "task_5_last_issue": 705
   },
   "open_prs": [846, 811, 779, 771, 764, 759, 750, 733, 723],
-  "merged_prs": [719, 713, 707, 696]
+  "merged_prs": [719, 713, 707, 696],
+  "pending_pr_check": "Next run: search for PR on branch test-assist/participation-edit-helpers-tests and add its number to open_prs"
 }
