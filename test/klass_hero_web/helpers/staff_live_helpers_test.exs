@@ -7,7 +7,7 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
 
   describe "load_assigned_programs/1" do
-    test "returns all provider programs and a MapSet of every program id when staff has no tags" do
+    test "returns every provider program when staff has no tags (empty tag list = no filter)" do
       provider = ProviderFixtures.provider_profile_fixture()
       staff_member = ProviderFixtures.staff_member_fixture(provider_id: provider.id, tags: [])
 
@@ -25,7 +25,7 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
       assert assigned_ids == MapSet.new([program_a.id, program_b.id])
     end
 
-    test "MapSet contains only category-matched program ids when staff has tags" do
+    test "returns only category-matched programs when staff has tags set" do
       provider = ProviderFixtures.provider_profile_fixture()
 
       staff_member =
@@ -34,14 +34,12 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
       sports_program =
         insert(:program_listing_schema, provider_id: provider.id, category: "sports")
 
-      arts_program =
+      _arts_program =
         insert(:program_listing_schema, provider_id: provider.id, category: "arts")
 
       {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
-      assert Enum.map(programs, & &1.id) |> Enum.sort() ==
-               Enum.sort([sports_program.id, arts_program.id])
-
+      assert Enum.map(programs, & &1.id) == [sports_program.id]
       assert assigned_ids == MapSet.new([sports_program.id])
     end
 
