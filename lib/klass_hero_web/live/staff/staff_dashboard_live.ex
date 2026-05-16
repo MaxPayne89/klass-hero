@@ -4,9 +4,9 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
-  alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Shared.Entitlements
+  alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme
 
@@ -18,9 +18,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
     case Provider.get_provider_profile(staff_member.provider_id) do
       {:ok, provider} ->
-        all_programs = ProgramCatalog.list_programs_for_provider(staff_member.provider_id)
-        programs = Provider.list_assigned_programs(staff_member, all_programs)
-        assigned_ids = MapSet.new(programs, & &1.id)
+        {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
         socket =
           socket

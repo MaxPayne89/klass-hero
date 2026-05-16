@@ -2,10 +2,9 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Participation
-  alias KlassHero.ProgramCatalog
-  alias KlassHero.Provider
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
+  alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -14,9 +13,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
   def mount(%{"session_id" => session_id}, _session, socket) do
     staff_member = socket.assigns.current_scope.staff_member
 
-    all_programs = ProgramCatalog.list_programs_for_provider(staff_member.provider_id)
-    assigned_programs = Provider.list_assigned_programs(staff_member, all_programs)
-    assigned_program_ids = MapSet.new(assigned_programs, & &1.id)
+    {_programs, assigned_program_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
     socket =
       socket
