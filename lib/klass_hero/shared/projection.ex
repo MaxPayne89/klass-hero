@@ -10,8 +10,10 @@ defmodule KlassHero.Shared.Projection do
   See `docs/superpowers/specs/2026-05-16-projection-macro-design.md`.
   """
 
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+
   @callback bootstrap_impl() :: non_neg_integer()
-  @callback handle_event(event_type :: atom(), event :: term()) :: any()
+  @callback handle_event(event_type :: atom(), event :: IntegrationEvent.t()) :: any()
 
   defmacro __using__(opts) do
     topics = Keyword.fetch!(opts, :topics)
@@ -30,7 +32,7 @@ defmodule KlassHero.Shared.Projection do
         GenServer.start_link(__MODULE__, opts, name: name)
       end
 
-      @impl GenServer
+      @impl true
       def init(opts) do
         if Keyword.get(opts, :skip_bootstrap, false) do
           {:ok, %{bootstrapped: false}}
