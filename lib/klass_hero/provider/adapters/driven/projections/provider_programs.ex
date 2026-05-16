@@ -101,8 +101,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
   defp extract_name(%{name: name}) when is_binary(name), do: name
 
   defp extract_name(payload) do
-    require Logger
-
     Logger.error("ProviderPrograms received event without :title or :name (payload_keys=#{inspect(Map.keys(payload))})")
 
     raise ArgumentError, "Program payload missing :title or :name field"
