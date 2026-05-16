@@ -6,8 +6,10 @@ defmodule KlassHero.Shared.Projection.WithBootstrapRetry do
 
   ## Options
 
-  - `:max_attempts` — defaults to `3`. After exhausting attempts the original
-    exception is reraised so the supervisor sees it.
+  - `:max_attempts` — defaults to `3`. Maximum number of retries *after* the
+    initial bootstrap attempt. Total calls to `bootstrap_impl/0` will be at most
+    `max_attempts + 1`. After exhausting retries the original exception is
+    reraised so the supervisor sees it.
   - `:base_delay_ms` — defaults to `5_000`. Linear backoff: `base_delay_ms * retry_count`.
 
   Use immediately after `use KlassHero.Shared.Projection, ...`.

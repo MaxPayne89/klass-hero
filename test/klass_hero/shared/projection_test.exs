@@ -217,7 +217,8 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
 
     test "succeeds on first attempt without retry without crashing" do
-      {:ok, _} = Agent.start_link(fn -> 0 end, name: InstantSuccessAgent)
+      {:ok, instant_pid} = Agent.start_link(fn -> 0 end, name: InstantSuccessAgent)
+      on_exit(fn -> if Process.alive?(instant_pid), do: Agent.stop(instant_pid) end)
       {:ok, pid} = InstantSuccessProjection.start_link(name: unique_name())
 
       # Drain handle_continue. With the bug present, the GenServer crashes here

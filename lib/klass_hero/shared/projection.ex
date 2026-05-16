@@ -7,7 +7,29 @@ defmodule KlassHero.Shared.Projection do
   `handle_info/2` warner. The calling module supplies `bootstrap_impl/0` and
   `handle_event/2`.
 
-  See `docs/superpowers/specs/2026-05-16-projection-macro-design.md`.
+  ## Usage
+
+      defmodule MyContext.Adapters.Driven.Projections.MyProjection do
+        use KlassHero.Shared.Projection,
+          topics: ["integration:some_context:some_event"]
+
+        # Optionally add retry on transient bootstrap failure:
+        use KlassHero.Shared.Projection.WithBootstrapRetry
+
+        @impl KlassHero.Shared.Projection
+        def bootstrap_impl do
+          # populate the read table; return row count
+          42
+        end
+
+        @impl KlassHero.Shared.Projection
+        def handle_event(:some_event, %IntegrationEvent{} = event) do
+          # upsert into the read table
+        end
+      end
+
+  See `KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms` for the
+  canonical example.
   """
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
