@@ -3,9 +3,12 @@ defmodule KlassHero.Shared.ProjectionTest do
 
   # TestProjection lives inside this file deliberately: the macro must be
   # exercised against a synthetic module backed by an Agent, not a real schema.
+  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
+  alias KlassHero.Shared.Projection.WithDomainEvents
   alias KlassHero.Shared.ProjectionTest.AlwaysFailAgent
+  alias KlassHero.Shared.ProjectionTest.DomainEventAgent
   alias KlassHero.Shared.ProjectionTest.FlakyAgent
   alias KlassHero.Shared.ProjectionTest.InstantSuccessAgent
 
@@ -188,6 +191,72 @@ defmodule KlassHero.Shared.ProjectionTest do
 
     @impl Projection
     def handle_event(_, _), do: :ok
+  end
+
+  defmodule DomainEventProjection do
+    use Projection, topics: ["test:domain_events:event"]
+    use WithDomainEvents
+
+    @impl Projection
+    def bootstrap_impl, do: 0
+
+    @impl Projection
+    def handle_event(_type, _event), do: :ok
+
+    @impl WithDomainEvents
+    def handle_domain_event(type, event) do
+      Agent.update(DomainEventAgent, fn s ->
+        %{s | events: [{type, event} | s.events]}
+      end)
+    end
+  end
+
+  describe "WithDomainEvents mixin" do
+    setup do
+      {:ok, _} =
+        Agent.start_link(
+          fn -> %{events: []} end,
+          name: DomainEventAgent
+        )
+
+      :ok
+    end
+
+    test "dispatches {:domain_event, %DomainEvent{}} envelopes to handle_domain_event/2" do
+      {:ok, pid} = DomainEventProjection.start_link(name: unique_name(), skip_bootstrap: true)
+
+      event = %DomainEvent{
+        event_id: Ecto.UUID.generate(),
+        event_type: :something_happened,
+        aggregate_type: :thing,
+        aggregate_id: "agg-1",
+        occurred_at: DateTime.utc_now(),
+        payload: %{detail: 1}
+      }
+
+      send(pid, {:domain_event, event})
+      :sys.get_state(pid)
+
+      state = Agent.get(DomainEventAgent, & &1)
+      assert [{:something_happened, ^event}] = state.events
+    end
+  end
+
+  describe "catch-all handle_info/2 with mixin loaded" do
+    import ExUnit.CaptureLog
+
+    test "still logs warning for messages not matched by any specific clause" do
+      {:ok, pid} = DomainEventProjection.start_link(name: unique_name(), skip_bootstrap: true)
+
+      log =
+        capture_log(fn ->
+          send(pid, {:weird_envelope, "definitely not matched"})
+          :sys.get_state(pid)
+        end)
+
+      assert log =~ "received unexpected message"
+      assert Process.alive?(pid)
+    end
   end
 
   describe "WithBootstrapRetry mixin" do

@@ -27,6 +27,7 @@ defmodule KlassHero.Shared do
       NameUtils,
       Projection,
       Projection.WithBootstrapRetry,
+      Projection.WithDomainEvents,
       FeatureFlags,
       Adapters.Driven.Events.EventHandlers.NotifyLiveViews,
       Adapters.Driven.Events.RetryHelpers,
