@@ -89,7 +89,9 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   def handle_call(:rebuild, _from, state) do
     verified_ids = load_verified_ids()
     Logger.info("#{inspect(__MODULE__)} rebuilt", count: MapSet.size(verified_ids))
-    {:reply, :ok, %{state | bootstrapped: true, verified_ids: verified_ids}}
+    # Map.merge (not %{state | ...}) so rebuild stays safe even when the GenServer
+    # was started with skip_bootstrap: true (init state lacks :verified_ids).
+    {:reply, :ok, Map.merge(state, %{bootstrapped: true, verified_ids: verified_ids})}
   end
 
   # ── Override apply_bootstrap to populate the MapSet in state ──────────────

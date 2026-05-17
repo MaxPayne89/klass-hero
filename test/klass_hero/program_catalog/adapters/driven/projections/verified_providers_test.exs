@@ -298,5 +298,28 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
 
       assert VerifiedProviders.verified?(new_id, name) == true
     end
+
+    test "rebuild after skip_bootstrap: true populates verified_ids without crashing" do
+      # Stealth-bug regression: handle_call(:rebuild) previously used
+      # %{state | ... , verified_ids: ...}, which raises KeyError when init state
+      # came from skip_bootstrap: true (no :verified_ids key). Map.merge guards this.
+      name = :"reg_skip_#{System.unique_integer([:positive])}"
+
+      pid =
+        start_supervised!(
+          {VerifiedProviders, name: name, skip_bootstrap: true},
+          id: :regression_skip_bootstrap
+        )
+
+      # Initial state lacks :verified_ids (skip_bootstrap path).
+      refute Map.has_key?(:sys.get_state(pid), :verified_ids)
+
+      # Rebuild must NOT crash and must populate verified_ids.
+      assert :ok = VerifiedProviders.rebuild(name)
+
+      state = :sys.get_state(pid)
+      assert state.bootstrapped == true
+      assert %MapSet{} = state.verified_ids
+    end
   end
 end
