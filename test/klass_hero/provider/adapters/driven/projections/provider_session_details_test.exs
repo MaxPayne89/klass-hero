@@ -595,4 +595,45 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
 
     %{session_id: session_id}
   end
+
+  describe "macro invariants after happy-path startup" do
+    test "state.retry_count == 0 after first event projects successfully" do
+      pid =
+        start_supervised!(
+          {ProviderSessionDetails, name: :"reg_#{System.unique_integer([:positive])}"},
+          id: :regression_projection
+        )
+
+      # Synchronize: ensure bootstrap has completed
+      :sys.get_state(pid)
+
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+
+      # Build a minimal session_created event using the shared broadcast helper pattern
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id, title: "Regression")
+      session_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :session_created,
+          :participation,
+          :session,
+          session_id,
+          %{
+            session_id: session_id,
+            program_id: program.id,
+            session_date: ~D[2026-05-01],
+            start_time: ~T[09:00:00],
+            end_time: ~T[10:00:00]
+          }
+        )
+
+      send(pid, {:integration_event, event})
+      # Synchronize: ensure GenServer has processed the message
+      :sys.get_state(pid)
+
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+    end
+  end
 end
