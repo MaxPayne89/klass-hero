@@ -74,3 +74,4 @@ The codebase is moving toward Command Query Responsibility Segregation:
 - Phoenix web adapters (driving adapters)
 - Event handler and worker adapters (driving adapters under `adapters/driving/`)
 - Configuration and dependency injection
+- Event-driven projections (driven adapters under `adapters/driven/projections/`) — use `KlassHero.Shared.Projection` (base macro) and optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). The calling module declares `:topics` in `use Projection, ...` and implements `bootstrap_impl/0` and `handle_event/2`. See `ProviderPrograms` for the canonical example.

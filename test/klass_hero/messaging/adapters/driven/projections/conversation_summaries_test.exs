@@ -1762,4 +1762,45 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       )
     )
   end
+
+  describe "macro invariants after happy-path startup" do
+    test "state.retry_count == 0 after first event projects successfully" do
+      pid =
+        start_supervised!(
+          {ConversationSummaries, name: :"reg_#{System.unique_integer([:positive])}"},
+          id: :regression_projection
+        )
+
+      :sys.get_state(pid)
+
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+
+      user_1 = user_fixture(name: "Alice Macro")
+      user_2 = user_fixture(name: "Bob Macro")
+
+      conversation_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :conversation_created,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            participant_ids: [user_1.id, user_2.id],
+            type: "direct",
+            provider_id: provider_id,
+            program_id: nil,
+            subject: nil
+          }
+        )
+
+      send(pid, {:integration_event, event})
+      :sys.get_state(pid)
+
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+    end
+  end
 end

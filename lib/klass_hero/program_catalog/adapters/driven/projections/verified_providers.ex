@@ -2,184 +2,119 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   @moduledoc """
   In-memory projection of verified provider IDs.
 
-  This GenServer maintains a MapSet of provider IDs that are verified, enabling
-  fast O(1) lookups without database queries. It bootstraps from the Provider
-  context on startup and stays in sync via integration events.
+  Maintains a `MapSet` of provider IDs that are verified, enabling fast O(1)
+  lookups without database queries. Bootstraps from the Provider context on
+  startup and stays in sync via integration events.
+
+  Built on `KlassHero.Shared.Projection` (base). Does NOT use
+  `WithBootstrapRetry`: on bootstrap failure the GenServer crashes and the
+  supervisor handles the restart, which is the established recovery pattern.
 
   ## Architecture
 
-  This is a "driven adapter" in the Ports & Adapters architecture - it's driven
-  by integration events from the Provider context. The Program Catalog context
-  uses this projection to enrich program data with provider verification status.
+  This is a driven adapter — driven by integration events from the Provider
+  context. The Program Catalog context uses this projection to enrich program
+  data with provider verification status (`ProgramListings` looks it up via
+  `verified?/2`).
 
-  ## Startup Behavior
+  ## Event handling
 
-  On init, the GenServer:
-  1. Subscribes to `integration:provider:provider_verified` topic
-  2. Subscribes to `integration:provider:provider_unverified` topic
-  3. Calls `Provider.list_verified_provider_ids/0` to bootstrap the MapSet
-
-  ## Event Handling
-
-  - `:provider_verified` events add the provider ID to the MapSet
-  - `:provider_unverified` events remove the provider ID from the MapSet
+  - `:provider_verified` — adds the provider ID to the MapSet
+  - `:provider_unverified` — removes the provider ID from the MapSet
   """
 
-  use GenServer
+  use KlassHero.Shared.Projection,
+    topics: [
+      "integration:provider:provider_verified",
+      "integration:provider:provider_unverified"
+    ]
 
   alias KlassHero.Provider
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Projection
 
-  require Logger
+  # ── Behaviour callbacks ────────────────────────────────────────────────────
 
-  @verified_topic "integration:provider:provider_verified"
-  @unverified_topic "integration:provider:provider_unverified"
-
-  # Client API
-
-  @doc """
-  Starts the VerifiedProviders GenServer.
-
-  ## Options
-
-  - `:name` - Process name (defaults to `__MODULE__`)
-  """
-  def start_link(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, opts, name: name)
+  @impl Projection
+  def bootstrap_impl do
+    MapSet.size(load_verified_ids())
   end
+
+  # The macro's handle_info dispatcher calls handle_event/2 then discards the
+  # return value (returns {:noreply, state} with unchanged state). To mutate
+  # the custom verified_ids, we cast to self() so the cast is processed as the
+  # next mailbox message — after handle_info returns — with access to state.
+  # Tests use :sys.get_state/1 as a sync fence which drains the mailbox, so
+  # cast ordering is not a concern.
+  @impl Projection
+  def handle_event(:provider_verified, event) do
+    GenServer.cast(self(), {:add_verified, event.payload.provider_id})
+  end
+
+  def handle_event(:provider_unverified, event) do
+    GenServer.cast(self(), {:remove_verified, event.payload.provider_id})
+  end
+
+  # ── Cast handlers for MapSet mutation ─────────────────────────────────────
+
+  @impl true
+  def handle_cast({:add_verified, id}, state) do
+    Logger.debug("Provider verified in projection", provider_id: id)
+    {:noreply, %{state | verified_ids: MapSet.put(state.verified_ids, id)}}
+  end
+
+  def handle_cast({:remove_verified, id}, state) do
+    Logger.debug("Provider unverified in projection", provider_id: id)
+    {:noreply, %{state | verified_ids: MapSet.delete(state.verified_ids, id)}}
+  end
+
+  # ── Custom query API ───────────────────────────────────────────────────────
 
   @doc """
   Checks if a provider is verified.
 
   Returns `true` if the provider ID is in the verified set, `false` otherwise.
-
-  ## Parameters
-
-  - `provider_id` - The UUID of the provider profile to check
-  - `name` - The GenServer name (defaults to `__MODULE__`)
-
-  ## Examples
-
-      iex> VerifiedProviders.verified?("some-uuid")
-      true
-
-      iex> VerifiedProviders.verified?("unknown-uuid")
-      false
   """
   @spec verified?(String.t(), GenServer.name()) :: boolean()
   def verified?(provider_id, name \\ __MODULE__) do
     GenServer.call(name, {:verified?, provider_id})
   end
 
-  @doc """
-  Rebuilds the in-memory verified providers cache from the database.
-
-  Useful after seeding write tables directly (bypassing integration events).
-  Blocks until the rebuild is complete.
-  """
-  @spec rebuild(GenServer.name()) :: :ok
-  def rebuild(name \\ __MODULE__) do
-    GenServer.call(name, :rebuild, :infinity)
+  # Override handle_call/3 to handle both the custom :verified? query and the
+  # :rebuild message (the macro's default :rebuild does not update verified_ids).
+  @impl true
+  def handle_call({:verified?, provider_id}, _from, state) do
+    {:reply, MapSet.member?(state.verified_ids, provider_id), state}
   end
 
-  # Server Callbacks
-
-  @impl true
-  def init(_opts) do
-    # Trigger: GenServer is starting
-    # Why: Need to subscribe to events before bootstrapping to avoid missing events
-    # Outcome: Subscribed to both verified and unverified topics
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @verified_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @unverified_topic)
-
-    # Use handle_continue to bootstrap after init completes
-    # This ensures the GenServer is fully initialized before any blocking calls
-    {:ok, %{verified_ids: MapSet.new()}, {:continue, :bootstrap}}
+  def handle_call(:rebuild, _from, state) do
+    verified_ids = load_verified_ids()
+    Logger.info("#{inspect(__MODULE__)} rebuilt", count: MapSet.size(verified_ids))
+    # Map.merge (not %{state | ...}) so rebuild stays safe even when the GenServer
+    # was started with skip_bootstrap: true (init state lacks :verified_ids).
+    {:reply, :ok, Map.merge(state, %{bootstrapped: true, verified_ids: verified_ids})}
   end
 
-  @impl true
-  def handle_continue(:bootstrap, state) do
-    # Trigger: GenServer initialization complete
-    # Why: Bootstrap from Provider context to hydrate in-memory cache
-    # Outcome: MapSet populated with all currently verified provider IDs
-    verified_ids = bootstrap_verified_ids()
+  # ── Override apply_bootstrap to populate the MapSet in state ──────────────
+  # The base macro's default apply_bootstrap/1 returns
+  # {:noreply, %{state | bootstrapped: true}} with no hook for custom keys.
+  # This override writes verified_ids alongside the bootstrapped flag.
 
-    Logger.info("VerifiedProviders projection started",
+  defp apply_bootstrap(state) do
+    verified_ids = load_verified_ids()
+
+    Logger.info("#{inspect(__MODULE__)} projection started",
       count: MapSet.size(verified_ids)
     )
 
-    {:noreply, %{state | verified_ids: verified_ids}}
+    {:noreply, Map.merge(state, %{bootstrapped: true, verified_ids: verified_ids})}
   end
 
-  @impl true
-  def handle_call({:verified?, provider_id}, _from, state) do
-    result = MapSet.member?(state.verified_ids, provider_id)
-    {:reply, result, state}
-  end
+  # ── Private ────────────────────────────────────────────────────────────────
 
-  # Trigger: external caller requests a full rebuild (e.g. after seeding)
-  # Why: seeds insert into write tables without emitting integration events
-  # Outcome: in-memory cache refreshed from the authoritative Provider context
-  @impl true
-  def handle_call(:rebuild, _from, state) do
-    verified_ids = bootstrap_verified_ids()
-    Logger.info("VerifiedProviders rebuilt", count: MapSet.size(verified_ids))
-    {:reply, :ok, %{state | verified_ids: verified_ids}}
-  end
-
-  # Trigger: Received a provider_verified integration event
-  # Why: Provider context notifies other contexts when a provider is verified
-  # Outcome: Provider ID added to the in-memory MapSet
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :provider_verified} = event}, state) do
-    provider_id = event.payload.provider_id
-
-    Logger.debug("Provider verified in projection",
-      provider_id: provider_id,
-      event_id: event.event_id
-    )
-
-    new_ids = MapSet.put(state.verified_ids, provider_id)
-    {:noreply, %{state | verified_ids: new_ids}}
-  end
-
-  # Trigger: Received a provider_unverified integration event
-  # Why: Provider context notifies other contexts when a provider loses verification
-  # Outcome: Provider ID removed from the in-memory MapSet
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :provider_unverified} = event}, state) do
-    provider_id = event.payload.provider_id
-
-    Logger.debug("Provider unverified in projection",
-      provider_id: provider_id,
-      event_id: event.event_id
-    )
-
-    new_ids = MapSet.delete(state.verified_ids, provider_id)
-    {:noreply, %{state | verified_ids: new_ids}}
-  end
-
-  # Catch-all for unhandled messages — logged so misrouted events are traceable
-  @impl true
-  def handle_info(msg, state) do
-    Logger.debug("VerifiedProviders received unexpected message",
-      message: inspect(msg, limit: 200)
-    )
-
-    {:noreply, state}
-  end
-
-  # Trigger: GenServer needs initial state from Provider context
-  # Why: Cold start recovery - populate cache from authoritative source
-  # Outcome: Returns MapSet of verified provider IDs, or crashes to let supervisor retry
-  defp bootstrap_verified_ids do
+  defp load_verified_ids do
     case Provider.list_verified_provider_ids() do
-      {:ok, ids} ->
-        MapSet.new(ids)
-
-      {:error, reason} ->
-        raise "Failed to bootstrap verified providers: #{inspect(reason)}"
+      {:ok, ids} -> MapSet.new(ids)
+      {:error, reason} -> raise "Failed to bootstrap verified providers: #{inspect(reason)}"
     end
   end
 end

@@ -1,9 +1,11 @@
 defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
-  use KlassHero.DataCase, async: true
+  # async: false: projection GenServers run DB queries during {:continue, :bootstrap}
+  # before the test process can Sandbox.allow the spawned pid. Shared sandbox mode
+  # (DataCase default when not async) covers any spawned process automatically.
+  use KlassHero.DataCase, async: false
 
   import KlassHero.Factory
 
-  alias Ecto.Adapters.SQL.Sandbox
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
   alias KlassHero.Repo
@@ -30,7 +32,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
         skip_bootstrap: true
       )
 
-    Sandbox.allow(Repo, self(), pid)
     pid
   end
 

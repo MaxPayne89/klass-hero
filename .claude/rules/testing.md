@@ -57,3 +57,7 @@ This command:
 - Use `@tag` to tag specific tests, and `mix test --only tag` to run only those tests
 - Use `assert_raise` for testing expected exceptions: `assert_raise ArgumentError, fn -> invalid_function() end`
 - Use `mix help test` for full documentation on running tests
+
+## Projection Tests: `async: false`
+
+Test modules covering event-driven projections (modules under `**/adapters/driven/projections/`) use `use KlassHero.DataCase, async: false`. Projection GenServers run DB queries during `init/1`'s `{:continue, :bootstrap}` before the test process can call `Ecto.Adapters.SQL.Sandbox.allow/3` on the spawned pid, so the only reliable fix is shared-sandbox mode (which `async: false` flips on automatically via `DataCase.setup_sandbox/1`). Don't add `Sandbox.allow` calls in these files — they're redundant under shared mode. This rule does NOT apply to macro-level tests like `test/klass_hero/shared/projection_test.exs`, which exercise the macro against `Agent`-backed fakes with no DB at all and stay `async: true`.

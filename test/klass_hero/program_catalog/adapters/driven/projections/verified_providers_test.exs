@@ -269,4 +269,57 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
       refute VerifiedProviders.verified?(provider_id, @test_server_name)
     end
   end
+
+  describe "macro invariants after happy-path startup" do
+    test "verified_ids is populated and event mutates the cache" do
+      name = :"reg_#{System.unique_integer([:positive])}"
+      pid = start_supervised!({VerifiedProviders, name: name}, id: :regression_projection)
+
+      # Bootstrap completes — state has the MapSet
+      state = :sys.get_state(pid)
+      assert state.bootstrapped == true
+      assert %MapSet{} = state.verified_ids
+
+      # Send a provider_verified integration event and confirm verified?/2 picks it up
+      new_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :provider_verified,
+          :provider,
+          :provider,
+          new_id,
+          %{provider_id: new_id, business_name: "Regression Business"}
+        )
+
+      send(pid, {:integration_event, event})
+      # :sys.get_state drains the mailbox (sync fence)
+      :sys.get_state(pid)
+
+      assert VerifiedProviders.verified?(new_id, name) == true
+    end
+
+    test "rebuild after skip_bootstrap: true populates verified_ids without crashing" do
+      # Stealth-bug regression: handle_call(:rebuild) previously used
+      # %{state | ... , verified_ids: ...}, which raises KeyError when init state
+      # came from skip_bootstrap: true (no :verified_ids key). Map.merge guards this.
+      name = :"reg_skip_#{System.unique_integer([:positive])}"
+
+      pid =
+        start_supervised!(
+          {VerifiedProviders, name: name, skip_bootstrap: true},
+          id: :regression_skip_bootstrap
+        )
+
+      # Initial state lacks :verified_ids (skip_bootstrap path).
+      refute Map.has_key?(:sys.get_state(pid), :verified_ids)
+
+      # Rebuild must NOT crash and must populate verified_ids.
+      assert :ok = VerifiedProviders.rebuild(name)
+
+      state = :sys.get_state(pid)
+      assert state.bootstrapped == true
+      assert %MapSet{} = state.verified_ids
+    end
+  end
 end

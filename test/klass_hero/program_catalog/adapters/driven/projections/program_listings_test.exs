@@ -426,4 +426,49 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert Repo.get(ProgramListingSchema, other_listing.id).provider_verified == true
     end
   end
+
+  describe "macro invariants after happy-path startup" do
+    test "state.retry_count == 0 after first event projects successfully" do
+      # Start WITHOUT skip_bootstrap to exercise the real subscribe + handle_continue path.
+      # If a KeyError-class bug got swallowed by the retry mixin's rescue, retry_count
+      # would be > 0 even though the test event still projects correctly.
+      pid =
+        start_supervised!(
+          {ProgramListings, name: :"reg_#{System.unique_integer([:positive])}"},
+          id: :regression_projection
+        )
+
+      # Drain handle_continue; bootstrap should succeed on the first attempt.
+      # Shared sandbox (async: false) covers the GenServer pid automatically.
+      :sys.get_state(pid)
+
+      # If any rescue path was triggered during bootstrap, retry_count would be > 0.
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+
+      # Send one well-formed event; confirm the dispatcher path doesn't trip an internal raise.
+      program_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :program_created,
+          :program_catalog,
+          :program,
+          program_id,
+          %{
+            program_id: program_id,
+            provider_id: provider_id,
+            title: "Regression Test Program",
+            category: "sports",
+            meeting_days: []
+          }
+        )
+
+      send(pid, {:integration_event, event})
+      :sys.get_state(pid)
+
+      # No retry was scheduled by handle_event; state invariant preserved.
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+    end
+  end
 end

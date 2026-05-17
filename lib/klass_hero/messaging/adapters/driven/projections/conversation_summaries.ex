@@ -10,10 +10,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   ## Architecture
 
-  This is a "driven adapter" in the Ports & Adapters architecture — it's
-  driven by integration events from the Messaging context. The read-side
-  repository (`ConversationSummariesRepository`) queries the table this
-  projection writes.
+  Built on KlassHero.Shared.Projection + WithBootstrapRetry + WithDomainEvents.
+  The read-side repository (`ConversationSummariesRepository`) queries the table
+  this projection writes.
 
   ## Startup Behavior
 
@@ -34,7 +33,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     for rows where the anonymized user was the other participant
   """
 
-  use GenServer
+  use KlassHero.Shared.Projection,
+    topics: [
+      "integration:messaging:conversation_created",
+      "integration:messaging:message_sent",
+      "integration:messaging:messages_read",
+      "integration:messaging:conversation_archived",
+      "integration:messaging:conversations_archived",
+      "integration:messaging:message_data_anonymized",
+      "integration:messaging:participant_added",
+      "integration:messaging:participant_removed",
+      "messaging:enrolled_children_changed"
+    ]
+
+  use KlassHero.Shared.Projection.WithBootstrapRetry
+  use KlassHero.Shared.Projection.WithDomainEvents
 
   import Ecto.Query
 
@@ -44,259 +57,100 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-
-  require Logger
+  alias KlassHero.Shared.Projection
+  alias KlassHero.Shared.Projection.WithDomainEvents
 
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
-
-  @conversation_created_topic "integration:messaging:conversation_created"
-  @message_sent_topic "integration:messaging:message_sent"
-  @messages_read_topic "integration:messaging:messages_read"
-  @conversation_archived_topic "integration:messaging:conversation_archived"
-  @conversations_archived_topic "integration:messaging:conversations_archived"
-  @message_data_anonymized_topic "integration:messaging:message_data_anonymized"
-  @participant_added_topic "integration:messaging:participant_added"
-  @participant_removed_topic "integration:messaging:participant_removed"
-  @enrolled_children_changed_topic "messaging:enrolled_children_changed"
   @broadcast_token_regex ~r/\[broadcast:[^\]]+\]/
 
-  # Client API
+  # Behaviour callbacks ───────────────────────────────────────────────────────
 
-  @doc """
-  Starts the ConversationSummaries projection GenServer.
+  @impl Projection
+  def bootstrap_impl, do: bootstrap_from_write_tables()
 
-  ## Options
-
-  - `:name` - Process name (defaults to `__MODULE__`)
-  """
-  def start_link(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, opts, name: name)
-  end
-
-  @doc """
-  Rebuilds the conversation_summaries read table from the write tables.
-
-  Useful after seeding write tables directly (bypassing integration events).
-  Blocks until the rebuild is complete.
-  """
-  @spec rebuild(GenServer.name()) :: :ok
-  def rebuild(name \\ __MODULE__) do
-    GenServer.call(name, :rebuild, :infinity)
-  end
-
-  # Server Callbacks
-
-  @impl true
-  def init(_opts) do
-    # Trigger: GenServer is starting
-    # Why: subscribe to events before bootstrapping to avoid missing events
-    #      that arrive between bootstrap completion and subscription
-    # Outcome: subscribed to all six relevant topics
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @conversation_created_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @message_sent_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @messages_read_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @conversation_archived_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @conversations_archived_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @message_data_anonymized_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @participant_added_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @participant_removed_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @enrolled_children_changed_topic)
-
-    {:ok, %{bootstrapped: false}, {:continue, :bootstrap}}
-  end
-
-  @impl true
-  def handle_continue(:bootstrap, state) do
-    # Trigger: GenServer initialization complete
-    # Why: project all existing conversations from write tables into read table
-    # Outcome: conversation_summaries table populated with current data
-    attempt_bootstrap(state)
-  end
-
-  # Trigger: external caller requests a full rebuild (e.g. after seeding)
-  # Why: seeds insert into write tables without emitting integration events
-  # Outcome: conversation_summaries read table refreshed from write tables
-  @impl true
-  def handle_call(:rebuild, _from, state) do
-    count = bootstrap_from_write_tables()
-    Logger.info("ConversationSummaries rebuilt", count: count)
-    {:reply, :ok, %{state | bootstrapped: true}}
-  end
-
-  @impl true
-  def handle_info(:retry_bootstrap, state) do
-    {:noreply, state, {:continue, :bootstrap}}
-  end
-
-  # Trigger: Received a conversation_created integration event
-  # Why: a new conversation was created, each participant needs a summary row
-  # Outcome: one row per participant inserted into conversation_summaries
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :conversation_created} = event}, state) do
+  @impl Projection
+  def handle_event(:conversation_created, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting conversation_created",
       conversation_id: event.entity_id,
       event_id: event.event_id
     )
 
     project_conversation_created(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received a message_sent integration event
-  # Why: latest message fields must be updated, unread_count incremented for non-senders
-  # Outcome: all summary rows for this conversation updated
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :message_sent} = event}, state) do
+  def handle_event(:message_sent, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting message_sent",
       conversation_id: event.entity_id,
       event_id: event.event_id
     )
 
     project_message_sent(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received a messages_read integration event
-  # Why: the user has read all messages, unread_count should be reset
-  # Outcome: summary row for {conversation_id, user_id} updated
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :messages_read} = event}, state) do
+  def handle_event(:messages_read, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting messages_read",
       conversation_id: event.entity_id,
       event_id: event.event_id
     )
 
     project_messages_read(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received a conversation_archived integration event
-  # Why: conversation is being archived, all summary rows must reflect this
-  # Outcome: archived_at set for all rows of the conversation
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :conversation_archived} = event}, state) do
+  def handle_event(:conversation_archived, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting conversation_archived",
       conversation_id: event.entity_id,
       event_id: event.event_id
     )
 
     project_conversation_archived(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received a conversations_archived integration event (bulk)
-  # Why: multiple conversations archived at once, all summary rows must reflect this
-  # Outcome: archived_at set for all rows of the affected conversations
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :conversations_archived} = event}, state) do
+  def handle_event(:conversations_archived, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting conversations_archived",
       event_id: event.event_id
     )
 
     project_conversations_archived(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received a message_data_anonymized integration event
-  # Why: a user's data was anonymized (GDPR), their display name must be replaced
-  # Outcome: other_participant_name set to "Deleted User" for affected rows
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :message_data_anonymized} = event}, state) do
+  def handle_event(:message_data_anonymized, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting message_data_anonymized",
       user_id: event.entity_id,
       event_id: event.event_id
     )
 
     project_message_data_anonymized(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received a participant_added integration event
-  # Why: one or more users joined a conversation after creation; each needs
-  #      their own summary row so the conversation appears in their inbox
-  # Outcome: one row per new participant_user_id upserted into conversation_summaries
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :participant_added} = event}, state) do
+  def handle_event(:participant_added, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting participant_added",
       conversation_id: event.entity_id,
       event_id: event.event_id
     )
 
     project_participant_added(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received a participant_removed integration event
-  # Why: one or more users were removed from a conversation; their summary
-  #      rows must be soft-archived so the conversation disappears from
-  #      their inbox immediately
-  # Outcome: archived_at set on each affected (conversation_id, user_id) row,
-  #          preserving the first removal's timestamp on replay (COALESCE)
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :participant_removed} = event}, state) do
+  def handle_event(:participant_removed, %IntegrationEvent{} = event) do
     Logger.debug("ConversationSummaries projecting participant_removed",
       conversation_id: event.entity_id,
       event_id: event.event_id
     )
 
     project_participant_removed(event)
-    {:noreply, state}
   end
 
-  # Trigger: Received an enrolled_children_changed domain event from EnrolledChildren projection
-  # Why: conversation summary needs updated child names for display
-  # Outcome: enrolled_child_names column updated for all rows of the conversation
-  @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: :enrolled_children_changed} = event}, state) do
+  @impl WithDomainEvents
+  def handle_domain_event(:enrolled_children_changed, event) do
     Logger.debug("ConversationSummaries projecting enrolled_children_changed",
       conversation_id: event.aggregate_id
     )
 
     project_enrolled_children_changed(event)
-    {:noreply, state}
-  end
-
-  # Catch-all for unhandled messages — logged so misrouted events are traceable
-  @impl true
-  def handle_info(msg, state) do
-    Logger.warning("ConversationSummaries received unexpected message",
-      message: inspect(msg, limit: 200)
-    )
-
-    {:noreply, state}
   end
 
   # Private Functions — Bootstrap
-
-  # Trigger: bootstrap attempt with retry logic
-  # Why: transient DB failures shouldn't crash the GenServer immediately
-  # Outcome: successful bootstrap or scheduled retry (up to 3 times before crashing)
-  defp attempt_bootstrap(state) do
-    count = bootstrap_from_write_tables()
-    Logger.info("ConversationSummaries projection started", count: count)
-    {:noreply, %{state | bootstrapped: true}}
-  rescue
-    error ->
-      retry_count = Map.get(state, :retry_count, 0) + 1
-
-      if retry_count > 3 do
-        # Trigger: exhausted retries
-        # Why: persistent failure indicates real infrastructure issue
-        # Outcome: crash to let supervisor handle with its own restart strategy
-        reraise error, __STACKTRACE__
-      else
-        Logger.error("ConversationSummaries: bootstrap failed, scheduling retry",
-          error: Exception.message(error),
-          retry_count: retry_count
-        )
-
-        Process.send_after(self(), :retry_bootstrap, 5_000 * retry_count)
-        {:noreply, Map.put(state, :retry_count, retry_count)}
-      end
-  end
 
   # Trigger: bootstrap phase — read table may be empty or stale
   # Why: cold start recovery — populate read table from authoritative write tables
