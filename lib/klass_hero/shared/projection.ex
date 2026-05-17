@@ -37,6 +37,19 @@ defmodule KlassHero.Shared.Projection do
   @callback bootstrap_impl() :: non_neg_integer()
   @callback handle_event(event_type :: atom(), event :: IntegrationEvent.t()) :: any()
 
+  defmacro __before_compile__(_env) do
+    quote do
+      @impl true
+      def handle_info(msg, state) do
+        Logger.warning("#{inspect(__MODULE__)} received unexpected message",
+          message: inspect(msg, limit: 200)
+        )
+
+        {:noreply, state}
+      end
+    end
+  end
+
   defmacro __using__(opts) do
     topics = Keyword.fetch!(opts, :topics)
 
@@ -46,8 +59,11 @@ defmodule KlassHero.Shared.Projection do
       use GenServer
 
       alias KlassHero.Shared.Domain.Events.IntegrationEvent
+      alias KlassHero.Shared.Projection
 
       require Logger
+
+      @before_compile Projection
 
       @projection_topics topics
 
@@ -104,15 +120,6 @@ defmodule KlassHero.Shared.Projection do
       @impl true
       def handle_info(:retry_bootstrap, state) do
         {:noreply, state, {:continue, :bootstrap}}
-      end
-
-      @impl true
-      def handle_info(msg, state) do
-        Logger.warning("#{inspect(__MODULE__)} received unexpected message",
-          message: inspect(msg, limit: 200)
-        )
-
-        {:noreply, state}
       end
 
       defoverridable apply_bootstrap: 1
