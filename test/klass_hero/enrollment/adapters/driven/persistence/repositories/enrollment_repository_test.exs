@@ -435,6 +435,49 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
     end
   end
 
+  describe "list_pending_by_programs/1" do
+    test "returns only pending enrollments across the given programs" do
+      program_a = insert(:program_schema)
+      program_b = insert(:program_schema)
+      program_c = insert(:program_schema)
+
+      pending_a = insert(:enrollment_schema, program_id: program_a.id, status: :pending)
+      pending_b = insert(:enrollment_schema, program_id: program_b.id, status: :pending)
+      _confirmed_a = insert(:enrollment_schema, program_id: program_a.id, status: :confirmed)
+      _cancelled_b = insert(:enrollment_schema, program_id: program_b.id, status: :cancelled)
+      _completed_a = insert(:enrollment_schema, program_id: program_a.id, status: :completed)
+      _other_program = insert(:enrollment_schema, program_id: program_c.id, status: :pending)
+
+      ids =
+        EnrollmentRepository.list_pending_by_programs([program_a.id, program_b.id])
+        |> MapSet.new(& &1.id)
+
+      assert MapSet.equal?(ids, MapSet.new([to_string(pending_a.id), to_string(pending_b.id)]))
+    end
+
+    test "returns Enrollment domain structs (not Ecto schemas)" do
+      program = insert(:program_schema)
+      insert(:enrollment_schema, program_id: program.id, status: :pending)
+
+      [enrollment] = EnrollmentRepository.list_pending_by_programs([program.id])
+
+      assert %Enrollment{status: :pending} = enrollment
+    end
+
+    test "returns [] for empty program_ids" do
+      insert(:enrollment_schema, status: :pending)
+
+      assert EnrollmentRepository.list_pending_by_programs([]) == []
+    end
+
+    test "returns [] when no pending enrollments match" do
+      program = insert(:program_schema)
+      insert(:enrollment_schema, program_id: program.id, status: :confirmed)
+
+      assert EnrollmentRepository.list_pending_by_programs([program.id]) == []
+    end
+  end
+
   describe "concurrent create/1" do
     # Verifies that the unique constraint on (program_id, child_id) for active
     # enrollments is handled gracefully when two requests race to enroll the

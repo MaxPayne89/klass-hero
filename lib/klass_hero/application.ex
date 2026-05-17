@@ -144,7 +144,8 @@ defmodule KlassHero.Application do
             priority: 10},
            {:enrollment_created,
             {KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10}
+            priority: 10},
+           {:enrollment_confirmed, {NotifyLiveViews, :handle}}
          ]},
         id: :enrollment_domain_event_bus
       ),

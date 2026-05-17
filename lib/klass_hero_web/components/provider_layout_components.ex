@@ -546,6 +546,39 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     """
   end
 
+  @doc """
+  Pending enrollment card with an Approve button.
+
+  `entry` keys: `:enrollment_id, :child_name, :program_title, :enrolled_at`.
+  """
+  attr :entry, :map, required: true
+
+  def pv_pending_enrollment_card(assigns) do
+    ~H"""
+    <div
+      id={"pending-enrollment-#{@entry.enrollment_id}"}
+      class="flex items-center justify-between gap-3 rounded-xl border border-hero-grey-200 p-3"
+    >
+      <div class="min-w-0">
+        <div class="font-semibold truncate">{@entry.child_name}</div>
+        <div class="text-xs text-hero-grey-600 truncate">{@entry.program_title}</div>
+        <div class="text-xs text-hero-grey-500">
+          {gettext("Enrolled")} {Calendar.strftime(@entry.enrolled_at, "%b %d")}
+        </div>
+      </div>
+      <button
+        id={"approve-enrollment-#{@entry.enrollment_id}"}
+        type="button"
+        phx-click="approve_enrollment"
+        phx-value-id={@entry.enrollment_id}
+        class="rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-sm font-bold text-white hover:opacity-90"
+      >
+        {gettext("Approve")}
+      </button>
+    </div>
+    """
+  end
+
   ## ---------------------------------------------------------------------------
   ## Internal helpers
   ## ---------------------------------------------------------------------------

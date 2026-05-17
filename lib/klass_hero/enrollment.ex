@@ -58,6 +58,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.Application.Commands.{
     CancelEnrollmentByAdmin,
     ClaimInvite,
+    ConfirmEnrollment,
     CreateEnrollment,
     DeleteInvite,
     ImportEnrollmentCsv,
@@ -80,6 +81,7 @@ defmodule KlassHero.Enrollment do
     GetParticipantPolicy,
     ListEnrolledIdentityIds,
     ListParentEnrollments,
+    ListPendingEnrollmentsForProvider,
     ListProgramEnrollments,
     ListProgramInvites
   }
@@ -137,6 +139,26 @@ defmodule KlassHero.Enrollment do
   def cancel_enrollment_by_admin(enrollment_id, admin_id, reason)
       when is_binary(enrollment_id) and is_binary(admin_id) and is_binary(reason) and byte_size(reason) > 0 do
     CancelEnrollmentByAdmin.execute(enrollment_id, admin_id, reason)
+  end
+
+  @doc """
+  Confirms a pending enrollment when the owning provider approves it.
+
+  ## Parameters
+
+  - `:enrollment_id` — UUID of the enrollment
+  - `:provider_id` — UUID of the provider performing the approval
+
+  ## Returns
+
+  - `{:ok, Enrollment.t()}` — confirmation succeeded
+  - `{:error, :not_found}` — enrollment does not exist
+  - `{:error, :unauthorized}` — provider does not own the program
+  - `{:error, :invalid_status_transition}` — enrollment is not pending
+  """
+  def confirm_enrollment(%{enrollment_id: enrollment_id, provider_id: provider_id} = params)
+      when is_binary(enrollment_id) and is_binary(provider_id) do
+    ConfirmEnrollment.execute(params)
   end
 
   @doc """
@@ -297,6 +319,16 @@ defmodule KlassHero.Enrollment do
   """
   def list_program_enrollments(program_id) when is_binary(program_id) do
     ListProgramEnrollments.execute(program_id)
+  end
+
+  @doc """
+  Lists enriched pending enrollment entries across the given program IDs.
+
+  Used by the provider dashboard's "Pending enrollments" inbox card to
+  surface enrollments awaiting provider approval.
+  """
+  def list_pending_enrollments_for_provider(program_ids) when is_list(program_ids) do
+    ListPendingEnrollmentsForProvider.execute(program_ids)
   end
 
   @doc """

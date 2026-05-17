@@ -1433,4 +1433,87 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       assert has_element?(view, ~s(a[href="/provider/complete-profile"]))
     end
   end
+
+  describe "pending enrollments card" do
+    test "shows empty state when no pending enrollments", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+
+      assert has_element?(view, "#pending-enrollments-card")
+      assert render(view) =~ "No pending enrollments right now."
+    end
+
+    test "renders a row per pending enrollment for this provider", %{conn: conn, provider: provider} do
+      program = insert_program_with_listing(provider_id: provider.id, title: "Soccer Camp")
+      {child, parent} = KlassHero.Factory.insert_child_with_guardian()
+
+      enrollment =
+        KlassHero.Factory.insert(:enrollment_schema,
+          program_id: program.id,
+          parent_id: parent.id,
+          child_id: child.id,
+          status: :pending
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+
+      assert has_element?(view, "#pending-enrollment-#{enrollment.id}")
+      assert has_element?(view, "#approve-enrollment-#{enrollment.id}")
+      assert render(view) =~ "Soccer Camp"
+    end
+
+    test "does not show pending enrollments from another provider", %{conn: conn} do
+      other_provider = KlassHero.Factory.insert(:provider_profile_schema)
+      other_program = KlassHero.Factory.insert(:program_schema, provider_id: other_provider.id)
+
+      enrollment =
+        KlassHero.Factory.insert(:enrollment_schema, program_id: other_program.id, status: :pending)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+
+      refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
+    end
+
+    test "approving a pending enrollment confirms it and removes it from the card",
+         %{conn: conn, provider: provider} do
+      program = insert_program_with_listing(provider_id: provider.id)
+      {child, parent} = KlassHero.Factory.insert_child_with_guardian()
+
+      enrollment =
+        KlassHero.Factory.insert(:enrollment_schema,
+          program_id: program.id,
+          parent_id: parent.id,
+          child_id: child.id,
+          status: :pending
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+
+      view
+      |> element("#approve-enrollment-#{enrollment.id}")
+      |> render_click()
+
+      refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
+
+      {:ok, reloaded} = KlassHero.Enrollment.get_enrollment(enrollment.id)
+      assert reloaded.status == :confirmed
+    end
+
+    test "approving an enrollment for another provider's program flashes an error",
+         %{conn: conn} do
+      other_provider = KlassHero.Factory.insert(:provider_profile_schema)
+      other_program = KlassHero.Factory.insert(:program_schema, provider_id: other_provider.id)
+
+      enrollment =
+        KlassHero.Factory.insert(:enrollment_schema, program_id: other_program.id, status: :pending)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+
+      render_hook(view, "approve_enrollment", %{"id" => enrollment.id})
+
+      assert render(view) =~ "Not allowed"
+
+      {:ok, reloaded} = KlassHero.Enrollment.get_enrollment(enrollment.id)
+      assert reloaded.status == :pending
+    end
+  end
 end

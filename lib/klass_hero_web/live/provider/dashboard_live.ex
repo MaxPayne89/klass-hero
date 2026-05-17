@@ -130,6 +130,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           |> assign(total_sessions_completed: 0)
           |> assign(enrolled_total: 0)
           |> assign(pending_requests: [])
+          |> assign(pending_enrollments: [])
           |> assign(top_programs: [])
           |> allow_upload(:logo,
             accept: ~w(.jpg .jpeg .png .webp),
@@ -203,10 +204,21 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     enrolled_total = enrollment_counts |> Map.values() |> Enum.sum()
 
     pending_requests = load_pending_requests(program_ids)
+    pending_enrollments = Enrollment.list_pending_enrollments_for_provider(program_ids)
     top_programs = build_top_programs(program_listings, enrollment_counts)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(KlassHero.PubSub, "provider:#{provider.id}:stats_updated")
+
+      # Subscribe to the provider-scoped pending-changed topic so the dashboard
+      # refreshes automatically when a pending enrollment is confirmed.
+      # The generic NotifyLiveViews topic ("enrollment:enrollment_confirmed") is
+      # not provider-scoped, so ConfirmEnrollment also broadcasts a supplementary
+      # message on this topic to enable targeted, per-provider subscriptions.
+      Phoenix.PubSub.subscribe(
+        KlassHero.PubSub,
+        "enrollment:provider:#{provider.id}:pending_changed"
+      )
     end
 
     {:noreply,
@@ -216,6 +228,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
      |> assign(total_sessions_completed: total_sessions)
      |> assign(enrolled_total: enrolled_total)
      |> assign(pending_requests: pending_requests)
+     |> assign(pending_enrollments: pending_enrollments)
      |> assign(top_programs: top_programs)}
   end
 
@@ -263,7 +276,53 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
+  @impl true
+  def handle_info(:enrollment_pending_changed, socket) do
+    {:noreply, refresh_pending_enrollments(socket)}
+  end
+
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  # ============================================================================
+  # Pending Enrollment Events
+  # ============================================================================
+
+  @impl true
+  def handle_event("approve_enrollment", %{"id" => enrollment_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case Enrollment.confirm_enrollment(%{
+           enrollment_id: enrollment_id,
+           provider_id: provider_id
+         }) do
+      {:ok, _enrollment} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Enrollment approved"))
+         |> refresh_pending_enrollments()}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, gettext("Not allowed to approve this enrollment"))}
+
+      {:error, :invalid_status_transition} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("Enrollment is not pending"))
+         |> refresh_pending_enrollments()}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, gettext("Enrollment not found"))}
+
+      {:error, reason} ->
+        Logger.error("[Dashboard.approve_enrollment] Failed",
+          enrollment_id: enrollment_id,
+          provider_id: provider_id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Failed to approve"))}
+    end
+  end
 
   # ============================================================================
   # Staff Member CRUD Events
@@ -1218,6 +1277,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
                 active_program_count={@programs_count}
                 enrolled_total={@enrolled_total}
                 pending_requests={@pending_requests}
+                pending_enrollments={@pending_enrollments}
                 top_programs={@top_programs}
               />
             <% :team -> %>
@@ -1455,6 +1515,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   attr :active_program_count, :integer, required: true
   attr :enrolled_total, :integer, required: true
   attr :pending_requests, :list, required: true
+  attr :pending_enrollments, :list, required: true
   attr :top_programs, :list, required: true
 
   defp overview_section(assigns) do
@@ -1499,8 +1560,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         <.pv_earnings_chart data={[]} />
       </section>
 
-      <%!-- Top programs + pending requests side-by-side on desktop. --%>
-      <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <%!-- Top programs + pending invites + pending enrollments side-by-side on desktop. --%>
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <.kh_card class="p-5">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-lg">{gettext("Your top programs")}</h3>
@@ -1531,6 +1592,24 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           </div>
           <div class="space-y-3">
             <.pv_request_card :for={r <- @pending_requests} request={r} />
+          </div>
+        </.kh_card>
+
+        <.kh_card id="pending-enrollments-card" class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg">{gettext("Pending enrollments")}</h3>
+            <span class="text-xs text-hero-grey-600 font-semibold">
+              {length(@pending_enrollments)} {gettext("pending")}
+            </span>
+          </div>
+          <div :if={@pending_enrollments == []} class="text-sm text-hero-grey-600">
+            {gettext("No pending enrollments right now.")}
+          </div>
+          <div class="space-y-3">
+            <.pv_pending_enrollment_card
+              :for={entry <- @pending_enrollments}
+              entry={entry}
+            />
           </div>
         </.kh_card>
       </section>
@@ -2348,5 +2427,11 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       {:error, :not_found} ->
         to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
     end
+  end
+
+  defp refresh_pending_enrollments(socket) do
+    provider = socket.assigns.current_scope.provider
+    program_ids = ProgramCatalog.list_programs_for_provider(provider.id) |> Enum.map(& &1.id)
+    assign(socket, :pending_enrollments, Enrollment.list_pending_enrollments_for_provider(program_ids))
   end
 end

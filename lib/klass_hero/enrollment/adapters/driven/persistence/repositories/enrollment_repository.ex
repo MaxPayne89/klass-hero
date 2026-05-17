@@ -247,6 +247,20 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   end
 
   @impl true
+  def list_pending_by_programs([]), do: []
+
+  def list_pending_by_programs(program_ids) when is_list(program_ids) do
+    span do
+      set_attributes("db", operation: "select", entity: "enrollment")
+
+      EnrollmentSchema
+      |> where([e], e.status == :pending and e.program_id in ^program_ids)
+      |> Repo.all()
+      |> MapperHelpers.to_domain_list(EnrollmentMapper)
+    end
+  end
+
+  @impl true
   @doc """
   Lists active enrollments for a program from the database.
 

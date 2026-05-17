@@ -68,4 +68,12 @@ defmodule KlassHero.Enrollment.Domain.Ports.ForQueryingEnrollments do
   Returns list of Enrollment.t(), ordered by enrolled_at descending.
   """
   @callback list_by_program(program_id :: binary()) :: [Enrollment.t()]
+
+  @doc """
+  Returns all enrollments with status `:pending` that belong to any of the
+  given program IDs.
+
+  Empty list of program IDs short-circuits to an empty result.
+  """
+  @callback list_pending_by_programs(program_ids :: [binary()]) :: [Enrollment.t()]
 end
