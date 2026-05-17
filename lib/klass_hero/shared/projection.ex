@@ -122,7 +122,7 @@ defmodule KlassHero.Shared.Projection do
         {:noreply, state, {:continue, :bootstrap}}
       end
 
-      defoverridable apply_bootstrap: 1
+      defoverridable apply_bootstrap: 1, handle_call: 3
     end
   end
 end
