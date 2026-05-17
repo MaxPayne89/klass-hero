@@ -130,6 +130,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           |> assign(total_sessions_completed: 0)
           |> assign(enrolled_total: 0)
           |> assign(pending_requests: [])
+          |> assign(pending_enrollments: [])
           |> assign(top_programs: [])
           |> allow_upload(:logo,
             accept: ~w(.jpg .jpeg .png .webp),
@@ -203,10 +204,21 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     enrolled_total = enrollment_counts |> Map.values() |> Enum.sum()
 
     pending_requests = load_pending_requests(program_ids)
+    pending_enrollments = Enrollment.list_pending_enrollments_for_provider(program_ids)
     top_programs = build_top_programs(program_listings, enrollment_counts)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(KlassHero.PubSub, "provider:#{provider.id}:stats_updated")
+
+      # Subscribe to the provider-scoped pending-changed topic so the dashboard
+      # refreshes automatically when a pending enrollment is confirmed.
+      # The generic NotifyLiveViews topic ("enrollment:enrollment_confirmed") is
+      # not provider-scoped, so ConfirmEnrollment also broadcasts a supplementary
+      # message on this topic to enable targeted, per-provider subscriptions.
+      Phoenix.PubSub.subscribe(
+        KlassHero.PubSub,
+        "enrollment:provider:#{provider.id}:pending_changed"
+      )
     end
 
     {:noreply,
@@ -216,6 +228,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
      |> assign(total_sessions_completed: total_sessions)
      |> assign(enrolled_total: enrolled_total)
      |> assign(pending_requests: pending_requests)
+     |> assign(pending_enrollments: pending_enrollments)
      |> assign(top_programs: top_programs)}
   end
 
