@@ -14,4 +14,11 @@ defmodule KlassHero.Enrollment.Domain.Ports.ForResolvingProgramCatalog do
   Returns `%{"Program Title" => "program-uuid", ...}`.
   """
   @callback list_program_titles_for_provider(binary()) :: %{String.t() => binary()}
+
+  @doc """
+  Returns true if the given program is owned by the given provider.
+
+  Returns false for unknown programs and for programs owned by other providers.
+  """
+  @callback program_owned_by?(program_id :: binary(), provider_id :: binary()) :: boolean()
 end
