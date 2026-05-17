@@ -276,7 +276,53 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
+  @impl true
+  def handle_info(:enrollment_pending_changed, socket) do
+    {:noreply, refresh_pending_enrollments(socket)}
+  end
+
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  # ============================================================================
+  # Pending Enrollment Events
+  # ============================================================================
+
+  @impl true
+  def handle_event("approve_enrollment", %{"id" => enrollment_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case Enrollment.confirm_enrollment(%{
+           enrollment_id: enrollment_id,
+           provider_id: provider_id
+         }) do
+      {:ok, _enrollment} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Enrollment approved"))
+         |> refresh_pending_enrollments()}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, gettext("Not allowed to approve this enrollment"))}
+
+      {:error, :invalid_status_transition} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("Enrollment is not pending"))
+         |> refresh_pending_enrollments()}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, gettext("Enrollment not found"))}
+
+      {:error, reason} ->
+        Logger.error("[Dashboard.approve_enrollment] Failed",
+          enrollment_id: enrollment_id,
+          provider_id: provider_id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Failed to approve"))}
+    end
+  end
 
   # ============================================================================
   # Staff Member CRUD Events
@@ -2381,5 +2427,11 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       {:error, :not_found} ->
         to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
     end
+  end
+
+  defp refresh_pending_enrollments(socket) do
+    provider = socket.assigns.current_scope.provider
+    program_ids = ProgramCatalog.list_programs_for_provider(provider.id) |> Enum.map(& &1.id)
+    assign(socket, :pending_enrollments, Enrollment.list_pending_enrollments_for_provider(program_ids))
   end
 end
