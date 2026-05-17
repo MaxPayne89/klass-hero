@@ -198,22 +198,83 @@ defmodule KlassHeroWeb.UIComponents do
           <div class="text-xs text-hero-grey-600 font-semibold">{gettext("Signed in as")}</div>
           <div class="text-sm font-bold truncate">{@user.email}</div>
         </div>
-        <a
-          href={~p"/users/settings"}
-          role="menuitem"
-          class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-hero-black-100 hover:bg-hero-cream-100 no-underline"
-        >
-          <.icon name="hero-cog-6-tooth" class="w-4 h-4" /> {gettext("Settings")}
-        </a>
-        <.link
+        <.kh_menu_item href={~p"/users/settings"} icon="hero-cog-6-tooth">
+          {gettext("Settings")}
+        </.kh_menu_item>
+        <.admin_nav is_admin={Map.get(@user, :is_admin, false)} />
+        <.kh_menu_item
           href={~p"/users/log-out"}
           method="delete"
-          role="menuitem"
-          class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 border-t border-hero-grey-200 no-underline"
+          icon="hero-arrow-right-on-rectangle"
+          variant={:destructive}
+          class="border-t border-hero-grey-200"
         >
-          <.icon name="hero-arrow-right-on-rectangle" class="w-4 h-4" /> {gettext("Log out")}
-        </.link>
+          {gettext("Log out")}
+        </.kh_menu_item>
       </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders an item inside a `kh_user_menu/1` panel — icon + label, with optional
+  `:destructive` variant (red palette, used for logout-style actions). Accepts
+  the same `href` / `navigate` / `method` routing attrs as `<.link>`.
+  """
+  attr :href, :string, default: nil
+  attr :navigate, :string, default: nil
+  attr :method, :string, default: nil
+  attr :icon, :string, required: true, doc: "Heroicon name (e.g. \"hero-cog-6-tooth\")"
+
+  attr :variant, :atom,
+    default: :default,
+    values: [:default, :destructive],
+    doc: "`:destructive` swaps the color palette for logout-style actions"
+
+  attr :class, :string, default: ""
+  slot :inner_block, required: true
+
+  def kh_menu_item(assigns) do
+    ~H"""
+    <.link
+      href={@href}
+      navigate={@navigate}
+      method={@method}
+      role="menuitem"
+      class={[
+        "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold no-underline",
+        kh_menu_item_variant_classes(@variant),
+        @class
+      ]}
+    >
+      <.icon name={@icon} class="w-4 h-4" /> {render_slot(@inner_block)}
+    </.link>
+    """
+  end
+
+  defp kh_menu_item_variant_classes(:default), do: "text-hero-black-100 hover:bg-hero-cream-100"
+  defp kh_menu_item_variant_classes(:destructive), do: "text-red-600 hover:bg-red-50"
+
+  @doc """
+  Renders the admin section of a `kh_user_menu/1` panel. Renders nothing when
+  `is_admin` is false.
+  """
+  attr :is_admin, :boolean, default: false
+
+  def admin_nav(assigns) do
+    ~H"""
+    <div :if={@is_admin} class="border-t border-hero-grey-200">
+      <div class="px-4 py-2 bg-hero-cream-100">
+        <div class="text-xs text-hero-grey-600 font-semibold uppercase tracking-wider">
+          {gettext("Admin")}
+        </div>
+      </div>
+      <.kh_menu_item navigate={~p"/admin/accounts"} icon="hero-chart-bar-square">
+        {gettext("Dashboard")}
+      </.kh_menu_item>
+      <.kh_menu_item navigate={~p"/admin/verifications"} icon="hero-shield-check">
+        {gettext("Verifications")}
+      </.kh_menu_item>
     </div>
     """
   end
