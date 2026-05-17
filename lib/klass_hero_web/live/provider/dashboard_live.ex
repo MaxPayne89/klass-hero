@@ -1231,6 +1231,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
                 active_program_count={@programs_count}
                 enrolled_total={@enrolled_total}
                 pending_requests={@pending_requests}
+                pending_enrollments={@pending_enrollments}
                 top_programs={@top_programs}
               />
             <% :team -> %>
@@ -1468,6 +1469,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   attr :active_program_count, :integer, required: true
   attr :enrolled_total, :integer, required: true
   attr :pending_requests, :list, required: true
+  attr :pending_enrollments, :list, required: true
   attr :top_programs, :list, required: true
 
   defp overview_section(assigns) do
@@ -1512,8 +1514,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         <.pv_earnings_chart data={[]} />
       </section>
 
-      <%!-- Top programs + pending requests side-by-side on desktop. --%>
-      <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <%!-- Top programs + pending invites + pending enrollments side-by-side on desktop. --%>
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <.kh_card class="p-5">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-lg">{gettext("Your top programs")}</h3>
@@ -1544,6 +1546,24 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           </div>
           <div class="space-y-3">
             <.pv_request_card :for={r <- @pending_requests} request={r} />
+          </div>
+        </.kh_card>
+
+        <.kh_card id="pending-enrollments-card" class="p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg">{gettext("Pending enrollments")}</h3>
+            <span class="text-xs text-hero-grey-600 font-semibold">
+              {length(@pending_enrollments)} {gettext("pending")}
+            </span>
+          </div>
+          <div :if={@pending_enrollments == []} class="text-sm text-hero-grey-600">
+            {gettext("No pending enrollments right now.")}
+          </div>
+          <div class="space-y-3">
+            <.pv_pending_enrollment_card
+              :for={entry <- @pending_enrollments}
+              entry={entry}
+            />
           </div>
         </.kh_card>
       </section>
