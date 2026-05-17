@@ -204,4 +204,39 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
                    fn -> EnrollmentEvents.enrollment_cancelled("", %{}) end
     end
   end
+
+  describe "enrollment_confirmed/3" do
+    test "builds an event with the canonical payload" do
+      enrollment_id = "11111111-1111-1111-1111-111111111111"
+      program_id = "22222222-2222-2222-2222-222222222222"
+      child_id = "33333333-3333-3333-3333-333333333333"
+      parent_id = "44444444-4444-4444-4444-444444444444"
+      confirmed_at = DateTime.utc_now()
+
+      assert %DomainEvent{
+               event_type: :enrollment_confirmed,
+               aggregate_id: ^enrollment_id,
+               aggregate_type: :enrollment,
+               payload: %{
+                 enrollment_id: ^enrollment_id,
+                 program_id: ^program_id,
+                 child_id: ^child_id,
+                 parent_id: ^parent_id,
+                 confirmed_at: ^confirmed_at
+               }
+             } =
+               EnrollmentEvents.enrollment_confirmed(enrollment_id, %{
+                 program_id: program_id,
+                 child_id: child_id,
+                 parent_id: parent_id,
+                 confirmed_at: confirmed_at
+               })
+    end
+
+    test "raises on empty enrollment_id" do
+      assert_raise ArgumentError, ~r/non-empty enrollment_id/, fn ->
+        EnrollmentEvents.enrollment_confirmed("", %{})
+      end
+    end
+  end
 end

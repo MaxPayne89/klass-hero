@@ -20,6 +20,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
     an enrollment invite email.
   - `:enrollment_cancelled` - Emitted when an admin cancels an enrollment.
   - `:enrollment_created` - Emitted when a new enrollment is persisted.
+  - `:enrollment_confirmed` - Emitted when a provider approves a pending enrollment.
   """
 
   alias KlassHero.Shared.Domain.Events.DomainEvent
@@ -215,5 +216,34 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
   def enrollment_created(enrollment_id, _payload, _opts) do
     raise ArgumentError,
           "enrollment_created/3 requires a non-empty enrollment_id string, got: #{inspect(enrollment_id)}"
+  end
+
+  @doc """
+  Creates an `:enrollment_confirmed` event when a provider approves a pending enrollment.
+
+  ## Parameters
+
+  - `enrollment_id` — the confirmed enrollment's ID
+  - `payload` — event data including `program_id`, `child_id`, `parent_id`, `confirmed_at`
+  - `opts` — forwarded to `DomainEvent.new/5` (e.g. `:correlation_id`)
+  """
+  def enrollment_confirmed(enrollment_id, payload \\ %{}, opts \\ [])
+
+  def enrollment_confirmed(enrollment_id, payload, opts)
+      when is_binary(enrollment_id) and byte_size(enrollment_id) > 0 do
+    base_payload = %{enrollment_id: enrollment_id}
+
+    DomainEvent.new(
+      :enrollment_confirmed,
+      enrollment_id,
+      @aggregate_type,
+      Map.merge(payload, base_payload),
+      opts
+    )
+  end
+
+  def enrollment_confirmed(enrollment_id, _payload, _opts) do
+    raise ArgumentError,
+          "enrollment_confirmed/3 requires a non-empty enrollment_id string, got: #{inspect(enrollment_id)}"
   end
 end
