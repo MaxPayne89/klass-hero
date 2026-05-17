@@ -246,7 +246,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
     end
   end
 
-  @impl true
   def list_pending_by_programs([]), do: []
 
   @impl true
@@ -254,7 +253,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
     EnrollmentSchema
     |> where([e], e.status == :pending and e.program_id in ^program_ids)
     |> Repo.all()
-    |> Enum.map(&EnrollmentMapper.to_domain/1)
+    |> MapperHelpers.to_domain_list(EnrollmentMapper)
   end
 
   @impl true
