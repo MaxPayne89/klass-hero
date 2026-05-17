@@ -44,4 +44,33 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACLTest do
       assert ProgramCatalogACL.list_program_titles_for_provider(Ecto.UUID.generate()) == %{}
     end
   end
+
+  describe "program_owned_by?/2" do
+    test "returns true when the program belongs to the provider" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      assert ProgramCatalogACL.program_owned_by?(program.id, provider.id)
+    end
+
+    test "returns false when the program belongs to another provider" do
+      other_provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: other_provider.id)
+      provider = insert(:provider_profile_schema)
+
+      refute ProgramCatalogACL.program_owned_by?(program.id, provider.id)
+    end
+
+    test "returns false for an unknown program id" do
+      provider = insert(:provider_profile_schema)
+
+      refute ProgramCatalogACL.program_owned_by?(Ecto.UUID.generate(), provider.id)
+    end
+
+    test "returns false for an invalid uuid" do
+      provider = insert(:provider_profile_schema)
+
+      refute ProgramCatalogACL.program_owned_by?("not-a-uuid", provider.id)
+    end
+  end
 end

@@ -46,4 +46,32 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL do
       end
     end
   end
+
+  @impl true
+  def program_owned_by?(program_id, provider_id) when is_binary(program_id) and is_binary(provider_id) do
+    span do
+      set_attributes("acl",
+        source: "enrollment",
+        target: "program_catalog",
+        operation: "program_owned_by?"
+      )
+
+      with {:ok, _} <- Ecto.UUID.cast(program_id),
+           {:ok, _} <- Ecto.UUID.cast(provider_id) do
+        from(p in "programs",
+          where:
+            p.id == type(^program_id, :binary_id) and
+              p.provider_id == type(^provider_id, :binary_id),
+          select: 1
+        )
+        |> Repo.one()
+        |> case do
+          nil -> false
+          1 -> true
+        end
+      else
+        :error -> false
+      end
+    end
+  end
 end
