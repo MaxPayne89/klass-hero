@@ -389,7 +389,7 @@ defmodule KlassHeroWeb.UserAuth do
     cond do
       :provider in roles -> ~p"/provider/dashboard"
       :staff_provider in roles -> ~p"/staff/dashboard"
-      true -> ~p"/users/settings"
+      true -> ~p"/dashboard"
     end
   end
 

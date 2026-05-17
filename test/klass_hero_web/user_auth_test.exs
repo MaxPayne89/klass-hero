@@ -29,7 +29,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       conn = UserAuth.log_in_user(conn, user)
       assert token = get_session(conn, :user_token)
       assert get_session(conn, :live_socket_id) == "users_sessions:#{Base.url_encode64(token)}"
-      assert redirected_to(conn) == ~p"/users/settings"
+      assert redirected_to(conn) == ~p"/dashboard"
       assert Accounts.get_user_by_session_token(token)
     end
 
@@ -78,13 +78,13 @@ defmodule KlassHeroWeb.UserAuthTest do
       assert max_age == @remember_me_cookie_max_age
     end
 
-    test "redirects to settings when user is already logged in", %{conn: conn, user: user} do
+    test "redirects to parent dashboard when user is already logged in", %{conn: conn, user: user} do
       conn =
         conn
         |> assign(:current_scope, Scope.for_user(user))
         |> UserAuth.log_in_user(user)
 
-      assert redirected_to(conn) == ~p"/users/settings"
+      assert redirected_to(conn) == ~p"/dashboard"
     end
 
     test "redirects provider to provider dashboard", %{conn: conn} do
@@ -676,14 +676,14 @@ defmodule KlassHeroWeb.UserAuthTest do
       assert UserAuth.signed_in_path(user) == ~p"/provider/dashboard"
     end
 
-    test "redirects parent to user settings" do
+    test "redirects parent to parent dashboard" do
       user = %Accounts.User{intended_roles: [:parent]}
-      assert UserAuth.signed_in_path(user) == ~p"/users/settings"
+      assert UserAuth.signed_in_path(user) == ~p"/dashboard"
     end
 
-    test "redirects user with no roles to user settings" do
+    test "redirects user with no roles to parent dashboard" do
       user = %Accounts.User{intended_roles: []}
-      assert UserAuth.signed_in_path(user) == ~p"/users/settings"
+      assert UserAuth.signed_in_path(user) == ~p"/dashboard"
     end
 
     test "provider takes precedence over staff_provider for dual-role users" do
@@ -693,6 +693,22 @@ defmodule KlassHeroWeb.UserAuthTest do
 
     test "falls back to root for nil user" do
       assert UserAuth.signed_in_path(nil) == ~p"/"
+    end
+
+    test "is_admin does not change role-based redirect (role wins)" do
+      cases = [
+        {[], ~p"/dashboard", "admin-only user lands on parent dashboard"},
+        {[:parent], ~p"/dashboard", "parent+admin lands on parent dashboard"},
+        {[:provider], ~p"/provider/dashboard", "provider+admin lands on provider dashboard"},
+        {[:staff_provider], ~p"/staff/dashboard", "staff+admin lands on staff dashboard"}
+      ]
+
+      for {roles, expected, label} <- cases do
+        user = %Accounts.User{intended_roles: roles, is_admin: true}
+
+        assert UserAuth.signed_in_path(user) == expected,
+               "#{label}: roles=#{inspect(roles)}"
+      end
     end
   end
 

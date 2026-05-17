@@ -205,6 +205,7 @@ defmodule KlassHeroWeb.UIComponents do
         >
           <.icon name="hero-cog-6-tooth" class="w-4 h-4" /> {gettext("Settings")}
         </a>
+        <.admin_nav user={@user} />
         <.link
           href={~p"/users/log-out"}
           method="delete"
@@ -214,6 +215,43 @@ defmodule KlassHeroWeb.UIComponents do
           <.icon name="hero-arrow-right-on-rectangle" class="w-4 h-4" /> {gettext("Log out")}
         </.link>
       </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the admin section of an account dropdown — an "Admin" heading plus
+  links to the admin Dashboard and Verifications. Renders nothing for users
+  without `is_admin: true`.
+
+  Styled to slot inside `kh_user_menu/1`'s panel between Settings and Log out,
+  so the admin entry stays discoverable from whichever role-specific layout the
+  user lands on (parent or provider topbar).
+  """
+  attr :user, :map, required: true, doc: "User struct/map; gated by :is_admin"
+
+  def admin_nav(assigns) do
+    ~H"""
+    <div :if={@user.is_admin} class="border-t border-hero-grey-200">
+      <div class="px-4 py-2 bg-hero-cream-100">
+        <div class="text-xs text-hero-grey-600 font-semibold uppercase tracking-wider">
+          {gettext("Admin")}
+        </div>
+      </div>
+      <.link
+        navigate={~p"/admin/accounts"}
+        role="menuitem"
+        class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-hero-black-100 hover:bg-hero-cream-100 no-underline"
+      >
+        <.icon name="hero-chart-bar-square" class="w-4 h-4" /> {gettext("Dashboard")}
+      </.link>
+      <.link
+        navigate={~p"/admin/verifications"}
+        role="menuitem"
+        class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-hero-black-100 hover:bg-hero-cream-100 no-underline"
+      >
+        <.icon name="hero-shield-check" class="w-4 h-4" /> {gettext("Verifications")}
+      </.link>
     </div>
     """
   end

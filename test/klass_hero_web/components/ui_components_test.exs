@@ -327,6 +327,31 @@ defmodule KlassHeroWeb.UIComponentsTest do
     """)
   end
 
+  describe "admin_nav/1" do
+    test "renders Admin heading + Dashboard + Verifications links when user is admin" do
+      html = render_admin_nav(is_admin: true)
+
+      assert html =~ "Admin"
+      assert html =~ ~s|href="/admin/accounts"|
+      assert html =~ ~s|href="/admin/verifications"|
+      assert html =~ "Dashboard"
+      assert html =~ "Verifications"
+    end
+
+    test "renders nothing when user is not admin" do
+      html = render_admin_nav(is_admin: false)
+
+      refute html =~ ~s|href="/admin/accounts"|
+      refute html =~ ~s|href="/admin/verifications"|
+    end
+
+    test "uses menuitem role for admin links (a11y)" do
+      html = render_admin_nav(is_admin: true)
+
+      assert html =~ ~s|role="menuitem"|
+    end
+  end
+
   describe "kh_user_menu/1" do
     test "renders the trigger as initial-circle from user.name" do
       html = render_kh_user_menu(user: %{name: "Maxi", email: "max@example.com"})
@@ -387,7 +412,7 @@ defmodule KlassHeroWeb.UIComponentsTest do
     end
 
     test "supports multiple instances on one page via distinct ids" do
-      assigns = %{user: %{name: "Maxi", email: "max@example.com"}}
+      assigns = %{user: %{name: "Maxi", email: "max@example.com", is_admin: false}}
 
       html =
         rendered_to_string(~H"""
@@ -400,11 +425,37 @@ defmodule KlassHeroWeb.UIComponentsTest do
       assert html =~ ~s|id="mobile-trigger"|
       assert html =~ ~s|id="mobile-panel"|
     end
+
+    test "embeds admin links when user.is_admin is true" do
+      html =
+        render_kh_user_menu(user: %{name: "A", email: "admin@example.com", is_admin: true})
+
+      assert html =~ ~s|href="/admin/accounts"|
+      assert html =~ ~s|href="/admin/verifications"|
+    end
+
+    test "omits admin links when user.is_admin is false" do
+      html =
+        render_kh_user_menu(user: %{name: "P", email: "parent@example.com", is_admin: false})
+
+      refute html =~ ~s|href="/admin/accounts"|
+      refute html =~ ~s|href="/admin/verifications"|
+    end
+  end
+
+  defp render_admin_nav(opts) do
+    assigns = %{user: %{is_admin: Keyword.fetch!(opts, :is_admin)}}
+
+    rendered_to_string(~H"""
+    <UIComponents.admin_nav user={@user} />
+    """)
   end
 
   defp render_kh_user_menu(opts) do
+    user = opts |> Keyword.fetch!(:user) |> Map.put_new(:is_admin, false)
+
     assigns = %{
-      user: Keyword.fetch!(opts, :user),
+      user: user,
       id: Keyword.get(opts, :id, "user-menu")
     }
 

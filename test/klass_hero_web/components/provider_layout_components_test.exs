@@ -239,7 +239,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
     assigns = %{
       provider: Keyword.fetch!(opts, :provider),
       show_new_program_cta: Keyword.get(opts, :show_new_program_cta, false),
-      user: Keyword.get(opts, :user, %{name: "Test Provider", email: "provider@example.com"})
+      user: Keyword.get(opts, :user, %{name: "Test Provider", email: "provider@example.com", is_admin: false})
     }
 
     rendered_to_string(~H"""
