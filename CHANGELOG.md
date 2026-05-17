@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.6](https://github.com/MaxPayne89/klass-hero/compare/v0.50.5...v0.50.6) (2026-05-17)
+
+
+### Bug Fixes
+
+* let providers approve pending enrollments ([#859](https://github.com/MaxPayne89/klass-hero/issues/859)) ([#866](https://github.com/MaxPayne89/klass-hero/issues/866)) ([73b1287](https://github.com/MaxPayne89/klass-hero/commit/73b12872f2e4b091b52dbb2ed7ad46f3c87895ab))
+* route admin users to primary layout with shared dropdown nav ([#864](https://github.com/MaxPayne89/klass-hero/issues/864)) ([d0bbe64](https://github.com/MaxPayne89/klass-hero/commit/d0bbe64bbb1aeb96b1eec07a495cee7f63284c6d))
+
 ## [0.50.5](https://github.com/MaxPayne89/klass-hero/compare/v0.50.4...v0.50.5) (2026-05-17)
 
 
