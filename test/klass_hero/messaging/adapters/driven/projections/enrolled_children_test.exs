@@ -171,6 +171,52 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
     end
   end
 
+  describe "macro invariants after happy-path startup" do
+    test "state.retry_count == 0 after first event projects successfully" do
+      # Start WITHOUT skip_bootstrap to exercise the real subscribe + handle_continue path.
+      # If a KeyError-class bug got swallowed by the retry mixin's rescue, retry_count
+      # would be > 0 even though the test event still projects correctly.
+      pid =
+        start_supervised!(
+          {EnrolledChildren, name: :"reg_#{System.unique_integer([:positive])}"},
+          id: :regression_projection
+        )
+
+      # Drain handle_continue; bootstrap should succeed on the first attempt.
+      # Shared sandbox (async: false) covers the GenServer pid automatically.
+      :sys.get_state(pid)
+
+      # If any rescue path was triggered during bootstrap, retry_count would be > 0.
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+
+      # Send one well-formed enrollment_created event; confirm dispatcher path
+      # doesn't trip an internal raise.
+      enrollment_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :enrollment_created,
+          :enrollment,
+          :enrollment,
+          enrollment_id,
+          %{
+            enrollment_id: enrollment_id,
+            child_id: Ecto.UUID.generate(),
+            parent_id: Ecto.UUID.generate(),
+            parent_user_id: Ecto.UUID.generate(),
+            program_id: Ecto.UUID.generate(),
+            status: "confirmed"
+          }
+        )
+
+      send(pid, {:integration_event, event})
+      :sys.get_state(pid)
+
+      # No retry scheduled by handle_event. State invariant preserved.
+      assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
+    end
+  end
+
   # Helper to create users with specific names
   defp user_fixture(attrs) do
     KlassHero.AccountsFixtures.user_fixture(attrs)

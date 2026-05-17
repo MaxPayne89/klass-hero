@@ -1,20 +1,24 @@
 defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   @moduledoc """
-  Event-driven projection maintaining the `messaging_enrolled_children` lookup table.
+  Event-driven projection maintaining the `messaging_enrolled_children` read table.
 
-  This GenServer subscribes to cross-context integration events from
-  Enrollment and Family, plus Messaging's own `conversation_created` event.
-  It maintains a local lookup of enrolled children per parent+program,
-  then emits `enrolled_children_changed` domain events that the
-  `ConversationSummaries` projection consumes.
+  Mirrors the enrolment + child + parent context needed for Messaging features so
+  that conversation summaries can display which child(ren) a conversation is about
+  without joining across context boundaries.
 
-  ## Event Subscriptions
+  Built on `KlassHero.Shared.Projection` (base) + `Projection.WithBootstrapRetry`
+  (linear-backoff retry on transient bootstrap failure).
 
-  - `integration:enrollment:enrollment_created` — upserts a lookup row
-  - `integration:enrollment:enrollment_cancelled` — deletes a lookup row
-  - `integration:family:child_created` — updates child_first_name
-  - `integration:family:child_updated` — updates child_first_name
-  - `integration:messaging:conversation_created` — triggers name resolution for new conversations
+  ## Event handling
+
+  - `:enrollment_created` — inserts enrollment row(s)
+  - `:enrollment_cancelled` — deletes rows for that enrollment
+  - `:child_created` — updates child_first_name across rows
+  - `:child_updated` — updates child_first_name across rows
+  - `:conversation_created` — broadcasts `:enrolled_children_changed` domain event for downstream projections
+
+  After every state-changing operation, emits a `:enrolled_children_changed`
+  domain event so dependent projections (ConversationSummaries) can refresh.
 
   ## Cross-Context Coupling
 
@@ -41,7 +45,16 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   tracks replacing all of these with dedicated cross-context ports.
   """
 
-  use GenServer
+  use KlassHero.Shared.Projection,
+    topics: [
+      "integration:enrollment:enrollment_created",
+      "integration:enrollment:enrollment_cancelled",
+      "integration:family:child_created",
+      "integration:family:child_updated",
+      "integration:messaging:conversation_created"
+    ]
+
+  use KlassHero.Shared.Projection.WithBootstrapRetry
 
   import Ecto.Query
 
@@ -50,175 +63,27 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-
-  require Logger
-
-  @enrollment_created_topic "integration:enrollment:enrollment_created"
-  @enrollment_cancelled_topic "integration:enrollment:enrollment_cancelled"
-  @child_created_topic "integration:family:child_created"
-  @child_updated_topic "integration:family:child_updated"
-  @conversation_created_topic "integration:messaging:conversation_created"
+  alias KlassHero.Shared.Projection
 
   @enrolled_children_changed_topic "messaging:enrolled_children_changed"
 
-  # Client API
+  # Behaviour callbacks ───────────────────────────────────────────────────────
 
-  @doc """
-  Starts the EnrolledChildren projection GenServer.
+  @impl Projection
+  def bootstrap_impl, do: bootstrap_from_write_tables()
 
-  ## Options
+  @impl Projection
+  def handle_event(:enrollment_created, %IntegrationEvent{} = event), do: project_enrollment_created(event)
 
-  - `:name` - Process name (defaults to `__MODULE__`)
-  """
-  def start_link(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, opts, name: name)
-  end
+  def handle_event(:enrollment_cancelled, %IntegrationEvent{} = event), do: project_enrollment_cancelled(event)
 
-  @doc """
-  Rebuilds the messaging_enrolled_children read table from the write tables.
+  def handle_event(:child_created, %IntegrationEvent{} = event), do: project_child_name_change(event)
 
-  Useful after seeding write tables directly (bypassing integration events).
-  Blocks until the rebuild is complete.
-  """
-  @spec rebuild(GenServer.name()) :: :ok
-  def rebuild(name \\ __MODULE__) do
-    GenServer.call(name, :rebuild, :infinity)
-  end
+  def handle_event(:child_updated, %IntegrationEvent{} = event), do: project_child_name_change(event)
 
-  # Server Callbacks
+  def handle_event(:conversation_created, %IntegrationEvent{} = event), do: project_conversation_created(event)
 
-  @impl true
-  def init(_opts) do
-    # Trigger: GenServer is starting
-    # Why: subscribe to events before bootstrapping to avoid missing events
-    #      that arrive between bootstrap completion and subscription
-    # Outcome: subscribed to all five relevant topics
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @enrollment_created_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @enrollment_cancelled_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @child_created_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @child_updated_topic)
-    Phoenix.PubSub.subscribe(KlassHero.PubSub, @conversation_created_topic)
-
-    {:ok, %{bootstrapped: false}, {:continue, :bootstrap}}
-  end
-
-  @impl true
-  def handle_continue(:bootstrap, state) do
-    # Trigger: GenServer initialization complete
-    # Why: project all existing enrollments from write tables into read table
-    # Outcome: messaging_enrolled_children table populated with current data
-    attempt_bootstrap(state)
-  end
-
-  # Trigger: external caller requests a full rebuild (e.g. after seeding)
-  # Why: seeds insert into write tables without emitting integration events
-  # Outcome: messaging_enrolled_children read table refreshed from write tables
-  @impl true
-  def handle_call(:rebuild, _from, state) do
-    count = bootstrap_from_write_tables()
-    Logger.info("EnrolledChildren rebuilt", count: count)
-    {:reply, :ok, %{state | bootstrapped: true}}
-  end
-
-  @impl true
-  def handle_info(:retry_bootstrap, state) do
-    {:noreply, state, {:continue, :bootstrap}}
-  end
-
-  # Trigger: Received an enrollment_created integration event
-  # Why: a new enrollment was created, upsert a lookup row
-  # Outcome: one row inserted/updated in messaging_enrolled_children
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :enrollment_created} = event}, state) do
-    Logger.debug("EnrolledChildren projecting enrollment_created",
-      enrollment_id: event.entity_id
-    )
-
-    project_enrollment_created(event)
-    {:noreply, state}
-  end
-
-  # Trigger: Received an enrollment_cancelled integration event
-  # Why: enrollment cancelled, remove the lookup row
-  # Outcome: row deleted from messaging_enrolled_children
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :enrollment_cancelled} = event}, state) do
-    Logger.debug("EnrolledChildren projecting enrollment_cancelled",
-      enrollment_id: event.entity_id
-    )
-
-    project_enrollment_cancelled(event)
-    {:noreply, state}
-  end
-
-  # Trigger: Received a child_created integration event
-  # Why: new child may need first_name populated in existing lookup rows
-  # Outcome: child_first_name updated for matching rows
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :child_created} = event}, state) do
-    Logger.debug("EnrolledChildren projecting child_created", child_id: event.entity_id)
-    project_child_name_change(event)
-    {:noreply, state}
-  end
-
-  # Trigger: Received a child_updated integration event
-  # Why: child name may have changed, update lookup rows
-  # Outcome: child_first_name updated for matching rows
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :child_updated} = event}, state) do
-    Logger.debug("EnrolledChildren projecting child_updated", child_id: event.entity_id)
-    project_child_name_change(event)
-    {:noreply, state}
-  end
-
-  # Trigger: Received a conversation_created integration event
-  # Why: new conversation may need child names resolved for its participants
-  # Outcome: enrolled_children_changed emitted if any participant has enrolled children
-  @impl true
-  def handle_info({:integration_event, %IntegrationEvent{event_type: :conversation_created} = event}, state) do
-    project_conversation_created(event)
-    {:noreply, state}
-  end
-
-  # Catch-all for unhandled messages — logged so misrouted events are traceable
-  @impl true
-  def handle_info(msg, state) do
-    Logger.warning("EnrolledChildren received unexpected message",
-      message: inspect(msg, limit: 200)
-    )
-
-    {:noreply, state}
-  end
-
-  # Private — Bootstrap
-
-  # Trigger: bootstrap attempt with retry logic
-  # Why: transient DB failures shouldn't crash the GenServer immediately
-  # Outcome: successful bootstrap or scheduled retry (up to 3 times before crashing)
-  defp attempt_bootstrap(state) do
-    count = bootstrap_from_write_tables()
-    Logger.info("EnrolledChildren projection started", count: count)
-    {:noreply, %{state | bootstrapped: true}}
-  rescue
-    error ->
-      retry_count = Map.get(state, :retry_count, 0) + 1
-
-      if retry_count > 3 do
-        # Trigger: exhausted retries
-        # Why: persistent failure indicates real infrastructure issue
-        # Outcome: crash to let supervisor handle with its own restart strategy
-        reraise error, __STACKTRACE__
-      else
-        Logger.error("EnrolledChildren: bootstrap failed, scheduling retry",
-          error: Exception.message(error),
-          retry_count: retry_count
-        )
-
-        Process.send_after(self(), :retry_bootstrap, 5_000 * retry_count)
-        {:noreply, Map.put(state, :retry_count, retry_count)}
-      end
-  end
+  # Private — Bootstrap ───────────────────────────────────────────────────────
 
   # Trigger: bootstrap phase — read table may be empty or stale
   # Why: cold start recovery — populate read table from authoritative write tables
@@ -260,7 +125,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     end
   end
 
-  # Private — Event Projections
+  # Private — Event Projections ───────────────────────────────────────────────
 
   # Trigger: enrollment_created event received
   # Why: a new enrollment needs a lookup row so child names can be resolved
@@ -405,7 +270,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     end)
   end
 
-  # Private — Re-derivation
+  # Private — Re-derivation ───────────────────────────────────────────────────
 
   # Trigger: a row in messaging_enrolled_children was added, removed, or updated
   # Why: downstream consumers (ConversationSummaries) need the updated child name list
