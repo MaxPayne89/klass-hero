@@ -5,6 +5,15 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.50.5](https://github.com/MaxPayne89/klass-hero/compare/v0.50.4...v0.50.5) (2026-05-17)
+
+
+### Code Refactoring
+
+* extract name-to-initials algorithm to Shared.NameUtils ([#852](https://github.com/MaxPayne89/klass-hero/issues/852)) ([5570c4a](https://github.com/MaxPayne89/klass-hero/commit/5570c4afaac6741b85c82c0b953ecd30f404535d)), closes [#847](https://github.com/MaxPayne89/klass-hero/issues/847)
+* extract projection boilerplate into Shared.Projection macro ([#862](https://github.com/MaxPayne89/klass-hero/issues/862)) ([3ec2513](https://github.com/MaxPayne89/klass-hero/commit/3ec25135274e0f278e1a0899f239dbcccfa6630e))
+* extract staff assigned-programs lookup to shared helper ([#855](https://github.com/MaxPayne89/klass-hero/issues/855)) ([8719c92](https://github.com/MaxPayne89/klass-hero/commit/8719c923edfec770e8d0e6c159c1040480b825e6))
+
 ## [0.50.4](https://github.com/MaxPayne89/klass-hero/compare/v0.50.3...v0.50.4) (2026-05-14)
 
 
