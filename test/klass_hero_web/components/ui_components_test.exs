@@ -412,7 +412,7 @@ defmodule KlassHeroWeb.UIComponentsTest do
     end
 
     test "supports multiple instances on one page via distinct ids" do
-      assigns = %{user: %{name: "Maxi", email: "max@example.com", is_admin: false}}
+      assigns = %{user: %{name: "Maxi", email: "max@example.com"}}
 
       html =
         rendered_to_string(~H"""
@@ -444,18 +444,16 @@ defmodule KlassHeroWeb.UIComponentsTest do
   end
 
   defp render_admin_nav(opts) do
-    assigns = %{user: %{is_admin: Keyword.fetch!(opts, :is_admin)}}
+    assigns = %{is_admin: Keyword.fetch!(opts, :is_admin)}
 
     rendered_to_string(~H"""
-    <UIComponents.admin_nav user={@user} />
+    <UIComponents.admin_nav is_admin={@is_admin} />
     """)
   end
 
   defp render_kh_user_menu(opts) do
-    user = opts |> Keyword.fetch!(:user) |> Map.put_new(:is_admin, false)
-
     assigns = %{
-      user: user,
+      user: Keyword.fetch!(opts, :user),
       id: Keyword.get(opts, :id, "user-menu")
     }
 
