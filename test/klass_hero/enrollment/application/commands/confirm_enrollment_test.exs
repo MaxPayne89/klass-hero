@@ -42,6 +42,13 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
                })
     end
 
+    test "returns :not_found for malformed enrollment id (no crash)" do
+      provider = insert(:provider_profile_schema)
+
+      assert {:error, :not_found} =
+               ConfirmEnrollment.execute(%{enrollment_id: "not-a-uuid", provider_id: provider.id})
+    end
+
     test "returns :invalid_status_transition when already confirmed" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)

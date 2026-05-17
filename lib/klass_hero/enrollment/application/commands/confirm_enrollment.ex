@@ -52,7 +52,8 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollment do
           | {:error, :not_found | :unauthorized | :invalid_status_transition | term()}
   def execute(%{enrollment_id: enrollment_id, provider_id: provider_id})
       when is_binary(enrollment_id) and is_binary(provider_id) do
-    with {:ok, enrollment} <- @enrollment_reader.get_by_id(enrollment_id),
+    with {:ok, enrollment_id} <- cast_uuid_or_not_found(enrollment_id),
+         {:ok, enrollment} <- @enrollment_reader.get_by_id(enrollment_id),
          :ok <- authorize(enrollment, provider_id),
          {:ok, confirmed} <- Enrollment.confirm(enrollment),
          {:ok, persisted} <- @enrollment_repo.update(enrollment_id, to_update_attrs(confirmed)),
@@ -63,6 +64,18 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollment do
       )
 
       {:ok, persisted}
+    end
+  end
+
+  # `enrollment_id` arrives from the LiveView `phx-value-id` (DOM-tamperable). Without this
+  # guard, `Repo.get/2` raises `Ecto.Query.CastError` on malformed input. `provider_id` is
+  # server-trusted (read from `current_scope`), so only the enrollment id needs guarding;
+  # any invalid `provider_id` is already handled by `ProgramCatalogACL.program_owned_by?/2`
+  # returning false, which translates to `{:error, :unauthorized}`.
+  defp cast_uuid_or_not_found(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, _} -> {:ok, id}
+      :error -> {:error, :not_found}
     end
   end
 
