@@ -544,10 +544,13 @@ defmodule KlassHeroWeb.MarketingComponents do
                 "Join Berlin's trusted network of educators. We handle payments, scheduling, and discovery — you focus on teaching."
               )}
             </p>
+            <p id="mk-provider-cta-subtitle" class="text-white/90 text-base font-semibold mt-6">
+              {gettext("Are you an educator, coach, or artist?")}
+            </p>
             <div class="mt-8 flex gap-3 flex-wrap">
               <.link navigate={~p"/for-providers"}>
-                <.kh_button variant={:primary} size={:lg}>
-                  {gettext("Start Teaching Today →")}
+                <.kh_button variant={:primary} size={:lg} id="mk-provider-cta-primary">
+                  {gettext("Learn How to Become a Hero →")}
                 </.kh_button>
               </.link>
               <.link navigate={~p"/for-providers"}>

@@ -141,7 +141,8 @@ defmodule KlassHeroWeb.HomeLiveTest do
 
       assert has_element?(view, "#mk-provider-cta")
       assert has_element?(view, "h2", "How to Grow Your Youth Program")
-      assert has_element?(view, "button", "Start Teaching Today")
+      assert has_element?(view, "#mk-provider-cta-subtitle", "Are you an educator, coach, or artist?")
+      assert has_element?(view, "#mk-provider-cta-primary", "Learn How to Become a Hero")
 
       # Three numbered step cards.
       assert has_element?(view, "h4", "List Your Program")
