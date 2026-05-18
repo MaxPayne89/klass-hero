@@ -5,7 +5,7 @@
     "lint": "mix credo --strict",
     "format": "mix format",
     "precommit": "mix precommit",
-    "note": "mix not available in CI runner; tests validated by CI on merge"
+    "note": "mix not available in CI runner; tests validated by CI on merge. CI runs on PRs via .github/workflows/ci.yml (trigger: pull_request to **)."
   },
   "testing_notes": {
     "framework": "ExUnit with DataCase (async: true), Factory via ex_machina",
@@ -25,12 +25,13 @@
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
     "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:false.",
     "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
-    "coverage_saturation_note": "As of 2026-05-17, backlog exhausted. Maintainer writing comprehensive tests for all new code. PRs #859/#866 (ConfirmEnrollment+ListPendingEnrollments), #862 (Projection macro), #864 (admin routing) all shipped with maintainer tests.",
+    "coverage_saturation_note": "As of 2026-05-18, backlog exhausted. Maintainer writing comprehensive tests for all new code. PRs #872 (notify_live_views_test, confirm_enrollment_test, dashboard_live_test), #875 (CTA copy, trivial) all ship with maintainer tests or are non-testable.",
     "create_program_rejected_note": "PR #634 with CreateProgram/UpdateProgram tests was closed without merge by maintainer. Do not re-attempt.",
     "ci_check_runs_note": "No CI check runs appear on Test Improver PRs. CI may only run on push to main or require maintainer trigger.",
     "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html.",
     "ecto_enum_status_note": "BulkEnrollmentInviteSchema.status and EnrollmentSchema.status are Ecto.Enum fields. Tests must use atoms (:pending, :invite_sent, :registered, :enrolled, :failed).",
-    "pr_779_superseded_note": "PR #779 superseded by #696 being merged to main on 2026-05-09. Same files: attachment_mapper_test.exs + bulk_enrollment_invite_mapper_test.exs. Close #779.",
+    "pr_779_confirmed_dirty": "PR #779 is confirmed dirty (mergeable_state: dirty). Both test files (bulk_enrollment_invite_mapper_test.exs, attachment_mapper_test.exs) confirmed on main as of 2026-05-18. Should be closed.",
+    "pr_846_conflict_analysis": "PR #846 modifies existing instructor_test.exs and staff_member_presenter_test.exs. Files exist on main but don't have initials/1 or to_hero_card tests yet. Insertion points valid (line 34/35 instructor, ~line 70-73 staff_presenter). Likely mergeable.",
     "child_presenter_note": "ChildPresenter: non-trivial age calc, extract_initials (now NameUtils.initials_from_name/1), children_summary. PR #811 adds 14 pure unit tests.",
     "age_calculation_pattern": "birthday_in_past(n) = Jan 1 n years ago; birthday_in_future(n) = Dec 31 n years ago. Robust against year boundary.",
     "pr_852_name_utils_note": "PR #852 (2026-05-15): extracted name-to-initials to Shared.NameUtils.initials_from_name/1. Maintainer added name_utils_test.exs (56 lines). instructor.ex, child_presenter.ex, program_presenter.ex, provider_presenter.ex all delegate to NameUtils.",
@@ -39,7 +40,8 @@
     "participation_edit_helpers_note": "ParticipationEditHelpers (pure logic, no DB): default_edit_notes/1 has 4-clause pattern match; build_edit_correction/3 has 3-branch cond. PR #858 submitted 2026-05-16.",
     "projection_macro_note": "PR #862 (2026-05-17): Shared.Projection macro + WithBootstrapRetry + WithDomainEvents. Fully tested by maintainer (327-line projection_test.exs + updated projection tests). No TI opportunity.",
     "confirm_enrollment_note": "PR #859/#866 (2026-05-17): ConfirmEnrollment command + ListPendingEnrollmentsForProvider query. Both fully tested by maintainer (89+86 line test files). No TI opportunity.",
-    "pr_855_merged_note": "PR #855 (StaffLiveHelpers refactor+tests) merged 2026-05-16. Changed: staff_live_helpers.ex (new), staff_dashboard_live.ex, staff_participation_live.ex, staff_sessions_live.ex, staff_live_helpers_test.exs. No conflict with any open TI PRs."
+    "pr_855_merged_note": "PR #855 (StaffLiveHelpers refactor+tests) merged 2026-05-16. Changed: staff_live_helpers.ex (new), staff_dashboard_live.ex, staff_participation_live.ex, staff_sessions_live.ex, staff_live_helpers_test.exs. No conflict with any open TI PRs.",
+    "pr_872_note": "PR #872 (2026-05-18): collapse pending-enrollments refresh to single channel. Adds provider_scoped_topic/2 to enrollment.ex and notify_live_views.ex. Fully tested by maintainer (notify_live_views_test.exs +25 lines, confirm_enrollment_test.exs +7 lines, dashboard_live_test.exs +41 lines). No TI opportunity."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -50,13 +52,13 @@
     }
   ],
   "tasks_last_run": {
-    "task_1": "2026-05-05",
-    "task_2": "2026-05-17",
+    "task_1": "2026-05-18",
+    "task_2": "2026-05-18",
     "task_3": "2026-05-16",
-    "task_4": "2026-05-17",
+    "task_4": "2026-05-18",
     "task_5": "2026-05-16",
     "task_6": "2026-05-16",
-    "task_7": "2026-05-17"
+    "task_7": "2026-05-18"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -119,7 +121,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #866 (2026-05-17, approve pending enrollments): maintainer wrote confirm_enrollment_test.exs + list_pending_enrollments_for_provider_test.exs; no TI opportunity",
+    "task_2_last_file": "PR #875 (2026-05-18, homepage CTA copy): trivial template change, no tests needed",
     "task_5_last_issue": 705
   },
   "open_prs": [858, 846, 811, 779, 771, 764, 759, 750, 733, 723],
