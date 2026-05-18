@@ -2,16 +2,17 @@
 name: review-architecture
 description: >-
   Review code changes for DDD/Ports & Adapters architecture compliance by
-  spawning the architecture-reviewer (12 structural checks) and boundary-checker
-  (6 semantic violation checks) agents in parallel. Consolidates findings into
-  a unified report. Use when: reviewing a PR, checking architecture before merge,
+  spawning the architecture-reviewer (12 structural checks), boundary-checker
+  (6 semantic violation checks), and regression-analyzer (8 behaviour-
+  preservation checks) agents in parallel. Consolidates findings into a unified
+  report. Use when: reviewing a PR, checking architecture before merge,
   validating structural changes, or after modifying bounded context code.
   Invoke with: /review-architecture
 ---
 
 # Review Architecture
 
-Run a comprehensive DDD/Ports & Adapters architecture review by dispatching two
+Run a comprehensive DDD/Ports & Adapters architecture review by dispatching three
 specialized agents in parallel, then consolidating their reports.
 
 **Type:** Rigid workflow. Follow steps exactly.
@@ -57,9 +58,9 @@ Display: `Affected contexts: Enrollment, Family, Shared`
 
 This helps the user understand the review scope.
 
-## Step 3: Spawn Both Agents in Parallel
+## Step 3: Spawn All Three Agents in Parallel
 
-Launch both agents **in the same message** so they run concurrently.
+Launch all three agents **in the same message** so they run concurrently.
 
 ### Agent 1: Architecture Reviewer
 
@@ -105,15 +106,41 @@ Run all 6 checks scoped to these files and their immediate references.
 Report findings in your standard output format.
 ```
 
+### Agent 3: Regression Analyzer
+
+Use the `regression-analyzer` subagent. In the prompt, provide:
+
+- The diff base (default `main` for PR reviews, `HEAD` for unstaged)
+- Explicit scope mode: `pr-diff` (default) or `unstaged`
+- The list of changed files (the agent can re-derive it but passing it helps)
+
+Example prompt:
+
+```
+Analyse the diff for behaviour-preservation regressions.
+
+Scope: pr-diff (base: main)
+
+Changed files:
+<file list>
+
+Run all 8 checks against the diff. For producer/consumer pair checks (#4),
+grep the codebase for matching subscribers — same-context inspection is
+insufficient. Report findings in your standard output format.
+```
+
 ## Step 4: Consolidate Reports
 
 Once both agents complete, merge their findings into a single unified report.
 
 ### Deduplication
 
-Both agents may flag the same issue (e.g., a cross-context schema access would be caught
-by both Check 8 of architecture-reviewer and Check 2 of boundary-checker). Deduplicate
-by matching on the same file + line + violation type. Keep the more detailed description.
+Agents may flag the same issue from different angles:
+- Cross-context schema access → caught by architecture-reviewer Check 8 AND boundary-checker Check 2
+- Domain model purity drift → caught by architecture-reviewer Check 11 AND boundary-checker Check 5
+- A pattern widened in a use case → may surface as regression-analyzer Check 1 AND architecture-reviewer Check 5 (use case structure)
+
+Deduplicate by matching on the same file + line + violation type. Keep the more detailed description. For overlaps between regression-analyzer and the other two, prefer the regression-analyzer's framing — it speaks specifically to behaviour preservation, which is the action-shaping concern.
 
 ### Unified Report Format
 
@@ -130,7 +157,8 @@ by matching on the same file + line + violation type. Keep the more detailed des
 |--------|--------|--------|------------|----------|
 | Structure (architecture-reviewer) | 12 | N | N | N |
 | Boundaries (boundary-checker) | 6 | N | N | N |
-| **Total** | **18** | **N** | **N** | **N** |
+| Behaviour (regression-analyzer) | 8 | N | N | N |
+| **Total** | **26** | **N** | **N** | **N** |
 
 ## Violations
 
@@ -159,8 +187,8 @@ After presenting the report:
 
 ## Rules
 
-- **Always spawn both agents in parallel.** They are independent and run faster concurrently.
-- **Always scope to changed files.** Pass the file list to both agents — do not run full-codebase scans from this skill (the user can run the agents standalone for that).
-- **Deduplicate across agents.** The same violation should not appear twice in the report.
+- **Always spawn all three agents in parallel.** They are independent and run faster concurrently.
+- **Always scope to changed files.** Pass the file list to all three agents — do not run full-codebase scans from this skill (the user can run the agents standalone for that). Exception: regression-analyzer's Check 4 (producer/consumer pair drift) does grep codebase-wide for matching subscribers — that's intentional and the agent handles it internally.
+- **Deduplicate across agents.** The same violation should not appear three times in the report — prefer the regression-analyzer framing when behaviour is at stake.
 - **Never auto-fix without confirmation.** Present findings first, then offer to fix.
 - **Include the full check count.** Even if all checks pass, list them so the user knows what was verified.
