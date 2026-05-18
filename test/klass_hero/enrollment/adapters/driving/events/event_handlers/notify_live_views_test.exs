@@ -26,9 +26,21 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveV
   end
 
   describe "derive_topic/1" do
-    test "delegates to shared handler" do
+    test "falls back to shared derivation when payload omits provider_id" do
       event = DomainEvent.new(:participant_policy_set, "id", :enrollment, %{})
       assert NotifyLiveViews.derive_topic(event) == "enrollment:participant_policy_set"
+    end
+
+    test "appends provider scope when payload carries provider_id" do
+      provider_id = Ecto.UUID.generate()
+
+      event =
+        DomainEvent.new(:enrollment_confirmed, Ecto.UUID.generate(), :enrollment, %{
+          provider_id: provider_id
+        })
+
+      assert NotifyLiveViews.derive_topic(event) ==
+               "enrollment:enrollment_confirmed:provider:#{provider_id}"
     end
   end
 end

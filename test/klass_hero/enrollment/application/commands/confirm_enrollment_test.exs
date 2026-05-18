@@ -67,7 +67,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
                ConfirmEnrollment.execute(%{enrollment_id: schema.id, provider_id: provider.id})
     end
 
-    test "publishes an :enrollment_confirmed event on success" do
+    test "publishes an :enrollment_confirmed event on success with provider-scoped payload" do
       setup_test_events()
 
       provider = insert(:provider_profile_schema)
@@ -77,7 +77,12 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       assert {:ok, _} =
                ConfirmEnrollment.execute(%{enrollment_id: schema.id, provider_id: provider.id})
 
-      event = assert_event_published(:enrollment_confirmed)
+      event =
+        assert_event_published(:enrollment_confirmed, %{
+          provider_id: provider.id,
+          program_id: program.id
+        })
+
       assert event.aggregate_id == schema.id
     end
   end

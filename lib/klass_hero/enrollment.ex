@@ -54,6 +54,7 @@ defmodule KlassHero.Enrollment do
     ]
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema
+  alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
   alias KlassHero.Enrollment.Application.Commands.{
     CancelEnrollmentByAdmin,
@@ -330,6 +331,14 @@ defmodule KlassHero.Enrollment do
   def list_pending_enrollments_for_provider(program_ids) when is_list(program_ids) do
     ListPendingEnrollmentsForProvider.execute(program_ids)
   end
+
+  @doc """
+  Returns the provider-scoped PubSub topic for an Enrollment domain event.
+
+  Subscribers (e.g. `DashboardLive`) call this to subscribe to the same
+  topic the publisher (`Enrollment.NotifyLiveViews`) derives.
+  """
+  defdelegate provider_scoped_topic(event_type, provider_id), to: NotifyLiveViews
 
   @doc """
   Counts active enrollments for a parent in the current month.

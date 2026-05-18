@@ -92,28 +92,17 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollment do
   end
 
   defp dispatch_event(%Enrollment{} = persisted, provider_id) do
-    # Publish the canonical enrollment:enrollment_confirmed domain event to PubSub.
-    # The generic NotifyLiveViews handler derives the topic as "enrollment:enrollment_confirmed",
-    # which is not provider-scoped. We also broadcast a provider-scoped notification so that
-    # the provider DashboardLive can subscribe to their own topic and refresh the pending list
-    # without receiving events from other providers.
     dispatch_result =
       persisted.id
       |> EnrollmentEvents.enrollment_confirmed(%{
         enrollment_id: persisted.id,
         program_id: persisted.program_id,
+        provider_id: provider_id,
         child_id: persisted.child_id,
         parent_id: persisted.parent_id,
         confirmed_at: persisted.confirmed_at
       })
       |> EventDispatchHelper.dispatch_or_error(@context)
-
-    # Supplementary provider-scoped broadcast — best-effort (mirrors PubSub best-effort policy).
-    Phoenix.PubSub.broadcast(
-      KlassHero.PubSub,
-      "enrollment:provider:#{provider_id}:pending_changed",
-      :enrollment_pending_changed
-    )
 
     case dispatch_result do
       :ok -> {:ok, persisted}
