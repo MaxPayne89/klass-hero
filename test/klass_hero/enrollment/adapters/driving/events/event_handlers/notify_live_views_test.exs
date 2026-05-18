@@ -42,5 +42,17 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveV
       assert NotifyLiveViews.derive_topic(event) ==
                "enrollment:enrollment_confirmed:provider:#{provider_id}"
     end
+
+    test "does not provider-scope non-enrollment_confirmed events even when payload has provider_id" do
+      provider_id = Ecto.UUID.generate()
+
+      event =
+        DomainEvent.new(:invite_deleted, Ecto.UUID.generate(), :invite, %{
+          provider_id: provider_id,
+          invite_id: "some-id"
+        })
+
+      assert NotifyLiveViews.derive_topic(event) == "invite:invite_deleted"
+    end
   end
 end

@@ -2,9 +2,9 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveV
   @moduledoc """
   Routes Enrollment domain events to PubSub topics for LiveView updates.
 
-  When an event payload carries `provider_id`, the topic is scoped per-provider
-  so only that provider's `DashboardLive` receives the message. Other events
-  fall back to the shared default topic (`"<aggregate>:<event>"`).
+  `:enrollment_confirmed` events are scoped per-provider via
+  `provider_scoped_topic/2`. All other events fall back to the shared default
+  topic (`"<aggregate>:<event>"`).
   """
 
   alias KlassHero.Shared.Adapters.Driven.Events.EventHandlers.NotifyLiveViews,
@@ -29,8 +29,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveV
   end
 
   @spec derive_topic(DomainEvent.t()) :: String.t()
-  def derive_topic(%DomainEvent{event_type: evt, payload: %{provider_id: pid}}) when is_binary(pid),
-    do: provider_scoped_topic(evt, pid)
+  def derive_topic(%DomainEvent{event_type: :enrollment_confirmed, payload: %{provider_id: pid}}) when is_binary(pid),
+    do: provider_scoped_topic(:enrollment_confirmed, pid)
 
   def derive_topic(%DomainEvent{} = event), do: SharedNotifyLiveViews.derive_topic(event)
 
