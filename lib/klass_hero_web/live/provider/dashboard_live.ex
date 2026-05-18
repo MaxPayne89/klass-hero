@@ -20,6 +20,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Models.PayRate
   alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Entitlements
   alias KlassHero.Shared.Storage
   alias KlassHeroWeb.Helpers.TaskHelpers
@@ -210,14 +211,9 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(KlassHero.PubSub, "provider:#{provider.id}:stats_updated")
 
-      # Subscribe to the provider-scoped pending-changed topic so the dashboard
-      # refreshes automatically when a pending enrollment is confirmed.
-      # The generic NotifyLiveViews topic ("enrollment:enrollment_confirmed") is
-      # not provider-scoped, so ConfirmEnrollment also broadcasts a supplementary
-      # message on this topic to enable targeted, per-provider subscriptions.
       Phoenix.PubSub.subscribe(
         KlassHero.PubSub,
-        "enrollment:provider:#{provider.id}:pending_changed"
+        Enrollment.provider_scoped_topic(:enrollment_confirmed, provider.id)
       )
     end
 
@@ -277,7 +273,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   @impl true
-  def handle_info(:enrollment_pending_changed, socket) do
+  def handle_info({:domain_event, %DomainEvent{event_type: :enrollment_confirmed}}, socket) do
     {:noreply, refresh_pending_enrollments(socket)}
   end
 
@@ -296,10 +292,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
            provider_id: provider_id
          }) do
       {:ok, _enrollment} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, gettext("Enrollment approved"))
-         |> refresh_pending_enrollments()}
+        # No refresh here — :enrollment_confirmed loopback drives it (handle_info/2).
+        {:noreply, put_flash(socket, :info, gettext("Enrollment approved"))}
 
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, gettext("Not allowed to approve this enrollment"))}

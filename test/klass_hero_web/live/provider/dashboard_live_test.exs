@@ -9,6 +9,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
+  alias KlassHero.Shared.Domain.Events.DomainEvent
 
   setup :register_and_log_in_provider
 
@@ -1473,7 +1474,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
     end
 
-    test "approving a pending enrollment confirms it and removes it from the card",
+    test "approving a pending enrollment confirms it in the DB and flashes success",
          %{conn: conn, provider: provider} do
       program = insert_program_with_listing(provider_id: provider.id)
       {child, parent} = KlassHero.Factory.insert_child_with_guardian()
@@ -1492,10 +1493,48 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       |> element("#approve-enrollment-#{enrollment.id}")
       |> render_click()
 
-      refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
+      assert render(view) =~ "Enrollment approved"
 
       {:ok, reloaded} = KlassHero.Enrollment.get_enrollment(enrollment.id)
       assert reloaded.status == :confirmed
+    end
+
+    test "card refreshes when an :enrollment_confirmed event arrives for this provider",
+         %{conn: conn, provider: provider} do
+      program = insert_program_with_listing(provider_id: provider.id)
+      {child, parent} = KlassHero.Factory.insert_child_with_guardian()
+
+      enrollment =
+        KlassHero.Factory.insert(:enrollment_schema,
+          program_id: program.id,
+          parent_id: parent.id,
+          child_id: child.id,
+          status: :pending
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+
+      assert has_element?(view, "#pending-enrollment-#{enrollment.id}")
+
+      enrollment
+      |> Ecto.Changeset.change(%{
+        status: :confirmed,
+        confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+      |> Repo.update!()
+
+      event =
+        DomainEvent.new(
+          :enrollment_confirmed,
+          enrollment.id,
+          :enrollment,
+          %{provider_id: provider.id}
+        )
+
+      send(view.pid, {:domain_event, event})
+      _ = render(view)
+
+      refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
     end
 
     test "approving an enrollment for another provider's program flashes an error",
