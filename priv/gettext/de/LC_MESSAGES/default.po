@@ -1731,10 +1731,15 @@ msgstr ""
 msgid "Sports"
 msgstr "Sport"
 
-#: lib/klass_hero_web/live/home_live.ex:325
+#: lib/klass_hero_web/components/marketing_components.ex:548
 #, elixir-autogen, elixir-format
-msgid "Start Teaching Today →"
-msgstr ""
+msgid "Are you an educator, coach, or artist?"
+msgstr "Bist du Pädagog:in, Coach oder Künstler:in?"
+
+#: lib/klass_hero_web/components/marketing_components.ex:553
+#, elixir-autogen, elixir-format
+msgid "Learn How to Become a Hero →"
+msgstr "Werde zum Hero →"
 
 #: lib/klass_hero_web/live/about_live.ex:173
 #, elixir-autogen, elixir-format
