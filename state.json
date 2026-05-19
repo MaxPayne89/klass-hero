@@ -41,7 +41,8 @@
     "projection_macro_note": "PR #862 (2026-05-17): Shared.Projection macro + WithBootstrapRetry + WithDomainEvents. Fully tested by maintainer (327-line projection_test.exs + updated projection tests). No TI opportunity.",
     "confirm_enrollment_note": "PR #859/#866 (2026-05-17): ConfirmEnrollment command + ListPendingEnrollmentsForProvider query. Both fully tested by maintainer (89+86 line test files). No TI opportunity.",
     "pr_855_merged_note": "PR #855 (StaffLiveHelpers refactor+tests) merged 2026-05-16. Changed: staff_live_helpers.ex (new), staff_dashboard_live.ex, staff_participation_live.ex, staff_sessions_live.ex, staff_live_helpers_test.exs. No conflict with any open TI PRs.",
-    "pr_872_note": "PR #872 (2026-05-18): collapse pending-enrollments refresh to single channel. Adds provider_scoped_topic/2 to enrollment.ex and notify_live_views.ex. Fully tested by maintainer (notify_live_views_test.exs +25 lines, confirm_enrollment_test.exs +7 lines, dashboard_live_test.exs +41 lines). No TI opportunity."
+    "pr_872_note": "PR #872 (2026-05-18): collapse pending-enrollments refresh to single channel. Adds provider_scoped_topic/2 to enrollment.ex and notify_live_views.ex. Fully tested by maintainer (notify_live_views_test.exs +25 lines, confirm_enrollment_test.exs +7 lines, dashboard_live_test.exs +41 lines). No TI opportunity.",
+    "broadcast_to_program_note": "BroadcastToProgram.setup_participants/3 now dispatches :participant_added with :broadcast_setup source. 176-line test file added by maintainer in PR #893 (2026-05-19)."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -53,12 +54,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-18",
-    "task_2": "2026-05-18",
+    "task_2": "2026-05-19",
     "task_3": "2026-05-16",
-    "task_4": "2026-05-18",
-    "task_5": "2026-05-16",
+    "task_4": "2026-05-19",
+    "task_5": "2026-05-19",
     "task_6": "2026-05-16",
-    "task_7": "2026-05-18"
+    "task_7": "2026-05-19"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -124,7 +125,23 @@
     "task_2_last_file": "PR #875 (2026-05-18, homepage CTA copy): trivial template change, no tests needed",
     "task_5_last_issue": 705
   },
-  "open_prs": [858, 846, 811, 779, 771, 764, 759, 750, 733, 723],
-  "merged_prs": [719, 713, 707, 696],
+  "open_prs": [
+    858,
+    846,
+    811,
+    779,
+    771,
+    764,
+    759,
+    750,
+    733,
+    723
+  ],
+  "merged_prs": [
+    719,
+    713,
+    707,
+    696
+  ],
   "pending_pr_check": null
 }
