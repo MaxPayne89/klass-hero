@@ -20,12 +20,13 @@ defmodule KlassHeroWeb.ForProvidersLiveTest do
       assert has_element?(view, "#for-providers-hero")
     end
 
-    test "renders the four marketing sections in order", %{conn: conn} do
+    test "renders the marketing sections in order", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/for-providers")
 
       assert html =~ ~s|id="for-providers-hero"|
       assert html =~ ~s|id="for-providers-benefits"|
       assert html =~ ~s|id="for-providers-how-it-works"|
+      assert html =~ ~s|id="for-providers-safety-standards"|
       assert html =~ ~s|id="for-providers-pricing"|
       assert html =~ ~s|id="for-providers-faq"|
 
@@ -34,13 +35,21 @@ defmodule KlassHeroWeb.ForProvidersLiveTest do
       benefits_pos =
         String.split(html, ~s|id="for-providers-benefits"|) |> hd() |> String.length()
 
+      how_it_works_pos =
+        String.split(html, ~s|id="for-providers-how-it-works"|) |> hd() |> String.length()
+
+      safety_pos =
+        String.split(html, ~s|id="for-providers-safety-standards"|) |> hd() |> String.length()
+
       pricing_pos =
         String.split(html, ~s|id="for-providers-pricing"|) |> hd() |> String.length()
 
       faq_pos = String.split(html, ~s|id="for-providers-faq"|) |> hd() |> String.length()
 
       assert hero_pos < benefits_pos
-      assert benefits_pos < pricing_pos
+      assert benefits_pos < how_it_works_pos
+      assert how_it_works_pos < safety_pos
+      assert safety_pos < pricing_pos
       assert pricing_pos < faq_pos
     end
 
@@ -78,6 +87,21 @@ defmodule KlassHeroWeb.ForProvidersLiveTest do
       assert html =~ "Get verified"
       assert html =~ "Receive bookings"
       assert html =~ "Get paid weekly"
+    end
+
+    test "renders the 8-up safety standards grid", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/for-providers")
+
+      assert has_element?(view, "#for-providers-safety-standards")
+      assert html =~ "The bar to teach on Klass Hero"
+      assert html =~ "Age &amp; Identity"
+      assert html =~ "Teaching Experience"
+      assert html =~ "Extended Police Check"
+      assert html =~ "Pedagogical Interview"
+      assert html =~ "Safeguarding Training"
+      assert html =~ "Qualifications"
+      assert html =~ "Community Standards"
+      assert html =~ "Liability Insurance"
     end
 
     test "renders one pricing tier per backed Entitlements provider tier", %{conn: conn} do

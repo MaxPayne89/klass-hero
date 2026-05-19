@@ -20,6 +20,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
     <.dark_hero />
     <.benefits_section benefits={benefits()} />
     <.how_it_works_section steps={steps()} />
+    <.safety_standards_section standards={safety_standards()} />
     <.pricing_section tiers={@provider_tiers} />
     <.faq_section faqs={faqs()} />
     <.final_cta />
@@ -125,6 +126,37 @@ defmodule KlassHeroWeb.ForProvidersLive do
             <h4 class="font-bold text-lg">{s.title}</h4>
             <p class="text-white/70 mt-2 leading-relaxed text-sm">{s.desc}</p>
           </div>
+        </div>
+      </div>
+    </section>
+    """
+  end
+
+  attr :standards, :list, required: true
+
+  defp safety_standards_section(assigns) do
+    ~H"""
+    <section id="for-providers-safety-standards" class="py-16 lg:py-24 bg-white">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center max-w-2xl mx-auto mb-14">
+          <.kh_pill tone={:primary} class="mb-3">{gettext("Trust & Safety")}</.kh_pill>
+          <h2 class={[Theme.typography(:page_title)]}>
+            {gettext("The bar to teach on Klass Hero")}
+          </h2>
+          <p class="text-hero-grey-600 text-lg mt-3">
+            {gettext("Every Hero clears the same checks. Here's what that means.")}
+          </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <.kh_card
+            :for={s <- @standards}
+            data-role="safety-card"
+            class="p-7 hover:shadow-lg hover:-translate-y-1"
+          >
+            <.kh_icon_chip icon={s.icon} gradient={:primary} />
+            <h3 class={["mt-5", Theme.typography(:card_title), "text-xl"]}>{s.title}</h3>
+            <p class="mt-2 text-hero-grey-600 leading-relaxed">{s.desc}</p>
+          </.kh_card>
         </div>
       </div>
     </section>
@@ -378,6 +410,51 @@ defmodule KlassHeroWeb.ForProvidersLive do
     ]
   end
 
+  defp safety_standards do
+    [
+      %{
+        icon: "hero-identification",
+        title: gettext("Age & Identity"),
+        desc: gettext("18+, government-ID verified before listing.")
+      },
+      %{
+        icon: "hero-academic-cap",
+        title: gettext("Teaching Experience"),
+        desc: gettext("Minimum one year working with children, validated.")
+      },
+      %{
+        icon: "hero-shield-exclamation",
+        title: gettext("Extended Police Check"),
+        desc: gettext("Erweitertes Führungszeugnis (extended background check), refreshed annually.")
+      },
+      %{
+        icon: "hero-video-camera",
+        title: gettext("Pedagogical Interview"),
+        desc: gettext("Live video screen with our safeguarding lead.")
+      },
+      %{
+        icon: "hero-heart",
+        title: gettext("Safeguarding Training"),
+        desc: gettext("Mandatory child-protection course before going live.")
+      },
+      %{
+        icon: "hero-document-check",
+        title: gettext("Qualifications"),
+        desc: gettext("Degrees, certs, and references reviewed.")
+      },
+      %{
+        icon: "hero-check-badge",
+        title: gettext("Community Standards"),
+        desc: gettext("Signed agreement on conduct and quality bar.")
+      },
+      %{
+        icon: "hero-shield-check",
+        title: gettext("Liability Insurance"),
+        desc: gettext("Active policy required to teach.")
+      }
+    ]
+  end
+
   defp steps do
     [
       %{
@@ -390,7 +467,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
         n: "02",
         icon: "hero-shield-check",
         title: gettext("Get verified"),
-        desc: gettext("Complete our 6-step Hero verification. We handle background checks, references and screening.")
+        desc: gettext("Complete Hero verification. We handle background checks, references and screening.")
       },
       %{
         n: "03",
@@ -420,7 +497,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
         q: gettext("How quickly can I start accepting bookings?"),
         a:
           gettext(
-            "Once your listing is live and you've completed the 6-step verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week."
+            "Once your listing is live and you've completed Hero verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week."
           )
       },
       %{
@@ -434,7 +511,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
         q: gettext("What's the verification process like?"),
         a:
           gettext(
-            "It's our 6-step Hero standard: identity & age verification, experience validation, extended police background check, video interview, child safeguarding training, and signing our community standards. See the Trust & Safety page for the full breakdown."
+            "It's the Hero standard: identity & age verification, experience validation, extended police background check (Erweitertes Führungszeugnis), video interview, child safeguarding training, and signing our community standards. See the Trust & Safety page for the full breakdown."
           )
       },
       %{
