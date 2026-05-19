@@ -425,7 +425,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
       %{
         icon: "hero-shield-exclamation",
         title: gettext("Extended Police Check"),
-        desc: gettext("Erweitertes Führungszeugnis — refreshed annually.")
+        desc: gettext("Erweitertes Führungszeugnis (extended background check), refreshed annually.")
       },
       %{
         icon: "hero-video-camera",
@@ -467,7 +467,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
         n: "02",
         icon: "hero-shield-check",
         title: gettext("Get verified"),
-        desc: gettext("Complete our 6-step Hero verification. We handle background checks, references and screening.")
+        desc: gettext("Complete Hero verification. We handle background checks, references and screening.")
       },
       %{
         n: "03",
@@ -497,7 +497,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
         q: gettext("How quickly can I start accepting bookings?"),
         a:
           gettext(
-            "Once your listing is live and you've completed the 6-step verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week."
+            "Once your listing is live and you've completed Hero verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week."
           )
       },
       %{
@@ -511,7 +511,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
         q: gettext("What's the verification process like?"),
         a:
           gettext(
-            "It's our 6-step Hero standard: identity & age verification, experience validation, extended police background check, video interview, child safeguarding training, and signing our community standards. See the Trust & Safety page for the full breakdown."
+            "It's the Hero standard: identity & age verification, experience validation, extended police background check (Erweitertes Führungszeugnis), video interview, child safeguarding training, and signing our community standards. See the Trust & Safety page for the full breakdown."
           )
       },
       %{
