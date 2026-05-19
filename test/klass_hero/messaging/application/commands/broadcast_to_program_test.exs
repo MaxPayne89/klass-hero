@@ -1,13 +1,15 @@
 defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
-  use KlassHero.DataCase, async: true
+  use KlassHero.DataCase, async: false
 
   import KlassHero.EventTestHelper
   import KlassHero.Factory
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
+  alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Application.Commands.BroadcastToProgram
   alias KlassHero.Messaging.Domain.Models.{Conversation, Message}
   alias KlassHero.Provider.Domain.Models.ProviderProfile
@@ -413,6 +415,179 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
 
       published_types = Enum.map(get_published_events(), & &1.event_type)
       refute :broadcast_sent in published_types
+    end
+  end
+
+  describe "execute/4 — :participant_added event dispatch" do
+    setup do
+      setup_test_integration_events()
+      :ok
+    end
+
+    test "first broadcast emits :participant_added with source :broadcast_setup carrying sender + parent user_ids" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent1_user = AccountsFixtures.user_fixture()
+      parent2_user = AccountsFixtures.user_fixture()
+      parent1 = insert(:parent_profile_schema, identity_id: parent1_user.id)
+      parent2 = insert(:parent_profile_schema, identity_id: parent2_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent1.id,
+        status: "confirmed"
+      )
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent2.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, conversation, _msg, _count} =
+               BroadcastToProgram.execute(scope, program.id, "Hi")
+
+      event =
+        get_published_integration_events()
+        |> Enum.find(
+          &match?(
+            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+            &1
+          )
+        )
+
+      assert event,
+             "expected a :participant_added integration event with source :broadcast_setup to be published"
+
+      assert event.entity_id == conversation.id
+
+      assert Enum.sort(event.payload.participant_user_ids) ==
+               Enum.sort([scope.user.id, parent1_user.id, parent2_user.id])
+    end
+
+    test "re-broadcast on existing conversation with same participants emits NO :broadcast_setup event" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent_user = AccountsFixtures.user_fixture()
+      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
+
+      clear_integration_events()
+
+      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "second")
+
+      refute Enum.any?(
+               get_published_integration_events(),
+               &match?(
+                 %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+                 &1
+               )
+             ),
+             "expected no :broadcast_setup event on re-broadcast when participants are unchanged"
+    end
+
+    test "re-broadcast that adds a NEW enrolled parent emits :broadcast_setup with only the new user_id" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent1_user = AccountsFixtures.user_fixture()
+      parent1 = insert(:parent_profile_schema, identity_id: parent1_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent1.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
+
+      clear_integration_events()
+
+      # New parent enrolled between broadcasts
+      parent2_user = AccountsFixtures.user_fixture()
+      parent2 = insert(:parent_profile_schema, identity_id: parent2_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent2.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "second")
+
+      event =
+        get_published_integration_events()
+        |> Enum.find(
+          &match?(
+            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+            &1
+          )
+        )
+
+      assert event,
+             "expected a :participant_added event with source :broadcast_setup for the newly-enrolled parent"
+
+      assert event.payload.participant_user_ids == [parent2_user.id]
+    end
+
+    test "sender and each parent see broadcast in inbox after projection runs (no server restart)" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      scope = build_scope_with_provider(provider, :professional)
+
+      parent1_user = AccountsFixtures.user_fixture()
+      parent2_user = AccountsFixtures.user_fixture()
+      parent1 = insert(:parent_profile_schema, identity_id: parent1_user.id)
+      parent2 = insert(:parent_profile_schema, identity_id: parent2_user.id)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent1.id,
+        status: "confirmed"
+      )
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        parent_id: parent2.id,
+        status: "confirmed"
+      )
+
+      assert {:ok, conversation, _msg, _count} =
+               BroadcastToProgram.execute(scope, program.id, "Important")
+
+      event =
+        get_published_integration_events()
+        |> Enum.find(
+          &match?(
+            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+            &1
+          )
+        )
+
+      assert event, "expected :broadcast_setup event to be dispatched"
+
+      # Drive the projection directly — deterministic, avoids PubSub timing.
+      ConversationSummaries.handle_event(:participant_added, event)
+
+      for user_id <- [scope.user.id, parent1_user.id, parent2_user.id] do
+        {:ok, summaries, _has_more} = ConversationSummariesRepository.list_for_user(user_id, [])
+
+        assert Enum.any?(summaries, &(&1.conversation_id == conversation.id)),
+               "expected user #{user_id} to see broadcast conversation #{conversation.id} in inbox; " <>
+                 "got #{inspect(Enum.map(summaries, & &1.conversation_id))}"
+      end
     end
   end
 
