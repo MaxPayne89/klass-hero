@@ -5,6 +5,24 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.0](https://github.com/MaxPayne89/klass-hero/compare/v0.50.6...v0.51.0) (2026-05-19)
+
+
+### Features
+
+* add safety standards section to /for-providers ([#890](https://github.com/MaxPayne89/klass-hero/issues/890)) ([9a8fd12](https://github.com/MaxPayne89/klass-hero/commit/9a8fd122e1b3453bf7b03e9d27278c65532e87b0))
+* update homepage provider CTA copy and link ([#875](https://github.com/MaxPayne89/klass-hero/issues/875)) ([4a01a5a](https://github.com/MaxPayne89/klass-hero/commit/4a01a5ab4600b4115f58690a3850eae2e1a453de)), closes [#650](https://github.com/MaxPayne89/klass-hero/issues/650)
+
+
+### Bug Fixes
+
+* dispatch participant_added on broadcast so inbox updates without restart ([#893](https://github.com/MaxPayne89/klass-hero/issues/893)) ([212cd64](https://github.com/MaxPayne89/klass-hero/commit/212cd6491cdfdc6b4d4fdc1de82e11626b1f67fd))
+
+
+### Code Refactoring
+
+* collapse pending-enrollments refresh to single channel ([#872](https://github.com/MaxPayne89/klass-hero/issues/872)) ([5573fbd](https://github.com/MaxPayne89/klass-hero/commit/5573fbd67556682af9c535db8127092d07477fde))
+
 ## [0.50.6](https://github.com/MaxPayne89/klass-hero/compare/v0.50.5...v0.50.6) (2026-05-17)
 
 
