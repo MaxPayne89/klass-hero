@@ -80,7 +80,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
         }
 
   @typedoc "Source of a `:participant_added` event."
-  @type participant_added_source :: :initial_staff | :later_assignment
+  @type participant_added_source :: :initial_staff | :later_assignment | :broadcast_setup
 
   @typedoc "Payload for `:participant_added` events."
   @type participant_added_payload :: %{

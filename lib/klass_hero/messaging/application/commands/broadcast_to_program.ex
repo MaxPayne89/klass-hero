@@ -15,6 +15,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Repo
@@ -137,25 +138,27 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
     end
   end
 
-  # Trigger: broadcast participants need to be present before SendMessage runs
-  # Why: SendMessage.verify_participant rejects senders not in the conversation —
-  #      provider/staff sender must be added before delegation. AddAssignedStaff
-  #      now returns its :participant_added domain event as data; dispatch
-  #      happens after the transaction commits so the projection on a separate
-  #      DB connection can read-your-own-writes.
+  # Trigger: broadcast participants need to be present before SendMessage runs.
+  # Why: SendMessage.verify_participant rejects senders not in the conversation;
+  #      parents and sender are inserted via a single add_batch so its
+  #      "only-newly-inserted" return list is the exact set the :broadcast_setup
+  #      :participant_added event should carry. Empty new-list ⇒ no event,
+  #      preserving idempotency on re-broadcast. AddAssignedStaff returns its
+  #      own :participant_added domain event as data; dispatch happens after
+  #      the transaction commits so projections on a separate DB connection
+  #      can read-their-own-writes.
   # Outcome: parents, sender, and assigned staff added in a single transaction;
   #          on commit, all collected events fan out via EventDispatchHelper.
   defp setup_participants(conversation, scope, parent_user_ids) do
+    # De-dupe sender against parents — degenerate case where provider's user
+    # account is also enrolled as a parent of the program.
+    candidate_ids = Enum.uniq([scope.user.id | parent_user_ids])
+
     Repo.transaction(fn ->
-      with {:ok, _} <- @participant_repo.add_batch(conversation.id, parent_user_ids),
-           {:ok, _} <-
-             @participant_repo.add_or_get(%{
-               conversation_id: conversation.id,
-               user_id: scope.user.id
-             }),
+      with {:ok, inserted} <- @participant_repo.add_batch(conversation.id, candidate_ids),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, conversation.program_id, scope.user.id) do
-        staff_events
+        build_broadcast_event(conversation.id, inserted) ++ staff_events
       else
         {:error, reason} -> Repo.rollback(reason)
       end
@@ -168,6 +171,13 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp build_broadcast_event(_conversation_id, []), do: []
+
+  defp build_broadcast_event(conversation_id, inserted) do
+    user_ids = Enum.map(inserted, & &1.user_id)
+    [MessagingEvents.participant_added(conversation_id, user_ids, :broadcast_setup)]
   end
 
   defp get_or_create_broadcast_conversation(provider_id, program_id, subject) do

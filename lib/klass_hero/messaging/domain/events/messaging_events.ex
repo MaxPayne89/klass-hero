@@ -188,7 +188,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   end
 
   @typedoc "Provenance of a participant_added event."
-  @type participant_added_source :: :initial_staff | :later_assignment
+  @type participant_added_source :: :initial_staff | :later_assignment | :broadcast_setup
 
   @doc """
   Creates a participant_added event.
