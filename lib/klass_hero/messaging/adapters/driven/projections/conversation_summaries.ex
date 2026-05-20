@@ -194,20 +194,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       # Outcome: MapSet of message_ids that have at least one attachment
       attachment_message_ids = fetch_attachment_message_ids(latest_messages)
 
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      # Trigger: program_broadcast rows need a human label (program title)
+      # Why: pre-existing nil for non-direct types surfaced as "Unknown" in the inbox (#892)
+      # Outcome: program_id -> title map; nil for missing programs (rare race), UI falls back
+      program_names = fetch_program_names_for_broadcasts(conversations)
 
-      entries =
-        Enum.flat_map(conversations, fn conversation ->
-          build_conversation_entries(
-            conversation,
-            user_names,
-            latest_messages,
-            unread_counts,
-            system_notes,
-            attachment_message_ids,
-            now
-          )
-        end)
+      globals = %{
+        user_names: user_names,
+        latest_messages: latest_messages,
+        unread_counts: unread_counts,
+        system_notes: system_notes,
+        attachment_message_ids: attachment_message_ids,
+        program_names: program_names,
+        now: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+
+      entries = Enum.flat_map(conversations, &build_conversation_entries(&1, globals))
 
       if entries == [] do
         0
@@ -226,28 +228,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     end
   end
 
-  defp build_conversation_entries(
-         conversation,
-         user_names,
-         latest_messages,
-         unread_counts,
-         system_notes,
-         attachment_message_ids,
-         now
-       ) do
+  defp build_conversation_entries(conversation, %{} = globals) do
     active_participants = Enum.filter(conversation.participants, &is_nil(&1.left_at))
-    latest_message = Map.get(latest_messages, conversation.id)
-    conv_system_notes = Map.get(system_notes, conversation.id, %{})
 
-    context = %{
-      active_participants: active_participants,
-      user_names: user_names,
-      latest_message: latest_message,
-      unread_counts: unread_counts,
-      system_notes: conv_system_notes,
-      attachment_message_ids: attachment_message_ids,
-      now: now
-    }
+    context =
+      globals
+      |> Map.put(:active_participants, active_participants)
+      |> Map.put(:latest_message, Map.get(globals.latest_messages, conversation.id))
+      |> Map.put(:system_notes, Map.get(globals.system_notes, conversation.id, %{}))
 
     Enum.map(active_participants, fn participant ->
       build_summary_entry(conversation, participant, context)
@@ -262,6 +250,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       unread_counts: unread_counts,
       system_notes: conv_system_notes,
       attachment_message_ids: attachment_message_ids,
+      program_names: program_names,
       now: now
     } = context
 
@@ -289,6 +278,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       program_id: conversation.program_id,
       subject: conversation.subject,
       other_participant_name: other_name,
+      program_name: Map.get(program_names, conversation.program_id),
       participant_count: participant_count,
       latest_message_content: latest_message && latest_message.content,
       latest_message_sender_id: latest_message && latest_message.sender_id,
@@ -320,6 +310,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     participant_count = length(participant_ids)
 
     user_names = fetch_user_names(participant_ids)
+    program_name = resolve_program_name(conversation_type, program_id)
 
     # Trigger: multiple participant rows must be inserted atomically
     # Why: a mid-loop crash without a transaction leaves partial rows,
@@ -344,6 +335,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
           program_id: program_id,
           subject: subject,
           other_participant_name: other_name,
+          program_name: program_name,
           participant_count: participant_count,
           unread_count: 0
         }
@@ -365,6 +357,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
                :program_id,
                :subject,
                :other_participant_name,
+               :program_name,
                :participant_count,
                :updated_at
              ]},
@@ -438,6 +431,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
              :program_id,
              :subject,
              :other_participant_name,
+             :program_name,
              :participant_count,
              :archived_at,
              :updated_at
@@ -455,6 +449,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     unread_counts = fetch_unread_counts([conversation])
     system_notes = fetch_system_notes([conversation.id])
     attachment_message_ids = fetch_attachment_message_ids(latest_messages)
+    program_names = fetch_program_names_for_broadcasts([conversation])
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     %{
@@ -464,6 +459,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       unread_counts: unread_counts,
       system_notes: Map.get(system_notes, conversation.id, %{}),
       attachment_message_ids: attachment_message_ids,
+      program_names: program_names,
       now: now
     }
   end
@@ -734,6 +730,43 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   end
 
   defp fetch_user_names(_), do: %{}
+
+  # Trigger: bootstrap / participant_added need to display program titles on
+  #          program_broadcast rows.
+  # Why: cross-context read of programs table mirrors EnrolledChildren precedent —
+  #      raw-string join sidesteps Boundary's compile-time isolation while
+  #      preserving the projection-extend pattern (#892). The eventual cross-context
+  #      port sweep is tracked by #685.
+  # Outcome: map of program_id -> title for every broadcast conversation that
+  #          carries a program_id; missing programs yield no entry, so callers
+  #          read Map.get(..., id) which returns nil for the UI fallback.
+  defp fetch_program_names_for_broadcasts(conversations) do
+    program_ids =
+      for c <- conversations,
+          c.type == "program_broadcast",
+          not is_nil(c.program_id),
+          uniq: true,
+          do: c.program_id
+
+    fetch_program_names(program_ids)
+  end
+
+  defp fetch_program_names([]), do: %{}
+
+  defp fetch_program_names(program_ids) do
+    from(p in "programs",
+      where: p.id in type(^program_ids, {:array, :binary_id}),
+      select: {type(p.id, :binary_id), p.title}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  defp resolve_program_name("program_broadcast", program_id) when not is_nil(program_id) do
+    [program_id] |> fetch_program_names() |> Map.get(program_id)
+  end
+
+  defp resolve_program_name(_type, _program_id), do: nil
 
   # Trigger: resolving other participant name for bootstrap (has ParticipantSchema structs)
   # Why: for direct conversations, each user sees the other's name

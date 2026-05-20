@@ -46,11 +46,12 @@ defmodule KlassHeroWeb.MessagingComponents do
   attr :unread_count, :integer, default: 0
   attr :latest_message, :map, default: nil
   attr :other_participant_name, :string, default: nil
+  attr :program_name, :string, default: nil
   attr :enrolled_child_names, :list, default: []
   attr :navigate, :string, default: nil
 
   def conversation_card(assigns) do
-    assigns = update(assigns, :other_participant_name, &(&1 || gettext("Unknown")))
+    assigns = assign(assigns, :display_name, derive_display_name(assigns))
 
     ~H"""
     <.link
@@ -66,9 +67,9 @@ defmodule KlassHeroWeb.MessagingComponents do
         <!-- Avatar -->
         <div class={[
           "w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0",
-          avatar_color(@other_participant_name)
+          avatar_color(@display_name)
         ]}>
-          {String.first(@other_participant_name) |> String.upcase()}
+          {String.first(@display_name) |> String.upcase()}
         </div>
         
     <!-- Content -->
@@ -79,7 +80,7 @@ defmodule KlassHeroWeb.MessagingComponents do
               @unread_count > 0 && ["font-semibold", Theme.text_color(:heading)],
               @unread_count == 0 && ["font-medium", Theme.text_color(:body)]
             ]}>
-              {@other_participant_name}
+              {@display_name}
             </h3>
             <span class={["text-xs flex-shrink-0", Theme.text_color(:muted)]}>
               {format_timestamp(@latest_message && @latest_message.inserted_at)}
@@ -544,6 +545,7 @@ defmodule KlassHeroWeb.MessagingComponents do
         unread_count={conv_data.unread_count}
         latest_message={conv_data.latest_message}
         other_participant_name={conv_data.other_participant_name}
+        program_name={Map.get(conv_data, :program_name)}
         enrolled_child_names={
           if @user_type == :parent,
             do: [],
@@ -719,6 +721,26 @@ defmodule KlassHeroWeb.MessagingComponents do
     index = :erlang.phash2(name, tuple_size(@avatar_colors))
     elem(@avatar_colors, index)
   end
+
+  # Trigger: render an inbox row label that fits the conversation type
+  # Why: broadcasts have no "other participant" — falling back to "Unknown" surfaced
+  #      as the UX bug in #892. Branch on type so each kind gets a meaningful label.
+  # Outcome: program title (or generic broadcast label) for broadcasts; participant
+  #          name (or "Unknown") for direct threads.
+  defp derive_display_name(%{conversation: %{type: :program_broadcast}, program_name: name})
+       when is_binary(name) and byte_size(name) > 0 do
+    name
+  end
+
+  defp derive_display_name(%{conversation: %{type: :program_broadcast}}) do
+    gettext("Program Broadcast")
+  end
+
+  defp derive_display_name(%{other_participant_name: name}) when is_binary(name) and byte_size(name) > 0 do
+    name
+  end
+
+  defp derive_display_name(_assigns), do: gettext("Unknown")
 
   defp format_timestamp(nil), do: ""
 

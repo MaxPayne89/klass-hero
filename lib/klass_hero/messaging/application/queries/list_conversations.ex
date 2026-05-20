@@ -63,6 +63,7 @@ defmodule KlassHero.Messaging.Application.Queries.ListConversations do
       latest_message: build_latest_message(summary),
       last_read_at: summary.last_read_at,
       other_participant_name: summary.other_participant_name,
+      program_name: summary.program_name,
       enrolled_child_names: summary.enrolled_child_names
     }
   end

@@ -248,6 +248,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
       program_id: schema.program_id,
       subject: schema.subject,
       other_participant_name: schema.other_participant_name,
+      program_name: schema.program_name,
       participant_count: schema.participant_count,
       latest_message_content: schema.latest_message_content,
       latest_message_sender_id: schema.latest_message_sender_id,
