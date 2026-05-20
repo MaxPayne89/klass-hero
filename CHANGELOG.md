@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.2](https://github.com/MaxPayne89/klass-hero/compare/v0.51.1...v0.51.2) (2026-05-20)
+
+
+### Bug Fixes
+
+* read msg.content not msg.body in dashboard message preview ([#902](https://github.com/MaxPayne89/klass-hero/issues/902)) ([78cde35](https://github.com/MaxPayne89/klass-hero/commit/78cde355817d86b17883db65915873bc7b5a6901)), closes [#897](https://github.com/MaxPayne89/klass-hero/issues/897)
+
 ## [0.51.1](https://github.com/MaxPayne89/klass-hero/compare/v0.51.0...v0.51.1) (2026-05-20)
 
 
