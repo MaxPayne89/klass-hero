@@ -285,6 +285,59 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert parent_summary.enrolled_child_names == ["Emma"]
       assert provider_summary.enrolled_child_names == ["Emma"]
     end
+
+    test "bootstraps program_name for program_broadcast rows from programs.title" do
+      # Trigger: bug #892 — broadcast inbox rows show "Unknown" because
+      #          conversation_summaries carries no program-name field.
+      # Why: cold-start path must denormalise programs.title onto each
+      #      participant's summary row so the UI can render it.
+      # Outcome: every participant's broadcast summary carries the program title.
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id, title: "Science Explorers")
+
+      parent_user = user_fixture(name: "Sarah Johnson")
+      provider_user = user_fixture(name: "Claudia Wolf")
+
+      conversation_id = Ecto.UUID.generate()
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      Repo.insert!(%ConversationSchema{
+        id: conversation_id,
+        type: "program_broadcast",
+        provider_id: provider.id,
+        program_id: program.id
+      })
+
+      Repo.insert!(%ParticipantSchema{
+        id: Ecto.UUID.generate(),
+        conversation_id: conversation_id,
+        user_id: parent_user.id,
+        joined_at: now
+      })
+
+      Repo.insert!(%ParticipantSchema{
+        id: Ecto.UUID.generate(),
+        conversation_id: conversation_id,
+        user_id: provider_user.id,
+        joined_at: now
+      })
+
+      stop_supervised!(ConversationSummaries)
+
+      bootstrap_name = :"bootstrap_program_name_#{System.unique_integer([:positive])}"
+
+      bootstrap_pid =
+        start_supervised!({ConversationSummaries, name: bootstrap_name}, id: :bootstrap_program_name)
+
+      _ = :sys.get_state(bootstrap_pid)
+
+      summaries =
+        Repo.all(from(s in ConversationSummarySchema, where: s.conversation_id == ^conversation_id))
+
+      assert length(summaries) == 2
+      assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
+      assert Enum.all?(summaries, &(&1.program_name == "Science Explorers"))
+    end
   end
 
   describe "rebuild/1" do
@@ -404,6 +457,99 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert summary_2 != nil
       assert summary_2.other_participant_name == "Alice Smith"
       assert summary_2.participant_count == 2
+    end
+
+    test "keeps program_name nil when broadcast conversation references unknown program" do
+      # Trigger: broadcast event arrives with a program_id that doesn't match any
+      #          row in `programs` (rare race or stale event after a delete).
+      # Why: the projection must degrade gracefully — UI has its own fallback label.
+      # Outcome: summary row inserted with program_name == nil, no crash.
+      provider = insert(:provider_profile_schema)
+      user = user_fixture(name: "Solo Parent")
+
+      conversation_id = Ecto.UUID.generate()
+      missing_program_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :conversation_created,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            type: "program_broadcast",
+            provider_id: provider.id,
+            program_id: missing_program_id,
+            subject: "Welcome",
+            participant_ids: [user.id]
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:conversation_created",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      summary =
+        Repo.one(
+          from(s in ConversationSummarySchema,
+            where: s.conversation_id == ^conversation_id and s.user_id == ^user.id
+          )
+        )
+
+      assert summary != nil
+      assert summary.conversation_type == "program_broadcast"
+      assert summary.program_name == nil
+    end
+
+    test "populates program_name on conversation_created for program_broadcast" do
+      # Trigger: bug #892 — broadcasts arrive via :conversation_created without a
+      #          materialised program label; UI shows "Unknown".
+      # Why: the projection must resolve programs.title at event time so brand-new
+      #      broadcast threads get a name without waiting for a rebuild.
+      # Outcome: each participant's summary row carries the program title.
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id, title: "Forest Friends")
+
+      user_1 = user_fixture(name: "Parent One")
+      user_2 = user_fixture(name: "Parent Two")
+
+      conversation_id = Ecto.UUID.generate()
+
+      event =
+        IntegrationEvent.new(
+          :conversation_created,
+          :messaging,
+          :conversation,
+          conversation_id,
+          %{
+            conversation_id: conversation_id,
+            type: "program_broadcast",
+            provider_id: provider.id,
+            program_id: program.id,
+            subject: "Welcome",
+            participant_ids: [user_1.id, user_2.id]
+          }
+        )
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:messaging:conversation_created",
+        {:integration_event, event}
+      )
+
+      _ = :sys.get_state(@test_server_name)
+
+      summaries =
+        Repo.all(from(s in ConversationSummarySchema, where: s.conversation_id == ^conversation_id))
+
+      assert length(summaries) == 2
+      assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
+      assert Enum.all?(summaries, &(&1.program_name == "Forest Friends"))
     end
 
     test "re-firing event preserves last_read_at and unread_count (idempotent)" do

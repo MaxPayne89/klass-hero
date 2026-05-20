@@ -20,6 +20,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSu
     field :program_id, :binary_id
     field :subject, :string
     field :other_participant_name, :string
+    field :program_name, :string
     field :participant_count, :integer, default: 0
     field :latest_message_content, :string
     field :latest_message_sender_id, :binary_id

@@ -6,7 +6,7 @@ defmodule KlassHeroWeb.MessagingComponentsTest do
   alias KlassHeroWeb.MessagingComponents
 
   describe "conversation_card/1" do
-    test "renders with nil other_participant_name without crashing" do
+    test "falls back to 'Unknown' for a direct conversation with nil participant name" do
       html =
         render_component(&MessagingComponents.conversation_card/1, %{
           id: "conv-test",
@@ -30,6 +30,36 @@ defmodule KlassHeroWeb.MessagingComponentsTest do
         })
 
       assert html =~ "Jane Doe"
+    end
+
+    test "renders program_name as the title for a program_broadcast conversation" do
+      html =
+        render_component(&MessagingComponents.conversation_card/1, %{
+          id: "conv-broadcast",
+          conversation: %{id: "conv-2", type: :program_broadcast},
+          unread_count: 0,
+          latest_message: nil,
+          other_participant_name: nil,
+          program_name: "Science Explorers"
+        })
+
+      assert html =~ "Science Explorers"
+      refute html =~ "Unknown"
+    end
+
+    test "falls back to 'Program Broadcast' when program_name is nil on a broadcast" do
+      html =
+        render_component(&MessagingComponents.conversation_card/1, %{
+          id: "conv-broadcast",
+          conversation: %{id: "conv-3", type: :program_broadcast},
+          unread_count: 0,
+          latest_message: nil,
+          other_participant_name: nil,
+          program_name: nil
+        })
+
+      assert html =~ "Program Broadcast"
+      refute html =~ "Unknown"
     end
   end
 
