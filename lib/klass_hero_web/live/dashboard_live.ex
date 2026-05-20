@@ -161,7 +161,7 @@ defmodule KlassHeroWeb.DashboardLive do
           %{
             id: conv.id,
             from: from,
-            preview: (msg && msg.body) || gettext("New conversation"),
+            preview: (msg && msg.content) || gettext("New conversation"),
             time: msg && relative_time(msg.inserted_at),
             color: Enum.at(palette, rem(idx, length(palette))),
             unread?: entry.unread_count > 0
