@@ -25,7 +25,7 @@
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
     "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:false.",
     "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
-    "coverage_saturation_note": "As of 2026-05-18, backlog exhausted. Maintainer writing comprehensive tests for all new code. PRs #872 (notify_live_views_test, confirm_enrollment_test, dashboard_live_test), #875 (CTA copy, trivial) all ship with maintainer tests or are non-testable.",
+    "coverage_saturation_note": "As of 2026-05-20, backlog exhausted. Maintainer writing comprehensive tests for all new code. All recent PRs (#893, #895, #902) ship with maintainer tests.",
     "create_program_rejected_note": "PR #634 with CreateProgram/UpdateProgram tests was closed without merge by maintainer. Do not re-attempt.",
     "ci_check_runs_note": "No CI check runs appear on Test Improver PRs. CI may only run on push to main or require maintainer trigger.",
     "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html.",
@@ -42,7 +42,9 @@
     "confirm_enrollment_note": "PR #859/#866 (2026-05-17): ConfirmEnrollment command + ListPendingEnrollmentsForProvider query. Both fully tested by maintainer (89+86 line test files). No TI opportunity.",
     "pr_855_merged_note": "PR #855 (StaffLiveHelpers refactor+tests) merged 2026-05-16. Changed: staff_live_helpers.ex (new), staff_dashboard_live.ex, staff_participation_live.ex, staff_sessions_live.ex, staff_live_helpers_test.exs. No conflict with any open TI PRs.",
     "pr_872_note": "PR #872 (2026-05-18): collapse pending-enrollments refresh to single channel. Adds provider_scoped_topic/2 to enrollment.ex and notify_live_views.ex. Fully tested by maintainer (notify_live_views_test.exs +25 lines, confirm_enrollment_test.exs +7 lines, dashboard_live_test.exs +41 lines). No TI opportunity.",
-    "broadcast_to_program_note": "BroadcastToProgram.setup_participants/3 now dispatches :participant_added with :broadcast_setup source. 176-line test file added by maintainer in PR #893 (2026-05-19)."
+    "broadcast_to_program_note": "BroadcastToProgram.setup_participants/3 now dispatches :participant_added with :broadcast_setup source. 176-line test file added by maintainer in PR #893 (2026-05-19).",
+    "pr_895_note": "PR #895 (2026-05-20): denormalises program_name onto conversation_summaries. Maintainer added 146 lines to conversation_summaries_test.exs, 31 lines to messaging_components_test.exs. No TI opportunity.",
+    "pr_902_note": "PR #902 (2026-05-20): fixes msg.content vs msg.body regression in DashboardLive. Adds regression test seeding conversation_summary. No TI opportunity."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -54,12 +56,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-18",
-    "task_2": "2026-05-19",
+    "task_2": "2026-05-20",
     "task_3": "2026-05-16",
-    "task_4": "2026-05-19",
+    "task_4": "2026-05-20",
     "task_5": "2026-05-19",
     "task_6": "2026-05-16",
-    "task_7": "2026-05-19"
+    "task_7": "2026-05-20"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -122,7 +124,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #875 (2026-05-18, homepage CTA copy): trivial template change, no tests needed",
+    "task_2_last_file": "PR #902 (2026-05-20, dashboard msg.content regression fix): fully tested by maintainer",
     "task_5_last_issue": 705
   },
   "open_prs": [
