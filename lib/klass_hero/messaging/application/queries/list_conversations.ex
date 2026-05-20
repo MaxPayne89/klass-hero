@@ -30,7 +30,12 @@ defmodule KlassHero.Messaging.Application.Queries.ListConversations do
   - `:unread_count` - Number of unread messages
   - `:latest_message` - The most recent message (map or nil)
   - `:last_read_at` - When user last read
-  - `:other_participant_name` - Display name of other participant (for direct) or subject (for broadcast)
+  - `:other_participant_name` - Display name of the other participant for
+    direct conversations; nil for broadcasts (which use `:program_name`)
+  - `:program_name` - Program title for `:program_broadcast` conversations;
+    nil for direct (denormalised from `programs.title` by the projection)
+  - `:enrolled_child_names` - List of child first names attached to the
+    conversation (provider-side context for direct conversations)
   """
   @spec execute(String.t(), keyword()) ::
           {:ok, [map()], boolean()}

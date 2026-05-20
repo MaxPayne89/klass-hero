@@ -22,13 +22,22 @@ defmodule KlassHeroWeb.MessagingComponents do
   @doc """
   Renders a conversation card for the conversation list.
 
+  The displayed label is derived from `conversation.type`:
+  - `:program_broadcast` — uses `program_name`, falling back to
+    `gettext("Program Broadcast")` when the program row is missing.
+  - everything else — uses `other_participant_name`, falling back to
+    `gettext("Unknown")`.
+
   ## Attributes
   - id: DOM id for the card
-  - conversation: The conversation entity
+  - conversation: The conversation entity (must expose `:type`)
   - unread_count: Number of unread messages
   - latest_message: The most recent message (optional)
-  - other_participant_name: Name of the other participant
-  - on_click: Click handler
+  - other_participant_name: Name of the other participant (direct conversations)
+  - program_name: Program title (broadcast conversations)
+  - enrolled_child_names: Optional list of child first names rendered under the
+    label (provider-side direct conversations)
+  - navigate: Target URL for the `<.link navigate=...>` wrapper
 
   ## Examples
 
@@ -38,6 +47,7 @@ defmodule KlassHeroWeb.MessagingComponents do
         unread_count={2}
         latest_message={message}
         other_participant_name="John Smith"
+        program_name={nil}
       />
 
   """
