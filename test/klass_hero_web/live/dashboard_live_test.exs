@@ -89,6 +89,23 @@ defmodule KlassHeroWeb.DashboardLiveTest do
 
       assert html =~ "No messages yet."
     end
+
+    test "renders latest message preview when the user has a conversation summary",
+         %{conn: conn, user: user} do
+      # Regression: #897 — dashboard crashed with `KeyError :body` because the
+      # LiveView read `msg.body` while the read-model DTO exposes `:content`.
+      preview_text = "Spring recital reminder for Saturday"
+
+      insert(:conversation_summary_schema,
+        user_id: user.id,
+        latest_message_content: preview_text,
+        latest_message_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+
+      {:ok, _view, html} = live(conn, ~p"/dashboard")
+
+      assert html =~ preview_text
+    end
   end
 
   describe "Contact Provider flow" do
