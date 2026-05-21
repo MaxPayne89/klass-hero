@@ -537,4 +537,40 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       assert halt_entry.errors =~ "Stream halted"
     end
   end
+
+  # -- failure category matrix ---------------------------------------------------
+
+  describe "execute/2 - failure category matrix" do
+    setup :setup_provider_with_programs
+
+    @failure_cases [
+      {%{first: ""}, :validation, :child_first_name, "is required"},
+      {%{email: "not-an-email"}, :validation, :guardian_email, "must be a valid email"},
+      {%{program: "Nonexistent Program"}, :validation, :program_name, "program not found"},
+      {%{grade: "99"}, :validation, :school_grade, "must be between 1 and 13"}
+    ]
+
+    test "each case produces the expected failure category and field error", %{provider: provider} do
+      for {row_overrides, expected_category, expected_field, expected_msg} <- @failure_cases do
+        csv = build_csv([row_overrides])
+
+        assert {:ok, %{created: 0, failed: [failure]}} =
+                 ImportEnrollmentCsv.execute(provider.id, csv),
+               "unexpected return shape for case #{inspect(row_overrides)}"
+
+        assert failure.category == expected_category,
+               "for #{inspect(row_overrides)}: expected category #{expected_category}, got #{failure.category}"
+
+        found_pair = Enum.find(failure.errors, fn {f, _} -> f == expected_field end)
+
+        assert found_pair,
+               "for #{inspect(row_overrides)}: expected field #{expected_field} in #{inspect(failure.errors)}"
+
+        {^expected_field, msg} = found_pair
+
+        assert msg =~ expected_msg,
+               "for #{inspect(row_overrides)}: expected msg ~= #{expected_msg}, got #{msg}"
+      end
+    end
+  end
 end
