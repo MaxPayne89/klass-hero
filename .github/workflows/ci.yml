@@ -43,6 +43,18 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
+      # Compile all deps once before the NIF force-rebuild. `mix deps.compile
+      # lazy_html --force` only rebuilds lazy_html itself — it does NOT
+      # trigger compilation of transitive deps (fine, elixir_make,
+      # cc_precompiler). On a warm cache they're already in _build/; on a
+      # cold cache (e.g. after a runtime bump invalidates the cache key)
+      # the --force step fails with "could not find an app file at
+      # _build/test/lib/fine/ebin/fine.app".
+      - name: Compile dependencies
+        run: mix deps.compile
+        env:
+          MIX_ENV: test
+
       # Force-recompile NIF deps to prevent stale cache issues.
       # The restore-keys fallback can provide a NIF binary from a
       # previous version that doesn't match the current mix.lock.
