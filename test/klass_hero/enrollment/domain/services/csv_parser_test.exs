@@ -318,7 +318,9 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
         ])
 
       assert {:error, errors} = CsvParser.parse(csv)
-      assert [{2, reason}] = errors
+      # parse/1 delegates to parse_stream/1 which is 1-based from the first data row
+      # (header not counted); the use case (Task 4) adds +1 for user-visible CSV line numbers
+      assert [{1, reason}] = errors
       assert reason =~ "invalid date"
       assert reason =~ "child_date_of_birth"
       assert reason =~ "not-a-date"
@@ -332,8 +334,10 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
     end
 
     test "returns error for malformed CSV with mismatched quotes" do
+      # validate_headers/1 catches structural breaks in the header line and returns
+      # {:error, :malformed_csv}; parse/1 short-circuits via with and propagates it
       csv = "\"unclosed quote,value\n"
-      assert {:error, [{1, "CSV file is malformed:" <> _}]} = CsvParser.parse(csv)
+      assert {:error, :malformed_csv} = CsvParser.parse(csv)
     end
   end
 
@@ -464,6 +468,8 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       {:ok, prepared} = CsvParser.validate_headers(csv)
       results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
 
+      # parse_stream/1 is 1-based from the first data row (header not counted).
+      # The use case (Task 4) adds 1 for user-visible CSV line numbers.
       assert [
                {:ok, %{child_first_name: "Alice"}},
                {:error, {2, msg}},
