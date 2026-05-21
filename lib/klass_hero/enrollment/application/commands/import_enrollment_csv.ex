@@ -43,6 +43,8 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
                        :for_storing_bulk_enrollment_invites
                      ])
 
+  @default_chunk_size 100
+
   @type failure :: %{
           row: pos_integer() | nil,
           category: :parse | :validation | :duplicate | :insert,
@@ -53,8 +55,14 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
 
   @spec execute(binary(), binary()) ::
           {:ok, report()} | {:error, %{parse_errors: [{0, String.t()}]}}
-  def execute(provider_id, csv_binary) when is_binary(provider_id) and is_binary(csv_binary) do
+  def execute(provider_id, csv_binary), do: execute(provider_id, csv_binary, [])
+
+  @spec execute(binary(), binary(), keyword()) ::
+          {:ok, report()} | {:error, %{parse_errors: [{0, String.t()}]}}
+  def execute(provider_id, csv_binary, opts) when is_binary(provider_id) and is_binary(csv_binary) and is_list(opts) do
     Logger.info("[ImportEnrollmentCsv] Starting CSV import for provider #{provider_id}")
+
+    chunk_size = fetch_chunk_size(opts)
 
     with {:ok, prepared} <- prepare_csv(csv_binary),
          {:ok, context} <- build_context(provider_id) do
@@ -74,7 +82,8 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
       final =
         prepared
         |> CsvParser.parse_stream()
-        |> Enum.reduce(acc0, &process_row/2)
+        |> Stream.chunk_every(chunk_size)
+        |> Enum.reduce(acc0, &process_chunk/2)
 
       Logger.info(
         "[ImportEnrollmentCsv] Finished for provider #{provider_id}: " <>
@@ -129,7 +138,11 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
     end
   end
 
-  # -- per-row dispatch ------------------------------------------------------
+  # -- chunk + per-row dispatch ------------------------------------------------
+
+  defp process_chunk(chunk, acc) do
+    Enum.reduce(chunk, acc, &process_row/2)
+  end
 
   # Row-level parse error from CsvParser.parse_stream/1 (e.g. bad date format).
   # Capture row number from acc BEFORE bumping — next_row is the current data row.
@@ -205,6 +218,13 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
       row.child_first_name,
       row.child_last_name
     )
+  end
+
+  defp fetch_chunk_size(opts) do
+    case Keyword.get(opts, :chunk_size, @default_chunk_size) do
+      n when is_integer(n) and n > 0 -> n
+      bad -> raise ArgumentError, "chunk_size must be a positive integer, got: #{inspect(bad)}"
+    end
   end
 
   defp maybe_publish_event(_provider_id, %{created: 0}), do: :ok

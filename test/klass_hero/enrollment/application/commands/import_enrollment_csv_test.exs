@@ -397,4 +397,25 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       assert msg =~ "Missing required columns"
     end
   end
+
+  # -- cross-chunk dedup ---------------------------------------------------------
+
+  describe "execute/2 - cross-chunk dedup" do
+    setup :setup_provider_with_programs
+
+    test "in-batch dedup detects duplicates split across chunk boundary", %{provider: provider} do
+      # rows = [A, B, A] with chunk_size: 2 -> chunk 1 = [A, B], chunk 2 = [A]
+      csv =
+        build_csv([
+          %{first: "Alice", last: "X", email: "a@x.com"},
+          %{first: "Bob", last: "Y", email: "b@x.com"},
+          %{first: "Alice", last: "X", email: "a@x.com"}
+        ])
+
+      assert {:ok, %{created: 2, failed: [%{row: 4, category: :duplicate, errors: msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv, chunk_size: 2)
+
+      assert msg =~ "Duplicate entry in CSV"
+    end
+  end
 end
