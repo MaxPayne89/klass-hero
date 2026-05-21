@@ -268,10 +268,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
   defp format_date(nil), do: "N/A"
   defp format_date(%Date{} = date), do: Calendar.strftime(date, "%B %d, %Y")
 
-  defp format_time(nil), do: "N/A"
   defp format_time(%Time{} = time), do: Calendar.strftime(time, "%I:%M %p")
-
-  defp format_datetime(nil), do: "N/A"
 
   defp format_datetime(%DateTime{} = datetime) do
     Calendar.strftime(datetime, "%B %d, %Y at %I:%M %p")
