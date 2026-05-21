@@ -1,9 +1,8 @@
 defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Enrollment.Domain.Services.CsvParser
-
   # -- helpers ---------------------------------------------------------------
+  alias KlassHero.Enrollment.Domain.Services.CsvParser
 
   defp headers do
     [
@@ -370,6 +369,61 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       csv = <<0xEF, 0xBB, 0xBF>> <> header_line() <> "\n"
 
       assert {:error, :empty_csv} = CsvParser.parse(csv)
+    end
+  end
+
+  # -- validate_headers/1 -------------------------------------------------------
+
+  describe "validate_headers/1" do
+    test "returns prepared payload with column_keys and remainder for a valid CSV" do
+      csv =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season\nAlice,Smith,1/1/2016,Bob,Smith,p@x.com,,,,,,,,,,,Ballsports & Parkour,,Test"
+
+      assert {:ok, %{column_keys: keys, remainder: rest}} =
+               CsvParser.validate_headers(csv)
+
+      assert is_list(keys)
+      assert :child_first_name in keys
+      assert :program_name in keys
+      assert is_binary(rest)
+      assert String.starts_with?(rest, "Alice,Smith")
+    end
+
+    test "returns :empty_csv error for empty input" do
+      assert {:error, :empty_csv} =
+               CsvParser.validate_headers("")
+
+      assert {:error, :empty_csv} =
+               CsvParser.validate_headers("   \n  ")
+    end
+
+    test "returns invalid_headers error when required columns missing" do
+      csv = "Wrong,Headers\nAlice,Smith"
+
+      assert {:error, {:invalid_headers, missing}} =
+               CsvParser.validate_headers(csv)
+
+      assert :child_first_name in missing
+      assert :program_name in missing
+    end
+
+    test "returns :malformed_csv when the header line is structurally broken" do
+      # Unbalanced quote in header line
+      csv = ~s(Participant information: First,"Unclosed,Program\nAlice,Smith,Ballsports)
+
+      assert {:error, :malformed_csv} =
+               CsvParser.validate_headers(csv)
+    end
+
+    test "strips UTF-8 BOM before parsing headers" do
+      bom_csv =
+        <<0xEF, 0xBB, 0xBF>> <>
+          "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season\nAlice,Smith,1/1/2016,Bob,Smith,p@x.com,,,,,,,,,,,Ballsports & Parkour,,Test"
+
+      assert {:ok, %{column_keys: keys}} =
+               CsvParser.validate_headers(bom_csv)
+
+      assert :child_first_name in keys
     end
   end
 

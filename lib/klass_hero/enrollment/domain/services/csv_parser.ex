@@ -54,6 +54,55 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
 
   # -- public API ------------------------------------------------------------
 
+  @type prepared :: %{column_keys: [atom() | :skip | nil], remainder: binary()}
+
+  @doc """
+  Eagerly peeks at the first line of the CSV binary, resolves headers to
+  column keys, and returns a prepared payload ready to be streamed by
+  `parse_stream/1`. Strips a leading UTF-8 BOM if present.
+
+  This is the ONLY place that produces whole-file fatals
+  (`:empty_csv`, `:malformed_csv`, `{:invalid_headers, missing}`).
+  `parse_stream/1` then assumes headers are valid and never short-circuits
+  on header issues.
+  """
+  @spec validate_headers(binary()) ::
+          {:ok, prepared()}
+          | {:error, :empty_csv}
+          | {:error, :malformed_csv}
+          | {:error, {:invalid_headers, [atom()]}}
+  def validate_headers(csv) when is_binary(csv) do
+    trimmed =
+      csv
+      |> strip_bom()
+      |> String.trim_leading()
+
+    case String.split(trimmed, ~r/\r?\n/, parts: 2) do
+      [""] ->
+        {:error, :empty_csv}
+
+      [only_header] ->
+        with {:ok, keys} <- parse_header_line(only_header) do
+          {:ok, %{column_keys: keys, remainder: ""}}
+        end
+
+      [header_line, remainder] ->
+        with {:ok, keys} <- parse_header_line(header_line) do
+          {:ok, %{column_keys: keys, remainder: remainder}}
+        end
+    end
+  end
+
+  defp parse_header_line(header_line) do
+    case __MODULE__.Parser.parse_string(header_line, skip_headers: false) do
+      [raw_headers | _] -> resolve_headers(raw_headers)
+      [] -> {:error, :empty_csv}
+    end
+  rescue
+    _e in NimbleCSV.ParseError ->
+      {:error, :malformed_csv}
+  end
+
   @doc """
   Parses a CSV binary string into a list of structured row maps.
 
