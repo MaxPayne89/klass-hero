@@ -427,6 +427,73 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
     end
   end
 
+  # -- parse_stream/1 -----------------------------------------------------------
+
+  describe "parse_stream/1" do
+    defp build_csv_with_rows(data_lines) do
+      headers =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season"
+
+      Enum.join([headers | data_lines], "\n")
+    end
+
+    test "yields {:ok, row_map} for each valid data row" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          "Carol,Doe,5/5/2017,Dan,Doe,dan@x.com,,,,,,,,,,,Arts,,Spring"
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      assert [{:ok, row1}, {:ok, row2}] = results
+      assert row1.child_first_name == "Alice"
+      assert row1.program_name == "Ballsports"
+      assert row2.child_first_name == "Carol"
+    end
+
+    test "yields {:error, {row_num, message}} for rows with bad data" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          "Carol,Doe,not-a-date,Dan,Doe,dan@x.com,,,,,,,,,,,Arts,,Spring",
+          "Eve,Jones,3/3/2018,Frank,Jones,frank@x.com,,,,,,,,,,,Sports,,Spring"
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      assert [
+               {:ok, %{child_first_name: "Alice"}},
+               {:error, {2, msg}},
+               {:ok, %{child_first_name: "Eve"}}
+             ] = results
+
+      assert msg =~ "invalid date"
+    end
+
+    test "returns empty stream when remainder is empty" do
+      {:ok, prepared} = CsvParser.validate_headers(build_csv_with_rows([]))
+      assert prepared |> CsvParser.parse_stream() |> Enum.to_list() == []
+    end
+
+    test "is lazy — does not parse beyond what is taken" do
+      csv =
+        build_csv_with_rows(
+          for n <- 1..1000 do
+            "Name#{n},Last,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring"
+          end
+        )
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+
+      first_two = prepared |> CsvParser.parse_stream() |> Enum.take(2)
+      assert length(first_two) == 2
+      assert [{:ok, %{child_first_name: "Name1"}}, {:ok, %{child_first_name: "Name2"}}] = first_two
+    end
+  end
+
   # -- test row builder ------------------------------------------------------
 
   defp row_with_overrides(overrides) do

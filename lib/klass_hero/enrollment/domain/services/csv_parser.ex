@@ -104,6 +104,41 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   end
 
   @doc """
+  Returns a lazy `Enumerable.t/0` over the prepared CSV remainder.
+
+  Each yielded element is one of:
+
+    * `{:ok, row_map}` — successfully parsed and type-converted row
+    * `{:error, {row_num, message}}` — row-level parse failure (bad date, etc.)
+
+  Whole-file fatals do NOT appear here — they are produced by
+  `validate_headers/1` before any streaming begins. A mid-stream
+  `NimbleCSV.ParseError` propagates as an exception; callers consuming
+  the stream inside a chunk fold should rescue it.
+
+  Row numbers are 1-based starting from the first data row (header line
+  is NOT counted).
+  """
+  @spec parse_stream(prepared()) :: Enumerable.t()
+  def parse_stream(%{column_keys: column_keys, remainder: remainder}) do
+    col_count = length(column_keys)
+
+    remainder
+    |> String.splitter(["\r\n", "\n"], trim: false)
+    |> Stream.reject(&(&1 == ""))
+    |> Stream.with_index(1)
+    |> Stream.map(fn {line, row_number} ->
+      [cells] = __MODULE__.Parser.parse_string(line, skip_headers: false)
+      padded = pad_cells(cells, col_count)
+
+      case build_row(padded, column_keys, row_number) do
+        {:ok, _} = ok -> ok
+        {:error, reason} -> {:error, {row_number, reason}}
+      end
+    end)
+  end
+
+  @doc """
   Parses a CSV binary string into a list of structured row maps.
 
   Returns `{:ok, rows}` when all rows parse successfully, or
