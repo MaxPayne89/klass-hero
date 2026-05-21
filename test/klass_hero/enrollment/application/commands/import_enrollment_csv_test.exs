@@ -326,21 +326,21 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       provider: provider,
       program1: program
     } do
-      repo_module =
-        Application.fetch_env!(:klass_hero, :enrollment)
-        |> Keyword.fetch!(:for_storing_bulk_enrollment_invites)
-
-      {:ok, 1} =
-        repo_module.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Alice",
-            child_last_name: "X",
-            child_date_of_birth: ~D[2016-01-01],
-            guardian_email: "a@x.com"
-          }
-        ])
+      # Trigger: seed a pre-existing invite so the use case sees a DB duplicate
+      # Why: Task 10 will delete create_batch/1; Repo.insert! on the schema
+      #      struct stays valid regardless of the use case's persistence API
+      # Outcome: direct struct insert bypasses changeset validation — we
+      #          control the data, so the FK-satisfying fields are enough
+      %BulkEnrollmentInviteSchema{
+        program_id: program.id,
+        provider_id: provider.id,
+        child_first_name: "Alice",
+        child_last_name: "X",
+        child_date_of_birth: ~D[2016-01-01],
+        guardian_email: "a@x.com",
+        status: :pending
+      }
+      |> Repo.insert!()
 
       csv =
         build_csv([

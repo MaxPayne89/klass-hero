@@ -278,9 +278,14 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   # -- date parsing ----------------------------------------------------------
   # Trigger: dates arrive as M/D/YYYY or MM/DD/YYYY
   # Why: parents fill forms with inconsistent date formatting
-  # Outcome: a %Date{} struct or an error with row context
+  # Outcome: a %Date{} struct or an error scoped to the column and bad value
 
-  defp parse_date(raw, field, row_number) do
+  # Trigger: per-cell converters used to embed `(row N)` in their error messages
+  # Why: row numbers are already in the {row_num, message} tuple yielded by
+  #      parse_stream/1; the use case owns canonical 2-based numbering (header
+  #      is row 1), so double-numbering produced contradictory output
+  # Outcome: messages stay column/value-specific; numbering happens at the boundary
+  defp parse_date(raw, field, _row_number) do
     trimmed = String.trim(raw)
 
     case String.split(trimmed, "/") do
@@ -292,11 +297,11 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
           {:ok, date}
         else
           _ ->
-            {:error, "invalid date format in column #{field}: #{trimmed} (row #{row_number})"}
+            {:error, "invalid date format in column #{field}: #{trimmed}"}
         end
 
       _ ->
-        {:error, "invalid date format in column #{field}: #{trimmed} (row #{row_number})"}
+        {:error, "invalid date format in column #{field}: #{trimmed}"}
     end
   end
 
