@@ -828,13 +828,36 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
       {:ok, [{:ok, csv_binary}]} ->
         case Enrollment.import_enrollment_csv(provider_id, csv_binary) do
-          {:ok, %{created: count}} ->
+          {:ok, %{created: count, failed: []}} ->
             socket = refresh_invites_silent(socket, program_id)
 
             {:noreply,
              socket
              |> put_flash(:info, gettext("Imported %{count} families.", count: count))
              |> assign(import_errors: nil)}
+
+          {:ok, %{created: 0, failed: failed}} ->
+            {:noreply,
+             socket
+             |> put_flash(
+               :error,
+               gettext("No rows imported. %{f} rows could not be processed.", f: length(failed))
+             )
+             |> assign(import_errors: failed)}
+
+          {:ok, %{created: count, failed: failed}} ->
+            socket = refresh_invites_silent(socket, program_id)
+
+            {:noreply,
+             socket
+             |> put_flash(
+               :info,
+               gettext("Imported %{c} families. %{f} rows could not be processed.",
+                 c: count,
+                 f: length(failed)
+               )
+             )
+             |> assign(import_errors: failed)}
 
           {:error, error_report} ->
             {:noreply, assign(socket, import_errors: error_report)}

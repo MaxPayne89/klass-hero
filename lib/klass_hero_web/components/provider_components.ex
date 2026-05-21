@@ -1983,7 +1983,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             Theme.rounded(:lg)
           ]}
         >
-          <p class="font-semibold mb-2">{gettext("Import failed")}</p>
+          <p class="font-semibold mb-2">{gettext("Rows with errors")}</p>
           <ul class="list-disc pl-5 space-y-1">
             <li :for={msg <- format_import_errors(@import_errors)}>
               {msg}
@@ -2229,54 +2229,27 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp invite_status_label(:failed), do: gettext("Failed")
   defp invite_status_label(status), do: status |> to_string() |> String.capitalize()
 
-  defp format_import_errors(errors) when is_map(errors) do
-    parse_msgs =
-      case Map.get(errors, :parse_errors) do
-        errs when is_list(errs) ->
-          Enum.map(errs, fn {row, msg} ->
-            gettext("Row %{row}: %{msg}", row: row, msg: msg)
-          end)
+  # Partial-success path: list of row-level failure maps from ImportEnrollmentCsv
+  defp format_import_errors(failures) when is_list(failures) do
+    Enum.map(failures, fn %{row: row, category: category, errors: errors} ->
+      row_label = if row, do: gettext("Row %{row}", row: row), else: gettext("Row —")
+      category_label = category |> to_string() |> String.capitalize()
+      error_detail = format_failure_errors(errors)
+      "#{row_label} [#{category_label}]: #{error_detail}"
+    end)
+  end
 
-        _ ->
-          []
-      end
-
-    validation_msgs =
-      case Map.get(errors, :validation_errors) do
-        errs when is_list(errs) ->
-          Enum.map(errs, fn {row, field_errors} ->
-            msg = format_field_errors(field_errors)
-            gettext("Row %{row}: %{msg}", row: row, msg: msg)
-          end)
-
-        _ ->
-          []
-      end
-
-    duplicate_msgs =
-      case Map.get(errors, :duplicate_errors) do
-        errs when is_list(errs) ->
-          Enum.map(errs, fn {row, msg} ->
-            gettext("Row %{row}: %{msg}", row: row, msg: msg)
-          end)
-
-        _ ->
-          []
-      end
-
-    parse_msgs ++ validation_msgs ++ duplicate_msgs
+  # Whole-file fatal path: map with parse_errors key
+  defp format_import_errors(%{parse_errors: errs}) when is_list(errs) do
+    Enum.map(errs, fn {_row, msg} -> msg end)
   end
 
   defp format_import_errors(_), do: [gettext("An unexpected error occurred during import.")]
 
-  # Trigger: field_errors is a keyword list like [{:guardian_email, "is required"}, ...]
-  # Why: internal atom names (e.g. :program_name) are confusing to end users
-  # Outcome: human-friendly labels like "Program" shown instead of "program_name"
-  defp format_field_errors(field_errors) do
-    Enum.map_join(field_errors, ", ", fn {field, detail} ->
-      label = humanize_field(field)
-      "#{label}: #{detail}"
-    end)
+  defp format_failure_errors(errors) when is_binary(errors), do: errors
+
+  defp format_failure_errors(errors) when is_list(errors) do
+    Enum.map_join(errors, ", ", fn {field, msg} -> "#{humanize_field(field)}: #{msg}" end)
   end
 
   # Trigger: each field atom needs a user-facing label
