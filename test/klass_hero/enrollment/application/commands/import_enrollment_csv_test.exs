@@ -506,7 +506,10 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
 
       assert {:ok, %{created: 0}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
-      refute_receive {:bulk_invites_imported, _}, 500
+      provider_id = provider.id
+
+      refute_receive {:bulk_invites_imported, %DomainEvent{payload: %{provider_id: ^provider_id}}},
+                     500
     end
   end
 
