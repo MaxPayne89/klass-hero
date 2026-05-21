@@ -11,16 +11,14 @@ defmodule KlassHero.Enrollment.Application.Commands.ResendInviteTest do
     program = insert(:program_schema, provider_id: provider.id)
 
     {:ok, _} =
-      BulkEnrollmentInviteRepository.create_batch([
-        %{
-          program_id: program.id,
-          provider_id: provider.id,
-          child_first_name: "Jane",
-          child_last_name: "Smith",
-          child_date_of_birth: ~D[2015-06-15],
-          guardian_email: "jane@test.com"
-        }
-      ])
+      BulkEnrollmentInviteRepository.create_one(%{
+        program_id: program.id,
+        provider_id: provider.id,
+        child_first_name: "Jane",
+        child_last_name: "Smith",
+        child_date_of_birth: ~D[2015-06-15],
+        guardian_email: "jane@test.com"
+      })
 
     [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
 

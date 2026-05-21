@@ -456,17 +456,15 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
           title: "Test Program"
         )
 
-      {:ok, _count} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "parent@test.com"
-          }
-        ])
+      {:ok, _invite} =
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "parent@test.com"
+        })
 
       %{program: program}
     end
@@ -511,17 +509,15 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
           title: "Test Program"
         )
 
-      {:ok, _count} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "parent@test.com"
-          }
-        ])
+      {:ok, _invite} =
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "parent@test.com"
+        })
 
       %{program: program}
     end
@@ -664,16 +660,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
     } do
       # Seed an existing invite matching the form submission
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Emma",
-            child_last_name: "Schmidt",
-            child_date_of_birth: ~D[2016-03-15],
-            guardian_email: "existing@example.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Emma",
+          child_last_name: "Schmidt",
+          child_date_of_birth: ~D[2016-03-15],
+          guardian_email: "existing@example.com"
+        })
 
       view = open_invites_tab(conn, program.id)
 
@@ -767,16 +761,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "enrolled@test.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "enrolled@test.com"
+        })
 
       # Walk through the state machine to enrolled
       [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
@@ -814,16 +806,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "concurrent@test.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "concurrent@test.com"
+        })
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       view |> element("#view-roster-#{program.id}") |> render_click()
@@ -844,16 +834,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "removed@test.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "removed@test.com"
+        })
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       view |> element("#view-roster-#{program.id}") |> render_click()

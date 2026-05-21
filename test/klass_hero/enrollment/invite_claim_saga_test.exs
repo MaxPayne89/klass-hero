@@ -59,19 +59,17 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
     token = "saga-test-#{System.unique_integer([:positive])}"
     email = "saga-test-#{System.unique_integer([:positive])}@example.com"
 
-    {:ok, 1} =
-      BulkEnrollmentInviteRepository.create_batch([
-        %{
-          program_id: program.id,
-          provider_id: provider.id,
-          child_first_name: "Emma",
-          child_last_name: "Schmidt",
-          child_date_of_birth: ~D[2016-03-15],
-          guardian_email: email,
-          guardian_first_name: "Anna",
-          guardian_last_name: "Schmidt"
-        }
-      ])
+    {:ok, _} =
+      BulkEnrollmentInviteRepository.create_one(%{
+        program_id: program.id,
+        provider_id: provider.id,
+        child_first_name: "Emma",
+        child_last_name: "Schmidt",
+        child_date_of_birth: ~D[2016-03-15],
+        guardian_email: email,
+        guardian_first_name: "Anna",
+        guardian_last_name: "Schmidt"
+      })
 
     invite =
       BulkEnrollmentInviteSchema

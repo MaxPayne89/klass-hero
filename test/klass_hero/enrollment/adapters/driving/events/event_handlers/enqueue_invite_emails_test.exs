@@ -36,7 +36,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
       }
     ]
 
-    {:ok, 2} = BulkEnrollmentInviteRepository.create_batch(rows)
+    Enum.each(rows, &BulkEnrollmentInviteRepository.create_one/1)
     %{provider: provider, program: program}
   end
 

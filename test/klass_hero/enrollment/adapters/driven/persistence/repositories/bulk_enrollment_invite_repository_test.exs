@@ -27,74 +27,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     )
   end
 
-  describe "create_batch/1" do
-    setup :setup_program
-
-    test "inserts valid rows and returns count", %{program: program, provider: provider} do
-      rows = [
-        valid_invite_attrs(program, provider),
-        valid_invite_attrs(program, provider, %{
-          child_first_name: "Liam",
-          child_last_name: "Mueller",
-          child_date_of_birth: ~D[2017-07-20],
-          guardian_email: "other@example.com"
-        })
-      ]
-
-      assert {:ok, 2} = BulkEnrollmentInviteRepository.create_batch(rows)
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
-    end
-
-    test "rolls back entire batch when one row is invalid", %{
-      program: program,
-      provider: provider
-    } do
-      rows = [
-        valid_invite_attrs(program, provider),
-        # Missing required child_last_name
-        valid_invite_attrs(program, provider, %{child_last_name: nil, guardian_email: "b@x.com"})
-      ]
-
-      assert {:error, {_index, %Ecto.Changeset{}}} =
-               BulkEnrollmentInviteRepository.create_batch(rows)
-
-      # Trigger: transaction rolled back
-      # Why: atomicity guarantee — no partial batch inserts
-      # Outcome: zero rows persisted
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 0
-    end
-
-    test "returns {:ok, 0} for empty list" do
-      assert {:ok, 0} = BulkEnrollmentInviteRepository.create_batch([])
-    end
-
-    test "persists all optional fields", %{program: program, provider: provider} do
-      attrs =
-        valid_invite_attrs(program, provider, %{
-          guardian_first_name: "Hans",
-          guardian_last_name: "Schmidt",
-          guardian2_email: "other-parent@example.com",
-          guardian2_first_name: "Maria",
-          guardian2_last_name: "Schmidt",
-          school_grade: 3,
-          school_name: "Grundschule Mitte",
-          medical_conditions: "Asthma",
-          nut_allergy: true,
-          consent_photo_marketing: true,
-          consent_photo_social_media: false
-        })
-
-      assert {:ok, 1} = BulkEnrollmentInviteRepository.create_batch([attrs])
-
-      invite = Repo.one!(BulkEnrollmentInviteSchema)
-      assert invite.guardian_first_name == "Hans"
-      assert invite.school_grade == 3
-      assert invite.nut_allergy == true
-      assert invite.consent_photo_marketing == true
-      assert invite.status == :pending
-    end
-  end
-
   describe "create_one/1" do
     setup :setup_program
 
@@ -137,6 +69,32 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
                BulkEnrollmentInviteRepository.create_one(attrs)
 
       assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 1
+    end
+
+    test "persists all optional fields", %{program: program, provider: provider} do
+      attrs =
+        valid_invite_attrs(program, provider, %{
+          guardian_first_name: "Hans",
+          guardian_last_name: "Schmidt",
+          guardian2_email: "other-parent@example.com",
+          guardian2_first_name: "Maria",
+          guardian2_last_name: "Schmidt",
+          school_grade: 3,
+          school_name: "Grundschule Mitte",
+          medical_conditions: "Asthma",
+          nut_allergy: true,
+          consent_photo_marketing: true,
+          consent_photo_social_media: false
+        })
+
+      assert {:ok, _} = BulkEnrollmentInviteRepository.create_one(attrs)
+
+      invite = Repo.one!(BulkEnrollmentInviteSchema)
+      assert invite.guardian_first_name == "Hans"
+      assert invite.school_grade == 3
+      assert invite.nut_allergy == true
+      assert invite.consent_photo_marketing == true
+      assert invite.status == :pending
     end
   end
 
@@ -186,15 +144,14 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     setup :setup_program
 
     test "returns MapSet of existing keys", %{program: program, provider: provider} do
-      rows = [
-        valid_invite_attrs(program, provider, %{
-          child_first_name: "Emma",
-          child_last_name: "Schmidt",
-          guardian_email: "Parent@Example.com"
-        })
-      ]
-
-      {:ok, 1} = BulkEnrollmentInviteRepository.create_batch(rows)
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(
+          valid_invite_attrs(program, provider, %{
+            child_first_name: "Emma",
+            child_last_name: "Schmidt",
+            guardian_email: "Parent@Example.com"
+          })
+        )
 
       result = BulkEnrollmentInviteRepository.list_existing_keys_for_programs([program.id])
 
@@ -232,7 +189,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
         })
       ]
 
-      {:ok, 2} = BulkEnrollmentInviteRepository.create_batch(rows)
+      Enum.each(rows, &BulkEnrollmentInviteRepository.create_one/1)
 
       result =
         BulkEnrollmentInviteRepository.list_existing_keys_for_programs([
@@ -250,8 +207,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     setup :setup_program
 
     test "returns {:ok, invite} when found", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       invite = Repo.one!(BulkEnrollmentInviteSchema)
 
@@ -270,8 +227,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     setup :setup_program
 
     test "returns pending invites with no token", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       result = BulkEnrollmentInviteRepository.list_pending_without_token([program.id])
       assert length(result) == 1
@@ -280,8 +237,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     end
 
     test "excludes invites that already have tokens", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       invite = Repo.one!(BulkEnrollmentInviteSchema)
       invite |> Ecto.Changeset.change(%{invite_token: "existing-token"}) |> Repo.update!()
@@ -290,8 +247,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     end
 
     test "excludes non-pending invites", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       invite = Repo.one!(BulkEnrollmentInviteSchema)
 
@@ -322,7 +279,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
         })
       ]
 
-      {:ok, 2} = BulkEnrollmentInviteRepository.create_batch(rows)
+      Enum.each(rows, &BulkEnrollmentInviteRepository.create_one/1)
       invites = Repo.all(BulkEnrollmentInviteSchema)
       pairs = Enum.map(invites, fn inv -> {inv.id, "token-#{inv.id}"} end)
 
@@ -341,8 +298,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     setup :setup_program
 
     test "returns {:ok, invite} when token matches", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       invite = Repo.one!(BulkEnrollmentInviteSchema)
       token = "test-token-#{System.unique_integer()}"
@@ -369,8 +326,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
       program: program,
       provider: provider
     } do
-      {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+      Enum.each(
+        [
           valid_invite_attrs(program, provider, %{
             child_last_name: "Zebra",
             child_first_name: "Alice",
@@ -381,7 +338,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
             child_first_name: "Bob",
             guardian_email: "bob@test.com"
           })
-        ])
+        ],
+        &BulkEnrollmentInviteRepository.create_one/1
+      )
 
       invites = BulkEnrollmentInviteRepository.list_by_program(program.id)
 
@@ -400,22 +359,22 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
       program_b = insert(:program_schema, provider_id: provider.id)
 
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+        BulkEnrollmentInviteRepository.create_one(
           valid_invite_attrs(program_a, provider, %{
             child_last_name: "Smith",
             child_first_name: "Jane",
             guardian_email: "jane@test.com"
           })
-        ])
+        )
 
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+        BulkEnrollmentInviteRepository.create_one(
           valid_invite_attrs(program_b, provider, %{
             child_last_name: "Jones",
             child_first_name: "Tom",
             guardian_email: "tom@test.com"
           })
-        ])
+        )
 
       invites = BulkEnrollmentInviteRepository.list_by_program(program_a.id)
 
@@ -428,8 +387,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     setup :setup_program
 
     test "returns count of invites for a program", %{program: program, provider: provider} do
-      {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+      Enum.each(
+        [
           valid_invite_attrs(program, provider, %{
             child_last_name: "Smith",
             child_first_name: "Jane",
@@ -440,7 +399,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
             child_first_name: "Tom",
             guardian_email: "tom@test.com"
           })
-        ])
+        ],
+        &BulkEnrollmentInviteRepository.create_one/1
+      )
 
       assert BulkEnrollmentInviteRepository.count_by_program(program.id) == 2
     end
@@ -455,7 +416,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
     test "deletes an invite by id", %{program: program, provider: provider} do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
 
@@ -476,13 +437,13 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
       provider: provider
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+        BulkEnrollmentInviteRepository.create_one(
           valid_invite_attrs(program, provider, %{
             child_last_name: "Smith",
             child_first_name: "Jane",
             guardian_email: "jane@test.com"
           })
-        ])
+        )
 
       [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
 
@@ -505,13 +466,13 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
     test "resets failed invite to pending", %{program: program, provider: provider} do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+        BulkEnrollmentInviteRepository.create_one(
           valid_invite_attrs(program, provider, %{
             child_last_name: "Smith",
             child_first_name: "Jane",
             guardian_email: "jane@test.com"
           })
-        ])
+        )
 
       [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
 
@@ -530,13 +491,13 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
     test "rejects reset for registered invite", %{program: program, provider: provider} do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+        BulkEnrollmentInviteRepository.create_one(
           valid_invite_attrs(program, provider, %{
             child_last_name: "Smith",
             child_first_name: "Jane",
             guardian_email: "jane@test.com"
           })
-        ])
+        )
 
       [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
 
@@ -560,13 +521,13 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
     test "rejects reset for enrolled invite", %{program: program, provider: provider} do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
+        BulkEnrollmentInviteRepository.create_one(
           valid_invite_attrs(program, provider, %{
             child_last_name: "Smith",
             child_first_name: "Jane",
             guardian_email: "jane@test.com"
           })
-        ])
+        )
 
       [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
 
@@ -604,8 +565,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     setup :setup_program
 
     test "transitions pending to invite_sent", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       invite = Repo.one!(BulkEnrollmentInviteSchema)
 
@@ -622,8 +583,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     end
 
     test "transitions pending to failed", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       invite = Repo.one!(BulkEnrollmentInviteSchema)
 
@@ -638,8 +599,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
     end
 
     test "rejects invalid transition", %{program: program, provider: provider} do
-      {:ok, 1} =
-        BulkEnrollmentInviteRepository.create_batch([valid_invite_attrs(program, provider)])
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(valid_invite_attrs(program, provider))
 
       invite = Repo.one!(BulkEnrollmentInviteSchema)
 

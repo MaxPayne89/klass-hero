@@ -333,8 +333,8 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       program1: program
     } do
       # Trigger: seed a pre-existing invite so the use case sees a DB duplicate
-      # Why: Task 10 will delete create_batch/1; Repo.insert! on the schema
-      #      struct stays valid regardless of the use case's persistence API
+      # Why: Repo.insert! on the schema struct stays valid regardless of the
+      #      use case's persistence API
       # Outcome: direct struct insert bypasses changeset validation — we
       #          control the data, so the FK-satisfying fields are enough
       %BulkEnrollmentInviteSchema{

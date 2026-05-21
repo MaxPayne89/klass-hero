@@ -12,18 +12,16 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
     provider = insert(:provider_profile_schema)
     program = insert(:program_schema, provider_id: provider.id, title: "Dance Class")
 
-    {:ok, 1} =
-      BulkEnrollmentInviteRepository.create_batch([
-        %{
-          program_id: program.id,
-          provider_id: provider.id,
-          child_first_name: "Emma",
-          child_last_name: "Schmidt",
-          child_date_of_birth: ~D[2016-03-15],
-          guardian_email: "parent@example.com",
-          guardian_first_name: "Hans"
-        }
-      ])
+    {:ok, _} =
+      BulkEnrollmentInviteRepository.create_one(%{
+        program_id: program.id,
+        provider_id: provider.id,
+        child_first_name: "Emma",
+        child_last_name: "Schmidt",
+        child_date_of_birth: ~D[2016-03-15],
+        guardian_email: "parent@example.com",
+        guardian_first_name: "Hans"
+      })
 
     invite = Repo.one!(BulkEnrollmentInviteSchema)
     invite = invite |> Ecto.Changeset.change(%{invite_token: "test-token-123"}) |> Repo.update!()
