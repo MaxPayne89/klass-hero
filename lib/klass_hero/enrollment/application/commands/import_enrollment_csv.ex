@@ -83,7 +83,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
         prepared
         |> CsvParser.parse_stream()
         |> Stream.chunk_every(chunk_size)
-        |> Enum.reduce(acc0, &process_chunk/2)
+        |> Enum.reduce_while(acc0, &process_chunk/2)
 
       Logger.info(
         "[ImportEnrollmentCsv] Finished for provider #{provider_id}: " <>
@@ -141,7 +141,19 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
   # -- chunk + per-row dispatch ------------------------------------------------
 
   defp process_chunk(chunk, acc) do
-    Enum.reduce(chunk, acc, &process_row/2)
+    Enum.reduce_while(chunk, {:cont, acc}, fn
+      {:parse_halt, message}, {_, acc} ->
+        halt_entry = %{
+          row: nil,
+          category: :parse,
+          errors: "Stream halted: #{message}"
+        }
+
+        {:halt, {:halt, push_failure(acc, halt_entry)}}
+
+      row_result, {_, acc} ->
+        {:cont, {:cont, process_row(row_result, acc)}}
+    end)
   end
 
   # Row-level parse error from CsvParser.parse_stream/1 (e.g. bad date format).

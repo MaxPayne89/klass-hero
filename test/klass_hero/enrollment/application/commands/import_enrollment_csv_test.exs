@@ -86,6 +86,11 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
     end
   end
 
+  defp build_data_row(overrides) do
+    merged = Map.merge(@csv_defaults, overrides)
+    Enum.map_join(@csv_field_order, ",", &csv_escape(merged[&1]))
+  end
+
   # -- happy path (updated to new return shape) --------------------------------
 
   describe "execute/2 happy path" do
@@ -416,6 +421,34 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
                ImportEnrollmentCsv.execute(provider.id, csv, chunk_size: 2)
 
       assert msg =~ "Duplicate entry in CSV"
+    end
+  end
+
+  # -- mid-stream halt -----------------------------------------------------------
+
+  describe "execute/2 - mid-stream halt" do
+    setup :setup_provider_with_programs
+
+    test "earlier rows persist, halt entry appended on ParseError", %{provider: provider} do
+      # Construct a CSV where the third data row has unbalanced quotes -> NimbleCSV.ParseError.
+      # chunk_size: 2 puts rows 1 and 2 in the first chunk (committed before the bad chunk),
+      # and the bad row alone in the second chunk which causes the ParseError halt.
+      headers = Enum.map_join(@csv_header_row, ",", &csv_escape/1)
+      row1 = build_data_row(%{first: "Alice"})
+      row2 = build_data_row(%{first: "Bob", email: "bob@x.com"})
+      bad_row = ~s|Eve,"Unclosed,1/1/2018,Frank,Jones,frank@x.com,,,,,,,,,,,Ballsports & Parkour,,Spring|
+      csv = Enum.join([headers, row1, row2, bad_row], "\n")
+
+      assert {:ok, %{created: 2, failed: failed}} =
+               ImportEnrollmentCsv.execute(provider.id, csv, chunk_size: 2)
+
+      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
+
+      halt_entry =
+        Enum.find(failed, fn f -> f.category == :parse and is_nil(f.row) end)
+
+      assert halt_entry, "expected a :parse halt entry"
+      assert halt_entry.errors =~ "Stream halted"
     end
   end
 end
