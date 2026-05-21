@@ -573,4 +573,24 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       end
     end
   end
+
+  # -- large CSV smoke test ------------------------------------------------------
+
+  describe "execute/2 - large CSV smoke test" do
+    setup :setup_provider_with_programs
+
+    @tag :slow
+    test "5_000 valid + 500 invalid rows complete with correct counts", %{provider: provider} do
+      valid_rows = for n <- 1..5_000, do: %{first: "Valid#{n}", email: "valid#{n}@x.com"}
+      invalid_rows = for n <- 1..500, do: %{first: "", email: "bad#{n}@x.com"}
+      csv = build_csv(valid_rows ++ invalid_rows)
+
+      {:ok, %{created: created, failed: failed}} =
+        ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert created == 5_000
+      assert length(failed) == 500
+      assert Enum.all?(failed, &(&1.category == :validation))
+    end
+  end
 end
