@@ -760,8 +760,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
     "#{Calendar.strftime(date, "%B %d, %Y")} at #{Calendar.strftime(start_time, "%I:%M %p")}"
   end
 
-  defp format_time(nil), do: "N/A"
-
   defp format_time(%DateTime{} = datetime) do
     Calendar.strftime(datetime, "%I:%M %p")
   end
