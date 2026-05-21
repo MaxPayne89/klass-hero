@@ -28,23 +28,23 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
       )
 
       case Enrollment.import_enrollment_csv(provider_id, csv_binary) do
-        {:ok, %{created: count}} ->
-          Logger.info("[EnrollmentImport] Import succeeded",
+        {:ok, report} ->
+          Logger.info("[EnrollmentImport] Import complete",
             provider_id: provider_id,
-            created: count
+            created: report.created,
+            failed: length(report.failed)
           )
 
-          conn |> put_status(:created) |> json(%{created: count})
+          conn |> put_status(:ok) |> json(format_report(report))
 
-        {:error, error_report} ->
-          Logger.warning("[EnrollmentImport] Import failed with errors",
-            provider_id: provider_id,
-            error_types: Map.keys(error_report)
+        {:error, %{parse_errors: _} = error_report} ->
+          Logger.warning("[EnrollmentImport] Import failed (whole-file fatal)",
+            provider_id: provider_id
           )
 
           conn
           |> put_status(:unprocessable_entity)
-          |> json(%{errors: format_errors(error_report)})
+          |> json(%{errors: format_fatal(error_report)})
       end
     else
       {:error, :not_provider} ->
@@ -92,25 +92,34 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
 
   defp read_upload(_params), do: {:error, :no_file}
 
-  # Trigger: the use case returns tuples like `{row_num, message}` and
-  #   `{row_num, [{:field, "msg"}, ...]}` that Jason cannot encode.
-  # Why: tuples are not JSON-serializable; we must convert to maps so the
-  #   HTTP response round-trips correctly through Jason.encode!/1.
-  # Outcome: each error category becomes a list of plain maps.
-  defp format_errors(error_report) do
-    error_report
-    |> Map.new(fn
-      {:parse_errors, errors} ->
-        {"parse_errors", Enum.map(errors, fn {row, message} -> %{row: row, message: message} end)}
+  # Trigger: the use case now returns {:ok, %{created: n, failed: [...]}} for
+  #   all row-level outcomes (full success, mixed, all-failed).
+  # Why: partial success is the normal case — we must serialise the structured
+  #   failed list so the client knows which rows to remediate.
+  # Outcome: a flat map with integer `created` and a list of failed-row maps.
+  defp format_report(%{created: created, failed: failed}) do
+    %{
+      created: created,
+      failed:
+        Enum.map(failed, fn %{row: row, category: category, errors: errors} ->
+          %{
+            row: row,
+            category: Atom.to_string(category),
+            errors: format_errors_field(errors)
+          }
+        end)
+    }
+  end
 
-      {:validation_errors, errors} ->
-        {"validation_errors",
-         Enum.map(errors, fn {row, field_errors} ->
-           %{row: row, errors: Map.new(field_errors)}
-         end)}
+  defp format_errors_field(errors) when is_binary(errors), do: errors
+  defp format_errors_field(errors) when is_list(errors), do: Map.new(errors)
 
-      {:duplicate_errors, errors} ->
-        {"duplicate_errors", Enum.map(errors, fn {row, message} -> %{row: row, message: message} end)}
-    end)
+  # Trigger: whole-file fatals carry `parse_errors` tuples that Jason cannot encode.
+  # Why: tuples are not JSON-serializable; convert to maps for the HTTP response.
+  # Outcome: `%{"parse_errors" => [%{row: n, message: "..."}]}`.
+  defp format_fatal(%{parse_errors: errors}) do
+    %{
+      "parse_errors" => Enum.map(errors, fn {row, msg} -> %{row: row, message: msg} end)
+    }
   end
 end
