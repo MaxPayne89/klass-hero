@@ -6,8 +6,9 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv
   alias KlassHero.Repo
-
   # -- setup helpers ---------------------------------------------------------
+  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.DomainEventBus
 
   defp setup_provider_with_programs(_context) do
     provider = insert(:provider_profile_schema)
@@ -421,6 +422,91 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
                ImportEnrollmentCsv.execute(provider.id, csv, chunk_size: 2)
 
       assert msg =~ "Duplicate entry in CSV"
+    end
+  end
+
+  # -- event firing ------------------------------------------------------------
+
+  describe "execute/2 - event firing" do
+    setup :setup_provider_with_programs
+
+    # Subscribe an anonymous handler on the Enrollment DomainEventBus that
+    # forwards every :bulk_invites_imported event to the test process.
+    # EventDispatchHelper.dispatch runs handlers synchronously in the caller's
+    # process, so this delivers reliably without async/PubSub timing concerns.
+    setup do
+      test_pid = self()
+
+      DomainEventBus.subscribe(
+        KlassHero.Enrollment,
+        :bulk_invites_imported,
+        fn event ->
+          send(test_pid, {:bulk_invites_imported, event})
+          :ok
+        end
+      )
+
+      :ok
+    end
+
+    test "fires bulk_invites_imported with success-only program_ids when created > 0", %{
+      provider: provider,
+      program1: program1,
+      program2: program2
+    } do
+      csv =
+        build_csv([
+          %{first: "Alice", last: "A", email: "alice@x.com", program: program1.title},
+          %{first: "Bob", last: "B", email: "bob@x.com", program: program2.title}
+        ])
+
+      assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
+
+      provider_id = provider.id
+
+      assert_receive {:bulk_invites_imported,
+                      %DomainEvent{
+                        event_type: :bulk_invites_imported,
+                        payload: %{provider_id: ^provider_id, program_ids: ids, count: 2}
+                      }},
+                     1_000
+
+      assert program1.id in ids
+      assert program2.id in ids
+      assert length(ids) == 2
+    end
+
+    test "fires event with only programs that had at least one success", %{
+      provider: provider,
+      program1: program1,
+      program2: program2
+    } do
+      # program1 row succeeds; program2 row fails validation (missing first name).
+      csv =
+        build_csv([
+          %{first: "Alice", last: "A", email: "alice@x.com", program: program1.title},
+          %{first: "", last: "B", email: "bob@x.com", program: program2.title}
+        ])
+
+      assert {:ok, %{created: 1, failed: [%{category: :validation}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert_receive {:bulk_invites_imported,
+                      %DomainEvent{
+                        event_type: :bulk_invites_imported,
+                        payload: %{program_ids: ids, count: 1}
+                      }},
+                     1_000
+
+      assert ids == [program1.id]
+    end
+
+    test "does NOT fire event when created == 0", %{provider: provider} do
+      csv = build_csv([%{first: ""}, %{first: "", email: "x@y.com"}])
+
+      assert {:ok, %{created: 0}} = ImportEnrollmentCsv.execute(provider.id, csv)
+
+      refute_receive {:bulk_invites_imported, _}, 500
     end
   end
 
