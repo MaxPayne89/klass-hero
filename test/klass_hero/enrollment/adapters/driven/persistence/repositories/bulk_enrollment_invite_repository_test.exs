@@ -189,7 +189,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
         })
       ]
 
-      Enum.each(rows, &BulkEnrollmentInviteRepository.create_one/1)
+      Enum.each(rows, fn attrs ->
+        {:ok, _} = BulkEnrollmentInviteRepository.create_one(attrs)
+      end)
 
       result =
         BulkEnrollmentInviteRepository.list_existing_keys_for_programs([
@@ -279,7 +281,10 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
         })
       ]
 
-      Enum.each(rows, &BulkEnrollmentInviteRepository.create_one/1)
+      Enum.each(rows, fn attrs ->
+        {:ok, _} = BulkEnrollmentInviteRepository.create_one(attrs)
+      end)
+
       invites = Repo.all(BulkEnrollmentInviteSchema)
       pairs = Enum.map(invites, fn inv -> {inv.id, "token-#{inv.id}"} end)
 

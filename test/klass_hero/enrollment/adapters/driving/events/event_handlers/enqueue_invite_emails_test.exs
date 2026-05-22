@@ -36,7 +36,10 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
       }
     ]
 
-    Enum.each(rows, &BulkEnrollmentInviteRepository.create_one/1)
+    Enum.each(rows, fn attrs ->
+      {:ok, _} = BulkEnrollmentInviteRepository.create_one(attrs)
+    end)
+
     %{provider: provider, program: program}
   end
 
