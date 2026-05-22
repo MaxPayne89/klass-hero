@@ -142,9 +142,12 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
 
   defp process_chunk(chunk, acc) do
     Enum.reduce_while(chunk, {:cont, acc}, fn
-      {:parse_halt, message}, {_, acc} ->
+      {:parse_halt, _stream_row_num, message}, {_, acc} ->
+        # The use case owns canonical 2-based numbering (header is row 1),
+        # so we surface the data-row index from acc.next_row rather than the
+        # parser's 1-based stream index.
         halt_entry = %{
-          row: nil,
+          row: acc.next_row,
           category: :parse,
           errors: "Stream halted: #{message}"
         }

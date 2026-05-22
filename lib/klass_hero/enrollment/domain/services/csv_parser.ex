@@ -110,8 +110,9 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   Each yielded element is one of:
 
     * `{:ok, row_map}` — successfully parsed and type-converted row
-    * `{:error, {row_num, message}}` — row-level parse failure (bad date, etc.)
-    * `{:parse_halt, message}` — structural CSV failure (mid-stream
+    * `{:error, {row_num, message}}` — row-level parse failure (bad date,
+      blank line, etc.)
+    * `{:parse_halt, row_num, message}` — structural CSV failure (mid-stream
       `NimbleCSV.ParseError`). Stream consumers should treat this as a
       signal to halt further processing; subsequent stream elements
       after a `:parse_halt` are undefined.
@@ -120,45 +121,100 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   NOT appear here — they are produced by `validate_headers/1` before any
   streaming begins.
 
-  Row numbers in `{:ok, row}` and `{:error, {row_num, _}}` are 1-based
-  starting from the first data row (header line is NOT counted).
+  Row numbers in every shape (`{:ok, _}`, `{:error, {n, _}}`,
+  `{:parse_halt, n, _}`) are 1-based starting from the first data row
+  (header line is NOT counted). Blank lines ARE counted so row numbers
+  stay aligned with the file's data-row positions even when blanks are
+  present.
+
+  ## RFC4180 multi-line quoted fields
+
+  Internally this pipes the remainder through `NimbleCSV`'s
+  `to_line_stream/1` (which re-chunks on newlines while preserving
+  quoted multi-line cells as a single row) and then `parse_stream/2`.
+  Mid-stream parse errors raised by NimbleCSV are caught by a wrapping
+  `Stream.resource/3` so they surface as the `:parse_halt` sentinel
+  rather than crashing the caller.
   """
   @spec parse_stream(prepared()) ::
           Enumerable.t(
             {:ok, map()}
             | {:error, {pos_integer(), String.t()}}
-            | {:parse_halt, String.t()}
+            | {:parse_halt, pos_integer(), String.t()}
           )
   def parse_stream(%{column_keys: column_keys, remainder: remainder}) do
     col_count = length(column_keys)
 
-    remainder
-    |> String.splitter(["\r\n", "\n"], trim: false)
-    |> Stream.reject(&(&1 == ""))
+    [remainder]
+    |> __MODULE__.Parser.to_line_stream()
+    |> __MODULE__.Parser.parse_stream(skip_headers: false)
+    |> with_halt_on_raise()
     |> Stream.with_index(1)
-    |> Stream.map(fn {line, row_number} ->
-      # Trigger: each non-empty line is parsed individually by NimbleCSV.
-      # Why: parse_string/2 always returns exactly one row for a single non-empty
-      #      line; a structurally malformed line (e.g. unbalanced quote) raises
-      #      NimbleCSV.ParseError which cannot be caught downstream in a lazy
-      #      stream chain. We rescue here (via try/rescue inside the anonymous fn)
-      #      and convert it to a {:parse_halt, msg} sentinel so the caller
-      #      (ImportEnrollmentCsv) can detect and halt gracefully while preserving
-      #      rows committed before this point.
-      # Outcome: the bare [cells] match is safe in this single-line context.
-      try do
-        [cells] = __MODULE__.Parser.parse_string(line, skip_headers: false)
-        padded = pad_cells(cells, col_count)
+    |> Stream.map(fn
+      {{:parse_halt, message}, row_number} ->
+        {:parse_halt, row_number, message}
 
-        case build_row(padded, column_keys, row_number) do
-          {:ok, _} = ok -> ok
-          {:error, reason} -> {:error, {row_number, reason}}
+      {cells, row_number} when is_list(cells) ->
+        if blank_row?(cells) do
+          {:error, {row_number, "blank row"}}
+        else
+          padded = pad_cells(cells, col_count)
+
+          case build_row(padded, column_keys, row_number) do
+            {:ok, _} = ok -> ok
+            {:error, reason} -> {:error, {row_number, reason}}
+          end
         end
-      rescue
-        e in NimbleCSV.ParseError ->
-          {:parse_halt, Exception.message(e)}
-      end
     end)
+  end
+
+  # A blank line yields a single empty-string cell from NimbleCSV. We treat
+  # those as a row-level error (not a fatal halt) so row numbering stays
+  # aligned with the user's spreadsheet without misclassifying intentionally
+  # empty rows.
+  defp blank_row?([""]), do: true
+  defp blank_row?([cell]) when is_binary(cell), do: String.trim(cell) == ""
+  defp blank_row?(_), do: false
+
+  # Wraps an enumerable so that any exception raised during enumeration is
+  # surfaced as a single trailing `{:parse_halt, msg}` element, after which
+  # the wrapped stream is treated as exhausted.
+  #
+  # Trigger: NimbleCSV.parse_stream/2 raises NimbleCSV.ParseError mid-stream
+  #   when it hits a structurally malformed cell (e.g. unbalanced quote).
+  # Why: a raised exception inside a lazy pipeline cannot be caught by a
+  #   downstream Stream.map's try/rescue — the raise happens in the producer.
+  #   Wrapping at the producer boundary converts the raise into a
+  #   well-known sentinel so the caller can preserve rows committed before
+  #   the error and decide whether to keep going.
+  # Outcome: a malformed CSV yields at most one `:parse_halt` followed by
+  #   end-of-stream, never a runtime crash.
+  defp with_halt_on_raise(stream) do
+    Stream.resource(
+      fn ->
+        {:suspended, _, cont} =
+          Enumerable.reduce(stream, {:suspend, nil}, fn item, _ -> {:suspend, item} end)
+
+        {:cont, cont}
+      end,
+      fn
+        :done ->
+          {:halt, :done}
+
+        {:cont, cont} ->
+          try do
+            case cont.({:cont, nil}) do
+              {:suspended, item, next_cont} -> {[item], {:cont, next_cont}}
+              {:done, _} -> {:halt, :done}
+              {:halted, _} -> {:halt, :done}
+            end
+          rescue
+            e in NimbleCSV.ParseError ->
+              {[{:parse_halt, Exception.message(e)}], :done}
+          end
+      end,
+      fn _ -> :ok end
+    )
   end
 
   @doc """
@@ -188,17 +244,24 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     end
   end
 
+  # Trigger: parse_stream/1's sentinel contract states subsequent stream
+  #   elements after a :parse_halt are undefined.
+  # Why: an earlier Enum.reduce/3 would walk the WHOLE list, converting every
+  #   :parse_halt-shaped element to a duplicate error. A single mid-stream
+  #   structural break should surface as exactly one error tuple, not N.
+  # Outcome: reduce_while halts on the first :parse_halt, attributing the
+  #   error to the row number it actually occurred on.
   defp partition_results(results) do
     {oks, errs} =
-      Enum.reduce(results, {[], []}, fn
+      Enum.reduce_while(results, {[], []}, fn
         {:ok, row}, {oks, errs} ->
-          {[row | oks], errs}
+          {:cont, {[row | oks], errs}}
 
         {:error, {row_num, msg}}, {oks, errs} ->
-          {oks, [{row_num, msg} | errs]}
+          {:cont, {oks, [{row_num, msg} | errs]}}
 
-        {:parse_halt, msg}, {oks, errs} ->
-          {oks, [{1, "CSV file is malformed: #{msg}"} | errs]}
+        {:parse_halt, row_num, msg}, {oks, errs} ->
+          {:halt, {oks, [{row_num, "CSV file is malformed: #{msg}"} | errs]}}
       end)
 
     case {Enum.reverse(oks), Enum.reverse(errs)} do

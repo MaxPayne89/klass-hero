@@ -353,6 +353,24 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       assert {:ok, [row]} = CsvParser.parse(csv)
       assert row.school_name =~ "2HB - BIS"
     end
+
+    # RFC4180: a cell containing an embedded newline is legal as long as the
+    # cell is wrapped in double quotes. The parser must keep that cell as a
+    # single value, not shred the row into fragments on the literal newline.
+    test "parses multi-line quoted field as a single row per RFC4180" do
+      headers =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season"
+
+      data =
+        ~s|Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,"Roosevelt\nHigh School",,,,,,Ballsports,,Spring|
+
+      csv = headers <> "\n" <> data
+
+      assert {:ok, [row]} = CsvParser.parse(csv)
+      assert row.child_first_name == "Alice"
+      assert row.school_name == "Roosevelt\nHigh School"
+      assert row.program_name == "Ballsports"
+    end
   end
 
   # -- BOM handling -----------------------------------------------------------
@@ -497,6 +515,93 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       first_two = prepared |> CsvParser.parse_stream() |> Enum.take(2)
       assert length(first_two) == 2
       assert [{:ok, %{child_first_name: "Name1"}}, {:ok, %{child_first_name: "Name2"}}] = first_two
+    end
+
+    # Fix #4: blank lines must bump the row counter so error messages stay
+    # aligned with the user's spreadsheet line numbers. Previously a
+    # Stream.reject filtered blanks out BEFORE indexing, shifting subsequent
+    # row numbers down by one for each blank.
+    test "blank lines are counted as rows and yield row-level errors" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          "",
+          "Carol,Doe,5/5/2017,Dan,Doe,dan@x.com,,,,,,,,,,,Arts,,Spring"
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      # Row 1 = Alice, Row 2 = blank (error), Row 3 = Carol.
+      # The third row MUST surface as index 3, not index 2.
+      assert [
+               {:ok, %{child_first_name: "Alice"}},
+               {:error, {2, _blank_msg}},
+               {:ok, %{child_first_name: "Carol"}}
+             ] = results
+    end
+
+    # Fix #1: NimbleCSV's parse_stream handles RFC4180 multi-line quoted
+    # fields. Verify a quoted cell with an embedded newline does not crash
+    # the stream or produce a :parse_halt.
+    test "parse_stream/1 preserves multi-line quoted cells as one row" do
+      data =
+        ~s|Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,"Roosevelt\nHigh School",,,,,,Ballsports,,Spring|
+
+      csv = build_csv_with_rows([data])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      assert [{:ok, row}] = results
+      assert row.school_name == "Roosevelt\nHigh School"
+    end
+
+    # Fix #1/#9: structurally malformed CSV (mid-stream unbalanced quote)
+    # must surface as a single :parse_halt sentinel carrying the row number
+    # at which the parser bailed out — not raise, not yield N halts.
+    test "parse_stream/1 surfaces structural errors as a single :parse_halt" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          ~s|Bob,"Unclosed,2/2/2017,Carol,Smith,carol@x.com,,,,,,,,,,,Arts,,Spring|
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      # Alice ok, then one :parse_halt with the failing row number, then end.
+      assert [
+               {:ok, %{child_first_name: "Alice"}},
+               {:parse_halt, row_num, msg}
+             ] = results
+
+      assert is_integer(row_num) and row_num > 0
+      assert is_binary(msg)
+    end
+  end
+
+  # -- partition_results halt semantics (Fix #9) -----------------------------
+
+  describe "parse/1 with structural errors" do
+    test "halts on first :parse_halt and emits a single error tuple" do
+      headers =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season"
+
+      # Two malformed lines back-to-back: only the first should surface as
+      # an error; iteration must halt rather than emit one error per line.
+      csv =
+        headers <>
+          "\n" <>
+          ~s|Alice,"Unclosed,1/1/2016,Bob,Smith,b@x.com,,,,,,,,,,,Ballsports,,Spring| <>
+          "\n" <>
+          ~s|Carol,"AlsoUnclosed,2/2/2017,Dan,Smith,d@x.com,,,,,,,,,,,Arts,,Spring|
+
+      assert {:error, errors} = CsvParser.parse(csv)
+      assert length(errors) == 1
+      assert [{row_num, msg}] = errors
+      assert is_integer(row_num) and row_num > 0
+      assert msg =~ "CSV file is malformed"
     end
   end
 

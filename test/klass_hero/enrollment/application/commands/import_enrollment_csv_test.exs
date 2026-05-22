@@ -534,10 +534,14 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
 
       halt_entry =
-        Enum.find(failed, fn f -> f.category == :parse and is_nil(f.row) end)
+        Enum.find(failed, fn f -> f.category == :parse and f.errors =~ "Stream halted" end)
 
       assert halt_entry, "expected a :parse halt entry"
-      assert halt_entry.errors =~ "Stream halted"
+      # The halt entry now carries the user-visible row number (2-based: header is
+      # row 1) where parsing died, instead of nil. The bad row is the 4th file
+      # line (header + 2 ok rows + bad) so it surfaces as row 4.
+      assert is_integer(halt_entry.row)
+      assert halt_entry.row == 4
     end
   end
 
