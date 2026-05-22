@@ -114,7 +114,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerIntegrationTest do
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
-      assert json_response(conn, 201) == %{"created" => 5_000}
+      assert json_response(conn, 201) == %{"created" => 5_000, "failed" => []}
       assert KlassHero.Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 5_000
     end
   end

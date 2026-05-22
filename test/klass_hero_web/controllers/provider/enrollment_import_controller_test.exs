@@ -119,7 +119,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
       assert json_response(conn, 400) == %{"error" => "No file uploaded"}
     end
 
-    test "returns 200 with created count and empty failed list for fully-valid CSV" do
+    test "returns 201 with created count and empty failed list for fully-valid CSV" do
       %{conn: conn, provider: provider} = register_and_log_in_provider(%{conn: build_conn()})
       insert(:program_schema, provider_id: provider.id, title: "Ballsports & Parkour")
 
@@ -133,7 +133,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
-      assert json_response(conn, 200) == %{"created" => 2, "failed" => []}
+      assert json_response(conn, 201) == %{"created" => 2, "failed" => []}
     end
 
     test "returns 200 with mixed outcomes when some rows fail" do
@@ -148,7 +148,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
       body = json_response(conn, 200)
       assert body["created"] == 1
       assert [%{"row" => 3, "category" => "validation", "errors" => errors}] = body["failed"]
-      assert errors["child_first_name"] == "is required"
+      assert errors["child_first_name"] == ["is required"]
     end
 
     test "returns 200 when all rows fail (created: 0, failed has all rows)" do
@@ -200,7 +200,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
-      body = json_response(conn, 200)
+      body = json_response(conn, 201)
       assert body["created"] == 1
       assert body["failed"] == []
     end

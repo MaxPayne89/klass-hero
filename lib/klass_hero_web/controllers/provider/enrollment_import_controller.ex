@@ -28,6 +28,19 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
       )
 
       case Enrollment.import_enrollment_csv(provider_id, csv_binary) do
+        {:ok, %{created: _, failed: []} = report} ->
+          Logger.info("[EnrollmentImport] Import complete",
+            provider_id: provider_id,
+            created: report.created,
+            failed: 0
+          )
+
+          # Trigger: every row succeeded — no partial-outcome to communicate.
+          # Why: pre-refactor clients branch on 201 for "fully created" responses;
+          #   reserving 201 here preserves that contract.
+          # Outcome: full-success path emits HTTP 201 Created.
+          conn |> put_status(:created) |> json(format_report(report))
+
         {:ok, report} ->
           Logger.info("[EnrollmentImport] Import complete",
             provider_id: provider_id,
@@ -35,6 +48,10 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
             failed: length(report.failed)
           )
 
+          # Trigger: at least one row failed (mixed outcome or all-failed).
+          # Why: 200 OK signals "processed, see body" — the caller must inspect
+          #   `failed` to remediate. Distinct from 201 so clients can branch.
+          # Outcome: partial/all-failed paths emit HTTP 200 with structured body.
           conn |> put_status(:ok) |> json(format_report(report))
 
         {:error, %{parse_errors: _} = error_report} ->
@@ -112,7 +129,16 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
   end
 
   defp format_errors_field(errors) when is_binary(errors), do: errors
-  defp format_errors_field(errors) when is_list(errors), do: Map.new(errors)
+
+  # Trigger: ChangesetErrors.field_list/1 produces one `{field, msg}` tuple per
+  #   message — a field with two validation failures yields two entries.
+  # Why: `Map.new/1` on those tuples would silently drop all but the last message.
+  # Outcome: group by field so callers receive every message: `%{field => [msg, ...]}`.
+  defp format_errors_field(errors) when is_list(errors) do
+    errors
+    |> Enum.group_by(fn {field, _msg} -> field end, fn {_field, msg} -> msg end)
+    |> Map.new()
+  end
 
   # Trigger: whole-file fatals carry `parse_errors` tuples that Jason cannot encode.
   # Why: tuples are not JSON-serializable; convert to maps for the HTTP response.

@@ -971,7 +971,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       render_upload(csv_file, "import.csv")
       render_submit(view, "import_csv", %{})
 
-      assert_flash(view, :info, "Imported 1 families.")
+      assert_flash(view, :info, "Imported 1 family.")
       assert has_element?(view, "#invites-table")
       refute has_element?(view, "#import-errors")
     end
@@ -1058,7 +1058,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       render_submit(view, "import_csv", %{})
 
       # Partial-success: info flash for imported count, error list for failed rows
-      assert_flash(view, :info, ~r/Imported 1 families/)
+      assert_flash(view, :info, ~r/Imported 1 family/)
       html = render(view)
       assert html =~ "could not be processed"
       assert has_element?(view, "#import-errors")
