@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.51.3](https://github.com/MaxPayne89/klass-hero/compare/v0.51.2...v0.51.3) (2026-05-22)
+
+
+### Code Refactoring
+
+* CSV enrollment import — partial success + application-level chunking ([#908](https://github.com/MaxPayne89/klass-hero/issues/908)) ([43320e5](https://github.com/MaxPayne89/klass-hero/commit/43320e564f8256b97e1ae934a18d6fa2b40b07d9))
+
 ## [0.51.2](https://github.com/MaxPayne89/klass-hero/compare/v0.51.1...v0.51.2) (2026-05-20)
 
 
