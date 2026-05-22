@@ -25,7 +25,7 @@
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
     "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:false.",
     "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
-    "coverage_saturation_note": "As of 2026-05-21, backlog exhausted. Maintainer writing comprehensive tests for all new code. #908 (CSV import) 4920 tests. All recent PRs ship with maintainer tests.",
+    "coverage_saturation_note": "As of 2026-05-22, backlog exhausted. Maintainer writing comprehensive tests for all new code. #908 (CSV import) 4920 tests. All recent PRs ship with maintainer tests.",
     "create_program_rejected_note": "PR #634 with CreateProgram/UpdateProgram tests was closed without merge by maintainer. Do not re-attempt.",
     "ci_check_runs_note": "No CI check runs appear on Test Improver PRs. CI may only run on push to main or require maintainer trigger.",
     "email_html_test_note": "EmailHtml.esc/1 uses binary pattern matching for HTML escaping (5 entities). wrap/2 escapes footer but NOT inner_html.",
@@ -46,8 +46,10 @@
     "pr_895_note": "PR #895 (2026-05-20): denormalises program_name onto conversation_summaries. Maintainer added 146 lines to conversation_summaries_test.exs, 31 lines to messaging_components_test.exs. No TI opportunity.",
     "pr_902_note": "PR #902 (2026-05-20): fixes msg.content vs msg.body regression in DashboardLive. Adds regression test seeding conversation_summary. No TI opportunity.",
     "pr_906_note": "PR #906 (2026-05-21): graphify integration + dep/runtime bumps + removed :faker + nil clause removal in participation_components.ex and participation_history_live.ex. No TI opportunity. Test count now 4905.",
-    "pr_908_note": "PR #908 (2026-05-21): CSV enrollment import partial success refactor (open). Fully tested by maintainer (4920 tests pass). No TI opportunity.",
-    "faker_removed_note": ":faker removed from mix.exs in #906 (naserca fork had invalid U+0085 in String.ex under Elixir 1.20.0-rc.5). No TI PRs use Faker; all use ex_machina factories."
+    "pr_908_note": "PR #908 (2026-05-22 merged): CSV enrollment import partial success refactor. Fully tested by maintainer (4920 tests pass, 408 lines import_enrollment_csv_test.exs, 241 lines csv_parser_test.exs). No TI opportunity.",
+    "pr_910_note": "PR #910 (2026-05-22): release bump — CHANGELOG.md, .release-please-manifest.json, mix.exs only. No production code or test changes.",
+    "faker_removed_note": ":faker removed from mix.exs in #906 (naserca fork had invalid U+0085 in String.ex under Elixir 1.20.0-rc.5). No TI PRs use Faker; all use ex_machina factories.",
+    "claude_rules_added_note": "PR #910 also added .claude/ config files (agents, rules, skills, commands). No test implications."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -59,12 +61,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-18",
-    "task_2": "2026-05-21",
+    "task_2": "2026-05-22",
     "task_3": "2026-05-16",
-    "task_4": "2026-05-21",
+    "task_4": "2026-05-22",
     "task_5": "2026-05-21",
     "task_6": "2026-05-16",
-    "task_7": "2026-05-21"
+    "task_7": "2026-05-22"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -127,7 +129,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #908 (2026-05-21, CSV enrollment import partial success): fully tested by maintainer (4920 tests)",
+    "task_2_last_file": "PR #910 (2026-05-22, release bump): CHANGELOG/version only, no code",
     "task_5_last_issue": 705
   },
   "open_prs": [
