@@ -394,6 +394,24 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       assert msg =~ "empty"
     end
 
+    test "header-only CSV returns :empty_csv fatal", %{provider: provider} do
+      headers_only = Enum.map_join(@csv_header_row, ",", &csv_escape/1)
+
+      assert {:error, %{parse_errors: [{0, msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, headers_only)
+
+      assert msg =~ "empty"
+    end
+
+    test "header + only blank lines returns :empty_csv fatal", %{provider: provider} do
+      csv = Enum.map_join(@csv_header_row, ",", &csv_escape/1) <> "\n\n\n"
+
+      assert {:error, %{parse_errors: [{0, msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert msg =~ "empty"
+    end
+
     test "missing headers -> {:error, %{parse_errors: ...}}", %{provider: provider} do
       csv = "Wrong,Headers\nAlice,Smith"
 
