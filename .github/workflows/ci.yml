@@ -171,9 +171,11 @@ jobs:
         run: mix deps.get
 
       # mix test alias (mix.exs) detects CI env and prepends
-      # ecto.create --quiet + ecto.migrate --quiet automatically
+      # ecto.create --quiet + ecto.migrate --quiet automatically.
+      # --include slow opts the 5k-row CSV smoke test into CI so
+      # chunk-boundary correctness at scale is exercised on every PR.
       - name: Run tests
-        run: mix test
+        run: mix test --include slow
 
   e2e:
     name: E2E Tests
