@@ -155,18 +155,21 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
         {:parse_halt, row_number, message}
 
       {cells, row_number} when is_list(cells) ->
-        if blank_row?(cells) do
-          {:error, {row_number, "blank row"}}
-        else
-          padded = pad_cells(cells, col_count)
-
-          case build_row(padded, column_keys, row_number) do
-            {:ok, _} = ok -> ok
-            {:error, reason} -> {:error, {row_number, reason}}
-          end
-        end
+        process_row(cells, row_number, column_keys, col_count)
     end)
   end
+
+  defp process_row(cells, row_number, column_keys, col_count) do
+    if blank_row?(cells) do
+      {:error, {row_number, "blank row"}}
+    else
+      padded = pad_cells(cells, col_count)
+      tag_row(build_row(padded, column_keys, row_number), row_number)
+    end
+  end
+
+  defp tag_row({:ok, _} = ok, _row_number), do: ok
+  defp tag_row({:error, reason}, row_number), do: {:error, {row_number, reason}}
 
   # A blank line yields a single empty-string cell from NimbleCSV. We treat
   # those as a row-level error (not a fatal halt) so row numbering stays
