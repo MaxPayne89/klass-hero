@@ -66,7 +66,6 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
         existing_keys_by_program: %{},
         success_program_ids: MapSet.new(),
         context: context,
-        next_row: 2,
         invite_reader: invite_reader,
         invite_repository: invite_repository
       }
@@ -74,6 +73,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
       final =
         prepared
         |> CsvParser.parse_stream()
+        |> Stream.with_index(2)
         |> Stream.chunk_every(chunk_size)
         |> Enum.reduce_while(acc0, &process_chunk/2)
 
@@ -186,12 +186,9 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
     end
   end
 
-  defp process_row_in_chunk({:parse_halt, _stream_row_num, message}, {_tag, acc}) do
-    # The use case owns canonical 2-based numbering (header is row 1),
-    # so we surface the data-row index from acc.next_row rather than the
-    # parser's 1-based stream index.
+  defp process_row_in_chunk({{:parse_halt, message}, file_row}, {_tag, acc}) do
     halt_entry = %{
-      row: acc.next_row,
+      row: file_row,
       category: :parse,
       errors: "Stream halted: #{message}"
     }
@@ -199,28 +196,28 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
     {:halt, {:halted, push_failure(acc, halt_entry)}}
   end
 
-  defp process_row_in_chunk(row_result, {_tag, acc}) do
-    {:cont, {:continue, process_row(row_result, acc)}}
+  defp process_row_in_chunk({{:error, message}, file_row}, {_tag, acc}) do
+    {:cont, {:continue, process_row({:error, message}, file_row, acc)}}
+  end
+
+  defp process_row_in_chunk({{:ok, row}, file_row}, {_tag, acc}) do
+    {:cont, {:continue, process_row({:ok, row}, file_row, acc)}}
   end
 
   # Row-level parse error from CsvParser.parse_stream/1 (e.g. bad date format).
-  # Capture row number from acc BEFORE bumping — next_row is the current data row.
-  defp process_row({:error, {_stream_row_num, message}}, acc) do
-    acc
-    |> push_failure(%{row: acc.next_row, category: :parse, errors: message})
-    |> Map.update!(:next_row, &(&1 + 1))
+  # `file_row` is the 2-based user-visible CSV line number applied by the use
+  # case's Stream.with_index(2) wrap (header is row 1, first data row is 2).
+  defp process_row({:error, message}, file_row, acc) do
+    push_failure(acc, %{row: file_row, category: :parse, errors: message})
   end
 
-  defp process_row({:ok, row}, acc) do
-    row_num = acc.next_row
-    acc = Map.update!(acc, :next_row, &(&1 + 1))
-
+  defp process_row({:ok, row}, file_row, acc) do
     case ImportRowValidator.validate(row, acc.context) do
       {:error, field_errors} ->
-        push_failure(acc, %{row: row_num, category: :validation, errors: field_errors})
+        push_failure(acc, %{row: file_row, category: :validation, errors: field_errors})
 
       {:ok, validated_row} ->
-        attempt_dedup_and_insert(validated_row, row_num, acc)
+        attempt_dedup_and_insert(validated_row, file_row, acc)
     end
   end
 

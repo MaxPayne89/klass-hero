@@ -110,9 +110,9 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   Each yielded element is one of:
 
     * `{:ok, row_map}` — successfully parsed and type-converted row
-    * `{:error, {row_num, message}}` — row-level parse failure (bad date,
-      blank line, etc.)
-    * `{:parse_halt, row_num, message}` — structural CSV failure (mid-stream
+    * `{:error, message}` — row-level parse failure (bad date, blank line,
+      etc.)
+    * `{:parse_halt, message}` — structural CSV failure (mid-stream
       `NimbleCSV.ParseError`). Stream consumers should treat this as a
       signal to halt further processing; subsequent stream elements
       after a `:parse_halt` are undefined.
@@ -121,11 +121,21 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   NOT appear here — they are produced by `validate_headers/1` before any
   streaming begins.
 
-  Row numbers in every shape (`{:ok, _}`, `{:error, {n, _}}`,
-  `{:parse_halt, n, _}`) are 1-based starting from the first data row
-  (header line is NOT counted). Blank lines ARE counted so row numbers
-  stay aligned with the file's data-row positions even when blanks are
-  present.
+  ## Row numbering is caller-owned
+
+  This stream does NOT tag elements with row numbers. Callers thread
+  positional context via `Stream.with_index/2`, choosing their own base
+  (e.g. `2` for user-visible CSV line numbers that count the header as
+  row 1):
+
+      prepared
+      |> CsvParser.parse_stream()
+      |> Stream.with_index(2)
+      |> Enum.each(fn {element, file_row} -> ... end)
+
+  Blank lines ARE emitted as `{:error, "blank row"}` rather than being
+  silently skipped, so positional indexing stays aligned with the file's
+  data-row positions even when blanks are present.
 
   ## RFC4180 multi-line quoted fields
 
@@ -139,8 +149,8 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   @spec parse_stream(prepared()) ::
           Enumerable.t(
             {:ok, map()}
-            | {:error, {pos_integer(), String.t()}}
-            | {:parse_halt, pos_integer(), String.t()}
+            | {:error, String.t()}
+            | {:parse_halt, String.t()}
           )
   def parse_stream(%{column_keys: column_keys, remainder: remainder}) do
     col_count = length(column_keys)
@@ -149,27 +159,23 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     |> __MODULE__.Parser.to_line_stream()
     |> __MODULE__.Parser.parse_stream(skip_headers: false)
     |> with_halt_on_raise()
-    |> Stream.with_index(1)
     |> Stream.map(fn
-      {{:parse_halt, message}, row_number} ->
-        {:parse_halt, row_number, message}
+      {:parse_halt, message} ->
+        {:parse_halt, message}
 
-      {cells, row_number} when is_list(cells) ->
-        process_row(cells, row_number, column_keys, col_count)
+      cells when is_list(cells) ->
+        process_row(cells, column_keys, col_count)
     end)
   end
 
-  defp process_row(cells, row_number, column_keys, col_count) do
+  defp process_row(cells, column_keys, col_count) do
     if blank_row?(cells) do
-      {:error, {row_number, "blank row"}}
+      {:error, "blank row"}
     else
       padded = pad_cells(cells, col_count)
-      tag_row(build_row(padded, column_keys, row_number), row_number)
+      build_row(padded, column_keys)
     end
   end
-
-  defp tag_row({:ok, _} = ok, _row_number), do: ok
-  defp tag_row({:error, reason}, row_number), do: {:error, {row_number, reason}}
 
   # A blank line yields a single empty-string cell from NimbleCSV. We treat
   # those as a row-level error (not a fatal halt) so row numbering stays
@@ -225,6 +231,10 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   `validate_headers/1` followed by `parse_stream/1`, partitioned into
   either all-ok or all-error.
 
+  Row numbers in the error list are 2-based (header is row 1), applied
+  here via `Stream.with_index/2`. `parse_stream/1` itself does not tag
+  rows — see its `@doc` for details on caller-owned numbering.
+
   Kept for back-compat with callers that prefer a single return value.
   New callers should prefer the streaming pair for memory-bounded
   processing.
@@ -239,6 +249,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     with {:ok, prepared} <- validate_headers(csv) do
       prepared
       |> parse_stream()
+      |> Stream.with_index(2)
       |> Enum.to_list()
       |> case do
         [] -> {:error, :empty_csv}
@@ -253,18 +264,20 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   #   :parse_halt-shaped element to a duplicate error. A single mid-stream
   #   structural break should surface as exactly one error tuple, not N.
   # Outcome: reduce_while halts on the first :parse_halt, attributing the
-  #   error to the row number it actually occurred on.
+  #   error to the file row it actually occurred on. Row numbers are 2-based
+  #   (applied by parse/1 via Stream.with_index(2)) so the header is row 1
+  #   and the first data row is row 2.
   defp partition_results(results) do
     {oks, errs} =
       Enum.reduce_while(results, {[], []}, fn
-        {:ok, row}, {oks, errs} ->
+        {{:ok, row}, _file_row}, {oks, errs} ->
           {:cont, {[row | oks], errs}}
 
-        {:error, {row_num, msg}}, {oks, errs} ->
-          {:cont, {oks, [{row_num, msg} | errs]}}
+        {{:error, msg}, file_row}, {oks, errs} ->
+          {:cont, {oks, [{file_row, msg} | errs]}}
 
-        {:parse_halt, row_num, msg}, {oks, errs} ->
-          {:halt, {oks, [{row_num, "CSV file is malformed: #{msg}"} | errs]}}
+        {{:parse_halt, msg}, file_row}, {oks, errs} ->
+          {:halt, {oks, [{file_row, "CSV file is malformed: #{msg}"} | errs]}}
       end)
 
     case {Enum.reverse(oks), Enum.reverse(errs)} do
@@ -316,14 +329,14 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     end
   end
 
-  defp build_row(cells, column_keys, row_number) do
+  defp build_row(cells, column_keys) do
     pairs =
       column_keys
       |> Enum.zip(cells)
       |> Enum.reject(fn {key, _val} -> key == :skip or is_nil(key) end)
 
     Enum.reduce_while(pairs, {:ok, %{}}, fn {key, raw_value}, {:ok, acc} ->
-      case convert_value(key, raw_value, row_number) do
+      case convert_value(key, raw_value) do
         {:ok, converted} -> {:cont, {:ok, Map.put(acc, key, converted)}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
@@ -336,20 +349,19 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   # Why: raw CSV values are all strings; domain expects typed values
   # Outcome: strings become dates, booleans, integers, or trimmed/nilled strings
 
-  defp convert_value(:child_date_of_birth, raw, row_number) do
-    parse_date(raw, :child_date_of_birth, row_number)
+  defp convert_value(:child_date_of_birth, raw) do
+    parse_date(raw, :child_date_of_birth)
   end
 
-  defp convert_value(key, raw, _row_number)
-       when key in [:nut_allergy, :consent_photo_marketing, :consent_photo_social_media] do
+  defp convert_value(key, raw) when key in [:nut_allergy, :consent_photo_marketing, :consent_photo_social_media] do
     {:ok, parse_boolean(raw)}
   end
 
-  defp convert_value(:school_grade, raw, row_number) do
-    parse_grade(raw, row_number)
+  defp convert_value(:school_grade, raw) do
+    parse_grade(raw)
   end
 
-  defp convert_value(_key, raw, _row_number) do
+  defp convert_value(_key, raw) do
     {:ok, clean_string(raw)}
   end
 
@@ -359,11 +371,11 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   # Outcome: a %Date{} struct or an error scoped to the column and bad value
 
   # Trigger: per-cell converters used to embed `(row N)` in their error messages
-  # Why: row numbers are already in the {row_num, message} tuple yielded by
-  #      parse_stream/1; the use case owns canonical 2-based numbering (header
-  #      is row 1), so double-numbering produced contradictory output
+  # Why: row numbers are owned by the caller via Stream.with_index/2; embedding
+  #      them inside the converter produced contradictory output when numbering
+  #      schemes diverged. The caller tags each error tuple positionally.
   # Outcome: messages stay column/value-specific; numbering happens at the boundary
-  defp parse_date(raw, field, _row_number) do
+  defp parse_date(raw, field) do
     trimmed = String.trim(raw)
 
     case String.split(trimmed, "/") do
@@ -400,7 +412,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
 
   # -- grade parsing ---------------------------------------------------------
 
-  defp parse_grade(raw, _row_number) do
+  defp parse_grade(raw) do
     raw
     |> String.trim()
     |> Integer.parse()

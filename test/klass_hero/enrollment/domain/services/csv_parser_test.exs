@@ -318,9 +318,10 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
         ])
 
       assert {:error, errors} = CsvParser.parse(csv)
-      # parse/1 delegates to parse_stream/1 which is 1-based from the first data row
-      # (header not counted); the use case (Task 4) adds +1 for user-visible CSV line numbers
-      assert [{1, reason}] = errors
+      # parse/1 wraps parse_stream/1 in Stream.with_index(2), so row numbers are
+      # 2-based (header = row 1, first data row = row 2). parse_stream/1 itself
+      # is row-number-agnostic; callers thread positional context via with_index.
+      assert [{2, reason}] = errors
       assert reason =~ "invalid date"
       assert reason =~ "child_date_of_birth"
       assert reason =~ "not-a-date"
@@ -475,7 +476,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       assert row2.child_first_name == "Carol"
     end
 
-    test "yields {:error, {row_num, message}} for rows with bad data" do
+    test "yields {:error, message} for rows with bad data" do
       csv =
         build_csv_with_rows([
           "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
@@ -486,11 +487,12 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       {:ok, prepared} = CsvParser.validate_headers(csv)
       results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
 
-      # parse_stream/1 is 1-based from the first data row (header not counted).
-      # The use case (Task 4) adds 1 for user-visible CSV line numbers.
+      # parse_stream/1 emits 2-tuple shapes (no embedded row number). Callers
+      # thread positional context via Stream.with_index/2 — see parse/1 for the
+      # canonical 2-based scheme.
       assert [
                {:ok, %{child_first_name: "Alice"}},
-               {:error, {2, msg}},
+               {:error, msg},
                {:ok, %{child_first_name: "Eve"}}
              ] = results
 
@@ -517,11 +519,12 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       assert [{:ok, %{child_first_name: "Name1"}}, {:ok, %{child_first_name: "Name2"}}] = first_two
     end
 
-    # Fix #4: blank lines must bump the row counter so error messages stay
-    # aligned with the user's spreadsheet line numbers. Previously a
-    # Stream.reject filtered blanks out BEFORE indexing, shifting subsequent
-    # row numbers down by one for each blank.
-    test "blank lines are counted as rows and yield row-level errors" do
+    # Fix #4: blank lines must still emit an element so caller-side
+    # Stream.with_index/2 stays aligned with the user's spreadsheet line
+    # numbers. Previously a Stream.reject filtered blanks out BEFORE the
+    # caller could index them, shifting subsequent row numbers down by one
+    # for each blank.
+    test "blank lines are emitted as row-level errors so caller indexing stays aligned" do
       csv =
         build_csv_with_rows([
           "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
@@ -532,11 +535,12 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       {:ok, prepared} = CsvParser.validate_headers(csv)
       results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
 
-      # Row 1 = Alice, Row 2 = blank (error), Row 3 = Carol.
-      # The third row MUST surface as index 3, not index 2.
+      # parse_stream/1 emits 2-tuples only — row numbers are caller-owned.
+      # The blank row appears between Alice and Carol so a caller using
+      # Stream.with_index/2 sees Carol at its expected position.
       assert [
                {:ok, %{child_first_name: "Alice"}},
-               {:error, {2, _blank_msg}},
+               {:error, _blank_msg},
                {:ok, %{child_first_name: "Carol"}}
              ] = results
     end
@@ -558,8 +562,8 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
     end
 
     # Fix #1/#9: structurally malformed CSV (mid-stream unbalanced quote)
-    # must surface as a single :parse_halt sentinel carrying the row number
-    # at which the parser bailed out — not raise, not yield N halts.
+    # must surface as a single :parse_halt sentinel — not raise, not yield
+    # N halts. Row numbers are caller-owned via Stream.with_index/2.
     test "parse_stream/1 surfaces structural errors as a single :parse_halt" do
       csv =
         build_csv_with_rows([
@@ -570,13 +574,12 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       {:ok, prepared} = CsvParser.validate_headers(csv)
       results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
 
-      # Alice ok, then one :parse_halt with the failing row number, then end.
+      # Alice ok, then one :parse_halt with the malformed-cell message, then end.
       assert [
                {:ok, %{child_first_name: "Alice"}},
-               {:parse_halt, row_num, msg}
+               {:parse_halt, msg}
              ] = results
 
-      assert is_integer(row_num) and row_num > 0
       assert is_binary(msg)
     end
   end
