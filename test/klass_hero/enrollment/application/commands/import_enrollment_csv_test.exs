@@ -6,8 +6,9 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv
   alias KlassHero.Repo
-
   # -- setup helpers ---------------------------------------------------------
+  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.DomainEventBus
 
   defp setup_provider_with_programs(_context) do
     provider = insert(:provider_profile_schema)
@@ -86,7 +87,12 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
     end
   end
 
-  # -- happy path ------------------------------------------------------------
+  defp build_data_row(overrides) do
+    merged = Map.merge(@csv_defaults, overrides)
+    Enum.map_join(@csv_field_order, ",", &csv_escape(merged[&1]))
+  end
+
+  # -- happy path (updated to new return shape) --------------------------------
 
   describe "execute/2 happy path" do
     setup :setup_provider_with_programs
@@ -103,7 +109,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
           %{first: "Bob", last: "Jones", email: "bob@test.com", program: "Organic Arts"}
         ])
 
-      assert {:ok, %{created: 2}} = ImportEnrollmentCsv.execute(provider.id, csv)
+      assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
       assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
     end
@@ -120,7 +126,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
           %{first: "Bob", last: "Jones", email: "bob@test.com", program: "Organic Arts"}
         ])
 
-      assert {:ok, %{created: 2}} = ImportEnrollmentCsv.execute(provider.id, csv)
+      assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
       # Trigger: EnqueueInviteEmails handler runs via DomainEventBus
       # Why: the bulk_invites_imported event should fire after persist,
@@ -161,7 +167,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
           }
         ])
 
-      assert {:ok, %{created: 2}} = ImportEnrollmentCsv.execute(provider.id, csv)
+      assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
       invites = Repo.all(BulkEnrollmentInviteSchema)
       alice_invite = Enum.find(invites, &(&1.child_first_name == "Alice"))
@@ -203,7 +209,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
           %{first: "Carol", last: "Lee", email: "carol@test.com", program: "Ballsports & Parkour"}
         ])
 
-      assert {:ok, %{created: 3}} = ImportEnrollmentCsv.execute(provider.id, csv)
+      assert {:ok, %{created: 3, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
     end
   end
 
@@ -247,7 +253,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
     end
   end
 
-  # -- parse errors ----------------------------------------------------------
+  # -- parse errors (whole-file fatals) ---------------------------------------
 
   describe "execute/2 parse errors" do
     setup :setup_provider_with_programs
@@ -267,181 +273,349 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
     end
   end
 
-  # -- validation errors -----------------------------------------------------
+  # -- per-row outcomes (new shape) ------------------------------------------
 
-  describe "execute/2 validation errors" do
+  describe "execute/2 - return shape and per-row outcomes" do
     setup :setup_provider_with_programs
 
-    test "returns validation errors for missing guardian_email", %{provider: provider} do
-      csv = build_csv([%{email: ""}])
+    test "returns {:ok, %{created: n, failed: []}} when all rows valid", %{provider: provider} do
+      csv = build_csv([%{first: "Alice"}, %{first: "Bob", email: "bob@x.com"}])
 
-      assert {:error, %{validation_errors: errors}} =
+      assert {:ok, %{created: 2, failed: []}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      assert [{1, field_errors}] = errors
-      assert Enum.any?(field_errors, fn {field, _msg} -> field == :guardian_email end)
+      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
     end
 
-    test "returns validation error for unknown program", %{provider: provider} do
-      csv = build_csv([%{email: "test@test.com", program: "Nonexistent Program"}])
-
-      assert {:error, %{validation_errors: errors}} =
-               ImportEnrollmentCsv.execute(provider.id, csv)
-
-      assert [{1, field_errors}] = errors
-      assert Enum.any?(field_errors, fn {field, _msg} -> field == :program_name end)
-    end
-
-    test "accumulates errors from multiple rows", %{provider: provider} do
+    test "persists valid rows and reports invalid ones when mixed", %{provider: provider} do
       csv =
         build_csv([
-          %{email: "", program: "Ballsports & Parkour"},
-          %{email: "valid@test.com", program: "Unknown Program"}
+          %{first: "Alice"},
+          %{first: "", email: "alice@x.com"},
+          %{first: "Bob", email: "bob@x.com"}
         ])
 
-      assert {:error, %{validation_errors: errors}} =
+      assert {:ok, %{created: 2, failed: failed}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      assert length(errors) == 2
+      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
+
+      assert [%{row: 3, category: :validation, errors: errors}] = failed
+      assert {:child_first_name, "is required"} in errors
     end
-  end
 
-  # -- batch duplicate detection ---------------------------------------------
+    test "every row fails validation -> created: 0, failed has all rows", %{provider: provider} do
+      csv = build_csv([%{first: ""}, %{first: "", email: "x@y.com"}])
 
-  describe "execute/2 batch duplicates" do
-    setup :setup_provider_with_programs
+      assert {:ok, %{created: 0, failed: failed}} =
+               ImportEnrollmentCsv.execute(provider.id, csv)
 
-    test "detects duplicate rows within the same CSV", %{provider: provider} do
+      assert length(failed) == 2
+      assert Enum.all?(failed, &(&1.category == :validation))
+      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 0
+    end
+
+    test "in-batch duplicate is reported per-row, first row still imported", %{provider: provider} do
       csv =
         build_csv([
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "parent@test.com",
-            program: "Ballsports & Parkour"
-          },
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "parent@test.com",
-            program: "Ballsports & Parkour"
-          }
+          %{first: "Alice", last: "X", email: "a@x.com"},
+          %{first: "Alice", last: "X", email: "a@x.com"}
         ])
 
-      assert {:error, %{duplicate_errors: dupes}} =
+      assert {:ok, %{created: 1, failed: [%{row: 3, category: :duplicate, errors: msg}]}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      # Trigger: second row is the duplicate
-      # Why: first occurrence is kept; subsequent ones flagged
-      # Outcome: row 2 has the error
-      assert [{2, msg}] = dupes
       assert msg =~ "Duplicate entry in CSV"
     end
 
-    test "same child in different programs is not a duplicate", %{provider: provider} do
-      csv =
-        build_csv([
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "parent@test.com",
-            program: "Ballsports & Parkour"
-          },
-          %{first: "Alice", last: "Smith", email: "parent@test.com", program: "Organic Arts"}
-        ])
-
-      assert {:ok, %{created: 2}} = ImportEnrollmentCsv.execute(provider.id, csv)
-    end
-  end
-
-  # -- existing duplicate detection ------------------------------------------
-
-  describe "execute/2 existing duplicates" do
-    setup :setup_provider_with_programs
-
-    test "detects invites that already exist in the database", %{
+    test "existing DB duplicate is reported per-row, other rows still imported", %{
       provider: provider,
-      program1: program1
+      program1: program
     } do
-      # Pre-insert an invite
-      existing_attrs = %{
-        program_id: program1.id,
+      # Trigger: seed a pre-existing invite so the use case sees a DB duplicate
+      # Why: Repo.insert! on the schema struct stays valid regardless of the
+      #      use case's persistence API
+      # Outcome: direct struct insert bypasses changeset validation — we
+      #          control the data, so the FK-satisfying fields are enough
+      %BulkEnrollmentInviteSchema{
+        program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Alice",
-        child_last_name: "Smith",
+        child_last_name: "X",
         child_date_of_birth: ~D[2016-01-01],
-        guardian_email: "parent@test.com"
+        guardian_email: "a@x.com",
+        status: :pending
       }
+      |> Repo.insert!()
 
-      repo_module =
-        Application.fetch_env!(:klass_hero, :enrollment)
-        |> Keyword.fetch!(:for_storing_bulk_enrollment_invites)
-
-      {:ok, 1} = repo_module.create_batch([existing_attrs])
-
-      # Now try to import the same child+program combo
       csv =
         build_csv([
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "parent@test.com",
-            program: "Ballsports & Parkour"
-          }
+          %{first: "Bob", last: "Y", email: "b@x.com"},
+          %{first: "Alice", last: "X", email: "a@x.com"}
         ])
 
-      assert {:error, %{duplicate_errors: dupes}} =
+      assert {:ok, %{created: 1, failed: [%{row: 3, category: :duplicate, errors: msg}]}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      assert [{1, msg}] = dupes
       assert msg =~ "already exists"
+    end
+
+    test "row-level parse errors (bad date) become :parse failures, others import", %{
+      provider: provider
+    } do
+      csv =
+        build_csv([
+          %{first: "Alice", dob: "1/1/2016"},
+          %{first: "Bob", dob: "not-a-date", email: "bob@x.com"},
+          %{first: "Carol", dob: "3/3/2018", email: "carol@x.com"}
+        ])
+
+      assert {:ok, %{created: 2, failed: [%{row: 3, category: :parse, errors: msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert msg =~ "invalid date"
+    end
+
+    test "no programs for provider -> {:error, %{parse_errors: ...}} whole-file fatal" do
+      provider = insert(:provider_profile_schema)
+
+      csv = build_csv([%{first: "Alice"}])
+
+      assert {:error, %{parse_errors: [{0, msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert msg =~ "No programs"
+    end
+
+    test "empty CSV -> {:error, %{parse_errors: ...}}", %{provider: provider} do
+      assert {:error, %{parse_errors: [{0, msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, "")
+
+      assert msg =~ "empty"
+    end
+
+    test "header-only CSV returns :empty_csv fatal", %{provider: provider} do
+      headers_only = Enum.map_join(@csv_header_row, ",", &csv_escape/1)
+
+      assert {:error, %{parse_errors: [{0, msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, headers_only)
+
+      assert msg =~ "empty"
+    end
+
+    test "header + only blank lines returns :empty_csv fatal", %{provider: provider} do
+      csv = Enum.map_join(@csv_header_row, ",", &csv_escape/1) <> "\n\n\n"
+
+      assert {:error, %{parse_errors: [{0, msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert msg =~ "empty"
+    end
+
+    test "missing headers -> {:error, %{parse_errors: ...}}", %{provider: provider} do
+      csv = "Wrong,Headers\nAlice,Smith"
+
+      assert {:error, %{parse_errors: [{0, msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert msg =~ "Missing required columns"
     end
   end
 
-  # -- all-or-nothing --------------------------------------------------------
+  # -- cross-chunk dedup ---------------------------------------------------------
 
-  describe "execute/2 all-or-nothing" do
+  describe "execute/2 - cross-chunk dedup" do
     setup :setup_provider_with_programs
 
-    test "nothing is persisted when one row has validation errors", %{provider: provider} do
+    test "in-batch dedup detects duplicates split across chunk boundary", %{provider: provider} do
+      # rows = [A, B, A] with chunk_size: 2 -> chunk 1 = [A, B], chunk 2 = [A]
       csv =
         build_csv([
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "valid@test.com",
-            program: "Ballsports & Parkour"
-          },
-          %{first: "Bob", last: "Jones", email: "", program: "Ballsports & Parkour"}
+          %{first: "Alice", last: "X", email: "a@x.com"},
+          %{first: "Bob", last: "Y", email: "b@x.com"},
+          %{first: "Alice", last: "X", email: "a@x.com"}
         ])
 
-      assert {:error, %{validation_errors: _}} =
-               ImportEnrollmentCsv.execute(provider.id, csv)
+      assert {:ok, %{created: 2, failed: [%{row: 4, category: :duplicate, errors: msg}]}} =
+               ImportEnrollmentCsv.execute(provider.id, csv, chunk_size: 2)
 
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 0
+      assert msg =~ "Duplicate entry in CSV"
+    end
+  end
+
+  # -- event firing ------------------------------------------------------------
+
+  describe "execute/2 - event firing" do
+    setup :setup_provider_with_programs
+
+    # Subscribe an anonymous handler on the Enrollment DomainEventBus that
+    # forwards every :bulk_invites_imported event to the test process.
+    # EventDispatchHelper.dispatch runs handlers synchronously in the caller's
+    # process, so this delivers reliably without async/PubSub timing concerns.
+    setup do
+      test_pid = self()
+
+      DomainEventBus.subscribe(
+        KlassHero.Enrollment,
+        :bulk_invites_imported,
+        fn event ->
+          send(test_pid, {:bulk_invites_imported, event})
+          :ok
+        end
+      )
+
+      :ok
     end
 
-    test "nothing is persisted when batch duplicate detected", %{provider: provider} do
+    test "fires bulk_invites_imported with success-only program_ids when created > 0", %{
+      provider: provider,
+      program1: program1,
+      program2: program2
+    } do
       csv =
         build_csv([
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "parent@test.com",
-            program: "Ballsports & Parkour"
-          },
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "parent@test.com",
-            program: "Ballsports & Parkour"
-          }
+          %{first: "Alice", last: "A", email: "alice@x.com", program: program1.title},
+          %{first: "Bob", last: "B", email: "bob@x.com", program: program2.title}
         ])
 
-      assert {:error, %{duplicate_errors: _}} =
+      assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
+
+      provider_id = provider.id
+
+      assert_receive {:bulk_invites_imported,
+                      %DomainEvent{
+                        event_type: :bulk_invites_imported,
+                        payload: %{provider_id: ^provider_id, program_ids: ids, count: 2}
+                      }},
+                     1_000
+
+      assert program1.id in ids
+      assert program2.id in ids
+      assert length(ids) == 2
+    end
+
+    test "fires event with only programs that had at least one success", %{
+      provider: provider,
+      program1: program1,
+      program2: program2
+    } do
+      # program1 row succeeds; program2 row fails validation (missing first name).
+      csv =
+        build_csv([
+          %{first: "Alice", last: "A", email: "alice@x.com", program: program1.title},
+          %{first: "", last: "B", email: "bob@x.com", program: program2.title}
+        ])
+
+      assert {:ok, %{created: 1, failed: [%{category: :validation}]}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 0
+      assert_receive {:bulk_invites_imported,
+                      %DomainEvent{
+                        event_type: :bulk_invites_imported,
+                        payload: %{program_ids: ids, count: 1}
+                      }},
+                     1_000
+
+      assert ids == [program1.id]
+    end
+
+    test "does NOT fire event when created == 0", %{provider: provider} do
+      csv = build_csv([%{first: ""}, %{first: "", email: "x@y.com"}])
+
+      assert {:ok, %{created: 0}} = ImportEnrollmentCsv.execute(provider.id, csv)
+
+      provider_id = provider.id
+
+      refute_receive {:bulk_invites_imported, %DomainEvent{payload: %{provider_id: ^provider_id}}},
+                     500
+    end
+  end
+
+  # -- mid-stream halt -----------------------------------------------------------
+
+  describe "execute/2 - mid-stream halt" do
+    setup :setup_provider_with_programs
+
+    test "earlier rows persist, halt entry appended on ParseError", %{provider: provider} do
+      # Construct a CSV where the third data row has unbalanced quotes -> NimbleCSV.ParseError.
+      # chunk_size: 2 puts rows 1 and 2 in the first chunk (committed before the bad chunk),
+      # and the bad row alone in the second chunk which causes the ParseError halt.
+      headers = Enum.map_join(@csv_header_row, ",", &csv_escape/1)
+      row1 = build_data_row(%{first: "Alice"})
+      row2 = build_data_row(%{first: "Bob", email: "bob@x.com"})
+      bad_row = ~s|Eve,"Unclosed,1/1/2018,Frank,Jones,frank@x.com,,,,,,,,,,,Ballsports & Parkour,,Spring|
+      csv = Enum.join([headers, row1, row2, bad_row], "\n")
+
+      assert {:ok, %{created: 2, failed: failed}} =
+               ImportEnrollmentCsv.execute(provider.id, csv, chunk_size: 2)
+
+      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
+
+      halt_entry =
+        Enum.find(failed, fn f -> f.category == :parse and f.errors =~ "Stream halted" end)
+
+      assert halt_entry, "expected a :parse halt entry"
+      # The halt entry now carries the user-visible row number (2-based: header is
+      # row 1) where parsing died, instead of nil. The bad row is the 4th file
+      # line (header + 2 ok rows + bad) so it surfaces as row 4.
+      assert is_integer(halt_entry.row)
+      assert halt_entry.row == 4
+    end
+  end
+
+  # -- failure category matrix ---------------------------------------------------
+
+  describe "execute/2 - failure category matrix" do
+    setup :setup_provider_with_programs
+
+    @failure_cases [
+      {%{first: ""}, :validation, :child_first_name, "is required"},
+      {%{email: "not-an-email"}, :validation, :guardian_email, "must be a valid email"},
+      {%{program: "Nonexistent Program"}, :validation, :program_name, "program not found"},
+      {%{grade: "99"}, :validation, :school_grade, "must be between 1 and 13"}
+    ]
+
+    test "each case produces the expected failure category and field error", %{provider: provider} do
+      for {row_overrides, expected_category, expected_field, expected_msg} <- @failure_cases do
+        csv = build_csv([row_overrides])
+
+        assert {:ok, %{created: 0, failed: [failure]}} =
+                 ImportEnrollmentCsv.execute(provider.id, csv),
+               "unexpected return shape for case #{inspect(row_overrides)}"
+
+        assert failure.category == expected_category,
+               "for #{inspect(row_overrides)}: expected category #{expected_category}, got #{failure.category}"
+
+        found_pair = Enum.find(failure.errors, fn {f, _} -> f == expected_field end)
+
+        assert found_pair,
+               "for #{inspect(row_overrides)}: expected field #{expected_field} in #{inspect(failure.errors)}"
+
+        {^expected_field, msg} = found_pair
+
+        assert msg =~ expected_msg,
+               "for #{inspect(row_overrides)}: expected msg ~= #{expected_msg}, got #{msg}"
+      end
+    end
+  end
+
+  # -- large CSV smoke test ------------------------------------------------------
+
+  describe "execute/2 - large CSV smoke test" do
+    setup :setup_provider_with_programs
+
+    @tag :slow
+    test "5_000 valid + 500 invalid rows complete with correct counts", %{provider: provider} do
+      valid_rows = for n <- 1..5_000, do: %{first: "Valid#{n}", email: "valid#{n}@x.com"}
+      invalid_rows = for n <- 1..500, do: %{first: "", email: "bad#{n}@x.com"}
+      csv = build_csv(valid_rows ++ invalid_rows)
+
+      {:ok, %{created: created, failed: failed}} =
+        ImportEnrollmentCsv.execute(provider.id, csv)
+
+      assert created == 5_000
+      assert length(failed) == 500
+      assert Enum.all?(failed, &(&1.category == :validation))
     end
   end
 end

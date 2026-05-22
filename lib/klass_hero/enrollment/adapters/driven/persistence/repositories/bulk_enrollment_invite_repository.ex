@@ -3,11 +3,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   Repository implementation for bulk enrollment invite persistence.
 
   Implements the ForStoringBulkEnrollmentInvites port with:
-  - Atomic batch insert via Ecto.Multi
+  - Per-row insert via `create_one/1` for partial-success import flows
   - Duplicate-detection query returning MapSet of natural keys
-
-  All rows in a batch share a single transaction boundary.
-  If any row fails changeset validation, the entire batch rolls back.
   """
 
   @behaviour KlassHero.Enrollment.Domain.Ports.ForQueryingBulkEnrollmentInvites
@@ -31,60 +28,12 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
   @impl true
   @doc """
-  Inserts all invite records atomically in a single transaction.
-
-  Each row passes through `BulkEnrollmentInviteSchema.import_changeset/2`,
-  which validates required fields and excludes lifecycle columns.
-
-  Returns:
-  - `{:ok, non_neg_integer()}` — count of created records
-  - `{:error, {index, changeset}}` — 0-based row index and first failing changeset (entire batch rolled back)
-  """
-  def create_batch([]), do: {:ok, 0}
-
-  def create_batch(rows) when is_list(rows) do
-    span do
-      set_attributes("db", operation: "insert", entity: "bulk_enrollment_invite")
-
-      rows
-      |> Enum.with_index()
-      |> Enum.reduce(Ecto.Multi.new(), fn {attrs, index}, multi ->
-        changeset =
-          BulkEnrollmentInviteSchema.import_changeset(%BulkEnrollmentInviteSchema{}, attrs)
-
-        Ecto.Multi.insert(multi, {:invite, index}, changeset)
-      end)
-      |> Repo.transaction()
-      |> case do
-        {:ok, results} ->
-          count = map_size(results)
-
-          Logger.info("[BulkEnrollmentInvite.Repository] Batch created",
-            count: count
-          )
-
-          {:ok, count}
-
-        {:error, {:invite, index}, changeset, _changes} ->
-          Logger.error("[BulkEnrollmentInvite.Repository] Batch insert failed",
-            row_index: index,
-            batch_size: length(rows),
-            errors: inspect(changeset.errors)
-          )
-
-          {:error, {index, changeset}}
-      end
-    end
-  end
-
-  @impl true
-  @doc """
   Inserts a single invite and returns the persisted domain struct.
 
-  Runs the same `import_changeset/2` used by `create_batch/1`, so a row that
-  passes one would pass the other. Kept separate from the batch path so
-  callers who need the created id don't pay for a `{_, index}` lookup or a
-  follow-up read.
+  Runs `BulkEnrollmentInviteSchema.import_changeset/2`, which validates
+  required fields and excludes lifecycle columns. Callers needing per-row
+  outcomes (e.g. ImportEnrollmentCsv collecting partial-success results)
+  invoke this in a loop.
   """
   def create_one(attrs) when is_map(attrs) do
     span do

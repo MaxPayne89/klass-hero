@@ -33,7 +33,10 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
       }
     ]
 
-    {:ok, 2} = BulkEnrollmentInviteRepository.create_batch(rows)
+    Enum.each(rows, fn attrs ->
+      {:ok, _} = BulkEnrollmentInviteRepository.create_one(attrs)
+    end)
+
     %{provider: provider, program: program}
   end
 
@@ -85,18 +88,15 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
       other_provider = insert(:provider_profile_schema)
       orphan_program = insert(:program_schema, provider_id: other_provider.id, title: "Other")
 
-      rows = [
-        %{
+      {:ok, _} =
+        BulkEnrollmentInviteRepository.create_one(%{
           program_id: orphan_program.id,
           provider_id: provider.id,
           child_first_name: "Orphan",
           child_last_name: "Child",
           child_date_of_birth: ~D[2016-01-01],
           guardian_email: "orphan@example.com"
-        }
-      ]
-
-      {:ok, 1} = BulkEnrollmentInviteRepository.create_batch(rows)
+        })
 
       # Move existing invites to non-pending so only the orphan gets picked up
       from(s in BulkEnrollmentInviteSchema,

@@ -2,8 +2,26 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
   @moduledoc """
   Use case for importing enrollment invites from a CSV file.
 
-  Orchestrates: parse CSV -> validate rows -> detect duplicates -> persist batch.
-  All-or-nothing: if any row fails, nothing is persisted.
+  Streams rows through `CsvParser.parse_stream/1`, validates each
+  independently, and inserts surviving rows one-by-one via
+  `create_one/1`. Whole-file fatals (empty CSV, missing headers,
+  no programs, title collisions) short-circuit and return
+  `{:error, %{parse_errors: [...]}}`. Row-level failures are
+  accumulated; the use case always returns `{:ok, %{created, failed}}`
+  in that case.
+
+  ## Return shape
+
+      {:ok, %{
+        created: non_neg_integer(),
+        failed: [%{
+          row: pos_integer() | nil,
+          category: :parse | :validation | :duplicate | :insert,
+          errors: String.t() | [{atom(), String.t()}]
+        }]
+      }}
+
+      {:error, %{parse_errors: [{0, String.t()}]}}  # whole-file fatal
   """
 
   alias KlassHero.Enrollment.Application.ChangesetErrors
@@ -14,51 +32,99 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
   alias KlassHero.Enrollment.Domain.Services.ImportRowValidator
   alias KlassHero.Shared.EventDispatchHelper
 
-  @invite_reader Application.compile_env!(:klass_hero, [
-                   :enrollment,
-                   :for_querying_bulk_enrollment_invites
-                 ])
-  @invite_repository Application.compile_env!(:klass_hero, [
-                       :enrollment,
-                       :for_storing_bulk_enrollment_invites
-                     ])
+  require Logger
+
+  @default_chunk_size 100
+
+  @type failure :: %{
+          row: pos_integer() | nil,
+          category: :parse | :validation | :duplicate | :insert,
+          errors: String.t() | [{atom(), String.t()}]
+        }
+
+  @type report :: %{created: non_neg_integer(), failed: [failure()]}
 
   @spec execute(binary(), binary()) ::
-          {:ok, %{created: non_neg_integer()}}
-          | {:error, %{parse_errors: list()}}
-          | {:error, %{validation_errors: list()}}
-          | {:error, %{duplicate_errors: list()}}
-  def execute(provider_id, csv_binary) when is_binary(provider_id) and is_binary(csv_binary) do
-    with {:ok, rows} <- parse_csv(csv_binary),
-         {:ok, context} <- build_context(provider_id),
-         {:ok, validated_rows} <- validate_all_rows(rows, context),
-         {:ok, validated_rows} <- check_batch_duplicates(validated_rows),
-         {:ok, validated_rows} <- check_existing_duplicates(validated_rows),
-         {:ok, count} <- persist_batch(validated_rows) do
-      program_ids = validated_rows |> Enum.map(& &1.program_id) |> Enum.uniq()
-      publish_event(provider_id, program_ids, count)
-      {:ok, %{created: count}}
+          {:ok, report()} | {:error, %{parse_errors: [{0, String.t()}]}}
+  def execute(provider_id, csv_binary), do: execute(provider_id, csv_binary, [])
+
+  @spec execute(binary(), binary(), keyword()) ::
+          {:ok, report()} | {:error, %{parse_errors: [{0, String.t()}]}}
+  def execute(provider_id, csv_binary, opts) when is_binary(provider_id) and is_binary(csv_binary) and is_list(opts) do
+    Logger.info("[ImportEnrollmentCsv] Starting CSV import for provider #{provider_id}")
+
+    chunk_size = fetch_chunk_size(opts)
+    invite_reader = invite_reader()
+    invite_repository = invite_repository()
+
+    with {:ok, prepared} <- prepare_csv(csv_binary),
+         {:ok, context} <- build_context(provider_id) do
+      acc0 = %{
+        created: 0,
+        failed: [],
+        seen: MapSet.new(),
+        existing_keys_by_program: %{},
+        success_program_ids: MapSet.new(),
+        context: context,
+        invite_reader: invite_reader,
+        invite_repository: invite_repository
+      }
+
+      final =
+        prepared
+        |> CsvParser.parse_stream()
+        |> Stream.with_index(2)
+        |> Stream.chunk_every(chunk_size)
+        |> Enum.reduce_while(acc0, &process_chunk/2)
+
+      Logger.info(
+        "[ImportEnrollmentCsv] Finished for provider #{provider_id}: " <>
+          "created=#{final.created} failed=#{length(final.failed)}"
+      )
+
+      if empty_csv?(final) do
+        {:error, %{parse_errors: [{0, "CSV file is empty or has no data rows"}]}}
+      else
+        maybe_publish_event(provider_id, final)
+        {:ok, %{created: final.created, failed: Enum.reverse(final.failed)}}
+      end
     end
   end
 
-  defp parse_csv(csv_binary) do
-    case CsvParser.parse(csv_binary) do
-      {:ok, rows} ->
-        {:ok, rows}
+  # -- runtime port resolution -----------------------------------------------
+
+  # Trigger: tests / runtime swaps via Application.put_env need to be honored.
+  # Why: compile_env! captures the binding at compile time, ignoring later
+  #      Application.put_env calls — making port swapping in tests brittle.
+  # Outcome: resolve ports at runtime so the active config always wins.
+  defp invite_reader do
+    Application.fetch_env!(:klass_hero, :enrollment)
+    |> Keyword.fetch!(:for_querying_bulk_enrollment_invites)
+  end
+
+  defp invite_repository do
+    Application.fetch_env!(:klass_hero, :enrollment)
+    |> Keyword.fetch!(:for_storing_bulk_enrollment_invites)
+  end
+
+  # -- whole-file fatals -----------------------------------------------------
+
+  defp prepare_csv(csv_binary) do
+    case CsvParser.validate_headers(csv_binary) do
+      {:ok, prepared} ->
+        {:ok, prepared}
 
       {:error, :empty_csv} ->
         {:error, %{parse_errors: [{0, "CSV file is empty or has no data rows"}]}}
 
+      {:error, :malformed_csv} ->
+        {:error, %{parse_errors: [{0, "CSV file is malformed at the header row"}]}}
+
       {:error, {:invalid_headers, missing}} ->
         {:error, %{parse_errors: [{0, "Missing required columns: #{inspect(missing)}"}]}}
-
-      {:error, row_errors} when is_list(row_errors) ->
-        {:error, %{parse_errors: row_errors}}
     end
   end
 
-  # LiveView renders parse_errors in the CSV uploader; wrap the shared
-  # helper's generic errors into that shape so no new UI paths are needed.
   defp build_context(provider_id) do
     case ProviderProgramContext.for_provider(provider_id) do
       {:ok, context} ->
@@ -81,86 +147,150 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
     end
   end
 
-  defp validate_all_rows(rows, context) do
-    {validated, errors} =
-      rows
-      |> Enum.with_index(1)
-      |> Enum.reduce({[], []}, fn {row, row_num}, {valid_acc, error_acc} ->
-        case ImportRowValidator.validate(row, context) do
-          {:ok, validated_row} -> {[validated_row | valid_acc], error_acc}
-          {:error, field_errors} -> {valid_acc, [{row_num, field_errors} | error_acc]}
-        end
-      end)
+  # Trigger: header-only CSV (or header + only blank lines) reaches the reduce
+  #          with no successful inserts and only blank-row parse failures (or
+  #          no failures at all).
+  # Why: CsvParser.validate_headers/1 accepts the header line, then
+  #      parse_stream/1 yields zero {:ok, _} rows. Without this guard the use
+  #      case would return {:ok, %{created: 0, failed: blanks}} — silently
+  #      claiming success on a file that has no data.
+  # Outcome: surface :empty_csv as a whole-file fatal so the UI can show the
+  #          same error as a completely empty upload.
+  defp empty_csv?(%{created: 0, failed: failed}) do
+    Enum.all?(failed, &blank_row_failure?/1)
+  end
 
-    if errors == [] do
-      {:ok, Enum.reverse(validated)}
+  defp empty_csv?(_acc), do: false
+
+  defp blank_row_failure?(%{category: :parse, errors: errors}) when is_binary(errors) do
+    errors =~ "blank row"
+  end
+
+  defp blank_row_failure?(_), do: false
+
+  # -- chunk + per-row dispatch ------------------------------------------------
+
+  # Trigger: outer Enum.reduce_while needs {:cont, acc} | {:halt, acc}. The
+  #          inner reduce_while also needs that shape but its accumulator
+  #          carries the use-case state, so we'd be smushing two unrelated
+  #          tag namespaces into one tuple.
+  # Why: an earlier version returned the inner reduce's nested tuple by
+  #      coincidence — refactoring the inner shape would silently break the
+  #      outer fold. Using :continue/:halted internally separates the two.
+  # Outcome: the inner accumulator tag (:continue/:halted) is mapped to the
+  #          outer directive (:cont/:halt) in one explicit place.
+  defp process_chunk(chunk, acc) do
+    case Enum.reduce_while(chunk, {:continue, acc}, &process_row_in_chunk/2) do
+      {:continue, new_acc} -> {:cont, new_acc}
+      {:halted, new_acc} -> {:halt, new_acc}
+    end
+  end
+
+  defp process_row_in_chunk({{:parse_halt, message}, file_row}, {_tag, acc}) do
+    halt_entry = %{
+      row: file_row,
+      category: :parse,
+      errors: "Stream halted: #{message}"
+    }
+
+    {:halt, {:halted, push_failure(acc, halt_entry)}}
+  end
+
+  defp process_row_in_chunk({{:error, message}, file_row}, {_tag, acc}) do
+    {:cont, {:continue, process_row({:error, message}, file_row, acc)}}
+  end
+
+  defp process_row_in_chunk({{:ok, row}, file_row}, {_tag, acc}) do
+    {:cont, {:continue, process_row({:ok, row}, file_row, acc)}}
+  end
+
+  # Row-level parse error from CsvParser.parse_stream/1 (e.g. bad date format).
+  # `file_row` is the 2-based user-visible CSV line number applied by the use
+  # case's Stream.with_index(2) wrap (header is row 1, first data row is 2).
+  defp process_row({:error, message}, file_row, acc) do
+    push_failure(acc, %{row: file_row, category: :parse, errors: message})
+  end
+
+  defp process_row({:ok, row}, file_row, acc) do
+    case ImportRowValidator.validate(row, acc.context) do
+      {:error, field_errors} ->
+        push_failure(acc, %{row: file_row, category: :validation, errors: field_errors})
+
+      {:ok, validated_row} ->
+        attempt_dedup_and_insert(validated_row, file_row, acc)
+    end
+  end
+
+  defp attempt_dedup_and_insert(row, row_num, acc) do
+    key = dedup_key(row)
+
+    if MapSet.member?(acc.seen, key) do
+      push_failure(acc, %{
+        row: row_num,
+        category: :duplicate,
+        errors: "Duplicate entry in CSV: same program, guardian email, and child name"
+      })
     else
-      {:error, %{validation_errors: Enum.reverse(errors)}}
+      {existing_dup?, acc} = check_existing_dup(acc, row, key)
+
+      if existing_dup? do
+        acc
+        |> Map.update!(:seen, &MapSet.put(&1, key))
+        |> push_failure(%{
+          row: row_num,
+          category: :duplicate,
+          errors: "Invite already exists for this child and program"
+        })
+      else
+        insert_row(acc, row, row_num, key)
+      end
     end
   end
 
-  # Catching duplicates in-batch gives the user row-number errors; the DB
-  # unique constraint would also reject them but with a less helpful shape.
-  defp check_batch_duplicates(rows) do
-    {_seen, duplicates} =
-      rows
-      |> Enum.with_index(1)
-      |> Enum.reduce({MapSet.new(), []}, fn {row, row_num}, {seen, dupes} ->
-        key = dedup_key(row)
+  defp insert_row(acc, row, row_num, key) do
+    case acc.invite_repository.create_one(row) do
+      {:ok, _invite} ->
+        %{
+          acc
+          | created: acc.created + 1,
+            seen: MapSet.put(acc.seen, key),
+            success_program_ids: MapSet.put(acc.success_program_ids, row.program_id)
+        }
 
-        if MapSet.member?(seen, key) do
-          {seen,
-           [
-             {row_num, "Duplicate entry in CSV: same program, guardian email, and child name"}
-             | dupes
-           ]}
-        else
-          {MapSet.put(seen, key), dupes}
-        end
-      end)
-
-    if duplicates == [] do
-      {:ok, rows}
-    else
-      {:error, %{duplicate_errors: Enum.reverse(duplicates)}}
+      {:error, %Ecto.Changeset{} = changeset} ->
+        acc
+        |> Map.update!(:seen, &MapSet.put(&1, key))
+        |> push_failure(%{
+          row: row_num,
+          category: :insert,
+          errors: ChangesetErrors.field_list(changeset)
+        })
     end
   end
 
-  defp check_existing_duplicates(rows) do
-    program_ids = rows |> Enum.map(& &1.program_id) |> Enum.uniq()
-    existing_keys = @invite_reader.list_existing_keys_for_programs(program_ids)
+  # Trigger: per-row dedup check needs the set of existing DB keys for the
+  #          row's program; loading all provider programs up front is wasteful
+  #          when the CSV references only a few of them.
+  # Why: a provider with 200 programs and a CSV touching 1 program would
+  #      otherwise preload 200x more data than needed.
+  # Outcome: lazy load on first reference, cache in the accumulator so later
+  #          rows referencing the same program reuse the result.
+  defp check_existing_dup(acc, row, key) do
+    program_id = row.program_id
 
-    duplicates =
-      rows
-      |> Enum.with_index(1)
-      |> Enum.reduce([], fn {row, row_num}, dupes ->
-        if MapSet.member?(existing_keys, dedup_key(row)) do
-          [{row_num, "Invite already exists for this child and program"} | dupes]
-        else
-          dupes
-        end
-      end)
+    case Map.fetch(acc.existing_keys_by_program, program_id) do
+      {:ok, keys} ->
+        {MapSet.member?(keys, key), acc}
 
-    if duplicates == [] do
-      {:ok, rows}
-    else
-      {:error, %{duplicate_errors: Enum.reverse(duplicates)}}
+      :error ->
+        keys = acc.invite_reader.list_existing_keys_for_programs([program_id])
+        acc = put_in(acc.existing_keys_by_program[program_id], keys)
+        {MapSet.member?(keys, key), acc}
     end
   end
 
-  defp persist_batch(validated_rows) do
-    case @invite_repository.create_batch(validated_rows) do
-      {:ok, count} ->
-        {:ok, count}
-
-      {:error, {index, %Ecto.Changeset{} = changeset}} ->
-        {:error, %{validation_errors: [{index + 1, ChangesetErrors.field_list(changeset)}]}}
-    end
-  end
-
-  defp publish_event(provider_id, program_ids, count) do
-    EnrollmentEvents.bulk_invites_imported(provider_id, program_ids, count)
-    |> EventDispatchHelper.dispatch(KlassHero.Enrollment)
+  defp push_failure(acc, failure) do
+    Map.update!(acc, :failed, &[failure | &1])
   end
 
   defp dedup_key(row) do
@@ -170,5 +300,19 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
       row.child_first_name,
       row.child_last_name
     )
+  end
+
+  defp fetch_chunk_size(opts) do
+    case Keyword.get(opts, :chunk_size, @default_chunk_size) do
+      n when is_integer(n) and n > 0 -> n
+      bad -> raise ArgumentError, "chunk_size must be a positive integer, got: #{inspect(bad)}"
+    end
+  end
+
+  defp maybe_publish_event(_provider_id, %{created: 0}), do: :ok
+
+  defp maybe_publish_event(provider_id, %{created: count, success_program_ids: ids}) do
+    EnrollmentEvents.bulk_invites_imported(provider_id, MapSet.to_list(ids), count)
+    |> EventDispatchHelper.dispatch(KlassHero.Enrollment)
   end
 end

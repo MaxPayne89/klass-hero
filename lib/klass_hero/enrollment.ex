@@ -186,17 +186,20 @@ defmodule KlassHero.Enrollment do
   end
 
   @doc """
-  Imports enrollment invites from a CSV file for a provider.
+  Imports enrollment invites from a CSV binary, returning per-row outcomes.
 
-  Parses the CSV, validates each row, checks for duplicates, and persists
-  all valid rows as BulkEnrollmentInvite records with status "pending".
+  Streams the CSV through the parser in chunks of 100 rows (default),
+  validates each row, deduplicates against in-batch and existing DB
+  entries, and inserts surviving rows one at a time. Whole-file fatals
+  (empty CSV, missing headers, no provider programs, title collisions)
+  short-circuit and return `{:error, %{parse_errors: [...]}}`.
 
-  All-or-nothing: if any row fails validation, nothing is persisted.
-
-  Returns:
-  - `{:ok, %{created: count}}` on success
-  - `{:error, error_report}` with parse_errors, validation_errors, or duplicate_errors
+  Row-level failures NEVER abort the import; they are accumulated in
+  the `:failed` list and the use case returns `{:ok, %{created, failed}}`.
   """
+  @spec import_enrollment_csv(binary(), binary()) ::
+          {:ok, ImportEnrollmentCsv.report()}
+          | {:error, %{parse_errors: [{0, String.t()}]}}
   def import_enrollment_csv(provider_id, csv_binary) when is_binary(provider_id) and is_binary(csv_binary) do
     ImportEnrollmentCsv.execute(provider_id, csv_binary)
   end

@@ -9,23 +9,11 @@ defmodule KlassHero.Enrollment.Domain.Ports.ForStoringBulkEnrollmentInvites do
   alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
 
   @doc """
-  Inserts all invite records atomically in a single transaction.
-
-  If any record fails validation, the entire batch is rolled back.
-
-  Returns:
-  - `{:ok, non_neg_integer()}` — count of created records
-  - `{:error, term()}` — first changeset error from the batch
-  """
-  @callback create_batch([map()]) :: {:ok, non_neg_integer()} | {:error, term()}
-
-  @doc """
   Inserts a single invite record and returns the persisted domain struct.
 
-  Used by the manual single-invite flow where the caller needs the created
-  invite's id (e.g. to acknowledge which row was created, to drive UI
-  focus, or for tests). The batch path stays strictly count-returning to
-  preserve its existing contract.
+  Used by both the manual single-invite flow and CSV import (called per
+  row so partial successes can be reported), where the caller needs the
+  created invite's id and per-row error feedback.
 
   Returns:
   - `{:ok, BulkEnrollmentInvite.t()}` on success

@@ -828,13 +828,51 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
       {:ok, [{:ok, csv_binary}]} ->
         case Enrollment.import_enrollment_csv(provider_id, csv_binary) do
-          {:ok, %{created: count}} ->
+          {:ok, %{created: count, failed: []}} ->
             socket = refresh_invites_silent(socket, program_id)
 
             {:noreply,
              socket
-             |> put_flash(:info, gettext("Imported %{count} families.", count: count))
+             |> put_flash(
+               :info,
+               ngettext("Imported %{count} family.", "Imported %{count} families.", count)
+             )
              |> assign(import_errors: nil)}
+
+          {:ok, %{created: 0, failed: failed}} ->
+            {:noreply,
+             socket
+             |> put_flash(
+               :error,
+               ngettext(
+                 "No rows imported. %{count} row could not be processed.",
+                 "No rows imported. %{count} rows could not be processed.",
+                 length(failed)
+               )
+             )
+             |> assign(import_errors: failed)}
+
+          {:ok, %{created: count, failed: failed}} ->
+            socket = refresh_invites_silent(socket, program_id)
+
+            # Trigger: partial success — both `count` (imported) and `length(failed)` vary independently.
+            # Why: composing two ngettext calls keeps each plural rule independent so translators
+            #   can pluralise both halves correctly without combinatorial msgids.
+            # Outcome: e.g. "Imported 1 family. 2 rows could not be processed."
+            imported_msg =
+              ngettext("Imported %{count} family.", "Imported %{count} families.", count)
+
+            failed_msg =
+              ngettext(
+                "%{count} row could not be processed.",
+                "%{count} rows could not be processed.",
+                length(failed)
+              )
+
+            {:noreply,
+             socket
+             |> put_flash(:info, imported_msg <> " " <> failed_msg)
+             |> assign(import_errors: failed)}
 
           {:error, error_report} ->
             {:noreply, assign(socket, import_errors: error_report)}

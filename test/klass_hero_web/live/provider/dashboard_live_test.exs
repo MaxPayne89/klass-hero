@@ -456,17 +456,15 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
           title: "Test Program"
         )
 
-      {:ok, _count} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "parent@test.com"
-          }
-        ])
+      {:ok, _invite} =
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "parent@test.com"
+        })
 
       %{program: program}
     end
@@ -511,17 +509,15 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
           title: "Test Program"
         )
 
-      {:ok, _count} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "parent@test.com"
-          }
-        ])
+      {:ok, _invite} =
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "parent@test.com"
+        })
 
       %{program: program}
     end
@@ -664,16 +660,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
     } do
       # Seed an existing invite matching the form submission
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Emma",
-            child_last_name: "Schmidt",
-            child_date_of_birth: ~D[2016-03-15],
-            guardian_email: "existing@example.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Emma",
+          child_last_name: "Schmidt",
+          child_date_of_birth: ~D[2016-03-15],
+          guardian_email: "existing@example.com"
+        })
 
       view = open_invites_tab(conn, program.id)
 
@@ -767,16 +761,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "enrolled@test.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "enrolled@test.com"
+        })
 
       # Walk through the state machine to enrolled
       [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
@@ -814,16 +806,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "concurrent@test.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "concurrent@test.com"
+        })
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       view |> element("#view-roster-#{program.id}") |> render_click()
@@ -844,16 +834,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_batch([
-          %{
-            program_id: program.id,
-            provider_id: provider.id,
-            child_first_name: "Jane",
-            child_last_name: "Smith",
-            child_date_of_birth: ~D[2015-06-15],
-            guardian_email: "removed@test.com"
-          }
-        ])
+        BulkEnrollmentInviteRepository.create_one(%{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          child_date_of_birth: ~D[2015-06-15],
+          guardian_email: "removed@test.com"
+        })
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       view |> element("#view-roster-#{program.id}") |> render_click()
@@ -983,12 +971,12 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       render_upload(csv_file, "import.csv")
       render_submit(view, "import_csv", %{})
 
-      assert_flash(view, :info, "Imported 1 families.")
+      assert_flash(view, :info, "Imported 1 family.")
       assert has_element?(view, "#invites-table")
       refute has_element?(view, "#import-errors")
     end
 
-    test "import with validation errors shows import-errors div", %{
+    test "import with validation errors shows import-errors div and no-rows flash", %{
       conn: conn,
       program: program
     } do
@@ -1009,12 +997,14 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       render_upload(csv_file, "bad.csv")
       render_submit(view, "import_csv", %{})
 
+      # All-failed CSV: error flash + #import-errors list rendered
+      assert_flash(view, :error, ~r/No rows imported/)
       assert has_element?(view, "#import-errors")
       html = render(view)
-      assert html =~ "Import failed"
+      assert html =~ "Rows with errors"
     end
 
-    test "import with parse errors shows import-errors div", %{
+    test "import with parse errors (bad headers) shows import-errors div with fatal message", %{
       conn: conn,
       program: program
     } do
@@ -1035,9 +1025,44 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       render_upload(csv_file, "bad_headers.csv")
       render_submit(view, "import_csv", %{})
 
+      # Whole-file fatal: no flash, just #import-errors with error detail
       assert has_element?(view, "#import-errors")
       html = render(view)
-      assert html =~ "Import failed"
+      assert html =~ "Rows with errors"
+    end
+
+    test "mixed CSV shows partial-success flash and renders failed rows", %{
+      conn: conn,
+      program: program
+    } do
+      # First row valid, second row invalid (missing email)
+      csv_content =
+        build_csv([
+          %{first: "Alice", last: "Smith", email: "alice@example.com"},
+          %{first: "Bob", last: "Smith", email: ""}
+        ])
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+      navigate_to_invites_tab(view, program)
+
+      csv_file =
+        file_input(view, "#csv-upload-form", :csv_file, [
+          %{
+            name: "mixed.csv",
+            content: csv_content,
+            type: "text/csv"
+          }
+        ])
+
+      render_upload(csv_file, "mixed.csv")
+      render_submit(view, "import_csv", %{})
+
+      # Partial-success: info flash for imported count, error list for failed rows
+      assert_flash(view, :info, ~r/Imported 1 family/)
+      html = render(view)
+      assert html =~ "could not be processed"
+      assert has_element?(view, "#import-errors")
+      assert html =~ "Rows with errors"
     end
 
     test "submitting without file shows no-file flash", %{

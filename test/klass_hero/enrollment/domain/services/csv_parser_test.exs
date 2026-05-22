@@ -1,9 +1,8 @@
 defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Enrollment.Domain.Services.CsvParser
-
   # -- helpers ---------------------------------------------------------------
+  alias KlassHero.Enrollment.Domain.Services.CsvParser
 
   defp headers do
     [
@@ -319,6 +318,9 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
         ])
 
       assert {:error, errors} = CsvParser.parse(csv)
+      # parse/1 wraps parse_stream/1 in Stream.with_index(2), so row numbers are
+      # 2-based (header = row 1, first data row = row 2). parse_stream/1 itself
+      # is row-number-agnostic; callers thread positional context via with_index.
       assert [{2, reason}] = errors
       assert reason =~ "invalid date"
       assert reason =~ "child_date_of_birth"
@@ -333,8 +335,10 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
     end
 
     test "returns error for malformed CSV with mismatched quotes" do
+      # validate_headers/1 catches structural breaks in the header line and returns
+      # {:error, :malformed_csv}; parse/1 short-circuits via with and propagates it
       csv = "\"unclosed quote,value\n"
-      assert {:error, [{1, "CSV file is malformed:" <> _}]} = CsvParser.parse(csv)
+      assert {:error, :malformed_csv} = CsvParser.parse(csv)
     end
   end
 
@@ -349,6 +353,24 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
 
       assert {:ok, [row]} = CsvParser.parse(csv)
       assert row.school_name =~ "2HB - BIS"
+    end
+
+    # RFC4180: a cell containing an embedded newline is legal as long as the
+    # cell is wrapped in double quotes. The parser must keep that cell as a
+    # single value, not shred the row into fragments on the literal newline.
+    test "parses multi-line quoted field as a single row per RFC4180" do
+      headers =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season"
+
+      data =
+        ~s|Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,"Roosevelt\nHigh School",,,,,,Ballsports,,Spring|
+
+      csv = headers <> "\n" <> data
+
+      assert {:ok, [row]} = CsvParser.parse(csv)
+      assert row.child_first_name == "Alice"
+      assert row.school_name == "Roosevelt\nHigh School"
+      assert row.program_name == "Ballsports"
     end
   end
 
@@ -370,6 +392,219 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       csv = <<0xEF, 0xBB, 0xBF>> <> header_line() <> "\n"
 
       assert {:error, :empty_csv} = CsvParser.parse(csv)
+    end
+  end
+
+  # -- validate_headers/1 -------------------------------------------------------
+
+  describe "validate_headers/1" do
+    test "returns prepared payload with column_keys and remainder for a valid CSV" do
+      csv =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season\nAlice,Smith,1/1/2016,Bob,Smith,p@x.com,,,,,,,,,,,Ballsports & Parkour,,Test"
+
+      assert {:ok, %{column_keys: keys, remainder: rest}} =
+               CsvParser.validate_headers(csv)
+
+      assert is_list(keys)
+      assert :child_first_name in keys
+      assert :program_name in keys
+      assert is_binary(rest)
+      assert String.starts_with?(rest, "Alice,Smith")
+    end
+
+    test "returns :empty_csv error for empty input" do
+      assert {:error, :empty_csv} =
+               CsvParser.validate_headers("")
+
+      assert {:error, :empty_csv} =
+               CsvParser.validate_headers("   \n  ")
+    end
+
+    test "returns invalid_headers error when required columns missing" do
+      csv = "Wrong,Headers\nAlice,Smith"
+
+      assert {:error, {:invalid_headers, missing}} =
+               CsvParser.validate_headers(csv)
+
+      assert :child_first_name in missing
+      assert :program_name in missing
+    end
+
+    test "returns :malformed_csv when the header line is structurally broken" do
+      # Unbalanced quote in header line
+      csv = ~s(Participant information: First,"Unclosed,Program\nAlice,Smith,Ballsports)
+
+      assert {:error, :malformed_csv} =
+               CsvParser.validate_headers(csv)
+    end
+
+    test "strips UTF-8 BOM before parsing headers" do
+      bom_csv =
+        <<0xEF, 0xBB, 0xBF>> <>
+          "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season\nAlice,Smith,1/1/2016,Bob,Smith,p@x.com,,,,,,,,,,,Ballsports & Parkour,,Test"
+
+      assert {:ok, %{column_keys: keys}} =
+               CsvParser.validate_headers(bom_csv)
+
+      assert :child_first_name in keys
+    end
+  end
+
+  # -- parse_stream/1 -----------------------------------------------------------
+
+  describe "parse_stream/1" do
+    defp build_csv_with_rows(data_lines) do
+      headers =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season"
+
+      Enum.join([headers | data_lines], "\n")
+    end
+
+    test "yields {:ok, row_map} for each valid data row" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          "Carol,Doe,5/5/2017,Dan,Doe,dan@x.com,,,,,,,,,,,Arts,,Spring"
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      assert [{:ok, row1}, {:ok, row2}] = results
+      assert row1.child_first_name == "Alice"
+      assert row1.program_name == "Ballsports"
+      assert row2.child_first_name == "Carol"
+    end
+
+    test "yields {:error, message} for rows with bad data" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          "Carol,Doe,not-a-date,Dan,Doe,dan@x.com,,,,,,,,,,,Arts,,Spring",
+          "Eve,Jones,3/3/2018,Frank,Jones,frank@x.com,,,,,,,,,,,Sports,,Spring"
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      # parse_stream/1 emits 2-tuple shapes (no embedded row number). Callers
+      # thread positional context via Stream.with_index/2 — see parse/1 for the
+      # canonical 2-based scheme.
+      assert [
+               {:ok, %{child_first_name: "Alice"}},
+               {:error, msg},
+               {:ok, %{child_first_name: "Eve"}}
+             ] = results
+
+      assert msg =~ "invalid date"
+    end
+
+    test "returns empty stream when remainder is empty" do
+      {:ok, prepared} = CsvParser.validate_headers(build_csv_with_rows([]))
+      assert prepared |> CsvParser.parse_stream() |> Enum.to_list() == []
+    end
+
+    test "is lazy — does not parse beyond what is taken" do
+      csv =
+        build_csv_with_rows(
+          for n <- 1..1000 do
+            "Name#{n},Last,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring"
+          end
+        )
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+
+      first_two = prepared |> CsvParser.parse_stream() |> Enum.take(2)
+      assert length(first_two) == 2
+      assert [{:ok, %{child_first_name: "Name1"}}, {:ok, %{child_first_name: "Name2"}}] = first_two
+    end
+
+    # Fix #4: blank lines must still emit an element so caller-side
+    # Stream.with_index/2 stays aligned with the user's spreadsheet line
+    # numbers. Previously a Stream.reject filtered blanks out BEFORE the
+    # caller could index them, shifting subsequent row numbers down by one
+    # for each blank.
+    test "blank lines are emitted as row-level errors so caller indexing stays aligned" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          "",
+          "Carol,Doe,5/5/2017,Dan,Doe,dan@x.com,,,,,,,,,,,Arts,,Spring"
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      # parse_stream/1 emits 2-tuples only — row numbers are caller-owned.
+      # The blank row appears between Alice and Carol so a caller using
+      # Stream.with_index/2 sees Carol at its expected position.
+      assert [
+               {:ok, %{child_first_name: "Alice"}},
+               {:error, _blank_msg},
+               {:ok, %{child_first_name: "Carol"}}
+             ] = results
+    end
+
+    # Fix #1: NimbleCSV's parse_stream handles RFC4180 multi-line quoted
+    # fields. Verify a quoted cell with an embedded newline does not crash
+    # the stream or produce a :parse_halt.
+    test "parse_stream/1 preserves multi-line quoted cells as one row" do
+      data =
+        ~s|Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,"Roosevelt\nHigh School",,,,,,Ballsports,,Spring|
+
+      csv = build_csv_with_rows([data])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      assert [{:ok, row}] = results
+      assert row.school_name == "Roosevelt\nHigh School"
+    end
+
+    # Fix #1/#9: structurally malformed CSV (mid-stream unbalanced quote)
+    # must surface as a single :parse_halt sentinel — not raise, not yield
+    # N halts. Row numbers are caller-owned via Stream.with_index/2.
+    test "parse_stream/1 surfaces structural errors as a single :parse_halt" do
+      csv =
+        build_csv_with_rows([
+          "Alice,Smith,1/1/2016,Bob,Smith,bob@x.com,,,,,,,,,,,Ballsports,,Spring",
+          ~s|Bob,"Unclosed,2/2/2017,Carol,Smith,carol@x.com,,,,,,,,,,,Arts,,Spring|
+        ])
+
+      {:ok, prepared} = CsvParser.validate_headers(csv)
+      results = prepared |> CsvParser.parse_stream() |> Enum.to_list()
+
+      # Alice ok, then one :parse_halt with the malformed-cell message, then end.
+      assert [
+               {:ok, %{child_first_name: "Alice"}},
+               {:parse_halt, msg}
+             ] = results
+
+      assert is_binary(msg)
+    end
+  end
+
+  # -- partition_results halt semantics (Fix #9) -----------------------------
+
+  describe "parse/1 with structural errors" do
+    test "halts on first :parse_halt and emits a single error tuple" do
+      headers =
+        "Participant information: First,Participant information: Last,Participant information: Date,Parent/guardian information: First,Parent/guardian information: Last,Parent/guardian information: Email,Parent/guardian 2 information: First,Parent/guardian 2 information: Last,Parent/guardian 2 information: Email,School information: Grade,School information: Name,Medical/allergy information: Do you have,Medical/allergy information: Medical,Medical/allergy information: Nut,Photography/video release permission: I agree that photos showing,Photography/video release permission: I agree that photos and films,Program,Instructor,Season"
+
+      # Two malformed lines back-to-back: only the first should surface as
+      # an error; iteration must halt rather than emit one error per line.
+      csv =
+        headers <>
+          "\n" <>
+          ~s|Alice,"Unclosed,1/1/2016,Bob,Smith,b@x.com,,,,,,,,,,,Ballsports,,Spring| <>
+          "\n" <>
+          ~s|Carol,"AlsoUnclosed,2/2/2017,Dan,Smith,d@x.com,,,,,,,,,,,Arts,,Spring|
+
+      assert {:error, errors} = CsvParser.parse(csv)
+      assert length(errors) == 1
+      assert [{row_num, msg}] = errors
+      assert is_integer(row_num) and row_num > 0
+      assert msg =~ "CSV file is malformed"
     end
   end
 

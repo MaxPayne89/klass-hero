@@ -13,17 +13,15 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
     provider = insert(:provider_profile_schema)
     program = insert(:program_schema, provider_id: provider.id)
 
-    {:ok, 1} =
-      BulkEnrollmentInviteRepository.create_batch([
-        %{
-          program_id: program.id,
-          provider_id: provider.id,
-          child_first_name: "Emma",
-          child_last_name: "Schmidt",
-          child_date_of_birth: ~D[2016-03-15],
-          guardian_email: "parent@example.com"
-        }
-      ])
+    {:ok, _} =
+      BulkEnrollmentInviteRepository.create_one(%{
+        program_id: program.id,
+        provider_id: provider.id,
+        child_first_name: "Emma",
+        child_last_name: "Schmidt",
+        child_date_of_birth: ~D[2016-03-15],
+        guardian_email: "parent@example.com"
+      })
 
     invite = Repo.one!(BulkEnrollmentInviteSchema)
 

@@ -10,6 +10,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
 
       {:ok, [%{child_first_name: "...", ...}]}
       {:error, :empty_csv}
+      {:error, :malformed_csv}
       {:error, {:invalid_headers, [:child_first_name, ...]}}
       {:error, [{row_number, "reason"}]}
   """
@@ -54,28 +55,234 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
 
   # -- public API ------------------------------------------------------------
 
-  @doc """
-  Parses a CSV binary string into a list of structured row maps.
+  @type prepared :: %{column_keys: [atom() | :skip | nil], remainder: binary()}
 
-  Returns `{:ok, rows}` when all rows parse successfully, or
-  `{:error, reason}` when the CSV is empty, has invalid headers,
-  or contains rows with unparseable values.
+  @doc """
+  Eagerly peeks at the first line of the CSV binary, resolves headers to
+  column keys, and returns a prepared payload ready to be streamed by
+  `parse_stream/1`. Strips a leading UTF-8 BOM if present.
+
+  This is the ONLY place that produces whole-file fatals
+  (`:empty_csv`, `:malformed_csv`, `{:invalid_headers, missing}`).
+  `parse_stream/1` then assumes headers are valid and never short-circuits
+  on header issues.
+  """
+  @spec validate_headers(binary()) ::
+          {:ok, prepared()}
+          | {:error, :empty_csv}
+          | {:error, :malformed_csv}
+          | {:error, {:invalid_headers, [atom()]}}
+  def validate_headers(csv) when is_binary(csv) do
+    trimmed =
+      csv
+      |> strip_bom()
+      |> String.trim_leading()
+
+    case String.split(trimmed, ~r/\r?\n/, parts: 2) do
+      [""] ->
+        {:error, :empty_csv}
+
+      [only_header] ->
+        with {:ok, keys} <- parse_header_line(only_header) do
+          {:ok, %{column_keys: keys, remainder: ""}}
+        end
+
+      [header_line, remainder] ->
+        with {:ok, keys} <- parse_header_line(header_line) do
+          {:ok, %{column_keys: keys, remainder: remainder}}
+        end
+    end
+  end
+
+  defp parse_header_line(header_line) do
+    case __MODULE__.Parser.parse_string(header_line, skip_headers: false) do
+      [raw_headers | _] -> resolve_headers(raw_headers)
+      [] -> {:error, :empty_csv}
+    end
+  rescue
+    _e in NimbleCSV.ParseError ->
+      {:error, :malformed_csv}
+  end
+
+  @doc """
+  Returns a lazy `Enumerable.t/0` over the prepared CSV remainder.
+
+  Each yielded element is one of:
+
+    * `{:ok, row_map}` — successfully parsed and type-converted row
+    * `{:error, message}` — row-level parse failure (bad date, blank line,
+      etc.)
+    * `{:parse_halt, message}` — structural CSV failure (mid-stream
+      `NimbleCSV.ParseError`). Stream consumers should treat this as a
+      signal to halt further processing; subsequent stream elements
+      after a `:parse_halt` are undefined.
+
+  Whole-file fatals (empty CSV, malformed header, missing headers) do
+  NOT appear here — they are produced by `validate_headers/1` before any
+  streaming begins.
+
+  ## Row numbering is caller-owned
+
+  This stream does NOT tag elements with row numbers. Callers thread
+  positional context via `Stream.with_index/2`, choosing their own base
+  (e.g. `2` for user-visible CSV line numbers that count the header as
+  row 1):
+
+      prepared
+      |> CsvParser.parse_stream()
+      |> Stream.with_index(2)
+      |> Enum.each(fn {element, file_row} -> ... end)
+
+  Blank lines ARE emitted as `{:error, "blank row"}` rather than being
+  silently skipped, so positional indexing stays aligned with the file's
+  data-row positions even when blanks are present.
+
+  ## RFC4180 multi-line quoted fields
+
+  Internally this pipes the remainder through `NimbleCSV`'s
+  `to_line_stream/1` (which re-chunks on newlines while preserving
+  quoted multi-line cells as a single row) and then `parse_stream/2`.
+  Mid-stream parse errors raised by NimbleCSV are caught by a wrapping
+  `Stream.resource/3` so they surface as the `:parse_halt` sentinel
+  rather than crashing the caller.
+  """
+  @spec parse_stream(prepared()) ::
+          Enumerable.t(
+            {:ok, map()}
+            | {:error, String.t()}
+            | {:parse_halt, String.t()}
+          )
+  def parse_stream(%{column_keys: column_keys, remainder: remainder}) do
+    col_count = length(column_keys)
+
+    [remainder]
+    |> __MODULE__.Parser.to_line_stream()
+    |> __MODULE__.Parser.parse_stream(skip_headers: false)
+    |> with_halt_on_raise()
+    |> Stream.map(fn
+      {:parse_halt, message} ->
+        {:parse_halt, message}
+
+      cells when is_list(cells) ->
+        process_row(cells, column_keys, col_count)
+    end)
+  end
+
+  defp process_row(cells, column_keys, col_count) do
+    if blank_row?(cells) do
+      {:error, "blank row"}
+    else
+      padded = pad_cells(cells, col_count)
+      build_row(padded, column_keys)
+    end
+  end
+
+  # A blank line yields a single empty-string cell from NimbleCSV. We treat
+  # those as a row-level error (not a fatal halt) so row numbering stays
+  # aligned with the user's spreadsheet without misclassifying intentionally
+  # empty rows.
+  defp blank_row?([""]), do: true
+  defp blank_row?([cell]) when is_binary(cell), do: String.trim(cell) == ""
+  defp blank_row?(_), do: false
+
+  # Wraps an enumerable so that any exception raised during enumeration is
+  # surfaced as a single trailing `{:parse_halt, msg}` element, after which
+  # the wrapped stream is treated as exhausted.
+  #
+  # Trigger: NimbleCSV.parse_stream/2 raises NimbleCSV.ParseError mid-stream
+  #   when it hits a structurally malformed cell (e.g. unbalanced quote).
+  # Why: a raised exception inside a lazy pipeline cannot be caught by a
+  #   downstream Stream.map's try/rescue — the raise happens in the producer.
+  #   Wrapping at the producer boundary converts the raise into a
+  #   well-known sentinel so the caller can preserve rows committed before
+  #   the error and decide whether to keep going.
+  # Outcome: a malformed CSV yields at most one `:parse_halt` followed by
+  #   end-of-stream, never a runtime crash.
+  defp with_halt_on_raise(stream) do
+    Stream.resource(
+      fn ->
+        {:suspended, _, cont} =
+          Enumerable.reduce(stream, {:suspend, nil}, fn item, _ -> {:suspend, item} end)
+
+        {:cont, cont}
+      end,
+      fn
+        :done ->
+          {:halt, :done}
+
+        {:cont, cont} ->
+          try do
+            case cont.({:cont, nil}) do
+              {:suspended, item, next_cont} -> {[item], {:cont, next_cont}}
+              {:done, _} -> {:halt, :done}
+              {:halted, _} -> {:halt, :done}
+            end
+          rescue
+            e in NimbleCSV.ParseError ->
+              {[{:parse_halt, Exception.message(e)}], :done}
+          end
+      end,
+      fn _ -> :ok end
+    )
+  end
+
+  @doc """
+  Parses a CSV binary into a list of rows (eager). Equivalent to
+  `validate_headers/1` followed by `parse_stream/1`, partitioned into
+  either all-ok or all-error.
+
+  Row numbers in the error list are 2-based (header is row 1), applied
+  here via `Stream.with_index/2`. `parse_stream/1` itself does not tag
+  rows — see its `@doc` for details on caller-owned numbering.
+
+  Kept for back-compat with callers that prefer a single return value.
+  New callers should prefer the streaming pair for memory-bounded
+  processing.
   """
   @spec parse(binary()) ::
           {:ok, [map()]}
           | {:error, :empty_csv}
+          | {:error, :malformed_csv}
           | {:error, {:invalid_headers, [atom()]}}
           | {:error, [{pos_integer(), String.t()}]}
   def parse(csv) when is_binary(csv) do
-    trimmed =
-      csv
-      |> strip_bom()
-      |> String.trim()
+    with {:ok, prepared} <- validate_headers(csv) do
+      prepared
+      |> parse_stream()
+      |> Stream.with_index(2)
+      |> Enum.to_list()
+      |> case do
+        [] -> {:error, :empty_csv}
+        results -> partition_results(results)
+      end
+    end
+  end
 
-    if trimmed == "" do
-      {:error, :empty_csv}
-    else
-      do_parse(trimmed)
+  # Trigger: parse_stream/1's sentinel contract states subsequent stream
+  #   elements after a :parse_halt are undefined.
+  # Why: an earlier Enum.reduce/3 would walk the WHOLE list, converting every
+  #   :parse_halt-shaped element to a duplicate error. A single mid-stream
+  #   structural break should surface as exactly one error tuple, not N.
+  # Outcome: reduce_while halts on the first :parse_halt, attributing the
+  #   error to the file row it actually occurred on. Row numbers are 2-based
+  #   (applied by parse/1 via Stream.with_index(2)) so the header is row 1
+  #   and the first data row is row 2.
+  defp partition_results(results) do
+    {oks, errs} =
+      Enum.reduce_while(results, {[], []}, fn
+        {{:ok, row}, _file_row}, {oks, errs} ->
+          {:cont, {[row | oks], errs}}
+
+        {{:error, msg}, file_row}, {oks, errs} ->
+          {:cont, {oks, [{file_row, msg} | errs]}}
+
+        {{:parse_halt, msg}, file_row}, {oks, errs} ->
+          {:halt, {oks, [{file_row, "CSV file is malformed: #{msg}"} | errs]}}
+      end)
+
+    case {Enum.reverse(oks), Enum.reverse(errs)} do
+      {rows, []} -> {:ok, rows}
+      {_rows, errors} -> {:error, errors}
     end
   end
 
@@ -84,44 +291,6 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   # Outcome: BOM is silently removed so the parser sees clean UTF-8 text
   defp strip_bom(<<0xEF, 0xBB, 0xBF, rest::binary>>), do: rest
   defp strip_bom(text), do: text
-
-  # -- internal pipeline -----------------------------------------------------
-
-  defp do_parse(csv) do
-    # Trigger: need to extract headers and data rows from the same CSV
-    # Why: NimbleCSV handles quoting/escaping correctly for both headers and data
-    # Outcome: first row becomes header mapping, remaining rows become structured maps
-    all_rows =
-      try do
-        __MODULE__.Parser.parse_string(csv, skip_headers: false)
-      rescue
-        # Trigger: malformed CSV input (mismatched quotes, stray escapes)
-        # Why: NimbleCSV raises on structural errors; callers expect {:error, _} tuples
-        # Outcome: surface a descriptive error instead of crashing
-        e in NimbleCSV.ParseError ->
-          {:error, [{1, "CSV file is malformed: #{Exception.message(e)}"}]}
-      end
-
-    case all_rows do
-      {:error, _} = error ->
-        error
-
-      [] ->
-        {:error, :empty_csv}
-
-      [headers] ->
-        # Only headers, no data rows
-        with {:ok, _column_keys} <- resolve_headers(headers) do
-          {:error, :empty_csv}
-        end
-
-      [headers | data_rows] ->
-        with {:ok, column_keys} <- resolve_headers(headers) do
-          col_count = length(column_keys)
-          build_rows(data_rows, column_keys, col_count)
-        end
-    end
-  end
 
   # -- header resolution -----------------------------------------------------
 
@@ -150,29 +319,6 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
 
   # -- row building ----------------------------------------------------------
 
-  defp build_rows(raw_rows, column_keys, col_count) do
-    {rows, errors} =
-      raw_rows
-      |> Enum.with_index(2)
-      |> Enum.reduce({[], []}, fn {cells, row_number}, {good, bad} ->
-        # Trigger: NimbleCSV drops trailing empty cells
-        # Why: a row like "a,b,,," becomes ["a","b"] instead of ["a","b","",""]
-        # Outcome: pad with empty strings so zip aligns correctly with column_keys
-        padded_cells = pad_cells(cells, col_count)
-
-        case build_row(padded_cells, column_keys, row_number) do
-          {:ok, row} -> {[row | good], bad}
-          {:error, reason} -> {good, [{row_number, reason} | bad]}
-        end
-      end)
-
-    if errors == [] do
-      {:ok, Enum.reverse(rows)}
-    else
-      {:error, Enum.reverse(errors)}
-    end
-  end
-
   defp pad_cells(cells, expected_count) do
     actual = length(cells)
 
@@ -183,14 +329,14 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     end
   end
 
-  defp build_row(cells, column_keys, row_number) do
+  defp build_row(cells, column_keys) do
     pairs =
       column_keys
       |> Enum.zip(cells)
       |> Enum.reject(fn {key, _val} -> key == :skip or is_nil(key) end)
 
     Enum.reduce_while(pairs, {:ok, %{}}, fn {key, raw_value}, {:ok, acc} ->
-      case convert_value(key, raw_value, row_number) do
+      case convert_value(key, raw_value) do
         {:ok, converted} -> {:cont, {:ok, Map.put(acc, key, converted)}}
         {:error, reason} -> {:halt, {:error, reason}}
       end
@@ -203,29 +349,33 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   # Why: raw CSV values are all strings; domain expects typed values
   # Outcome: strings become dates, booleans, integers, or trimmed/nilled strings
 
-  defp convert_value(:child_date_of_birth, raw, row_number) do
-    parse_date(raw, :child_date_of_birth, row_number)
+  defp convert_value(:child_date_of_birth, raw) do
+    parse_date(raw, :child_date_of_birth)
   end
 
-  defp convert_value(key, raw, _row_number)
-       when key in [:nut_allergy, :consent_photo_marketing, :consent_photo_social_media] do
+  defp convert_value(key, raw) when key in [:nut_allergy, :consent_photo_marketing, :consent_photo_social_media] do
     {:ok, parse_boolean(raw)}
   end
 
-  defp convert_value(:school_grade, raw, row_number) do
-    parse_grade(raw, row_number)
+  defp convert_value(:school_grade, raw) do
+    parse_grade(raw)
   end
 
-  defp convert_value(_key, raw, _row_number) do
+  defp convert_value(_key, raw) do
     {:ok, clean_string(raw)}
   end
 
   # -- date parsing ----------------------------------------------------------
   # Trigger: dates arrive as M/D/YYYY or MM/DD/YYYY
   # Why: parents fill forms with inconsistent date formatting
-  # Outcome: a %Date{} struct or an error with row context
+  # Outcome: a %Date{} struct or an error scoped to the column and bad value
 
-  defp parse_date(raw, field, row_number) do
+  # Trigger: per-cell converters used to embed `(row N)` in their error messages
+  # Why: row numbers are owned by the caller via Stream.with_index/2; embedding
+  #      them inside the converter produced contradictory output when numbering
+  #      schemes diverged. The caller tags each error tuple positionally.
+  # Outcome: messages stay column/value-specific; numbering happens at the boundary
+  defp parse_date(raw, field) do
     trimmed = String.trim(raw)
 
     case String.split(trimmed, "/") do
@@ -237,11 +387,11 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
           {:ok, date}
         else
           _ ->
-            {:error, "invalid date format in column #{field}: #{trimmed} (row #{row_number})"}
+            {:error, "invalid date format in column #{field}: #{trimmed}"}
         end
 
       _ ->
-        {:error, "invalid date format in column #{field}: #{trimmed} (row #{row_number})"}
+        {:error, "invalid date format in column #{field}: #{trimmed}"}
     end
   end
 
@@ -262,7 +412,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
 
   # -- grade parsing ---------------------------------------------------------
 
-  defp parse_grade(raw, _row_number) do
+  defp parse_grade(raw) do
     raw
     |> String.trim()
     |> Integer.parse()

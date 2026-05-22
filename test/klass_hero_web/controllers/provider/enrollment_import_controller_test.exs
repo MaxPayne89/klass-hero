@@ -73,8 +73,8 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
     end
   end
 
-  defp write_tmp_csv(content) do
-    path = Path.join(System.tmp_dir!(), "test_import_#{System.unique_integer([:positive])}.csv")
+  defp write_temp(content) do
+    path = Path.join(System.tmp_dir!(), "import_#{System.unique_integer([:positive])}.csv")
     File.write!(path, content)
     on_exit(fn -> File.rm(path) end)
     path
@@ -104,7 +104,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
       conn = log_in_user(conn, user)
 
       csv = build_csv([%{}])
-      path = write_tmp_csv(csv)
+      path = write_temp(csv)
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
@@ -119,55 +119,75 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
       assert json_response(conn, 400) == %{"error" => "No file uploaded"}
     end
 
-    test "happy path imports valid CSV and returns 201" do
+    test "returns 201 with created count and empty failed list for fully-valid CSV" do
       %{conn: conn, provider: provider} = register_and_log_in_provider(%{conn: build_conn()})
       insert(:program_schema, provider_id: provider.id, title: "Ballsports & Parkour")
 
       csv =
         build_csv([
-          %{
-            first: "Alice",
-            last: "Smith",
-            email: "alice@test.com",
-            program: "Ballsports & Parkour"
-          },
-          %{first: "Bob", last: "Jones", email: "bob@test.com", program: "Ballsports & Parkour"}
+          %{first: "Alice", last: "Smith", email: "alice@test.com"},
+          %{first: "Bob", last: "Jones", email: "bob@test.com"}
         ])
 
-      path = write_tmp_csv(csv)
+      path = write_temp(csv)
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
-      assert json_response(conn, 201) == %{"created" => 2}
+      assert json_response(conn, 201) == %{"created" => 2, "failed" => []}
     end
 
-    test "validation errors return 422 with structured error details" do
+    test "returns 200 with mixed outcomes when some rows fail" do
       %{conn: conn, provider: provider} = register_and_log_in_provider(%{conn: build_conn()})
       insert(:program_schema, provider_id: provider.id, title: "Ballsports & Parkour")
 
-      csv = build_csv([%{email: "", program: "Ballsports & Parkour"}])
-      path = write_tmp_csv(csv)
+      csv = build_csv([%{first: "Alice"}, %{first: "", email: "x@y.com"}])
+      path = write_temp(csv)
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
-      response = json_response(conn, 422)
-      assert %{"errors" => %{"validation_errors" => [error]}} = response
-      assert Map.has_key?(error, "row")
-      assert Map.has_key?(error, "errors")
+      body = json_response(conn, 200)
+      assert body["created"] == 1
+      assert [%{"row" => 3, "category" => "validation", "errors" => errors}] = body["failed"]
+      assert errors["child_first_name"] == ["is required"]
     end
 
-    test "validation error response includes specific field names" do
+    test "returns 200 when all rows fail (created: 0, failed has all rows)" do
       %{conn: conn, provider: provider} = register_and_log_in_provider(%{conn: build_conn()})
       insert(:program_schema, provider_id: provider.id, title: "Ballsports & Parkour")
 
-      csv = build_csv([%{email: "", program: "Ballsports & Parkour"}])
-      path = write_tmp_csv(csv)
+      csv = build_csv([%{first: ""}, %{first: "", email: "x@y.com"}])
+      path = write_temp(csv)
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
-      assert %{"errors" => %{"validation_errors" => [error]}} = json_response(conn, 422)
-      assert error["row"] == 1
-      assert %{"guardian_email" => "is required"} = error["errors"]
+      body = json_response(conn, 200)
+      assert body["created"] == 0
+      assert length(body["failed"]) == 2
+      assert Enum.all?(body["failed"], &(&1["category"] == "validation"))
+    end
+
+    test "returns 422 with parse_errors for whole-file fatal (empty CSV)" do
+      %{conn: conn} = register_and_log_in_provider(%{conn: build_conn()})
+
+      path = write_temp("")
+
+      conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
+
+      body = json_response(conn, 422)
+      assert %{"errors" => %{"parse_errors" => [%{"row" => 0, "message" => msg}]}} = body
+      assert msg =~ "empty"
+    end
+
+    test "returns 422 with parse_errors for invalid CSV headers" do
+      %{conn: conn} = register_and_log_in_provider(%{conn: build_conn()})
+
+      path = write_temp("Wrong,Headers\nval1,val2\n")
+
+      conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
+
+      body = json_response(conn, 422)
+      assert %{"errors" => %{"parse_errors" => [%{"row" => _, "message" => msg}]}} = body
+      assert msg =~ "Missing required columns"
     end
 
     test "BOM-prefixed CSV imports successfully" do
@@ -176,35 +196,24 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
 
       bom = <<0xEF, 0xBB, 0xBF>>
       csv = bom <> build_csv([%{first: "Alice", last: "Smith", email: "alice@test.com"}])
-      path = write_tmp_csv(csv)
+      path = write_temp(csv)
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
-      assert json_response(conn, 201) == %{"created" => 1}
+      body = json_response(conn, 201)
+      assert body["created"] == 1
+      assert body["failed"] == []
     end
 
     test "file exceeding 2MB returns 413" do
       %{conn: conn} = register_and_log_in_provider(%{conn: build_conn()})
 
       content = String.duplicate("x", 2_000_001)
-      path = write_tmp_csv(content)
+      path = write_temp(content)
 
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
       assert json_response(conn, 413) == %{"error" => "File too large (max 2MB)"}
-    end
-
-    test "parse errors return 422 with structured error details" do
-      %{conn: conn} = register_and_log_in_provider(%{conn: build_conn()})
-
-      path = write_tmp_csv("")
-
-      conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
-
-      response = json_response(conn, 422)
-      assert %{"errors" => %{"parse_errors" => [error]}} = response
-      assert Map.has_key?(error, "row")
-      assert Map.has_key?(error, "message")
     end
   end
 end
