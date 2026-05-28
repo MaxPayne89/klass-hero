@@ -39,7 +39,7 @@
     "pr_811_still_valid_note": "PR #811 tests ChildPresenter.to_profile_view/1 external behaviour (not extract_initials directly). Valid after #852 (ChildPresenter now uses NameUtils internally but external contract unchanged).",
     "participation_edit_helpers_note": "ParticipationEditHelpers (pure logic, no DB): default_edit_notes/1 has 4-clause pattern match; build_edit_correction/3 has 3-branch cond. PR #858 submitted 2026-05-16.",
     "faker_removed_note": ":faker removed from mix.exs in #906 (naserca fork had invalid U+0085 in String.ex under Elixir 1.20.0-rc.5). No TI PRs use Faker; all use ex_machina factories.",
-    "incident_report_presenter_note": "IncidentReportPresenter: severity_color/1 (4 clauses), to_list_view/1 (delegates category_label, severity_label, format_occurred_at). PR pending from 2026-05-27."
+    "incident_report_presenter_note": "IncidentReportPresenter: severity_color/1 (4 clauses), to_list_view/1 (delegates category_label, severity_label, format_occurred_at). PR #920 created 2026-05-27."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -53,10 +53,10 @@
     "task_1": "2026-05-18",
     "task_2": "2026-05-25",
     "task_3": "2026-05-27",
-    "task_4": "2026-05-27",
-    "task_5": "2026-05-21",
+    "task_4": "2026-05-28",
+    "task_5": "2026-05-28",
     "task_6": "2026-05-16",
-    "task_7": "2026-05-27"
+    "task_7": "2026-05-28"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -65,7 +65,7 @@
       "run_id": "26540581151",
       "description": "11 pure unit tests for IncidentReportPresenter (severity_color/1, to_list_view/1, format_occurred_at via to_list_view)",
       "tests_added": 11,
-      "pr_number": "pending"
+      "pr_number": 920
     },
     {
       "date": "2026-05-16",
@@ -126,10 +126,10 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #910 (2026-05-22, release bump): CHANGELOG/version only, no code",
-    "task_5_last_issue": 705
+    "task_2_last_file": "PR #918 (2026-05-28, product-design agents: markdown/config only, no code)",
+    "task_5_last_issue": 515
   },
-  "open_prs": [858, 846, 811, 779, 771, 764, 759, 750, 733, 723],
+  "open_prs": [920, 858, 846, 811, 779, 771, 764, 759, 750, 733, 723],
   "merged_prs": [719, 713, 707, 696],
-  "pending_pr_check": "incident_report_presenter_pr_created_2026-05-27"
+  "pending_pr_check": null
 }
