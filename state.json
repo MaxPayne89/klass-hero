@@ -5,7 +5,7 @@
     "lint": "mix credo --strict",
     "format": "mix format",
     "precommit": "mix precommit",
-    "note": "mix not available in CI runner; tests validated by CI on merge. CI runs on PRs via .github/workflows/ci.yml (trigger: pull_request to **)."
+    "note": "mix not available in CI runner; tests validated by CI on merge. CI runs on PRs via .github/workflows/ci.yml (trigger: pull_request to **). CI stack: Elixir 1.20.0-rc.5 + OTP 28.5."
   },
   "testing_notes": {
     "framework": "ExUnit with DataCase (async: true), Factory via ex_machina",
@@ -50,13 +50,13 @@
     }
   ],
   "tasks_last_run": {
-    "task_1": "2026-05-18",
+    "task_1": "2026-05-30",
     "task_2": "2026-05-25",
     "task_3": "2026-05-27",
-    "task_4": "2026-05-28",
+    "task_4": "2026-05-30",
     "task_5": "2026-05-28",
     "task_6": "2026-05-16",
-    "task_7": "2026-05-28"
+    "task_7": "2026-05-30"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -126,7 +126,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #918 (2026-05-28, product-design agents: markdown/config only, no code)",
+    "task_2_last_file": "PR #927 (2026-05-28, docs-only: domain glossary + ADRs + agent skills config)",
     "task_5_last_issue": 515
   },
   "open_prs": [920, 858, 846, 811, 779, 771, 764, 759, 750, 733, 723],
