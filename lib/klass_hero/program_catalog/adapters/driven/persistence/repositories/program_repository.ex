@@ -20,6 +20,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   import Ecto.Query
 
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Mappers.ProgramMapper
+  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Queries.CursorCodec
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Queries.ProgramQueries
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
   alias KlassHero.ProgramCatalog.Domain.Models.Program
@@ -178,7 +179,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
       )
 
       with {:ok, validated_limit} <- validate_limit(limit),
-           {:ok, cursor_data} <- decode_cursor(cursor) do
+           {:ok, cursor_data} <- CursorCodec.decode(cursor) do
         schemas = fetch_page(validated_limit, cursor_data, category)
 
         {items, has_more} =
@@ -190,7 +191,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
         next_cursor =
           if has_more do
-            items |> List.last() |> encode_cursor()
+            items |> List.last() |> CursorCodec.encode()
           end
 
         domain_programs = Enum.map(items, &ProgramMapper.to_domain/1)
@@ -326,48 +327,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   defp validate_limit(_), do: {:error, :invalid_limit}
-
-  defp decode_cursor(nil), do: {:ok, nil}
-
-  defp decode_cursor(cursor) when is_binary(cursor) do
-    with {:ok, decoded} <- Base.url_decode64(cursor, padding: false),
-         {:ok, data} <- Jason.decode(decoded),
-         {:ok, datetime} <- parse_cursor_timestamp(data["ts"]),
-         {:ok, uuid} <- parse_cursor_uuid(data["id"]) do
-      {:ok, {datetime, uuid}}
-    else
-      _ -> {:error, :invalid_cursor}
-    end
-  end
-
-  defp parse_cursor_timestamp(ts) when is_integer(ts) do
-    case DateTime.from_unix(ts, :microsecond) do
-      {:ok, datetime} -> {:ok, datetime}
-      {:error, _} -> {:error, :invalid_timestamp}
-    end
-  end
-
-  defp parse_cursor_timestamp(_), do: {:error, :invalid_timestamp}
-
-  defp parse_cursor_uuid(uuid) when is_binary(uuid) do
-    case Ecto.UUID.cast(uuid) do
-      {:ok, uuid} -> {:ok, uuid}
-      :error -> {:error, :invalid_uuid}
-    end
-  end
-
-  defp parse_cursor_uuid(_), do: {:error, :invalid_uuid}
-
-  defp encode_cursor(program_schema) do
-    cursor_data = %{
-      "ts" => DateTime.to_unix(program_schema.inserted_at, :microsecond),
-      "id" => program_schema.id
-    }
-
-    cursor_data
-    |> Jason.encode!()
-    |> Base.url_encode64(padding: false)
-  end
 
   defp fetch_page(limit, cursor_data, category) do
     ProgramQueries.base_query()
