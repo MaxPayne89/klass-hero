@@ -25,6 +25,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   alias KlassHero.ProgramCatalog.Domain.Models.Program
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.Domain.Types.Pagination.PageResult
   alias KlassHero.Shared.ErrorIds
 
@@ -138,31 +139,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   def get_by_id(id) when is_binary(id) do
     span do
       set_attributes("db", operation: "select", entity: "program")
-
-      Logger.info("[ProgramRepository] Starting get_by_id query for program ID: #{id}")
-
-      # Use dump/1 to validate UUID format - cast/1 incorrectly accepts 16-byte binaries
-      case Ecto.UUID.dump(id) do
-        {:ok, _binary} ->
-          case Repo.get(ProgramSchema, id) do
-            nil ->
-              Logger.info("[ProgramRepository] Program not found with ID: #{id}")
-              {:error, :not_found}
-
-            schema ->
-              program = ProgramMapper.to_domain(schema)
-
-              Logger.info(
-                "[ProgramRepository] Successfully retrieved program '#{program.title}' (ID: #{id}) from database"
-              )
-
-              {:ok, program}
-          end
-
-        :error ->
-          Logger.info("[ProgramRepository] Invalid UUID format: #{id}")
-          {:error, :not_found}
-      end
+      RepositoryHelpers.get_by_uuid(ProgramSchema, id, ProgramMapper)
     end
   end
 

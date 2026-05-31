@@ -22,6 +22,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.ErrorIds
 
   require Logger
@@ -252,16 +253,5 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
     end
   end
 
-  defp get_schema(child_id) do
-    case Ecto.UUID.dump(child_id) do
-      {:ok, _binary} ->
-        case Repo.get(ChildSchema, child_id) do
-          nil -> {:error, :not_found}
-          schema -> {:ok, schema}
-        end
-
-      :error ->
-        {:error, :not_found}
-    end
-  end
+  defp get_schema(child_id), do: RepositoryHelpers.get_schema_by_uuid(ChildSchema, child_id)
 end
