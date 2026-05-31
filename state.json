@@ -39,7 +39,9 @@
     "pr_811_still_valid_note": "PR #811 tests ChildPresenter.to_profile_view/1 external behaviour (not extract_initials directly). Valid after #852 (ChildPresenter now uses NameUtils internally but external contract unchanged).",
     "participation_edit_helpers_note": "ParticipationEditHelpers (pure logic, no DB): default_edit_notes/1 has 4-clause pattern match; build_edit_correction/3 has 3-branch cond. PR #858 submitted 2026-05-16.",
     "faker_removed_note": ":faker removed from mix.exs in #906 (naserca fork had invalid U+0085 in String.ex under Elixir 1.20.0-rc.5). No TI PRs use Faker; all use ex_machina factories.",
-    "incident_report_presenter_note": "IncidentReportPresenter: severity_color/1 (4 clauses), to_list_view/1 (delegates category_label, severity_label, format_occurred_at). PR #920 created 2026-05-27."
+    "incident_report_presenter_note": "IncidentReportPresenter: severity_color/1 (4 clauses), to_list_view/1 (delegates category_label, severity_label, format_occurred_at). PR #920 created 2026-05-27.",
+    "use_case_case_note": "KlassHero.UseCaseCase defined in test/support/use_case_case.ex but never used by any test file — potential dead code.",
+    "projection_test_async_note": "Projection tests (adapters/driven/projections/) use async:false; macro-level projection tests (projection_test.exs) use async:true with Agent fakes. Documented in .claude/rules/testing.md (added #927)."
   },
   "maintainer_priorities": "No specific priorities communicated yet.",
   "testing_backlog": [
@@ -51,12 +53,12 @@
   ],
   "tasks_last_run": {
     "task_1": "2026-05-30",
-    "task_2": "2026-05-25",
+    "task_2": "2026-05-31",
     "task_3": "2026-05-27",
-    "task_4": "2026-05-30",
+    "task_4": "2026-05-31",
     "task_5": "2026-05-28",
-    "task_6": "2026-05-16",
-    "task_7": "2026-05-30"
+    "task_6": "2026-05-31",
+    "task_7": "2026-05-31"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -126,7 +128,7 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "PR #927 (2026-05-28, docs-only: domain glossary + ADRs + agent skills config)",
+    "task_2_last_file": "PR #927 (2026-05-31, docs-only: domain glossary + ADRs + agent skills config + .claude/ rules)",
     "task_5_last_issue": 515
   },
   "open_prs": [920, 858, 846, 811, 779, 771, 764, 759, 750, 733, 723],
