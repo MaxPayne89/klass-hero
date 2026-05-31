@@ -91,15 +91,52 @@ _Avoid_: Plan, Level, Membership
 ## Messaging
 
 **Conversation**:
-A messaging thread between **Users** (typically a **Parent** and a **Provider**).
+A messaging thread always anchored to a **Provider** (and optionally a **Program**). Comes in two kinds — a **Direct Conversation** or a **Broadcast** — and can be **Archived**, after which it is kept until a **Retention** deadline and then purged.
 _Avoid_: Thread, Chat, Channel
 
+**Direct Conversation** (`direct`):
+A thread between specific **Users** — typically a **Parent** and the **Provider**'s staff — whose membership is an explicit set of **Participants** who join and leave.
+_Avoid_: DM, Private message
+
+**Broadcast** (`program_broadcast`):
+A Provider's one-to-many announcement thread scoped to a single **Program**. At most one active Broadcast exists per Program. Its audience is *derived*, not hand-added: the **Parents**/guardians of the children **Enrolled** in that Program, plus the Program's assigned **Staff Members**. Recipients are not **Participants**.
+_Avoid_: Announcement, Bulletin, Newsletter, Channel
+
 **Message**:
-A single entry within a **Conversation**.
+A single entry within a **Conversation** (Direct or Broadcast). Usually typed by a **User**, but may instead be a **System Message**; it may carry **Attachments** (and a Message can be attachments-only, with no text). A sender may delete their own Message — a *soft* delete that hides it but keeps the row — distinct from the **Retention** purge that later hard-deletes the whole thread.
+
+**System Message**:
+A **Message** the platform generates rather than a person types — for example a marker recorded in a **Broadcast**. Shares the Message timeline but is not user-authored.
+_Avoid_: System Note (that risks colliding with **Session Note**), Notification, Event
+
+**Attachment**:
+A file attached to a **Message** — a photo or document with a filename, content type and size. Immutable once created; never edited. Deleted with its Message, and purged from storage when the **Conversation** passes its **Retention Period**.
+_Avoid_: Upload, File, Media, Document (that's a **Verification Document**, unrelated)
 
 **Participant** (Messaging):
-A **User**'s membership in a **Conversation** — tracks join/leave and read receipts. This is the *only* meaning of "Participant" in the system; it is **not** a child attending a Session.
-_Avoid_: using "Participant" for a child on a **Roster** (that's a **Participation Record**)
+A **User**'s membership in a **Direct Conversation** — tracks join/leave and read receipts. Applies to Direct Conversations only; a **Broadcast** has a derived audience, not Participants. This is the *only* meaning of "Participant" in the system; it is **not** a child attending a Session.
+_Avoid_: using "Participant" for a child on a **Roster** (that's a **Participation Record**), or for a **Broadcast** recipient
+
+**Archival**:
+The automatic retirement of a **Conversation** once its **Program** has ended (after a grace window). Archiving starts the **Retention Period**; it deletes nothing yet. A **Direct Conversation** with no Program is never archived — it lives indefinitely.
+_Avoid_: Delete, Close, Hide
+
+**Retention Period**:
+The window an archived **Conversation** (with its **Messages** and **Attachments**) is kept before being *purged* — a permanent hard delete, including attachment files in storage. Not recoverable. Distinct from the **Registration Period** on a Program.
+_Avoid_: Expiry, TTL; "purge" is the destructive end-state, not ordinary message deletion
+
+## Support Inbox
+
+A communication **channel** separate from in-app **Messaging** — external email handled by **Admins**, with no link to **Conversations**, **Parents** or **Providers**. Deliberately distinct; not merged with in-app messaging. "Support Inbox" is the canonical name; the code still says "Admin Inbox" / `emails` (`admin/emails`, `EmailsLive`) — a pending rename.
+_Avoid_: Admin Inbox, Emails (channel name), Tickets queue
+
+**Inbound Email**:
+An email received from outside the platform via the Resend webhook, triaged by an **Admin** (`unread → read → archived`). The sender is *any external party* — typically a prospect or a member of the public with a question, who need not be a platform **User**. This is why the channel shares no model with **Conversations** (which require Users). Body content is fetched asynchronously after the metadata arrives.
+_Avoid_: Message (in-app only), Ticket
+
+**Email Reply**:
+An **Admin**'s reply to an **Inbound Email**, sent from the admin dashboard (`sending → sent → failed`).
+_Avoid_: Message, Response
 
 ## Safeguarding & Feedback
 
@@ -185,3 +222,7 @@ Today **Subscription Tier** gates Parent and Provider capabilities through the S
 **"Participation" is overloaded across context, record, and consent.**
 The word names the Participation *context*, the **Participation Record** (roster row), and a `participation` **Consent** type.
 **Resolution:** Bare "participation" means attendance/roster only. The Consent type is being renamed `participation → activity_participation` so the word never also means consent.
+
+**The Support Inbox lives inside the Messaging context but shares no data with it.**
+**Inbound Email** / **Email Reply** (external email via Resend, Admin-operated) are co-located in Messaging yet share no rows or associations with in-app **Conversation**/**Message**. "Message" is in-app only; "Email" is the inbox only.
+**Resolution:** Keep them as distinct subsystems with no shared schema. The inbox stays co-located in Messaging for now; extracting it into its own **Support** bounded context is deferred until the inbox grows its own domain (assignment/SLA/richer status, or a second external channel). See ADR-0003.
