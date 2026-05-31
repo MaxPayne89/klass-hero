@@ -26,6 +26,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.ErrorIds
 
   require Logger
@@ -66,10 +67,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
 
             {:error, :duplicate_resource}
           else
-            Logger.warning(
-              "[Provider.ProviderProfileRepository] Validation error creating provider profile",
-              identity_id: attrs[:identity_id],
-              errors: inspect(changeset.errors)
+            RepositoryHelpers.log_validation_error(
+              changeset,
+              ErrorIds.provider_profile_validation_failed()
             )
 
             {:error, changeset}
@@ -145,19 +145,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
     span do
       set_attributes("db", operation: "update", entity: "provider_profile")
 
-      case Repo.get(ProviderProfileSchema, provider_profile.id) do
-        nil ->
-          {:error, :not_found}
-
-        schema ->
-          attrs = ProviderProfileMapper.to_schema(provider_profile)
-
-          with {:ok, updated} <-
-                 schema
-                 |> ProviderProfileSchema.changeset(attrs)
-                 |> Repo.update() do
-            {:ok, ProviderProfileMapper.to_domain(updated)}
-          end
+      with {:ok, schema} <-
+             RepositoryHelpers.get_schema_by_uuid(ProviderProfileSchema, provider_profile.id),
+           attrs = ProviderProfileMapper.to_schema(provider_profile),
+           {:ok, updated} <-
+             schema |> ProviderProfileSchema.changeset(attrs) |> Repo.update() do
+        {:ok, ProviderProfileMapper.to_domain(updated)}
       end
     end
   end

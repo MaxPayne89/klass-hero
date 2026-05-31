@@ -14,6 +14,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.InboundEmailSchema
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
 
   require Logger
 
@@ -48,11 +49,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
       InboundEmailQueries.base()
       |> InboundEmailQueries.by_id(id)
-      |> Repo.one()
-      |> case do
-        nil -> {:error, :not_found}
-        schema -> {:ok, InboundEmailMapper.to_domain(schema)}
-      end
+      |> RepositoryHelpers.fetch_one(InboundEmailMapper)
     end
   end
 
@@ -63,11 +60,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
       InboundEmailQueries.base()
       |> InboundEmailQueries.by_resend_id(resend_id)
-      |> Repo.one()
-      |> case do
-        nil -> {:error, :not_found}
-        schema -> {:ok, InboundEmailMapper.to_domain(schema)}
-      end
+      |> RepositoryHelpers.fetch_one(InboundEmailMapper)
     end
   end
 

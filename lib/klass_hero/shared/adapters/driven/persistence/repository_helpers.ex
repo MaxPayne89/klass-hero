@@ -9,6 +9,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
 
   alias KlassHero.Repo
 
+  require Logger
+
   @doc "Fetches by primary key and maps to a domain struct. Raises on a malformed id."
   @spec get_by_id(module(), term(), module()) :: {:ok, struct()} | {:error, :not_found}
   def get_by_id(schema, id, mapper) do
@@ -55,5 +57,17 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
       nil -> {:error, :not_found}
       record -> {:ok, mapper.to_domain(record)}
     end
+  end
+
+  @doc """
+  Logs a changeset validation failure in the canonical format (`error_id:` plus
+  raw `errors:`), returning `:ok`. The caller keeps returning `{:error, changeset}`.
+  """
+  @spec log_validation_error(Ecto.Changeset.t(), String.t()) :: :ok
+  def log_validation_error(%Ecto.Changeset{} = changeset, error_id) when is_binary(error_id) do
+    Logger.warning("Repository validation failed",
+      error_id: error_id,
+      errors: changeset.errors
+    )
   end
 end

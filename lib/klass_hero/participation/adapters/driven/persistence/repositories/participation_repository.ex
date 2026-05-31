@@ -86,16 +86,13 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
 
   @impl true
   def update(%ParticipationRecord{} = record) do
-    case Repo.get(ParticipationRecordSchema, record.id) do
-      nil ->
-        {:error, :not_found}
+    with {:ok, schema} <-
+           RepositoryHelpers.get_schema_by_uuid(ParticipationRecordSchema, record.id) do
+      attrs = ParticipationRecordMapper.update_schema(schema, record)
 
-      schema ->
-        attrs = ParticipationRecordMapper.update_schema(schema, record)
-
-        schema
-        |> ParticipationRecordSchema.update_changeset(attrs)
-        |> do_update()
+      schema
+      |> ParticipationRecordSchema.update_changeset(attrs)
+      |> do_update()
     end
   end
 

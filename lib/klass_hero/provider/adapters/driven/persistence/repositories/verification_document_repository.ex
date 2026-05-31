@@ -100,19 +100,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
     span do
       set_attributes("db", operation: "update", entity: "verification_document")
 
-      case Repo.get(VerificationDocumentSchema, document.id) do
-        nil ->
-          {:error, :not_found}
-
-        schema ->
-          attrs = VerificationDocumentMapper.to_schema(document)
-
-          with {:ok, updated} <-
-                 schema
-                 |> VerificationDocumentSchema.changeset(attrs)
-                 |> Repo.update() do
-            {:ok, VerificationDocumentMapper.to_domain(updated)}
-          end
+      with {:ok, schema} <-
+             RepositoryHelpers.get_schema_by_uuid(VerificationDocumentSchema, document.id),
+           attrs = VerificationDocumentMapper.to_schema(document),
+           {:ok, updated} <-
+             schema |> VerificationDocumentSchema.changeset(attrs) |> Repo.update() do
+        {:ok, VerificationDocumentMapper.to_domain(updated)}
       end
     end
   end

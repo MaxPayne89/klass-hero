@@ -68,10 +68,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
           {:ok, persisted}
 
         {:error, changeset} ->
-          Logger.warning("[ProgramRepository] Program creation failed",
-            errors: inspect(changeset.errors)
-          )
-
+          RepositoryHelpers.log_validation_error(changeset, ErrorIds.program_create_failed())
           {:error, changeset}
       end
     end
@@ -300,12 +297,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
         {:ok, updated_program}
 
       {:error, changeset} ->
-        Logger.warning(
-          "[ProgramRepository] Program update failed due to changeset errors",
-          program_id: program.id,
-          errors: changeset.errors
-        )
-
+        RepositoryHelpers.log_validation_error(changeset, ErrorIds.program_update_failed())
         {:error, changeset}
     end
   rescue

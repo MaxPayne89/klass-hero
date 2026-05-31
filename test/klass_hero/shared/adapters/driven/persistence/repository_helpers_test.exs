@@ -2,6 +2,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpersTest do
   use KlassHero.DataCase, async: true
 
   import Ecto.Query
+  import ExUnit.CaptureLog
 
   alias KlassHero.Accounts.Adapters.Driven.Persistence.Mappers.UserMapper
   alias KlassHero.Accounts.User
@@ -66,6 +67,22 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpersTest do
       query = from(u in User, where: u.id == ^Ecto.UUID.generate())
 
       assert {:error, :not_found} = RepositoryHelpers.fetch_one(query, UserMapper)
+    end
+  end
+
+  describe "log_validation_error/2" do
+    test "logs a warning and returns :ok" do
+      changeset =
+        %User{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.add_error(:email, "is invalid")
+
+      log =
+        capture_log(fn ->
+          assert :ok = RepositoryHelpers.log_validation_error(changeset, "user_update_failed")
+        end)
+
+      assert log =~ "Repository validation failed"
     end
   end
 end
