@@ -9,6 +9,8 @@ defmodule KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite do
   This is a pure domain model with no persistence concerns.
   """
 
+  use KlassHero.Shared.Domain.Models.PersistenceSupport
+
   @enforce_keys [
     :id,
     :program_id,
@@ -76,22 +78,6 @@ defmodule KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite do
           enrollment_id: String.t() | nil,
           error_details: String.t() | nil
         }
-
-  @doc """
-  Reconstructs a BulkEnrollmentInvite from persistence data.
-
-  Skips business validation since data was validated on write.
-  Uses `struct!/2` to enforce `@enforce_keys`.
-
-  Returns:
-  - `{:ok, invite}` if all required keys are present
-  - `{:error, :invalid_persistence_data}` if required keys are missing
-  """
-  def from_persistence(attrs) when is_map(attrs) do
-    {:ok, struct!(__MODULE__, attrs)}
-  rescue
-    ArgumentError -> {:error, :invalid_persistence_data}
-  end
 
   @doc "Returns true if the invite is in `:pending` status."
   @spec pending?(t()) :: boolean()

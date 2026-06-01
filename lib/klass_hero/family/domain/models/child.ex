@@ -24,6 +24,8 @@ defmodule KlassHero.Family.Domain.Models.Child do
   - `updated_at` - When the record was last updated
   """
 
+  use KlassHero.Shared.Domain.Models.PersistenceSupport
+
   @valid_genders ~w(male female diverse not_specified)
 
   @enforce_keys [:id, :first_name, :last_name, :date_of_birth]
@@ -60,22 +62,6 @@ defmodule KlassHero.Family.Domain.Models.Child do
   @doc "Returns the list of valid gender values."
   @spec valid_genders() :: [String.t()]
   def valid_genders, do: @valid_genders
-
-  @doc """
-  Reconstructs a Child from persistence data.
-
-  Unlike `new/1`, this skips business validation since data was validated
-  on write. Uses `struct!/2` to enforce `@enforce_keys`.
-
-  Returns:
-  - `{:ok, child}` if all required keys are present
-  - `{:error, :invalid_persistence_data}` if required keys are missing
-  """
-  def from_persistence(attrs) when is_map(attrs) do
-    {:ok, struct!(__MODULE__, attrs)}
-  rescue
-    ArgumentError -> {:error, :invalid_persistence_data}
-  end
 
   @doc """
   Returns the full name of the child (first name + last name).

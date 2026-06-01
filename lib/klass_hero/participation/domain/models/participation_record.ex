@@ -24,6 +24,8 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecord do
   are `DateTime.t()` in UTC timezone.
   """
 
+  use KlassHero.Shared.Domain.Models.PersistenceSupport
+
   @enforce_keys [:id, :session_id, :child_id, :status]
   defstruct [
     :id,
@@ -64,22 +66,6 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecord do
         }
 
   @valid_statuses [:registered, :checked_in, :checked_out, :absent]
-
-  @doc """
-  Reconstructs a ParticipationRecord from persistence data.
-
-  Skips business validation since data was validated on write.
-  Uses `struct!/2` to enforce `@enforce_keys`.
-
-  Returns:
-  - `{:ok, record}` if all required keys are present
-  - `{:error, :invalid_persistence_data}` if required keys are missing
-  """
-  def from_persistence(attrs) when is_map(attrs) do
-    {:ok, struct!(__MODULE__, attrs)}
-  rescue
-    ArgumentError -> {:error, :invalid_persistence_data}
-  end
 
   @doc """
   Creates a new participation record in registered status.
