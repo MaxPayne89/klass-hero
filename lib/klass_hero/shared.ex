@@ -19,6 +19,7 @@ defmodule KlassHero.Shared do
       Domain.Ports.Driving.ForHandlingEvents,
       Domain.Ports.Driving.ForHandlingIntegrationEvents,
       Domain.Types.Money,
+      Domain.Validation,
       Domain.Types.Pagination.PageResult,
       DomainEventBus,
       EventPublishing,

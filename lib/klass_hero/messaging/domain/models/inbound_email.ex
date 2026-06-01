@@ -5,6 +5,8 @@ defmodule KlassHero.Messaging.Domain.Models.InboundEmail do
   Supports status transitions: unread → read → archived, and unread ← read.
   """
 
+  alias KlassHero.Shared.Domain.Validation
+
   @enforce_keys [:id, :resend_id, :from_address, :to_addresses, :subject, :received_at]
 
   defstruct [
@@ -122,21 +124,13 @@ defmodule KlassHero.Messaging.Domain.Models.InboundEmail do
 
   defp validate(%__MODULE__{} = email) do
     []
-    |> validate_uuid(:id, email.id)
+    |> Validation.validate_required_string(:id, email.id)
     |> validate_present(:resend_id, email.resend_id)
     |> validate_present(:from_address, email.from_address)
     |> validate_present(:subject, email.subject)
     |> validate_list(:to_addresses, email.to_addresses)
     |> validate_status(email.status)
   end
-
-  defp validate_uuid(errors, field, value) when is_binary(value) do
-    if String.trim(value) == "",
-      do: ["#{field} cannot be empty" | errors],
-      else: errors
-  end
-
-  defp validate_uuid(errors, field, _), do: ["#{field} must be a string" | errors]
 
   defp validate_present(errors, field, value) when is_binary(value) do
     if String.trim(value) == "",

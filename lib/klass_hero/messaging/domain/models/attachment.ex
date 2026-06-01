@@ -6,6 +6,8 @@ defmodule KlassHero.Messaging.Domain.Models.Attachment do
   can be extended to support other file types in the future.
   """
 
+  alias KlassHero.Shared.Domain.Validation
+
   @enforce_keys [:id, :message_id, :file_url, :original_filename, :content_type, :file_size_bytes]
 
   defstruct [
@@ -83,34 +85,12 @@ defmodule KlassHero.Messaging.Domain.Models.Attachment do
 
   defp validate(%__MODULE__{} = attachment) do
     []
-    |> validate_uuid(:id, attachment.id)
-    |> validate_uuid(:message_id, attachment.message_id)
-    |> validate_non_empty_string(:file_url, attachment.file_url)
-    |> validate_non_empty_string(:original_filename, attachment.original_filename)
+    |> Validation.validate_required_string(:id, attachment.id)
+    |> Validation.validate_required_string(:message_id, attachment.message_id)
+    |> Validation.validate_required_string(:file_url, attachment.file_url)
+    |> Validation.validate_required_string(:original_filename, attachment.original_filename)
     |> validate_content_type(attachment.content_type)
     |> validate_file_size(attachment.file_size_bytes)
-  end
-
-  defp validate_uuid(errors, field, value) when is_binary(value) do
-    if String.trim(value) == "" do
-      ["#{field} cannot be empty" | errors]
-    else
-      errors
-    end
-  end
-
-  defp validate_uuid(errors, field, _), do: ["#{field} must be a string" | errors]
-
-  defp validate_non_empty_string(errors, field, value) when is_binary(value) do
-    if String.trim(value) == "" do
-      ["#{field} cannot be empty" | errors]
-    else
-      errors
-    end
-  end
-
-  defp validate_non_empty_string(errors, field, _value) do
-    ["#{field} must be a string" | errors]
   end
 
   defp validate_content_type(errors, type) when type in @allowed_content_types, do: errors
