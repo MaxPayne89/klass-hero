@@ -55,10 +55,10 @@
     "task_1": "2026-05-30",
     "task_2": "2026-05-31",
     "task_3": "2026-05-27",
-    "task_4": "2026-05-31",
+    "task_4": "2026-06-01",
     "task_5": "2026-05-28",
     "task_6": "2026-05-31",
-    "task_7": "2026-05-31"
+    "task_7": "2026-06-01"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -120,11 +120,11 @@
     }
   ],
   "monthly_summary_issue": {
-    "number": 787,
-    "month": "2026-05",
+    "number": null,
+    "month": "2026-06",
     "state": "open",
-    "april_issue_closed": true,
-    "april_issue_number": 580
+    "may_issue_closed": true,
+    "may_issue_number": 787
   },
   "checked_off_items": [],
   "backlog_cursor": {
