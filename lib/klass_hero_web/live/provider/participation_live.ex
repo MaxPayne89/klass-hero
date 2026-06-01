@@ -1,6 +1,14 @@
 defmodule KlassHeroWeb.Provider.ParticipationLive do
   use KlassHeroWeb, :live_view
 
+  import KlassHeroWeb.Helpers.ParticipationEditHelpers,
+    only: [
+      expand_form: 7,
+      cancel_form: 4,
+      update_form: 6,
+      find_participation_record: 2
+    ]
+
   alias KlassHero.Participation
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
@@ -351,27 +359,6 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     {:noreply, load_session_data(socket)}
   end
 
-  # Form lifecycle helpers — parameterized expand/cancel/update for all form types
-
-  defp expand_form(socket, id, form_name, field, initial_value, expanded_key, forms_key) do
-    form = to_form(%{field => initial_value}, as: form_name)
-
-    socket
-    |> assign(expanded_key, id)
-    |> assign(forms_key, Map.put(Map.get(socket.assigns, forms_key), id, form))
-  end
-
-  defp cancel_form(socket, id, expanded_key, forms_key) do
-    socket
-    |> assign(expanded_key, nil)
-    |> assign(forms_key, Map.delete(Map.get(socket.assigns, forms_key), id))
-  end
-
-  defp update_form(socket, id, value, form_name, field, forms_key) do
-    updated_form = to_form(%{field => value}, as: form_name)
-    assign(socket, forms_key, Map.put(Map.get(socket.assigns, forms_key), id, updated_form))
-  end
-
   # Private helper functions
 
   defp load_session_data(socket) do
@@ -446,11 +433,5 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     socket
     |> assign(:record_note_map, notes_by_record)
     |> assign(:provider_notes, notes_by_id)
-  end
-
-  defp find_participation_record(socket, record_id) do
-    Enum.find(socket.assigns.participation_records, fn record ->
-      to_string(record.id) == record_id
-    end)
   end
 end

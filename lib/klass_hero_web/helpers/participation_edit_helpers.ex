@@ -8,7 +8,10 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpers do
   the appropriate `:actor_role`.
   """
 
+  import Phoenix.Component, only: [assign: 3, to_form: 2]
+
   alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias Phoenix.LiveView.Socket
 
   @type role :: :provider | :staff
 
@@ -70,5 +73,42 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpers do
       {:ok, ndt} -> {:ok, DateTime.from_naive!(ndt, "Etc/UTC")}
       _ -> {:error, :invalid_datetime}
     end
+  end
+
+  @doc """
+  Opens an inline form for record `id`: tracks it under `expanded_key` and stores
+  a fresh `to_form/2` (named `form_name`, seeded with `field => initial_value`)
+  in the `forms_key` map.
+  """
+  @spec expand_form(Socket.t(), term(), atom(), atom(), term(), atom(), atom()) :: Socket.t()
+  def expand_form(socket, id, form_name, field, initial_value, expanded_key, forms_key) do
+    form = to_form(%{field => initial_value}, as: form_name)
+
+    socket
+    |> assign(expanded_key, id)
+    |> assign(forms_key, Map.put(Map.get(socket.assigns, forms_key), id, form))
+  end
+
+  @doc "Closes the inline form for record `id`, clearing `expanded_key` and its `forms_key` entry."
+  @spec cancel_form(Socket.t(), term(), atom(), atom()) :: Socket.t()
+  def cancel_form(socket, id, expanded_key, forms_key) do
+    socket
+    |> assign(expanded_key, nil)
+    |> assign(forms_key, Map.delete(Map.get(socket.assigns, forms_key), id))
+  end
+
+  @doc "Replaces the `forms_key` entry for record `id` with a fresh form holding `field => value`."
+  @spec update_form(Socket.t(), term(), term(), atom(), atom(), atom()) :: Socket.t()
+  def update_form(socket, id, value, form_name, field, forms_key) do
+    updated_form = to_form(%{field => value}, as: form_name)
+    assign(socket, forms_key, Map.put(Map.get(socket.assigns, forms_key), id, updated_form))
+  end
+
+  @doc "Finds a participation record in `socket.assigns.participation_records` by string id."
+  @spec find_participation_record(Socket.t(), String.t()) :: ParticipationRecord.t() | nil
+  def find_participation_record(socket, record_id) do
+    Enum.find(socket.assigns.participation_records, fn record ->
+      to_string(record.id) == record_id
+    end)
   end
 end
