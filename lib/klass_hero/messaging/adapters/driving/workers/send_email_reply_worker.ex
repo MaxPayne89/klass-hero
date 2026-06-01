@@ -8,6 +8,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
 
   use Oban.Worker, queue: :email, max_attempts: 3
 
+  alias KlassHero.Shared.RateLimitedEmailWorker
+
   require Logger
 
   @from Application.compile_env!(:klass_hero, [:mailer_defaults, :from])
@@ -29,16 +31,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
   #      fire too soon and hit the limit again
   # Outcome: rate-limited jobs wait 30s+ before retry; other failures use 10s base
   @impl Oban.Worker
-  def backoff(%Oban.Job{attempt: attempt, unsaved_error: unsaved_error}) do
-    if rate_limit_error?(unsaved_error) do
-      trunc(min(30 * :math.pow(2, attempt - 1), 300))
-    else
-      trunc(min(10 * :math.pow(2, attempt - 1), 120))
-    end
-  end
-
-  defp rate_limit_error?(%{reason: {429, _}}), do: true
-  defp rate_limit_error?(_), do: false
+  def backoff(%Oban.Job{} = job), do: RateLimitedEmailWorker.backoff(job)
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"reply_id" => reply_id}} = job) do
