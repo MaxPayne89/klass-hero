@@ -12,6 +12,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   alias KlassHero.Participation
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
+  alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -62,39 +63,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_event("check_in", %{"id" => record_id}, socket) do
-    record = find_participation_record(socket, record_id)
-
-    case record do
-      nil ->
-        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
-
-      record ->
-        case Participation.record_check_in(%{
-               record_id: record.id,
-               checked_in_by: socket.assigns.current_scope.user.id
-             }) do
-          {:ok, _record} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, gettext("Child checked in successfully"))
-             |> load_session_data()}
-
-          {:error, reason} ->
-            Logger.error(
-              "[ParticipationLive.check_in] Failed to check in",
-              record_id: record_id,
-              child_id: record.child_id,
-              reason: inspect(reason)
-            )
-
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               gettext("Failed to check in: %{reason}", reason: inspect(reason))
-             )}
-        end
-    end
+    ParticipationLiveHandlers.check_in(socket, record_id, &load_session_data/1)
   end
 
   @impl true
@@ -123,43 +92,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_event("confirm_checkout", %{"id" => record_id, "checkout" => params}, socket) do
-    record = find_participation_record(socket, record_id)
-    notes = Map.get(params, "notes")
-
-    case record do
-      nil ->
-        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
-
-      record ->
-        case Participation.record_check_out(%{
-               record_id: record.id,
-               checked_out_by: socket.assigns.current_scope.user.id,
-               notes: notes
-             }) do
-          {:ok, _record} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, gettext("Child checked out successfully"))
-             |> assign(:checkout_form_expanded, nil)
-             |> assign(:checkout_forms, Map.delete(socket.assigns.checkout_forms, record_id))
-             |> load_session_data()}
-
-          {:error, reason} ->
-            Logger.error(
-              "[ParticipationLive.confirm_checkout] Failed to check out",
-              record_id: record_id,
-              child_id: record.child_id,
-              reason: inspect(reason)
-            )
-
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               gettext("Failed to check out: %{reason}", reason: inspect(reason))
-             )}
-        end
-    end
+    ParticipationLiveHandlers.confirm_checkout(socket, record_id, params, &load_session_data/1)
   end
 
   # Behavioral note form handlers
@@ -181,41 +114,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_event("submit_note", %{"id" => record_id, "note" => params}, socket) do
-    case find_participation_record(socket, record_id) do
-      nil ->
-        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
-
-      _record ->
-        content = Map.get(params, "content", "")
-
-        case Participation.submit_behavioral_note(%{
-               participation_record_id: record_id,
-               provider_id: socket.assigns.provider_id,
-               content: content
-             }) do
-          {:ok, _note} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, gettext("Behavioral note submitted for review"))
-             |> assign(:note_form_expanded, nil)
-             |> assign(:note_forms, Map.delete(socket.assigns.note_forms, record_id))
-             |> load_session_data()}
-
-          {:error, :blank_content} ->
-            {:noreply, put_flash(socket, :error, gettext("Note content cannot be blank"))}
-
-          {:error, :duplicate_note} ->
-            {:noreply, put_flash(socket, :error, gettext("You already submitted a note for this record"))}
-
-          {:error, reason} ->
-            Logger.error("[ParticipationLive.submit_note] Failed",
-              record_id: record_id,
-              reason: inspect(reason)
-            )
-
-            {:noreply, put_flash(socket, :error, gettext("Failed to submit note"))}
-        end
-    end
+    ParticipationLiveHandlers.submit_note(socket, record_id, params, &load_session_data/1)
   end
 
   # Revision form handlers
