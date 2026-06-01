@@ -82,7 +82,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
     Repo.transaction(fn ->
       attrs =
         %{type: :direct, provider_id: provider_id}
-        |> maybe_put_program_id(program_id)
+        |> Shared.maybe_put_program_id(program_id)
 
       with {:ok, conversation} <- @conversation_repo.create(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, target_user_id),
@@ -124,9 +124,6 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
   end
 
   defp handle_commit({:error, reason}, _scope, _provider_id), do: {:error, reason}
-
-  defp maybe_put_program_id(attrs, nil), do: attrs
-  defp maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
 
   defp add_participants(conversation_id, user_id_1, user_id_2) do
     with {:ok, _} <-

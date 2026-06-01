@@ -17,8 +17,30 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @aggregate_type :provider
+
+  @doc "Creates a provider_verified integration event."
+  @spec provider_verified(ProviderProfile.t(), String.t()) :: IntegrationEvent.t()
+  def provider_verified(%ProviderProfile{} = profile, admin_id) do
+    IntegrationEvent.new(:provider_verified, @aggregate_type, @aggregate_type, profile.id, %{
+      provider_id: profile.id,
+      business_name: profile.business_name,
+      verified_at: profile.verified_at,
+      admin_id: admin_id
+    })
+  end
+
+  @doc "Creates a provider_unverified integration event."
+  @spec provider_unverified(ProviderProfile.t(), String.t()) :: IntegrationEvent.t()
+  def provider_unverified(%ProviderProfile{} = profile, admin_id) do
+    IntegrationEvent.new(:provider_unverified, @aggregate_type, @aggregate_type, profile.id, %{
+      provider_id: profile.id,
+      business_name: profile.business_name,
+      admin_id: admin_id
+    })
+  end
 
   @doc "Creates a subscription_tier_changed event."
   @spec subscription_tier_changed(ProviderProfile.t(), atom(), keyword()) :: DomainEvent.t()
