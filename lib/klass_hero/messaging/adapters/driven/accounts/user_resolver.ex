@@ -21,13 +21,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
   def get_display_names([]), do: {:ok, %{}}
 
   def get_display_names(user_ids) do
-    span do
-      set_attributes("acl",
-        source: "messaging",
-        target: "accounts",
-        operation: "get_display_names"
-      )
-
+    acl_span source: "messaging", target: "accounts" do
       names_map =
         from(u in User,
           where: u.id in ^user_ids,
@@ -43,13 +37,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
   @impl true
   @spec get_display_name(String.t()) :: {:ok, String.t()} | {:error, :not_found}
   def get_display_name(user_id) do
-    span do
-      set_attributes("acl",
-        source: "messaging",
-        target: "accounts",
-        operation: "get_display_name"
-      )
-
+    acl_span source: "messaging", target: "accounts" do
       case Repo.one(from(u in User, where: u.id == ^user_id, select: {u.name, u.email})) do
         nil -> {:error, :not_found}
         {name, email} -> {:ok, name || email}
@@ -60,13 +48,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
   @impl true
   @spec get_user_id_for_provider(String.t()) :: {:ok, String.t()} | {:error, :not_found}
   def get_user_id_for_provider(provider_id) do
-    span do
-      set_attributes("acl",
-        source: "messaging",
-        target: "accounts",
-        operation: "get_user_id_for_provider"
-      )
-
+    acl_span source: "messaging", target: "accounts" do
       # Trigger: need identity_id for a provider_id stored on a conversation
       # Why: delegate to Provider facade to respect bounded context boundaries —
       #      Messaging is not allowed to query Provider schemas directly

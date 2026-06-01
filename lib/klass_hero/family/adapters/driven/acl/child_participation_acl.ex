@@ -20,13 +20,7 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACL do
 
   @impl true
   def delete_all_for_child(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("acl",
-        source: "family",
-        target: "participation",
-        operation: "delete_all_for_child"
-      )
-
+    acl_span source: "family", target: "participation" do
       # Trigger: behavioral_notes.child_id has ON DELETE: nothing FK constraint
       # Why: must delete behavioral notes before participation records and before child
       # Outcome: no FK violations when participation records and child are deleted

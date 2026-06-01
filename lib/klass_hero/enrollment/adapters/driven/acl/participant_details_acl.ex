@@ -16,13 +16,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ParticipantDetailsACL do
 
   @impl true
   def get_participant_details(child_id) do
-    span do
-      set_attributes("acl",
-        source: "enrollment",
-        target: "family",
-        operation: "get_participant_details"
-      )
-
+    acl_span source: "enrollment", target: "family" do
       case Family.get_child_by_id(child_id) do
         {:ok, child} ->
           {:ok,

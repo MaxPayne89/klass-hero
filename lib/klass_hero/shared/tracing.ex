@@ -31,7 +31,7 @@ defmodule KlassHero.Shared.Tracing do
   defmacro __using__(_opts) do
     quote do
       import KlassHero.Shared.Tracing,
-        only: [span: 1, span: 2, set_attribute: 2, set_attributes: 2]
+        only: [span: 1, span: 2, acl_span: 2, set_attribute: 2, set_attributes: 2]
 
       alias KlassHero.Shared.Tracing
 
@@ -74,6 +74,42 @@ defmodule KlassHero.Shared.Tracing do
             reraise exception, __STACKTRACE__
         end
       end)
+    end
+  end
+
+  @doc """
+  Wraps an ACL adapter function body in a span tagged with the standard
+  `acl.{source,target,operation}` attributes.
+
+  `source` and `target` name the bounded contexts being bridged. `operation` is
+  derived from the calling function name at compile time, so all callers stay
+  consistent:
+
+      def get_children_by_ids(ids) do
+        acl_span source: "enrollment", target: "family" do
+          # implementation
+        end
+      end
+
+  Expands in the caller (like `span/2`) so span and operation attribution point
+  at the adapter function, not this module.
+  """
+  defmacro acl_span(opts, do: block) do
+    {function, _arity} = __CALLER__.function
+    operation = Atom.to_string(function)
+    source = Keyword.fetch!(opts, :source)
+    target = Keyword.fetch!(opts, :target)
+
+    quote do
+      span do
+        set_attributes("acl",
+          source: unquote(source),
+          target: unquote(target),
+          operation: unquote(operation)
+        )
+
+        unquote(block)
+      end
     end
   end
 

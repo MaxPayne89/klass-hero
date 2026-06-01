@@ -22,13 +22,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL do
 
   @impl true
   def list_program_titles_for_provider(provider_id) when is_binary(provider_id) do
-    span do
-      set_attributes("acl",
-        source: "enrollment",
-        target: "program_catalog",
-        operation: "list_program_titles"
-      )
-
+    acl_span source: "enrollment", target: "program_catalog" do
       # Trigger: provider_id may not be a valid UUID
       # Why: type(^provider_id, :binary_id) raises Ecto.Query.CastError on invalid format
       # Outcome: invalid UUID returns empty map; build_context handles the empty-map case
@@ -49,13 +43,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL do
 
   @impl true
   def program_owned_by?(program_id, provider_id) when is_binary(program_id) and is_binary(provider_id) do
-    span do
-      set_attributes("acl",
-        source: "enrollment",
-        target: "program_catalog",
-        operation: "program_owned_by?"
-      )
-
+    acl_span source: "enrollment", target: "program_catalog" do
       with {:ok, _} <- Ecto.UUID.cast(program_id),
            {:ok, _} <- Ecto.UUID.cast(provider_id) do
         from(p in "programs",
