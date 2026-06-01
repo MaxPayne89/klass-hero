@@ -44,6 +44,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   alias KlassHero.Messaging.Domain.Models.Attachment
   alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias Phoenix.LiveView.Socket
 
   require Logger
 
@@ -106,6 +107,28 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
+  Trims a broadcast's subject/content and consumes its attachment uploads.
+
+  Returns `{:ok, subject, content, attachments}` when there is something to send,
+  or `:empty` when both the trimmed content and the attachment list are blank —
+  letting the caller flash a validation error. Shared by the provider and staff
+  broadcast composers, whose actual send paths differ on authorization.
+  """
+  @spec consume_and_validate_broadcast(Socket.t(), map()) ::
+          {:ok, String.t(), String.t(), list()} | :empty
+  def consume_and_validate_broadcast(socket, %{"subject" => subject, "content" => content}) do
+    content = String.trim(content)
+    subject = String.trim(subject)
+    attachments = consume_attachment_uploads(socket)
+
+    if content == "" and attachments == [] do
+      :empty
+    else
+      {:ok, subject, content, attachments}
+    end
+  end
+
+  @doc """
   Mounts a conversation show view with all necessary assigns.
 
   ## Options
@@ -118,6 +141,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   - `{:ok, socket}` on success
   - `{:ok, socket}` with flash and redirect on error
   """
+
   def mount_conversation_show(socket, conversation_id, opts) do
     back_path = Keyword.fetch!(opts, :back_path)
     variant = Keyword.get(opts, :variant, :parent)
