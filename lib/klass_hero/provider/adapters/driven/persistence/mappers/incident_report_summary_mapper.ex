@@ -6,14 +6,15 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IncidentReportSchema
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @spec from_schema(IncidentReportSchema.t()) :: IncidentReportSummary.t()
   def from_schema(%IncidentReportSchema{} = schema) do
     %IncidentReportSummary{
       id: to_string(schema.id),
       provider_id: to_string(schema.provider_id),
-      program_id: maybe_to_string(schema.program_id),
-      session_id: maybe_to_string(schema.session_id),
+      program_id: MapperHelpers.maybe_to_string(schema.program_id),
+      session_id: MapperHelpers.maybe_to_string(schema.session_id),
       category: schema.category,
       severity: schema.severity,
       description: schema.description,
@@ -21,7 +22,4 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
       reporter_display_name: schema.reporter_display_name
     }
   end
-
-  defp maybe_to_string(nil), do: nil
-  defp maybe_to_string(value), do: to_string(value)
 end

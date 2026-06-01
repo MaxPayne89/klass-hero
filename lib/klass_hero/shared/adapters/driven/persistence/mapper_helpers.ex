@@ -114,4 +114,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
         end
     end)
   end
+
+  @doc "Converts a value to a string, leaving nil untouched."
+  @spec maybe_to_string(term()) :: String.t() | nil
+  def maybe_to_string(nil), do: nil
+  def maybe_to_string(value), do: to_string(value)
 end

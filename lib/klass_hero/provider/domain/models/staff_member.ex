@@ -11,6 +11,7 @@ defmodule KlassHero.Provider.Domain.Models.StaffMember do
 
   alias KlassHero.Provider.Domain.Models.PayRate
   alias KlassHero.Shared.Categories
+  alias KlassHero.Shared.NameUtils
 
   @enforce_keys [:id, :provider_id, :first_name, :last_name]
 
@@ -93,11 +94,7 @@ defmodule KlassHero.Provider.Domain.Models.StaffMember do
 
   def full_name(%__MODULE__{first_name: first, last_name: last}), do: "#{first} #{last}"
 
-  def initials(%__MODULE__{first_name: first, last_name: last}) do
-    f = first |> String.first() |> String.upcase()
-    l = last |> String.first() |> String.upcase()
-    "#{f}#{l}"
-  end
+  def initials(%__MODULE__{} = staff), do: NameUtils.initials_from_name(full_name(staff))
 
   defp apply_defaults(attrs) do
     attrs

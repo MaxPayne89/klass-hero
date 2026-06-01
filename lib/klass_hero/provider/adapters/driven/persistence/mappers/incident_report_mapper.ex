@@ -15,6 +15,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportM
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IncidentReportSchema
   alias KlassHero.Provider.Domain.Models.IncidentReport
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @doc """
   Converts a domain IncidentReport into a map of attributes suitable for
@@ -52,8 +53,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportM
       provider_profile_id: to_string(schema.provider_id),
       reporter_user_id: to_string(schema.reporter_user_id),
       reporter_display_name: schema.reporter_display_name,
-      program_id: maybe_to_string(schema.program_id),
-      session_id: maybe_to_string(schema.session_id),
+      program_id: MapperHelpers.maybe_to_string(schema.program_id),
+      session_id: MapperHelpers.maybe_to_string(schema.session_id),
       category: schema.category,
       severity: schema.severity,
       description: schema.description,
@@ -64,7 +65,4 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportM
       updated_at: schema.updated_at
     }
   end
-
-  defp maybe_to_string(nil), do: nil
-  defp maybe_to_string(value), do: to_string(value)
 end

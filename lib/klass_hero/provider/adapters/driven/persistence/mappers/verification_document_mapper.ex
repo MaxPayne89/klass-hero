@@ -22,7 +22,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationDoc
   """
 
   import KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers,
-    only: [maybe_add_id: 2]
+    only: [maybe_add_id: 2, maybe_to_string: 1]
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VerificationDocumentSchema
   alias KlassHero.Provider.Domain.Models.VerificationDocument
@@ -103,8 +103,4 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationDoc
   # Converts an atom status to a string, defaulting to "pending" if nil.
   defp status_to_string(nil), do: "pending"
   defp status_to_string(status) when is_atom(status), do: Atom.to_string(status)
-
-  # Safely converts a value to string, returning nil if input is nil.
-  defp maybe_to_string(nil), do: nil
-  defp maybe_to_string(value), do: to_string(value)
 end
