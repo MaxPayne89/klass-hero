@@ -7,6 +7,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Mappers.Participat
 
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
   alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @doc "Converts a ParticipationRecordSchema to a ParticipationRecord domain model."
   @spec to_domain(ParticipationRecordSchema.t()) :: ParticipationRecord.t()
@@ -29,13 +30,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Mappers.Participat
       lock_version: schema.lock_version
     }
 
-    case ParticipationRecord.from_persistence(attrs) do
-      {:ok, record} ->
-        record
-
-      {:error, :invalid_persistence_data} ->
-        raise "Corrupted participation record data: #{inspect(schema.id)}"
-    end
+    MapperHelpers.from_persistence!(ParticipationRecord, attrs, schema.id)
   end
 
   @doc "Converts a ParticipationRecord domain model to attributes for persistence."

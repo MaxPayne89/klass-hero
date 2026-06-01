@@ -11,8 +11,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Mappers.UserMapper do
 
   alias KlassHero.Accounts.Domain.Models.User, as: DomainUser
   alias KlassHero.Accounts.User
-
-  require Logger
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @doc """
   Converts a User schema (from database) to a User domain entity.
@@ -34,16 +33,6 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Mappers.UserMapper do
       updated_at: schema.updated_at
     }
 
-    case DomainUser.from_persistence(attrs) do
-      {:ok, user} ->
-        user
-
-      {:error, :invalid_persistence_data} ->
-        Logger.error("[UserMapper] Corrupted persistence data",
-          user_id: schema.id
-        )
-
-        raise "Corrupted user data for id=#{inspect(schema.id)} — required keys missing"
-    end
+    MapperHelpers.from_persistence!(DomainUser, attrs, schema.id)
   end
 end
