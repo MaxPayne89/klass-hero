@@ -71,6 +71,23 @@ defmodule KlassHero.Shared.EventDispatchHelper do
     end
   end
 
+  @doc """
+  Like `dispatch_or_error/2`, but on success returns `{:ok, value}` instead of
+  bare `:ok`, keeping `with` chains uniform.
+
+      reset.provider_id
+      |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
+      |> EventDispatchHelper.dispatch_or_ok(KlassHero.Enrollment, reset)
+  """
+  @spec dispatch_or_ok(DomainEvent.t(), module(), value) :: {:ok, value} | {:error, term()}
+        when value: term()
+  def dispatch_or_ok(%DomainEvent{} = event, context, value) do
+    case dispatch_or_error(event, context) do
+      :ok -> {:ok, value}
+      {:error, _} = error -> error
+    end
+  end
+
   defp find_first_failure(results) do
     case Enum.find(results, fn {_identity, result} -> match?({:error, _}, result) end) do
       nil -> :ok

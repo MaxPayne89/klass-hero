@@ -83,10 +83,6 @@ defmodule KlassHero.Enrollment.Application.Commands.CancelEnrollmentByAdmin do
       reason: reason,
       cancelled_at: persisted.cancelled_at
     })
-    |> EventDispatchHelper.dispatch_or_error(@context)
-    |> case do
-      :ok -> {:ok, persisted}
-      {:error, _} = err -> err
-    end
+    |> EventDispatchHelper.dispatch_or_ok(@context, persisted)
   end
 end
