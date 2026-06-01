@@ -11,6 +11,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
   """
 
   alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Shared.CommandResult
 
   @query Application.compile_env!(:klass_hero, [:provider, :for_querying_provider_profiles])
   @repository Application.compile_env!(:klass_hero, [:provider, :for_storing_provider_profiles])
@@ -31,8 +32,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
          {:ok, persisted} <- @repository.update(completed) do
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 end

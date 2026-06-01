@@ -6,6 +6,7 @@ defmodule KlassHero.Family.Application.Commands.Parents.CreateParentProfile do
   """
 
   alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Shared.CommandResult
 
   @repository Application.compile_env!(:klass_hero, [:family, :for_storing_parent_profiles])
 
@@ -25,8 +26,7 @@ defmodule KlassHero.Family.Application.Commands.Parents.CreateParentProfile do
          {:ok, persisted} <- @repository.create_parent_profile(attrs_with_id) do
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 end

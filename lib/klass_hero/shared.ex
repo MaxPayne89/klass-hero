@@ -11,6 +11,7 @@ defmodule KlassHero.Shared do
     deps: [KlassHero],
     exports: [
       Categories,
+      CommandResult,
       Entitlements,
       ErrorIds,
       SubscriptionTiers,

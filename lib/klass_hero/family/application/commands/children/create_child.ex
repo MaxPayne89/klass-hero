@@ -8,6 +8,7 @@ defmodule KlassHero.Family.Application.Commands.Children.CreateChild do
 
   alias KlassHero.Family.Domain.Events.FamilyEvents
   alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.EventDispatchHelper
 
   @context KlassHero.Family
@@ -37,8 +38,7 @@ defmodule KlassHero.Family.Application.Commands.Children.CreateChild do
       dispatch_child_created(persisted, parent_id)
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 

@@ -6,6 +6,7 @@ defmodule KlassHero.Family.Application.Commands.Consents.GrantConsent do
   """
 
   alias KlassHero.Family.Domain.Models.Consent
+  alias KlassHero.Shared.CommandResult
 
   @repository Application.compile_env!(:klass_hero, [:family, :for_storing_consents])
 
@@ -30,9 +31,7 @@ defmodule KlassHero.Family.Application.Commands.Consents.GrantConsent do
          {:ok, persisted} <- @repository.grant(attrs_with_defaults) do
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, :already_active} -> {:error, :already_active}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 end

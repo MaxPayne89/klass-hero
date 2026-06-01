@@ -8,6 +8,7 @@ defmodule KlassHero.Family.Application.Commands.Children.UpdateChild do
 
   alias KlassHero.Family.Domain.Events.FamilyEvents
   alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.EventDispatchHelper
 
   @context KlassHero.Family
@@ -30,8 +31,7 @@ defmodule KlassHero.Family.Application.Commands.Children.UpdateChild do
       dispatch_child_updated(updated)
       {:ok, updated}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 

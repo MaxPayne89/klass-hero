@@ -6,6 +6,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CreateProviderProfil
   """
 
   alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Shared.CommandResult
 
   @repository Application.compile_env!(:klass_hero, [:provider, :for_storing_provider_profiles])
 
@@ -25,8 +26,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CreateProviderProfil
          {:ok, persisted} <- @repository.create_provider_profile(attrs_with_id) do
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 end
