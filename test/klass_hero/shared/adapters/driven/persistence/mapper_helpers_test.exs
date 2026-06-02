@@ -236,4 +236,55 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpersTest do
       assert result["definitely_not_an_atom_xyz"] == "unknown"
     end
   end
+
+  describe "maybe_to_string/1" do
+    test "returns nil unchanged" do
+      assert MapperHelpers.maybe_to_string(nil) == nil
+    end
+
+    test "returns strings unchanged" do
+      assert MapperHelpers.maybe_to_string("hello") == "hello"
+    end
+
+    test "converts integers to strings" do
+      assert MapperHelpers.maybe_to_string(42) == "42"
+    end
+
+    test "converts atoms to strings" do
+      assert MapperHelpers.maybe_to_string(:pending) == "pending"
+    end
+  end
+
+  describe "from_persistence!/3" do
+    defmodule MapperHelpersTestSuccessModel do
+      def from_persistence(%{value: v}), do: {:ok, %{value: v}}
+    end
+
+    defmodule MapperHelpersTestFailModel do
+      def from_persistence(_), do: {:error, :invalid_persistence_data}
+    end
+
+    test "returns the entity on success" do
+      assert %{value: "test"} =
+               MapperHelpers.from_persistence!(MapperHelpersTestSuccessModel, %{value: "test"}, "id-1")
+    end
+
+    test "raises on :invalid_persistence_data" do
+      assert_raise RuntimeError, ~r/Corrupted MapperHelpersTestFailModel data/, fn ->
+        MapperHelpers.from_persistence!(MapperHelpersTestFailModel, %{}, "id-2")
+      end
+    end
+
+    test "raised message contains the record id" do
+      assert_raise RuntimeError, ~r/id-3/, fn ->
+        MapperHelpers.from_persistence!(MapperHelpersTestFailModel, %{}, "id-3")
+      end
+    end
+
+    test "raised message contains the module name" do
+      assert_raise RuntimeError, ~r/MapperHelpersTestFailModel/, fn ->
+        MapperHelpers.from_persistence!(MapperHelpersTestFailModel, %{}, "id-4")
+      end
+    end
+  end
 end
