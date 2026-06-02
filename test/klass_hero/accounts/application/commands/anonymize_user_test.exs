@@ -12,7 +12,9 @@ defmodule KlassHero.Accounts.Application.Commands.AnonymizeUserTest do
 
   alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
   alias KlassHero.Accounts.Application.Commands.AnonymizeUser
-  alias KlassHero.Accounts.Domain.Models.User
+  # Auth uses phx.gen.auth: KlassHero.Accounts.User (the Ecto schema) is the
+  # canonical user type these commands return — not a separate domain model.
+  alias KlassHero.Accounts.User
 
   describe "execute/1 — success path" do
     test "returns anonymized domain User" do

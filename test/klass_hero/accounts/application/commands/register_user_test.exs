@@ -2,7 +2,7 @@ defmodule KlassHero.Accounts.Application.Commands.RegisterUserTest do
   @moduledoc """
   Integration tests for RegisterUser use case.
 
-  Verifies user creation orchestration: successful registration returns a domain
+  Verifies user creation orchestration: successful registration returns a
   User, validation failures surface the changeset, and duplicate emails are
   rejected.
   """
@@ -12,7 +12,9 @@ defmodule KlassHero.Accounts.Application.Commands.RegisterUserTest do
   import KlassHero.AccountsFixtures
 
   alias KlassHero.Accounts.Application.Commands.RegisterUser
-  alias KlassHero.Accounts.Domain.Models.User
+  # Auth uses phx.gen.auth: KlassHero.Accounts.User (the Ecto schema) is the
+  # canonical user type these commands return — not a separate domain model.
+  alias KlassHero.Accounts.User
 
   describe "execute/1 — success path" do
     test "returns domain User on valid attributes" do
@@ -22,7 +24,6 @@ defmodule KlassHero.Accounts.Application.Commands.RegisterUserTest do
       assert user.email == attrs.email
       assert user.name == attrs.name
     end
-
   end
 
   describe "execute/1 — validation failures" do

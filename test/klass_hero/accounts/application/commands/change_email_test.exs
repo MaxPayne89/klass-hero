@@ -13,7 +13,9 @@ defmodule KlassHero.Accounts.Application.Commands.ChangeEmailTest do
   alias KlassHero.Accounts
   alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
   alias KlassHero.Accounts.Application.Commands.ChangeEmail
-  alias KlassHero.Accounts.Domain.Models.User
+  # Auth uses phx.gen.auth: KlassHero.Accounts.User (the Ecto schema) is the
+  # canonical user type these commands return — not a separate domain model.
+  alias KlassHero.Accounts.User
 
   defp generate_email_change_token(user, new_email) do
     user_with_new_email = %{user | email: new_email}

@@ -6,91 +6,65 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvita
   alias KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvitation
   alias KlassHero.Provider.Domain.Models.StaffMember
 
-  describe "execute/1 with staff_member_id" do
-    test "transitions :sent invitation to :expired" do
-      provider = provider_profile_fixture()
+  # Only :sent invitations may transition to :expired; every other status is an
+  # invalid transition.
+  @invalid_source_statuses [:pending, :accepted, :failed, :expired]
 
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          invitation_status: :sent,
-          invitation_token_hash: :crypto.hash(:sha256, "tok")
-        })
+  defp staff_with_status(status) do
+    provider = provider_profile_fixture()
+    attrs = %{provider_id: provider.id, invitation_status: status}
+
+    # A token hash is only valid on statuses that carry a live/used token; the
+    # invitation changeset rejects it on :pending/:accepted (which need a user_id).
+    # The hash is unique per call — several staff are created in one transaction
+    # within a single tabular test, and the column has a unique index.
+    attrs =
+      if status in [:sent, :failed, :expired],
+        do: Map.put(attrs, :invitation_token_hash, :crypto.hash(:sha256, "tok-#{System.unique_integer([:positive])}")),
+        else: attrs
+
+    staff_member_fixture(attrs)
+  end
+
+  describe "execute/1 with staff_member_id" do
+    test "transitions a :sent invitation to :expired" do
+      staff = staff_with_status(:sent)
 
       assert {:ok, %StaffMember{} = updated} = ExpireStaffInvitation.execute(staff.id)
       assert updated.id == staff.id
       assert updated.invitation_status == :expired
     end
 
-    test "returns error for :pending staff member (invalid transition)" do
-      provider = provider_profile_fixture()
+    test "rejects expiry from any non-:sent status" do
+      for status <- @invalid_source_statuses do
+        staff = staff_with_status(status)
 
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          invitation_status: :pending
-        })
-
-      assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff.id)
+        assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff.id),
+               "expected #{status} → :expired to be rejected"
+      end
     end
 
-    test "returns error for :accepted staff member (invalid transition)" do
-      provider = provider_profile_fixture()
-
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          invitation_status: :accepted
-        })
-
-      assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff.id)
-    end
-
-    test "returns error for :failed staff member (invalid transition)" do
-      provider = provider_profile_fixture()
-
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          invitation_status: :failed,
-          invitation_token_hash: :crypto.hash(:sha256, "tok")
-        })
-
-      assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff.id)
-    end
-
-    test "returns :not_found for non-existent staff member" do
+    test "returns :not_found for a non-existent staff member" do
       assert {:error, :not_found} = ExpireStaffInvitation.execute(Ecto.UUID.generate())
     end
   end
 
   describe "execute/1 with %StaffMember{} struct" do
-    test "transitions :sent invitation to :expired without re-fetching from DB" do
-      provider = provider_profile_fixture()
-
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          invitation_status: :sent,
-          invitation_token_hash: :crypto.hash(:sha256, "tok")
-        })
+    test "transitions a :sent invitation to :expired without re-fetching from DB" do
+      staff = staff_with_status(:sent)
 
       assert {:ok, %StaffMember{} = updated} = ExpireStaffInvitation.execute(staff)
       assert updated.id == staff.id
       assert updated.invitation_status == :expired
     end
 
-    test "returns error for :expired → :expired (no self-transition defined)" do
-      provider = provider_profile_fixture()
+    test "rejects expiry from any non-:sent status" do
+      for status <- @invalid_source_statuses do
+        staff = staff_with_status(status)
 
-      staff =
-        staff_member_fixture(%{
-          provider_id: provider.id,
-          invitation_status: :expired,
-          invitation_token_hash: :crypto.hash(:sha256, "tok")
-        })
-
-      assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff)
+        assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff),
+               "expected #{status} → :expired to be rejected"
+      end
     end
   end
 end

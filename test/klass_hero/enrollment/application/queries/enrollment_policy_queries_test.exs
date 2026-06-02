@@ -7,14 +7,14 @@ defmodule KlassHero.Enrollment.Application.Queries.EnrollmentPolicyQueriesTest d
   alias KlassHero.Enrollment.Application.Queries.EnrollmentPolicyQueries
 
   # Helpers for setting up policies and enrollments
-  defp upsert_policy!(program_id, attrs \\ %{}) do
+  defp upsert_policy!(program_id, attrs) do
     {:ok, policy} =
       EnrollmentPolicyRepository.upsert(Map.merge(%{program_id: program_id}, attrs))
 
     policy
   end
 
-  defp insert_enrollment!(program_id, status \\ "pending") do
+  defp insert_enrollment!(program_id, status) do
     {child, parent} = insert_child_with_guardian()
 
     insert(:enrollment_schema,
