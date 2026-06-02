@@ -1,9 +1,9 @@
 defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
   @moduledoc """
-  Shared `handle_event` bodies for the provider and staff roster LiveViews.
+  Shared `handle_event` bodies for the provider and staff participation LiveViews.
 
   The check-in, check-out, and note-submission flows are identical across both
-  surfaces; only the post-success roster reload differs (staff reloads through a
+  surfaces; only the post-success participation reload differs (staff reloads through a
   program-assignment authorization gate). Callers pass their own `reload_fn`
   (a `socket -> socket` function, typically `&load_session_data/1`) so that
   divergence stays in the LiveView while the orchestration lives here.
