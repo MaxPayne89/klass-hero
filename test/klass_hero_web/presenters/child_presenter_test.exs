@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
   """
 
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Family.Domain.Models.Child
   alias KlassHeroWeb.Presenters.ChildPresenter
@@ -64,6 +65,15 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
     test "returns 0 for a child born this year" do
       child = build_child(%{date_of_birth: years_ago(0)})
       assert ChildPresenter.to_simple_view(child).age == 0
+    end
+
+    # birthday_in_past/1 pins the birthday to Jan 1 (always already passed this
+    # year), so the computed age equals the generated number of years exactly.
+    property "computes age as whole years elapsed for any past Jan-1 birthday" do
+      check all(years <- StreamData.integer(0..18)) do
+        child = build_child(%{date_of_birth: birthday_in_past(years)})
+        assert ChildPresenter.to_simple_view(child).age == years
+      end
     end
   end
 
@@ -125,6 +135,14 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
       result = ChildPresenter.to_profile_view(child)
       assert String.length(result.initials) == 2
       assert result.initials == "AM"
+    end
+
+    # The three views derive age from the same child; they must never disagree.
+    property "to_simple_view and to_profile_view report the same age" do
+      check all(years <- StreamData.integer(0..18)) do
+        child = build_child(%{date_of_birth: birthday_in_past(years)})
+        assert ChildPresenter.to_profile_view(child).age == ChildPresenter.to_simple_view(child).age
+      end
     end
   end
 
