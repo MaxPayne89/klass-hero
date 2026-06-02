@@ -15,8 +15,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Mappers.ChildMapper do
 
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
   alias KlassHero.Family.Domain.Models.Child
-
-  require Logger
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @doc """
   Converts a ChildSchema (from database) to a Child domain entity.
@@ -40,18 +39,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Mappers.ChildMapper do
       updated_at: schema.updated_at
     }
 
-    case Child.from_persistence(attrs) do
-      {:ok, child} ->
-        child
-
-      {:error, :invalid_persistence_data} ->
-        Logger.error("[ChildMapper] Corrupted persistence data",
-          child_id: schema.id,
-          fields: Map.keys(attrs)
-        )
-
-        raise "Corrupted child data for id=#{inspect(schema.id)} — required keys missing from persistence"
-    end
+    MapperHelpers.from_persistence!(Child, attrs, schema.id)
   end
 
   @doc """

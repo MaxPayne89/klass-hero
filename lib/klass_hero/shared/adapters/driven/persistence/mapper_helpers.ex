@@ -8,6 +8,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
 
   alias KlassHero.Shared.SubscriptionTiers
 
+  require Logger
+
   @doc """
   Converts a list of persistence schemas to domain entities using the given mapper module.
 
@@ -113,5 +115,39 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
           ArgumentError -> {k, v}
         end
     end)
+  end
+
+  @doc "Converts a value to a string, leaving nil untouched."
+  @spec maybe_to_string(term()) :: String.t() | nil
+  def maybe_to_string(nil), do: nil
+  def maybe_to_string(value), do: to_string(value)
+
+  @doc """
+  Reconstructs a domain entity from persistence attrs, raising on corruption.
+
+  Calls `domain_module.from_persistence(attrs)`; returns the entity on `:ok`. On
+  `{:error, :invalid_persistence_data}` it logs the entity id and present field
+  keys, then raises — corrupt persistence data is a bug, not a recoverable error.
+
+  `id` is the schema's primary key, used for log and message correlation. The
+  entity label in the log and raised message is derived from `domain_module`.
+  """
+  @spec from_persistence!(module(), map(), term()) :: struct()
+  def from_persistence!(domain_module, attrs, id) when is_map(attrs) do
+    case domain_module.from_persistence(attrs) do
+      {:ok, entity} ->
+        entity
+
+      {:error, :invalid_persistence_data} ->
+        label = domain_module |> Module.split() |> List.last()
+
+        Logger.error("Corrupted persistence data",
+          entity: label,
+          id: id,
+          fields: Map.keys(attrs)
+        )
+
+        raise "Corrupted #{label} data for id=#{inspect(id)} — required keys missing from persistence"
+    end
   end
 end

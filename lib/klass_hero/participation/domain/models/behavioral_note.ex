@@ -21,6 +21,8 @@ defmodule KlassHero.Participation.Domain.Models.BehavioralNote do
   Rejected notes can be revised and resubmitted.
   """
 
+  use KlassHero.Shared.Domain.Models.PersistenceSupport
+
   @enforce_keys [:id, :participation_record_id, :child_id, :provider_id, :content, :status]
   defstruct [
     :id,
@@ -55,22 +57,6 @@ defmodule KlassHero.Participation.Domain.Models.BehavioralNote do
         }
 
   @max_content_length 1000
-
-  @doc """
-  Reconstructs a BehavioralNote from persistence data.
-
-  Skips business validation since data was validated on write.
-  Uses `struct!/2` to enforce `@enforce_keys`.
-
-  Returns:
-  - `{:ok, note}` if all required keys are present
-  - `{:error, :invalid_persistence_data}` if required keys are missing
-  """
-  def from_persistence(attrs) when is_map(attrs) do
-    {:ok, struct!(__MODULE__, attrs)}
-  rescue
-    ArgumentError -> {:error, :invalid_persistence_data}
-  end
 
   @doc """
   Creates a new behavioral note in pending_approval status.

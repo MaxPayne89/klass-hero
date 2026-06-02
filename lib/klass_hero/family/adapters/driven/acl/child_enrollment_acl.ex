@@ -19,13 +19,7 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL do
 
   @impl true
   def list_active_with_program_titles(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("acl",
-        source: "family",
-        target: "enrollment",
-        operation: "list_active_with_program_titles"
-      )
-
+    acl_span source: "family", target: "enrollment" do
       from(e in "enrollments",
         join: p in "programs",
         on: e.program_id == p.id,
@@ -44,13 +38,7 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL do
 
   @impl true
   def cancel_active_for_child(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("acl",
-        source: "family",
-        target: "enrollment",
-        operation: "cancel_active_for_child"
-      )
-
+    acl_span source: "family", target: "enrollment" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       {count, _} =

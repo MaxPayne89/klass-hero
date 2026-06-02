@@ -13,13 +13,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver do
   @impl true
   @spec active_staff_for_provider?(String.t(), String.t()) :: boolean()
   def active_staff_for_provider?(provider_id, user_id) do
-    span do
-      set_attributes("acl",
-        source: "messaging",
-        target: "provider",
-        operation: "active_staff_for_provider?"
-      )
-
+    acl_span source: "messaging", target: "provider" do
       KlassHero.Provider.active_staff_for_provider?(provider_id, user_id)
     end
   end

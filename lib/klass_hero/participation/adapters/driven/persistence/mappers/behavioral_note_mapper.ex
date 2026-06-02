@@ -7,6 +7,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Mappers.Behavioral
 
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
   alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @doc "Converts a BehavioralNoteSchema to a BehavioralNote domain model."
   @spec to_domain(BehavioralNoteSchema.t()) :: BehavioralNote.t()
@@ -26,13 +27,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Mappers.Behavioral
       updated_at: schema.updated_at
     }
 
-    case BehavioralNote.from_persistence(attrs) do
-      {:ok, note} ->
-        note
-
-      {:error, :invalid_persistence_data} ->
-        raise "Corrupted behavioral note data: #{inspect(schema.id)}"
-    end
+    MapperHelpers.from_persistence!(BehavioralNote, attrs, schema.id)
   end
 
   @doc "Converts a BehavioralNote domain model to attributes for persistence."

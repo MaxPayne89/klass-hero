@@ -9,8 +9,11 @@ defmodule KlassHero.Provider.Domain.Models.StaffMember do
   Qualifications are freeform text entries (e.g., "First Aid", "UEFA B License").
   """
 
+  use KlassHero.Shared.Domain.Models.PersistenceSupport
+
   alias KlassHero.Provider.Domain.Models.PayRate
   alias KlassHero.Shared.Categories
+  alias KlassHero.Shared.NameUtils
 
   @enforce_keys [:id, :provider_id, :first_name, :last_name]
 
@@ -73,31 +76,11 @@ defmodule KlassHero.Provider.Domain.Models.StaffMember do
     end
   end
 
-  @doc """
-  Reconstructs a StaffMember from persistence data.
-
-  Unlike `new/1`, this skips business validation since data was validated
-  on write. Uses `struct!/2` to enforce `@enforce_keys`.
-
-  Returns:
-  - `{:ok, staff_member}` if all required keys are present
-  - `{:error, :invalid_persistence_data}` if required keys are missing
-  """
-  def from_persistence(attrs) when is_map(attrs) do
-    {:ok, struct!(__MODULE__, attrs)}
-  rescue
-    ArgumentError -> {:error, :invalid_persistence_data}
-  end
-
   def valid?(%__MODULE__{} = staff), do: validate(staff) == []
 
   def full_name(%__MODULE__{first_name: first, last_name: last}), do: "#{first} #{last}"
 
-  def initials(%__MODULE__{first_name: first, last_name: last}) do
-    f = first |> String.first() |> String.upcase()
-    l = last |> String.first() |> String.upcase()
-    "#{f}#{l}"
-  end
+  def initials(%__MODULE__{} = staff), do: NameUtils.initials_from_name(full_name(staff))
 
   defp apply_defaults(attrs) do
     attrs

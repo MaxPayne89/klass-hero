@@ -114,7 +114,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
     Repo.transaction(fn ->
       attrs =
         %{type: :direct, provider_id: provider_id}
-        |> maybe_put_program_id(program_id)
+        |> Shared.maybe_put_program_id(program_id)
 
       with {:ok, conversation} <- @conversation_repo.create(attrs),
            {:ok, _} <-
@@ -158,9 +158,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   end
 
   defp handle_commit({:error, reason}), do: {:error, reason}
-
-  defp maybe_put_program_id(attrs, nil), do: attrs
-  defp maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
 
   # Trigger: parent initiates a private reply to a broadcast
   # Why: inserts a system note in the direct conversation so the provider

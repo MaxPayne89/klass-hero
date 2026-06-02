@@ -9,6 +9,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Mappers.ConsentMapper do
 
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
   alias KlassHero.Family.Domain.Models.Consent
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @doc """
   Converts a ConsentSchema (from database) to a Consent domain entity.
@@ -28,9 +29,6 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Mappers.ConsentMapper do
       updated_at: schema.updated_at
     }
 
-    case Consent.from_persistence(attrs) do
-      {:ok, consent} -> consent
-      {:error, :invalid_persistence_data} -> raise "Corrupted consent data: #{inspect(schema.id)}"
-    end
+    MapperHelpers.from_persistence!(Consent, attrs, schema.id)
   end
 end

@@ -18,13 +18,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ChildInfoACL do
   def get_children_by_ids([]), do: []
 
   def get_children_by_ids(child_ids) when is_list(child_ids) do
-    span do
-      set_attributes("acl",
-        source: "enrollment",
-        target: "family",
-        operation: "get_children_by_ids"
-      )
-
+    acl_span source: "enrollment", target: "family" do
       child_ids
       |> Family.get_children_by_ids()
       |> Enum.map(fn child ->

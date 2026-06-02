@@ -18,8 +18,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
-
-  require Logger
+  alias KlassHero.Shared.ErrorIds
 
   @impl true
   def create(attrs) when is_map(attrs) do
@@ -34,12 +33,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
           {:ok, StaffMemberMapper.to_domain(schema)}
 
         {:error, changeset} ->
-          Logger.warning(
-            "[Provider.StaffMemberRepository] Validation error creating staff member",
-            provider_id: attrs[:provider_id],
-            errors: inspect(changeset.errors)
-          )
-
+          RepositoryHelpers.log_validation_error(changeset, ErrorIds.staff_member_create_failed())
           {:error, changeset}
       end
     end
@@ -111,19 +105,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
     span do
       set_attributes("db", operation: "update", entity: "staff_member")
 
-      case Repo.get(StaffMemberSchema, staff_member.id) do
-        nil ->
-          {:error, :not_found}
-
-        schema ->
-          attrs = StaffMemberMapper.to_schema(staff_member)
-
-          with {:ok, updated} <-
-                 schema
-                 |> StaffMemberSchema.edit_changeset(attrs)
-                 |> Repo.update() do
-            {:ok, StaffMemberMapper.to_domain(updated)}
-          end
+      with {:ok, schema} <-
+             RepositoryHelpers.get_schema_by_uuid(StaffMemberSchema, staff_member.id),
+           attrs = StaffMemberMapper.to_schema(staff_member),
+           {:ok, updated} <-
+             schema |> StaffMemberSchema.edit_changeset(attrs) |> Repo.update() do
+        {:ok, StaffMemberMapper.to_domain(updated)}
       end
     end
   end

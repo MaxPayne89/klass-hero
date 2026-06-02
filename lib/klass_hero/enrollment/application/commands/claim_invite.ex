@@ -113,10 +113,9 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
       consent_photo_marketing: invite.consent_photo_marketing,
       consent_photo_social_media: invite.consent_photo_social_media
     })
-    |> EventDispatchHelper.dispatch_or_error(KlassHero.Enrollment)
-    |> case do
-      :ok -> {:ok, %ClaimResult{user_type: user_type, user: user, invite: invite}}
-      {:error, _} = err -> err
-    end
+    |> EventDispatchHelper.dispatch_or_ok(
+      KlassHero.Enrollment,
+      %ClaimResult{user_type: user_type, user: user, invite: invite}
+    )
   end
 end

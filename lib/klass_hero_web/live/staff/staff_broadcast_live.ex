@@ -115,15 +115,13 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
   end
 
   @impl true
-  def handle_event("send_broadcast", %{"subject" => subject, "content" => content}, socket) do
-    content = String.trim(content)
-    subject = String.trim(subject)
-    attachments = MessagingLiveHelper.consume_attachment_uploads(socket)
+  def handle_event("send_broadcast", %{"subject" => _, "content" => _} = params, socket) do
+    case MessagingLiveHelper.consume_and_validate_broadcast(socket, params) do
+      {:ok, subject, content, attachments} ->
+        send_broadcast(socket, subject, content, attachments)
 
-    if content == "" and attachments == [] do
-      {:noreply, put_flash(socket, :error, gettext("Message content is required"))}
-    else
-      send_broadcast(socket, subject, content, attachments)
+      :empty ->
+        {:noreply, put_flash(socket, :error, gettext("Message content is required"))}
     end
   end
 

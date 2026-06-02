@@ -12,8 +12,8 @@ defmodule KlassHero.Provider.Application.Commands.Providers.VerifyProvider do
   and updates the verified_at timestamp.
   """
 
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.Models.ProviderProfile
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.IntegrationEventPublishing
 
   @query Application.compile_env!(:klass_hero, [:provider, :for_querying_provider_profiles])
@@ -41,24 +41,9 @@ defmodule KlassHero.Provider.Application.Commands.Providers.VerifyProvider do
     end
   end
 
-  # Trigger: Provider verification completed
-  # Why: Other contexts (e.g., Program Catalog) may need to know about verified providers
-  # Outcome: Integration event published to PubSub for cross-context consumption
   defp publish_event(profile, admin_id) do
-    event =
-      IntegrationEvent.new(
-        :provider_verified,
-        :provider,
-        :provider,
-        profile.id,
-        %{
-          provider_id: profile.id,
-          business_name: profile.business_name,
-          verified_at: profile.verified_at,
-          admin_id: admin_id
-        }
-      )
-
-    IntegrationEventPublishing.publish(event)
+    profile
+    |> ProviderEvents.provider_verified(admin_id)
+    |> IntegrationEventPublishing.publish()
   end
 end

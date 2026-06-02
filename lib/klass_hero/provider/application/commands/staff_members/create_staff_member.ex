@@ -13,6 +13,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
 
   alias KlassHero.Provider.Application.InvitationEmitter
   alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Shared.CommandResult
 
   require Logger
 
@@ -42,8 +43,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
          {:ok, persisted} <- @repository.create(attrs) do
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 
@@ -67,8 +67,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
           compensate_failed_emission(persisted, reason)
       end
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 

@@ -15,6 +15,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   import Ecto.Query
 
+  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Queries.CursorCodec
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramListingSchema
   alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
   alias KlassHero.Repo
@@ -33,7 +34,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
         category: category
       )
 
-      with {:ok, cursor_data} <- decode_cursor(cursor) do
+      with {:ok, cursor_data} <- CursorCodec.decode(cursor) do
         schemas = fetch_page(limit, cursor_data, category)
 
         # Trigger: fetched one extra record beyond the limit
@@ -48,7 +49,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
         next_cursor =
           if has_more do
-            items |> List.last() |> encode_cursor()
+            items |> List.last() |> CursorCodec.encode()
           end
 
         dtos = Enum.map(items, &to_dto/1)
@@ -231,45 +232,4 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
       updated_at: schema.updated_at
     })
   end
-
-  # --- Cursor encoding/decoding ---
-  # Matches the write-side ProgramRepository cursor format:
-  # Base64 URL-encoded JSON: {"ts": unix_microseconds, "id": uuid_string}
-
-  defp encode_cursor(%ProgramListingSchema{} = schema) do
-    %{"ts" => DateTime.to_unix(schema.inserted_at, :microsecond), "id" => schema.id}
-    |> Jason.encode!()
-    |> Base.url_encode64(padding: false)
-  end
-
-  defp decode_cursor(nil), do: {:ok, nil}
-
-  defp decode_cursor(cursor) when is_binary(cursor) do
-    with {:ok, decoded} <- Base.url_decode64(cursor, padding: false),
-         {:ok, data} <- Jason.decode(decoded),
-         {:ok, datetime} <- parse_cursor_timestamp(data["ts"]),
-         {:ok, uuid} <- parse_cursor_uuid(data["id"]) do
-      {:ok, {datetime, uuid}}
-    else
-      _ -> {:error, :invalid_cursor}
-    end
-  end
-
-  defp parse_cursor_timestamp(ts) when is_integer(ts) do
-    case DateTime.from_unix(ts, :microsecond) do
-      {:ok, datetime} -> {:ok, datetime}
-      {:error, _} -> {:error, :invalid_timestamp}
-    end
-  end
-
-  defp parse_cursor_timestamp(_), do: {:error, :invalid_timestamp}
-
-  defp parse_cursor_uuid(uuid) when is_binary(uuid) do
-    case Ecto.UUID.cast(uuid) do
-      {:ok, uuid} -> {:ok, uuid}
-      :error -> {:error, :invalid_uuid}
-    end
-  end
-
-  defp parse_cursor_uuid(_), do: {:error, :invalid_uuid}
 end

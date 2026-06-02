@@ -55,10 +55,6 @@ defmodule KlassHero.Enrollment.Application.Commands.ResendInvite do
   defp dispatch_resend_event(reset) do
     reset.provider_id
     |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
-    |> EventDispatchHelper.dispatch_or_error(KlassHero.Enrollment)
-    |> case do
-      :ok -> {:ok, reset}
-      {:error, _} = err -> err
-    end
+    |> EventDispatchHelper.dispatch_or_ok(KlassHero.Enrollment, reset)
   end
 end

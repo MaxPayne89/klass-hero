@@ -8,8 +8,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
-
-  require Logger
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @doc """
   Converts a BulkEnrollmentInviteSchema to a BulkEnrollmentInvite domain entity.
@@ -45,17 +44,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
       error_details: schema.error_details
     }
 
-    case BulkEnrollmentInvite.from_persistence(attrs) do
-      {:ok, invite} ->
-        invite
-
-      {:error, :invalid_persistence_data} ->
-        Logger.error("[BulkEnrollmentInviteMapper] Corrupted persistence data",
-          invite_id: schema.id,
-          fields: Map.keys(attrs)
-        )
-
-        raise "Corrupted invite data for id=#{inspect(schema.id)} — required keys missing from persistence"
-    end
+    MapperHelpers.from_persistence!(BulkEnrollmentInvite, attrs, schema.id)
   end
 end

@@ -22,8 +22,8 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
-
-  require Logger
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
+  alias KlassHero.Shared.ErrorIds
 
   @impl true
   def grant(attrs) when is_map(attrs) do
@@ -43,11 +43,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
           if EctoErrorHelpers.any_unique_constraint_violation?(changeset.errors) do
             {:error, :already_active}
           else
-            Logger.warning(
-              "[Family.ConsentRepository] Changeset validation failed during grant",
-              errors: changeset.errors
-            )
-
+            RepositoryHelpers.log_validation_error(changeset, ErrorIds.consent_grant_failed())
             {:error, changeset}
           end
       end
@@ -68,12 +64,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
               {:ok, ConsentMapper.to_domain(updated)}
 
             {:error, changeset} ->
-              Logger.warning(
-                "[Family.ConsentRepository] Consent withdrawal update failed",
-                consent_id: consent_id,
-                errors: changeset.errors
-              )
-
+              RepositoryHelpers.log_validation_error(changeset, ErrorIds.consent_withdraw_failed())
               {:error, changeset}
           end
 
@@ -88,17 +79,12 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
     span do
       set_attributes("db", operation: "select", entity: "consent")
 
-      query =
-        ConsentSchema
-        |> where([c], c.child_id == ^child_id)
-        |> where([c], c.consent_type == ^consent_type)
-        |> where([c], is_nil(c.withdrawn_at))
-        |> limit(1)
-
-      case Repo.one(query) do
-        nil -> {:error, :not_found}
-        schema -> {:ok, ConsentMapper.to_domain(schema)}
-      end
+      ConsentSchema
+      |> where([c], c.child_id == ^child_id)
+      |> where([c], c.consent_type == ^consent_type)
+      |> where([c], is_nil(c.withdrawn_at))
+      |> limit(1)
+      |> RepositoryHelpers.fetch_one(ConsentMapper)
     end
   end
 
@@ -157,16 +143,5 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
     end
   end
 
-  defp get_schema(consent_id) do
-    case Ecto.UUID.dump(consent_id) do
-      {:ok, _binary} ->
-        case Repo.get(ConsentSchema, consent_id) do
-          nil -> {:error, :not_found}
-          schema -> {:ok, schema}
-        end
-
-      :error ->
-        {:error, :not_found}
-    end
-  end
+  defp get_schema(consent_id), do: RepositoryHelpers.get_schema_by_uuid(ConsentSchema, consent_id)
 end

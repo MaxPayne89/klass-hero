@@ -10,6 +10,7 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
   alias KlassHero.Family.Domain.Events.FamilyEvents
   alias KlassHero.Family.Domain.Models.Child
   alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
@@ -71,11 +72,8 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
       {:error, :duplicate_resource} ->
         @parent_query.get_by_identity_id(user_id)
 
-      {:error, errors} when is_list(errors) ->
-        {:error, {:validation_error, errors}}
-
-      {:error, reason} ->
-        {:error, reason}
+      result ->
+        CommandResult.wrap_validation_errors(result)
     end
   end
 
@@ -125,11 +123,7 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
          {:ok, persisted} <- @child_repository.create_with_guardian(child_attrs, parent_id) do
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) ->
-        {:error, {:validation_error, errors}}
-
-      {:error, reason} ->
-        {:error, reason}
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 

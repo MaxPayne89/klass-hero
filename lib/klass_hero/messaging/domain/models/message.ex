@@ -11,6 +11,7 @@ defmodule KlassHero.Messaging.Domain.Models.Message do
   """
 
   alias KlassHero.Messaging.Domain.Models.Attachment
+  alias KlassHero.Shared.Domain.Validation
 
   @enforce_keys [:id, :conversation_id, :sender_id]
 
@@ -117,23 +118,13 @@ defmodule KlassHero.Messaging.Domain.Models.Message do
 
   defp validate(%__MODULE__{} = message) do
     []
-    |> validate_uuid(:id, message.id)
-    |> validate_uuid(:conversation_id, message.conversation_id)
-    |> validate_uuid(:sender_id, message.sender_id)
+    |> Validation.validate_required_string(:id, message.id)
+    |> Validation.validate_required_string(:conversation_id, message.conversation_id)
+    |> Validation.validate_required_string(:sender_id, message.sender_id)
     |> validate_content(message.content, message.attachments)
     |> validate_message_type(message.message_type)
     |> validate_attachments_count(message.attachments)
   end
-
-  defp validate_uuid(errors, field, value) when is_binary(value) do
-    if String.trim(value) == "" do
-      ["#{field} cannot be empty" | errors]
-    else
-      errors
-    end
-  end
-
-  defp validate_uuid(errors, field, _), do: ["#{field} must be a string" | errors]
 
   defp validate_content(errors, content, attachments) when is_binary(content) do
     trimmed = String.trim(content)

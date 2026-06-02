@@ -1,31 +1,73 @@
 defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
   @moduledoc """
-  Shared query helpers for repository adapters across bounded contexts.
+  Shared fetch-and-map helpers for repository adapters.
 
-  Provides common fetch-and-map patterns that eliminate boilerplate in
-  repository implementations. Delegates data transformation to the
-  mapper module passed by the caller.
+  Each helper delegates domain mapping to a `mapper` module implementing
+  `to_domain/1`. None emit telemetry spans — callers wrap calls in their own
+  `span` so traces attribute to the repository, not this module.
   """
 
-  @doc """
-  Fetches a record by primary key and maps it to a domain struct.
+  alias KlassHero.Repo
 
-  The mapper module must implement `to_domain/1`.
+  require Logger
 
-  ## Examples
-
-      iex> RepositoryHelpers.get_by_id(UserSchema, "a1b2c3d4-e5f6-7890-abcd-ef1234567890", UserMapper)
-      {:ok, %User{}}
-
-      iex> RepositoryHelpers.get_by_id(UserSchema, "00000000-0000-0000-0000-000000000000", UserMapper)
-      {:error, :not_found}
-
-  """
+  @doc "Fetches by primary key and maps to a domain struct. Raises on a malformed id."
   @spec get_by_id(module(), term(), module()) :: {:ok, struct()} | {:error, :not_found}
   def get_by_id(schema, id, mapper) do
-    case KlassHero.Repo.get(schema, id) do
+    case Repo.get(schema, id) do
       nil -> {:error, :not_found}
       record -> {:ok, mapper.to_domain(record)}
     end
+  end
+
+  @doc """
+  Fetches a schema record by UUID primary key, returning `{:error, :not_found}`
+  for a malformed id instead of raising.
+
+  Uses `Ecto.UUID.dump/1`, not `cast/1`: `cast/1` accepts raw 16-byte binaries
+  that are not valid textual UUIDs.
+  """
+  @spec get_schema_by_uuid(module(), term()) :: {:ok, struct()} | {:error, :not_found}
+  def get_schema_by_uuid(schema, id) do
+    case Ecto.UUID.dump(id) do
+      {:ok, _binary} ->
+        case Repo.get(schema, id) do
+          nil -> {:error, :not_found}
+          record -> {:ok, record}
+        end
+
+      :error ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc "UUID-safe `get_by_id/3`: maps to a domain struct, `:not_found` for a malformed id."
+  @spec get_by_uuid(module(), term(), module()) :: {:ok, struct()} | {:error, :not_found}
+  def get_by_uuid(schema, id, mapper) do
+    case get_schema_by_uuid(schema, id) do
+      {:ok, record} -> {:ok, mapper.to_domain(record)}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  @doc "Runs a single-row query and maps the result."
+  @spec fetch_one(Ecto.Queryable.t(), module()) :: {:ok, struct()} | {:error, :not_found}
+  def fetch_one(queryable, mapper) do
+    case Repo.one(queryable) do
+      nil -> {:error, :not_found}
+      record -> {:ok, mapper.to_domain(record)}
+    end
+  end
+
+  @doc """
+  Logs a changeset validation failure in the canonical format (`error_id:` plus
+  raw `errors:`), returning `:ok`. The caller keeps returning `{:error, changeset}`.
+  """
+  @spec log_validation_error(Ecto.Changeset.t(), String.t()) :: :ok
+  def log_validation_error(%Ecto.Changeset{} = changeset, error_id) when is_binary(error_id) do
+    Logger.warning("Repository validation failed",
+      error_id: error_id,
+      errors: changeset.errors
+    )
   end
 end

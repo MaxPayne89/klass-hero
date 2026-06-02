@@ -23,13 +23,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL do
 
   @impl true
   def get_program_start_date(program_id) do
-    span do
-      set_attributes("acl",
-        source: "enrollment",
-        target: "program_catalog",
-        operation: "get_program_start_date"
-      )
-
+    acl_span source: "enrollment", target: "program_catalog" do
       # Trigger: schemaless query on "programs" table
       # Why: Ecto doesn't know field types without a schema, so we must
       #      cast program_id to :binary_id for the UUID column comparison.

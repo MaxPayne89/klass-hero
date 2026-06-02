@@ -11,6 +11,7 @@ defmodule KlassHero.Shared do
     deps: [KlassHero],
     exports: [
       Categories,
+      CommandResult,
       Entitlements,
       ErrorIds,
       SubscriptionTiers,
@@ -18,7 +19,9 @@ defmodule KlassHero.Shared do
       Domain.Events.IntegrationEvent,
       Domain.Ports.Driving.ForHandlingEvents,
       Domain.Ports.Driving.ForHandlingIntegrationEvents,
+      Domain.Models.PersistenceSupport,
       Domain.Types.Money,
+      Domain.Validation,
       Domain.Types.Pagination.PageResult,
       DomainEventBus,
       EventPublishing,

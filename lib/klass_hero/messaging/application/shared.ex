@@ -73,4 +73,9 @@ defmodule KlassHero.Messaging.Application.Shared do
       check_entitlement(scope, metadata)
     end
   end
+
+  @doc "Adds `:program_id` to the attrs map only when a program id is present."
+  @spec maybe_put_program_id(map(), String.t() | nil) :: map()
+  def maybe_put_program_id(attrs, nil), do: attrs
+  def maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
 end

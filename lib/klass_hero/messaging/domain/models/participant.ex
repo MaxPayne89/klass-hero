@@ -5,6 +5,8 @@ defmodule KlassHero.Messaging.Domain.Models.Participant do
   Tracks membership and read receipts for conversation participants.
   """
 
+  alias KlassHero.Shared.Domain.Validation
+
   @enforce_keys [:id, :conversation_id, :user_id, :joined_at]
 
   defstruct [
@@ -107,21 +109,11 @@ defmodule KlassHero.Messaging.Domain.Models.Participant do
 
   defp validate(%__MODULE__{} = participant) do
     []
-    |> validate_uuid(:id, participant.id)
-    |> validate_uuid(:conversation_id, participant.conversation_id)
-    |> validate_uuid(:user_id, participant.user_id)
+    |> Validation.validate_required_string(:id, participant.id)
+    |> Validation.validate_required_string(:conversation_id, participant.conversation_id)
+    |> Validation.validate_required_string(:user_id, participant.user_id)
     |> validate_datetime(:joined_at, participant.joined_at)
   end
-
-  defp validate_uuid(errors, field, value) when is_binary(value) do
-    if String.trim(value) == "" do
-      ["#{field} cannot be empty" | errors]
-    else
-      errors
-    end
-  end
-
-  defp validate_uuid(errors, field, _), do: ["#{field} must be a string" | errors]
 
   defp validate_datetime(errors, _field, %DateTime{}), do: errors
   defp validate_datetime(errors, field, _), do: ["#{field} must be a DateTime" | errors]

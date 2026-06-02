@@ -16,6 +16,7 @@ defmodule KlassHero.Messaging.Domain.Models.Conversation do
 
   alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Messaging.Domain.Models.Participant
+  alias KlassHero.Shared.Domain.Validation
 
   @enforce_keys [:id, :type, :provider_id]
 
@@ -138,21 +139,11 @@ defmodule KlassHero.Messaging.Domain.Models.Conversation do
 
   defp validate(%__MODULE__{} = conversation) do
     []
-    |> validate_uuid(:id, conversation.id)
-    |> validate_uuid(:provider_id, conversation.provider_id)
+    |> Validation.validate_required_string(:id, conversation.id)
+    |> Validation.validate_required_string(:provider_id, conversation.provider_id)
     |> validate_type(conversation.type)
     |> validate_program_id(conversation)
   end
-
-  defp validate_uuid(errors, field, value) when is_binary(value) do
-    if String.trim(value) == "" do
-      ["#{field} cannot be empty" | errors]
-    else
-      errors
-    end
-  end
-
-  defp validate_uuid(errors, field, _), do: ["#{field} must be a string" | errors]
 
   defp validate_type(errors, type) when type in @valid_types, do: errors
 

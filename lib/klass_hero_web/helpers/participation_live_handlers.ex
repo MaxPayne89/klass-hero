@@ -1,0 +1,128 @@
+defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
+  @moduledoc """
+  Shared `handle_event` bodies for the provider and staff participation LiveViews.
+
+  The check-in, check-out, and note-submission flows are identical across both
+  surfaces; only the post-success participation reload differs (staff reloads through a
+  program-assignment authorization gate). Callers pass their own `reload_fn`
+  (a `socket -> socket` function, typically `&load_session_data/1`) so that
+  divergence stays in the LiveView while the orchestration lives here.
+  """
+
+  use Gettext, backend: KlassHeroWeb.Gettext
+
+  import Phoenix.Component, only: [assign: 3]
+  import Phoenix.LiveView, only: [put_flash: 3]
+
+  alias KlassHeroWeb.Helpers.ParticipationEditHelpers
+  alias Phoenix.LiveView.Socket
+
+  require Logger
+
+  @type reload_fn :: (Socket.t() -> Socket.t())
+
+  @doc "Records a check-in for the given record, then reloads via `reload_fn`."
+  @spec check_in(Socket.t(), String.t(), reload_fn()) :: {:noreply, Socket.t()}
+  def check_in(socket, record_id, reload_fn) do
+    case ParticipationEditHelpers.find_participation_record(socket, record_id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
+
+      record ->
+        case KlassHero.Participation.record_check_in(%{
+               record_id: record.id,
+               checked_in_by: socket.assigns.current_scope.user.id
+             }) do
+          {:ok, _record} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, gettext("Child checked in successfully"))
+             |> reload_fn.()}
+
+          {:error, reason} ->
+            Logger.error("[ParticipationLiveHandlers.check_in] Failed to check in",
+              record_id: record_id,
+              child_id: record.child_id,
+              reason: inspect(reason)
+            )
+
+            {:noreply, put_flash(socket, :error, gettext("Failed to check in: %{reason}", reason: inspect(reason)))}
+        end
+    end
+  end
+
+  @doc "Records a check-out for the given record, clearing its checkout form, then reloads."
+  @spec confirm_checkout(Socket.t(), String.t(), map(), reload_fn()) :: {:noreply, Socket.t()}
+  def confirm_checkout(socket, record_id, params, reload_fn) do
+    notes = Map.get(params, "notes")
+
+    case ParticipationEditHelpers.find_participation_record(socket, record_id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
+
+      record ->
+        case KlassHero.Participation.record_check_out(%{
+               record_id: record.id,
+               checked_out_by: socket.assigns.current_scope.user.id,
+               notes: notes
+             }) do
+          {:ok, _record} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, gettext("Child checked out successfully"))
+             |> assign(:checkout_form_expanded, nil)
+             |> assign(:checkout_forms, Map.delete(socket.assigns.checkout_forms, record_id))
+             |> reload_fn.()}
+
+          {:error, reason} ->
+            Logger.error("[ParticipationLiveHandlers.confirm_checkout] Failed to check out",
+              record_id: record_id,
+              child_id: record.child_id,
+              reason: inspect(reason)
+            )
+
+            {:noreply, put_flash(socket, :error, gettext("Failed to check out: %{reason}", reason: inspect(reason)))}
+        end
+    end
+  end
+
+  @doc "Submits a behavioral note for the given record, clearing its note form, then reloads."
+  @spec submit_note(Socket.t(), String.t(), map(), reload_fn()) :: {:noreply, Socket.t()}
+  def submit_note(socket, record_id, params, reload_fn) do
+    case ParticipationEditHelpers.find_participation_record(socket, record_id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
+
+      _record ->
+        content = Map.get(params, "content", "")
+
+        case KlassHero.Participation.submit_behavioral_note(%{
+               participation_record_id: record_id,
+               provider_id: socket.assigns.provider_id,
+               content: content
+             }) do
+          {:ok, _note} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, gettext("Behavioral note submitted for review"))
+             |> assign(:note_form_expanded, nil)
+             |> assign(:note_forms, Map.delete(socket.assigns.note_forms, record_id))
+             |> reload_fn.()}
+
+          {:error, :blank_content} ->
+            {:noreply, put_flash(socket, :error, gettext("Note content cannot be blank"))}
+
+          {:error, :duplicate_note} ->
+            {:noreply, put_flash(socket, :error, gettext("You already submitted a note for this record"))}
+
+          {:error, reason} ->
+            Logger.error("[ParticipationLiveHandlers.submit_note] Failed",
+              record_id: record_id,
+              reason: inspect(reason)
+            )
+
+            {:noreply, put_flash(socket, :error, gettext("Failed to submit note"))}
+        end
+    end
+  end
+end

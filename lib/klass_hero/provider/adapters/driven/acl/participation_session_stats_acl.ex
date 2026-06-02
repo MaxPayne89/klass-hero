@@ -20,13 +20,7 @@ defmodule KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL do
 
   @impl true
   def list_completed_session_counts do
-    span do
-      set_attributes("acl",
-        source: "provider",
-        target: "participation",
-        operation: "list_completed_session_counts"
-      )
-
+    acl_span source: "provider", target: "participation" do
       results =
         from(s in "program_sessions",
           join: p in "programs",

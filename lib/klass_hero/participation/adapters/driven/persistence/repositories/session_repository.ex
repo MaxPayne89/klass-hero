@@ -59,17 +59,14 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
 
   @impl true
   def update(%ProgramSession{} = session) do
-    case Repo.get(ProgramSessionSchema, session.id) do
-      nil ->
-        {:error, :not_found}
+    with {:ok, schema} <-
+           RepositoryHelpers.get_schema_by_uuid(ProgramSessionSchema, session.id) do
+      attrs = ProgramSessionMapper.update_schema(schema, session)
 
-      schema ->
-        attrs = ProgramSessionMapper.update_schema(schema, session)
-
-        schema
-        |> ProgramSessionSchema.update_changeset(attrs)
-        |> Repo.update()
-        |> handle_update_result()
+      schema
+      |> ProgramSessionSchema.update_changeset(attrs)
+      |> Repo.update()
+      |> handle_update_result()
     end
   end
 

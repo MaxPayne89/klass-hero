@@ -95,4 +95,24 @@ defmodule KlassHero.Shared.ErrorIds do
 
   @doc "Child validation error - changeset validation failed."
   def child_validation_error, do: "identity.child.validation.error"
+
+  # Repository changeset-validation failures (standardized logging)
+
+  @doc "Consent grant failed due to changeset errors."
+  def consent_grant_failed, do: "family.consent.grant.failed"
+
+  @doc "Consent withdrawal failed due to changeset errors."
+  def consent_withdraw_failed, do: "family.consent.withdraw.failed"
+
+  @doc "Staff member create failed due to changeset errors."
+  def staff_member_create_failed, do: "provider.staff_member.create.failed"
+
+  @doc "Provider profile validation failed during create."
+  def provider_profile_validation_failed, do: "provider.profile.create.validation_failed"
+
+  @doc "Program create failed due to changeset errors."
+  def program_create_failed, do: "program.catalog.create.failed"
+
+  @doc "Program update failed due to changeset errors."
+  def program_update_failed, do: "program.catalog.update.failed"
 end

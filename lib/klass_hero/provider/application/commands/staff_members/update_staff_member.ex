@@ -6,6 +6,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMember
   """
 
   alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Shared.CommandResult
 
   @query Application.compile_env!(:klass_hero, [:provider, :for_querying_staff_members])
   @repository Application.compile_env!(:klass_hero, [:provider, :for_storing_staff_members])
@@ -25,8 +26,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMember
          {:ok, persisted} <- @repository.update(updated) do
       {:ok, persisted}
     else
-      {:error, errors} when is_list(errors) -> {:error, {:validation_error, errors}}
-      {:error, _} = error -> error
+      result -> CommandResult.wrap_validation_errors(result)
     end
   end
 end

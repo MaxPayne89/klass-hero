@@ -21,6 +21,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
   }
 
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
 
   require Logger
 
@@ -58,11 +59,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
       MessageQueries.base()
       |> MessageQueries.by_id(id)
-      |> Repo.one()
-      |> case do
-        nil -> {:error, :not_found}
-        schema -> {:ok, MessageMapper.to_domain(schema)}
-      end
+      |> RepositoryHelpers.fetch_one(MessageMapper)
     end
   end
 
