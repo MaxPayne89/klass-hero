@@ -118,21 +118,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
         :ok
 
       ids ->
-        Repo.transaction(fn ->
-          case @participant_repo.add_to_conversations_batch(staff_user_id, ids) do
-            {:ok, _count} ->
-              Enum.map(ids, fn conversation_id ->
-                MessagingEvents.participant_added(
-                  conversation_id,
-                  [staff_user_id],
-                  :later_assignment
-                )
-              end)
-
-            {:error, reason} ->
-              Repo.rollback(reason)
-          end
-        end)
+        Repo.transaction(fn -> backfill_participants(staff_user_id, ids) end)
         |> case do
           {:ok, events} ->
             Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
@@ -141,6 +127,22 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
           {:error, reason} ->
             {:error, reason}
         end
+    end
+  end
+
+  defp backfill_participants(staff_user_id, ids) do
+    case @participant_repo.add_to_conversations_batch(staff_user_id, ids) do
+      {:ok, _count} ->
+        Enum.map(ids, fn conversation_id ->
+          MessagingEvents.participant_added(
+            conversation_id,
+            [staff_user_id],
+            :later_assignment
+          )
+        end)
+
+      {:error, reason} ->
+        Repo.rollback(reason)
     end
   end
 
