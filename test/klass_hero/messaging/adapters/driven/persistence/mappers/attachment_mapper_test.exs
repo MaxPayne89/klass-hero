@@ -36,7 +36,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
     end
 
     test "maps nil timestamps" do
-      schema = build_schema(%{inserted_at: nil, updated_at: nil})
+      schema = build_schema(inserted_at: nil, updated_at: nil)
 
       result = AttachmentMapper.to_domain(schema)
 
@@ -44,8 +44,16 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
       assert result.updated_at == nil
     end
 
+    test "preserves content_type without transformation" do
+      for content_type <- ~w(image/jpeg image/png image/gif image/webp) do
+        schema = build_schema(content_type: content_type)
+        result = AttachmentMapper.to_domain(schema)
+        assert result.content_type == content_type
+      end
+    end
+
     test "preserves large file_size_bytes" do
-      schema = build_schema(%{file_size_bytes: 10_485_760})
+      schema = build_schema(file_size_bytes: 10_485_760)
 
       result = AttachmentMapper.to_domain(schema)
 
@@ -66,10 +74,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
 
       result = AttachmentMapper.to_create_attrs(attrs)
 
-      assert Enum.sort(Map.keys(result)) ==
-               ~w(content_type file_size_bytes file_url message_id original_filename storage_path)a
-
-      for key <- Map.keys(attrs), do: assert(result[key] == attrs[key])
+      assert result == attrs
     end
 
     test "filters out extraneous keys not needed for persistence" do
@@ -92,7 +97,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
 
     test "includes storage_path (not present in domain model)" do
       storage_path = "uploads/2025/04/abc123.jpg"
-
       attrs = %{
         message_id: Ecto.UUID.generate(),
         file_url: "https://cdn.example.com/abc123.jpg",
@@ -133,6 +137,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
       updated_at: now
     }
 
-    struct!(AttachmentSchema, Map.merge(defaults, overrides))
+    struct!(AttachmentSchema, Map.merge(defaults, Map.new(overrides)))
   end
 end

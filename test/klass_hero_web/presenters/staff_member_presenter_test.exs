@@ -70,6 +70,57 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
     end
   end
 
+  describe "to_hero_card/1 — parent/public-facing hero card (badge always nil)" do
+    test "uses hero-card-staff DOM id prefix" do
+      staff = staff_fixture(%{})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert card.id == "hero-card-staff-#{staff.id}"
+    end
+
+    test "exposes :name (not :full_name) as the display name" do
+      staff = staff_fixture(%{first_name: "Alice", last_name: "Smith"})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert card.name == "Alice Smith"
+      refute Map.has_key?(card, :full_name)
+    end
+
+    test "badge is always nil — badge is applied only by HeroCardsPresenter" do
+      staff = staff_fixture(%{})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert is_nil(card.badge)
+    end
+
+    test "nil tags and qualifications default to empty lists" do
+      staff = staff_fixture(%{tags: nil, qualifications: nil})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert card.tags == []
+      assert card.qualifications == []
+    end
+  end
+
+  describe "to_hero_card_list/1" do
+    test "maps a list preserving badge: nil on each card" do
+      list = [
+        staff_fixture(%{first_name: "Alice", last_name: "A"}),
+        staff_fixture(%{first_name: "Bob", last_name: "B"})
+      ]
+
+      cards = StaffMemberPresenter.to_hero_card_list(list)
+
+      assert length(cards) == 2
+      assert Enum.map(cards, & &1.name) == ["Alice A", "Bob B"]
+      assert Enum.all?(cards, &is_nil(&1.badge))
+    end
+  end
+
   describe "to_admin_view/1 — business-owner-facing (includes pay_rate)" do
     test "includes a formatted rate_label when pay_rate is hourly" do
       staff = staff_fixture(%{pay_rate: hourly_rate()})

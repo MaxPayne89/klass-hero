@@ -34,6 +34,28 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.InstructorTest do
     end
   end
 
+  describe "initials/1" do
+    test "returns uppercase initial of each word in a two-word name" do
+      {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Marie Curie"})
+      assert Instructor.initials(instructor) == "MC"
+    end
+
+    test "returns single initial for a single-word name" do
+      {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Madonna"})
+      assert Instructor.initials(instructor) == "M"
+    end
+
+    test "takes only the first two initials from a three-word name" do
+      {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Mary Jane Watson"})
+      assert Instructor.initials(instructor) == "MJ"
+    end
+
+    test "handles extra internal whitespace between words" do
+      {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Alice   Smith"})
+      assert Instructor.initials(instructor) == "AS"
+    end
+  end
+
   describe "from_persistence/1" do
     test "reconstructs without validation" do
       assert {:ok, instructor} = Instructor.from_persistence(@valid_attrs)
