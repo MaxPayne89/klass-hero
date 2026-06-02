@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
   """
 
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Provider.Domain.Models.{PayRate, StaffMember}
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
@@ -38,6 +39,24 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
     rate
   end
 
+  defp per_session_rate do
+    {:ok, rate} = PayRate.per_session(Decimal.new("80.00"))
+    rate
+  end
+
+  # An arbitrary staff member with random identity fields and any pay-rate state.
+  # Used to assert the parent-facing leak invariant holds for ALL inputs, not
+  # just the two hand-picked examples.
+  defp staff_generator do
+    gen all(
+          first <- StreamData.string(:alphanumeric, min_length: 1, max_length: 12),
+          last <- StreamData.string(:alphanumeric, min_length: 1, max_length: 12),
+          pay_rate <- StreamData.member_of([nil, hourly_rate(), per_session_rate()])
+        ) do
+      staff_fixture(%{first_name: first, last_name: last, pay_rate: pay_rate})
+    end
+  end
+
   describe "to_card_view/1 — parent/public-facing (no pay_rate)" do
     test "never includes pay_rate, even when the StaffMember has one set" do
       staff = staff_fixture(%{pay_rate: hourly_rate()})
@@ -56,6 +75,17 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
       refute Map.has_key?(view, :pay_rate)
       assert view.full_name == "Mike Johnson"
     end
+
+    # Security invariant: no matter the staff member's fields or pay-rate state,
+    # the parent-facing card must never carry compensation data.
+    property "never leaks :pay_rate or :rate_label for any staff member" do
+      check all(staff <- staff_generator()) do
+        view = StaffMemberPresenter.to_card_view(staff)
+
+        refute Map.has_key?(view, :pay_rate)
+        refute Map.has_key?(view, :rate_label)
+      end
+    end
   end
 
   describe "to_card_view_list/1" do
@@ -67,6 +97,66 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
       for view <- views do
         refute Map.has_key?(view, :pay_rate)
       end
+    end
+
+    property "never leaks pay data for any list of staff members" do
+      check all(staff_list <- StreamData.list_of(staff_generator(), max_length: 5)) do
+        views = StaffMemberPresenter.to_card_view_list(staff_list)
+
+        assert Enum.all?(views, &(not Map.has_key?(&1, :pay_rate)))
+        assert Enum.all?(views, &(not Map.has_key?(&1, :rate_label)))
+      end
+    end
+  end
+
+  describe "to_hero_card/1 — parent/public-facing hero card (badge always nil)" do
+    test "uses hero-card-staff DOM id prefix" do
+      staff = staff_fixture(%{})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert card.id == "hero-card-staff-#{staff.id}"
+    end
+
+    test "exposes :name (not :full_name) as the display name" do
+      staff = staff_fixture(%{first_name: "Alice", last_name: "Smith"})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert card.name == "Alice Smith"
+      refute Map.has_key?(card, :full_name)
+    end
+
+    test "badge is always nil — badge is applied only by HeroCardsPresenter" do
+      staff = staff_fixture(%{})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert is_nil(card.badge)
+    end
+
+    test "nil tags and qualifications default to empty lists" do
+      staff = staff_fixture(%{tags: nil, qualifications: nil})
+
+      card = StaffMemberPresenter.to_hero_card(staff)
+
+      assert card.tags == []
+      assert card.qualifications == []
+    end
+  end
+
+  describe "to_hero_card_list/1" do
+    test "maps a list preserving badge: nil on each card" do
+      list = [
+        staff_fixture(%{first_name: "Alice", last_name: "A"}),
+        staff_fixture(%{first_name: "Bob", last_name: "B"})
+      ]
+
+      cards = StaffMemberPresenter.to_hero_card_list(list)
+
+      assert length(cards) == 2
+      assert Enum.map(cards, & &1.name) == ["Alice A", "Bob B"]
+      assert Enum.all?(cards, &is_nil(&1.badge))
     end
   end
 

@@ -1,5 +1,6 @@
 defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapperTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.AttachmentSchema
@@ -36,7 +37,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
     end
 
     test "maps nil timestamps" do
-      schema = build_schema(%{inserted_at: nil, updated_at: nil})
+      schema = build_schema(inserted_at: nil, updated_at: nil)
 
       result = AttachmentMapper.to_domain(schema)
 
@@ -44,12 +45,51 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
       assert result.updated_at == nil
     end
 
+    test "preserves content_type without transformation" do
+      for content_type <- ~w(image/jpeg image/png image/gif image/webp) do
+        schema = build_schema(content_type: content_type)
+        result = AttachmentMapper.to_domain(schema)
+        assert result.content_type == content_type
+      end
+    end
+
     test "preserves large file_size_bytes" do
-      schema = build_schema(%{file_size_bytes: 10_485_760})
+      schema = build_schema(file_size_bytes: 10_485_760)
 
       result = AttachmentMapper.to_domain(schema)
 
       assert result.file_size_bytes == 10_485_760
+    end
+
+    # to_domain/1 is a straight field copy (no casting), so every field must
+    # survive verbatim for any schema.
+    property "carries every field through unchanged" do
+      check all(
+              file_url <- string(:printable, max_length: 60),
+              original_filename <- string(:printable, max_length: 40),
+              content_type <- string(:alphanumeric, min_length: 1, max_length: 20),
+              file_size_bytes <- integer(0..50_000_000)
+            ) do
+        schema =
+          build_schema(
+            file_url: file_url,
+            original_filename: original_filename,
+            content_type: content_type,
+            file_size_bytes: file_size_bytes
+          )
+
+        result = AttachmentMapper.to_domain(schema)
+
+        assert %Attachment{} = result
+        assert result.id == schema.id
+        assert result.message_id == schema.message_id
+        assert result.file_url == file_url
+        assert result.original_filename == original_filename
+        assert result.content_type == content_type
+        assert result.file_size_bytes == file_size_bytes
+        assert result.inserted_at == schema.inserted_at
+        assert result.updated_at == schema.updated_at
+      end
     end
   end
 
@@ -66,10 +106,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
 
       result = AttachmentMapper.to_create_attrs(attrs)
 
-      assert Enum.sort(Map.keys(result)) ==
-               ~w(content_type file_size_bytes file_url message_id original_filename storage_path)a
-
-      for key <- Map.keys(attrs), do: assert(result[key] == attrs[key])
+      assert result == attrs
     end
 
     test "filters out extraneous keys not needed for persistence" do
@@ -133,6 +170,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
       updated_at: now
     }
 
-    struct!(AttachmentSchema, Map.merge(defaults, overrides))
+    struct!(AttachmentSchema, Map.merge(defaults, Map.new(overrides)))
   end
 end
