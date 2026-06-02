@@ -1,9 +1,12 @@
 defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmentInviteMapperTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmentInviteMapper
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
+
+  @statuses [:pending, :invite_sent, :registered, :enrolled, :failed]
 
   describe "to_domain/1" do
     test "maps all fields from schema to domain struct" do
@@ -72,23 +75,24 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
     end
 
     test "maps schema with all optional fields nil" do
-      schema = build_schema(%{
-        guardian2_email: nil,
-        guardian2_first_name: nil,
-        guardian2_last_name: nil,
-        school_grade: nil,
-        school_name: nil,
-        medical_conditions: nil,
-        nut_allergy: nil,
-        consent_photo_marketing: nil,
-        consent_photo_social_media: nil,
-        invite_token: nil,
-        invite_sent_at: nil,
-        registered_at: nil,
-        enrolled_at: nil,
-        enrollment_id: nil,
-        error_details: nil
-      })
+      schema =
+        build_schema(%{
+          guardian2_email: nil,
+          guardian2_first_name: nil,
+          guardian2_last_name: nil,
+          school_grade: nil,
+          school_name: nil,
+          medical_conditions: nil,
+          nut_allergy: nil,
+          consent_photo_marketing: nil,
+          consent_photo_social_media: nil,
+          invite_token: nil,
+          invite_sent_at: nil,
+          registered_at: nil,
+          enrolled_at: nil,
+          enrollment_id: nil,
+          error_details: nil
+        })
 
       result = BulkEnrollmentInviteMapper.to_domain(schema)
 
@@ -155,7 +159,44 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.BulkEnrollmen
       assert is_binary(result.id)
       assert result.id == to_string(raw_id)
     end
+
+    # Optional fields must round through whether nil or populated, across every
+    # status. Required keys are held fixed by build_schema/1 defaults.
+    property "preserves optional fields and status in both nil and populated states" do
+      check all(
+              status <- member_of(@statuses),
+              school_grade <- maybe(integer(1..13)),
+              school_name <- maybe(string(:printable, min_length: 1, max_length: 30)),
+              medical_conditions <- maybe(string(:printable, min_length: 1, max_length: 40)),
+              guardian2_email <- maybe(string(:alphanumeric, min_length: 1, max_length: 20)),
+              error_details <- maybe(string(:printable, min_length: 1, max_length: 40)),
+              nut_allergy <- boolean()
+            ) do
+        schema =
+          build_schema(%{
+            status: status,
+            school_grade: school_grade,
+            school_name: school_name,
+            medical_conditions: medical_conditions,
+            guardian2_email: guardian2_email,
+            error_details: error_details,
+            nut_allergy: nut_allergy
+          })
+
+        result = BulkEnrollmentInviteMapper.to_domain(schema)
+
+        assert result.status == status
+        assert result.school_grade == school_grade
+        assert result.school_name == school_name
+        assert result.medical_conditions == medical_conditions
+        assert result.guardian2_email == guardian2_email
+        assert result.error_details == error_details
+        assert result.nut_allergy == nut_allergy
+      end
+    end
   end
+
+  defp maybe(gen), do: one_of([constant(nil), gen])
 
   defp build_schema(overrides) do
     defaults = %{

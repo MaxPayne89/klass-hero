@@ -9,6 +9,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportM
   """
 
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IncidentReportSchema
@@ -18,6 +19,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportM
   @provider_id Ecto.UUID.generate()
   @reporter_user_id Ecto.UUID.generate()
   @program_id Ecto.UUID.generate()
+
+  @categories [:safety_concern, :behavioral_issue, :injury, :property_damage, :policy_violation, :other]
+  @severities [:low, :medium, :high, :critical]
 
   defp valid_schema(overrides \\ %{}) do
     defaults = %{
@@ -219,12 +223,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportM
       domain_before =
         valid_domain(%{photo_url: "photos/test.jpg", original_filename: "test.jpg"})
 
-      attrs = IncidentReportMapper.to_schema(domain_before)
-
-      schema =
-        struct!(IncidentReportSchema, Map.merge(Map.from_struct(valid_schema()), attrs))
-
-      domain_after = IncidentReportMapper.to_domain(schema)
+      domain_after = round_trip(domain_before)
 
       assert domain_after.id == domain_before.id
       assert domain_after.provider_profile_id == domain_before.provider_profile_id
@@ -234,6 +233,61 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportM
       assert domain_after.description == domain_before.description
       assert domain_after.photo_url == domain_before.photo_url
       assert domain_after.original_filename == domain_before.original_filename
+    end
+
+    property "domain → schema attrs → domain preserves every non-timestamp field" do
+      check all(domain_before <- domain_generator()) do
+        domain_after = round_trip(domain_before)
+
+        # to_schema drops timestamps and to_domain re-reads them from the schema,
+        # so compare the whole struct modulo the two timestamp fields.
+        normalised = %{domain_after | inserted_at: domain_before.inserted_at, updated_at: domain_before.updated_at}
+
+        assert normalised == domain_before
+      end
+    end
+  end
+
+  # Round-trips a domain report through the mapper. to_schema/1 omits timestamps,
+  # so they are supplied from the valid_schema/0 base during reconstruction.
+  defp round_trip(domain) do
+    attrs = IncidentReportMapper.to_schema(domain)
+
+    IncidentReportSchema
+    |> struct!(Map.merge(Map.from_struct(valid_schema()), attrs))
+    |> IncidentReportMapper.to_domain()
+  end
+
+  defp maybe(gen), do: one_of([constant(nil), gen])
+  defp nonempty_string, do: string(:alphanumeric, min_length: 1, max_length: 20)
+
+  defp domain_generator do
+    gen all(
+          id <- nonempty_string(),
+          provider_profile_id <- nonempty_string(),
+          reporter_user_id <- nonempty_string(),
+          reporter_display_name <- nonempty_string(),
+          program_id <- maybe(nonempty_string()),
+          session_id <- maybe(nonempty_string()),
+          category <- member_of(@categories),
+          severity <- member_of(@severities),
+          description <- nonempty_string(),
+          photo_url <- maybe(nonempty_string()),
+          original_filename <- maybe(nonempty_string())
+        ) do
+      valid_domain(%{
+        id: id,
+        provider_profile_id: provider_profile_id,
+        reporter_user_id: reporter_user_id,
+        reporter_display_name: reporter_display_name,
+        program_id: program_id,
+        session_id: session_id,
+        category: category,
+        severity: severity,
+        description: description,
+        photo_url: photo_url,
+        original_filename: original_filename
+      })
     end
   end
 end

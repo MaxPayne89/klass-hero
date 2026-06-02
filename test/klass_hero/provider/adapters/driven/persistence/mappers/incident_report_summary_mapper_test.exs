@@ -8,6 +8,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
   """
 
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IncidentReportSchema
@@ -16,6 +17,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
   @id Ecto.UUID.generate()
   @provider_id Ecto.UUID.generate()
   @program_id Ecto.UUID.generate()
+
+  @categories [:safety_concern, :behavioral_issue, :injury, :property_damage, :policy_violation, :other]
+  @severities [:low, :medium, :high, :critical]
 
   defp valid_schema(overrides \\ %{}) do
     defaults = %{
@@ -87,5 +91,46 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
 
       assert summary.session_id == session_id
     end
+
+    property "projects every display field, stringifying ids and guarding nil FKs" do
+      check all(
+              id <- nonempty_string(),
+              provider_id <- nonempty_string(),
+              program_id <- maybe(nonempty_string()),
+              session_id <- maybe(nonempty_string()),
+              category <- member_of(@categories),
+              severity <- member_of(@severities),
+              description <- nonempty_string(),
+              reporter_display_name <- nonempty_string()
+            ) do
+        schema =
+          valid_schema(%{
+            id: id,
+            provider_id: provider_id,
+            program_id: program_id,
+            session_id: session_id,
+            category: category,
+            severity: severity,
+            description: description,
+            reporter_display_name: reporter_display_name
+          })
+
+        summary = IncidentReportSummaryMapper.from_schema(schema)
+
+        assert summary.id == to_string(id)
+        assert summary.provider_id == to_string(provider_id)
+        assert summary.program_id == maybe_to_string(program_id)
+        assert summary.session_id == maybe_to_string(session_id)
+        assert summary.category == category
+        assert summary.severity == severity
+        assert summary.description == description
+        assert summary.reporter_display_name == reporter_display_name
+      end
+    end
   end
+
+  defp maybe(gen), do: one_of([constant(nil), gen])
+  defp nonempty_string, do: string(:alphanumeric, min_length: 1, max_length: 20)
+  defp maybe_to_string(nil), do: nil
+  defp maybe_to_string(value), do: to_string(value)
 end

@@ -1,5 +1,6 @@
 defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapperTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.AttachmentSchema
@@ -59,6 +60,37 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
 
       assert result.file_size_bytes == 10_485_760
     end
+
+    # to_domain/1 is a straight field copy (no casting), so every field must
+    # survive verbatim for any schema.
+    property "carries every field through unchanged" do
+      check all(
+              file_url <- string(:printable, max_length: 60),
+              original_filename <- string(:printable, max_length: 40),
+              content_type <- string(:alphanumeric, min_length: 1, max_length: 20),
+              file_size_bytes <- integer(0..50_000_000)
+            ) do
+        schema =
+          build_schema(
+            file_url: file_url,
+            original_filename: original_filename,
+            content_type: content_type,
+            file_size_bytes: file_size_bytes
+          )
+
+        result = AttachmentMapper.to_domain(schema)
+
+        assert %Attachment{} = result
+        assert result.id == schema.id
+        assert result.message_id == schema.message_id
+        assert result.file_url == file_url
+        assert result.original_filename == original_filename
+        assert result.content_type == content_type
+        assert result.file_size_bytes == file_size_bytes
+        assert result.inserted_at == schema.inserted_at
+        assert result.updated_at == schema.updated_at
+      end
+    end
   end
 
   describe "to_create_attrs/1" do
@@ -97,6 +129,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapp
 
     test "includes storage_path (not present in domain model)" do
       storage_path = "uploads/2025/04/abc123.jpg"
+
       attrs = %{
         message_id: Ecto.UUID.generate(),
         file_url: "https://cdn.example.com/abc123.jpg",

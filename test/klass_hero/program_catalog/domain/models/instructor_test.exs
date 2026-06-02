@@ -1,7 +1,9 @@
 defmodule KlassHero.ProgramCatalog.Domain.Models.InstructorTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.ProgramCatalog.Domain.Models.Instructor
+  alias KlassHero.Shared.NameUtils
 
   @valid_attrs %{
     id: "550e8400-e29b-41d4-a716-446655440000",
@@ -35,24 +37,19 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.InstructorTest do
   end
 
   describe "initials/1" do
-    test "returns uppercase initial of each word in a two-word name" do
+    test "returns the uppercase initials of the instructor's name" do
       {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Marie Curie"})
       assert Instructor.initials(instructor) == "MC"
     end
 
-    test "returns single initial for a single-word name" do
-      {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Madonna"})
-      assert Instructor.initials(instructor) == "M"
-    end
-
-    test "takes only the first two initials from a three-word name" do
-      {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Mary Jane Watson"})
-      assert Instructor.initials(instructor) == "MJ"
-    end
-
-    test "handles extra internal whitespace between words" do
-      {:ok, instructor} = Instructor.new(%{@valid_attrs | name: "Alice   Smith"})
-      assert Instructor.initials(instructor) == "AS"
+    # initials/1 is a thin delegation to NameUtils.initials_from_name/1, which is
+    # itself property-tested. Rather than re-derive the initials algorithm here,
+    # assert the wiring: initials/1 must agree with the helper for any name.
+    property "delegates to NameUtils.initials_from_name/1 for any name" do
+      check all(name <- string(:printable, max_length: 30)) do
+        instructor = %Instructor{id: @valid_attrs.id, name: name}
+        assert Instructor.initials(instructor) == NameUtils.initials_from_name(name)
+      end
     end
   end
 
