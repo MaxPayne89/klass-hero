@@ -25,30 +25,36 @@
     "incident_report_mapper_note": "IncidentReportMapper: provider_profile_id (domain) <-> provider_id (DB); maybe_to_string nil-guard for program_id/session_id",
     "login_by_magic_link_note": "LoginByMagicLink: 3 paths (confirmed/unconfirmed/error). Use async:true (not async:false).",
     "domain_event_test_pattern": "EventDispatchHelper.dispatch/2 uses DomainEventBus (not TestEventPublisher port). Bridge via DomainEventBus.subscribe. Use async:false.",
-    "coverage_saturation_note": "As of 2026-06-02, backlog largely exhausted. Maintainer merged all 11 TI PRs via #944 (sweep to ExUnit standard + 12 stream_data properties). New opportunities: shared seams from #937 tested in TI PR on branch test-assist/shared-seams-2026-06-02.",
+    "coverage_saturation_note": "As of 2026-06-03, backlog largely exhausted. Remaining: #705 (global config mutation refactor) and #515 (E2E scale) require maintainer decisions. No new code introduced since 2026-06-02.",
     "pr_944_sweep_note": "Maintainer merged all 11 TI PRs via #944 (2026-06-02), sweeping to ExUnit standard with stream_data properties. LoginByMagicLink now uses async:true.",
-    "refactor_937_notes": "Big refactor #937 introduced: CommandResult, Domain.Validation, CursorCodec, MapperHelpers.maybe_to_string/from_persistence!, PersistenceSupport macro, ParticipationLiveHandlers, MessagingLiveHelper. First four now have TI tests.",
+    "refactor_937_notes": "Big refactor #937 introduced: CommandResult, Domain.Validation, CursorCodec, MapperHelpers.maybe_to_string/from_persistence!, PersistenceSupport macro, ParticipationLiveHandlers, MessagingLiveHelper. First four now have TI tests (PR #945).",
     "from_persistence_bang_test_note": "MapperHelpers.from_persistence!/3 test: define inline defmodule with unique names (MapperHelpersTestSuccessModel/FailModel) inside describe block to avoid atom collisions.",
     "cursor_codec_test_note": "CursorCodec is pure, no DB needed. encode returns URL-safe base64 (no +/=). decode(nil) -> {:ok, nil}. All error paths return {:error, :invalid_cursor}.",
     "command_result_wrap_note": "CommandResult.wrap_validation_errors/1: only wraps {:error, list}; all other shapes pass through unchanged.",
-    "projection_test_async_note": "Projection tests (adapters/driven/projections/) use async:false; macro-level projection tests (projection_test.exs) use async:true with Agent fakes. Documented in .claude/rules/testing.md (added #927)."
+    "projection_test_async_note": "Projection tests (adapters/driven/projections/) use async:false; macro-level projection tests (projection_test.exs) use async:true with Agent fakes. Documented in .claude/rules/testing.md (added #927).",
+    "untested_trivial_note": "Remaining untested lib files are mostly ports (behaviours only), pass-through query modules, trivial structs (active?/1 etc.), Mailer, Release, context facades. None have logic worth unit testing."
   },
   "maintainer_priorities": "Maintainer merged all 11 TI PRs via #944 sweep (2026-06-02). This confirms high engagement and quality focus — maintainer added stream_data property tests on top of the example-based tests.",
   "testing_backlog": [
     {
       "id": "e2e-messaging-pubsub-fanout",
       "priority": "medium",
-      "description": "E2E scale tests for messaging PubSub fan-out (Issue #515)"
+      "description": "E2E scale tests for messaging PubSub fan-out (Issue #515) — requires maintainer design decisions on real PubSub in E2E and CI resource budget"
+    },
+    {
+      "id": "refactor-global-config-mutation",
+      "priority": "medium",
+      "description": "Refactor tests mutating :integration_event_publisher global config (Issue #705) — Option 1 (Mox) is best; requires maintainer sign-off"
     }
   ],
   "tasks_last_run": {
     "task_1": "2026-05-30",
-    "task_2": "2026-06-02",
+    "task_2": "2026-06-03",
     "task_3": "2026-06-02",
-    "task_4": "2026-06-01",
-    "task_5": "2026-05-28",
+    "task_4": "2026-06-03",
+    "task_5": "2026-06-03",
     "task_6": "2026-05-31",
-    "task_7": "2026-06-02"
+    "task_7": "2026-06-03"
   },
   "work_in_progress": null,
   "completed_work": [
@@ -57,8 +63,7 @@
       "run_id": "26850743545",
       "description": "40 pure unit tests for 4 new shared seams from #937: CommandResult, Domain.Validation, CursorCodec, MapperHelpers.maybe_to_string/from_persistence!",
       "tests_added": 40,
-      "pr_branch": "test-assist/shared-seams-2026-06-02",
-      "pr_number": "TBD"
+      "pr_number": 945
     },
     {
       "date": "2026-06-02",
@@ -84,10 +89,11 @@
   },
   "checked_off_items": [],
   "backlog_cursor": {
-    "task_2_last_file": "Refactor #937 seams analyzed 2026-06-02",
-    "task_5_last_issue": 515
+    "task_2_last_file": "Scanned all untested lib files 2026-06-03; backlog exhausted",
+    "task_5_last_issue": 705
   },
-  "open_prs": ["test-assist/shared-seams-2026-06-02"],
+  "open_prs": ["test-assist/shared-seams-2026-06-02-d6412edbfc868ddd"],
+  "open_pr_numbers": [945],
   "merged_prs": [944, 920, 858, 846, 811, 779, 771, 764, 759, 750, 733, 723, 719, 713, 707, 696],
   "pending_pr_check": null
 }
