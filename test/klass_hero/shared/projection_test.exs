@@ -185,8 +185,13 @@ defmodule KlassHero.Shared.ProjectionTest do
 
     @impl Projection
     def bootstrap_impl do
-      Agent.update(AlwaysFailAgent, fn n -> n + 1 end)
-      raise "always fails"
+      # Raise behind a runtime condition (always true: count starts at 0 and is
+      # incremented before the check) so the return type stays integer() instead
+      # of none() — Elixir 1.20's inference otherwise flags the macro-generated
+      # `count = bootstrap_impl()` match as unreachable.
+      count = Agent.get_and_update(AlwaysFailAgent, fn n -> {n + 1, n + 1} end)
+      if count > 0, do: raise("always fails")
+      count
     end
 
     @impl Projection
