@@ -3,22 +3,22 @@ defmodule KlassHero.Shared.SubscriptionTiersTest do
 
   alias KlassHero.Shared.SubscriptionTiers
 
-  describe "cast_provider_tier/1" do
-    test "casts valid tier strings to atoms" do
-      assert SubscriptionTiers.cast_provider_tier("starter") == {:ok, :starter}
-      assert SubscriptionTiers.cast_provider_tier("professional") == {:ok, :professional}
-      assert SubscriptionTiers.cast_provider_tier("business_plus") == {:ok, :business_plus}
+  describe "parent tiers" do
+    test "parent_tiers/0 returns the two parent tier atoms" do
+      assert SubscriptionTiers.parent_tiers() == [:explorer, :active]
     end
 
-    test "returns tagged error for unknown tier string" do
-      assert SubscriptionTiers.cast_provider_tier("invalid") == {:error, :invalid_tier}
-      assert SubscriptionTiers.cast_provider_tier("") == {:error, :invalid_tier}
+    test "valid_parent_tier?/1 accepts only parent tier atoms" do
+      assert SubscriptionTiers.valid_parent_tier?(:explorer)
+      assert SubscriptionTiers.valid_parent_tier?(:active)
+
+      refute SubscriptionTiers.valid_parent_tier?(:starter)
+      refute SubscriptionTiers.valid_parent_tier?("explorer")
+      refute SubscriptionTiers.valid_parent_tier?(nil)
     end
 
-    test "returns tagged error for non-binary input" do
-      assert SubscriptionTiers.cast_provider_tier(nil) == {:error, :invalid_tier}
-      assert SubscriptionTiers.cast_provider_tier(:starter) == {:error, :invalid_tier}
-      assert SubscriptionTiers.cast_provider_tier(123) == {:error, :invalid_tier}
+    test "default_parent_tier/0 returns :explorer" do
+      assert SubscriptionTiers.default_parent_tier() == :explorer
     end
   end
 end

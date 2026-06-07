@@ -33,7 +33,6 @@ defmodule KlassHero.Accounts.User do
     field :intended_roles, UserRoles, default: []
     field :locale, :string, default: "en"
     field :is_admin, :boolean, default: false
-    field :provider_subscription_tier, :string
 
     has_one :parent_profile, ParentProfileSchema, foreign_key: :identity_id
     has_one :provider_profile, ProviderProfileSchema, foreign_key: :identity_id
@@ -81,10 +80,9 @@ defmodule KlassHero.Accounts.User do
   A user changeset for staff provider registration.
 
   Always sets intended_roles to [:staff_provider, :provider] — every invited
-  staff member automatically gets a starter provider account.
+  staff member automatically gets a provider account.
 
-  Does not require provider_subscription_tier. Used when a staff member
-  registers via an invitation link.
+  Used when a staff member registers via an invitation link.
 
   ## Options
 

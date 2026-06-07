@@ -89,8 +89,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         provider: %ProviderProfile{
           id: provider.id,
           identity_id: provider_owner.id,
-          business_name: "Test Provider",
-          subscription_tier: :professional
+          business_name: "Test Provider"
         }
       }
 
@@ -125,8 +124,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         provider: %ProviderProfile{
           id: provider.id,
           identity_id: provider_owner.id,
-          business_name: "Test Provider",
-          subscription_tier: :professional
+          business_name: "Test Provider"
         }
       }
 
@@ -201,8 +199,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         provider: %ProviderProfile{
           id: provider.id,
           identity_id: provider_owner.id,
-          business_name: "Test Provider",
-          subscription_tier: :professional
+          business_name: "Test Provider"
         }
       }
 
@@ -268,8 +265,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         provider: %ProviderProfile{
           id: provider.id,
           identity_id: provider_owner.id,
-          business_name: "Test Provider",
-          subscription_tier: :professional
+          business_name: "Test Provider"
         }
       }
 

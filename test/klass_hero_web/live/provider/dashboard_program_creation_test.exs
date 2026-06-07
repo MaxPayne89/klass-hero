@@ -449,10 +449,6 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       conn: conn,
       provider: provider
     } do
-      provider
-      |> Ecto.Changeset.change(%{subscription_tier: "starter"})
-      |> Repo.update!()
-
       seed_programs_with_listing(provider.id, 2)
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
@@ -461,10 +457,6 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     end
 
     test "creates a program beyond the former starter cap", %{conn: conn, provider: provider} do
-      provider
-      |> Ecto.Changeset.change(%{subscription_tier: "starter"})
-      |> Repo.update!()
-
       seed_programs_with_listing(provider.id, 2)
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")

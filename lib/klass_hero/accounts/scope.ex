@@ -126,19 +126,6 @@ defmodule KlassHero.Accounts.Scope do
   def parent_tier(%__MODULE__{parent: nil}), do: nil
   def parent_tier(%__MODULE__{parent: %{subscription_tier: tier}}), do: tier
 
-  @doc """
-  Returns the provider's subscription tier from the scope.
-
-  Returns nil if no provider profile exists.
-
-  ## Examples
-
-      iex> provider_tier(scope)
-      :starter
-  """
-  def provider_tier(%__MODULE__{provider: nil}), do: nil
-  def provider_tier(%__MODULE__{provider: %{subscription_tier: tier}}), do: tier
-
   # Private helpers
 
   defp extract_profile({:ok, profile}), do: profile

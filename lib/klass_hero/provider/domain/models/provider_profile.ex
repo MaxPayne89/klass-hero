@@ -9,8 +9,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
   not foreign key, maintaining bounded context independence.
   """
 
-  alias KlassHero.Shared.SubscriptionTiers
-
   @enforce_keys [:id, :identity_id, :business_name]
 
   defstruct [
@@ -27,7 +25,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     :verified_at,
     :verified_by_id,
     :categories,
-    :subscription_tier,
     :originated_from,
     :profile_status,
     :inserted_at,
@@ -48,7 +45,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
           verified_at: DateTime.t() | nil,
           verified_by_id: String.t() | nil,
           categories: [String.t()] | nil,
-          subscription_tier: :starter | :professional | :business_plus | nil,
           originated_from: :direct | :staff_invite | nil,
           profile_status: :draft | :active | nil,
           inserted_at: DateTime.t() | nil,
@@ -88,7 +84,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     attrs
     |> Map.put_new(:verified, false)
     |> Map.put_new(:categories, [])
-    |> Map.put_new(:subscription_tier, SubscriptionTiers.default_provider_tier())
     |> Map.put_new(:originated_from, :direct)
     |> Map.put_new(:profile_status, :active)
   end
@@ -141,7 +136,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     |> validate_verified(provider_profile.verified)
     |> validate_verified_at(provider_profile.verified_at)
     |> validate_categories(provider_profile.categories)
-    |> validate_subscription_tier(provider_profile.subscription_tier)
     |> validate_originated_from(provider_profile.originated_from)
     |> validate_profile_status(provider_profile.profile_status)
     |> validate_business_owner_email(provider_profile.business_owner_email)
@@ -280,17 +274,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
   end
 
   defp validate_categories(errors, _), do: ["Categories must be a list" | errors]
-
-  defp validate_subscription_tier(errors, nil), do: errors
-
-  defp validate_subscription_tier(errors, tier) do
-    if SubscriptionTiers.valid_provider_tier?(tier) do
-      errors
-    else
-      valid = SubscriptionTiers.provider_tiers() |> Enum.join(", ")
-      ["Subscription tier must be one of: #{valid}" | errors]
-    end
-  end
 
   @valid_originated_from [:direct, :staff_invite]
 

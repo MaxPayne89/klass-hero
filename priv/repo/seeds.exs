@@ -199,8 +199,7 @@ provider_profile_data = [
     phone: "+49 89 200 0001",
     website: "https://hartmann-sport.example.com",
     address: "Hauptstr. 12, 80331 Munich",
-    categories: ["sports", "life-skills"],
-    tier: "starter"
+    categories: ["sports", "life-skills"]
   },
   %{
     business_name: "Klein Kreativ Werkstatt",
@@ -208,8 +207,7 @@ provider_profile_data = [
     phone: "+49 89 200 0002",
     website: "https://klein-kreativ.example.com",
     address: "Leopoldstr. 45, 80802 Munich",
-    categories: ["arts", "workshops"],
-    tier: "starter"
+    categories: ["arts", "workshops"]
   },
   %{
     business_name: "Wolf Musik Akademie",
@@ -217,8 +215,7 @@ provider_profile_data = [
     phone: "+49 30 300 0003",
     website: "https://wolf-musik.example.com",
     address: "Kurfürstendamm 88, 10709 Berlin",
-    categories: ["music", "arts", "education"],
-    tier: "professional"
+    categories: ["music", "arts", "education"]
   },
   %{
     business_name: "Braun Bildungszentrum",
@@ -226,8 +223,7 @@ provider_profile_data = [
     phone: "+49 40 400 0004",
     website: "https://braun-bildung.example.com",
     address: "Mönckebergstr. 20, 20095 Hamburg",
-    categories: ["education", "life-skills", "workshops"],
-    tier: "professional"
+    categories: ["education", "life-skills", "workshops"]
   },
   %{
     business_name: "Richter Elite Academy",
@@ -235,8 +231,7 @@ provider_profile_data = [
     phone: "+49 69 500 0005",
     website: "https://richter-elite.example.com",
     address: "Zeil 100, 60313 Frankfurt",
-    categories: ["sports", "camps", "education", "life-skills"],
-    tier: "business_plus"
+    categories: ["sports", "camps", "education", "life-skills"]
   }
 ]
 
@@ -252,7 +247,6 @@ provider_profiles =
       website: data.website,
       address: data.address,
       categories: data.categories,
-      subscription_tier: data.tier,
       verified: true,
       verified_at: now,
       verified_by_id: admin.id
@@ -260,7 +254,7 @@ provider_profiles =
     |> Repo.insert!()
   end)
 
-Logger.info("Created #{length(provider_profiles)} provider profiles (2 starter, 2 professional, 1 business_plus)")
+Logger.info("Created #{length(provider_profiles)} provider profiles")
 
 # Convenient references
 [starter_1, starter_2, pro_1, pro_2, biz] = provider_profiles
@@ -678,7 +672,7 @@ pro_1_staff = Map.get(staff_by_provider, pro_1.id, [])
 pro_2_staff = Map.get(staff_by_provider, pro_2.id, [])
 biz_staff = Map.get(staff_by_provider, biz.id, [])
 
-# Starter providers: 2 each (at tier limit)
+# First two providers: 2 programs each
 starter_1_programs = [
   %{
     title: "Youth Fitness Basics",

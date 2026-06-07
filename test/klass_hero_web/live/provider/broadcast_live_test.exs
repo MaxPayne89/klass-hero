@@ -111,7 +111,7 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       user = AccountsFixtures.user_fixture(%{intended_roles: [:provider]})
 
       _provider =
-        insert(:provider_profile_schema, identity_id: user.id, subscription_tier: "starter")
+        insert(:provider_profile_schema, identity_id: user.id)
 
       conn = log_in_user(conn, user)
       program = insert(:program_schema)

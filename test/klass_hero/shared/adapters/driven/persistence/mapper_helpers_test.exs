@@ -9,10 +9,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpersTest do
       assert MapperHelpers.string_to_tier("active", :explorer) == :active
     end
 
-    test "returns the atom for a valid provider tier string" do
-      assert MapperHelpers.string_to_tier("starter", :starter) == :starter
-      assert MapperHelpers.string_to_tier("professional", :starter) == :professional
-      assert MapperHelpers.string_to_tier("business_plus", :starter) == :business_plus
+    test "returns the default for a former provider tier string (ADR-0004)" do
+      assert MapperHelpers.string_to_tier("starter", :explorer) == :explorer
+      assert MapperHelpers.string_to_tier("business_plus", :explorer) == :explorer
     end
 
     test "returns the default when the string is nil" do
@@ -24,7 +23,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpersTest do
     end
 
     test "returns the default for an empty string" do
-      assert MapperHelpers.string_to_tier("", :starter) == :starter
+      assert MapperHelpers.string_to_tier("", :explorer) == :explorer
     end
 
     test "does not create new atoms from arbitrary strings" do
@@ -47,15 +46,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpersTest do
       assert MapperHelpers.tier_to_string(:active, "explorer") == "active"
     end
 
-    test "converts a provider tier atom to its string representation" do
-      assert MapperHelpers.tier_to_string(:starter, "starter") == "starter"
-      assert MapperHelpers.tier_to_string(:professional, "starter") == "professional"
-      assert MapperHelpers.tier_to_string(:business_plus, "starter") == "business_plus"
-    end
-
     test "returns the default string when tier is nil" do
       assert MapperHelpers.tier_to_string(nil, "explorer") == "explorer"
-      assert MapperHelpers.tier_to_string(nil, "starter") == "starter"
     end
   end
 
@@ -66,14 +58,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpersTest do
       assert MapperHelpers.normalize_subscription_tier(attrs) == %{
                subscription_tier: "explorer",
                name: "Alice"
-             }
-    end
-
-    test "converts provider tier atom to string" do
-      attrs = %{subscription_tier: :business_plus}
-
-      assert MapperHelpers.normalize_subscription_tier(attrs) == %{
-               subscription_tier: "business_plus"
              }
     end
 

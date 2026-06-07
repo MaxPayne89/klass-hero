@@ -17,7 +17,7 @@ defmodule KlassHero.Accounts.UserNotifierStaffTest do
       assert email.text_body =~ "Jane"
       assert email.text_body =~ "Fun Academy"
       assert email.text_body =~ "test-token"
-      assert email.text_body =~ "free starter account"
+      assert email.text_body =~ "free provider account"
       assert email.text_body =~ "Claim your account"
       assert email.text_body =~ "terms of service"
     end
@@ -40,7 +40,7 @@ defmodule KlassHero.Accounts.UserNotifierStaffTest do
       assert email.text_body =~ "Bob"
       assert email.text_body =~ "Cool Sports"
       assert email.text_body =~ "/staff/dashboard"
-      assert email.text_body =~ "free starter account"
+      assert email.text_body =~ "free provider account"
       assert email.text_body =~ "terms of service"
     end
   end

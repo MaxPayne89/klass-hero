@@ -117,18 +117,4 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
       assert view.initials == "MB"
     end
   end
-
-  describe "tier_label/1" do
-    test "returns label for each valid tier" do
-      assert ProviderPresenter.tier_label(:starter) == "Starter Plan"
-      assert ProviderPresenter.tier_label(:professional) == "Professional Plan"
-      assert ProviderPresenter.tier_label(:business_plus) == "Business Plus Plan"
-    end
-
-    test "raises FunctionClauseError for unknown tier" do
-      assert_raise FunctionClauseError, fn ->
-        ProviderPresenter.tier_label(:unknown)
-      end
-    end
-  end
 end

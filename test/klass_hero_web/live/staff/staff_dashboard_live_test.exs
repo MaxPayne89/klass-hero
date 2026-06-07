@@ -147,7 +147,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       parent_user = user_fixture(intended_roles: [:parent])
 
       provider =
-        provider_profile_fixture(subscription_tier: "professional")
+        provider_profile_fixture()
 
       user = user_fixture(intended_roles: [:staff_provider])
 
@@ -261,7 +261,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
 
   describe "staff roster messaging controls (former starter-tier provider)" do
     setup %{conn: conn} do
-      provider = provider_profile_fixture(subscription_tier: "starter")
+      provider = provider_profile_fixture()
       user = user_fixture(intended_roles: [:staff_provider])
 
       staff =

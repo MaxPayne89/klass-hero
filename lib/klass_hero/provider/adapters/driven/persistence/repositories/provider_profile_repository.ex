@@ -46,7 +46,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
 
       schema_attrs =
         attrs
-        |> MapperHelpers.normalize_atom_field(:subscription_tier)
         |> MapperHelpers.normalize_atom_field(:originated_from)
         |> MapperHelpers.normalize_atom_field(:profile_status)
 

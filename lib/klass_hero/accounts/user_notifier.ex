@@ -103,7 +103,7 @@ defmodule KlassHero.Accounts.UserNotifier do
     #{business_name} has added you to their team on Klass Hero — and you're set up
     to start earning with your own programs too.
 
-    You'll get a free starter account, linked to #{business_name}'s programs and
+    You'll get a free provider account, linked to #{business_name}'s programs and
     ready for your own.
 
     Claim your account & get started:
@@ -113,7 +113,7 @@ defmodule KlassHero.Accounts.UserNotifier do
     Here's how it works:
     1. Click the link above
     2. Your name is already filled in — just confirm it and set a password
-    3. You'll have a free starter account, linked to #{business_name}'s programs
+    3. You'll have a free provider account, linked to #{business_name}'s programs
 
     No monthly fees. No setup costs.
 
@@ -136,7 +136,7 @@ defmodule KlassHero.Accounts.UserNotifier do
     Hi #{name},
 
     #{business_name} has added you to their team on Klass Hero — and you now have
-    a free starter account of your own, ready for your programs.
+    a free provider account of your own, ready for your programs.
 
     You're linked to #{business_name}'s programs and can start managing your own
     activities right away.

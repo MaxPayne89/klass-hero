@@ -17,7 +17,6 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
 
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Shared.NameUtils
-  alias KlassHeroWeb.Presenters.TierPresenter
 
   @doc """
   Transforms a Provider domain model to business view format.
@@ -85,14 +84,6 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
       true -> :pending
     end
   end
-
-  @doc """
-  Converts a subscription tier atom to a human-readable label with "Plan" suffix.
-
-  Delegates to `TierPresenter.tier_plan_label/1`.
-  """
-  @spec tier_label(atom()) :: String.t()
-  defdelegate tier_label(tier), to: TierPresenter, as: :tier_plan_label
 
   @doc """
   Builds a list of verification badges for display.

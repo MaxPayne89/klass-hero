@@ -1394,10 +1394,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       user = KlassHero.AccountsFixtures.user_fixture(%{intended_roles: [:provider]})
 
       provider =
-        KlassHero.Factory.insert(:provider_profile_schema,
-          identity_id: user.id,
-          subscription_tier: "starter"
-        )
+        KlassHero.Factory.insert(:provider_profile_schema, identity_id: user.id)
 
       conn = log_in_user(conn, user)
 

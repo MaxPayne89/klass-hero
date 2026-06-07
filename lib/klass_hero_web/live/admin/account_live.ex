@@ -130,11 +130,8 @@ defmodule KlassHeroWeb.Admin.AccountLive do
               </span>
             <% end %>
             <%= if @item.provider_profile do %>
-              <span class={[
-                "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                provider_tier_class(@item.provider_profile.subscription_tier)
-              ]}>
-                {provider_tier_label(@item.provider_profile.subscription_tier)}
+              <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">
+                Provider
               </span>
             <% end %>
             <%= if !@item.parent_profile && !@item.provider_profile do %>
@@ -167,16 +164,4 @@ defmodule KlassHeroWeb.Admin.AccountLive do
   defp parent_tier_class("explorer"), do: "bg-gray-100 text-gray-700"
   defp parent_tier_class("active"), do: "bg-green-100 text-green-700"
   defp parent_tier_class(_), do: "bg-gray-100 text-gray-700"
-
-  # Provider tier display helpers
-
-  defp provider_tier_label("starter"), do: "Starter"
-  defp provider_tier_label("professional"), do: "Professional"
-  defp provider_tier_label("business_plus"), do: "Business+"
-  defp provider_tier_label(tier), do: String.capitalize(tier || "")
-
-  defp provider_tier_class("starter"), do: "bg-gray-100 text-gray-700"
-  defp provider_tier_class("professional"), do: "bg-blue-100 text-blue-700"
-  defp provider_tier_class("business_plus"), do: "bg-amber-100 text-amber-700"
-  defp provider_tier_class(_), do: "bg-gray-100 text-gray-700"
 end

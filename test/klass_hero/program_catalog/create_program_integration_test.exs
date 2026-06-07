@@ -127,7 +127,7 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
   describe "create_program/1 without program limits" do
     # Provider tiers removed (ADR-0004): no per-tier program cap remains
     test "former starter-tier provider creates programs beyond the old cap" do
-      provider = ProviderFixtures.provider_profile_fixture(%{subscription_tier: "starter"})
+      provider = ProviderFixtures.provider_profile_fixture()
 
       for i <- 1..3 do
         assert {:ok, program} =

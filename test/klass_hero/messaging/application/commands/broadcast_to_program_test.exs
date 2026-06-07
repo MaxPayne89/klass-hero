@@ -18,7 +18,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "creates broadcast conversation and message with enrolled parents" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       # Create parents with real users to satisfy FK constraint
       parent_user1 = AccountsFixtures.user_fixture()
@@ -54,7 +54,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "includes subject when provided" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -76,10 +76,11 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
       assert conversation.subject == "Schedule Change"
     end
 
-    test "returns not_entitled error for starter tier provider" do
+    test "any provider can broadcast (former starter tier included)" do
+      # Provider tiers removed (ADR-0004): no entitlement gate on broadcasts
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :starter)
+      scope = build_scope_with_provider(provider)
 
       parent = insert(:parent_profile_schema)
 
@@ -89,14 +90,14 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
         status: "confirmed"
       )
 
-      assert {:error, :not_entitled} =
+      assert {:ok, _conversation, _message, _recipient_count} =
                BroadcastToProgram.execute(scope, program.id, "Message")
     end
 
     test "returns no_enrollments error when no parents enrolled" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       assert {:error, :no_enrollments} =
                BroadcastToProgram.execute(scope, program.id, "Message")
@@ -105,7 +106,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "excludes cancelled and completed enrollments" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       active_user = AccountsFixtures.user_fixture()
       cancelled_user = AccountsFixtures.user_fixture()
@@ -141,7 +142,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "professional tier provider can broadcast" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -159,7 +160,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "business_plus tier provider can broadcast" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :business_plus)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -179,7 +180,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "adds assigned staff as participants alongside parents" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -207,7 +208,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "does not duplicate owner when owner is also assigned as staff" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -241,7 +242,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "second broadcast on the same program reuses the conversation and persists both messages" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -284,7 +285,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "persists attachments alongside the broadcast message" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -305,7 +306,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "attachment-only broadcast persists nil content" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -329,7 +330,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "surfaces SendMessage validation errors" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -374,7 +375,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "publishes :message_sent with conversation, sender, and content" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -399,7 +400,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "does not publish :broadcast_sent" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -427,7 +428,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "first broadcast emits :participant_added with source :broadcast_setup carrying sender + parent user_ids" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent1_user = AccountsFixtures.user_fixture()
       parent2_user = AccountsFixtures.user_fixture()
@@ -470,7 +471,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "re-broadcast on existing conversation with same participants emits NO :broadcast_setup event" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
@@ -500,7 +501,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "re-broadcast that adds a NEW enrolled parent emits :broadcast_setup with only the new user_id" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent1_user = AccountsFixtures.user_fixture()
       parent1 = insert(:parent_profile_schema, identity_id: parent1_user.id)
@@ -545,7 +546,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     test "sender and each parent see broadcast in inbox after projection runs (no server restart)" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       parent1_user = AccountsFixtures.user_fixture()
       parent2_user = AccountsFixtures.user_fixture()
@@ -591,7 +592,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     end
   end
 
-  defp build_scope_with_provider(provider_schema, tier) do
+  defp build_scope_with_provider(provider_schema) do
     user = AccountsFixtures.user_fixture()
 
     # Trigger: factory binds provider row to a throwaway unconfirmed user
@@ -606,8 +607,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
     provider_profile = %ProviderProfile{
       id: provider_schema.id,
       identity_id: user.id,
-      business_name: "Test Provider",
-      subscription_tier: tier
+      business_name: "Test Provider"
     }
 
     %Scope{
