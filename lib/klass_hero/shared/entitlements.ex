@@ -176,7 +176,7 @@ defmodule KlassHero.Shared.Entitlements do
       iex> Entitlements.can_initiate_messaging?(%{parent: %{subscription_tier: :active}})
       true
 
-      iex> Entitlements.can_initiate_messaging?(%{provider: %ProviderProfile{}})
+      iex> Entitlements.can_initiate_messaging?(%{provider: loaded_provider_profile})
       true
 
       iex> Entitlements.can_initiate_messaging?(%{staff_member: %{provider_id: "abc"}, provider: nil, parent: nil})
@@ -184,7 +184,7 @@ defmodule KlassHero.Shared.Entitlements do
   """
   @spec can_initiate_messaging?(map()) :: boolean()
 
-  # Staff members inherit messaging entitlements from their provider's subscription tier.
+  # Staff members inherit messaging entitlements from their provider.
   # Pure staff scopes (provider: nil, parent: nil) return false — callers must check via
   # the loaded provider profile, e.g. can_initiate_messaging?(%{provider: loaded_provider}).
   # Note: requires both provider: nil AND parent: nil so a parent+staff dual scope
