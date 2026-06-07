@@ -242,37 +242,22 @@ defmodule KlassHero.Shared.EntitlementsTest do
       assert Entitlements.can_initiate_messaging?(scope)
     end
 
-    test "returns false for starter provider" do
-      scope = %Scope{parent: nil, provider: provider_with_tier(:starter)}
-      refute Entitlements.can_initiate_messaging?(scope)
+    test "returns true for any provider regardless of former tier" do
+      for tier <- [:starter, :professional, :business_plus, nil] do
+        scope = %Scope{parent: nil, provider: provider_with_tier(tier)}
+
+        assert Entitlements.can_initiate_messaging?(scope),
+               "expected provider with former tier #{inspect(tier)} to initiate messaging"
+      end
     end
 
-    test "returns true for professional provider" do
-      scope = %Scope{parent: nil, provider: provider_with_tier(:professional)}
-      assert Entitlements.can_initiate_messaging?(scope)
-    end
-
-    test "returns true for business_plus provider" do
-      scope = %Scope{parent: nil, provider: provider_with_tier(:business_plus)}
-      assert Entitlements.can_initiate_messaging?(scope)
-    end
-
-    test "returns true when either parent or provider can message" do
-      scope = %Scope{
-        parent: parent_with_tier(:explorer),
-        provider: provider_with_tier(:professional)
-      }
-
-      assert Entitlements.can_initiate_messaging?(scope)
-    end
-
-    test "returns false when neither can message" do
+    test "returns true for explorer parent when a provider is present" do
       scope = %Scope{
         parent: parent_with_tier(:explorer),
         provider: provider_with_tier(:starter)
       }
 
-      refute Entitlements.can_initiate_messaging?(scope)
+      assert Entitlements.can_initiate_messaging?(scope)
     end
 
     test "returns false for empty scope" do
@@ -290,11 +275,11 @@ defmodule KlassHero.Shared.EntitlementsTest do
       refute Entitlements.can_initiate_messaging?(scope)
     end
 
-    test "returns true for staff_member scope with professional provider (dual role)" do
+    test "returns true for staff_member scope with loaded provider (dual role)" do
       scope = %Scope{
         staff_member: %{provider_id: "some-provider-id"},
         parent: nil,
-        provider: provider_with_tier(:professional)
+        provider: provider_with_tier(:starter)
       }
 
       assert Entitlements.can_initiate_messaging?(scope)

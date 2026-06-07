@@ -259,7 +259,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
     end
   end
 
-  describe "staff roster messaging controls (starter tier)" do
+  describe "staff roster messaging controls (former starter-tier provider)" do
     setup %{conn: conn} do
       provider = provider_profile_fixture(subscription_tier: "starter")
       user = user_fixture(intended_roles: [:staff_provider])
@@ -297,17 +297,19 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       %{conn: conn, provider: provider, staff: staff, program: program}
     end
 
-    test "roster modal shows disabled message buttons when provider tier is starter", %{
+    test "roster modal shows broadcast link for staff of former starter-tier provider", %{
       conn: conn,
       program: program
     } do
+      # Provider tiers removed (ADR-0004): staff inherit messaging from any provider
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
       view |> element("#roster-btn-#{program.id}") |> render_click()
 
       assert has_element?(view, "#staff-roster-modal")
-      # Broadcast should be a disabled button, not a link
-      assert has_element?(view, "button#staff-broadcast-#{program.id}[disabled]")
+      # Broadcast is a navigable link, not a disabled button
+      assert has_element?(view, "a#staff-broadcast-#{program.id}")
+      refute has_element?(view, "button#staff-broadcast-#{program.id}[disabled]")
     end
   end
 

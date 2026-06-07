@@ -1388,8 +1388,8 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       assert path =~ "/provider/messages/"
     end
 
-    test "shows disabled message buttons for starter tier provider", %{conn: conn} do
-      # Re-register with starter tier — starter providers cannot initiate messaging
+    test "shows enabled message buttons for former starter-tier provider", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): every provider can initiate messaging
       user = KlassHero.AccountsFixtures.user_fixture(%{intended_roles: [:provider]})
 
       provider =
@@ -1420,7 +1420,8 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       view |> element("#view-roster-#{program.id}") |> render_click()
 
-      assert has_element?(view, "#send-message-#{enrollment.id}[disabled]")
+      assert has_element?(view, "#send-message-#{enrollment.id}")
+      refute has_element?(view, "#send-message-#{enrollment.id}[disabled]")
     end
   end
 

@@ -330,10 +330,11 @@ defmodule KlassHero.Shared.Entitlements do
   # Scope-based entitlement functions
 
   @doc """
-  Checks if a scope can initiate messaging based on the associated profile's tier.
+  Checks if a scope can initiate messaging.
 
-  Works with both parent and provider profiles. If both are present, returns true
-  if either profile has messaging rights.
+  Parents are gated by their subscription tier; any provider can initiate
+  messaging (provider tiers removed — ADR-0004). If both profiles are present,
+  returns true if either has messaging rights.
 
   ## Examples
 
@@ -343,7 +344,7 @@ defmodule KlassHero.Shared.Entitlements do
       iex> Entitlements.can_initiate_messaging?(%{parent: %{subscription_tier: :active}})
       true
 
-      iex> Entitlements.can_initiate_messaging?(%{provider: %{subscription_tier: :professional}})
+      iex> Entitlements.can_initiate_messaging?(%{provider: %ProviderProfile{}})
       true
 
       iex> Entitlements.can_initiate_messaging?(%{staff_member: %{provider_id: "abc"}, provider: nil, parent: nil})
@@ -499,9 +500,9 @@ defmodule KlassHero.Shared.Entitlements do
 
   defp parent_can_message?(%{subscription_tier: tier}), do: get_parent_limit(tier, :can_initiate_messaging)
 
+  # Provider tiers removed (ADR-0004): every provider can initiate messaging.
   defp provider_can_message?(nil), do: false
-
-  defp provider_can_message?(%{subscription_tier: tier}), do: get_provider_limit(tier, :can_initiate_messaging)
+  defp provider_can_message?(_provider), do: true
 
   defp get_parent_limit(tier, key) do
     tier = tier || :explorer
