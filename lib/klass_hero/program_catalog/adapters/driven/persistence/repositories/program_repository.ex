@@ -338,15 +338,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   @impl true
-  def count_by_provider_and_origin(provider_id, origin) when is_atom(origin) do
-    origin_string = to_string(origin)
-
-    ProgramSchema
-    |> where([p], p.provider_id == ^provider_id and p.origin == ^origin_string)
-    |> Repo.aggregate(:count)
-  end
-
-  @impl true
   def list_ended_program_ids(cutoff_date) do
     span do
       set_attributes("db", operation: "select", entity: "program")

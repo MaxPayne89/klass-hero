@@ -289,7 +289,6 @@ config :klass_hero, :participation,
 # Configure Program Catalog bounded context
 config :klass_hero, :program_catalog,
   repository: ProgramRepository,
-  for_listing_programs: ProgramRepository,
   for_listing_program_summaries: ProgramListingsRepository
 
 # Configure Provider bounded context

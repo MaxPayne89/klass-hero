@@ -12,7 +12,6 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
   alias KlassHero.Messaging.Domain.Models.Attachment
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Shared.Entitlements
   alias KlassHeroWeb.MessagingComponents
   alias KlassHeroWeb.MessagingLiveHelper
 
@@ -24,14 +23,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
 
     case Provider.get_provider_profile(staff_member.provider_id) do
       {:ok, provider} ->
-        if Entitlements.can_initiate_messaging?(%{provider: provider}) do
-          mount_broadcast_form(socket, provider, staff_member, program_id)
-        else
-          {:ok,
-           socket
-           |> put_flash(:error, gettext("Your subscription tier doesn't support broadcasts"))
-           |> push_navigate(to: ~p"/staff/dashboard")}
-        end
+        mount_broadcast_form(socket, provider, staff_member, program_id)
 
       {:error, :not_found} ->
         {:ok,

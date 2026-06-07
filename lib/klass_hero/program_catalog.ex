@@ -289,18 +289,6 @@ defmodule KlassHero.ProgramCatalog do
   def trending_searches(limit), do: TrendingSearches.list(limit)
 
   @doc """
-  Counts self-posted programs for a provider.
-
-  Used by the provider dashboard to display accurate program slot usage.
-  Only programs with `origin: :self_posted` are counted — business-assigned
-  programs do not count toward the tier limit.
-  """
-  @spec count_self_posted_programs(String.t()) :: non_neg_integer()
-  def count_self_posted_programs(provider_id) do
-    ProgramCatalogQueries.count_self_posted_programs(provider_id)
-  end
-
-  @doc """
   Returns IDs of programs whose end_date is before the given cutoff date.
 
   Used by the Messaging context's retention policy to archive broadcast

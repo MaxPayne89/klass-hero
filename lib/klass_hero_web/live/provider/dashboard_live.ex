@@ -718,9 +718,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         {:ok, conversation} ->
           {:noreply, push_navigate(socket, to: ~p"/provider/messages/#{conversation.id}")}
 
-        {:error, :not_entitled} ->
-          {:noreply, put_flash(socket, :error, gettext("Upgrade your plan to send messages."))}
-
         {:error, _reason} ->
           {:noreply, put_flash(socket, :error, gettext("Could not start conversation. Please try again."))}
       end

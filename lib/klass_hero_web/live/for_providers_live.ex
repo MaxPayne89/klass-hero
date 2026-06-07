@@ -19,7 +19,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
     <.benefits_section benefits={benefits()} />
     <.how_it_works_section steps={steps()} />
     <.safety_standards_section standards={safety_standards()} />
-    <.pricing_section />
+    <.pricing_section features={pricing_features()} />
     <.faq_section faqs={faqs()} />
     <.final_cta />
     """
@@ -161,6 +161,8 @@ defmodule KlassHeroWeb.ForProvidersLive do
     """
   end
 
+  attr :features, :list, required: true
+
   defp pricing_section(assigns) do
     ~H"""
     <section id="for-providers-pricing" class="py-16 lg:py-24 bg-hero-cream-100">
@@ -186,18 +188,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
             )}
           </p>
           <ul class="mt-6 space-y-2.5 text-left max-w-md mx-auto">
-            <li
-              :for={
-                f <- [
-                  gettext("Unlimited programs and locations"),
-                  gettext("Unlimited team seats"),
-                  gettext("Direct messaging and broadcasts"),
-                  gettext("Secure payments, invoicing, and VAT handling"),
-                  gettext("The Klass Hero verified badge")
-                ]
-              }
-              class="flex items-start gap-2 text-sm"
-            >
+            <li :for={f <- @features} class="flex items-start gap-2 text-sm">
               <.icon name="hero-check" class="w-4 h-4 mt-0.5 shrink-0 text-hero-yellow-500" />
               <span>{f}</span>
             </li>
@@ -424,6 +415,16 @@ defmodule KlassHeroWeb.ForProvidersLive do
         title: gettext("Get paid weekly"),
         desc: gettext("Secure SEPA payouts every Monday. Invoices and VAT handled automatically.")
       }
+    ]
+  end
+
+  defp pricing_features do
+    [
+      gettext("Unlimited programs and locations"),
+      gettext("Unlimited team seats"),
+      gettext("Direct messaging and broadcasts"),
+      gettext("Secure payments, invoicing, and VAT handling"),
+      gettext("The Klass Hero verified badge")
     ]
   end
 

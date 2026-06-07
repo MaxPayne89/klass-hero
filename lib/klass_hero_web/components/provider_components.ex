@@ -1788,8 +1788,8 @@ defmodule KlassHeroWeb.ProviderComponents do
                 id={"send-message-#{entry.enrollment_id}"}
                 type="button"
                 disabled
-                title={message_button_title(@can_message?, entry)}
-                aria-label={message_button_title(@can_message?, entry)}
+                title={message_button_title(entry)}
+                aria-label={message_button_title(entry)}
                 class={[
                   "p-2 inline-flex",
                   Theme.rounded(:lg),
@@ -1806,9 +1806,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     """
   end
 
-  defp message_button_title(false = _can_message?, _entry), do: gettext("Upgrade to Professional to message parents")
-
-  defp message_button_title(true = _can_message?, entry) do
+  defp message_button_title(entry) do
     cond do
       entry.parent_user_id == nil -> gettext("Parent account not available")
       entry.status != :confirmed -> gettext("Enrollment not confirmed")

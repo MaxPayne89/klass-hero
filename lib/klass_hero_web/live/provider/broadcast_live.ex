@@ -99,12 +99,6 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
          )
          |> push_navigate(to: ~p"/provider/messages/#{conversation.id}")}
 
-      {:error, :not_entitled} ->
-        {:noreply,
-         socket
-         |> assign(:sending, false)
-         |> put_flash(:error, gettext("Your subscription tier doesn't support broadcasts"))}
-
       {:error, :no_enrollments} ->
         {:noreply,
          socket

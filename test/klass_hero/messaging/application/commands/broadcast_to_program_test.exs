@@ -139,25 +139,8 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
       assert recipient_count == 1
     end
 
-    test "professional tier provider can broadcast" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
-
-      assert {:ok, _conversation, _message, _count} =
-               BroadcastToProgram.execute(scope, program.id, "Message")
-    end
-
-    test "business_plus tier provider can broadcast" do
+    # Provider tiers removed (ADR-0004): any provider can broadcast.
+    test "provider can broadcast" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
       scope = build_scope_with_provider(provider)

@@ -10,17 +10,6 @@ defmodule KlassHero.ProgramCatalog.Application.Queries.ProgramCatalogQueries do
   @repository Application.compile_env!(:klass_hero, [:program_catalog, :repository])
 
   @doc """
-  Counts self-posted programs for a provider.
-
-  Only programs with `origin: :self_posted` are counted — business-assigned
-  programs do not count toward the tier limit.
-  """
-  @spec count_self_posted_programs(String.t()) :: non_neg_integer()
-  def count_self_posted_programs(provider_id) do
-    @repository.count_by_provider_and_origin(provider_id, :self_posted)
-  end
-
-  @doc """
   Returns IDs of programs whose end_date is before the given cutoff date.
 
   Used by the Messaging context's retention policy to archive broadcast
