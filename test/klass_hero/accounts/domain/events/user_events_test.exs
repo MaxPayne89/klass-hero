@@ -122,26 +122,13 @@ defmodule KlassHero.Accounts.Domain.Events.UserEventsTest do
                    fn -> UserEvents.user_registered(user) end
     end
 
-    test "includes provider_subscription_tier in payload when present" do
-      user = %{
-        id: 1,
-        email: "test@example.com",
-        name: "Test User",
-        intended_roles: [:provider],
-        provider_subscription_tier: "professional"
-      }
+    test "carries no provider_subscription_tier in payload" do
+      # Provider tiers removed (ADR-0004)
+      user = %{id: 1, email: "test@example.com", name: "Test User", intended_roles: [:provider]}
 
       event = UserEvents.user_registered(user)
 
-      assert event.payload.provider_subscription_tier == "professional"
-    end
-
-    test "includes nil provider_subscription_tier when not set" do
-      user = %{id: 1, email: "test@example.com", name: "Test User"}
-
-      event = UserEvents.user_registered(user)
-
-      assert event.payload.provider_subscription_tier == nil
+      refute Map.has_key?(event.payload, :provider_subscription_tier)
     end
   end
 
@@ -200,7 +187,7 @@ defmodule KlassHero.Accounts.Domain.Events.UserEventsTest do
       assert event.payload.confirmation_token == "abc123"
     end
 
-    test "includes name, intended_roles, and provider_subscription_tier in payload" do
+    test "includes name and intended_roles in payload" do
       confirmed_at = ~U[2024-01-01 12:00:00Z]
 
       user = %{
@@ -208,25 +195,23 @@ defmodule KlassHero.Accounts.Domain.Events.UserEventsTest do
         email: "test@example.com",
         name: "Test Provider",
         confirmed_at: confirmed_at,
-        intended_roles: [:provider],
-        provider_subscription_tier: "professional"
+        intended_roles: [:provider]
       }
 
       event = UserEvents.user_confirmed(user)
 
       assert event.payload.name == "Test Provider"
       assert event.payload.intended_roles == ["provider"]
-      assert event.payload.provider_subscription_tier == "professional"
+      refute Map.has_key?(event.payload, :provider_subscription_tier)
     end
 
-    test "handles nil intended_roles and provider_subscription_tier gracefully" do
+    test "handles nil intended_roles gracefully" do
       confirmed_at = ~U[2024-01-01 12:00:00Z]
       user = %{id: 1, email: "test@example.com", confirmed_at: confirmed_at}
 
       event = UserEvents.user_confirmed(user)
 
       assert event.payload.intended_roles == []
-      assert event.payload.provider_subscription_tier == nil
     end
   end
 

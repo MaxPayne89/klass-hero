@@ -28,17 +28,6 @@ defmodule KlassHeroWeb.Presenters.TierPresenterTest do
     end
   end
 
-  describe "tier_summary/1" do
-    test "returns compact summary with program limit and commission" do
-      assert TierPresenter.tier_summary(:starter) =~ "2 programs"
-      assert TierPresenter.tier_summary(:starter) =~ "18% commission"
-      assert TierPresenter.tier_summary(:professional) =~ "5 programs"
-      assert TierPresenter.tier_summary(:professional) =~ "12% commission"
-      assert TierPresenter.tier_summary(:business_plus) =~ "Unlimited programs"
-      assert TierPresenter.tier_summary(:business_plus) =~ "8% commission"
-    end
-  end
-
   describe "tier_features/1" do
     test "starter features include program limit, commission, media, and team seat" do
       features = TierPresenter.tier_features(:starter)
@@ -81,27 +70,6 @@ defmodule KlassHeroWeb.Presenters.TierPresenterTest do
         assert Map.has_key?(tier, :features)
         assert is_list(tier.features)
       end
-    end
-  end
-
-  describe "registration_tier_options/0" do
-    test "returns three tuples with string keys, labels, and summaries" do
-      options = TierPresenter.registration_tier_options()
-      assert length(options) == 3
-
-      [{k1, l1, s1}, {k2, l2, s2}, {k3, l3, s3}] = options
-
-      assert k1 == "starter"
-      assert l1 == "Starter"
-      assert s1 =~ "2 programs"
-
-      assert k2 == "professional"
-      assert l2 == "Professional"
-      assert s2 =~ "5 programs"
-
-      assert k3 == "business_plus"
-      assert l3 == "Business Plus"
-      assert s3 =~ "Unlimited programs"
     end
   end
 end

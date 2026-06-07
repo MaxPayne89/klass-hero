@@ -76,19 +76,6 @@ defmodule KlassHeroWeb.Presenters.TierPresenter do
     |> maybe_append(:promotional in info.media, gettext("Promotional content"))
   end
 
-  @doc """
-  Compact summary for registration tier selector.
-
-  Returns a short string like "2 programs, 12% commission".
-  """
-  @spec tier_summary(atom()) :: String.t()
-  def tier_summary(tier) when tier in @provider_tiers do
-    info = Entitlements.provider_tier_info(tier)
-
-    [format_program_limit(info.max_programs), format_commission(info.commission_rate)]
-    |> Enum.join(", ")
-  end
-
   # -- Composite builders for specific UI contexts --
 
   @doc """
@@ -107,18 +94,6 @@ defmodule KlassHeroWeb.Presenters.TierPresenter do
         period: tier_period(tier),
         features: tier_features(tier)
       }
-    end)
-  end
-
-  @doc """
-  Returns tier options for the registration form radio buttons.
-
-  Each tuple contains `{key_string, label, summary}`.
-  """
-  @spec registration_tier_options() :: [{String.t(), String.t(), String.t()}]
-  def registration_tier_options do
-    Enum.map(Entitlements.provider_tiers(), fn tier ->
-      {Atom.to_string(tier), tier_label(tier), tier_summary(tier)}
     end)
   end
 

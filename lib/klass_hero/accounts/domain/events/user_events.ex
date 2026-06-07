@@ -86,8 +86,7 @@ defmodule KlassHero.Accounts.Domain.Events.UserEvents do
     base_payload = %{
       email: user.email,
       name: user.name,
-      intended_roles: Enum.map(Map.get(user, :intended_roles) || [], &Atom.to_string/1),
-      provider_subscription_tier: Map.get(user, :provider_subscription_tier)
+      intended_roles: Enum.map(Map.get(user, :intended_roles) || [], &Atom.to_string/1)
     }
 
     opts = Keyword.put_new(opts, :criticality, :critical)
@@ -120,7 +119,6 @@ defmodule KlassHero.Accounts.Domain.Events.UserEvents do
   - `name` - User's display name
   - `confirmed_at` - Timestamp of confirmation
   - `intended_roles` - List of role identifiers selected during registration (["parent"], ["provider"], or both)
-  - `provider_subscription_tier` - Selected provider tier (nil if not a provider)
 
   ## Raises
 
@@ -144,8 +142,7 @@ defmodule KlassHero.Accounts.Domain.Events.UserEvents do
       email: user.email,
       name: Map.get(user, :name),
       confirmed_at: user.confirmed_at,
-      intended_roles: Enum.map(Map.get(user, :intended_roles) || [], &Atom.to_string/1),
-      provider_subscription_tier: Map.get(user, :provider_subscription_tier)
+      intended_roles: Enum.map(Map.get(user, :intended_roles) || [], &Atom.to_string/1)
     }
 
     DomainEvent.new(

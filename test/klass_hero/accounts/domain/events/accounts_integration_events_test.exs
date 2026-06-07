@@ -149,13 +149,11 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEventsTest do
 
       event =
         AccountsIntegrationEvents.user_confirmed(user_id, %{
-          intended_roles: ["provider"],
-          provider_subscription_tier: "professional"
+          intended_roles: ["provider"]
         })
 
       assert event.payload.user_id == user_id
       assert event.payload.intended_roles == ["provider"]
-      assert event.payload.provider_subscription_tier == "professional"
     end
 
     test "base_payload user_id wins over caller-supplied user_id" do

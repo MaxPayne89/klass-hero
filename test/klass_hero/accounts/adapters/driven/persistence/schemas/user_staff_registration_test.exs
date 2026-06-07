@@ -28,7 +28,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserStaffRegist
       assert get_change(changeset, :intended_roles) == [:staff_provider, :provider]
     end
 
-    test "does not require provider_subscription_tier" do
+    test "is valid with just name and email" do
       changeset =
         User.staff_registration_changeset(%User{}, %{
           name: "Jane Doe",
@@ -37,7 +37,6 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserStaffRegist
         })
 
       assert changeset.valid?
-      assert get_change(changeset, :provider_subscription_tier) == nil
     end
 
     test "requires name" do
