@@ -6209,3 +6209,47 @@ msgstr "Ihre Woche mit den Kindern"
 #, elixir-autogen, elixir-format
 msgid "Go to dashboard"
 msgstr "Zum Dashboard"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Free to join"
+msgstr "Kostenlos beitreten"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Every feature included. No subscription, no setup fees."
+msgstr "Alle Funktionen inklusive. Kein Abo, keine Einrichtungsgebühren."
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "We earn when you earn"
+msgstr "Wir verdienen, wenn Sie verdienen"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Joining Klass Hero costs nothing — unlimited programs, your whole team, all media, and direct parent messaging are included for everyone. A simple success-based fee on bookings made through the platform is coming; we'll share the details transparently before it launches."
+msgstr "Die Teilnahme an Klass Hero kostet nichts — unbegrenzte Programme, Ihr gesamtes Team, alle Medien und direkte Eltern-Kommunikation sind für alle inklusive. Eine einfache erfolgsbasierte Gebühr auf Buchungen über die Plattform kommt; wir teilen die Details transparent vor dem Start mit."
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Unlimited programs and locations"
+msgstr "Unbegrenzte Programme und Standorte"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Direct messaging and broadcasts"
+msgstr "Direktnachrichten und Rundnachrichten"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Secure payments, invoicing, and VAT handling"
+msgstr "Sichere Zahlungen, Rechnungsstellung und Umsatzsteuer-Abwicklung"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "The Klass Hero verified badge"
+msgstr "Das Klass-Hero-Verifizierungssiegel"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Start for free"
+msgstr "Kostenlos starten"
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Joining is free — every feature is included for all providers, with no subscription or setup fees. A success-based fee on bookings made through the platform is planned; we'll announce the details transparently before it launches."
+msgstr "Die Teilnahme ist kostenlos — alle Funktionen sind für alle Anbieter inklusive, ohne Abo oder Einrichtungsgebühren. Eine erfolgsbasierte Gebühr auf Buchungen über die Plattform ist geplant; wir geben die Details transparent vor dem Start bekannt."
+
+#: lib/klass_hero_web/live/for_providers_live.ex
+msgid "Yes. You can run unlimited programs, each with its own schedule and venue, and add as many team members as you need to delegate management across instructors."
+msgstr "Ja. Sie können unbegrenzt viele Programme mit jeweils eigenem Zeitplan und Veranstaltungsort betreiben und beliebig viele Teammitglieder hinzufügen, um die Verwaltung auf Ihre Kursleitungen zu verteilen."
