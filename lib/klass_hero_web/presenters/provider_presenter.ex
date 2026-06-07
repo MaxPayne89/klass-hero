@@ -16,7 +16,6 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   use Gettext, backend: KlassHeroWeb.Gettext
 
   alias KlassHero.Provider.Domain.Models.ProviderProfile
-  alias KlassHero.Shared.Entitlements
   alias KlassHero.Shared.NameUtils
   alias KlassHeroWeb.Presenters.TierPresenter
 
@@ -25,27 +24,17 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
 
   Used for the provider dashboard header and business profile card.
 
-  Returns a map with: id, name, tagline, plan, plan_label, verified,
-  verification_badges, program_slots_used, program_slots_total, initials,
-  logo_url, verification_status
+  Returns a map with: id, name, tagline, verified, verification_badges,
+  initials, logo_url, verification_status
   """
   @spec to_business_view(ProviderProfile.t()) :: map()
   def to_business_view(%ProviderProfile{} = provider) do
-    tier = provider.subscription_tier || Entitlements.default_provider_tier()
-    tier_info = Entitlements.provider_tier_info(tier)
-
     %{
       id: provider.id,
       name: provider.business_name,
       tagline: provider.description,
-      plan: tier,
-      plan_label: TierPresenter.tier_plan_label(tier),
       verified: provider.verified || false,
       verification_badges: build_verification_badges(provider),
-      program_slots_used: 0,
-      program_slots_total: tier_info[:max_programs],
-      team_seats_used: 0,
-      team_seats_total: tier_info[:team_seats],
       initials: NameUtils.initials_from_name(provider.business_name),
       logo_url: provider.logo_url,
       verification_status: :not_started

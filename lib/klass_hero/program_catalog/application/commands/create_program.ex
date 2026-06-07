@@ -2,26 +2,22 @@ defmodule KlassHero.ProgramCatalog.Application.Commands.CreateProgram do
   @moduledoc """
   Use case for creating a new program.
 
-  Orchestrates entitlement checking, domain validation, and persistence:
-  1. Checks program limit against provider's subscription tier
-  2. Builds and validates the Program aggregate via Program.create/1
-  3. Persists via the repository adapter
-  4. Dispatches domain events on success
+  Orchestrates domain validation and persistence:
+  1. Builds and validates the Program aggregate via Program.create/1
+  2. Persists via the repository adapter
+  3. Dispatches domain events on success
   """
 
   alias KlassHero.ProgramCatalog.Domain.Events.ProgramEvents
   alias KlassHero.ProgramCatalog.Domain.Models.Program
   alias KlassHero.Shared.DomainEventBus
-  alias KlassHero.Shared.Entitlements
 
   require Logger
 
   @repository Application.compile_env!(:klass_hero, [:program_catalog, :repository])
-  @listing_repository Application.compile_env!(:klass_hero, [:program_catalog, :for_listing_programs])
 
-  def execute(attrs, tier_holder) when is_map(attrs) do
-    with :ok <- check_program_limit(attrs[:provider_id], tier_holder),
-         {:ok, program} <- Program.create(attrs),
+  def execute(attrs) when is_map(attrs) do
+    with {:ok, program} <- Program.create(attrs),
          {:ok, persisted} <- @repository.create(program) do
       # Trigger: program was successfully persisted
       # Why: event dispatch is fire-and-forget — failures are logged inside
@@ -29,18 +25,6 @@ defmodule KlassHero.ProgramCatalog.Application.Commands.CreateProgram do
       # Outcome: event dispatch result discarded; program returned regardless
       dispatch_event(persisted)
       {:ok, persisted}
-    end
-  end
-
-  defp check_program_limit(nil, _tier_holder), do: :ok
-
-  defp check_program_limit(provider_id, tier_holder) do
-    current_count = @listing_repository.count_by_provider_and_origin(provider_id, :self_posted)
-
-    if Entitlements.can_create_program?(tier_holder, current_count) do
-      :ok
-    else
-      {:error, :program_limit_reached}
     end
   end
 

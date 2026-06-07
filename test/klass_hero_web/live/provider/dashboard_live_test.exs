@@ -112,10 +112,11 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       assert has_element?(view, "a", "Edit Profile")
     end
 
-    test "shows subscription plan management link", %{conn: conn} do
+    test "shows no subscription plan management link", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): no plan to manage
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
-      assert has_element?(view, "#subscription-cta")
-      assert has_element?(view, ~s(a[href="/provider/subscription"]))
+      refute has_element?(view, "#subscription-cta")
+      refute has_element?(view, ~s(a[href="/provider/subscription"]))
     end
 
     test "displays business logo when logo_url is set", %{conn: conn} do

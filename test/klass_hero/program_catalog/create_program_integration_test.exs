@@ -5,26 +5,22 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
 
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProviderFixtures
-  alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
 
-  describe "create_program/2" do
+  describe "create_program/1" do
     setup do
-      provider = ProviderFixtures.provider_profile_fixture(%{subscription_tier: "business_plus"})
+      provider = ProviderFixtures.provider_profile_fixture()
       %{provider: provider}
     end
 
     test "creates program with required fields", %{provider: provider} do
       assert {:ok, program} =
-               ProgramCatalog.create_program(
-                 %{
-                   provider_id: provider.id,
-                   title: "Art Adventures",
-                   description: "Creative art program for kids",
-                   category: "arts",
-                   price: Decimal.new("50.00")
-                 },
-                 provider
-               )
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Art Adventures",
+                 description: "Creative art program for kids",
+                 category: "arts",
+                 price: Decimal.new("50.00")
+               })
 
       assert program.title == "Art Adventures"
       assert program.category == "arts"
@@ -35,31 +31,27 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
       staff = ProviderFixtures.staff_member_fixture(provider_id: provider.id)
 
       assert {:ok, program} =
-               ProgramCatalog.create_program(
-                 %{
-                   provider_id: provider.id,
-                   title: "Soccer Camp",
-                   description: "Learn to play soccer",
-                   category: "sports",
-                   price: Decimal.new("75.00"),
-                   location: "Sports Park",
-                   instructor: %{
-                     id: staff.id,
-                     name: "#{staff.first_name} #{staff.last_name}",
-                     headshot_url: staff.headshot_url
-                   }
-                 },
-                 provider
-               )
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Soccer Camp",
+                 description: "Learn to play soccer",
+                 category: "sports",
+                 price: Decimal.new("75.00"),
+                 location: "Sports Park",
+                 instructor: %{
+                   id: staff.id,
+                   name: "#{staff.first_name} #{staff.last_name}",
+                   headshot_url: staff.headshot_url
+                 }
+               })
 
       assert program.instructor != nil
       assert program.instructor.id == staff.id
       assert program.location == "Sports Park"
     end
 
-    test "rejects missing required fields", %{provider: provider} do
-      assert {:error, errors} =
-               ProgramCatalog.create_program(%{title: "Incomplete"}, provider)
+    test "rejects missing required fields" do
+      assert {:error, errors} = ProgramCatalog.create_program(%{title: "Incomplete"})
 
       assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "description"))
@@ -70,16 +62,13 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
 
     test "rejects negative price", %{provider: provider} do
       assert {:error, errors} =
-               ProgramCatalog.create_program(
-                 %{
-                   provider_id: provider.id,
-                   title: "Bad Price Program",
-                   description: "Has negative price",
-                   category: "arts",
-                   price: Decimal.new("-5.00")
-                 },
-                 provider
-               )
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Bad Price Program",
+                 description: "Has negative price",
+                 category: "arts",
+                 price: Decimal.new("-5.00")
+               })
 
       assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "rice"))
@@ -87,16 +76,13 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
 
     test "rejects invalid category", %{provider: provider} do
       assert {:error, errors} =
-               ProgramCatalog.create_program(
-                 %{
-                   provider_id: provider.id,
-                   title: "Test",
-                   description: "Test desc",
-                   category: "invalid_category",
-                   price: Decimal.new("10.00")
-                 },
-                 provider
-               )
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Test",
+                 description: "Test desc",
+                 category: "invalid_category",
+                 price: Decimal.new("10.00")
+               })
 
       assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "ategory"))
@@ -107,16 +93,13 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
 
       for category <- categories do
         assert {:ok, program} =
-                 ProgramCatalog.create_program(
-                   %{
-                     provider_id: provider.id,
-                     title: "Program for #{category}",
-                     description: "Testing #{category} category",
-                     category: category,
-                     price: Decimal.new("25.00")
-                   },
-                   provider
-                 )
+                 ProgramCatalog.create_program(%{
+                   provider_id: provider.id,
+                   title: "Program for #{category}",
+                   description: "Testing #{category} category",
+                   category: category,
+                   price: Decimal.new("25.00")
+                 })
 
         assert program.category == category
       end
@@ -126,16 +109,13 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
       setup_test_integration_events()
 
       assert {:ok, program} =
-               ProgramCatalog.create_program(
-                 %{
-                   provider_id: provider.id,
-                   title: "Event Test Program",
-                   description: "Tests event dispatch",
-                   category: "arts",
-                   price: Decimal.new("30.00")
-                 },
-                 provider
-               )
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Event Test Program",
+                 description: "Tests event dispatch",
+                 category: "arts",
+                 price: Decimal.new("30.00")
+               })
 
       event = assert_integration_event_published(:program_created)
       assert event.entity_id == program.id
@@ -144,91 +124,23 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
     end
   end
 
-  describe "create_program/2 with program limit" do
-    test "allows creation when starter provider is under limit" do
+  describe "create_program/1 without program limits" do
+    # Provider tiers removed (ADR-0004): no per-tier program cap remains
+    test "former starter-tier provider creates programs beyond the old cap" do
       provider = ProviderFixtures.provider_profile_fixture(%{subscription_tier: "starter"})
 
-      assert {:ok, program} =
-               ProgramCatalog.create_program(
-                 %{
+      for i <- 1..3 do
+        assert {:ok, program} =
+                 ProgramCatalog.create_program(%{
                    provider_id: provider.id,
-                   title: "First Program",
+                   title: "Program #{i}",
                    description: "A valid program",
                    category: "arts",
                    price: Decimal.new("50.00")
-                 },
-                 provider
-               )
+                 }),
+               "expected program #{i} to be created (former cap was 2)"
 
-      assert program.origin == :self_posted
-    end
-
-    test "rejects creation when starter provider is at limit" do
-      provider = ProviderFixtures.provider_profile_fixture(%{subscription_tier: "starter"})
-
-      for i <- 1..2 do
-        {:ok, _} =
-          ProgramCatalog.create_program(
-            %{
-              provider_id: provider.id,
-              title: "Program #{i}",
-              description: "A valid program",
-              category: "arts",
-              price: Decimal.new("50.00")
-            },
-            provider
-          )
-      end
-
-      assert {:error, :program_limit_reached} =
-               ProgramCatalog.create_program(
-                 %{
-                   provider_id: provider.id,
-                   title: "Third Program",
-                   description: "Should be rejected",
-                   category: "arts",
-                   price: Decimal.new("50.00")
-                 },
-                 provider
-               )
-    end
-
-    test "allows creation for professional provider beyond starter limit" do
-      provider = ProviderFixtures.provider_profile_fixture(%{subscription_tier: "professional"})
-
-      for i <- 1..3 do
-        assert {:ok, _} =
-                 ProgramCatalog.create_program(
-                   %{
-                     provider_id: provider.id,
-                     title: "Program #{i}",
-                     description: "A valid program",
-                     category: "arts",
-                     price: Decimal.new("50.00")
-                   },
-                   provider
-                 )
-      end
-    end
-
-    test "allows starter provider to exceed limit when provider_tier_bypass is active" do
-      start_supervised!({StubFeatureFlagsAdapter, name: StubFeatureFlagsAdapter})
-      StubFeatureFlagsAdapter.set_enabled(:provider_tier_bypass)
-
-      provider = ProviderFixtures.provider_profile_fixture(%{subscription_tier: "starter"})
-
-      for i <- 1..3 do
-        assert {:ok, _} =
-                 ProgramCatalog.create_program(
-                   %{
-                     provider_id: provider.id,
-                     title: "Program #{i}",
-                     description: "A valid program",
-                     category: "arts",
-                     price: Decimal.new("50.00")
-                   },
-                   provider
-                 )
+        assert program.origin == :self_posted
       end
     end
   end

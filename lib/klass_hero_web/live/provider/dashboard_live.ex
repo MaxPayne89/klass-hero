@@ -77,7 +77,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
         staff_views = StaffMemberPresenter.to_admin_view_list(staff_members)
         programs_count = length(programs)
-        self_posted_count = ProgramCatalog.count_self_posted_programs(provider_profile.id)
 
         # Build staff filter options from real data
         staff_options =
@@ -98,7 +97,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           |> update_staff_count(length(staff_views))
           |> stream(:programs, programs)
           |> assign(programs_count: programs_count)
-          |> update_program_slots(self_posted_count)
           |> assign(staff_options: staff_options)
           |> assign(search_query: "")
           |> assign(selected_staff: "all")
@@ -1038,7 +1036,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     participant_policy_params = all_params["participant_policy"] || %{}
 
     with {:ok, attrs} <- maybe_add_instructor(attrs, program_params["instructor_id"], socket),
-         {:ok, program} <- ProgramCatalog.create_program(attrs, socket.assigns.current_scope.provider) do
+         {:ok, program} <- ProgramCatalog.create_program(attrs) do
       policy_result = maybe_set_enrollment_policy(program.id, enrollment_params)
       set_participant_policy_on_create(program.id, participant_policy_params)
       capacity = resolve_capacity(policy_result, enrollment_params)
@@ -1060,17 +1058,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
          programs_count: socket.assigns.programs_count + 1,
          enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"),
          participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
-       )
-       |> update_program_slots(socket.assigns.business.program_slots_used + 1)}
+       )}
     else
-      {:error, :program_limit_reached} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("You've reached your program limit. Upgrade your plan to add more programs.")
-         )}
-
       {:error, :instructor_not_found} ->
         {:noreply,
          put_flash(
@@ -1288,7 +1277,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       <% _ -> %>
         <.pv_dashboard_chrome
           business={@business}
-          can_create_program?={@can_create_program?}
           current_tab={dashboard_tab(@live_action)}
         >
           <.profile_completion_banner :if={@profile_draft?} />
@@ -1647,29 +1635,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       </section>
 
       <.business_profile_card business={@business} />
-
-      <%!-- Subscription CTA — shows current plan and links to management page --%>
-      <div
-        id="subscription-cta"
-        class="mt-4 rounded-lg border border-hero-blue-200 bg-hero-blue-50 p-4"
-      >
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-zinc-900">
-              {gettext("Current Plan: %{plan}", plan: @business.plan_label)}
-            </p>
-            <p :if={@business.plan == :starter} class="text-sm text-zinc-600 mt-0.5">
-              {gettext("Upgrade your plan to unlock more features")}
-            </p>
-          </div>
-          <.link
-            navigate={~p"/provider/subscription"}
-            class="text-sm font-medium text-hero-blue-600 hover:text-hero-blue-700 whitespace-nowrap"
-          >
-            {gettext("Manage Plan →")}
-          </.link>
-        </div>
-      </div>
     </div>
     """
   end
@@ -1966,23 +1931,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   defp update_staff_count(socket, count) do
-    business = %{socket.assigns.business | team_seats_used: count}
-    assign(socket, staff_count: count, business: business)
-  end
-
-  defp update_program_slots(socket, count) do
-    business = %{socket.assigns.business | program_slots_used: count}
-
-    socket
-    |> assign(business: business)
-    |> update_can_create_program()
-  end
-
-  defp update_can_create_program(socket) do
-    provider = socket.assigns.current_scope.provider
-    used = socket.assigns.business.program_slots_used
-    can_create? = Entitlements.can_create_program?(provider, used)
-    assign(socket, can_create_program?: can_create?)
+    assign(socket, staff_count: count)
   end
 
   defp fetch_staff_members(provider_id) do
@@ -2026,7 +1975,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     socket
     |> stream(:programs, programs, reset: true)
     |> assign(programs_count: length(programs))
-    |> update_program_slots(ProgramCatalog.count_self_posted_programs(socket.assigns.current_scope.provider.id))
   end
 
   defp build_enrollment_data(domain_programs) do

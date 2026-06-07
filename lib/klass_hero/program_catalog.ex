@@ -79,18 +79,15 @@ defmodule KlassHero.ProgramCatalog do
 
   - `attrs` - Map with: title, description, category, price, provider_id.
     Optional: location, cover_image_url, instructor_id, instructor_name, instructor_headshot_url.
-  - `tier_holder` - Provider domain model (must have `:subscription_tier` field).
-    Used to check program creation entitlement.
 
   ## Returns
 
   - `{:ok, Program.t()}` on success
-  - `{:error, :program_limit_reached}` if provider has reached their tier's program limit
   - `{:error, changeset}` on validation failure
   """
-  @spec create_program(map(), map()) :: {:ok, Program.t()} | {:error, term()}
-  def create_program(attrs, tier_holder) when is_map(attrs) do
-    CreateProgram.execute(attrs, tier_holder)
+  @spec create_program(map()) :: {:ok, Program.t()} | {:error, term()}
+  def create_program(attrs) when is_map(attrs) do
+    CreateProgram.execute(attrs)
   end
 
   @doc """
