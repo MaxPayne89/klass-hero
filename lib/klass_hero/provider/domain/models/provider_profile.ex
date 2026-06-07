@@ -129,34 +129,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     {:ok, %{profile | verified: false, verified_at: nil, verified_by_id: nil, updated_at: now}}
   end
 
-  @doc """
-  Changes the subscription tier for a provider profile.
-
-  Returns:
-  - `{:ok, updated_profile}` on success
-  - `{:error, :same_tier}` if new tier matches current
-  - `{:error, :invalid_tier}` if tier is not a valid provider tier
-  """
-  def change_tier(%__MODULE__{} = profile, new_tier) when is_atom(new_tier) do
-    cond do
-      # Trigger: tier atom not in the set of valid provider tiers
-      # Why: prevent setting nonsensical tiers like :gold or :premium
-      # Outcome: caller gets clear :invalid_tier error to surface in UI
-      not SubscriptionTiers.valid_provider_tier?(new_tier) ->
-        {:error, :invalid_tier}
-
-      # Trigger: requested tier is the same as current tier
-      # Why: no-op tier change is likely a UX bug, surface it early
-      # Outcome: caller can show "already on this tier" message
-      profile.subscription_tier == new_tier ->
-        {:error, :same_tier}
-
-      true ->
-        now = DateTime.utc_now() |> DateTime.truncate(:second)
-        {:ok, %{profile | subscription_tier: new_tier, updated_at: now}}
-    end
-  end
-
   defp validate(%__MODULE__{} = provider_profile) do
     []
     |> validate_identity_id(provider_profile.identity_id)

@@ -102,8 +102,6 @@ defmodule KlassHero.Application do
          handlers: [
            {:verification_document_approved, {CheckProviderVerificationStatus, :handle}},
            {:verification_document_rejected, {CheckProviderVerificationStatus, :handle}},
-           {:subscription_tier_changed,
-            {KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle}},
            {:staff_assigned_to_program,
             {KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle}},
            {:staff_unassigned_from_program,

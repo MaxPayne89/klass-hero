@@ -6,9 +6,6 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
 
   ## Events
 
-  - `:subscription_tier_changed` - Emitted when a provider's subscription tier changes.
-    Downstream contexts (e.g., Entitlements) can react to tier changes.
-
   - `:staff_member_invited` - Emitted when a staff member is invited to join a provider.
     The Accounts context reacts to send the invitation email (critical).
 
@@ -24,12 +21,6 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  @typedoc "Payload for `:subscription_tier_changed` events."
-  @type subscription_tier_changed_payload :: %{
-          required(:provider_id) => String.t(),
-          optional(atom()) => term()
-        }
-
   @typedoc "Payload for `:staff_member_invited` events."
   @type staff_member_invited_payload :: %{
           required(:staff_member_id) => String.t(),
@@ -37,33 +28,8 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
         }
 
   @source_context :provider
-  @entity_type :provider_profile
   @staff_entity_type :staff_member
   @incident_report_entity_type :incident_report
-
-  def subscription_tier_changed(provider_id, payload \\ %{}, opts \\ [])
-
-  def subscription_tier_changed(provider_id, payload, opts)
-      when is_binary(provider_id) and byte_size(provider_id) > 0 do
-    base_payload = %{provider_id: provider_id}
-
-    IntegrationEvent.new(
-      :subscription_tier_changed,
-      @source_context,
-      @entity_type,
-      provider_id,
-      # Trigger: caller may pass a conflicting :provider_id in payload
-      # Why: base_payload contains the canonical provider_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
-      Map.merge(payload, base_payload),
-      opts
-    )
-  end
-
-  def subscription_tier_changed(provider_id, _payload, _opts) do
-    raise ArgumentError,
-          "subscription_tier_changed/3 requires a non-empty provider_id string, got: #{inspect(provider_id)}"
-  end
 
   @doc """
   Creates a `staff_member_invited` integration event.

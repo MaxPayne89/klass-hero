@@ -133,8 +133,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
   """
   def admin_changeset(schema, attrs, metadata) do
     schema
-    |> cast(attrs, [:verified, :subscription_tier])
-    |> validate_inclusion(:subscription_tier, @valid_tier_strings)
+    |> cast(attrs, [:verified])
     |> maybe_set_verification_fields(metadata)
   end
 

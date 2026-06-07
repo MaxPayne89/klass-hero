@@ -18,23 +18,19 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
       %{schema: schema}
     end
 
-    test "casts verified and subscription_tier", %{schema: schema} do
+    test "casts verified", %{schema: schema} do
       admin_id = Ecto.UUID.generate()
       metadata = [assigns: %{current_scope: %{user: %{id: admin_id}}}]
 
       changeset =
         ProviderProfileSchema.admin_changeset(
           schema,
-          %{
-            verified: true,
-            subscription_tier: "professional"
-          },
+          %{verified: true},
           metadata
         )
 
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :verified) == true
-      assert Ecto.Changeset.get_change(changeset, :subscription_tier) == "professional"
     end
 
     test "sets verified_at and verified_by_id when verified changes to true", %{schema: schema} do
@@ -76,12 +72,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
     test "does not change verified_at when verified is unchanged", %{schema: schema} do
       metadata = [assigns: %{current_scope: %{user: %{id: "some-admin-id"}}}]
 
-      changeset =
-        ProviderProfileSchema.admin_changeset(
-          schema,
-          %{subscription_tier: "professional"},
-          metadata
-        )
+      changeset = ProviderProfileSchema.admin_changeset(schema, %{}, metadata)
 
       assert changeset.valid?
       assert Ecto.Changeset.get_change(changeset, :verified_at) == nil
@@ -97,7 +88,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
             description: "Hacked Desc",
             phone: "555-HACK",
             website: "https://hacked.com",
-            address: "Hacked Address"
+            address: "Hacked Address",
+            subscription_tier: "professional"
           },
           %{}
         )
@@ -108,20 +100,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
       assert Ecto.Changeset.get_change(changeset, :phone) == nil
       assert Ecto.Changeset.get_change(changeset, :website) == nil
       assert Ecto.Changeset.get_change(changeset, :address) == nil
-    end
-
-    test "validates subscription_tier inclusion", %{schema: schema} do
-      changeset =
-        ProviderProfileSchema.admin_changeset(
-          schema,
-          %{
-            subscription_tier: "invalid_tier"
-          },
-          %{}
-        )
-
-      refute changeset.valid?
-      assert {"is invalid", _} = changeset.errors[:subscription_tier]
+      assert Ecto.Changeset.get_change(changeset, :subscription_tier) == nil
     end
   end
 
