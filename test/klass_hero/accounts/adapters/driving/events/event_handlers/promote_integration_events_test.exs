@@ -94,8 +94,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
           email: "test@example.com",
           name: "Test Provider",
           confirmed_at: ~U[2024-01-01 12:00:00Z],
-          intended_roles: ["provider"],
-          provider_subscription_tier: "professional"
+          intended_roles: ["provider"]
         })
 
       assert :ok = PromoteIntegrationEvents.handle(domain_event)
@@ -105,7 +104,6 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
       assert event.source_context == :accounts
       assert event.payload.user_id == user_id
       assert event.payload.intended_roles == ["provider"]
-      assert event.payload.provider_subscription_tier == "professional"
       assert IntegrationEvent.critical?(event)
     end
 

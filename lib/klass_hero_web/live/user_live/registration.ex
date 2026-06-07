@@ -5,7 +5,6 @@ defmodule KlassHeroWeb.UserLive.Registration do
 
   alias KlassHero.Accounts
   alias KlassHero.Accounts.User
-  alias KlassHeroWeb.Presenters.TierPresenter
 
   @impl true
   def render(assigns) do
@@ -102,35 +101,6 @@ defmodule KlassHeroWeb.UserLive.Registration do
               </p>
             </fieldset>
 
-            <div :if={@show_tier_selector} id="tier-selector" class="pt-2 space-y-2">
-              <p class="text-sm font-semibold text-hero-black">{gettext("Choose your plan")}</p>
-              <div class="space-y-2">
-                <label
-                  :for={{key, label, summary} <- TierPresenter.registration_tier_options()}
-                  id={"tier-option-#{key}"}
-                  class="flex items-start gap-3 cursor-pointer rounded-xl border border-[var(--border-light)] p-3 hover:border-[var(--brand-primary)] transition-colors"
-                >
-                  <input
-                    type="radio"
-                    name="user[provider_subscription_tier]"
-                    value={key}
-                    checked={(@form[:provider_subscription_tier].value || "starter") == key}
-                    class="mt-0.5 text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
-                  />
-                  <div>
-                    <span class="font-semibold text-hero-black text-sm">{label}</span>
-                    <p class="text-xs text-[var(--fg-muted)]">{summary}</p>
-                  </div>
-                </label>
-              </div>
-              <p
-                :for={msg <- Enum.map(@form[:provider_subscription_tier].errors, &translate_error/1)}
-                class="text-sm text-[var(--error)]"
-              >
-                {msg}
-              </p>
-            </div>
-
             <.kh_button
               type="submit"
               variant={:primary}
@@ -157,7 +127,6 @@ defmodule KlassHeroWeb.UserLive.Registration do
 
     {:ok,
      socket
-     |> assign(:show_tier_selector, false)
      |> assign(:active_nav, :auth)
      |> assign_form(changeset), temporary_assigns: [form: nil]}
   end
@@ -190,13 +159,7 @@ defmodule KlassHeroWeb.UserLive.Registration do
   def handle_event("validate", %{"user" => user_params}, socket) do
     changeset = Accounts.change_user_registration(%User{}, user_params, validate_unique: false)
 
-    intended_roles = Map.get(user_params, "intended_roles", [])
-    show_tier = "provider" in intended_roles
-
-    {:noreply,
-     socket
-     |> assign(:show_tier_selector, show_tier)
-     |> assign_form(Map.put(changeset, :action, :validate))}
+    {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
   defp assign_form(socket, %Ecto.Changeset{} = changeset) do

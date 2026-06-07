@@ -241,12 +241,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                   id={"staff-broadcast-#{@roster_program_id}"}
                   type="button"
                   disabled
-                  title={
-                    if(!@can_message?,
-                      do: gettext("Upgrade plan to send broadcasts"),
-                      else: gettext("No enrolled parents")
-                    )
-                  }
+                  title={gettext("No enrolled parents")}
                   class="p-2 rounded-lg text-hero-grey-300 cursor-not-allowed"
                 >
                   <.icon name="hero-megaphone-mini" class="w-5 h-5" />
@@ -300,8 +295,8 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                           id={"staff-msg-#{entry.enrollment_id}"}
                           type="button"
                           disabled
-                          title={staff_message_button_title(@can_message?, entry)}
-                          aria-label={staff_message_button_title(@can_message?, entry)}
+                          title={staff_message_button_title(entry)}
+                          aria-label={staff_message_button_title(entry)}
                           class="p-2 inline-flex rounded-lg text-hero-grey-300 cursor-not-allowed"
                         >
                           <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />
@@ -319,9 +314,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     """
   end
 
-  defp staff_message_button_title(false = _can_message?, _entry), do: gettext("Upgrade plan to message parents")
-
-  defp staff_message_button_title(true = _can_message?, entry) do
+  defp staff_message_button_title(entry) do
     cond do
       entry.parent_user_id == nil -> gettext("Parent account not available")
       entry.status != :confirmed -> gettext("Enrollment not confirmed")

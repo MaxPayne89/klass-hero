@@ -820,87 +820,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
     end
   end
 
-  describe "count_by_provider_and_origin/2" do
-    test "returns count of programs with matching origin for a provider" do
-      provider = insert(:provider_profile_schema)
-
-      insert_program_with_origin(
-        %{
-          title: "Program 1",
-          description: "Desc",
-          age_range: "6-10",
-          price: Decimal.new("10.00"),
-          pricing_period: "per month",
-          provider_id: provider.id
-        },
-        "self_posted"
-      )
-
-      insert_program_with_origin(
-        %{
-          title: "Program 2",
-          description: "Desc",
-          age_range: "6-10",
-          price: Decimal.new("20.00"),
-          pricing_period: "per month",
-          provider_id: provider.id
-        },
-        "self_posted"
-      )
-
-      insert_program_with_origin(
-        %{
-          title: "Business Program",
-          description: "Desc",
-          age_range: "6-10",
-          price: Decimal.new("30.00"),
-          pricing_period: "per month",
-          provider_id: provider.id
-        },
-        "business_assigned"
-      )
-
-      assert ProgramRepository.count_by_provider_and_origin(provider.id, :self_posted) == 2
-      assert ProgramRepository.count_by_provider_and_origin(provider.id, :business_assigned) == 1
-    end
-
-    test "returns 0 when no programs match" do
-      provider = insert(:provider_profile_schema)
-      assert ProgramRepository.count_by_provider_and_origin(provider.id, :self_posted) == 0
-    end
-
-    test "does not count programs from other providers" do
-      provider_a = insert(:provider_profile_schema)
-      provider_b = insert(:provider_profile_schema)
-
-      insert_program_with_origin(
-        %{
-          title: "Provider A Program",
-          description: "Desc",
-          age_range: "6-10",
-          price: Decimal.new("10.00"),
-          pricing_period: "per month",
-          provider_id: provider_a.id
-        },
-        "self_posted"
-      )
-
-      insert_program_with_origin(
-        %{
-          title: "Provider B Program",
-          description: "Desc",
-          age_range: "6-10",
-          price: Decimal.new("20.00"),
-          pricing_period: "per month",
-          provider_id: provider_b.id
-        },
-        "self_posted"
-      )
-
-      assert ProgramRepository.count_by_provider_and_origin(provider_a.id, :self_posted) == 1
-    end
-  end
-
   # Helper function to insert a complete valid program
   defp insert_program(attrs) do
     default_attrs = %{
@@ -912,22 +831,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
     %ProgramSchema{}
     |> ProgramSchema.changeset(attrs)
-    |> Repo.insert!()
-  end
-
-  # Helper function to insert a program with a specific origin string.
-  # Uses changeset/2 then put_change for origin, since changeset/2 does not cast it.
-  defp insert_program_with_origin(attrs, origin) do
-    default_attrs = %{
-      id: Ecto.UUID.generate(),
-      category: "education"
-    }
-
-    attrs = Map.merge(default_attrs, attrs)
-
-    %ProgramSchema{}
-    |> ProgramSchema.changeset(attrs)
-    |> Ecto.Changeset.put_change(:origin, origin)
     |> Repo.insert!()
   end
 

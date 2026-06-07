@@ -106,15 +106,4 @@ defmodule KlassHero.ProgramCatalog.Domain.Ports.ForListingPrograms do
   The order of returned programs is not guaranteed.
   """
   @callback get_by_ids(ids :: [String.t()]) :: [Program.t()]
-
-  @doc """
-  Counts programs for a provider filtered by origin.
-
-  Used to enforce tier-based program limits — only self-posted programs
-  count toward the cap.
-  """
-  @callback count_by_provider_and_origin(
-              provider_id :: String.t(),
-              origin :: :self_posted | :business_assigned
-            ) :: non_neg_integer()
 end

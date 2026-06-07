@@ -14,7 +14,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
   describe "complete direct messaging flow" do
     test "provider initiates conversation with parent, both exchange messages" do
       provider = insert(:provider_profile_schema)
-      provider_scope = build_scope_with_provider(provider, :professional)
+      provider_scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
       _parent_scope = build_scope_with_parent(parent_user, :active)
@@ -53,7 +53,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
 
     test "unread tracking works correctly" do
       provider = insert(:provider_profile_schema)
-      provider_scope = build_scope_with_provider(provider, :professional)
+      provider_scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
 
@@ -97,7 +97,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
 
     test "listing conversations shows latest message and other participant name" do
       provider = insert(:provider_profile_schema)
-      provider_scope = build_scope_with_provider(provider, :professional)
+      provider_scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
 
@@ -131,7 +131,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
     test "provider broadcasts to all enrolled parents" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema)
-      provider_scope = build_scope_with_provider(provider, :professional)
+      provider_scope = build_scope_with_provider(provider)
 
       # Create parents with real users to satisfy FK constraint
       parent_user1 = AccountsFixtures.user_fixture()
@@ -251,7 +251,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
     |> Repo.update_all(set: [unread_count: new_count])
   end
 
-  defp build_scope_with_provider(provider_schema, tier) do
+  defp build_scope_with_provider(provider_schema) do
     user = AccountsFixtures.user_fixture()
 
     # Trigger: factory binds provider row to a throwaway unconfirmed user
@@ -266,8 +266,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
     provider_profile = %ProviderProfile{
       id: provider_schema.id,
       identity_id: user.id,
-      business_name: "Test Provider",
-      subscription_tier: tier
+      business_name: "Test Provider"
     }
 
     %Scope{

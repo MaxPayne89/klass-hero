@@ -58,13 +58,12 @@ defmodule KlassHero.Accounts.RegistrationProfileCreationIntegrationTest do
   end
 
   describe "provider registration → profile creation" do
-    test "provider profile exists with correct tier after registration" do
+    test "provider profile exists after registration" do
       {:ok, user} =
         Accounts.register_user(%{
           "name" => "Test Provider",
           "email" => "provider-#{System.unique_integer([:positive])}@example.com",
-          "intended_roles" => ["provider"],
-          "provider_subscription_tier" => "professional"
+          "intended_roles" => ["provider"]
         })
 
       assert_eventually(
@@ -73,8 +72,7 @@ defmodule KlassHero.Accounts.RegistrationProfileCreationIntegrationTest do
         interval_ms: 50
       )
 
-      assert {:ok, profile} = Provider.get_provider_by_identity(user.id)
-      assert profile.subscription_tier == :professional
+      assert {:ok, _profile} = Provider.get_provider_by_identity(user.id)
     end
 
     test "parent profile exists after registration" do
@@ -99,8 +97,7 @@ defmodule KlassHero.Accounts.RegistrationProfileCreationIntegrationTest do
         Accounts.register_user(%{
           "name" => "Dual Role User",
           "email" => "dual-#{System.unique_integer([:positive])}@example.com",
-          "intended_roles" => ["parent", "provider"],
-          "provider_subscription_tier" => "starter"
+          "intended_roles" => ["parent", "provider"]
         })
 
       assert_eventually(
@@ -112,8 +109,7 @@ defmodule KlassHero.Accounts.RegistrationProfileCreationIntegrationTest do
       )
 
       assert {:ok, _parent} = Family.get_parent_by_identity(user.id)
-      assert {:ok, provider} = Provider.get_provider_by_identity(user.id)
-      assert provider.subscription_tier == :starter
+      assert {:ok, _provider} = Provider.get_provider_by_identity(user.id)
     end
   end
 end

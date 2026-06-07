@@ -69,26 +69,11 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       assert render(view) =~ "Program created successfully."
     end
 
-    test "updates program slots counter after creating a program", %{conn: conn} do
+    test "shows no program slots counter", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): no slot limit, no counter
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
-      # Professional tier: 0 programs used out of 5 slots
-      assert has_element?(view, "#program-slots-counter", "0/5")
-
-      view |> element("#new-program-btn") |> render_click()
-
-      view
-      |> form("#program-form", %{
-        "program_schema" => %{
-          "title" => "Counter Test Program",
-          "description" => "Verifies program slots counter updates",
-          "category" => "arts",
-          "price" => "30.00"
-        }
-      })
-      |> render_submit()
-
-      assert has_element?(view, "#program-slots-counter", "1/5")
+      refute has_element?(view, "#program-slots-counter")
     end
 
     test "creates program with instructor assigned", %{conn: conn, provider: provider} do
@@ -433,7 +418,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
     end
   end
 
-  describe "program limit enforcement" do
+  describe "program creation without limits" do
     defp seed_programs_with_listing(provider_id, count) do
       for i <- 1..count do
         id = Ecto.UUID.generate()
@@ -459,23 +444,19 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       end
     end
 
-    test "disables new program button when at starter limit", %{conn: conn, provider: provider} do
-      provider
-      |> Ecto.Changeset.change(%{subscription_tier: "starter"})
-      |> Repo.update!()
-
+    # Provider tiers removed (ADR-0004): no per-tier program cap remains
+    test "new program button stays enabled beyond the former starter cap", %{
+      conn: conn,
+      provider: provider
+    } do
       seed_programs_with_listing(provider.id, 2)
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
-      assert has_element?(view, "#new-program-btn[disabled]")
+      refute has_element?(view, "#new-program-btn[disabled]")
     end
 
-    test "shows error when creation is rejected at limit", %{conn: conn, provider: provider} do
-      provider
-      |> Ecto.Changeset.change(%{subscription_tier: "starter"})
-      |> Repo.update!()
-
+    test "creates a program beyond the former starter cap", %{conn: conn, provider: provider} do
       seed_programs_with_listing(provider.id, 2)
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
@@ -486,24 +467,16 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       |> form("#program-form", %{
         "program_schema" => %{
           "title" => "Third Program",
-          "description" => "Should be rejected",
+          "description" => "Created beyond the former cap",
           "category" => "arts",
           "price" => "50.00"
         }
       })
       |> render_submit()
 
-      assert render(view) =~ "program limit"
-    end
-
-    test "enables new program button when under limit", %{conn: conn, provider: provider} do
-      provider
-      |> Ecto.Changeset.change(%{subscription_tier: "starter"})
-      |> Repo.update!()
-
-      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
-
-      refute has_element?(view, "#new-program-btn[disabled]")
+      html = render(view)
+      assert html =~ "Program created successfully."
+      refute html =~ "program limit"
     end
   end
 end

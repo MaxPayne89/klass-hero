@@ -9,7 +9,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
   describe "staff broadcast (entitled)" do
     setup %{conn: conn} do
       parent_user = user_fixture(intended_roles: [:parent])
-      provider = provider_profile_fixture(subscription_tier: "professional")
+      provider = provider_profile_fixture()
       user = user_fixture(intended_roles: [:staff_provider])
 
       staff =
@@ -124,9 +124,9 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
     end
   end
 
-  describe "staff broadcast (not entitled)" do
+  describe "staff broadcast (former starter-tier provider)" do
     setup %{conn: conn} do
-      provider = provider_profile_fixture(subscription_tier: "starter")
+      provider = provider_profile_fixture()
       user = user_fixture(intended_roles: [:staff_provider])
 
       staff_member_fixture(%{
@@ -144,11 +144,14 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
       %{conn: conn, program: program}
     end
 
-    test "redirects non-entitled staff member with error", %{conn: conn, program: program} do
-      assert {:error, {:live_redirect, %{to: "/staff/dashboard", flash: flash}}} =
-               live(conn, ~p"/staff/programs/#{program.id}/broadcast")
+    test "mounts broadcast compose for staff of former starter-tier provider", %{
+      conn: conn,
+      program: program
+    } do
+      # Provider tiers removed (ADR-0004): staff inherit messaging from any provider
+      {:ok, view, _html} = live(conn, ~p"/staff/programs/#{program.id}/broadcast")
 
-      assert flash["error"] =~ "subscription tier"
+      assert has_element?(view, "#staff-broadcast-form")
     end
   end
 end

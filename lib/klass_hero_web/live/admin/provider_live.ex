@@ -2,8 +2,8 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
   @moduledoc """
   Backpex LiveResource for managing provider profiles in the admin dashboard.
 
-  Provides index, show, and edit views. Only verified status and
-  subscription tier are editable — all other fields are provider-owned.
+  Provides index, show, and edit views. Only verified status is
+  editable — all other fields are provider-owned.
 
   Note: Backpex operates directly on Ecto schemas and Repo, bypassing
   the Ports & Adapters layering used elsewhere. This is a pragmatic
@@ -25,34 +25,16 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
     init_order: %{by: :inserted_at, direction: :desc}
 
   alias Backpex.Fields.Boolean
-  alias Backpex.Fields.Select
   alias Backpex.Fields.Text
   alias Backpex.Fields.Textarea
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-  alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.IntegrationEventPublishing
-  alias KlassHero.Shared.SubscriptionTiers
   alias KlassHeroWeb.Admin.Filters.VerifiedFilter
 
   require KlassHeroWeb.BackpexCompat
 
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
-
-  @tier_options Enum.map(
-                  SubscriptionTiers.provider_tiers(),
-                  fn tier ->
-                    label =
-                      tier
-                      |> Atom.to_string()
-                      |> String.replace("_", " ")
-                      |> String.split()
-                      |> Enum.map_join(" ", &String.capitalize/1)
-
-                    {label, Atom.to_string(tier)}
-                  end
-                )
 
   # Trigger: :new and :delete are not valid operations for provider profiles
   # Why: providers create their own profiles; deletion follows GDPR process
@@ -90,12 +72,6 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
         module: Boolean,
         label: "Verified",
         orderable: true
-      },
-      subscription_tier: %{
-        module: Select,
-        label: "Tier",
-        orderable: true,
-        options: @tier_options
       },
       description: %{
         module: Textarea,
@@ -151,7 +127,6 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
       old_item = socket.assigns.item
 
       maybe_publish_verification_event(old_item, item, socket)
-      maybe_dispatch_tier_event(old_item, item)
 
       socket
     end
@@ -196,27 +171,5 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
       }
     )
     |> IntegrationEventPublishing.publish()
-  end
-
-  # Trigger: subscription tier changed between old and new item
-  # Why: ChangeSubscriptionTier use case dispatches a domain event that gets
-  #      promoted to an integration event by PromoteIntegrationEvents handler
-  # Outcome: domain event dispatched so downstream handlers are notified
-  defp maybe_dispatch_tier_event(%{subscription_tier: same}, %{subscription_tier: same}), do: :ok
-
-  defp maybe_dispatch_tier_event(old_item, item) do
-    event =
-      DomainEvent.new(
-        :subscription_tier_changed,
-        item.id,
-        :provider,
-        %{
-          provider_id: item.id,
-          previous_tier: String.to_existing_atom(old_item.subscription_tier),
-          new_tier: String.to_existing_atom(item.subscription_tier)
-        }
-      )
-
-    DomainEventBus.dispatch(KlassHero.Provider, event)
   end
 end

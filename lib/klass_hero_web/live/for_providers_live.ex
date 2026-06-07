@@ -1,7 +1,6 @@
 defmodule KlassHeroWeb.ForProvidersLive do
   use KlassHeroWeb, :live_view
 
-  alias KlassHeroWeb.Presenters.TierPresenter
   alias KlassHeroWeb.Theme
 
   @impl true
@@ -9,8 +8,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
     {:ok,
      assign(socket,
        page_title: gettext("For Providers"),
-       active_nav: :providers,
-       provider_tiers: pricing_tiers()
+       active_nav: :providers
      )}
   end
 
@@ -21,7 +19,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
     <.benefits_section benefits={benefits()} />
     <.how_it_works_section steps={steps()} />
     <.safety_standards_section standards={safety_standards()} />
-    <.pricing_section tiers={@provider_tiers} />
+    <.pricing_section features={pricing_features()} />
     <.faq_section faqs={faqs()} />
     <.final_cta />
     """
@@ -163,98 +161,47 @@ defmodule KlassHeroWeb.ForProvidersLive do
     """
   end
 
-  attr :tiers, :list, required: true
+  attr :features, :list, required: true
 
   defp pricing_section(assigns) do
     ~H"""
     <section id="for-providers-pricing" class="py-16 lg:py-24 bg-hero-cream-100">
-      <div class="max-w-7xl mx-auto px-6">
-        <div class="text-center max-w-2xl mx-auto mb-10">
-          <.kh_pill tone={:accent} class="mb-3">{gettext("Plans & Pricing")}</.kh_pill>
+      <div class="max-w-3xl mx-auto px-6">
+        <div class="text-center mb-10">
+          <.kh_pill tone={:accent} class="mb-3">{gettext("Pricing")}</.kh_pill>
           <h2 class={[Theme.typography(:page_title)]}>
-            {gettext("Pricing that grows with you")}
+            {gettext("Free to join")}
           </h2>
           <p class="text-hero-grey-600 text-lg mt-3">
-            {gettext("Start free. Upgrade when it makes sense. No setup fees, cancel anytime.")}
+            {gettext("Every feature included. No subscription, no setup fees.")}
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div
-            :for={tier <- @tiers}
-            class={[
-              "relative rounded-3xl p-7 transition-all",
-              tier.popular &&
-                "bg-black text-white shadow-2xl md:scale-[1.02]",
-              !tier.popular &&
-                "bg-white border border-hero-grey-200 hover:shadow-lg"
-            ]}
+        <div class="rounded-3xl bg-black text-white p-8 lg:p-10 text-center shadow-2xl">
+          <%!-- typography-lint-ignore: marketing headline uses display font for emphasis --%>
+          <p class="font-display font-extrabold text-3xl text-hero-yellow-500">
+            {gettext("We earn when you earn")}
+          </p>
+          <p class="mt-4 text-white/80 leading-relaxed">
+            {gettext(
+              "Joining Klass Hero costs nothing — unlimited programs, your whole team, all media, and direct parent messaging are included for everyone. A simple success-based fee on bookings made through the platform is coming; we'll share the details transparently before it launches."
+            )}
+          </p>
+          <ul class="mt-6 space-y-2.5 text-left max-w-md mx-auto">
+            <li :for={f <- @features} class="flex items-start gap-2 text-sm">
+              <.icon name="hero-check" class="w-4 h-4 mt-0.5 shrink-0 text-hero-yellow-500" />
+              <span>{f}</span>
+            </li>
+          </ul>
+          <.kh_button
+            variant={:primary}
+            size={:lg}
+            navigate={~p"/users/register"}
+            class="mt-8 justify-center"
           >
-            <div
-              :if={tier.popular}
-              class="absolute -top-3 left-7 px-3 py-1 rounded-full bg-hero-yellow-500 text-black text-xs font-bold uppercase tracking-wide"
-            >
-              {gettext("Most popular")}
-            </div>
-            <h3 class={
-              [
-                # typography-lint-ignore: tier name uses display font as part of pricing card brand
-                "font-display font-extrabold text-2xl",
-                tier.popular && "text-hero-yellow-500"
-              ]
-            }>
-              {tier.title}
-            </h3>
-            <p class={[
-              "text-sm mt-1.5",
-              if(tier.popular, do: "text-white/70", else: "text-hero-grey-600")
-            ]}>
-              {tier.subtitle}
-            </p>
-
-            <div class="my-6">
-              <div class="flex items-baseline gap-1.5">
-                <%!-- typography-lint-ignore: pricing tier price uses display font for emphasis --%>
-                <span class="font-display font-extrabold text-5xl">{tier.price}</span>
-                <span class={[
-                  "text-sm font-semibold",
-                  if(tier.popular, do: "text-white/60", else: "text-hero-grey-600")
-                ]}>
-                  /{tier.period}
-                </span>
-              </div>
-            </div>
-
-            <ul class="space-y-2.5 mb-7">
-              <li :for={f <- tier.features} class="flex items-start gap-2 text-sm">
-                <.icon
-                  name="hero-check"
-                  class={"w-4 h-4 mt-0.5 shrink-0 #{if tier.popular, do: "text-hero-yellow-500", else: "text-emerald-500"}"}
-                />
-                <span>{f}</span>
-              </li>
-            </ul>
-
-            <.kh_button
-              variant={if(tier.popular, do: :primary, else: :ghost)}
-              size={:lg}
-              navigate={~p"/users/register"}
-              class="w-full justify-center"
-            >
-              <%= if tier.key == :starter do %>
-                {gettext("Start for free")} →
-              <% else %>
-                {gettext("Choose")} {tier.title} →
-              <% end %>
-            </.kh_button>
-          </div>
+            {gettext("Start for free")} →
+          </.kh_button>
         </div>
-
-        <p class="text-center text-sm text-hero-grey-600 mt-8">
-          {gettext(
-            "All plans include: secure payments · automatic invoicing · VAT handling · the Klass Hero verified badge"
-          )}
-        </p>
       </div>
     </section>
     """
@@ -352,19 +299,6 @@ defmodule KlassHeroWeb.ForProvidersLive do
   defp ghost_dark_cta_classes do
     # typography-lint-ignore: ghost-on-dark CTA mirrors KhButton primary surface
     "inline-flex items-center justify-center gap-2 px-7 py-3.5 text-lg rounded-xl font-display font-bold tracking-tight border border-white/30 text-white hover:bg-white/10 transition-all"
-  end
-
-  # Marketing pricing cards draw from `TierPresenter.subscription_tiers/0` —
-  # the same source the in-app `/provider/subscription` page uses. Single
-  # source of truth: changing canonical tier names, prices, or features
-  # propagates everywhere automatically.
-  #
-  # `popular` is the only marketing-only field: which tier we visually
-  # promote is a presentation choice, not an entitlement.
-  defp pricing_tiers do
-    Enum.map(TierPresenter.subscription_tiers(), fn tier ->
-      Map.put(tier, :popular, tier.key == :professional)
-    end)
   end
 
   defp benefits do
@@ -484,13 +418,23 @@ defmodule KlassHeroWeb.ForProvidersLive do
     ]
   end
 
+  defp pricing_features do
+    [
+      gettext("Unlimited programs and locations"),
+      gettext("Unlimited team seats"),
+      gettext("Direct messaging and broadcasts"),
+      gettext("Secure payments, invoicing, and VAT handling"),
+      gettext("The Klass Hero verified badge")
+    ]
+  end
+
   defp faqs do
     [
       %{
         q: gettext("How much does Klass Hero cost?"),
         a:
           gettext(
-            "Starter is free with 18% commission per booking — up to 2 programs. Professional is €19/mo with 12% commission and up to 5 programs. Business Plus is €49/mo with 8% commission and unlimited programs. No setup fees, cancel anytime."
+            "Joining is free — every feature is included for all providers, with no subscription or setup fees. A success-based fee on bookings made through the platform is planned; we'll announce the details transparently before it launches."
           )
       },
       %{
@@ -518,7 +462,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
         q: gettext("Can I run programs at multiple locations?"),
         a:
           gettext(
-            "Yes. Professional supports up to 5 programs each with their own schedule and venue. Business Plus adds unlimited programs and unlimited team seats so you can delegate management across instructors."
+            "Yes. You can run unlimited programs, each with its own schedule and venue, and add as many team members as you need to delegate management across instructors."
           )
       }
     ]

@@ -353,7 +353,6 @@ defmodule KlassHeroWeb.ProviderComponents do
       <.provider_dashboard_header business={@business} />
   """
   attr :business, :map, required: true
-  attr :can_create_program?, :boolean, default: true
 
   def provider_dashboard_header(assigns) do
     ~H"""
@@ -363,13 +362,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           {@business.name} {gettext("Dashboard")}
         </h1>
         <div class="flex flex-wrap items-center gap-2">
-          <span class={[
-            "px-3 py-1 text-xs font-semibold text-white uppercase tracking-wide",
-            Theme.rounded(:full),
-            "bg-green-500"
-          ]}>
-            {@business.plan_label}
-          </span>
           <span
             :if={@business.verified}
             class={[
@@ -384,26 +376,6 @@ defmodule KlassHeroWeb.ProviderComponents do
       </div>
 
       <div class="flex items-center gap-4">
-        <div class="text-right">
-          <p class="text-xs text-hero-grey-500 uppercase tracking-wide">
-            {gettext("Program Slots")}
-          </p>
-          <p id="program-slots-counter" class="text-lg font-semibold text-hero-charcoal">
-            {@business.program_slots_used}/{if @business.program_slots_total == :unlimited,
-              do: "∞",
-              else: @business.program_slots_total}
-          </p>
-        </div>
-        <div class="text-right">
-          <p class="text-xs text-hero-grey-500 uppercase tracking-wide">
-            {gettext("Team Members")}
-          </p>
-          <p class="text-lg font-semibold text-hero-charcoal">
-            {@business.team_seats_used}/{if @business.team_seats_total == :unlimited,
-              do: "∞",
-              else: @business.team_seats_total}
-          </p>
-        </div>
         <div class="relative group">
           <.kh_button
             id="new-program-btn"
@@ -411,13 +383,13 @@ defmodule KlassHeroWeb.ProviderComponents do
             size={:sm}
             icon="hero-plus-mini"
             phx-click="add_program"
-            disabled={@business.verification_status != :verified or not @can_create_program?}
+            disabled={@business.verification_status != :verified}
           >
             {gettext("New Program")}
           </.kh_button>
           <%!-- Tooltip: shown only when button is disabled --%>
           <div
-            :if={@business.verification_status != :verified or not @can_create_program?}
+            :if={@business.verification_status != :verified}
             id="new-program-tooltip"
             class={[
               "absolute right-0 top-full mt-2 w-64 p-3 bg-hero-charcoal text-white text-xs",
@@ -426,13 +398,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               Theme.transition(:normal)
             ]}
           >
-            <%= cond do %>
-              <% @business.verification_status != :verified -> %>
-                {gettext("Complete business verification to create programs.")}
-              <% not @can_create_program? -> %>
-                {gettext("You've reached your program limit. Upgrade your plan to add more programs.")}
-              <% true -> %>
-            <% end %>
+            {gettext("Complete business verification to create programs.")}
           </div>
         </div>
       </div>
@@ -1822,8 +1788,8 @@ defmodule KlassHeroWeb.ProviderComponents do
                 id={"send-message-#{entry.enrollment_id}"}
                 type="button"
                 disabled
-                title={message_button_title(@can_message?, entry)}
-                aria-label={message_button_title(@can_message?, entry)}
+                title={message_button_title(entry)}
+                aria-label={message_button_title(entry)}
                 class={[
                   "p-2 inline-flex",
                   Theme.rounded(:lg),
@@ -1840,9 +1806,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     """
   end
 
-  defp message_button_title(false = _can_message?, _entry), do: gettext("Upgrade to Professional to message parents")
-
-  defp message_button_title(true = _can_message?, entry) do
+  defp message_button_title(entry) do
     cond do
       entry.parent_user_id == nil -> gettext("Parent account not available")
       entry.status != :confirmed -> gettext("Enrollment not confirmed")

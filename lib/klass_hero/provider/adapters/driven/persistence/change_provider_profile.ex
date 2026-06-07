@@ -43,11 +43,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.ChangeProviderProfile d
       verified_at: provider.verified_at,
       verified_by_id: provider.verified_by_id,
       categories: provider.categories,
-      subscription_tier:
-        if(is_atom(provider.subscription_tier),
-          do: to_string(provider.subscription_tier),
-          else: provider.subscription_tier
-        ),
       profile_status:
         if(is_atom(provider.profile_status),
           do: to_string(provider.profile_status),

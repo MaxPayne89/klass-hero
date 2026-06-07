@@ -388,7 +388,6 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: ["sports", "outdoor"],
-      subscription_tier: "professional",
       profile_status: "active"
     }
   end
@@ -413,7 +412,6 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: [],
-      subscription_tier: "starter",
       originated_from: "staff_invite",
       profile_status: "draft"
     }

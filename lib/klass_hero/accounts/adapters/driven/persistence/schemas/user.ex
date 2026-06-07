@@ -18,7 +18,6 @@ defmodule KlassHero.Accounts.User do
   alias KlassHero.Accounts.User
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
-  alias KlassHero.Shared.SubscriptionTiers
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -34,7 +33,6 @@ defmodule KlassHero.Accounts.User do
     field :intended_roles, UserRoles, default: []
     field :locale, :string, default: "en"
     field :is_admin, :boolean, default: false
-    field :provider_subscription_tier, :string
 
     has_one :parent_profile, ParentProfileSchema, foreign_key: :identity_id
     has_one :provider_profile, ProviderProfileSchema, foreign_key: :identity_id
@@ -67,22 +65,14 @@ defmodule KlassHero.Accounts.User do
     * `:validate_unique` - Set to false if you don't want to validate the
       uniqueness of the email. Defaults to `true`.
   """
-  @valid_provider_tier_strings Enum.map(
-                                 SubscriptionTiers.provider_tiers(),
-                                 &Atom.to_string/1
-                               )
-
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:name, :email, :intended_roles, :provider_subscription_tier])
+    |> cast(attrs, [:name, :email, :intended_roles])
     |> put_default_role()
     |> validate_required([:name, :email, :intended_roles])
     |> validate_length(:name, min: 2, max: 100)
     |> validate_subset(:intended_roles, UserRole.valid_roles())
     |> validate_at_least_one_role()
-    |> validate_inclusion(:provider_subscription_tier, @valid_provider_tier_strings,
-      message: "is not a valid subscription tier"
-    )
     |> validate_email(opts)
   end
 
@@ -90,10 +80,9 @@ defmodule KlassHero.Accounts.User do
   A user changeset for staff provider registration.
 
   Always sets intended_roles to [:staff_provider, :provider] — every invited
-  staff member automatically gets a starter provider account.
+  staff member automatically gets a provider account.
 
-  Does not require provider_subscription_tier. Used when a staff member
-  registers via an invitation link.
+  Used when a staff member registers via an invitation link.
 
   ## Options
 

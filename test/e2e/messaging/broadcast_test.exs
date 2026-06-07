@@ -20,10 +20,7 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
       provider_user = user_fixture(%{intended_roles: [:provider]}) |> set_password()
 
       provider =
-        insert(:provider_profile_schema,
-          identity_id: provider_user.id,
-          subscription_tier: "professional"
-        )
+        insert(:provider_profile_schema, identity_id: provider_user.id)
 
       parent_user = user_fixture(%{intended_roles: [:parent]}) |> set_password()
 

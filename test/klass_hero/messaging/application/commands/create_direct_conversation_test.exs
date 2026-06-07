@@ -48,7 +48,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
   describe "execute/3" do
     test "creates new conversation with participants" do
       provider = insert(:provider_profile_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       target_user = AccountsFixtures.user_fixture()
 
@@ -62,7 +62,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
 
     test "returns existing conversation if one already exists" do
       provider = insert(:provider_profile_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       target_user = AccountsFixtures.user_fixture()
 
@@ -87,7 +87,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
 
     test "provider with professional tier can initiate" do
       provider = insert(:provider_profile_schema)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
 
       target_user = AccountsFixtures.user_fixture()
 
@@ -97,7 +97,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
 
     test "provider with business_plus tier can initiate" do
       provider = insert(:provider_profile_schema)
-      scope = build_scope_with_provider(provider, :business_plus)
+      scope = build_scope_with_provider(provider)
 
       target_user = AccountsFixtures.user_fixture()
 
@@ -125,7 +125,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
     test "adds assigned staff as participants when conversation has program context" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
       target_user = AccountsFixtures.user_fixture()
       staff_user = AccountsFixtures.user_fixture()
 
@@ -144,7 +144,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
     test "publishes :participant_added integration event when staff are added" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
       target_user = AccountsFixtures.user_fixture()
       staff_user = AccountsFixtures.user_fixture()
 
@@ -175,7 +175,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
       # critical events.
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
       target_user = AccountsFixtures.user_fixture()
       staff_user = AccountsFixtures.user_fixture()
 
@@ -204,7 +204,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
     test "does not add staff when no program_id provided" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
       target_user = AccountsFixtures.user_fixture()
       staff_user = AccountsFixtures.user_fixture()
 
@@ -223,7 +223,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
     test "does not add owner as duplicate staff participant" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
       target_user = AccountsFixtures.user_fixture()
 
       # The owner (scope.user) is also assigned as staff
@@ -240,7 +240,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
     test "does not add staff to existing conversations" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider, :professional)
+      scope = build_scope_with_provider(provider)
       target_user = AccountsFixtures.user_fixture()
 
       # First create the conversation without staff
@@ -265,14 +265,13 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
     end
   end
 
-  defp build_scope_with_provider(provider_schema, tier) do
+  defp build_scope_with_provider(provider_schema) do
     user = AccountsFixtures.user_fixture()
 
     provider_profile = %ProviderProfile{
       id: provider_schema.id,
       identity_id: user.id,
-      business_name: "Test Provider",
-      subscription_tier: tier
+      business_name: "Test Provider"
     }
 
     %Scope{

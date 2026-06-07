@@ -16,20 +16,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.ChangeProviderProfileTe
       assert get_field(changeset, :business_name) == provider.business_name
     end
 
-    test "maps subscription_tier atom to string" do
-      provider = Factory.build(:provider_profile, subscription_tier: :professional)
-      changeset = ChangeProviderProfile.execute(provider)
-
-      assert get_field(changeset, :subscription_tier) == "professional"
-    end
-
-    test "handles subscription_tier already a string" do
-      provider = Factory.build(:provider_profile, subscription_tier: "starter")
-      changeset = ChangeProviderProfile.execute(provider)
-
-      assert get_field(changeset, :subscription_tier) == "starter"
-    end
-
     test "tracks description changes" do
       provider = Factory.build(:provider_profile)
       changeset = ChangeProviderProfile.execute(provider, %{description: "New description"})

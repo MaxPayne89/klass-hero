@@ -12,7 +12,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
         identity_id: Ecto.UUID.generate(),
         business_name: "Test",
         originated_from: "staff_invite",
-        subscription_tier: "starter",
         categories: [],
         verified: false
       }
@@ -27,7 +26,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
         identity_id: Ecto.UUID.generate(),
         business_name: "Test",
         originated_from: "direct",
-        subscription_tier: "starter",
         categories: [],
         verified: false
       }
@@ -41,8 +39,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
         id: Ecto.UUID.generate(),
         identity_id: Ecto.UUID.generate(),
         business_name: "Test",
-        originated_from: :staff_invite,
-        subscription_tier: :starter
+        originated_from: :staff_invite
       }
 
       attrs = ProviderProfileMapper.to_schema(domain)

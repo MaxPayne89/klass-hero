@@ -48,7 +48,6 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Adapters.Driven.Persistence.ChangeProviderProfile
   alias KlassHero.Provider.Adapters.Driven.Persistence.ChangeStaffMember
   alias KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport
-  alias KlassHero.Provider.Application.Commands.Providers.ChangeSubscriptionTier
   alias KlassHero.Provider.Application.Commands.Providers.CompleteProviderProfile
   alias KlassHero.Provider.Application.Commands.Providers.CreateProviderProfile
   alias KlassHero.Provider.Application.Commands.Providers.UnverifyProvider
@@ -133,20 +132,6 @@ defmodule KlassHero.Provider do
           | {:error, :not_found | :already_active | {:validation_error, list()} | Ecto.Changeset.t()}
   def complete_provider_profile(provider_id, attrs) when is_binary(provider_id) and is_map(attrs) do
     CompleteProviderProfile.execute(provider_id, attrs)
-  end
-
-  @doc """
-  Changes the subscription tier for a provider profile.
-
-  Returns:
-  - `{:ok, ProviderProfile.t()}` on success
-  - `{:error, :same_tier}` if new tier matches current
-  - `{:error, :invalid_tier}` if tier is not valid
-  """
-  @spec change_subscription_tier(ProviderProfile.t(), atom()) ::
-          {:ok, ProviderProfile.t()} | {:error, :same_tier | :invalid_tier | :not_found}
-  def change_subscription_tier(%ProviderProfile{} = profile, new_tier) when is_atom(new_tier) do
-    ChangeSubscriptionTier.execute(profile, new_tier)
   end
 
   @doc """

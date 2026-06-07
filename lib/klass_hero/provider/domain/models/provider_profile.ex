@@ -9,8 +9,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
   not foreign key, maintaining bounded context independence.
   """
 
-  alias KlassHero.Shared.SubscriptionTiers
-
   @enforce_keys [:id, :identity_id, :business_name]
 
   defstruct [
@@ -27,7 +25,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     :verified_at,
     :verified_by_id,
     :categories,
-    :subscription_tier,
     :originated_from,
     :profile_status,
     :inserted_at,
@@ -48,7 +45,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
           verified_at: DateTime.t() | nil,
           verified_by_id: String.t() | nil,
           categories: [String.t()] | nil,
-          subscription_tier: :starter | :professional | :business_plus | nil,
           originated_from: :direct | :staff_invite | nil,
           profile_status: :draft | :active | nil,
           inserted_at: DateTime.t() | nil,
@@ -88,7 +84,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     attrs
     |> Map.put_new(:verified, false)
     |> Map.put_new(:categories, [])
-    |> Map.put_new(:subscription_tier, SubscriptionTiers.default_provider_tier())
     |> Map.put_new(:originated_from, :direct)
     |> Map.put_new(:profile_status, :active)
   end
@@ -129,34 +124,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     {:ok, %{profile | verified: false, verified_at: nil, verified_by_id: nil, updated_at: now}}
   end
 
-  @doc """
-  Changes the subscription tier for a provider profile.
-
-  Returns:
-  - `{:ok, updated_profile}` on success
-  - `{:error, :same_tier}` if new tier matches current
-  - `{:error, :invalid_tier}` if tier is not a valid provider tier
-  """
-  def change_tier(%__MODULE__{} = profile, new_tier) when is_atom(new_tier) do
-    cond do
-      # Trigger: tier atom not in the set of valid provider tiers
-      # Why: prevent setting nonsensical tiers like :gold or :premium
-      # Outcome: caller gets clear :invalid_tier error to surface in UI
-      not SubscriptionTiers.valid_provider_tier?(new_tier) ->
-        {:error, :invalid_tier}
-
-      # Trigger: requested tier is the same as current tier
-      # Why: no-op tier change is likely a UX bug, surface it early
-      # Outcome: caller can show "already on this tier" message
-      profile.subscription_tier == new_tier ->
-        {:error, :same_tier}
-
-      true ->
-        now = DateTime.utc_now() |> DateTime.truncate(:second)
-        {:ok, %{profile | subscription_tier: new_tier, updated_at: now}}
-    end
-  end
-
   defp validate(%__MODULE__{} = provider_profile) do
     []
     |> validate_identity_id(provider_profile.identity_id)
@@ -169,7 +136,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     |> validate_verified(provider_profile.verified)
     |> validate_verified_at(provider_profile.verified_at)
     |> validate_categories(provider_profile.categories)
-    |> validate_subscription_tier(provider_profile.subscription_tier)
     |> validate_originated_from(provider_profile.originated_from)
     |> validate_profile_status(provider_profile.profile_status)
     |> validate_business_owner_email(provider_profile.business_owner_email)
@@ -308,17 +274,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
   end
 
   defp validate_categories(errors, _), do: ["Categories must be a list" | errors]
-
-  defp validate_subscription_tier(errors, nil), do: errors
-
-  defp validate_subscription_tier(errors, tier) do
-    if SubscriptionTiers.valid_provider_tier?(tier) do
-      errors
-    else
-      valid = SubscriptionTiers.provider_tiers() |> Enum.join(", ")
-      ["Subscription tier must be one of: #{valid}" | errors]
-    end
-  end
 
   @valid_originated_from [:direct, :staff_invite]
 

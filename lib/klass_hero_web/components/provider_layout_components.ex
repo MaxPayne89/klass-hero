@@ -92,12 +92,6 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
           <p class="mt-1 text-xs text-white/90 leading-relaxed">
             {gettext("Add 3+ photos to boost bookings by ~40%.")}
           </p>
-          <a
-            href="/provider/subscription"
-            class="mt-2 block text-[11px] font-bold text-[var(--brand-primary)] hover:underline"
-          >
-            {gettext("View subscription")} →
-          </a>
         </div>
       </div>
     </aside>
@@ -263,7 +257,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
 
   Composed by every LiveView that should feel like a tab on the provider
   dashboard. The shell knows nothing about which LV uses it — callers pass
-  their `business`, `can_create_program?`, and the `current_tab` atom
+  their `business` and the `current_tab` atom
   (`:overview`, `:team`, `:programs`, `:sessions`).
 
   ## Examples
@@ -273,7 +267,6 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
       </.pv_dashboard_chrome>
   """
   attr :business, :map, required: true
-  attr :can_create_program?, :boolean, default: false
 
   attr :current_tab, :atom,
     required: true,
@@ -285,10 +278,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     ~H"""
     <div class={["min-h-screen", Theme.bg(:muted)]}>
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <.provider_dashboard_header
-          business={@business}
-          can_create_program?={@can_create_program?}
-        />
+        <.provider_dashboard_header business={@business} />
         <.provider_nav_tabs current_tab={@current_tab} />
         {render_slot(@inner_block)}
       </div>

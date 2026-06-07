@@ -11,12 +11,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
   import Ecto.Changeset
 
   alias KlassHero.Accounts.User
-  alias KlassHero.Shared.SubscriptionTiers
-
-  @valid_tier_strings Enum.map(
-                        SubscriptionTiers.provider_tiers(),
-                        &Atom.to_string/1
-                      )
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @timestamps_opts [type: :utc_datetime]
@@ -33,7 +27,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
     field :verified, :boolean, default: false
     field :verified_at, :utc_datetime
     field :categories, {:array, :string}, default: []
-    field :subscription_tier, :string, default: "starter"
     field :originated_from, :string, default: "direct"
     field :profile_status, :string, default: "active"
 
@@ -58,7 +51,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
   - verified (boolean, defaults to false)
   - verified_at (DateTime if provided)
   - categories (list of strings, defaults to [])
-  - subscription_tier (must be "starter", "professional", or "business_plus", defaults to "starter")
   """
   def changeset(provider_profile_schema, attrs) do
     provider_profile_schema
@@ -75,7 +67,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
       :verified_at,
       :verified_by_id,
       :categories,
-      :subscription_tier,
       :originated_from,
       :profile_status
     ])
@@ -83,7 +74,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
     |> validate_inclusion(:profile_status, ~w(draft active))
     |> validate_profile_fields()
     |> validate_length(:logo_url, min: 1, max: 500)
-    |> validate_inclusion(:subscription_tier, @valid_tier_strings)
     |> validate_inclusion(:originated_from, ~w(direct staff_invite), message: "is not a valid origin")
     |> unique_constraint(:identity_id,
       name: :providers_identity_id_index,
@@ -122,7 +112,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
   @doc """
   Admin changeset for provider profile management via Backpex.
 
-  Casts `verified` and `subscription_tier` — provider-owned fields
+  Casts `verified` — provider-owned fields
   (business_name, description, phone, etc.) are excluded.
 
   When `verified` changes, also sets `verified_at` and `verified_by_id`
@@ -133,8 +123,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
   """
   def admin_changeset(schema, attrs, metadata) do
     schema
-    |> cast(attrs, [:verified, :subscription_tier])
-    |> validate_inclusion(:subscription_tier, @valid_tier_strings)
+    |> cast(attrs, [:verified])
     |> maybe_set_verification_fields(metadata)
   end
 

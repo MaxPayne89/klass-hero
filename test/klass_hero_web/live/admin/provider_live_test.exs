@@ -90,36 +90,13 @@ defmodule KlassHeroWeb.Admin.ProviderLiveTest do
       assert schema.verified_by_id == nil
     end
 
-    test "admin can change subscription tier", %{conn: conn} do
-      provider = provider_profile_fixture(business_name: "Tier Change")
+    test "edit form exposes no subscription tier field", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): admins only edit verification
+      provider = provider_profile_fixture(business_name: "No Tier Field")
 
       {:ok, view, _html} = live(conn, ~p"/admin/providers/#{provider.id}/edit")
 
-      view
-      |> form("#resource-form", %{change: %{subscription_tier: "professional"}})
-      |> render_submit(%{"save-type" => "save"})
-
-      schema =
-        KlassHero.Repo.get!(
-          ProviderProfileSchema,
-          provider.id
-        )
-
-      assert schema.subscription_tier == "professional"
-    end
-
-    test "subscription tier select only allows valid options", %{conn: conn} do
-      provider = provider_profile_fixture(business_name: "Valid Tiers")
-
-      {:ok, view, _html} = live(conn, ~p"/admin/providers/#{provider.id}/edit")
-
-      # Trigger: Backpex Select field renders an HTML <select> element
-      # Why: invalid values can't be submitted through a <select> — only listed options
-      # Outcome: verify the select contains exactly the expected tier options
-      html = render(view)
-      assert html =~ "Starter"
-      assert html =~ "Professional"
-      assert html =~ "Business Plus"
+      refute has_element?(view, ~s([name="change[subscription_tier]"]))
     end
   end
 end

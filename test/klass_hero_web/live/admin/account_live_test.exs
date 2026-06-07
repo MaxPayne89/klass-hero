@@ -186,50 +186,22 @@ defmodule KlassHeroWeb.Admin.AccountLiveTest do
       assert has_element?(view, "span", "Active")
     end
 
-    test "displays Starter badge for provider with starter tier", %{conn: conn} do
-      user = KlassHero.AccountsFixtures.user_fixture(%{name: "Starter Provider"})
+    test "displays generic Provider badge for provider accounts", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): one badge for all providers
+      user = KlassHero.AccountsFixtures.user_fixture(%{name: "Some Provider"})
 
       KlassHero.Factory.insert(:provider_profile_schema,
         identity_id: user.id,
-        business_name: "Starter Biz",
-        subscription_tier: "starter"
+        business_name: "Some Biz"
       )
 
       {:ok, view, _html} = live(conn, ~p"/admin/accounts")
 
-      assert has_element?(view, "span", "Starter")
+      assert has_element?(view, "span", "Provider")
     end
 
-    test "displays Professional badge for provider with professional tier", %{conn: conn} do
-      user = KlassHero.AccountsFixtures.user_fixture(%{name: "Pro Provider"})
-
-      KlassHero.Factory.insert(:provider_profile_schema,
-        identity_id: user.id,
-        business_name: "Pro Biz",
-        subscription_tier: "professional"
-      )
-
-      {:ok, view, _html} = live(conn, ~p"/admin/accounts")
-
-      assert has_element?(view, "span", "Professional")
-    end
-
-    test "displays Business+ badge for provider with business_plus tier", %{conn: conn} do
-      user = KlassHero.AccountsFixtures.user_fixture(%{name: "Biz Plus Provider"})
-
-      KlassHero.Factory.insert(:provider_profile_schema,
-        identity_id: user.id,
-        business_name: "Biz Plus",
-        subscription_tier: "business_plus"
-      )
-
-      {:ok, view, _html} = live(conn, ~p"/admin/accounts")
-
-      assert has_element?(view, "span", "Business+")
-    end
-
-    test "displays both tiers for dual-role user", %{conn: conn} do
-      user = KlassHero.AccountsFixtures.user_fixture(%{name: "Dual Tier"})
+    test "displays parent tier and Provider badge for dual-role user", %{conn: conn} do
+      user = KlassHero.AccountsFixtures.user_fixture(%{name: "Dual Role"})
 
       KlassHero.Factory.insert(:parent_profile_schema,
         identity_id: user.id,
@@ -238,14 +210,13 @@ defmodule KlassHeroWeb.Admin.AccountLiveTest do
 
       KlassHero.Factory.insert(:provider_profile_schema,
         identity_id: user.id,
-        business_name: "Dual Tier Biz",
-        subscription_tier: "professional"
+        business_name: "Dual Role Biz"
       )
 
       {:ok, view, _html} = live(conn, ~p"/admin/accounts")
 
       assert has_element?(view, "span", "Active")
-      assert has_element?(view, "span", "Professional")
+      assert has_element?(view, "span", "Provider")
     end
 
     test "displays dash for user with no profiles", %{conn: conn} do

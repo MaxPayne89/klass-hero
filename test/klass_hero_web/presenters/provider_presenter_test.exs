@@ -49,32 +49,19 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
   end
 
   describe "to_business_view/1" do
-    test "includes team seat fields for starter tier" do
+    # Provider tiers removed (ADR-0004): no slot/seat limit fields in the view
+    test "carries no program-slot or team-seat limit fields" do
       provider = %ProviderProfile{
         id: "p1",
         identity_id: "i1",
-        business_name: "Test Biz",
-        subscription_tier: :starter
+        business_name: "Test Biz"
       }
 
       view = ProviderPresenter.to_business_view(provider)
 
-      assert view.team_seats_used == 0
-      assert view.team_seats_total == 1
-    end
-
-    test "includes unlimited team seats for business_plus tier" do
-      provider = %ProviderProfile{
-        id: "p2",
-        identity_id: "i2",
-        business_name: "Big Biz",
-        subscription_tier: :business_plus
-      }
-
-      view = ProviderPresenter.to_business_view(provider)
-
-      assert view.team_seats_used == 0
-      assert view.team_seats_total == :unlimited
+      assert view.name == "Test Biz"
+      refute Map.has_key?(view, :program_slots_total)
+      refute Map.has_key?(view, :team_seats_total)
     end
   end
 
@@ -128,20 +115,6 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
       assert view.description == nil
       assert view.logo_url == nil
       assert view.initials == "MB"
-    end
-  end
-
-  describe "tier_label/1" do
-    test "returns label for each valid tier" do
-      assert ProviderPresenter.tier_label(:starter) == "Starter Plan"
-      assert ProviderPresenter.tier_label(:professional) == "Professional Plan"
-      assert ProviderPresenter.tier_label(:business_plus) == "Business Plus Plan"
-    end
-
-    test "raises FunctionClauseError for unknown tier" do
-      assert_raise FunctionClauseError, fn ->
-        ProviderPresenter.tier_label(:unknown)
-      end
     end
   end
 end

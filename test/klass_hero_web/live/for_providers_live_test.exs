@@ -1,17 +1,15 @@
 defmodule KlassHeroWeb.ForProvidersLiveTest do
   @moduledoc """
-  Phase 1 — `/for-providers` marketing page.
-  Asserts the bundle's MkForProviders sections render in order, that pricing
-  tiers are filtered against `Entitlements.all_provider_tiers/0`, and that
-  the FLAGS-deferred surfaces (hero stats strip, success stories, monthly /
-  annual toggle) are NOT rendered.
+  `/for-providers` marketing page.
+  Asserts the bundle's MkForProviders sections render in order, that the
+  pricing section carries the free-to-join message (provider tiers removed,
+  ADR-0004), and that the FLAGS-deferred surfaces (hero stats strip, success
+  stories, monthly / annual toggle) are NOT rendered.
   """
 
   use KlassHeroWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
-
-  alias KlassHero.Shared.Entitlements
 
   describe "ForProvidersLive" do
     test "renders the page successfully at /for-providers", %{conn: conn} do
@@ -104,25 +102,18 @@ defmodule KlassHeroWeb.ForProvidersLiveTest do
       assert html =~ "Liability Insurance"
     end
 
-    test "renders one pricing tier per backed Entitlements provider tier", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/for-providers")
+    test "renders the free-to-join section instead of tier cards", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): one message, no plans
+      {:ok, view, html} = live(conn, ~p"/for-providers")
 
-      backed = Keyword.keys(Entitlements.all_provider_tiers())
+      assert has_element?(view, "#for-providers-pricing")
+      assert html =~ "Free to join"
+      assert html =~ "We earn when you earn"
 
-      # Tier marketing labels we know about. If a backed atom isn't in this
-      # list, the LiveView quietly drops it — that's intentional.
-      labels_for_atom = %{
-        starter: "Starter",
-        professional: "Professional",
-        business_plus: "Business Plus"
-      }
-
-      backed
-      |> Enum.map(&Map.get(labels_for_atom, &1))
-      |> Enum.reject(&is_nil/1)
-      |> Enum.each(fn label ->
-        assert html =~ label, "expected pricing tier label #{inspect(label)} to render"
-      end)
+      refute html =~ "€19"
+      refute html =~ "€49"
+      refute html =~ "Most popular"
+      refute html =~ "Business Plus"
     end
 
     test "omits the monthly / annual toggle (FLAGS ❌)", %{conn: conn} do

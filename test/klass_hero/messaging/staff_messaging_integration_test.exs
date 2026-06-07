@@ -116,8 +116,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
     provider_profile = %ProviderProfile{
       id: provider_schema.id,
       identity_id: user.id,
-      business_name: provider_schema.business_name,
-      subscription_tier: :professional
+      business_name: provider_schema.business_name
     }
 
     %Scope{

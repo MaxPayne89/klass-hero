@@ -112,10 +112,11 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       assert has_element?(view, "a", "Edit Profile")
     end
 
-    test "shows subscription plan management link", %{conn: conn} do
+    test "shows no subscription plan management link", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): no plan to manage
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
-      assert has_element?(view, "#subscription-cta")
-      assert has_element?(view, ~s(a[href="/provider/subscription"]))
+      refute has_element?(view, "#subscription-cta")
+      refute has_element?(view, ~s(a[href="/provider/subscription"]))
     end
 
     test "displays business logo when logo_url is set", %{conn: conn} do
@@ -1388,15 +1389,12 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       assert path =~ "/provider/messages/"
     end
 
-    test "shows disabled message buttons for starter tier provider", %{conn: conn} do
-      # Re-register with starter tier — starter providers cannot initiate messaging
+    test "shows enabled message buttons for former starter-tier provider", %{conn: conn} do
+      # Provider tiers removed (ADR-0004): every provider can initiate messaging
       user = KlassHero.AccountsFixtures.user_fixture(%{intended_roles: [:provider]})
 
       provider =
-        KlassHero.Factory.insert(:provider_profile_schema,
-          identity_id: user.id,
-          subscription_tier: "starter"
-        )
+        KlassHero.Factory.insert(:provider_profile_schema, identity_id: user.id)
 
       conn = log_in_user(conn, user)
 
@@ -1420,7 +1418,8 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       view |> element("#view-roster-#{program.id}") |> render_click()
 
-      assert has_element?(view, "#send-message-#{enrollment.id}[disabled]")
+      assert has_element?(view, "#send-message-#{enrollment.id}")
+      refute has_element?(view, "#send-message-#{enrollment.id}[disabled]")
     end
   end
 

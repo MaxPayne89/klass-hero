@@ -30,8 +30,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
     Enum.map(schemas, &mapper_module.to_domain/1)
   end
 
-  # Derive tier list from the single source of truth
-  @all_tiers SubscriptionTiers.parent_tiers() ++ SubscriptionTiers.provider_tiers()
+  # Derive tier list from the single source of truth (parent tiers only —
+  # provider tiers removed, ADR-0004)
+  @all_tiers SubscriptionTiers.parent_tiers()
 
   @doc """
   Converts a string tier to an atom, returning the default if nil or unknown.

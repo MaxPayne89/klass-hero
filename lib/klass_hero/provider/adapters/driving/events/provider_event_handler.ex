@@ -22,9 +22,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler do
 
   alias KlassHero.Provider
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers
-  alias KlassHero.Shared.SubscriptionTiers
-
-  require Logger
 
   @impl true
   def subscribed_events, do: [:user_registered, :user_confirmed, :user_anonymized]
@@ -57,7 +54,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler do
       business_name: Map.get(payload, :name, ""),
       business_owner_email: Map.get(payload, :email)
     }
-    |> maybe_put_tier(Map.get(payload, :provider_subscription_tier))
   end
 
   defp create_provider_profile_with_retry(attrs, user_id) do
@@ -70,23 +66,5 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler do
     }
 
     RetryHelpers.retry_and_normalize(operation, context)
-  end
-
-  defp maybe_put_tier(attrs, nil), do: attrs
-  defp maybe_put_tier(attrs, ""), do: attrs
-
-  defp maybe_put_tier(attrs, tier) when is_binary(tier) do
-    case SubscriptionTiers.cast_provider_tier(tier) do
-      {:ok, valid_tier} ->
-        Map.put(attrs, :subscription_tier, valid_tier)
-
-      {:error, :invalid_tier} ->
-        Logger.warning("Invalid provider tier in registration event, using default",
-          tier: tier,
-          identity_id: Map.get(attrs, :identity_id)
-        )
-
-        attrs
-    end
   end
 end

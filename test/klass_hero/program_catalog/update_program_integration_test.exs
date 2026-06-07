@@ -12,16 +12,13 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       provider = ProviderFixtures.provider_profile_fixture()
 
       {:ok, program} =
-        ProgramCatalog.create_program(
-          %{
-            provider_id: provider.id,
-            title: "Original Title",
-            description: "Original description",
-            category: "sports",
-            price: Decimal.new("100.00")
-          },
-          provider
-        )
+        ProgramCatalog.create_program(%{
+          provider_id: provider.id,
+          title: "Original Title",
+          description: "Original description",
+          category: "sports",
+          price: Decimal.new("100.00")
+        })
 
       %{program: program, provider: provider}
     end

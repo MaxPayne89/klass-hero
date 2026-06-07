@@ -4,7 +4,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
   """
 
   import KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers,
-    only: [string_to_tier: 2, tier_to_string: 2, maybe_add_id: 2]
+    only: [maybe_add_id: 2]
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Domain.Models.ProviderProfile
@@ -16,7 +16,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
 
   Returns the domain ProviderProfile struct with all fields mapped from the schema.
   UUIDs are converted to strings to maintain domain independence from Ecto types.
-  Subscription tier is converted from string to atom.
   """
   def to_domain(%ProviderProfileSchema{} = schema) do
     %ProviderProfile{
@@ -33,7 +32,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
       verified_at: schema.verified_at,
       verified_by_id: schema.verified_by_id && to_string(schema.verified_by_id),
       categories: schema.categories,
-      subscription_tier: string_to_tier(schema.subscription_tier, :starter),
       originated_from: string_to_origin(schema.originated_from),
       profile_status: string_to_profile_status(schema.profile_status),
       inserted_at: schema.inserted_at,
@@ -46,7 +44,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
 
   Returns a map suitable for Ecto changeset operations (insert/update).
   This is used when creating or updating provider profiles in the database.
-  Subscription tier is converted from atom to string.
   """
   def to_schema(%ProviderProfile{} = provider_profile) do
     %{
@@ -62,7 +59,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
       verified_at: provider_profile.verified_at,
       verified_by_id: provider_profile.verified_by_id,
       categories: provider_profile.categories,
-      subscription_tier: tier_to_string(provider_profile.subscription_tier, "starter"),
       originated_from: origin_to_string(provider_profile.originated_from),
       profile_status: profile_status_to_string(provider_profile.profile_status)
     }
