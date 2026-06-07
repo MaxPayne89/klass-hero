@@ -84,8 +84,8 @@ _Avoid_: Parent (reserve that for the account-holding role), Caregiver, Custodia
 A young person who attends **Programs**, belonging to one or more **Guardians**. The person a **Parent** enrols and a **Roster** tracks.
 _Avoid_: Kid, Student, Participant, Attendee
 
-**Subscription Tier** _(being removed — see flagged ambiguities)_:
-The plan a **Parent** (`explorer`, `active`) or **Provider** (`starter`, `professional`, `business_plus`) currently holds, gating capabilities (**Entitlements**) such as booking caps or the platform **Commission** rate. Slated for removal — do not build new behaviour on it.
+**Subscription Tier** _(parent-only; being removed — see flagged ambiguities)_:
+The plan a **Parent** (`explorer`, `active`) currently holds, gating parent capabilities (**Entitlements**) such as booking caps. Provider tiers (`starter`/`professional`/`business_plus`) were removed (ADR-0004): every **Provider** has full access, and a **success-based fee** on platform income is planned to replace tier commissions. Parent tiers are slated for removal too — do not build new behaviour on tiers.
 _Avoid_: Plan, Level, Membership
 
 ## Messaging
@@ -216,8 +216,8 @@ The per-child, parent-approved feedback entity is named `BehavioralNote` in code
 **Resolution:** Canonical term is **Session Note** for routine per-child feedback; reserve "behavioural" for the safeguarding-level `behavioral_issue` **Incident Report** category. A code rename `BehavioralNote → SessionNote` is pending.
 
 **Subscription tiers and the Entitlements service are being removed.**
-Today **Subscription Tier** gates Parent and Provider capabilities through the Shared **Entitlements** service, and the paid parent tier `:active` collides with the pervasive `active` lifecycle flag (`StaffMember.active`, `ProgramStaffAssignment.active?`, etc.).
-**Resolution (direction, not yet built):** Tiers are being dropped entirely. Once removed, the Entitlements service loses all functionality, the tier vocabulary (`explorer`/`active`/`starter`/`professional`/`business_plus`) retires, and the `:active` collision disappears on its own. Do not build new behaviour on tiers or Entitlements.
+Today **Subscription Tier** gates Parent capabilities through the Shared **Entitlements** service, and the paid parent tier `:active` collides with the pervasive `active` lifecycle flag (`StaffMember.active`, `ProgramStaffAssignment.active?`, etc.).
+**Resolution (in progress):** Provider tiers (`starter`/`professional`/`business_plus`) are already removed — every Provider has full access, with a **success-based fee** on platform income planned as the replacement (ADR-0004). Parent tiers (`explorer`/`active`) and the remaining parent half of Entitlements are still slated for removal; once they go, the tier vocabulary retires fully and the `:active` collision disappears on its own. Do not build new behaviour on tiers or Entitlements.
 
 **"Participation" is overloaded across context, record, and consent.**
 The word names the Participation *context*, the **Participation Record** (roster row), and a `participation` **Consent** type.
