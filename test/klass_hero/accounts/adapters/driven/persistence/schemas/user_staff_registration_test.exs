@@ -13,10 +13,10 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserStaffRegist
         })
 
       assert changeset.valid?
-      assert get_change(changeset, :intended_roles) == [:staff_provider, :provider]
+      assert get_change(changeset, :intended_roles) == [:staff, :provider]
     end
 
-    test "locks intended_roles to [:staff_provider, :provider]" do
+    test "locks intended_roles to [:staff, :provider]" do
       changeset =
         User.staff_registration_changeset(%User{}, %{
           name: "Jane Doe",
@@ -25,7 +25,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserStaffRegist
           intended_roles: [:parent]
         })
 
-      assert get_change(changeset, :intended_roles) == [:staff_provider, :provider]
+      assert get_change(changeset, :intended_roles) == [:staff, :provider]
     end
 
     test "is valid with just name and email" do
@@ -84,11 +84,11 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserStaffRegist
   end
 
   describe "staff_registration_changeset/3 always includes :provider role" do
-    test "sets [:staff_provider, :provider] by default" do
+    test "sets [:staff, :provider] by default" do
       attrs = %{"name" => "Test", "email" => "test@example.com", "password" => "long_password123"}
 
       changeset = User.staff_registration_changeset(%User{}, attrs, hash_password: false)
-      assert Ecto.Changeset.get_field(changeset, :intended_roles) == [:staff_provider, :provider]
+      assert Ecto.Changeset.get_field(changeset, :intended_roles) == [:staff, :provider]
     end
 
     test "ignores also_provider param — always includes :provider" do
@@ -100,7 +100,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserStaffRegist
       }
 
       changeset = User.staff_registration_changeset(%User{}, attrs, hash_password: false)
-      assert Ecto.Changeset.get_field(changeset, :intended_roles) == [:staff_provider, :provider]
+      assert Ecto.Changeset.get_field(changeset, :intended_roles) == [:staff, :provider]
     end
   end
 end

@@ -78,7 +78,7 @@
                   :provider in (@current_scope.user.intended_roles || []) ->
                     ~p"/provider/messages"
 
-                  :staff_provider in (@current_scope.user.intended_roles || []) ->
+                  :staff in (@current_scope.user.intended_roles || []) ->
                     ~p"/staff/messages"
 
                   true ->
@@ -222,7 +222,7 @@
                     :provider in (@current_scope.user.intended_roles || []) ->
                       ~p"/provider/messages"
 
-                    :staff_provider in (@current_scope.user.intended_roles || []) ->
+                    :staff in (@current_scope.user.intended_roles || []) ->
                       ~p"/staff/messages"
 
                     true ->

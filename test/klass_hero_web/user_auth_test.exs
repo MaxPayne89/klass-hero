@@ -528,7 +528,7 @@ defmodule KlassHeroWeb.UserAuthTest do
     end
 
     test "redirects staff provider users to staff dashboard", %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
 
       staff_member_fixture(%{
@@ -553,8 +553,8 @@ defmodule KlassHeroWeb.UserAuthTest do
       assert redirect_opts.to == "/staff/dashboard"
     end
 
-    test "continues for staff_provider user with no active staff record", %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff_provider])
+    test "continues for staff user with no active staff record", %{conn: conn} do
+      user = user_fixture(intended_roles: [:staff])
 
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
@@ -666,8 +666,8 @@ defmodule KlassHeroWeb.UserAuthTest do
   end
 
   describe "signed_in_path/1" do
-    test "redirects staff_provider to staff dashboard" do
-      user = %Accounts.User{intended_roles: [:staff_provider]}
+    test "redirects staff to staff dashboard" do
+      user = %Accounts.User{intended_roles: [:staff]}
       assert UserAuth.signed_in_path(user) == ~p"/staff/dashboard"
     end
 
@@ -686,8 +686,8 @@ defmodule KlassHeroWeb.UserAuthTest do
       assert UserAuth.signed_in_path(user) == ~p"/dashboard"
     end
 
-    test "provider takes precedence over staff_provider for dual-role users" do
-      user = %Accounts.User{intended_roles: [:provider, :staff_provider]}
+    test "provider takes precedence over staff for dual-role users" do
+      user = %Accounts.User{intended_roles: [:provider, :staff]}
       assert UserAuth.signed_in_path(user) == ~p"/provider/dashboard"
     end
 
@@ -700,7 +700,7 @@ defmodule KlassHeroWeb.UserAuthTest do
         {[], ~p"/dashboard", "admin-only user lands on parent dashboard"},
         {[:parent], ~p"/dashboard", "parent+admin lands on parent dashboard"},
         {[:provider], ~p"/provider/dashboard", "provider+admin lands on provider dashboard"},
-        {[:staff_provider], ~p"/staff/dashboard", "staff+admin lands on staff dashboard"}
+        {[:staff], ~p"/staff/dashboard", "staff+admin lands on staff dashboard"}
       ]
 
       for {roles, expected, label} <- cases do
@@ -713,8 +713,8 @@ defmodule KlassHeroWeb.UserAuthTest do
   end
 
   describe "dashboard_path/1" do
-    test "returns staff dashboard path for staff_provider" do
-      user = %Accounts.User{intended_roles: [:staff_provider]}
+    test "returns staff dashboard path for staff" do
+      user = %Accounts.User{intended_roles: [:staff]}
       assert UserAuth.dashboard_path(user) == ~p"/staff/dashboard"
     end
 
@@ -733,8 +733,8 @@ defmodule KlassHeroWeb.UserAuthTest do
       assert UserAuth.dashboard_path(user) == ~p"/dashboard"
     end
 
-    test "provider takes precedence over staff_provider for dual-role users" do
-      user = %Accounts.User{intended_roles: [:provider, :staff_provider]}
+    test "provider takes precedence over staff for dual-role users" do
+      user = %Accounts.User{intended_roles: [:provider, :staff]}
       assert UserAuth.dashboard_path(user) == ~p"/provider/dashboard"
     end
 
@@ -745,12 +745,12 @@ defmodule KlassHeroWeb.UserAuthTest do
 
   describe "signed_in_path/1 dual-role precedence" do
     test "provider takes precedence over staff for dual-role users" do
-      user = %Accounts.User{intended_roles: [:staff_provider, :provider]}
+      user = %Accounts.User{intended_roles: [:staff, :provider]}
       assert UserAuth.signed_in_path(user) == ~p"/provider/dashboard"
     end
 
     test "staff-only users still go to staff dashboard" do
-      user = %Accounts.User{intended_roles: [:staff_provider]}
+      user = %Accounts.User{intended_roles: [:staff]}
       assert UserAuth.signed_in_path(user) == ~p"/staff/dashboard"
     end
 
@@ -762,12 +762,12 @@ defmodule KlassHeroWeb.UserAuthTest do
 
   describe "dashboard_path/1 dual-role precedence" do
     test "provider takes precedence over staff for dual-role users" do
-      user = %Accounts.User{intended_roles: [:staff_provider, :provider]}
+      user = %Accounts.User{intended_roles: [:staff, :provider]}
       assert UserAuth.dashboard_path(user) == ~p"/provider/dashboard"
     end
 
     test "staff-only users still go to staff dashboard" do
-      user = %Accounts.User{intended_roles: [:staff_provider]}
+      user = %Accounts.User{intended_roles: [:staff]}
       assert UserAuth.dashboard_path(user) == ~p"/staff/dashboard"
     end
   end

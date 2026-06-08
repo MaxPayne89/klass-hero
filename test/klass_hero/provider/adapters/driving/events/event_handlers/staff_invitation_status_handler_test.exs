@@ -175,7 +175,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   describe "handle_event/1 staff_user_registered with create_provider_profile flag" do
     test "creates a provider profile when create_provider_profile is true" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider, :provider])
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff, :provider])
       provider = KlassHero.ProviderFixtures.provider_profile_fixture()
 
       staff =
@@ -210,7 +210,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
     end
 
     test "does NOT create a provider profile when flag is absent" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       provider = KlassHero.ProviderFixtures.provider_profile_fixture()
 
       staff =
@@ -240,7 +240,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
     end
 
     test "returns :ok when provider profile already exists (idempotent)" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider, :provider])
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff, :provider])
       _existing_profile = KlassHero.ProviderFixtures.provider_profile_fixture(identity_id: user.id)
       provider = KlassHero.ProviderFixtures.provider_profile_fixture()
 

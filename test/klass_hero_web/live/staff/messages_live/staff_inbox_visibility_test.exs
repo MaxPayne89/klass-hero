@@ -67,7 +67,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       program = insert(:program_schema, provider_id: provider.id)
       parent = user_fixture()
 
-      staff_user = user_fixture(intended_roles: [:staff_provider])
+      staff_user = user_fixture(intended_roles: [:staff])
 
       staff_member_fixture(%{
         provider_id: provider.id,
@@ -134,7 +134,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       flush_to_projection()
 
       # Now assign staff via the integration event the Provider context would send
-      staff_user = user_fixture(intended_roles: [:staff_provider])
+      staff_user = user_fixture(intended_roles: [:staff])
 
       staff_member_fixture(%{
         provider_id: provider.id,
@@ -177,7 +177,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       program = insert(:program_schema, provider_id: provider.id)
       parent = user_fixture()
 
-      staff_user = user_fixture(intended_roles: [:staff_provider])
+      staff_user = user_fixture(intended_roles: [:staff])
 
       staff_member_fixture(%{
         provider_id: provider.id,
@@ -243,7 +243,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       program = insert(:program_schema, provider_id: provider.id)
       parent = user_fixture()
 
-      staff_user = user_fixture(intended_roles: [:staff_provider])
+      staff_user = user_fixture(intended_roles: [:staff])
 
       staff_member_fixture(%{
         provider_id: provider.id,

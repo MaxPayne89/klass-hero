@@ -207,9 +207,7 @@ defmodule KlassHero.ProviderFixtures do
     attrs_map = Map.new(attrs)
 
     user =
-      KlassHero.AccountsFixtures.user_fixture(
-        intended_roles: attrs_map[:intended_roles] || [:staff_provider, :provider]
-      )
+      KlassHero.AccountsFixtures.user_fixture(intended_roles: attrs_map[:intended_roles] || [:staff, :provider])
 
     provider = provider_profile_fixture(identity_id: attrs_map[:identity_id] || user.id)
 

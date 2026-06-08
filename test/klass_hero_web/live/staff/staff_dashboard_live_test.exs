@@ -9,7 +9,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
 
   describe "staff dashboard" do
     setup %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
 
       staff =
@@ -149,7 +149,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider =
         provider_profile_fixture()
 
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
 
       staff =
         staff_member_fixture(%{
@@ -262,7 +262,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   describe "staff roster messaging controls (former starter-tier provider)" do
     setup %{conn: conn} do
       provider = provider_profile_fixture()
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
 
       staff =
         staff_member_fixture(%{
@@ -327,7 +327,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
 
   describe "cross-navigation for staff-only users" do
     setup %{conn: conn} do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       provider = KlassHero.ProviderFixtures.provider_profile_fixture()
 
       staff =

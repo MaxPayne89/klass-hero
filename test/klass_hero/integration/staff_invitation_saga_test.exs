@@ -132,7 +132,7 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
                  password: "hello world!"
                })
 
-      assert user.intended_roles == [:staff_provider, :provider]
+      assert user.intended_roles == [:staff, :provider]
 
       # Step 5: StaffInvitationStatusHandler handles :staff_user_registered
       # → status :sent → :accepted, user_id linked, provider profile created
@@ -153,9 +153,9 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
       assert profile.originated_from == :staff_invite
       assert profile.profile_status == :draft
 
-      # Step 7: Scope resolution gives the user both :staff_provider and :provider roles
+      # Step 7: Scope resolution gives the user both :staff and :provider roles
       scope = Scope.for_user(user) |> Scope.resolve_roles()
-      assert :staff_provider in scope.roles
+      assert :staff in scope.roles
       assert :provider in scope.roles
     end
   end

@@ -37,7 +37,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler do
     #   profile creation with originated_from: :staff_invite)
     intended_roles = Map.get(payload, :intended_roles, [])
 
-    if "provider" in intended_roles and "staff_provider" not in intended_roles do
+    if "provider" in intended_roles and "staff" not in intended_roles do
       user_id
       |> build_attrs_from_payload(payload)
       |> create_provider_profile_with_retry(user_id)

@@ -197,7 +197,7 @@ defmodule KlassHeroWeb.ConnCase do
   in the test context. This is useful for tests that require staff-only routes.
   """
   def register_and_log_in_staff(%{conn: _conn} = context) do
-    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff_provider]})
+    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff]})
     provider = KlassHero.Factory.insert(:provider_profile_schema)
 
     staff =
@@ -230,7 +230,7 @@ defmodule KlassHeroWeb.ConnCase do
   Includes a linked staff member with bio and tags for pre-fill testing.
   """
   def register_and_log_in_draft_provider(%{conn: _conn} = context) do
-    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff_provider, :provider]})
+    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff, :provider]})
 
     provider =
       KlassHero.Factory.insert(:draft_provider_profile_schema, identity_id: user.id)

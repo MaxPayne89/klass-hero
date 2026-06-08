@@ -48,7 +48,7 @@ defmodule KlassHero.Provider.Application.Queries.StaffMemberQueries do
 
   @doc """
   Returns the active staff member record linked to the given user ID.
-  Used by Scope to resolve :staff_provider role.
+  Used by Scope to resolve :staff role.
   """
   @spec get_active_by_user(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
   def get_active_by_user(user_id) when is_binary(user_id) do

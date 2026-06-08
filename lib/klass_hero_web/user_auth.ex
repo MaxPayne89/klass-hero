@@ -291,11 +291,11 @@ defmodule KlassHeroWeb.UserAuth do
     )
   end
 
-  def on_mount(:require_staff_provider, _params, session, socket) do
+  def on_mount(:require_staff, _params, session, socket) do
     require_role(
       socket,
       session,
-      &Scope.staff_provider?/1,
+      &Scope.staff?/1,
       gettext("You must be a staff member to access this page.")
     )
   end
@@ -330,7 +330,7 @@ defmodule KlassHeroWeb.UserAuth do
         Scope.provider?(scope) ->
           {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/provider/dashboard")}
 
-        Scope.staff_provider?(scope) ->
+        Scope.staff?(scope) ->
           {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/staff/dashboard")}
 
         true ->
@@ -388,7 +388,7 @@ defmodule KlassHeroWeb.UserAuth do
   def signed_in_path(%Accounts.User{intended_roles: roles}) do
     cond do
       :provider in roles -> ~p"/provider/dashboard"
-      :staff_provider in roles -> ~p"/staff/dashboard"
+      :staff in roles -> ~p"/staff/dashboard"
       true -> ~p"/dashboard"
     end
   end
@@ -399,7 +399,7 @@ defmodule KlassHeroWeb.UserAuth do
   def dashboard_path(%Accounts.User{intended_roles: roles}) do
     cond do
       :provider in roles -> ~p"/provider/dashboard"
-      :staff_provider in roles -> ~p"/staff/dashboard"
+      :staff in roles -> ~p"/staff/dashboard"
       true -> ~p"/dashboard"
     end
   end

@@ -79,8 +79,11 @@ defmodule KlassHero.Accounts.User do
   @doc """
   A user changeset for staff provider registration.
 
-  Always sets intended_roles to [:staff_provider, :provider] — every invited
+  Always sets intended_roles to [:staff, :provider] — every invited
   staff member automatically gets a provider account.
+
+  NOTE (ADR-0005): the forced `:provider` is removed in a follow-up (#965);
+  this changeset only renames the staff atom for now.
 
   Used when a staff member registers via an invitation link.
 
@@ -94,7 +97,7 @@ defmodule KlassHero.Accounts.User do
     |> cast(attrs, [:name, :email])
     |> validate_required([:name, :email])
     |> validate_length(:name, min: 2, max: 100)
-    |> put_change(:intended_roles, [:staff_provider, :provider])
+    |> put_change(:intended_roles, [:staff, :provider])
     |> validate_email(opts)
     |> password_changeset(attrs, opts)
   end

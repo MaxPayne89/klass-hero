@@ -48,7 +48,7 @@ defmodule KlassHero.Accounts do
   @doc """
   Registers a new staff provider user via invitation.
 
-  Uses staff_registration_changeset which locks intended_roles to [:staff_provider].
+  Uses staff_registration_changeset which locks intended_roles to [:staff].
   """
   def register_staff_user(attrs) do
     RegisterUser.execute(attrs, changeset_fn: &User.staff_registration_changeset/2)
@@ -416,7 +416,7 @@ defmodule KlassHero.Accounts do
   Returns an `%Ecto.Changeset{}` for tracking staff registration changes.
 
   Uses `staff_registration_changeset` which locks intended_roles to
-  `[:staff_provider]`.
+  `[:staff]`.
   """
   def change_staff_registration(attrs, opts \\ []) do
     User.staff_registration_changeset(%User{}, attrs, opts)

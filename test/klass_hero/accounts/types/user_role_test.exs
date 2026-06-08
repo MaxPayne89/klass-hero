@@ -5,7 +5,7 @@ defmodule KlassHero.Accounts.Types.UserRoleTest do
 
   describe "valid_roles/0" do
     test "returns list of valid role atoms" do
-      assert UserRole.valid_roles() == [:parent, :provider, :staff_provider]
+      assert UserRole.valid_roles() == [:parent, :provider, :staff]
     end
   end
 

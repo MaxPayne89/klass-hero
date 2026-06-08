@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.ScopeStaffProviderTest do
+defmodule KlassHero.Accounts.ScopeStaffTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
@@ -6,49 +6,49 @@ defmodule KlassHero.Accounts.ScopeStaffProviderTest do
 
   alias KlassHero.Accounts.Scope
 
-  describe "resolve_roles/1 with staff_provider" do
-    test "adds :staff_provider role when user is active staff member" do
-      user = user_fixture(intended_roles: [:staff_provider])
+  describe "resolve_roles/1 with staff" do
+    test "adds :staff role when user is active staff member" do
+      user = user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
       _staff = staff_member_fixture(%{provider_id: provider.id, user_id: user.id, active: true})
 
       scope = Scope.for_user(user) |> Scope.resolve_roles()
 
-      assert :staff_provider in scope.roles
+      assert :staff in scope.roles
       assert scope.staff_member != nil
       assert scope.staff_member.provider_id == provider.id
     end
 
-    test "does not add :staff_provider when user has no staff membership" do
+    test "does not add :staff when user has no staff membership" do
       user = user_fixture()
 
       scope = Scope.for_user(user) |> Scope.resolve_roles()
 
-      refute :staff_provider in scope.roles
+      refute :staff in scope.roles
       assert scope.staff_member == nil
     end
 
-    test "does not add :staff_provider when staff member is inactive" do
-      user = user_fixture(intended_roles: [:staff_provider])
+    test "does not add :staff when staff member is inactive" do
+      user = user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
       _staff = staff_member_fixture(%{provider_id: provider.id, user_id: user.id, active: false})
 
       scope = Scope.for_user(user) |> Scope.resolve_roles()
 
-      refute :staff_provider in scope.roles
+      refute :staff in scope.roles
       assert scope.staff_member == nil
     end
   end
 
-  describe "staff_provider?/1" do
+  describe "staff?/1" do
     test "returns true when staff_member is present" do
       scope = %Scope{staff_member: %{id: "123"}}
-      assert Scope.staff_provider?(scope)
+      assert Scope.staff?(scope)
     end
 
     test "returns false when staff_member is nil" do
       scope = %Scope{staff_member: nil}
-      refute Scope.staff_provider?(scope)
+      refute Scope.staff?(scope)
     end
   end
 end

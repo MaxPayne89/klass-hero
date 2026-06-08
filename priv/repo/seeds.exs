@@ -472,7 +472,7 @@ staff_by_provider =
 # ==============================================================================
 # S7b: UI TEST STAFF USER
 # ==============================================================================
-# A confirmed staff_provider user for test-driving staff dashboard flows.
+# A confirmed staff user for test-driving staff dashboard flows.
 # Linked to Wolf Musik Akademie (pro_1), empty tags (sees all programs).
 
 Logger.info("Seeding UI test staff user...")
@@ -484,7 +484,7 @@ uitest_staff_user =
     email: "uitest-staff@example.com",
     hashed_password: hashed_pw,
     confirmed_at: now,
-    intended_roles: [:staff_provider, :provider]
+    intended_roles: [:staff, :provider]
   })
   |> Repo.insert!()
 

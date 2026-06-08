@@ -514,7 +514,7 @@ defmodule KlassHero.AccountsTest do
 
   describe "emit_staff_user_registered/4" do
     test "includes create_provider_profile in event payload when passed" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       staff_member_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
@@ -525,7 +525,7 @@ defmodule KlassHero.AccountsTest do
     end
 
     test "works without opts (backwards compatible)" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       staff_member_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 

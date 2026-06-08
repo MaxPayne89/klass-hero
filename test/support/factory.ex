@@ -398,7 +398,7 @@ defmodule KlassHero.Factory do
   All optional fields are nil (provider hasn't filled them in yet).
   """
   def draft_provider_profile_schema_factory do
-    user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:staff_provider, :provider])
+    user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:staff, :provider])
 
     %ProviderProfileSchema{
       id: Ecto.UUID.generate(),

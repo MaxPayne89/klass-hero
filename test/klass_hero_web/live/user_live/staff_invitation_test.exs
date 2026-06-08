@@ -143,7 +143,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
       assert html =~ "Account created"
 
       user = KlassHero.Repo.get_by!(User, email: staff.email)
-      assert user.intended_roles == [:staff_provider, :provider]
+      assert user.intended_roles == [:staff, :provider]
     end
   end
 
@@ -198,7 +198,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
       assert html =~ "Account created"
 
       user = KlassHero.Repo.get_by!(User, email: staff.email)
-      assert :staff_provider in user.intended_roles
+      assert :staff in user.intended_roles
       assert :provider in user.intended_roles
     end
   end
