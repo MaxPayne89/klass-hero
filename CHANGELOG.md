@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.52.0](https://github.com/MaxPayne89/klass-hero/compare/v0.51.4...v0.52.0) (2026-06-07)
+
+
+### Features
+
+* remove provider subscription tiers ([#961](https://github.com/MaxPayne89/klass-hero/issues/961)) ([aa71f58](https://github.com/MaxPayne89/klass-hero/commit/aa71f589858c1a888458118f9b7d4d319af4c749))
+
 ## [0.51.4](https://github.com/MaxPayne89/klass-hero/compare/v0.51.3...v0.51.4) (2026-06-02)
 
 
