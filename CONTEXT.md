@@ -44,11 +44,12 @@ _Avoid_: Presence, Sign-in
 
 **Provider**:
 The business or organisation that lists **Programs** and employs **Staff Members**. Parents see the Provider as the entity behind a Program. Modelled as the `ProviderProfile` struct (DB table `providers`); "Provider" and "ProviderProfile" are the same thing — the profile *is* the provider, and `provider_id`/`provider_profile_id` point at it interchangeably.
+Provider-hood is **always a deliberate act** by the person themselves — either self-registering as a provider, or a **Staff Member** explicitly *upgrading* ("do my own thing"). It is **never** conferred automatically by being hired, and an **Admin** never creates a Provider on someone's behalf. A person (**User**) can be a Provider *and* a Staff Member at once (e.g. a founder who still teaches, or a staff member running something on the side) — these are independent **personas**, not the same record. A Provider who wants to teach their own Programs must deliberately add themselves as a **Staff Member** of their own business (self-staffing); a pure-business Provider never becomes a Staff Member.
 _Avoid_: Vendor, Merchant, Business, Partner, Organiser
 
 **Staff Member**:
-A person who works for a **Provider**. May be invited to claim a **User** account, may be assigned to one or more **Programs**, and carries a **Role**, qualifications and pay rate.
-_Avoid_: Employee, Team member, Worker
+An **employment link** between a person and one **Provider** — *not* the person themselves. The person is the **User**; the Staff Member is their record of working *for that one Provider*, carrying a **Role**, qualifications, pay rate and a display copy of name/bio/headshot. One person (User) may hold *several* Staff Member records, one per employing Provider. May be invited to claim a **User** account, and may be assigned to one or more **Programs** of that Provider.
+_Avoid_: Employee, Team member, Worker; and treating a Staff Member as the person (the **User** is the person)
 
 **Instructor**:
 The lead **Staff Member** responsible for running a Program — the "boss" for that Program (or for a specific **Session**). Exactly one Instructor leads, even though several Staff Members may be assigned alongside them. In the Program Catalog this person also appears as a read-only display copy.
@@ -65,7 +66,7 @@ _Avoid_: Membership, Posting
 ## Families & Accounts
 
 **User**:
-An authentication identity in the Accounts context — email, password, role. A person logs in as a User; their domain persona (**Parent**, **Staff Member**) lives in another context and links back by a correlation id, not a foreign key.
+An authentication identity in the Accounts context — email, password, `intended_roles` (`:parent | :provider | :staff`). The **User is the person**: a person logs in as one User and may hold *several* domain **personas** at once — **Parent**, one or more **Staff Member** records, and/or a **Provider** — each living in another context and linking back by a correlation id, not a foreign key. `intended_roles` is the signup-intent / landing hint and an eventual-consistency bridge (personas are created asynchronously); the **authority for authorization is persona existence** (`Scope.provider?`, `Scope.staff?`, …), kept in step by appending the matching role atom whenever a persona is gained.
 _Avoid_: Account, Login, Member
 
 **Admin**:
