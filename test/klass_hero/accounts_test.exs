@@ -521,4 +521,23 @@ defmodule KlassHero.AccountsTest do
       assert :ok = Accounts.emit_staff_user_registered(user.id, staff_member_id, provider_id)
     end
   end
+
+  describe "emails_match?/2" do
+    test "matches identical emails" do
+      assert Accounts.emails_match?("a@example.com", "a@example.com")
+    end
+
+    test "matches case-insensitively, ignoring surrounding whitespace" do
+      assert Accounts.emails_match?("  A@Example.COM ", "a@example.com")
+    end
+
+    test "does not match different emails" do
+      refute Accounts.emails_match?("a@example.com", "b@example.com")
+    end
+
+    test "nil never matches a real email" do
+      refute Accounts.emails_match?(nil, "a@example.com")
+      refute Accounts.emails_match?("a@example.com", nil)
+    end
+  end
 end

@@ -7,13 +7,16 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
 
   Per ADR-0005 (#967) every invitee — new or existing account — goes through the
   accept screen, which branches on login state (register / log-in-to-link /
-  one-click link). The handler no longer auto-links existing users at invite time;
-  linking happens only with authenticated, email-matched consent on the accept screen.
+  one-click link). The handler picks the email copy based on whether an account
+  already exists, but never auto-links: linking happens only with authenticated,
+  email-matched consent on the accept screen.
   """
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
+  alias KlassHero.Accounts
   alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
+  alias KlassHero.Accounts.User
   alias KlassHero.Accounts.UserNotifier
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -29,8 +32,8 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
     payload = MapperHelpers.normalize_keys(payload)
 
     case Map.fetch(payload, :email) do
-      {:ok, _email} ->
-        deliver_invitation(payload)
+      {:ok, email} ->
+        deliver_invitation(payload, Accounts.get_user_by_email(email))
 
       :error ->
         Logger.error("[StaffInvitationHandler] Missing :email in staff_member_invited payload")
@@ -40,22 +43,18 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
 
   def handle_event(_event), do: :ignore
 
-  defp deliver_invitation(%{
-         email: email,
-         staff_member_id: staff_member_id,
-         provider_id: provider_id,
-         first_name: first_name,
-         business_name: business_name,
-         raw_token: raw_token
-       }) do
+  defp deliver_invitation(payload, recipient) do
+    %{
+      email: email,
+      staff_member_id: staff_member_id,
+      provider_id: provider_id,
+      raw_token: raw_token
+    } = payload
+
     url =
       "#{Application.get_env(:klass_hero, :app_base_url, "http://localhost:4000")}/users/staff-invitation/#{raw_token}"
 
-    case UserNotifier.deliver_staff_invitation(
-           email,
-           %{business_name: business_name, first_name: first_name},
-           url
-         ) do
+    case send_invitation_email(payload, recipient, url) do
       {:ok, _} ->
         emit_sent(staff_member_id, provider_id)
 
@@ -68,6 +67,16 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
 
         emit_failed(staff_member_id, provider_id, inspect(reason))
     end
+  end
+
+  # No account yet → registration-style invitation.
+  defp send_invitation_email(%{email: email, business_name: business_name, first_name: first_name}, nil, url) do
+    UserNotifier.deliver_staff_invitation(email, %{business_name: business_name, first_name: first_name}, url)
+  end
+
+  # Existing account → log-in-and-link invitation (no registration, no auto-link).
+  defp send_invitation_email(%{email: email, business_name: business_name}, %User{name: name}, url) do
+    UserNotifier.deliver_staff_link_invitation(email, %{business_name: business_name, name: name}, url)
   end
 
   defp emit_sent(staff_member_id, provider_id) do

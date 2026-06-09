@@ -91,63 +91,54 @@ defmodule KlassHero.Accounts.UserNotifier do
   end
 
   @doc """
-  Delivers a staff invitation email with a registration link.
+  Delivers a staff invitation to someone without a Klass Hero account.
 
-  `url` must be the full registration URL (passed from the web layer to avoid
-  boundary violations).
+  They set up an account (role `:staff` only — joining a team is not becoming a
+  provider, ADR-0005) by following the accept link. `url` is the full accept-screen
+  URL (passed from the web layer to avoid boundary violations).
   """
   def deliver_staff_invitation(email, %{business_name: business_name, first_name: first_name}, url) do
-    deliver(email, "#{business_name} has invited you to join Klass Hero", """
+    deliver(email, "#{business_name} has invited you to join their team on Klass Hero", """
     Hi #{first_name},
 
-    #{business_name} has added you to their team on Klass Hero — and you're set up
-    to start earning with your own programs too.
+    #{business_name} has invited you to join their team on Klass Hero as a staff member.
 
-    You'll get a free provider account, linked to #{business_name}'s programs and
-    ready for your own.
-
-    Claim your account & get started:
+    Set up your account to accept:
 
     #{url}
 
-    Here's how it works:
-    1. Click the link above
-    2. Your name is already filled in — just confirm it and set a password
-    3. You'll have a free provider account, linked to #{business_name}'s programs
-
-    No monthly fees. No setup costs.
+    Your name is already filled in — just confirm it and choose a password, and
+    you'll be part of #{business_name}'s team.
 
     This invitation expires in 7 days.
 
-    By claiming your account you agree to our terms of service.
+    By creating your account you agree to our terms of service.
 
     If you did not expect this invitation, you can ignore this email.
     """)
   end
 
   @doc """
-  Delivers a notification email when an existing user is added as a staff member.
+  Delivers a staff invitation to someone who already has a Klass Hero account.
 
-  Requires a map with `business_name`, `name`, and `dashboard_url`. URLs must be
-  full URLs (passed from the web layer to avoid boundary violations).
+  They accept by logging into their existing account and confirming the link — no
+  new registration. `url` is the full accept-screen URL (passed from the web layer
+  to avoid boundary violations).
   """
-  def deliver_staff_added_notification(email, %{business_name: business_name, name: name, dashboard_url: dashboard_url}) do
-    deliver(email, "#{business_name} has invited you to join Klass Hero", """
+  def deliver_staff_link_invitation(email, %{business_name: business_name, name: name}, url) do
+    deliver(email, "#{business_name} has invited you to join their team on Klass Hero", """
     Hi #{name},
 
-    #{business_name} has added you to their team on Klass Hero — and you now have
-    a free provider account of your own, ready for your programs.
+    #{business_name} has invited you to join their team on Klass Hero as a staff member.
 
-    You're linked to #{business_name}'s programs and can start managing your own
-    activities right away.
+    You already have a Klass Hero account — log in to accept and join the team:
 
-    View your staff dashboard:
+    #{url}
 
-    #{dashboard_url}
+    Being added as staff does not change your existing account; it simply adds this
+    team to it. This invitation expires in 7 days.
 
-    By continuing to use your account you agree to our terms of service.
-
-    If you did not expect this, please contact #{business_name} directly.
+    If you did not expect this invitation, you can ignore this email.
     """)
   end
 end

@@ -14,17 +14,28 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
 
   alias KlassHero.Provider.Domain.Models.StaffMember
 
+  @staff_query Application.compile_env!(:klass_hero, [:provider, :for_querying_staff_members])
   @staff_repository Application.compile_env!(:klass_hero, [:provider, :for_storing_staff_members])
 
   @doc """
   Links `user_id` to `staff_member` and transitions the invitation to `:accepted`.
+
+  Re-reads the StaffMember by id so the transition decides on fresh DB state, not
+  a possibly-stale in-memory struct (e.g. one a LiveView captured at mount that has
+  since expired or been accepted). Idempotent for the same user.
   """
   @spec execute(StaffMember.t(), String.t()) :: {:ok, StaffMember.t()} | {:error, term()}
-  def execute(%StaffMember{invitation_status: :accepted, user_id: user_id} = staff, user_id) do
+  def execute(%StaffMember{id: id}, user_id) when is_binary(user_id) do
+    with {:ok, staff} <- @staff_query.get(id) do
+      accept(staff, user_id)
+    end
+  end
+
+  defp accept(%StaffMember{invitation_status: :accepted, user_id: user_id} = staff, user_id) do
     {:ok, staff}
   end
 
-  def execute(%StaffMember{} = staff, user_id) when is_binary(user_id) do
+  defp accept(%StaffMember{} = staff, user_id) do
     with {:ok, transitioned} <- StaffMember.transition_invitation(staff, :accepted) do
       @staff_repository.update(%{transitioned | user_id: user_id})
     end

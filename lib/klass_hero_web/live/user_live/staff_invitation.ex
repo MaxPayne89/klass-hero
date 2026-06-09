@@ -47,6 +47,10 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
           <div class="max-w-md mx-auto">
             <.kh_card class="p-7 lg:p-9">
               <%= case @mode do %>
+                <% :loading -> %>
+                  <div id="staff-invite-loading" class="space-y-3 text-center text-hero-grey-600">
+                    <p>{gettext("Loading your invitation…")}</p>
+                  </div>
                 <% :register -> %>
                   <.form
                     for={@form}
@@ -208,7 +212,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
   end
 
   @impl true
-  def handle_event("link", _params, socket) do
+  def handle_event("link", _params, %{assigns: %{mode: :link}} = socket) do
     user = current_user(socket)
     staff = socket.assigns.staff_member
 
@@ -233,6 +237,10 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
     end
   end
 
+  # Linking is only valid in :link mode; ignore a "link" event pushed in any other
+  # mode (e.g. a crafted client event when the button isn't rendered).
+  def handle_event("link", _params, socket), do: {:noreply, socket}
+
   @impl true
   def handle_event("validate", %{"user" => user_params}, socket) do
     staff = socket.assigns.staff_member
@@ -256,7 +264,13 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
   end
 
   defp mount_for_mode(socket, staff_member) do
-    mode = resolve_mode(current_user(socket), staff_member.email)
+    # Resolve the real mode (which needs a get_user_by_email lookup) only on the
+    # connected mount — the disconnected pass renders a lightweight placeholder,
+    # so the public token endpoint isn't double-queried per page load.
+    mode =
+      if connected?(socket),
+        do: resolve_mode(current_user(socket), staff_member.email),
+        else: :loading
 
     socket =
       assign(socket,
@@ -277,7 +291,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
   end
 
   defp resolve_mode(current_user, invite_email) do
-    if emails_match?(current_user.email, invite_email), do: :link, else: :wrong_account
+    if Accounts.emails_match?(current_user.email, invite_email), do: :link, else: :wrong_account
   end
 
   defp maybe_assign_register_form(socket, :register, staff_member) do
@@ -301,11 +315,6 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
       _ -> nil
     end
   end
-
-  defp emails_match?(a, b), do: normalize_email(a) == normalize_email(b)
-
-  defp normalize_email(nil), do: nil
-  defp normalize_email(email) when is_binary(email), do: email |> String.trim() |> String.downcase()
 
   defp maybe_persist_expiry(socket, staff_member) do
     if connected?(socket) do

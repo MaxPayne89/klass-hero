@@ -60,4 +60,24 @@ defmodule KlassHero.Accounts.Application.Commands.LinkStaffInvitationTest do
       assert {:ok, _updated} = Accounts.link_staff_invitation(user, staff)
     end
   end
+
+  describe "link_staff_invitation/2 (atomic — no partial state)" do
+    test "a failed link grants no role and leaves the invitation untouched" do
+      user = user_fixture(intended_roles: [:parent])
+      provider = provider_profile_fixture()
+      staff = sent_staff_for(provider, user.email)
+
+      # Expire the invitation so the link step fails its state transition.
+      assert {:ok, _} = Provider.expire_staff_invitation(staff)
+
+      assert {:error, :invalid_invitation_transition} =
+               Accounts.link_staff_invitation(user, staff)
+
+      # No :staff granted (role only follows a successful link), invitation unchanged.
+      assert reload_roles(user.id) == [:parent]
+      assert {:ok, db} = Provider.get_staff_member(staff.id)
+      assert db.invitation_status == :expired
+      assert is_nil(db.user_id)
+    end
+  end
 end

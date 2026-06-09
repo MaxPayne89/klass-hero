@@ -66,5 +66,24 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
       assert {:ok, accepted} = Provider.accept_staff_invitation(staff, user_id)
       assert accepted.invitation_status == :accepted
     end
+
+    test "re-fetches fresh state — a stale :sent struct whose DB row is :expired cannot resurrect" do
+      provider = provider_profile_fixture()
+      stale = sent_staff(provider)
+      user_id = user_fixture().id
+
+      # The DB row expires after the caller captured the :sent struct.
+      assert {:ok, _} = Provider.expire_staff_invitation(stale)
+      assert stale.invitation_status == :sent
+
+      # Accepting with the stale :sent struct must read the fresh :expired state and
+      # refuse — not blindly transition the in-memory :sent → :accepted (resurrection).
+      assert {:error, :invalid_invitation_transition} =
+               AcceptStaffInvitation.execute(stale, user_id)
+
+      assert {:ok, db} = Provider.get_staff_member(stale.id)
+      assert db.invitation_status == :expired
+      assert is_nil(db.user_id)
+    end
   end
 end

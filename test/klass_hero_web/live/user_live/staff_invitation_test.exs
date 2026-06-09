@@ -269,6 +269,17 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
       refute has_element?(lv, "#staff-registration-form")
     end
 
+    test "disconnected (static) render shows a loading placeholder, deferring the existence query", %{
+      conn: conn
+    } do
+      {raw_token, _staff, _provider} = create_staff_with_invitation()
+
+      html = conn |> get(~p"/users/staff-invitation/#{raw_token}") |> html_response(200)
+
+      assert html =~ "staff-invite-loading"
+      refute html =~ "staff-registration-form"
+    end
+
     test "logged in as a different account → wrong-account message", %{conn: conn} do
       logged_in = user_fixture()
       {raw_token, staff, _provider} = create_staff_with_invitation()
@@ -305,6 +316,32 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
       assert {:ok, linked} = KlassHero.Provider.get_staff_member(staff.id)
       assert linked.user_id == user.id
       assert linked.invitation_status == :accepted
+    end
+
+    test "a crafted 'link' event from an anonymous visitor is a no-op, not a crash", %{conn: conn} do
+      {raw_token, _staff, _provider} = create_staff_with_invitation()
+
+      {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
+      assert has_element?(lv, "#staff-registration-form")
+
+      # The link button isn't rendered here, but a client can still push the event.
+      html = render_click(lv, "link", %{})
+
+      assert html =~ "staff-registration-form"
+    end
+
+    test "a crafted 'link' event from the wrong account does not link", %{conn: conn} do
+      logged_in = user_fixture()
+      {raw_token, staff, _provider} = create_staff_with_invitation()
+
+      conn = log_in_user(conn, logged_in)
+      {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
+
+      render_click(lv, "link", %{})
+
+      assert {:ok, db} = KlassHero.Provider.get_staff_member(staff.id)
+      assert is_nil(db.user_id)
+      refute :staff in KlassHero.Repo.get!(User, logged_in.id).intended_roles
     end
   end
 end

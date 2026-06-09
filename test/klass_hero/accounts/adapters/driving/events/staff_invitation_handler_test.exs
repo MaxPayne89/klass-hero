@@ -60,8 +60,9 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
       assert_email_sent(fn email ->
         assert email.subject =~ "Fun Academy"
         assert email.text_body =~ "test-token-abc"
-        assert email.text_body =~ "Fun Academy"
         assert email.text_body =~ "Jane"
+        # Registration-style copy for a brand-new account.
+        assert email.text_body =~ "Set up your account"
       end)
     end
 
@@ -91,7 +92,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
   end
 
   describe "handle_event/1 — existing user path (#967: invite, not silent auto-link)" do
-    test "sends the invitation email with the accept-link token, like any invitee" do
+    test "sends the log-in-and-link invitation email (not the registration copy)" do
       user = user_fixture()
       # Drain emails sent by user_fixture (confirmation/login instructions)
       flush_emails()
@@ -112,6 +113,9 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
       assert_email_sent(fn email ->
         assert email.subject =~ "Cool Sports"
         assert email.text_body =~ "the-token"
+        # Existing-account copy: log in to accept, not register.
+        refute email.text_body =~ "Set up your account"
+        assert email.text_body =~ "log in"
       end)
     end
 

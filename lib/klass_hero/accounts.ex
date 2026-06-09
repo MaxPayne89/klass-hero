@@ -330,6 +330,19 @@ defmodule KlassHero.Accounts do
   end
 
   @doc """
+  Returns true when two emails refer to the same address (case- and
+  whitespace-insensitive). Single source of truth for the staff-invite
+  link match — both the accept screen and `link_staff_invitation/2` use it.
+  """
+  @spec emails_match?(String.t() | nil, String.t() | nil) :: boolean()
+  def emails_match?(a, b), do: normalize_email(a) == normalize_email(b) and not is_nil(a)
+
+  @doc "Normalizes an email for comparison (trim + downcase). `nil` stays `nil`."
+  @spec normalize_email(String.t() | nil) :: String.t() | nil
+  def normalize_email(nil), do: nil
+  def normalize_email(email) when is_binary(email), do: email |> String.trim() |> String.downcase()
+
+  @doc """
   Gets a user by email and password.
 
   ## Examples
