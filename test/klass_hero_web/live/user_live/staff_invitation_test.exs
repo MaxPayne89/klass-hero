@@ -5,6 +5,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
   import KlassHero.ProviderFixtures
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Accounts.Scope
   alias KlassHero.Accounts.User
 
   defp create_staff_with_invitation(opts \\ []) do
@@ -14,13 +15,14 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
     token_hash = :crypto.hash(:sha256, raw_bytes)
 
     sent_at = Keyword.get(opts, :invitation_sent_at, DateTime.utc_now())
+    email = Keyword.get(opts, :email, "invited-#{System.unique_integer([:positive])}@example.com")
 
     staff =
       staff_member_fixture(%{
         provider_id: provider.id,
         first_name: "Jane",
         last_name: "Doe",
-        email: "invited-#{System.unique_integer([:positive])}@example.com",
+        email: email,
         invitation_status: :sent,
         invitation_token_hash: token_hash,
         invitation_sent_at: sent_at
@@ -147,29 +149,6 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
     end
   end
 
-  describe "registration with duplicate email" do
-    test "shows validation error when email is already taken", %{conn: conn} do
-      {raw_token, staff, _provider} = create_staff_with_invitation()
-
-      # Create another user with the same email before registration
-      user_fixture(email: staff.email)
-
-      {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
-
-      result =
-        lv
-        |> form("#staff-registration-form",
-          user: %{
-            name: "Jane Doe",
-            password: "verylongpassword123!"
-          }
-        )
-        |> render_submit()
-
-      assert result =~ "has already been taken"
-    end
-  end
-
   describe "staff registration grants no provider role" do
     test "does not render a provider opt-in checkbox", %{conn: conn} do
       {raw_token, _staff, _provider} = create_staff_with_invitation()
@@ -256,6 +235,76 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
         |> render_change()
 
       assert has_element?(lv, "#staff-registration-form")
+    end
+  end
+
+  describe "accept-screen mode branches (link to existing account, #967)" do
+    test "anonymous + unknown email → registration form", %{conn: conn} do
+      {raw_token, _staff, _provider} = create_staff_with_invitation()
+
+      {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
+
+      assert has_element?(lv, "#staff-registration-form")
+      refute has_element?(lv, "#staff-invite-link-button")
+    end
+
+    test "anonymous + existing account → must-log-in prompt, no form", %{conn: conn} do
+      existing = user_fixture()
+      {raw_token, _staff, _provider} = create_staff_with_invitation(email: existing.email)
+
+      {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
+
+      assert has_element?(lv, "#staff-invite-login-prompt")
+      refute has_element?(lv, "#staff-registration-form")
+    end
+
+    test "logged in as the invited email → one-click link button", %{conn: conn} do
+      user = user_fixture()
+      {raw_token, _staff, _provider} = create_staff_with_invitation(email: user.email)
+
+      conn = log_in_user(conn, user)
+      {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
+
+      assert has_element?(lv, "#staff-invite-link-button")
+      refute has_element?(lv, "#staff-registration-form")
+    end
+
+    test "logged in as a different account → wrong-account message", %{conn: conn} do
+      logged_in = user_fixture()
+      {raw_token, staff, _provider} = create_staff_with_invitation()
+
+      conn = log_in_user(conn, logged_in)
+      {:ok, lv, html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
+
+      assert has_element?(lv, "#staff-invite-wrong-account")
+      refute has_element?(lv, "#staff-invite-link-button")
+      assert html =~ staff.email
+    end
+  end
+
+  describe "one-click link (#967)" do
+    test "links the account, grants :staff, and navigates to the staff dashboard", %{conn: conn} do
+      user = user_fixture(intended_roles: [:parent])
+      {raw_token, staff, _provider} = create_staff_with_invitation(email: user.email)
+
+      conn = log_in_user(conn, user)
+      {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
+
+      lv |> element("#staff-invite-link-button") |> render_click()
+
+      assert_redirect(lv, ~p"/staff/dashboard")
+
+      # Race-free: both writes completed synchronously before the redirect.
+      reloaded = KlassHero.Repo.get!(User, user.id)
+      assert :staff in reloaded.intended_roles
+      assert :parent in reloaded.intended_roles
+
+      scope = Scope.for_user(reloaded) |> Scope.resolve_roles()
+      assert :staff in scope.roles
+
+      assert {:ok, linked} = KlassHero.Provider.get_staff_member(staff.id)
+      assert linked.user_id == user.id
+      assert linked.invitation_status == :accepted
     end
   end
 end

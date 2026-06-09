@@ -15,6 +15,7 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Accounts.Application.Commands.{
     AnonymizeUser,
     ChangeEmail,
+    LinkStaffInvitation,
     LoginByMagicLink,
     RegisterUser
   }
@@ -22,6 +23,7 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Accounts.Application.Queries.ExportUserData
   alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
   alias KlassHero.Accounts.{User, UserNotifier, UserToken}
+  alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHero.Repo
   alias KlassHero.Shared.IntegrationEventPublishing
 
@@ -52,6 +54,21 @@ defmodule KlassHero.Accounts do
   """
   def register_staff_user(attrs) do
     RegisterUser.execute(attrs, changeset_fn: &User.staff_registration_changeset/2)
+  end
+
+  @doc """
+  Links an existing, authenticated user to a staff invitation (#967).
+
+  Appends `:staff` to the user's roles and links the StaffMember, only when the
+  user's email matches the invite. `user` must come from the session, never params.
+
+  Returns `{:ok, %User{}}`, `{:error, :email_mismatch}`, or an error from the
+  underlying writes.
+  """
+  @spec link_staff_invitation(User.t(), StaffMember.t()) ::
+          {:ok, User.t()} | {:error, :email_mismatch | term()}
+  def link_staff_invitation(%User{} = user, %StaffMember{} = staff_member) do
+    LinkStaffInvitation.execute(user, staff_member)
   end
 
   @doc """

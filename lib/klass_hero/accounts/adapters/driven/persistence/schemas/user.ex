@@ -99,6 +99,24 @@ defmodule KlassHero.Accounts.User do
     |> password_changeset(attrs, opts)
   end
 
+  @doc """
+  A changeset that grants an additional role, preserving the user's existing ones.
+
+  Unlike `registration_changeset` (casts user-supplied roles) and
+  `staff_registration_changeset` (sets `[:staff]`), this unions a server-decided
+  `role` into the persisted `intended_roles`. Used when an existing account is
+  linked as staff (ADR-0005 multi-persona): a `:parent` becoming also-`:staff`
+  keeps `:parent`. Idempotent — adding a role already held is a no-op.
+  """
+  def add_role_changeset(user, role) when is_atom(role) do
+    next_roles = Enum.uniq((user.intended_roles || []) ++ [role])
+
+    user
+    |> change()
+    |> put_change(:intended_roles, next_roles)
+    |> validate_subset(:intended_roles, UserRole.valid_roles())
+  end
+
   defp put_default_role(changeset) do
     case get_field(changeset, :intended_roles) do
       nil -> put_change(changeset, :intended_roles, [:parent])

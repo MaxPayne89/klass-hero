@@ -1,0 +1,32 @@
+defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvitation do
+  @moduledoc """
+  Command for linking a User to a StaffMember and accepting the invitation.
+
+  Synchronous twin of the `:staff_user_registered` handling in
+  `StaffInvitationStatusHandler` — both funnel through here so the link logic
+  (transition `:sent`/`:pending` → `:accepted`, set `user_id`) lives in one place.
+  Used by the one-click accept flow (#967), where the link must complete before the
+  redirect so `Scope.resolve_roles` resolves `:staff` immediately.
+
+  Idempotent: re-accepting an invitation already accepted by the same user is a
+  no-op success (the state machine has no `:accepted → :accepted` edge).
+  """
+
+  alias KlassHero.Provider.Domain.Models.StaffMember
+
+  @staff_repository Application.compile_env!(:klass_hero, [:provider, :for_storing_staff_members])
+
+  @doc """
+  Links `user_id` to `staff_member` and transitions the invitation to `:accepted`.
+  """
+  @spec execute(StaffMember.t(), String.t()) :: {:ok, StaffMember.t()} | {:error, term()}
+  def execute(%StaffMember{invitation_status: :accepted, user_id: user_id} = staff, user_id) do
+    {:ok, staff}
+  end
+
+  def execute(%StaffMember{} = staff, user_id) when is_binary(user_id) do
+    with {:ok, transitioned} <- StaffMember.transition_invitation(staff, :accepted) do
+      @staff_repository.update(%{transitioned | user_id: user_id})
+    end
+  end
+end

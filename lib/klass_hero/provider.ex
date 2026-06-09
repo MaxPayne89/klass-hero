@@ -53,6 +53,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Commands.Providers.UnverifyProvider
   alias KlassHero.Provider.Application.Commands.Providers.UpdateProviderProfile
   alias KlassHero.Provider.Application.Commands.Providers.VerifyProvider
+  alias KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvitation
   alias KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProgram
   alias KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.DeleteStaffMember
@@ -274,6 +275,17 @@ defmodule KlassHero.Provider do
 
   def expire_staff_invitation(staff_member_id) when is_binary(staff_member_id) do
     ExpireStaffInvitation.execute(staff_member_id)
+  end
+
+  @doc """
+  Links a User to a StaffMember and accepts the invitation (synchronous).
+
+  Used by the one-click accept flow (#967). Idempotent for the same user.
+  """
+  @spec accept_staff_invitation(StaffMember.t(), String.t()) ::
+          {:ok, StaffMember.t()} | {:error, term()}
+  def accept_staff_invitation(%StaffMember{} = staff_member, user_id) when is_binary(user_id) do
+    AcceptStaffInvitation.execute(staff_member, user_id)
   end
 
   @doc """

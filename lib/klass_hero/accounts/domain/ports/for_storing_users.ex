@@ -63,6 +63,19 @@ defmodule KlassHero.Accounts.Domain.Ports.ForStoringUsers do
   @callback register(map(), keyword()) :: {:ok, ecto_user()} | {:error, ecto_changeset()}
 
   @doc """
+  Grants an additional intended role to a user, preserving existing roles.
+
+  Idempotent — adding a role the user already holds is a no-op. Used when an
+  existing account is linked as staff (ADR-0005 multi-persona).
+
+  Returns:
+  - `{:ok, ecto_user()}` - Updated user
+  - `{:error, ecto_changeset()}` - Update failure
+  """
+  @callback append_intended_role(ecto_user(), atom()) ::
+              {:ok, ecto_user()} | {:error, ecto_changeset()}
+
+  @doc """
   Anonymizes a user's PII and deletes all their tokens atomically.
 
   Returns:

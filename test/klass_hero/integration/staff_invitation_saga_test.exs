@@ -166,14 +166,14 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
       :ok
     end
 
-    test "existing user is linked immediately without an invitation email" do
-      # Step 1: Create existing user before creating the staff member
-      existing_user = user_fixture()
+    test "existing user is invited (not auto-linked), then links on the accept screen" do
+      # Step 1: existing parent account, created before the staff invite
+      existing_user = user_fixture(intended_roles: [:parent])
       flush_emails()
 
       provider = provider_profile_fixture()
 
-      # Step 2: Create staff member with the existing user's email
+      # Step 2: staff member created with the existing user's email
       assert {:ok, staff, raw_token} =
                Provider.create_staff_member(%{
                  provider_id: provider.id,
@@ -183,44 +183,40 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
                })
 
       assert staff.invitation_status == :pending
-
-      # Reset integration events collected during create_staff_member
       clear_integration_events()
 
-      # Step 3: StaffInvitationHandler detects existing user
-      # → sends team-added notification (not an invitation), emits :staff_user_registered
+      # Step 3: existing users now receive the SAME invitation link as new users —
+      # no silent auto-link. :staff_invitation_sent is emitted; :staff_user_registered is NOT.
       invited_event = build_invited_event(staff, provider, raw_token)
       assert :ok = StaffInvitationHandler.handle_event(invited_event)
 
-      # A notification email is sent (not the invitation email with the registration token)
       assert_email_sent(fn email_msg ->
-        email_msg.subject =~ provider.business_name and
-          String.contains?(email_msg.text_body, "/staff/dashboard")
+        assert email_msg.text_body =~ raw_token
       end)
 
-      # :staff_user_registered is emitted immediately to link the existing user.
-      # It no longer carries a create_provider_profile flag (ADR-0005).
-      registered_ie = assert_integration_event_published(:staff_user_registered)
-      assert registered_ie.payload.staff_member_id == staff.id
-      assert registered_ie.payload.user_id == to_string(existing_user.id)
-      refute Map.has_key?(registered_ie.payload, :create_provider_profile)
+      assert_integration_event_published(:staff_invitation_sent)
+      types = get_published_integration_events() |> Enum.map(& &1.event_type)
+      refute :staff_user_registered in types
 
-      events = get_published_integration_events()
-      types = Enum.map(events, & &1.event_type)
-      refute :staff_invitation_sent in types
+      # Step 4: invitation transitions :pending → :sent
+      assert :ok = StaffInvitationStatusHandler.handle_event(build_sent_event(staff))
+      assert {:ok, staff_sent} = Provider.get_staff_member(staff.id)
+      assert staff_sent.invitation_status == :sent
 
-      # Step 4: StaffInvitationStatusHandler handles :staff_user_registered
-      # Staff is still :pending (skipped :sent step on the fast path) → links to :accepted
-      registered_event = build_registered_event(to_string(existing_user.id), staff, %{})
-
-      assert :ok = StaffInvitationStatusHandler.handle_event(registered_event)
+      # Step 5: the logged-in existing user accepts via the accept screen (one-click link).
+      assert {:ok, linked_user} = Accounts.link_staff_invitation(existing_user, staff_sent)
 
       assert {:ok, staff_accepted} = Provider.get_staff_member(staff.id)
       assert staff_accepted.invitation_status == :accepted
       assert staff_accepted.user_id == existing_user.id
 
-      # Step 5: linking an existing user as staff creates NO provider profile (ADR-0005)
+      # No provider profile (ADR-0005); multi-persona — :staff appended, :parent kept.
       refute Provider.has_provider_profile?(to_string(existing_user.id))
+      assert linked_user.intended_roles == [:parent, :staff]
+
+      # Scope resolves :staff via the now-linked active StaffMember (race-free).
+      scope = Scope.for_user(linked_user) |> Scope.resolve_roles()
+      assert :staff in scope.roles
     end
   end
 

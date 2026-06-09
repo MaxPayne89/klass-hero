@@ -90,8 +90,8 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
     end
   end
 
-  describe "handle_event/1 — existing user path" do
-    test "sends added-to-team notification email when email belongs to an existing user" do
+  describe "handle_event/1 — existing user path (#967: invite, not silent auto-link)" do
+    test "sends the invitation email with the accept-link token, like any invitee" do
       user = user_fixture()
       # Drain emails sent by user_fixture (confirmation/login instructions)
       flush_emails()
@@ -104,19 +104,18 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
           first_name: "Jane",
           last_name: "Doe",
           business_name: "Cool Sports",
-          raw_token: "irrelevant-token"
+          raw_token: "the-token"
         })
 
       assert :ok = StaffInvitationHandler.handle_event(event)
 
       assert_email_sent(fn email ->
         assert email.subject =~ "Cool Sports"
-        assert email.text_body =~ "Cool Sports"
-        assert email.text_body =~ "/staff/dashboard"
+        assert email.text_body =~ "the-token"
       end)
     end
 
-    test "emits :staff_user_registered to link an existing user (no provider profile)" do
+    test "emits :staff_invitation_sent and does NOT auto-link via :staff_user_registered" do
       user = user_fixture()
       staff_member_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
@@ -129,39 +128,16 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
           first_name: "Jane",
           last_name: "Doe",
           business_name: "Cool Sports",
-          raw_token: "irrelevant-token"
+          raw_token: "the-token"
         })
 
       assert :ok = StaffInvitationHandler.handle_event(event)
 
-      ie = assert_integration_event_published(:staff_user_registered)
-      assert ie.payload.user_id == to_string(user.id)
-      assert ie.payload.staff_member_id == staff_member_id
-      assert ie.payload.provider_id == provider_id
-      # ADR-0005: linkage only — no provider-creation flag rides along.
-      refute Map.has_key?(ie.payload, :create_provider_profile)
-      assert ie.source_context == :accounts
-    end
+      sent = assert_integration_event_published(:staff_invitation_sent)
+      assert sent.payload.staff_member_id == staff_member_id
 
-    test "does not emit :staff_invitation_sent for existing user" do
-      user = user_fixture()
-
-      event =
-        build_staff_member_invited_event(%{
-          staff_member_id: Ecto.UUID.generate(),
-          provider_id: Ecto.UUID.generate(),
-          email: user.email,
-          first_name: "Jane",
-          last_name: "Doe",
-          business_name: "Cool Sports",
-          raw_token: "irrelevant-token"
-        })
-
-      assert :ok = StaffInvitationHandler.handle_event(event)
-
-      events = get_published_integration_events()
-      types = Enum.map(events, & &1.event_type)
-      refute :staff_invitation_sent in types
+      types = get_published_integration_events() |> Enum.map(& &1.event_type)
+      refute :staff_user_registered in types
     end
   end
 
