@@ -135,8 +135,9 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
       assert user.intended_roles == [:staff]
 
       # Step 5: StaffInvitationStatusHandler handles :staff_user_registered
-      # → status :sent → :accepted, user_id linked. No provider profile (ADR-0005);
-      # empty opts prove the handler never creates one, flag or not.
+      # → status :sent → :accepted, user_id linked. No provider profile (ADR-0005).
+      # Empty opts exercise the no-flag path; the legacy-flag path (an in-flight event
+      # still carrying create_provider_profile) is covered by the handler unit test.
       registered_event = build_registered_event(to_string(user.id), staff, %{})
 
       assert :ok = StaffInvitationStatusHandler.handle_event(registered_event)
