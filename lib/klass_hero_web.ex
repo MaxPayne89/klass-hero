@@ -109,6 +109,9 @@ defmodule KlassHeroWeb do
       # Core UI components
       alias KlassHeroWeb.Layouts
 
+      # Role → landing/section path resolver (single source of truth)
+      alias KlassHeroWeb.RoleRouting
+
       # Common modules used in templates
       alias Phoenix.LiveView.JS
 

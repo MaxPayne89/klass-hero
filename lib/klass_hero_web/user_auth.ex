@@ -16,6 +16,7 @@ defmodule KlassHeroWeb.UserAuth do
   alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
+  alias KlassHeroWeb.RoleRouting
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.
@@ -326,14 +327,11 @@ defmodule KlassHeroWeb.UserAuth do
       scope = Scope.resolve_roles(socket.assigns.current_scope)
       socket = Phoenix.Component.assign(socket, :current_scope, scope)
 
-      cond do
-        Scope.provider?(scope) ->
-          {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/provider/dashboard")}
+      case RoleRouting.primary_role(scope.roles) do
+        role when role in [:provider, :staff] ->
+          {:halt, Phoenix.LiveView.redirect(socket, to: RoleRouting.dashboard_path(scope.roles))}
 
-        Scope.staff?(scope) ->
-          {:halt, Phoenix.LiveView.redirect(socket, to: ~p"/staff/dashboard")}
-
-        true ->
+        _ ->
           {:cont, socket}
       end
     else
@@ -385,24 +383,12 @@ defmodule KlassHeroWeb.UserAuth do
   end
 
   @doc "Returns the path to redirect to after log in, based on the user's intended roles."
-  def signed_in_path(%Accounts.User{intended_roles: roles}) do
-    cond do
-      :provider in roles -> ~p"/provider/dashboard"
-      :staff in roles -> ~p"/staff/dashboard"
-      true -> ~p"/dashboard"
-    end
-  end
+  def signed_in_path(%Accounts.User{intended_roles: roles}), do: RoleRouting.dashboard_path(roles)
 
   def signed_in_path(_), do: ~p"/"
 
   @doc "Returns the correct dashboard path based on the user's intended roles."
-  def dashboard_path(%Accounts.User{intended_roles: roles}) do
-    cond do
-      :provider in roles -> ~p"/provider/dashboard"
-      :staff in roles -> ~p"/staff/dashboard"
-      true -> ~p"/dashboard"
-    end
-  end
+  def dashboard_path(%Accounts.User{intended_roles: roles}), do: RoleRouting.dashboard_path(roles)
 
   def dashboard_path(nil), do: ~p"/dashboard"
 
