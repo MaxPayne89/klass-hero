@@ -96,11 +96,8 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
     end
 
     # Emit unconditionally regardless of notification delivery.
-    # Triggers staff linkage and provider profile creation downstream.
-    Accounts.emit_staff_user_registered(user.id, staff_member_id, provider_id, %{
-      create_provider_profile: true,
-      user_name: user.name
-    })
+    # Triggers staff linkage downstream (no provider profile — ADR-0005).
+    Accounts.emit_staff_user_registered(user.id, staff_member_id, provider_id)
   end
 
   defp emit_sent(staff_member_id, provider_id) do

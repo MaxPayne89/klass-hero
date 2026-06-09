@@ -57,30 +57,25 @@ defmodule KlassHero.Accounts do
   @doc """
   Emits a `staff_user_registered` integration event.
 
-  Called by the invitation registration LiveView after a successful
-  `register_staff_user/1`. The LiveView knows the staff context
+  Called after a successful `register_staff_user/1` (or when linking an
+  existing user invited as staff). The caller knows the staff context
   (staff_member_id, provider_id) that the use case layer does not.
 
-  ## Options (4th argument, optional map)
-
-  - `create_provider_profile: true` — signals the Provider context to
-    create a provider profile for this user.
-  - `user_name` — used as the default business name for the provider profile.
+  Drives staff linkage only — the Provider context links the User to the
+  StaffMember and accepts the invitation. Per ADR-0005 it never creates a
+  ProviderProfile; provider-hood is a deliberate, separate act.
 
   Returns `:ok` on success or `{:error, reason}` on publish failure.
   """
-  @spec emit_staff_user_registered(String.t(), String.t(), String.t(), map()) ::
+  @spec emit_staff_user_registered(String.t(), String.t(), String.t()) ::
           :ok | {:error, term()}
-  def emit_staff_user_registered(user_id, staff_member_id, provider_id, opts \\ %{})
-
-  def emit_staff_user_registered(user_id, staff_member_id, provider_id, opts)
+  def emit_staff_user_registered(user_id, staff_member_id, provider_id)
       when is_binary(user_id) and is_binary(staff_member_id) and is_binary(provider_id) do
-    payload =
-      opts
-      |> Map.merge(%{staff_member_id: staff_member_id, provider_id: provider_id})
-
     user_id
-    |> AccountsIntegrationEvents.staff_user_registered(payload)
+    |> AccountsIntegrationEvents.staff_user_registered(%{
+      staff_member_id: staff_member_id,
+      provider_id: provider_id
+    })
     |> IntegrationEventPublishing.publish_critical("staff_user_registered",
       user_id: user_id,
       staff_member_id: staff_member_id

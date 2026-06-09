@@ -77,15 +77,12 @@ defmodule KlassHero.Accounts.User do
   end
 
   @doc """
-  A user changeset for staff provider registration.
+  A user changeset for staff registration via an invitation link.
 
-  Always sets intended_roles to [:staff, :provider] — every invited
-  staff member automatically gets a provider account.
-
-  NOTE (ADR-0005): the forced `:provider` is removed in a follow-up (#965);
-  this changeset only renames the staff atom for now.
-
-  Used when a staff member registers via an invitation link.
+  Sets `intended_roles` to `[:staff]` only. Per ADR-0005, being hired as
+  staff is NOT becoming a provider — provider-hood is a deliberate, separate
+  act (self-registration or an explicit staff→provider upgrade). Accepting an
+  invite therefore never grants `:provider` and never creates a ProviderProfile.
 
   ## Options
 
@@ -97,7 +94,7 @@ defmodule KlassHero.Accounts.User do
     |> cast(attrs, [:name, :email])
     |> validate_required([:name, :email])
     |> validate_length(:name, min: 2, max: 100)
-    |> put_change(:intended_roles, [:staff, :provider])
+    |> put_change(:intended_roles, [:staff])
     |> validate_email(opts)
     |> password_changeset(attrs, opts)
   end

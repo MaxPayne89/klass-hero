@@ -132,15 +132,12 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
                  password: "hello world!"
                })
 
-      assert user.intended_roles == [:staff, :provider]
+      assert user.intended_roles == [:staff]
 
       # Step 5: StaffInvitationStatusHandler handles :staff_user_registered
-      # → status :sent → :accepted, user_id linked, provider profile created
-      registered_event =
-        build_registered_event(to_string(user.id), staff, %{
-          create_provider_profile: true,
-          user_name: user.name
-        })
+      # → status :sent → :accepted, user_id linked. No provider profile (ADR-0005);
+      # empty opts prove the handler never creates one, flag or not.
+      registered_event = build_registered_event(to_string(user.id), staff, %{})
 
       assert :ok = StaffInvitationStatusHandler.handle_event(registered_event)
 
@@ -148,15 +145,13 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
       assert staff_accepted.invitation_status == :accepted
       assert staff_accepted.user_id == user.id
 
-      # Step 6: ProviderProfile is now created automatically for staff users
-      assert {:ok, profile} = Provider.get_provider_by_identity(to_string(user.id))
-      assert profile.originated_from == :staff_invite
-      assert profile.profile_status == :draft
+      # Step 6: being hired creates NO provider profile — provider-hood is deliberate
+      refute Provider.has_provider_profile?(to_string(user.id))
 
-      # Step 7: Scope resolution gives the user both :staff and :provider roles
+      # Step 7: Scope resolution gives the user :staff only, never :provider
       scope = Scope.for_user(user) |> Scope.resolve_roles()
       assert :staff in scope.roles
-      assert :provider in scope.roles
+      refute :provider in scope.roles
     end
   end
 
@@ -202,25 +197,20 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
           String.contains?(email_msg.text_body, "/staff/dashboard")
       end)
 
-      # :staff_user_registered is emitted immediately with create_provider_profile flag
+      # :staff_user_registered is emitted immediately to link the existing user.
+      # It no longer carries a create_provider_profile flag (ADR-0005).
       registered_ie = assert_integration_event_published(:staff_user_registered)
       assert registered_ie.payload.staff_member_id == staff.id
       assert registered_ie.payload.user_id == to_string(existing_user.id)
-      assert registered_ie.payload.create_provider_profile == true
-      assert registered_ie.payload.user_name == existing_user.name
+      refute Map.has_key?(registered_ie.payload, :create_provider_profile)
 
       events = get_published_integration_events()
       types = Enum.map(events, & &1.event_type)
       refute :staff_invitation_sent in types
 
       # Step 4: StaffInvitationStatusHandler handles :staff_user_registered
-      # Staff is still :pending (skipped :sent step on the fast path)
-      # Provider profile is created automatically
-      registered_event =
-        build_registered_event(to_string(existing_user.id), staff, %{
-          create_provider_profile: true,
-          user_name: existing_user.name
-        })
+      # Staff is still :pending (skipped :sent step on the fast path) → links to :accepted
+      registered_event = build_registered_event(to_string(existing_user.id), staff, %{})
 
       assert :ok = StaffInvitationStatusHandler.handle_event(registered_event)
 
@@ -228,10 +218,8 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
       assert staff_accepted.invitation_status == :accepted
       assert staff_accepted.user_id == existing_user.id
 
-      # Step 5: ProviderProfile is created automatically for existing users
-      assert {:ok, profile} = Provider.get_provider_by_identity(to_string(existing_user.id))
-      assert profile.originated_from == :staff_invite
-      assert profile.profile_status == :draft
+      # Step 5: linking an existing user as staff creates NO provider profile (ADR-0005)
+      refute Provider.has_provider_profile?(to_string(existing_user.id))
     end
   end
 

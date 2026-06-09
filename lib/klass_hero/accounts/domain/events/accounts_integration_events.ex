@@ -52,8 +52,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
           required(:user_id) => String.t(),
           required(:staff_member_id) => String.t(),
           required(:provider_id) => String.t(),
-          optional(:create_provider_profile) => boolean(),
-          optional(:user_name) => String.t(),
           optional(atom()) => term()
         }
 

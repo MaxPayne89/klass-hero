@@ -143,7 +143,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
       assert html =~ "Account created"
 
       user = KlassHero.Repo.get_by!(User, email: staff.email)
-      assert user.intended_roles == [:staff, :provider]
+      assert user.intended_roles == [:staff]
     end
   end
 
@@ -170,8 +170,8 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
     end
   end
 
-  describe "automatic provider profile" do
-    test "does not render the provider opt-in checkbox", %{conn: conn} do
+  describe "staff registration grants no provider role" do
+    test "does not render a provider opt-in checkbox", %{conn: conn} do
       {raw_token, _staff, _provider} = create_staff_with_invitation()
 
       {:ok, view, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
@@ -179,7 +179,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
       refute has_element?(view, "input[name='user[also_provider]']")
     end
 
-    test "registration always includes :provider in intended_roles", %{conn: conn} do
+    test "registration grants :staff only, never :provider (ADR-0005)", %{conn: conn} do
       {raw_token, staff, _provider} = create_staff_with_invitation()
 
       {:ok, lv, _html} = live(conn, ~p"/users/staff-invitation/#{raw_token}")
@@ -198,8 +198,8 @@ defmodule KlassHeroWeb.UserLive.StaffInvitationTest do
       assert html =~ "Account created"
 
       user = KlassHero.Repo.get_by!(User, email: staff.email)
-      assert :staff in user.intended_roles
-      assert :provider in user.intended_roles
+      assert user.intended_roles == [:staff]
+      refute :provider in user.intended_roles
     end
   end
 

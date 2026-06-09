@@ -14,7 +14,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
-  alias KlassHero.Provider.Application.Commands.Providers.CreateProviderProfile
   alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -44,73 +43,22 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
   def handle_event(%IntegrationEvent{event_type: :staff_user_registered, payload: payload}) do
     payload = MapperHelpers.normalize_keys(payload)
 
-    with {:ok, user_id} <- Map.fetch(payload, :user_id),
-         :ok <-
-           transition_and_persist(payload, :accepted, fn transitioned ->
-             %{transitioned | user_id: user_id}
-           end) do
-      if payload[:create_provider_profile] do
-        maybe_create_provider_profile(user_id, payload)
-      else
-        :ok
-      end
-    else
+    # Links the User to the StaffMember and accepts the invitation. Per ADR-0005
+    # this never creates a ProviderProfile — being hired is not becoming a provider.
+    case Map.fetch(payload, :user_id) do
+      {:ok, user_id} ->
+        transition_and_persist(payload, :accepted, fn transitioned ->
+          %{transitioned | user_id: user_id}
+        end)
+
       :error ->
         Logger.error("[StaffInvitationStatusHandler] Missing :user_id in staff_user_registered payload")
 
         {:error, :invalid_payload}
-
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 
   def handle_event(_event), do: :ignore
-
-  defp maybe_create_provider_profile(user_id, payload) do
-    # Check existence first to avoid a failed INSERT that taints the
-    # wrapping Repo.transaction (Postgres constraint errors are not recoverable
-    # within the same transaction, even if we catch them in Elixir).
-    if KlassHero.Provider.has_provider_profile?(user_id) do
-      Logger.info("[StaffInvitationStatusHandler] Provider profile already exists",
-        user_id: user_id
-      )
-
-      :ok
-    else
-      business_name = payload[:user_name] || "My Business"
-
-      case CreateProviderProfile.execute(%{
-             identity_id: user_id,
-             business_name: business_name,
-             originated_from: :staff_invite,
-             profile_status: :draft
-           }) do
-        {:ok, profile} ->
-          Logger.info("[StaffInvitationStatusHandler] Created provider profile for staff user",
-            user_id: user_id,
-            provider_id: profile.id
-          )
-
-          :ok
-
-        {:error, :duplicate_resource} ->
-          Logger.info("[StaffInvitationStatusHandler] Provider profile already exists (race)",
-            user_id: user_id
-          )
-
-          :ok
-
-        {:error, reason} ->
-          Logger.error("[StaffInvitationStatusHandler] Failed to create provider profile",
-            user_id: user_id,
-            reason: inspect(reason)
-          )
-
-          {:error, reason}
-      end
-    end
-  end
 
   defp transition_and_persist(payload, new_status, update_fn \\ &Function.identity/1) do
     with {:ok, staff_member_id} <- Map.fetch(payload, :staff_member_id),

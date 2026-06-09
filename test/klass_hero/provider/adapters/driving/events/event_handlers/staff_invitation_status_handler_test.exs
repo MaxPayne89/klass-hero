@@ -173,9 +173,9 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
     end
   end
 
-  describe "handle_event/1 staff_user_registered with create_provider_profile flag" do
-    test "creates a provider profile when create_provider_profile is true" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff, :provider])
+  describe "handle_event/1 staff_user_registered links the user (ADR-0005: no provider profile)" do
+    test "links user_id, accepts the invitation, and creates no provider profile" do
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       provider = KlassHero.ProviderFixtures.provider_profile_fixture()
 
       staff =
@@ -192,24 +192,23 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       event =
         AccountsIntegrationEvents.staff_user_registered(
           user.id,
-          %{
-            staff_member_id: staff.id,
-            provider_id: provider.id,
-            create_provider_profile: true,
-            user_name: user.name
-          }
+          %{staff_member_id: staff.id, provider_id: provider.id}
         )
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
-      # Verify provider profile was created in draft status
-      assert {:ok, created_profile} = KlassHero.Provider.get_provider_by_identity(user.id)
-      assert created_profile.originated_from == :staff_invite
-      assert created_profile.profile_status == :draft
-      assert created_profile.business_name == user.name
+      # Staff member is linked and accepted...
+      assert {:ok, linked} = KlassHero.Provider.get_staff_member(staff.id)
+      assert linked.user_id == user.id
+      assert linked.invitation_status == :accepted
+
+      # ...but being hired created NO provider profile.
+      assert {:error, :not_found} = KlassHero.Provider.get_provider_by_identity(user.id)
     end
 
-    test "does NOT create a provider profile when flag is absent" do
+    test "ignores a legacy create_provider_profile flag — still no profile" do
+      # Defends the #964 deploy window: in-flight events enqueued by old code may
+      # still carry create_provider_profile: true. The handler must ignore it.
       user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       provider = KlassHero.ProviderFixtures.provider_profile_fixture()
 
@@ -229,37 +228,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
           user.id,
           %{
             staff_member_id: staff.id,
-            provider_id: provider.id
-          }
-        )
-
-      assert :ok = StaffInvitationStatusHandler.handle_event(event)
-
-      # Verify NO provider profile was created
-      assert {:error, :not_found} = KlassHero.Provider.get_provider_by_identity(user.id)
-    end
-
-    test "returns :ok when provider profile already exists (idempotent)" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff, :provider])
-      _existing_profile = KlassHero.ProviderFixtures.provider_profile_fixture(identity_id: user.id)
-      provider = KlassHero.ProviderFixtures.provider_profile_fixture()
-
-      staff =
-        KlassHero.ProviderFixtures.staff_member_fixture(
-          provider_id: provider.id,
-          email: "dup@test.com",
-          first_name: "Test",
-          last_name: "Staff",
-          invitation_status: :sent,
-          invitation_token_hash: :crypto.hash(:sha256, "dup-token"),
-          invitation_sent_at: DateTime.utc_now()
-        )
-
-      event =
-        AccountsIntegrationEvents.staff_user_registered(
-          user.id,
-          %{
-            staff_member_id: staff.id,
             provider_id: provider.id,
             create_provider_profile: true,
             user_name: user.name
@@ -267,6 +235,10 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
         )
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
+
+      assert {:ok, linked} = KlassHero.Provider.get_staff_member(staff.id)
+      assert linked.invitation_status == :accepted
+      assert {:error, :not_found} = KlassHero.Provider.get_provider_by_identity(user.id)
     end
   end
 
