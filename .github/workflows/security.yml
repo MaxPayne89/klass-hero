@@ -8,8 +8,8 @@ on:
 
 env:
   MIX_ENV: dev
-  ELIXIR_VERSION: '1.20.0'
-  OTP_VERSION: '29.0.1'
+  ELIXIR_VERSION: '1.20.1'
+  OTP_VERSION: '29.0.2'
   MIX_OS_DEPS_COMPILE_PARTITION_COUNT: '4'
 
 permissions:

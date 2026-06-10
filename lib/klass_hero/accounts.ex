@@ -17,7 +17,8 @@ defmodule KlassHero.Accounts do
     ChangeEmail,
     LinkStaffInvitation,
     LoginByMagicLink,
-    RegisterUser
+    RegisterUser,
+    UpgradeToProvider
   }
 
   alias KlassHero.Accounts.Application.Queries.ExportUserData
@@ -69,6 +70,21 @@ defmodule KlassHero.Accounts do
           {:ok, User.t()} | {:error, :email_mismatch | term()}
   def link_staff_invitation(%User{} = user, %StaffMember{} = staff_member) do
     LinkStaffInvitation.execute(user, staff_member)
+  end
+
+  @doc """
+  Upgrades an existing, authenticated user to Provider (#968, ADR-0005).
+
+  Creates a draft ProviderProfile for the user's identity and appends
+  `:provider` to their roles, atomically. `user` must come from the session,
+  never params — provider-hood is a deliberate, person-initiated act.
+
+  Returns `{:ok, %User{}}`, `{:error, :already_provider}`, or an error from
+  the underlying writes.
+  """
+  @spec upgrade_to_provider(User.t()) :: {:ok, User.t()} | {:error, :already_provider | term()}
+  def upgrade_to_provider(%User{} = user) do
+    UpgradeToProvider.execute(user)
   end
 
   @doc """

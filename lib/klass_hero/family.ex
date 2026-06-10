@@ -58,7 +58,7 @@ defmodule KlassHero.Family do
 
   Returns:
   - `{:ok, ParentProfile.t()}` - Parent profile created successfully
-  - `{:error, :duplicate_identity}` - Parent profile already exists
+  - `{:error, :duplicate_resource}` - Parent profile already exists
   - `{:error, {:validation_error, errors}}` - Domain validation failed
   - `{:error, changeset}` - Persistence validation failed
   """

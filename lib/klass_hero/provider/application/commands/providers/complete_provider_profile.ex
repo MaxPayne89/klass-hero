@@ -2,8 +2,8 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
   @moduledoc """
   Use case for completing a draft provider profile.
 
-  When a staff member opts into the provider role during activation,
-  StaffInvitationStatusHandler creates a minimal profile with profile_status: :draft.
+  When a staff member deliberately upgrades to provider (#968, ADR-0005),
+  Accounts' UpgradeToProvider creates a minimal profile with profile_status: :draft.
   This command accepts the full set of completion fields, validates at the domain
   level, then persists the completed profile with profile_status: :active.
 

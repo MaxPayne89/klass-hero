@@ -61,6 +61,27 @@ defmodule KlassHero.Accounts.Application.Commands.LinkStaffInvitationTest do
     end
   end
 
+  describe "link_staff_invitation/2 (stale session struct)" do
+    test "a role granted after the struct was loaded survives the link" do
+      user = user_fixture(intended_roles: [:parent])
+      provider = provider_profile_fixture()
+      staff = sent_staff_for(provider, user.email)
+
+      # Another flow grants :provider after this session's struct was loaded —
+      # the command must not write the stale array back.
+      {1, _} =
+        Repo.update_all(from(u in User, where: u.id == ^user.id),
+          set: [intended_roles: ["parent", "provider"]]
+        )
+
+      assert {:ok, updated} = Accounts.link_staff_invitation(user, staff)
+
+      assert :provider in updated.intended_roles
+      assert :staff in updated.intended_roles
+      assert :provider in reload_roles(user.id)
+    end
+  end
+
   describe "link_staff_invitation/2 (atomic — no partial state)" do
     test "a failed link grants no role and leaves the invitation untouched" do
       user = user_fixture(intended_roles: [:parent])

@@ -36,8 +36,12 @@ defmodule KlassHero.Accounts.Application.Commands.LinkStaffInvitation do
   def execute(%User{} = user, %StaffMember{} = staff_member) do
     with :ok <- ensure_email_match(user, staff_member) do
       Repo.transaction(fn ->
-        with {:ok, _linked} <- Provider.accept_staff_invitation(staff_member, user.id),
-             {:ok, updated_user} <- @user_repository.append_intended_role(user, :staff) do
+        # Re-fetch inside the transaction: the session struct can be mount-old,
+        # and the role append writes the whole intended_roles array.
+        fresh_user = Repo.get!(User, user.id)
+
+        with {:ok, _linked} <- Provider.accept_staff_invitation(staff_member, fresh_user.id),
+             {:ok, updated_user} <- @user_repository.append_intended_role(fresh_user, :staff) do
           updated_user
         else
           {:error, reason} -> Repo.rollback(reason)

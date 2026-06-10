@@ -92,12 +92,34 @@ defmodule KlassHero.Provider do
 
   Returns:
   - `{:ok, ProviderProfile.t()}` - Provider profile created successfully
-  - `{:error, :duplicate_identity}` - Provider profile already exists
+  - `{:error, :duplicate_resource}` - Provider profile already exists
   - `{:error, {:validation_error, errors}}` - Domain validation failed
   - `{:error, changeset}` - Persistence validation failed
   """
   def create_provider_profile(attrs) when is_map(attrs) do
     CreateProviderProfile.execute(attrs)
+  end
+
+  @doc """
+  Creates a draft provider profile for a deliberate upgrade (#968, ADR-0005).
+
+  Owns the draft-birth policy: `profile_status: :draft` (the completion flow
+  collects real business details) and an explicit `originated_from: :direct` —
+  every post-ADR-0005 provider is deliberate; `:staff_invite` marks only legacy
+  conflation artifacts that the #966 cleanup migration deletes by origin.
+
+  Same returns as `create_provider_profile/1`.
+  """
+  @spec create_draft_provider_profile(String.t(), String.t() | nil, String.t() | nil) ::
+          {:ok, ProviderProfile.t()} | {:error, term()}
+  def create_draft_provider_profile(identity_id, business_name, business_owner_email) when is_binary(identity_id) do
+    create_provider_profile(%{
+      identity_id: identity_id,
+      business_name: business_name,
+      business_owner_email: business_owner_email,
+      profile_status: :draft,
+      originated_from: :direct
+    })
   end
 
   @doc """

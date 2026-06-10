@@ -11,11 +11,8 @@
 #   - https://pkgs.org/ - resource for finding needed packages
 #   - Ex: hexpm/elixir:1.19.5-erlang-28.3-debian-bookworm-20250113-slim
 #
-# ELIXIR_VERSION uses the floating 1.20 tag: the exact 1.20.0-erlang-29.0.1
-# image was not yet published as of 2026-06-04 (1.20.0 final released 2026-06-03).
-# Re-pin to 1.20.0 once https://hub.docker.com/r/hexpm/elixir/tags has it.
-ARG ELIXIR_VERSION=1.20
-ARG OTP_VERSION=29.0.1
+ARG ELIXIR_VERSION=1.20.1
+ARG OTP_VERSION=29.0.2
 ARG DEBIAN_VERSION=bookworm-20260518-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"

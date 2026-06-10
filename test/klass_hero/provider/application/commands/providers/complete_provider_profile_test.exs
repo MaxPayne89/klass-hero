@@ -37,7 +37,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
 
       assert {:ok, completed} = Provider.complete_provider_profile(provider.id, attrs)
       assert completed.identity_id == provider.identity_id
-      assert completed.originated_from == :staff_invite
+      assert completed.originated_from == :direct
     end
 
     test "returns :not_found for non-existent provider" do

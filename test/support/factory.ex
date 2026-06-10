@@ -393,8 +393,8 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Draft provider profile variant — simulates a profile auto-created by
-  StaffInvitationStatusHandler when a staff member opts into provider role.
+  Draft provider profile variant — simulates a profile created by the
+  staff→provider self-upgrade (#968, Accounts.UpgradeToProvider).
   All optional fields are nil (provider hasn't filled them in yet).
   """
   def draft_provider_profile_schema_factory do
@@ -412,7 +412,7 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: [],
-      originated_from: "staff_invite",
+      originated_from: "direct",
       profile_status: "draft"
     }
   end
