@@ -44,7 +44,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
   @doc """
   Changeset for creating a new staff member.
 
-  provider_id is set programmatically via put_change, not cast from user input.
+  provider_id and user_id are set programmatically via put_change, not cast
+  from user input. user_id is only present for self-staffing (#969), where the
+  row is born already linked.
 
   Validation constants intentionally mirror StaffMember domain model.
   Domain validates on write; Ecto validates at persistence boundary.
@@ -53,6 +55,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
   def create_changeset(schema, attrs) do
     attrs = apply_pay_rate_struct(attrs)
     provider_id = attrs[:provider_id] || attrs["provider_id"]
+    user_id = attrs[:user_id] || attrs["user_id"]
 
     schema
     |> cast(attrs, [
@@ -72,6 +75,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
       :rate_currency
     ])
     |> put_change(:provider_id, provider_id)
+    |> maybe_put_user_id(user_id)
     |> validate_required([:provider_id, :first_name, :last_name])
     |> validate_length(:first_name, min: 1, max: 100)
     |> validate_length(:last_name, min: 1, max: 100)
@@ -86,7 +90,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
     )
     |> validate_pay_rate()
     |> foreign_key_constraint(:provider_id)
+    |> foreign_key_constraint(:user_id)
   end
+
+  defp maybe_put_user_id(changeset, nil), do: changeset
+  defp maybe_put_user_id(changeset, user_id), do: put_change(changeset, :user_id, user_id)
 
   @doc """
   Form changeset for editing staff members via LiveView.

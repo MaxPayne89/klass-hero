@@ -55,6 +55,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Commands.Providers.VerifyProvider
   alias KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvitation
   alias KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProgram
+  alias KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.DeleteStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvitation
@@ -244,6 +245,20 @@ defmodule KlassHero.Provider do
       provider_id: provider_id,
       admin_id: admin_id
     })
+  end
+
+  @doc """
+  Creates the provider's OWN staff row — pre-linked, `:accepted`, no
+  invitation token or email (#969, ADR-0005 self-staffing).
+
+  Returns `{:error, :already_staffed}` when an active row already links the
+  user to this provider.
+  """
+  @spec create_self_staff_member(String.t(), String.t(), map()) ::
+          {:ok, StaffMember.t()} | {:error, :already_staffed | term()}
+  def create_self_staff_member(provider_id, user_id, attrs)
+      when is_binary(provider_id) and is_binary(user_id) and is_map(attrs) do
+    CreateSelfStaffMember.execute(provider_id, user_id, attrs)
   end
 
   @doc """

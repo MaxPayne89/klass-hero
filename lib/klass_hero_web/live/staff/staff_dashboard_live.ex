@@ -101,14 +101,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     {:noreply, assign(socket, upgrade_confirm?: false)}
   end
 
-  defp upgrade_failed_flash(socket) do
-    put_flash(
-      socket,
-      :error,
-      gettext("Could not set up your provider profile. Please try again.")
-    )
-  end
-
   @impl true
   def handle_event("view_roster", %{"id" => program_id} = params, socket) do
     if MapSet.member?(socket.assigns.assigned_program_ids, program_id) do
@@ -155,6 +147,14 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
       true ->
         create_staff_conversation(socket, parent_user_id)
     end
+  end
+
+  defp upgrade_failed_flash(socket) do
+    put_flash(
+      socket,
+      :error,
+      gettext("Could not set up your provider profile. Please try again.")
+    )
   end
 
   defp roster_confirmed?(roster_entries, parent_user_id) do

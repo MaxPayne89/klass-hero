@@ -13,6 +13,7 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Accounts.Adapters.Driven.Persistence.TokenCleanup
 
   alias KlassHero.Accounts.Application.Commands.{
+    AddSelfAsStaff,
     AnonymizeUser,
     ChangeEmail,
     LinkStaffInvitation,
@@ -85,6 +86,21 @@ defmodule KlassHero.Accounts do
   @spec upgrade_to_provider(User.t()) :: {:ok, User.t()} | {:error, :already_provider | term()}
   def upgrade_to_provider(%User{} = user) do
     UpgradeToProvider.execute(user)
+  end
+
+  @doc """
+  Adds the user as a staff member of their OWN business (#969, ADR-0005).
+
+  Creates a pre-linked, accepted staff row (no invitation) and appends `:staff`
+  to their roles, atomically. `user` must come from the session, never params.
+
+  Returns `{:ok, %User{}}`, `{:error, :not_a_provider}`,
+  `{:error, :already_staffed}`, or an error from the underlying writes.
+  """
+  @spec add_self_as_staff(User.t(), map()) ::
+          {:ok, User.t()} | {:error, :not_a_provider | :already_staffed | term()}
+  def add_self_as_staff(%User{} = user, staff_attrs) when is_map(staff_attrs) do
+    AddSelfAsStaff.execute(user, staff_attrs)
   end
 
   @doc """
