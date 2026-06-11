@@ -35,6 +35,7 @@ defmodule KlassHero.Provider do
       Domain.ReadModels.IncidentReportSummary,
       Domain.ReadModels.ProviderProgram,
       Domain.ReadModels.SessionStats,
+      Domain.ReadModels.StaffMembership,
       Adapters.Driven.Persistence.Repositories.IncidentReportRepository,
       Adapters.Driven.Persistence.Repositories.ProviderProgramRepository,
       Adapters.Driven.Persistence.Repositories.SessionStatsRepository,
@@ -60,6 +61,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Commands.StaffMembers.DeleteStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvitation
   alias KlassHero.Provider.Application.Commands.StaffMembers.ResendStaffInvitation
+  alias KlassHero.Provider.Application.Commands.StaffMembers.SelectStaffContext
   alias KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFromProgram
   alias KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMember
   alias KlassHero.Provider.Application.Commands.Verification.ApproveVerificationDocument
@@ -81,12 +83,12 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Domain.Ports.ForQueryingVerificationDocuments
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
+  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
+  alias KlassHero.Provider.Domain.ReadModels.StaffMembership
 
   # ===========================================================================
   # Commands
   # ===========================================================================
-
-  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
 
   @doc """
   Creates a new provider profile.
@@ -259,6 +261,20 @@ defmodule KlassHero.Provider do
   def create_self_staff_member(provider_id, user_id, attrs)
       when is_binary(provider_id) and is_binary(user_id) and is_map(attrs) do
     CreateSelfStaffMember.execute(provider_id, user_id, attrs)
+  end
+
+  @doc """
+  Marks the user's employment at `provider_id` as their selected staff
+  context (#969 staff-context switcher). Scope resolution prefers the
+  selected row, remembered across sessions and devices.
+
+  Returns `{:error, :not_staffed}` when the user has no active staff row at
+  that provider.
+  """
+  @spec select_staff_context(String.t(), String.t()) ::
+          {:ok, :selected} | {:error, :not_staffed}
+  def select_staff_context(user_id, provider_id) when is_binary(user_id) and is_binary(provider_id) do
+    SelectStaffContext.execute(user_id, provider_id)
   end
 
   @doc """
@@ -501,6 +517,17 @@ defmodule KlassHero.Provider do
           {:ok, StaffMember.t()} | {:error, :not_found}
   def get_active_staff_member_by_user(user_id) when is_binary(user_id) do
     StaffMemberQueries.get_active_by_user(user_id)
+  end
+
+  @doc """
+  Lists all active employments of a user as `StaffMembership` read models
+  (staff row + employing provider's business name), in the same selection
+  order scope resolution uses — the head of the list is the employment the
+  scope currently carries. Powers the staff-context switcher (#969).
+  """
+  @spec list_active_staff_memberships(String.t()) :: {:ok, [StaffMembership.t()]}
+  def list_active_staff_memberships(user_id) when is_binary(user_id) do
+    StaffMemberQueries.list_active_memberships_by_user(user_id)
   end
 
   @doc """

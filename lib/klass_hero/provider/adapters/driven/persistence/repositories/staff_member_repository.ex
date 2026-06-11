@@ -14,7 +14,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
+  alias KlassHero.Provider.Domain.ReadModels.StaffMembership
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
@@ -152,15 +154,62 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
     span do
       set_attributes("db", operation: "select", entity: "staff_member")
 
-      query =
-        from s in StaffMemberSchema,
-          where: s.user_id == ^user_id and s.active == true,
-          order_by: [desc: s.inserted_at],
-          limit: 1
+      query = from [s, _p] in active_memberships_query(user_id), limit: 1, select: s
 
       case Repo.one(query) do
         nil -> {:error, :not_found}
         schema -> {:ok, StaffMemberMapper.to_domain(schema)}
+      end
+    end
+  end
+
+  @impl true
+  def list_active_memberships_by_user(user_id) when is_binary(user_id) do
+    span do
+      set_attributes("db", operation: "select", entity: "staff_member")
+
+      memberships =
+        from([s, p] in active_memberships_query(user_id),
+          select: %StaffMembership{
+            staff_member_id: type(s.id, :string),
+            provider_id: type(s.provider_id, :string),
+            business_name: p.business_name
+          }
+        )
+        |> Repo.all()
+
+      {:ok, memberships}
+    end
+  end
+
+  # Selection ordering for the staff-context switcher (#969): the row the user
+  # last selected wins; users who never selected default to an employer row
+  # over their own business (a founder reaches their own business through the
+  # provider dashboard — the staff surfaces should default to who employs them).
+  defp active_memberships_query(user_id) do
+    from s in StaffMemberSchema,
+      join: p in ProviderProfileSchema,
+      on: p.id == s.provider_id,
+      where: s.user_id == ^user_id and s.active == true,
+      order_by: [
+        desc_nulls_last: s.last_selected_at,
+        asc: p.identity_id == type(^user_id, :binary_id),
+        desc: s.inserted_at
+      ]
+  end
+
+  @impl true
+  def touch_last_selected(user_id, provider_id) when is_binary(user_id) and is_binary(provider_id) do
+    span do
+      set_attributes("db", operation: "update", entity: "staff_member")
+
+      query =
+        from s in StaffMemberSchema,
+          where: s.user_id == ^user_id and s.provider_id == ^provider_id and s.active == true
+
+      case Repo.update_all(query, set: [last_selected_at: DateTime.utc_now()]) do
+        {0, _} -> {:error, :not_staffed}
+        {_count, _} -> {:ok, :selected}
       end
     end
   end

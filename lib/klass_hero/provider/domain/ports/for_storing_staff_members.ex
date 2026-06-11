@@ -18,4 +18,7 @@ defmodule KlassHero.Provider.Domain.Ports.ForStoringStaffMembers do
 
   @callback delete(id :: binary()) ::
               :ok | {:error, :not_found}
+
+  @callback touch_last_selected(user_id :: String.t(), provider_id :: String.t()) ::
+              {:ok, :selected} | {:error, :not_staffed}
 end

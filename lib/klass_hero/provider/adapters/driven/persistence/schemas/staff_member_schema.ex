@@ -32,6 +32,10 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
     field :invitation_token_hash, :binary
     field :invitation_sent_at, :utc_datetime_usec
     field :user_id, :binary_id
+    # Staff-context switcher (#969 finding 1): bumped only via
+    # touch_last_selected/2 (update_all) — deliberately absent from every
+    # changeset cast list so no form or mapper path can set or wipe it.
+    field :last_selected_at, :utc_datetime_usec
     field :rate_type, Ecto.Enum, values: PayRate.valid_types()
     field :rate_amount, :decimal
     field :rate_currency, Ecto.Enum, values: Money.valid_currencies()

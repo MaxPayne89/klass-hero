@@ -21,11 +21,15 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
       {:ok, provider} ->
         {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
+        {:ok, memberships} =
+          Provider.list_active_staff_memberships(socket.assigns.current_scope.user.id)
+
         socket =
           socket
           |> assign(:page_title, gettext("Staff Dashboard"))
           |> assign(:active_nav, :home)
           |> assign(:provider, provider)
+          |> assign(:memberships, memberships)
           |> assign(:staff_member, staff_member)
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))
           |> assign(:assigned_program_ids, assigned_ids)
@@ -149,6 +153,28 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     end
   end
 
+  @impl true
+  def handle_event("switch_employer", %{"provider-id" => provider_id}, socket) do
+    user_id = socket.assigns.current_scope.user.id
+
+    case Provider.select_staff_context(user_id, provider_id) do
+      {:ok, :selected} ->
+        # Re-mount re-runs scope resolution, rebuilding the whole page for
+        # the newly selected employment.
+        {:noreply, push_navigate(socket, to: ~p"/staff/dashboard")}
+
+      {:error, :not_staffed} ->
+        # Stale picker: the row was deactivated elsewhere. Refresh the
+        # memberships so the dead option disappears.
+        {:ok, memberships} = Provider.list_active_staff_memberships(user_id)
+
+        {:noreply,
+         socket
+         |> assign(:memberships, memberships)
+         |> put_flash(:error, gettext("You're no longer on that team."))}
+    end
+  end
+
   defp upgrade_failed_flash(socket) do
     put_flash(
       socket,
@@ -200,6 +226,40 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
         >
           {gettext("Your pay rate")}: {@self_view.rate_label}
         </p>
+        <details :if={length(@memberships) > 1} id="employer-picker" class="relative mt-2">
+          <summary class={[
+            "inline-flex cursor-pointer select-none list-none items-center gap-1",
+            "text-sm font-medium text-brand hover:text-brand/80"
+          ]}>
+            <.icon name="hero-building-storefront-mini" class="w-4 h-4" />
+            {gettext("Switch business")}
+            <.icon name="hero-chevron-down-mini" class="w-4 h-4" />
+          </summary>
+          <ul class={[
+            "absolute left-0 z-10 mt-2 w-full max-w-xs rounded-lg",
+            "border border-hero-grey-200 bg-white shadow-lg"
+          ]}>
+            <li :for={membership <- @memberships}>
+              <button
+                id={"employer-option-#{membership.provider_id}"}
+                type="button"
+                phx-click="switch_employer"
+                phx-value-provider-id={membership.provider_id}
+                class={[
+                  "flex w-full items-center justify-between gap-2 px-4 py-3",
+                  "text-left text-sm text-hero-charcoal hover:bg-hero-grey-50"
+                ]}
+              >
+                {membership.business_name}
+                <.icon
+                  :if={membership.provider_id == @provider.id}
+                  name="hero-check-mini"
+                  class="w-4 h-4 text-brand"
+                />
+              </button>
+            </li>
+          </ul>
+        </details>
         <.link
           :if={@provider?}
           id="cross-nav-provider-link"

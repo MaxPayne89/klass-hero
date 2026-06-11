@@ -7,6 +7,7 @@ defmodule KlassHero.Provider.Domain.Ports.ForQueryingStaffMembers do
   """
 
   alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.Domain.ReadModels.StaffMembership
 
   @callback get(id :: binary()) ::
               {:ok, StaffMember.t()} | {:error, :not_found}
@@ -25,6 +26,9 @@ defmodule KlassHero.Provider.Domain.Ports.ForQueryingStaffMembers do
 
   @callback get_active_by_user(user_id :: String.t()) ::
               {:ok, StaffMember.t()} | {:error, :not_found}
+
+  @callback list_active_memberships_by_user(user_id :: String.t()) ::
+              {:ok, [StaffMembership.t()]}
 
   @callback active_for_provider_and_user?(provider_id :: String.t(), user_id :: String.t()) ::
               boolean()
