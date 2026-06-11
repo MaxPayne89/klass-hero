@@ -20,11 +20,9 @@ defmodule KlassHero.Accounts.Application.Commands.UpgradeToProvider do
   the race backstop behind the existence pre-check.
   """
 
+  alias KlassHero.Accounts.Application.Commands.PersonaGrant
   alias KlassHero.Accounts.User
   alias KlassHero.Provider
-  alias KlassHero.Repo
-
-  @user_repository Application.compile_env!(:klass_hero, [:accounts, :for_storing_users])
 
   @doc """
   Creates a draft ProviderProfile for `user` and grants `:provider`, atomically.
@@ -42,22 +40,20 @@ defmodule KlassHero.Accounts.Application.Commands.UpgradeToProvider do
     if Provider.has_provider_profile?(user.id) do
       {:error, :already_provider}
     else
-      Repo.transaction(fn ->
-        fresh_user = Repo.get!(User, user.id)
-
-        with {:ok, _profile} <-
-               Provider.create_draft_provider_profile(
-                 fresh_user.id,
-                 fresh_user.name,
-                 fresh_user.email
-               ),
-             {:ok, updated_user} <- @user_repository.append_intended_role(fresh_user, :provider) do
-          updated_user
-        else
-          {:error, :duplicate_resource} -> Repo.rollback(:already_provider)
-          {:error, reason} -> Repo.rollback(reason)
-        end
+      user
+      |> PersonaGrant.grant(:provider, fn fresh_user ->
+        Provider.create_draft_provider_profile(
+          fresh_user.id,
+          fresh_user.name,
+          fresh_user.email
+        )
       end)
+      |> normalize_result()
     end
   end
+
+  defp normalize_result({:ok, {updated_user, _profile}}), do: {:ok, updated_user}
+  # Race loser hit the unique-index backstop: same condition as the pre-check.
+  defp normalize_result({:error, :duplicate_resource}), do: {:error, :already_provider}
+  defp normalize_result({:error, reason}), do: {:error, reason}
 end

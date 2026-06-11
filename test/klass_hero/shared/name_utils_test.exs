@@ -53,4 +53,28 @@ defmodule KlassHero.Shared.NameUtilsTest do
       end
     end
   end
+
+  describe "split_first_last/1" do
+    @split_cases [
+      {"Max Pergl", {"Max", "Pergl"}, "two-word name"},
+      {"Anna Maria Schmidt", {"Anna", "Maria Schmidt"}, "multi-word: rest is last name"},
+      {"Cher", {"Cher", ""}, "single name leaves last empty"},
+      {"Anna  Maria", {"Anna", "Maria"}, "consecutive spaces collapse, no leading-space leak"},
+      {"  Max Pergl  ", {"Max", "Pergl"}, "surrounding whitespace trimmed"},
+      {"Max\tPergl", {"Max", "Pergl"}, "tab separator"},
+      {"", {"", ""}, "empty string"},
+      {"   ", {"", ""}, "whitespace-only"},
+      {nil, {"", ""}, "nil"},
+      {42, {"", ""}, "non-binary"}
+    ]
+
+    test "splits on the first whitespace run, robust to odd spacing" do
+      for {input, expected, label} <- @split_cases do
+        actual = NameUtils.split_first_last(input)
+
+        assert actual == expected,
+               "#{label}: split_first_last(#{inspect(input)}) returned #{inspect(actual)}"
+      end
+    end
+  end
 end

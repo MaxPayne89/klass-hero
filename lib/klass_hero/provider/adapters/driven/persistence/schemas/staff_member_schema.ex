@@ -91,6 +91,10 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
     |> validate_pay_rate()
     |> foreign_key_constraint(:provider_id)
     |> foreign_key_constraint(:user_id)
+    |> unique_constraint([:provider_id, :user_id],
+      name: :staff_members_active_provider_user_index,
+      message: "already an active staff member of this provider"
+    )
   end
 
   defp maybe_put_user_id(changeset, nil), do: changeset

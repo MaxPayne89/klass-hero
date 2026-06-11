@@ -8,10 +8,11 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMe
   and — unlike `CreateStaffMember` — no `:staff_member_invited` event, so no
   invitation email ever fires for the person who already owns the account.
 
-  Duplicate self-staffing is guarded by the active-row check below; there is no
-  DB unique constraint on (provider_id, user_id) (multi-employer staff need
-  multiple rows per user), so a concurrent double-submit can race past it.
-  Accepted: the loser is a visible duplicate the provider can delete.
+  Duplicate self-staffing is guarded twice: the active-row pre-check below for
+  the friendly path, and the `staff_members_active_provider_user_index` partial
+  unique index (active linked rows only, so multi-employer staff — rows at
+  DIFFERENT providers — are unaffected) as the race backstop. A race loser's
+  constraint violation is normalized to the same `:already_staffed` atom.
   """
 
   alias KlassHero.Provider.Domain.Models.StaffMember
@@ -50,7 +51,17 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMe
          {:ok, persisted} <- @repository.create(persistence_attrs) do
       {:ok, persisted}
     else
-      result -> CommandResult.wrap_validation_errors(result)
+      {:error, %Ecto.Changeset{errors: errors}} = result ->
+        if Keyword.has_key?(errors, :provider_id) and unique_violation?(errors[:provider_id]) do
+          {:error, :already_staffed}
+        else
+          CommandResult.wrap_validation_errors(result)
+        end
+
+      result ->
+        CommandResult.wrap_validation_errors(result)
     end
   end
+
+  defp unique_violation?({_msg, meta}), do: meta[:constraint] == :unique
 end

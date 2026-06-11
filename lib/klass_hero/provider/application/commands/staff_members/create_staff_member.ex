@@ -19,8 +19,26 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
 
   @repository Application.compile_env!(:klass_hero, [:provider, :for_storing_staff_members])
 
+  # Linkage and invitation state are owned by this command and the accept/
+  # self-staff flows — never by caller attrs. Stripping them here keeps the
+  # generic create unable to mint pre-linked or pre-accepted rows even if a
+  # future caller forwards raw params.
+  @programmatic_keys [
+    :user_id,
+    "user_id",
+    :invitation_status,
+    "invitation_status",
+    :invitation_token_hash,
+    "invitation_token_hash",
+    :invitation_sent_at,
+    "invitation_sent_at"
+  ]
+
   def execute(attrs) when is_map(attrs) do
-    attrs_with_id = Map.put_new(attrs, :id, Ecto.UUID.generate())
+    attrs_with_id =
+      attrs
+      |> Map.drop(@programmatic_keys)
+      |> Map.put_new(:id, Ecto.UUID.generate())
 
     if has_email?(attrs_with_id) do
       execute_with_invitation(attrs_with_id)

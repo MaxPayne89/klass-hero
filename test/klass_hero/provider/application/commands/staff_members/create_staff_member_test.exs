@@ -50,6 +50,23 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
       assert staff.active == false
     end
 
+    test "ignores smuggled linkage fields — generic create is never born linked", %{
+      provider_id: provider_id
+    } do
+      attrs = %{
+        :provider_id => provider_id,
+        :first_name => "Mallory",
+        :last_name => "Attacker",
+        :user_id => Ecto.UUID.generate(),
+        "user_id" => Ecto.UUID.generate(),
+        :invitation_status => :accepted
+      }
+
+      assert {:ok, staff} = CreateStaffMember.execute(attrs)
+      assert is_nil(staff.user_id)
+      refute staff.invitation_status == :accepted
+    end
+
     test "returns validation error when first_name is empty", %{provider_id: provider_id} do
       attrs = %{provider_id: provider_id, first_name: "", last_name: "Smith"}
 

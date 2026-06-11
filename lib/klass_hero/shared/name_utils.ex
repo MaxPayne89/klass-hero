@@ -26,4 +26,22 @@ defmodule KlassHero.Shared.NameUtils do
   end
 
   def initials_from_name(_), do: "?"
+
+  @doc """
+  Splits a single display name into `{first_name, last_name}` on the first
+  whitespace run. Robust to leading/trailing/consecutive whitespace; the
+  remainder after the first token becomes the last name ("Anna Maria Schmidt"
+  → `{"Anna", "Maria Schmidt"}`). A single-token name yields an empty last
+  name; nil/non-binary input yields `{"", ""}`.
+  """
+  @spec split_first_last(String.t() | nil | term()) :: {String.t(), String.t()}
+  def split_first_last(name) when is_binary(name) do
+    case String.split(name, ~r/\s+/, trim: true) do
+      [] -> {"", ""}
+      [first] -> {first, ""}
+      [first | rest] -> {first, Enum.join(rest, " ")}
+    end
+  end
+
+  def split_first_last(_), do: {"", ""}
 end

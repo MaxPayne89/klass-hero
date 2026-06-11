@@ -22,15 +22,28 @@ defmodule KlassHero.Accounts.Application.Commands.AddSelfAsStaffTest do
       user = user_fixture(intended_roles: [:provider])
       provider = provider_profile_fixture(identity_id: user.id)
 
-      assert {:ok, updated} = Accounts.add_self_as_staff(user, @staff_attrs)
+      assert {:ok, updated, staff} = Accounts.add_self_as_staff(user, @staff_attrs)
 
       assert updated.intended_roles == [:provider, :staff]
       assert reload_roles(user.id) == [:provider, :staff]
 
-      staff = own_staff_row(provider.id, user.id)
+      assert staff.provider_id == provider.id
+      assert staff.user_id == user.id
       assert staff.invitation_status == :accepted
       assert is_nil(staff.invitation_token_hash)
       assert staff.first_name == "Max"
+      assert own_staff_row(provider.id, user.id).id == staff.id
+    end
+
+    test "the self row always carries the account email, whatever was submitted" do
+      user = user_fixture(intended_roles: [:provider])
+      provider_profile_fixture(identity_id: user.id)
+
+      tampered = Map.put(@staff_attrs, :email, "someone-else@example.com")
+
+      assert {:ok, _updated, staff} = Accounts.add_self_as_staff(user, tampered)
+
+      assert staff.email == user.email
     end
   end
 
@@ -47,7 +60,7 @@ defmodule KlassHero.Accounts.Application.Commands.AddSelfAsStaffTest do
       user = user_fixture(intended_roles: [:provider])
       provider = provider_profile_fixture(identity_id: user.id)
 
-      assert {:ok, _} = Accounts.add_self_as_staff(user, @staff_attrs)
+      assert {:ok, _, _} = Accounts.add_self_as_staff(user, @staff_attrs)
       assert {:error, :already_staffed} = Accounts.add_self_as_staff(user, @staff_attrs)
 
       assert {:ok, [_only_one]} = Provider.list_staff_members(provider.id)
@@ -64,7 +77,7 @@ defmodule KlassHero.Accounts.Application.Commands.AddSelfAsStaffTest do
           set: [intended_roles: ["provider", "parent"]]
         )
 
-      assert {:ok, updated} = Accounts.add_self_as_staff(user, @staff_attrs)
+      assert {:ok, updated, _staff} = Accounts.add_self_as_staff(user, @staff_attrs)
 
       assert :parent in updated.intended_roles
       assert :staff in updated.intended_roles

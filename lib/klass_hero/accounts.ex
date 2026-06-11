@@ -92,13 +92,16 @@ defmodule KlassHero.Accounts do
   Adds the user as a staff member of their OWN business (#969, ADR-0005).
 
   Creates a pre-linked, accepted staff row (no invitation) and appends `:staff`
-  to their roles, atomically. `user` must come from the session, never params.
+  to their roles, atomically. `staff_attrs` takes the staff-form fields
+  (`:first_name`, `:last_name`, `:role`, `:bio`, `:tags`, `:qualifications`,
+  `:headshot_url`, `:pay_rate`); `:email` is forced to the account email.
+  `user` must come from the session, never params.
 
-  Returns `{:ok, %User{}}`, `{:error, :not_a_provider}`,
+  Returns `{:ok, %User{}, %StaffMember{}}`, `{:error, :not_a_provider}`,
   `{:error, :already_staffed}`, or an error from the underlying writes.
   """
   @spec add_self_as_staff(User.t(), map()) ::
-          {:ok, User.t()} | {:error, :not_a_provider | :already_staffed | term()}
+          {:ok, User.t(), struct()} | {:error, :not_a_provider | :already_staffed | term()}
   def add_self_as_staff(%User{} = user, staff_attrs) when is_map(staff_attrs) do
     AddSelfAsStaff.execute(user, staff_attrs)
   end

@@ -17,12 +17,10 @@ defmodule KlassHero.Accounts.Application.Commands.LinkStaffInvitation do
   """
 
   alias KlassHero.Accounts
+  alias KlassHero.Accounts.Application.Commands.PersonaGrant
   alias KlassHero.Accounts.User
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Models.StaffMember
-  alias KlassHero.Repo
-
-  @user_repository Application.compile_env!(:klass_hero, [:accounts, :for_storing_users])
 
   @doc """
   Links `user` to `staff_member` and grants `:staff`, atomically.
@@ -34,19 +32,12 @@ defmodule KlassHero.Accounts.Application.Commands.LinkStaffInvitation do
   @spec execute(User.t(), StaffMember.t()) ::
           {:ok, User.t()} | {:error, :email_mismatch | term()}
   def execute(%User{} = user, %StaffMember{} = staff_member) do
-    with :ok <- ensure_email_match(user, staff_member) do
-      Repo.transaction(fn ->
-        # Re-fetch inside the transaction: the session struct can be mount-old,
-        # and the role append writes the whole intended_roles array.
-        fresh_user = Repo.get!(User, user.id)
-
-        with {:ok, _linked} <- Provider.accept_staff_invitation(staff_member, fresh_user.id),
-             {:ok, updated_user} <- @user_repository.append_intended_role(fresh_user, :staff) do
-          updated_user
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+    with :ok <- ensure_email_match(user, staff_member),
+         {:ok, {updated_user, _linked}} <-
+           PersonaGrant.grant(user, :staff, fn fresh_user ->
+             Provider.accept_staff_invitation(staff_member, fresh_user.id)
+           end) do
+      {:ok, updated_user}
     end
   end
 
