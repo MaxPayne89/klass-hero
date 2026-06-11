@@ -17,18 +17,20 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   def mount(_params, _session, socket) do
     staff_member = socket.assigns.current_scope.staff_member
 
-    case Provider.get_provider_profile(staff_member.provider_id) do
-      {:ok, provider} ->
-        {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
+    {:ok, memberships} =
+      Provider.list_active_staff_memberships(socket.assigns.current_scope.user.id)
 
-        {:ok, memberships} =
-          Provider.list_active_staff_memberships(socket.assigns.current_scope.user.id)
+    # The memberships read model already carries everything this page needs
+    # about the employing business (id + name) — no separate profile lookup.
+    case Enum.find(memberships, &(&1.provider_id == staff_member.provider_id)) do
+      %{provider_id: provider_id, business_name: business_name} ->
+        {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
         socket =
           socket
           |> assign(:page_title, gettext("Staff Dashboard"))
           |> assign(:active_nav, :home)
-          |> assign(:provider, provider)
+          |> assign(:provider, %{id: provider_id, business_name: business_name})
           |> assign(:memberships, memberships)
           |> assign(:staff_member, staff_member)
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))
@@ -46,7 +48,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
         {:ok, socket}
 
-      {:error, :not_found} ->
+      nil ->
         {:ok,
          socket
          |> put_flash(
@@ -157,21 +159,19 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   def handle_event("switch_employer", %{"provider-id" => provider_id}, socket) do
     user_id = socket.assigns.current_scope.user.id
 
-    case Provider.select_staff_context(user_id, provider_id) do
-      {:ok, :selected} ->
-        # Re-mount re-runs scope resolution, rebuilding the whole page for
-        # the newly selected employment.
-        {:noreply, push_navigate(socket, to: ~p"/staff/dashboard")}
-
-      {:error, :not_staffed} ->
-        # Stale picker: the row was deactivated elsewhere. Refresh the
-        # memberships so the dead option disappears.
-        {:ok, memberships} = Provider.list_active_staff_memberships(user_id)
-
+    # Both outcomes re-mount: success rebuilds the page for the new
+    # employment; failure (row deactivated elsewhere, or a tampered non-UUID
+    # id — same user-visible truth) re-resolves the scope so every stale
+    # assign converges, not just the picker.
+    with {:ok, uuid} <- Ecto.UUID.cast(provider_id),
+         {:ok, :selected} <- Provider.select_staff_context(user_id, uuid) do
+      {:noreply, push_navigate(socket, to: ~p"/staff/dashboard")}
+    else
+      _invalid_or_not_staffed ->
         {:noreply,
          socket
-         |> assign(:memberships, memberships)
-         |> put_flash(:error, gettext("You're no longer on that team."))}
+         |> put_flash(:error, gettext("You're no longer on that team."))
+         |> push_navigate(to: ~p"/staff/dashboard")}
     end
   end
 

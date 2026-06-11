@@ -194,7 +194,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
       order_by: [
         desc_nulls_last: s.last_selected_at,
         asc: p.identity_id == type(^user_id, :binary_id),
-        desc: s.inserted_at
+        desc: s.inserted_at,
+        # Unique tiebreaker: inserted_at is second-precision, so same-second
+        # rows would otherwise order nondeterministically across executions —
+        # the limit-1 scope row and the memberships head could disagree.
+        desc: s.id
       ]
   end
 

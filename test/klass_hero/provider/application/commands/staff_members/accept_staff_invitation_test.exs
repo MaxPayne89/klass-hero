@@ -67,6 +67,31 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
       assert accepted.invitation_status == :accepted
     end
 
+    test "accepting becomes the selected staff context, beating a prior switcher selection" do
+      # Regression (#969 switcher review finding 1): selection ordering ranks
+      # last_selected_at above inserted_at, so without a bump on accept the
+      # freshly joined employer would lose to any previously selected one and
+      # the post-accept redirect would land on the OLD employer's dashboard.
+      user = user_fixture(intended_roles: [:staff])
+      old_employer = provider_profile_fixture()
+
+      staff_member_fixture(%{
+        provider_id: old_employer.id,
+        user_id: user.id,
+        invitation_status: :accepted,
+        last_selected_at: ~U[2026-06-01 09:00:00Z]
+      })
+
+      new_employer = provider_profile_fixture()
+      invite = sent_staff(new_employer)
+
+      assert {:ok, accepted} = AcceptStaffInvitation.execute(invite, user.id)
+
+      assert {:ok, resolved} = Provider.get_active_staff_member_by_user(user.id)
+      assert resolved.id == accepted.id
+      assert resolved.provider_id == new_employer.id
+    end
+
     test "re-fetches fresh state — a stale :sent struct whose DB row is :expired cannot resurrect" do
       provider = provider_profile_fixture()
       stale = sent_staff(provider)

@@ -8,6 +8,12 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
   Used by the one-click accept flow (#967), where the link must complete before the
   redirect so `Scope.resolve_roles` resolves `:staff` immediately.
 
+  Accepting also marks the new employment as the selected staff context
+  (`last_selected_at`, #969 switcher): joining a team is a deliberate act, so the
+  post-accept redirect lands on the NEW employer's dashboard even when the user
+  previously selected another employment. Self-staffing (`CreateSelfStaffMember`)
+  deliberately does NOT do this — founders default employer-first.
+
   Idempotent: re-accepting an invitation already accepted by the same user is a
   no-op success (the state machine has no `:accepted → :accepted` edge).
   """
@@ -36,8 +42,10 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
   end
 
   defp accept(%StaffMember{} = staff, user_id) do
-    with {:ok, transitioned} <- StaffMember.transition_invitation(staff, :accepted) do
-      @staff_repository.update(%{transitioned | user_id: user_id})
+    with {:ok, transitioned} <- StaffMember.transition_invitation(staff, :accepted),
+         {:ok, linked} <- @staff_repository.update(%{transitioned | user_id: user_id}),
+         {:ok, :selected} <- @staff_repository.touch_last_selected(user_id, linked.provider_id) do
+      {:ok, linked}
     end
   end
 end

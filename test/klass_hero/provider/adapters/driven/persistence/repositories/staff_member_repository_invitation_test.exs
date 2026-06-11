@@ -115,13 +115,17 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
       own_business = ProviderFixtures.provider_profile_fixture(%{identity_id: user.id})
 
       employer_row =
-        ProviderFixtures.staff_member_fixture(%{provider_id: employer.id, user_id: user.id})
+        ProviderFixtures.staff_member_fixture(%{
+          provider_id: employer.id,
+          user_id: user.id,
+          inserted_at: ~U[2026-01-01 10:00:00Z]
+        })
 
-      own_row =
-        ProviderFixtures.staff_member_fixture(%{provider_id: own_business.id, user_id: user.id})
-
-      set_inserted_at(employer_row.id, ~U[2026-01-01 10:00:00Z])
-      set_inserted_at(own_row.id, ~U[2026-06-01 10:00:00Z])
+      ProviderFixtures.staff_member_fixture(%{
+        provider_id: own_business.id,
+        user_id: user.id,
+        inserted_at: ~U[2026-06-01 10:00:00Z]
+      })
 
       assert {:ok, found} = StaffMemberRepository.get_active_by_user(user.id)
       assert found.id == employer_row.id
@@ -135,9 +139,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
       ProviderFixtures.staff_member_fixture(%{provider_id: employer.id, user_id: user.id})
 
       own_row =
-        ProviderFixtures.staff_member_fixture(%{provider_id: own_business.id, user_id: user.id})
-
-      set_last_selected_at(own_row.id, ~U[2026-06-10 09:00:00Z])
+        ProviderFixtures.staff_member_fixture(%{
+          provider_id: own_business.id,
+          user_id: user.id,
+          last_selected_at: ~U[2026-06-10 09:00:00Z]
+        })
 
       assert {:ok, found} = StaffMemberRepository.get_active_by_user(user.id)
       assert found.id == own_row.id
@@ -148,14 +154,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
       employer_a = ProviderFixtures.provider_profile_fixture()
       employer_b = ProviderFixtures.provider_profile_fixture()
 
-      row_a =
-        ProviderFixtures.staff_member_fixture(%{provider_id: employer_a.id, user_id: user.id})
+      ProviderFixtures.staff_member_fixture(%{
+        provider_id: employer_a.id,
+        user_id: user.id,
+        last_selected_at: ~U[2026-06-01 09:00:00Z]
+      })
 
       row_b =
-        ProviderFixtures.staff_member_fixture(%{provider_id: employer_b.id, user_id: user.id})
-
-      set_last_selected_at(row_a.id, ~U[2026-06-01 09:00:00Z])
-      set_last_selected_at(row_b.id, ~U[2026-06-10 09:00:00Z])
+        ProviderFixtures.staff_member_fixture(%{
+          provider_id: employer_b.id,
+          user_id: user.id,
+          last_selected_at: ~U[2026-06-10 09:00:00Z]
+        })
 
       assert {:ok, found} = StaffMemberRepository.get_active_by_user(user.id)
       assert found.id == row_b.id
@@ -166,14 +176,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
       employer_a = ProviderFixtures.provider_profile_fixture()
       employer_b = ProviderFixtures.provider_profile_fixture()
 
-      row_a =
-        ProviderFixtures.staff_member_fixture(%{provider_id: employer_a.id, user_id: user.id})
+      ProviderFixtures.staff_member_fixture(%{
+        provider_id: employer_a.id,
+        user_id: user.id,
+        inserted_at: ~U[2026-01-01 10:00:00Z]
+      })
 
       row_b =
-        ProviderFixtures.staff_member_fixture(%{provider_id: employer_b.id, user_id: user.id})
-
-      set_inserted_at(row_a.id, ~U[2026-01-01 10:00:00Z])
-      set_inserted_at(row_b.id, ~U[2026-03-01 10:00:00Z])
+        ProviderFixtures.staff_member_fixture(%{
+          provider_id: employer_b.id,
+          user_id: user.id,
+          inserted_at: ~U[2026-03-01 10:00:00Z]
+        })
 
       assert {:ok, found} = StaffMemberRepository.get_active_by_user(user.id)
       assert found.id == row_b.id
@@ -190,20 +204,31 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
       assert found.id == own_row.id
     end
 
-    defp set_inserted_at(staff_id, timestamp) do
-      {1, _} =
-        Repo.update_all(
-          from(s in "staff_members", where: s.id == type(^staff_id, :binary_id)),
-          set: [inserted_at: timestamp]
-        )
-    end
+    test "fully tied rows resolve deterministically and agree with the memberships head" do
+      # staff_members timestamps are second-precision: two invite-accepts in the
+      # same second tie on every ordering key unless a unique tiebreaker exists.
+      user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider])
+      employer_a = ProviderFixtures.provider_profile_fixture()
+      employer_b = ProviderFixtures.provider_profile_fixture()
+      tied_at = ~U[2026-03-01 10:00:00Z]
 
-    defp set_last_selected_at(staff_id, timestamp) do
-      {1, _} =
-        Repo.update_all(
-          from(s in "staff_members", where: s.id == type(^staff_id, :binary_id)),
-          set: [last_selected_at: timestamp]
-        )
+      for employer <- [employer_a, employer_b] do
+        ProviderFixtures.staff_member_fixture(%{
+          provider_id: employer.id,
+          user_id: user.id,
+          inserted_at: tied_at
+        })
+      end
+
+      results =
+        for _run <- 1..3 do
+          {:ok, found} = StaffMemberRepository.get_active_by_user(user.id)
+          {:ok, [head | _]} = StaffMemberRepository.list_active_memberships_by_user(user.id)
+          {found.id, head.staff_member_id}
+        end
+
+      assert [{resolved, resolved}] = Enum.uniq(results),
+             "limit-1 row and memberships head must agree and be stable: #{inspect(results)}"
     end
   end
 end

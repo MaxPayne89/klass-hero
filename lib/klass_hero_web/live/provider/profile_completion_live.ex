@@ -115,8 +115,9 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
 
   # Post-#968 the staff record belongs to an EMPLOYER's business, not the new
   # draft profile — bio/tags are person-level attributes pre-filled into a
-  # fully editable form. With multiple employments the most recent staff row
-  # wins (get_active_staff_member_by_user orders by inserted_at desc).
+  # fully editable form. With multiple employments the scope's currently
+  # selected employment wins (#969 switcher: last_selected_at, then
+  # employer-first, then newest — see active_memberships_query).
   defp build_pre_fill(staff_member, _provider) do
     %{}
     |> maybe_put_value(:description, staff_member.bio)
