@@ -117,6 +117,23 @@ defmodule KlassHero.Accounts.User do
     |> validate_subset(:intended_roles, UserRole.valid_roles())
   end
 
+  @doc """
+  A changeset that revokes a role, preserving the user's other ones.
+
+  The mirror of `add_role_changeset/2` (ADR-0005, #972): when a persona is lost
+  — the last linked staff row deleted — the matching atom is dropped from
+  `intended_roles` so intent stays in step with reality. Idempotent — removing a
+  role the user doesn't hold is a no-op.
+  """
+  def remove_role_changeset(user, role) when is_atom(role) do
+    next_roles = Enum.reject(user.intended_roles || [], &(&1 == role))
+
+    user
+    |> change()
+    |> put_change(:intended_roles, next_roles)
+    |> validate_subset(:intended_roles, UserRole.valid_roles())
+  end
+
   defp put_default_role(changeset) do
     case get_field(changeset, :intended_roles) do
       nil -> put_change(changeset, :intended_roles, [:parent])

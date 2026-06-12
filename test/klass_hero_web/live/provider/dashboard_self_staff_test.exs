@@ -25,6 +25,16 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
     %{conn: log_in_user(conn, user), user: user, provider: provider}
   end
 
+  # Founder who has already been granted :staff (self-staffed): the durable
+  # teardown is only observable when :staff actually sits in intended_roles.
+  defp log_in_provider_also_staff(conn) do
+    user = user_fixture(%{intended_roles: [:provider, :staff], name: "Maxi Founder"})
+    provider = KlassHero.Factory.insert(:provider_profile_schema, identity_id: user.id)
+    %{conn: log_in_user(conn, user), user: user, provider: provider}
+  end
+
+  defp reload_roles(user_id), do: KlassHero.Repo.get!(User, user_id).intended_roles
+
   describe "button visibility" do
     test "provider sees the self-staff button; an already self-staffed provider does not", %{
       conn: conn
@@ -211,6 +221,60 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
 
       assert has_element?(view, "#self-staff-btn")
       assert has_element?(view, "#cross-nav-staff-link")
+    end
+  end
+
+  describe "durable :staff teardown (#972)" do
+    test "deleting the last linked row removes :staff from intended_roles", %{conn: conn} do
+      %{conn: conn, user: user, provider: provider} = log_in_provider_also_staff(conn)
+
+      staff =
+        staff_member_fixture(
+          provider_id: provider.id,
+          user_id: user.id,
+          invitation_status: :accepted,
+          active: true
+        )
+
+      assert :staff in reload_roles(user.id)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      view
+      |> element(~s(button[phx-click="delete_member"][phx-value-id="#{staff.id}"]))
+      |> render_click()
+
+      # Durable: survives a fresh DB read, not just the in-session heal.
+      assert reload_roles(user.id) == [:provider]
+    end
+
+    test "deleting one of several linked rows keeps :staff", %{conn: conn} do
+      %{conn: conn, user: user, provider: provider} = log_in_provider_also_staff(conn)
+
+      employer = provider_profile_fixture()
+
+      staff_member_fixture(
+        provider_id: employer.id,
+        user_id: user.id,
+        invitation_status: :accepted,
+        active: true
+      )
+
+      own_row =
+        staff_member_fixture(
+          provider_id: provider.id,
+          user_id: user.id,
+          invitation_status: :accepted,
+          active: true
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      view
+      |> element(~s(button[phx-click="delete_member"][phx-value-id="#{own_row.id}"]))
+      |> render_click()
+
+      assert :staff in reload_roles(user.id)
     end
   end
 end

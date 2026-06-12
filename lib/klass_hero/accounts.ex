@@ -19,6 +19,7 @@ defmodule KlassHero.Accounts do
     LinkStaffInvitation,
     LoginByMagicLink,
     RegisterUser,
+    RemoveStaffMember,
     UpgradeToProvider
   }
 
@@ -104,6 +105,21 @@ defmodule KlassHero.Accounts do
           {:ok, User.t(), struct()} | {:error, :not_a_provider | :already_staffed | term()}
   def add_self_as_staff(%User{} = user, staff_attrs) when is_map(staff_attrs) do
     AddSelfAsStaff.execute(user, staff_attrs)
+  end
+
+  @doc """
+  Deletes a staff member row, atomically tearing down the now-backing-less
+  `:staff` role (ADR-0005, #972).
+
+  `:staff` is removed from the linked user only when no other active linked staff
+  row remains for them; multi-employer users keep it, and unlinked display-only
+  rows never touch roles.
+
+  Returns `{:ok, %StaffMember{}}` (the deleted row) or `{:error, :not_found}`.
+  """
+  @spec remove_staff_member(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
+  def remove_staff_member(staff_id) when is_binary(staff_id) do
+    RemoveStaffMember.execute(staff_id)
   end
 
   @doc """

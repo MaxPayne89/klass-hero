@@ -413,15 +413,15 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   @impl true
   def handle_event("delete_member", %{"id" => staff_id}, socket) do
-    deleted = Provider.get_staff_member(staff_id)
-
-    case Provider.delete_staff_member(staff_id) do
-      :ok ->
+    # Accounts orchestrates: it deletes the Provider row AND durably drops :staff
+    # when no other active linked row remains (#972), atomically.
+    case Accounts.remove_staff_member(staff_id) do
+      {:ok, deleted} ->
         {:noreply,
          socket
          |> stream_delete_by_dom_id(:team_members, "team_members-#{staff_id}")
          |> update_staff_count(max(0, socket.assigns.staff_count - 1))
-         |> heal_after_self_delete(deleted)
+         |> heal_after_self_delete({:ok, deleted})
          |> clear_flash(:error)
          |> put_flash(:info, gettext("Team member removed."))}
 
