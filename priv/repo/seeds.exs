@@ -484,7 +484,11 @@ uitest_staff_user =
     email: "uitest-staff@example.com",
     hashed_password: hashed_pw,
     confirmed_at: now,
-    intended_roles: [:staff, :provider]
+    # Staff-only (ADR-0005): a staff member is no longer a provider. The stray
+    # :provider here (leftover :staff_provider conflation) gave this user a
+    # provider intent with no backing profile, dead-ending login on
+    # /provider/dashboard via role precedence.
+    intended_roles: [:staff]
   })
   |> Repo.insert!()
 
