@@ -81,8 +81,8 @@ defmodule KlassHeroWeb.MessagingComponents do
         ]}>
           {String.first(@display_name) |> String.upcase()}
         </div>
-        
-    <!-- Content -->
+
+        <!-- Content -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
             <h3 class={[

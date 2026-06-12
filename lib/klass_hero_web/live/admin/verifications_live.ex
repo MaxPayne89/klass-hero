@@ -494,8 +494,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
       src={@signed_url}
       class="w-full h-[600px] rounded-lg border border-gray-200"
       title={gettext("Document preview")}
-    >
-    </iframe>
+    ></iframe>
     """
   end
 

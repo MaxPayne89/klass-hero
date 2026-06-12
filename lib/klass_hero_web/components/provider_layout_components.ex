@@ -134,8 +134,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
         :if={@active?}
         class="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-hero-yellow-500"
         aria-hidden="true"
-      >
-      </span>
+      ></span>
       <.icon
         name={@icon}
         class={"w-5 h-5 shrink-0 transition-colors #{pv_sidebar_icon_class(@active?)}"}
@@ -177,8 +176,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
         :if={@active?}
         class="absolute top-0 w-10 h-[3px] rounded-b-full bg-hero-yellow-500"
         aria-hidden="true"
-      >
-      </span>
+      ></span>
       <.icon name={@icon} class="w-6 h-6" />
       <span class={[
         "text-[10px] tracking-tight",

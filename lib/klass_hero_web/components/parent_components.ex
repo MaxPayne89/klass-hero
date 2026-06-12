@@ -169,8 +169,7 @@ defmodule KlassHeroWeb.ParentComponents do
         :if={@active?}
         class="absolute top-0 w-10 h-[3px] rounded-b-full bg-[var(--brand-primary)]"
         aria-hidden="true"
-      >
-      </span>
+      ></span>
       <.icon name={@icon} class={"w-6 h-6 #{!@active? && "opacity-90"}"} />
       <span class={[
         "text-[10px] tracking-tight",
@@ -480,8 +479,7 @@ defmodule KlassHeroWeb.ParentComponents do
             :if={m[:unread?]}
             class="w-2 h-2 rounded-full bg-[var(--brand-primary)] shrink-0"
             aria-label={gettext("Unread")}
-          >
-          </span>
+          ></span>
         </div>
       </div>
     </.kh_card>

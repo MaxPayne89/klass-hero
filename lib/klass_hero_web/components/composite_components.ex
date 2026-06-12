@@ -376,17 +376,17 @@ defmodule KlassHeroWeb.CompositeComponents do
             <div class="text-sm text-hero-grey-400">{@timestamp}</div>
           </div>
         </div>
-        
-    <!-- Post Content -->
+
+        <!-- Post Content -->
         <p data-testid="post-content" class="text-hero-black-100 mb-4 leading-relaxed">
           {@content}
         </p>
-        
-    <!-- Photo/Event Content -->
+
+        <!-- Photo/Event Content -->
         {render_slot(@photo_content)}
         {render_slot(@event_content)}
-        
-    <!-- Post Actions -->
+
+        <!-- Post Actions -->
         <div class="border-t border-hero-grey-200 pt-4">
           <div class="flex gap-6 mb-3">
             <button
@@ -410,11 +410,11 @@ defmodule KlassHeroWeb.CompositeComponents do
               <span data-testid="comment-count" class="text-sm font-medium">{@comment_count}</span>
             </button>
           </div>
-          
-    <!-- Comments Preview -->
+
+          <!-- Comments Preview -->
           {render_slot(@comments)}
-          
-    <!-- Add Comment Form -->
+
+          <!-- Add Comment Form -->
           <form phx-submit="add_comment" class="flex gap-2 mt-3">
             <input type="hidden" name="post_id" value={@post_id} />
             <input

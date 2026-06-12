@@ -75,8 +75,8 @@
               unread_count={assigns[:total_unread_count] || 0}
               href={RoleRouting.messages_path(@current_scope.user.intended_roles || [])}
             />
-            
-<!-- Authenticated User Dropdown -->
+
+            <!-- Authenticated User Dropdown -->
             <div class="dropdown dropdown-end">
               <label tabindex="0" class="btn btn-ghost btn-circle avatar">
                 <.user_avatar size="sm" ring={true} />
@@ -167,8 +167,8 @@
         </div>
       </div>
     </div>
-    
-<!-- Page content -->
+
+    <!-- Page content -->
     <main class="flex-1">
       <.flash_group flash={@flash} />
       <%= if assigns[:inner_content] do %>
@@ -177,12 +177,12 @@
         {render_slot(@inner_block)}
       <% end %>
     </main>
-    
-<!-- Footer -->
+
+    <!-- Footer -->
     <KlassHeroWeb.CompositeComponents.app_footer />
   </div>
-  
-<!-- Sidebar for mobile -->
+
+  <!-- Sidebar for mobile -->
   <div class="drawer-side">
     <label for="main-drawer" class="drawer-overlay"></label>
     <aside class="w-64 min-h-full bg-white shadow-lg">
