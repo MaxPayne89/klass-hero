@@ -150,8 +150,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
               </div>
             </div>
           </div>
-          
-    <!-- Form -->
+
+          <!-- Form -->
           <.form
             for={@form}
             phx-change="validate"

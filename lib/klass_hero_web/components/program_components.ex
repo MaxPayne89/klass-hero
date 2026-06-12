@@ -283,8 +283,8 @@ defmodule KlassHeroWeb.ProgramComponents do
           </div>
         </div>
       <% end %>
-      
-    <!-- Program Info -->
+
+      <!-- Program Info -->
       <div class="p-6">
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1">
@@ -348,8 +348,8 @@ defmodule KlassHeroWeb.ProgramComponents do
             ({@program.review_count} reviews)
           </span>
         </div>
-        
-    <!-- Program Details -->
+
+        <!-- Program Details -->
         <div class="space-y-2 mb-4">
           <div class="flex items-center text-sm text-hero-black-100">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -388,8 +388,8 @@ defmodule KlassHeroWeb.ProgramComponents do
             Ages {@program.age_range}
           </div>
         </div>
-        
-    <!-- Price -->
+
+        <!-- Price -->
         <div class="pt-4 border-t border-hero-grey-100">
           <div class={[Theme.typography(:card_title), Theme.text_color(:primary)]}>
             {ProgramCatalog.format_price(@program.price)}

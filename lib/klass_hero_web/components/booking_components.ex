@@ -125,8 +125,8 @@ defmodule KlassHeroWeb.BookingComponents do
           <span>{item[:label]}</span>
           <span>{item[:value]}</span>
         </div>
-        
-    <!-- Total with emphasis -->
+
+        <!-- Total with emphasis -->
         <div
           :for={total <- @total}
           class={[

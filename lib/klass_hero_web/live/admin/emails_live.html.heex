@@ -82,8 +82,7 @@
         <span class={["badge badge-sm", status_badge_class(email.status)]}>
           {translate_email_status(email.status)}
         </span>
-        <span :if={email.content_status == :pending} class="loading loading-spinner loading-xs">
-        </span>
+        <span :if={email.content_status == :pending} class="loading loading-spinner loading-xs"></span>
         <span
           :if={email.content_status == :failed}
           class="badge badge-xs badge-error"
