@@ -21,7 +21,6 @@ defmodule KlassHero.Accounts.Application.Commands.UpgradeToProviderTest do
 
       assert {:ok, profile} = Provider.get_provider_by_identity(user.id)
       assert profile.profile_status == :draft
-      assert profile.originated_from == :direct
       assert profile.business_name == user.name
       assert profile.business_owner_email == user.email
     end

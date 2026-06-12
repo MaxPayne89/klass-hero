@@ -412,7 +412,6 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: [],
-      originated_from: "direct",
       profile_status: "draft"
     }
   end

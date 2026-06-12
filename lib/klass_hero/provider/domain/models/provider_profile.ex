@@ -25,7 +25,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     :verified_at,
     :verified_by_id,
     :categories,
-    :originated_from,
     :profile_status,
     :inserted_at,
     :updated_at
@@ -45,7 +44,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
           verified_at: DateTime.t() | nil,
           verified_by_id: String.t() | nil,
           categories: [String.t()] | nil,
-          originated_from: :direct | :staff_invite | nil,
           profile_status: :draft | :active | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -84,7 +82,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     attrs
     |> Map.put_new(:verified, false)
     |> Map.put_new(:categories, [])
-    |> Map.put_new(:originated_from, :direct)
     |> Map.put_new(:profile_status, :active)
   end
 
@@ -136,7 +133,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     |> validate_verified(provider_profile.verified)
     |> validate_verified_at(provider_profile.verified_at)
     |> validate_categories(provider_profile.categories)
-    |> validate_originated_from(provider_profile.originated_from)
     |> validate_profile_status(provider_profile.profile_status)
     |> validate_business_owner_email(provider_profile.business_owner_email)
   end
@@ -274,12 +270,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
   end
 
   defp validate_categories(errors, _), do: ["Categories must be a list" | errors]
-
-  @valid_originated_from [:direct, :staff_invite]
-
-  defp validate_originated_from(errors, from) when from in @valid_originated_from, do: errors
-
-  defp validate_originated_from(errors, _), do: ["originated_from must be :direct or :staff_invite" | errors]
 
   @valid_profile_statuses [:draft, :active]
 

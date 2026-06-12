@@ -107,9 +107,8 @@ defmodule KlassHero.Provider do
   Creates a draft provider profile for a deliberate upgrade (#968, ADR-0005).
 
   Owns the draft-birth policy: `profile_status: :draft` (the completion flow
-  collects real business details) and an explicit `originated_from: :direct` —
-  every post-ADR-0005 provider is deliberate; `:staff_invite` marks only legacy
-  conflation artifacts that the #966 cleanup migration deletes by origin.
+  collects real business details). Every post-ADR-0005 provider is a deliberate
+  act, so there's no longer a creation origin to record (#970).
 
   Same returns as `create_provider_profile/1`.
   """
@@ -120,8 +119,7 @@ defmodule KlassHero.Provider do
       identity_id: identity_id,
       business_name: business_name,
       business_owner_email: business_owner_email,
-      profile_status: :draft,
-      originated_from: :direct
+      profile_status: :draft
     })
   end
 

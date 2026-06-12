@@ -90,43 +90,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfileTest do
     end
   end
 
-  describe "originated_from field" do
-    test "defaults to :direct when not provided" do
-      attrs = %{
-        id: Ecto.UUID.generate(),
-        identity_id: Ecto.UUID.generate(),
-        business_name: "Test Business"
-      }
-
-      assert {:ok, profile} = ProviderProfile.new(attrs)
-      assert profile.originated_from == :direct
-    end
-
-    test "accepts :staff_invite as originated_from" do
-      attrs = %{
-        id: Ecto.UUID.generate(),
-        identity_id: Ecto.UUID.generate(),
-        business_name: "Test Business",
-        originated_from: :staff_invite
-      }
-
-      assert {:ok, profile} = ProviderProfile.new(attrs)
-      assert profile.originated_from == :staff_invite
-    end
-
-    test "rejects invalid originated_from values" do
-      attrs = %{
-        id: Ecto.UUID.generate(),
-        identity_id: Ecto.UUID.generate(),
-        business_name: "Test Business",
-        originated_from: :unknown
-      }
-
-      assert {:error, errors} = ProviderProfile.new(attrs)
-      assert "originated_from must be :direct or :staff_invite" in errors
-    end
-  end
-
   describe "valid?/1" do
     test "returns true for valid provider profile" do
       {:ok, profile} =

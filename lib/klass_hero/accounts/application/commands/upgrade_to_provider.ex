@@ -9,8 +9,8 @@ defmodule KlassHero.Accounts.Application.Commands.UpgradeToProvider do
   versa), so this two-context orchestration belongs here, mirroring
   `LinkStaffInvitation`.
 
-  The draft-birth policy (`:draft` status, `originated_from: :direct`, the
-  person's name as placeholder business name) is owned by the Provider context
+  The draft-birth policy (`:draft` status, the person's name as placeholder
+  business name) is owned by the Provider context
   via `Provider.create_draft_provider_profile/3`; the
   `/provider/complete-profile` flow collects real business details.
 
