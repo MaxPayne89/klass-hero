@@ -29,7 +29,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
       assert completed.id == provider.id
     end
 
-    test "preserves identity_id and originated_from", %{provider: provider} do
+    test "preserves identity_id", %{provider: provider} do
       attrs = %{
         business_name: "New Name",
         description: "A description"
@@ -37,7 +37,6 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
 
       assert {:ok, completed} = Provider.complete_provider_profile(provider.id, attrs)
       assert completed.identity_id == provider.identity_id
-      assert completed.originated_from == :staff_invite
     end
 
     test "returns :not_found for non-existent provider" do

@@ -10,7 +10,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
     setup %{conn: conn} do
       parent_user = user_fixture(intended_roles: [:parent])
       provider = provider_profile_fixture()
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
 
       staff =
         staff_member_fixture(%{
@@ -127,7 +127,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
   describe "staff broadcast (former starter-tier provider)" do
     setup %{conn: conn} do
       provider = provider_profile_fixture()
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
 
       staff_member_fixture(%{
         provider_id: provider.id,

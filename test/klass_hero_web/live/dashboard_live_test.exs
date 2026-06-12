@@ -139,8 +139,8 @@ defmodule KlassHeroWeb.DashboardLiveTest do
   end
 
   describe "role-based redirect from /dashboard" do
-    test "staff_provider user is redirected to /staff/dashboard", %{} do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
+    test "staff user is redirected to /staff/dashboard", %{} do
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
 
       staff_member_fixture(%{

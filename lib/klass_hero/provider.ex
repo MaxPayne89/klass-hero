@@ -35,6 +35,7 @@ defmodule KlassHero.Provider do
       Domain.ReadModels.IncidentReportSummary,
       Domain.ReadModels.ProviderProgram,
       Domain.ReadModels.SessionStats,
+      Domain.ReadModels.StaffMembership,
       Adapters.Driven.Persistence.Repositories.IncidentReportRepository,
       Adapters.Driven.Persistence.Repositories.ProviderProgramRepository,
       Adapters.Driven.Persistence.Repositories.SessionStatsRepository,
@@ -53,11 +54,14 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Commands.Providers.UnverifyProvider
   alias KlassHero.Provider.Application.Commands.Providers.UpdateProviderProfile
   alias KlassHero.Provider.Application.Commands.Providers.VerifyProvider
+  alias KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvitation
   alias KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProgram
+  alias KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.DeleteStaffMember
   alias KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvitation
   alias KlassHero.Provider.Application.Commands.StaffMembers.ResendStaffInvitation
+  alias KlassHero.Provider.Application.Commands.StaffMembers.SelectStaffContext
   alias KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFromProgram
   alias KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMember
   alias KlassHero.Provider.Application.Commands.Verification.ApproveVerificationDocument
@@ -79,24 +83,44 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Domain.Ports.ForQueryingVerificationDocuments
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
+  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
+  alias KlassHero.Provider.Domain.ReadModels.StaffMembership
 
   # ===========================================================================
   # Commands
   # ===========================================================================
-
-  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
 
   @doc """
   Creates a new provider profile.
 
   Returns:
   - `{:ok, ProviderProfile.t()}` - Provider profile created successfully
-  - `{:error, :duplicate_identity}` - Provider profile already exists
+  - `{:error, :duplicate_resource}` - Provider profile already exists
   - `{:error, {:validation_error, errors}}` - Domain validation failed
   - `{:error, changeset}` - Persistence validation failed
   """
   def create_provider_profile(attrs) when is_map(attrs) do
     CreateProviderProfile.execute(attrs)
+  end
+
+  @doc """
+  Creates a draft provider profile for a deliberate upgrade (#968, ADR-0005).
+
+  Owns the draft-birth policy: `profile_status: :draft` (the completion flow
+  collects real business details). Every post-ADR-0005 provider is a deliberate
+  act, so there's no longer a creation origin to record (#970).
+
+  Same returns as `create_provider_profile/1`.
+  """
+  @spec create_draft_provider_profile(String.t(), String.t() | nil, String.t() | nil) ::
+          {:ok, ProviderProfile.t()} | {:error, term()}
+  def create_draft_provider_profile(identity_id, business_name, business_owner_email) when is_binary(identity_id) do
+    create_provider_profile(%{
+      identity_id: identity_id,
+      business_name: business_name,
+      business_owner_email: business_owner_email,
+      profile_status: :draft
+    })
   end
 
   @doc """
@@ -224,6 +248,34 @@ defmodule KlassHero.Provider do
   end
 
   @doc """
+  Creates the provider's OWN staff row — pre-linked, `:accepted`, no
+  invitation token or email (#969, ADR-0005 self-staffing).
+
+  Returns `{:error, :already_staffed}` when an active row already links the
+  user to this provider.
+  """
+  @spec create_self_staff_member(String.t(), String.t(), map()) ::
+          {:ok, StaffMember.t()} | {:error, :already_staffed | term()}
+  def create_self_staff_member(provider_id, user_id, attrs)
+      when is_binary(provider_id) and is_binary(user_id) and is_map(attrs) do
+    CreateSelfStaffMember.execute(provider_id, user_id, attrs)
+  end
+
+  @doc """
+  Marks the user's employment at `provider_id` as their selected staff
+  context (#969 staff-context switcher). Scope resolution prefers the
+  selected row, remembered across sessions and devices.
+
+  Returns `{:error, :not_staffed}` when the user has no active staff row at
+  that provider.
+  """
+  @spec select_staff_context(String.t(), String.t()) ::
+          {:ok, :selected} | {:error, :not_staffed}
+  def select_staff_context(user_id, provider_id) when is_binary(user_id) and is_binary(provider_id) do
+    SelectStaffContext.execute(user_id, provider_id)
+  end
+
+  @doc """
   Creates a new staff member for a provider.
   """
   def create_staff_member(attrs) when is_map(attrs) do
@@ -274,6 +326,17 @@ defmodule KlassHero.Provider do
 
   def expire_staff_invitation(staff_member_id) when is_binary(staff_member_id) do
     ExpireStaffInvitation.execute(staff_member_id)
+  end
+
+  @doc """
+  Links a User to a StaffMember and accepts the invitation (synchronous).
+
+  Used by the one-click accept flow (#967). Idempotent for the same user.
+  """
+  @spec accept_staff_invitation(StaffMember.t(), String.t()) ::
+          {:ok, StaffMember.t()} | {:error, term()}
+  def accept_staff_invitation(%StaffMember{} = staff_member, user_id) when is_binary(user_id) do
+    AcceptStaffInvitation.execute(staff_member, user_id)
   end
 
   @doc """
@@ -446,12 +509,23 @@ defmodule KlassHero.Provider do
 
   @doc """
   Returns the active staff member record linked to the given user ID.
-  Used by Scope to resolve :staff_provider role.
+  Used by Scope to resolve :staff role.
   """
   @spec get_active_staff_member_by_user(String.t()) ::
           {:ok, StaffMember.t()} | {:error, :not_found}
   def get_active_staff_member_by_user(user_id) when is_binary(user_id) do
     StaffMemberQueries.get_active_by_user(user_id)
+  end
+
+  @doc """
+  Lists all active employments of a user as `StaffMembership` read models
+  (staff row + employing provider's business name), in the same selection
+  order scope resolution uses — the head of the list is the employment the
+  scope currently carries. Powers the staff-context switcher (#969).
+  """
+  @spec list_active_staff_memberships(String.t()) :: {:ok, [StaffMembership.t()]}
+  def list_active_staff_memberships(user_id) when is_binary(user_id) do
+    StaffMemberQueries.list_active_memberships_by_user(user_id)
   end
 
   @doc """

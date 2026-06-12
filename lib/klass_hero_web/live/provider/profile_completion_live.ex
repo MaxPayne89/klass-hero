@@ -2,9 +2,9 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   @moduledoc """
   LiveView for completing a draft provider profile.
 
-  When a staff member opts into the provider role during activation,
-  a minimal profile is auto-created in draft status. This page guides
-  the provider through filling in their business details.
+  When a staff member deliberately upgrades to provider (#968, ADR-0005),
+  a minimal profile is created in draft status. This page guides
+  the new provider through filling in their business details.
 
   Pre-populates fields from the linked staff member record.
   """
@@ -113,6 +113,11 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
 
   defp build_pre_fill(nil, _provider), do: %{}
 
+  # Post-#968 the staff record belongs to an EMPLOYER's business, not the new
+  # draft profile — bio/tags are person-level attributes pre-filled into a
+  # fully editable form. With multiple employments the scope's currently
+  # selected employment wins (#969 switcher: last_selected_at, then
+  # employer-first, then newest — see active_memberships_query).
   defp build_pre_fill(staff_member, _provider) do
     %{}
     |> maybe_put_value(:description, staff_member.bio)

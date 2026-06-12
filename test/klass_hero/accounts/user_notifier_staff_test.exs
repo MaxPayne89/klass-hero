@@ -3,8 +3,8 @@ defmodule KlassHero.Accounts.UserNotifierStaffTest do
 
   alias KlassHero.Accounts.UserNotifier
 
-  describe "deliver_staff_invitation/3" do
-    test "delivers unified invitation email with registration link" do
+  describe "deliver_staff_invitation/3 (new user)" do
+    test "invites to join the team with an accept link — no provider-account promise" do
       assert {:ok, email} =
                UserNotifier.deliver_staff_invitation(
                  "staff@example.com",
@@ -13,35 +13,32 @@ defmodule KlassHero.Accounts.UserNotifierStaffTest do
                )
 
       assert email.to == [{"", "staff@example.com"}]
-      assert email.subject == "Fun Academy has invited you to join Klass Hero"
+      assert email.subject == "Fun Academy has invited you to join their team on Klass Hero"
       assert email.text_body =~ "Jane"
       assert email.text_body =~ "Fun Academy"
       assert email.text_body =~ "test-token"
-      assert email.text_body =~ "free provider account"
-      assert email.text_body =~ "Claim your account"
-      assert email.text_body =~ "terms of service"
+      assert email.text_body =~ "staff member"
+      # ADR-0005: joining a team is not getting a provider account.
+      refute email.text_body =~ "provider account"
     end
   end
 
-  describe "deliver_staff_added_notification/2" do
-    test "delivers unified notification email for existing users" do
+  describe "deliver_staff_link_invitation/3 (existing user)" do
+    test "tells an existing user to log in and accept — no registration, no provider account" do
       assert {:ok, email} =
-               UserNotifier.deliver_staff_added_notification(
+               UserNotifier.deliver_staff_link_invitation(
                  "existing@example.com",
-                 %{
-                   business_name: "Cool Sports",
-                   name: "Bob",
-                   dashboard_url: "http://localhost:4000/staff/dashboard"
-                 }
+                 %{business_name: "Cool Sports", name: "Bob"},
+                 "http://localhost:4000/users/staff-invitation/link-token"
                )
 
       assert email.to == [{"", "existing@example.com"}]
-      assert email.subject == "Cool Sports has invited you to join Klass Hero"
+      assert email.subject == "Cool Sports has invited you to join their team on Klass Hero"
       assert email.text_body =~ "Bob"
       assert email.text_body =~ "Cool Sports"
-      assert email.text_body =~ "/staff/dashboard"
-      assert email.text_body =~ "free provider account"
-      assert email.text_body =~ "terms of service"
+      assert email.text_body =~ "link-token"
+      assert email.text_body =~ "log in"
+      refute email.text_body =~ "provider account"
     end
   end
 end

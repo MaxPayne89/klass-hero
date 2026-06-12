@@ -27,7 +27,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
     field :verified, :boolean, default: false
     field :verified_at, :utc_datetime
     field :categories, {:array, :string}, default: []
-    field :originated_from, :string, default: "direct"
     field :profile_status, :string, default: "active"
 
     belongs_to :verified_by, User, type: :binary_id
@@ -67,14 +66,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
       :verified_at,
       :verified_by_id,
       :categories,
-      :originated_from,
       :profile_status
     ])
     |> validate_required([:identity_id, :business_name])
     |> validate_inclusion(:profile_status, ~w(draft active))
     |> validate_profile_fields()
     |> validate_length(:logo_url, min: 1, max: 500)
-    |> validate_inclusion(:originated_from, ~w(direct staff_invite), message: "is not a valid origin")
     |> unique_constraint(:identity_id,
       name: :providers_identity_id_index,
       message: "Provider profile already exists for this identity"

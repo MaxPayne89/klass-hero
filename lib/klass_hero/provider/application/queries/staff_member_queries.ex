@@ -7,6 +7,7 @@ defmodule KlassHero.Provider.Application.Queries.StaffMemberQueries do
   """
 
   alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.Domain.ReadModels.StaffMembership
 
   @staff_repository Application.compile_env!(:klass_hero, [
                       :provider,
@@ -48,11 +49,21 @@ defmodule KlassHero.Provider.Application.Queries.StaffMemberQueries do
 
   @doc """
   Returns the active staff member record linked to the given user ID.
-  Used by Scope to resolve :staff_provider role.
+  Used by Scope to resolve :staff role.
   """
   @spec get_active_by_user(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
   def get_active_by_user(user_id) when is_binary(user_id) do
     @staff_repository.get_active_by_user(user_id)
+  end
+
+  @doc """
+  Lists all active employments of a user with the employing providers'
+  business names, in selection order (head == the row `get_active_by_user/1`
+  returns). Powers the staff-context switcher (#969).
+  """
+  @spec list_active_memberships_by_user(String.t()) :: {:ok, [StaffMembership.t()]}
+  def list_active_memberships_by_user(user_id) when is_binary(user_id) do
+    @staff_repository.list_active_memberships_by_user(user_id)
   end
 
   @doc """

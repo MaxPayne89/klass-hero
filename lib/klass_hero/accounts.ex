@@ -13,15 +13,20 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Accounts.Adapters.Driven.Persistence.TokenCleanup
 
   alias KlassHero.Accounts.Application.Commands.{
+    AddSelfAsStaff,
     AnonymizeUser,
     ChangeEmail,
+    LinkStaffInvitation,
     LoginByMagicLink,
-    RegisterUser
+    RegisterUser,
+    RemoveStaffMember,
+    UpgradeToProvider
   }
 
   alias KlassHero.Accounts.Application.Queries.ExportUserData
   alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
   alias KlassHero.Accounts.{User, UserNotifier, UserToken}
+  alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHero.Repo
   alias KlassHero.Shared.IntegrationEventPublishing
 
@@ -48,39 +53,97 @@ defmodule KlassHero.Accounts do
   @doc """
   Registers a new staff provider user via invitation.
 
-  Uses staff_registration_changeset which locks intended_roles to [:staff_provider].
+  Uses staff_registration_changeset which locks intended_roles to [:staff].
   """
   def register_staff_user(attrs) do
     RegisterUser.execute(attrs, changeset_fn: &User.staff_registration_changeset/2)
   end
 
   @doc """
+  Links an existing, authenticated user to a staff invitation (#967).
+
+  Appends `:staff` to the user's roles and links the StaffMember, only when the
+  user's email matches the invite. `user` must come from the session, never params.
+
+  Returns `{:ok, %User{}}`, `{:error, :email_mismatch}`, or an error from the
+  underlying writes.
+  """
+  @spec link_staff_invitation(User.t(), StaffMember.t()) ::
+          {:ok, User.t()} | {:error, :email_mismatch | term()}
+  def link_staff_invitation(%User{} = user, %StaffMember{} = staff_member) do
+    LinkStaffInvitation.execute(user, staff_member)
+  end
+
+  @doc """
+  Upgrades an existing, authenticated user to Provider (#968, ADR-0005).
+
+  Creates a draft ProviderProfile for the user's identity and appends
+  `:provider` to their roles, atomically. `user` must come from the session,
+  never params — provider-hood is a deliberate, person-initiated act.
+
+  Returns `{:ok, %User{}}`, `{:error, :already_provider}`, or an error from
+  the underlying writes.
+  """
+  @spec upgrade_to_provider(User.t()) :: {:ok, User.t()} | {:error, :already_provider | term()}
+  def upgrade_to_provider(%User{} = user) do
+    UpgradeToProvider.execute(user)
+  end
+
+  @doc """
+  Adds the user as a staff member of their OWN business (#969, ADR-0005).
+
+  Creates a pre-linked, accepted staff row (no invitation) and appends `:staff`
+  to their roles, atomically. `staff_attrs` takes the staff-form fields
+  (`:first_name`, `:last_name`, `:role`, `:bio`, `:tags`, `:qualifications`,
+  `:headshot_url`, `:pay_rate`); `:email` is forced to the account email.
+  `user` must come from the session, never params.
+
+  Returns `{:ok, %User{}, %StaffMember{}}`, `{:error, :not_a_provider}`,
+  `{:error, :already_staffed}`, or an error from the underlying writes.
+  """
+  @spec add_self_as_staff(User.t(), map()) ::
+          {:ok, User.t(), struct()} | {:error, :not_a_provider | :already_staffed | term()}
+  def add_self_as_staff(%User{} = user, staff_attrs) when is_map(staff_attrs) do
+    AddSelfAsStaff.execute(user, staff_attrs)
+  end
+
+  @doc """
+  Deletes a staff member row, atomically tearing down the now-backing-less
+  `:staff` role (ADR-0005, #972).
+
+  `:staff` is removed from the linked user only when no other active linked staff
+  row remains for them; multi-employer users keep it, and unlinked display-only
+  rows never touch roles.
+
+  Returns `{:ok, %StaffMember{}}` (the deleted row) or `{:error, :not_found}`.
+  """
+  @spec remove_staff_member(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
+  def remove_staff_member(staff_id) when is_binary(staff_id) do
+    RemoveStaffMember.execute(staff_id)
+  end
+
+  @doc """
   Emits a `staff_user_registered` integration event.
 
-  Called by the invitation registration LiveView after a successful
-  `register_staff_user/1`. The LiveView knows the staff context
+  Called after a successful `register_staff_user/1` (or when linking an
+  existing user invited as staff). The caller knows the staff context
   (staff_member_id, provider_id) that the use case layer does not.
 
-  ## Options (4th argument, optional map)
-
-  - `create_provider_profile: true` — signals the Provider context to
-    create a provider profile for this user.
-  - `user_name` — used as the default business name for the provider profile.
+  Drives staff linkage only — the Provider context links the User to the
+  StaffMember and accepts the invitation. Per ADR-0005 it never creates a
+  ProviderProfile; provider-hood is a deliberate, separate act.
 
   Returns `:ok` on success or `{:error, reason}` on publish failure.
   """
-  @spec emit_staff_user_registered(String.t(), String.t(), String.t(), map()) ::
+  @spec emit_staff_user_registered(String.t(), String.t(), String.t()) ::
           :ok | {:error, term()}
-  def emit_staff_user_registered(user_id, staff_member_id, provider_id, opts \\ %{})
-
-  def emit_staff_user_registered(user_id, staff_member_id, provider_id, opts)
+  def emit_staff_user_registered(user_id, staff_member_id, provider_id)
       when is_binary(user_id) and is_binary(staff_member_id) and is_binary(provider_id) do
-    payload =
-      opts
-      |> Map.merge(%{staff_member_id: staff_member_id, provider_id: provider_id})
-
     user_id
-    |> AccountsIntegrationEvents.staff_user_registered(payload)
+    |> AccountsIntegrationEvents.staff_user_registered(%{
+      staff_member_id: staff_member_id,
+      provider_id: provider_id
+    })
     |> IntegrationEventPublishing.publish_critical("staff_user_registered",
       user_id: user_id,
       staff_member_id: staff_member_id
@@ -318,6 +381,19 @@ defmodule KlassHero.Accounts do
   end
 
   @doc """
+  Returns true when two emails refer to the same address (case- and
+  whitespace-insensitive). Single source of truth for the staff-invite
+  link match — both the accept screen and `link_staff_invitation/2` use it.
+  """
+  @spec emails_match?(String.t() | nil, String.t() | nil) :: boolean()
+  def emails_match?(a, b), do: normalize_email(a) == normalize_email(b) and not is_nil(a)
+
+  @doc "Normalizes an email for comparison (trim + downcase). `nil` stays `nil`."
+  @spec normalize_email(String.t() | nil) :: String.t() | nil
+  def normalize_email(nil), do: nil
+  def normalize_email(email) when is_binary(email), do: email |> String.trim() |> String.downcase()
+
+  @doc """
   Gets a user by email and password.
 
   ## Examples
@@ -416,7 +492,7 @@ defmodule KlassHero.Accounts do
   Returns an `%Ecto.Changeset{}` for tracking staff registration changes.
 
   Uses `staff_registration_changeset` which locks intended_roles to
-  `[:staff_provider]`.
+  `[:staff]`.
   """
   def change_staff_registration(attrs, opts \\ []) do
     User.staff_registration_changeset(%User{}, attrs, opts)

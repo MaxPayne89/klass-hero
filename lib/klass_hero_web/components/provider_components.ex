@@ -560,6 +560,10 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :uploads, :map, required: true
   attr :categories, :list, required: true, doc: "List of valid program categories"
 
+  attr :email_readonly, :boolean,
+    default: false,
+    doc: "Self-staffing locks the email to the account address (#969)"
+
   def staff_member_form(assigns) do
     ~H"""
     <div
@@ -620,6 +624,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             type="email"
             label={gettext("Email")}
             placeholder={gettext("e.g. mike@example.com")}
+            readonly={@email_readonly}
           />
         </div>
 

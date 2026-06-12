@@ -85,10 +85,10 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpersTest do
 
   describe "normalize_atom_field/2" do
     test "converts atom value to string for arbitrary key" do
-      attrs = %{originated_from: :staff_invite, name: "Alice"}
+      attrs = %{profile_status: :draft, name: "Alice"}
 
-      assert MapperHelpers.normalize_atom_field(attrs, :originated_from) == %{
-               originated_from: "staff_invite",
+      assert MapperHelpers.normalize_atom_field(attrs, :profile_status) == %{
+               profile_status: "draft",
                name: "Alice"
              }
     end
@@ -96,23 +96,23 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpersTest do
     test "leaves attrs unchanged when key is absent" do
       attrs = %{name: "Alice"}
 
-      assert MapperHelpers.normalize_atom_field(attrs, :originated_from) == %{name: "Alice"}
+      assert MapperHelpers.normalize_atom_field(attrs, :profile_status) == %{name: "Alice"}
     end
 
     test "leaves attrs unchanged when value is nil" do
-      attrs = %{originated_from: nil, name: "Alice"}
+      attrs = %{profile_status: nil, name: "Alice"}
 
-      assert MapperHelpers.normalize_atom_field(attrs, :originated_from) == %{
-               originated_from: nil,
+      assert MapperHelpers.normalize_atom_field(attrs, :profile_status) == %{
+               profile_status: nil,
                name: "Alice"
              }
     end
 
     test "leaves attrs unchanged when value is already a string" do
-      attrs = %{originated_from: "direct"}
+      attrs = %{profile_status: "active"}
 
-      assert MapperHelpers.normalize_atom_field(attrs, :originated_from) == %{
-               originated_from: "direct"
+      assert MapperHelpers.normalize_atom_field(attrs, :profile_status) == %{
+               profile_status: "active"
              }
     end
   end

@@ -1,6 +1,7 @@
 defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   use KlassHeroWeb, :live_view
 
+  alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
@@ -16,20 +17,27 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   def mount(_params, _session, socket) do
     staff_member = socket.assigns.current_scope.staff_member
 
-    case Provider.get_provider_profile(staff_member.provider_id) do
-      {:ok, provider} ->
+    {:ok, memberships} =
+      Provider.list_active_staff_memberships(socket.assigns.current_scope.user.id)
+
+    # The memberships read model already carries everything this page needs
+    # about the employing business (id + name) — no separate profile lookup.
+    case Enum.find(memberships, &(&1.provider_id == staff_member.provider_id)) do
+      %{provider_id: provider_id, business_name: business_name} ->
         {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
         socket =
           socket
           |> assign(:page_title, gettext("Staff Dashboard"))
           |> assign(:active_nav, :home)
-          |> assign(:provider, provider)
+          |> assign(:provider, %{id: provider_id, business_name: business_name})
+          |> assign(:memberships, memberships)
           |> assign(:staff_member, staff_member)
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))
           |> assign(:assigned_program_ids, assigned_ids)
           |> assign(:programs_empty?, programs == [])
-          |> assign(:dual_role?, Scope.dual_role?(socket.assigns.current_scope))
+          |> assign(:provider?, Scope.provider?(socket.assigns.current_scope))
+          |> assign(:upgrade_confirm?, false)
           |> assign(:show_roster, false)
           |> assign(:roster_entries, [])
           |> assign(:roster_program_name, nil)
@@ -40,7 +48,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
         {:ok, socket}
 
-      {:error, :not_found} ->
+      nil ->
         {:ok,
          socket
          |> put_flash(
@@ -49,6 +57,54 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
          )
          |> push_navigate(to: ~p"/")}
     end
+  end
+
+  # No assigns-guards on the upgrade events: the command is the sole gate
+  # (`:already_provider` with zero writes), and its answer re-converges the UI.
+  @impl true
+  def handle_event("request_provider_upgrade", _params, socket) do
+    {:noreply, assign(socket, upgrade_confirm?: true)}
+  end
+
+  @impl true
+  def handle_event("confirm_provider_upgrade", _params, socket) do
+    case Accounts.upgrade_to_provider(socket.assigns.current_scope.user) do
+      {:ok, _user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Welcome aboard! Let's set up your business profile."))
+         |> push_navigate(to: ~p"/provider/complete-profile")}
+
+      {:error, :already_provider} ->
+        # Stale tab: they upgraded elsewhere. Re-converge the UI to the truth.
+        {:noreply,
+         socket
+         |> assign(provider?: true, upgrade_confirm?: false)
+         |> put_flash(:info, gettext("You already have a provider profile."))}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        # Log only the errors — the changeset's changes carry the user's
+        # name/email and ProviderProfileSchema has no Inspect redaction.
+        Logger.error("Failed to upgrade staff user to provider",
+          user_id: socket.assigns.current_scope.user.id,
+          errors: inspect(changeset.errors)
+        )
+
+        {:noreply, upgrade_failed_flash(socket)}
+
+      {:error, reason} ->
+        Logger.error("Failed to upgrade staff user to provider",
+          user_id: socket.assigns.current_scope.user.id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, upgrade_failed_flash(socket)}
+    end
+  end
+
+  @impl true
+  def handle_event("cancel_provider_upgrade", _params, socket) do
+    {:noreply, assign(socket, upgrade_confirm?: false)}
   end
 
   @impl true
@@ -99,6 +155,34 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     end
   end
 
+  @impl true
+  def handle_event("switch_employer", %{"provider-id" => provider_id}, socket) do
+    user_id = socket.assigns.current_scope.user.id
+
+    # Both outcomes re-mount: success rebuilds the page for the new
+    # employment; failure (row deactivated elsewhere, or a tampered non-UUID
+    # id — same user-visible truth) re-resolves the scope so every stale
+    # assign converges, not just the picker.
+    with {:ok, uuid} <- Ecto.UUID.cast(provider_id),
+         {:ok, :selected} <- Provider.select_staff_context(user_id, uuid) do
+      {:noreply, push_navigate(socket, to: ~p"/staff/dashboard")}
+    else
+      _invalid_or_not_staffed ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("You're no longer on that team."))
+         |> push_navigate(to: ~p"/staff/dashboard")}
+    end
+  end
+
+  defp upgrade_failed_flash(socket) do
+    put_flash(
+      socket,
+      :error,
+      gettext("Could not set up your provider profile. Please try again.")
+    )
+  end
+
   defp roster_confirmed?(roster_entries, parent_user_id) do
     Enum.any?(roster_entries, fn entry ->
       entry.parent_user_id == parent_user_id and entry.status == :confirmed
@@ -142,8 +226,42 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
         >
           {gettext("Your pay rate")}: {@self_view.rate_label}
         </p>
+        <details :if={length(@memberships) > 1} id="employer-picker" class="relative mt-2">
+          <summary class={[
+            "inline-flex cursor-pointer select-none list-none items-center gap-1",
+            "text-sm font-medium text-brand hover:text-brand/80"
+          ]}>
+            <.icon name="hero-building-storefront-mini" class="w-4 h-4" />
+            {gettext("Switch business")}
+            <.icon name="hero-chevron-down-mini" class="w-4 h-4" />
+          </summary>
+          <ul class={[
+            "absolute left-0 z-10 mt-2 w-full max-w-xs rounded-lg",
+            "border border-hero-grey-200 bg-white shadow-lg"
+          ]}>
+            <li :for={membership <- @memberships}>
+              <button
+                id={"employer-option-#{membership.provider_id}"}
+                type="button"
+                phx-click="switch_employer"
+                phx-value-provider-id={membership.provider_id}
+                class={[
+                  "flex w-full items-center justify-between gap-2 px-4 py-3",
+                  "text-left text-sm text-hero-charcoal hover:bg-hero-grey-50"
+                ]}
+              >
+                {membership.business_name}
+                <.icon
+                  :if={membership.provider_id == @provider.id}
+                  name="hero-check-mini"
+                  class="w-4 h-4 text-brand"
+                />
+              </button>
+            </li>
+          </ul>
+        </details>
         <.link
-          :if={@dual_role?}
+          :if={@provider?}
           id="cross-nav-provider-link"
           navigate={~p"/provider/dashboard"}
           class="inline-flex items-center gap-1 text-sm text-brand hover:text-brand/80 mt-2"
@@ -151,6 +269,58 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           {gettext("Manage your business")} →
         </.link>
       </div>
+
+      <.kh_card :if={not @provider?} id="become-provider-cta" class="p-5 mt-6">
+        <h2 class={Theme.typography(:card_title)}>
+          {gettext("Start your own business")}
+        </h2>
+        <%= if @upgrade_confirm? do %>
+          <div id="become-provider-confirm" class="mt-1">
+            <p class="text-sm text-hero-grey-600">
+              {gettext(
+                "You'll get your own provider profile to fill in, and your account will open on your business dashboard from now on. You stay on %{business}'s team.",
+                business: @provider.business_name
+              )}
+            </p>
+            <div class="flex flex-col gap-2 mt-4">
+              <.kh_button
+                id="become-provider-confirm-button"
+                variant={:primary}
+                size={:lg}
+                class="w-full justify-center"
+                phx-click="confirm_provider_upgrade"
+                phx-disable-with={gettext("Setting up...")}
+              >
+                {gettext("Yes, become a provider")}
+              </.kh_button>
+              <.kh_button
+                id="become-provider-cancel-button"
+                variant={:ghost}
+                size={:lg}
+                class="w-full justify-center"
+                phx-click="cancel_provider_upgrade"
+              >
+                {gettext("Not now")}
+              </.kh_button>
+            </div>
+          </div>
+        <% else %>
+          <p class="text-sm text-hero-grey-600 mt-1">
+            {gettext("Offer your own programs on Klass Hero — alongside your work for %{business}.",
+              business: @provider.business_name
+            )}
+          </p>
+          <.kh_button
+            id="become-provider-cta-button"
+            variant={:primary}
+            size={:lg}
+            class="w-full justify-center mt-4"
+            phx-click="request_provider_upgrade"
+          >
+            {gettext("Become a provider")}
+          </.kh_button>
+        <% end %>
+      </.kh_card>
 
       <div class="mt-8">
         <h2 class={Theme.typography(:section_title)}>

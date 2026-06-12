@@ -163,15 +163,15 @@ defmodule KlassHeroWeb.Router do
       end
     end
 
-    # Staff provider routes - staff_provider role required.
+    # Staff routes - :staff role required.
     # Q3.1 locked: staff surface uses the same provider_app layout for
     # visual consistency; bundle doesn't ship a separate staff design.
-    live_session :require_staff_provider,
+    live_session :require_staff,
       layout: {KlassHeroWeb.Layouts, :provider_app},
       on_mount: [
         {LiveViewHook, :trace},
         {KlassHeroWeb.UserAuth, :require_authenticated},
-        {KlassHeroWeb.UserAuth, :require_staff_provider},
+        {KlassHeroWeb.UserAuth, :require_staff},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
         {RestoreLocale, :restore_locale}
       ] do

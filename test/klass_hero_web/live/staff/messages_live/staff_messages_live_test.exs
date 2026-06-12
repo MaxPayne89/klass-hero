@@ -9,7 +9,7 @@ defmodule KlassHeroWeb.Staff.MessagesLiveTest do
 
   describe "staff messages index" do
     setup %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
       program = insert(:program_schema, provider_id: provider.id)
 
@@ -64,7 +64,7 @@ defmodule KlassHeroWeb.Staff.MessagesLiveTest do
 
   describe "staff messages show" do
     setup %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
       program = insert(:program_schema, provider_id: provider.id)
 

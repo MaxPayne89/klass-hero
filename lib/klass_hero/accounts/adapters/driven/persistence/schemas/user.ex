@@ -77,12 +77,12 @@ defmodule KlassHero.Accounts.User do
   end
 
   @doc """
-  A user changeset for staff provider registration.
+  A user changeset for staff registration via an invitation link.
 
-  Always sets intended_roles to [:staff_provider, :provider] — every invited
-  staff member automatically gets a provider account.
-
-  Used when a staff member registers via an invitation link.
+  Sets `intended_roles` to `[:staff]` only. Per ADR-0005, being hired as
+  staff is NOT becoming a provider — provider-hood is a deliberate, separate
+  act (self-registration or an explicit staff→provider upgrade). Accepting an
+  invite therefore never grants `:provider` and never creates a ProviderProfile.
 
   ## Options
 
@@ -94,9 +94,44 @@ defmodule KlassHero.Accounts.User do
     |> cast(attrs, [:name, :email])
     |> validate_required([:name, :email])
     |> validate_length(:name, min: 2, max: 100)
-    |> put_change(:intended_roles, [:staff_provider, :provider])
+    |> put_change(:intended_roles, [:staff])
     |> validate_email(opts)
     |> password_changeset(attrs, opts)
+  end
+
+  @doc """
+  A changeset that grants an additional role, preserving the user's existing ones.
+
+  Unlike `registration_changeset` (casts user-supplied roles) and
+  `staff_registration_changeset` (sets `[:staff]`), this unions a server-decided
+  `role` into the persisted `intended_roles`. Used when an existing account is
+  linked as staff (ADR-0005 multi-persona): a `:parent` becoming also-`:staff`
+  keeps `:parent`. Idempotent — adding a role already held is a no-op.
+  """
+  def add_role_changeset(user, role) when is_atom(role) do
+    next_roles = Enum.uniq((user.intended_roles || []) ++ [role])
+
+    user
+    |> change()
+    |> put_change(:intended_roles, next_roles)
+    |> validate_subset(:intended_roles, UserRole.valid_roles())
+  end
+
+  @doc """
+  A changeset that revokes a role, preserving the user's other ones.
+
+  The mirror of `add_role_changeset/2` (ADR-0005, #972): when a persona is lost
+  — the last linked staff row deleted — the matching atom is dropped from
+  `intended_roles` so intent stays in step with reality. Idempotent — removing a
+  role the user doesn't hold is a no-op.
+  """
+  def remove_role_changeset(user, role) when is_atom(role) do
+    next_roles = Enum.reject(user.intended_roles || [], &(&1 == role))
+
+    user
+    |> change()
+    |> put_change(:intended_roles, next_roles)
+    |> validate_subset(:intended_roles, UserRole.valid_roles())
   end
 
   defp put_default_role(changeset) do

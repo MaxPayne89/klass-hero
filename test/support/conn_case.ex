@@ -197,7 +197,7 @@ defmodule KlassHeroWeb.ConnCase do
   in the test context. This is useful for tests that require staff-only routes.
   """
   def register_and_log_in_staff(%{conn: _conn} = context) do
-    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff_provider]})
+    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff]})
     provider = KlassHero.Factory.insert(:provider_profile_schema)
 
     staff =
@@ -225,19 +225,22 @@ defmodule KlassHeroWeb.ConnCase do
 
       setup :register_and_log_in_draft_provider
 
-  Simulates a staff member who opted into provider role during activation.
-  The provider profile is in draft status (needs completion).
-  Includes a linked staff member with bio and tags for pre-fill testing.
+  Simulates a staff member who deliberately upgraded to provider (#968,
+  ADR-0005): their own provider profile is in draft status (needs completion),
+  while their staff membership belongs to a SEPARATE employer's business.
+  Includes that staff member with bio and tags for pre-fill testing.
   """
   def register_and_log_in_draft_provider(%{conn: _conn} = context) do
-    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff_provider, :provider]})
+    user = AccountsFixtures.user_fixture(%{intended_roles: [:staff, :provider]})
 
     provider =
       KlassHero.Factory.insert(:draft_provider_profile_schema, identity_id: user.id)
 
+    employer = KlassHero.ProviderFixtures.provider_profile_fixture()
+
     staff =
       KlassHero.ProviderFixtures.staff_member_fixture(%{
-        provider_id: provider.id,
+        provider_id: employer.id,
         user_id: user.id,
         active: true,
         invitation_status: :accepted,

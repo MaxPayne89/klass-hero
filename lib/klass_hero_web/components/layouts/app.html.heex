@@ -73,18 +73,7 @@
             <!-- Messages Indicator -->
             <.messages_indicator
               unread_count={assigns[:total_unread_count] || 0}
-              href={
-                cond do
-                  :provider in (@current_scope.user.intended_roles || []) ->
-                    ~p"/provider/messages"
-
-                  :staff_provider in (@current_scope.user.intended_roles || []) ->
-                    ~p"/staff/messages"
-
-                  true ->
-                    ~p"/messages"
-                end
-              }
+              href={RoleRouting.messages_path(@current_scope.user.intended_roles || [])}
             />
             
 <!-- Authenticated User Dropdown -->
@@ -217,18 +206,7 @@
             </li>
             <li>
               <.link
-                navigate={
-                  cond do
-                    :provider in (@current_scope.user.intended_roles || []) ->
-                      ~p"/provider/messages"
-
-                    :staff_provider in (@current_scope.user.intended_roles || []) ->
-                      ~p"/staff/messages"
-
-                    true ->
-                      ~p"/messages"
-                  end
-                }
+                navigate={RoleRouting.messages_path(@current_scope.user.intended_roles || [])}
                 class="flex items-center justify-between"
               >
                 {gettext("Messages")}

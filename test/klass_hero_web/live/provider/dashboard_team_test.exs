@@ -3,6 +3,7 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
 
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Models.PayRate
   alias KlassHero.ProviderFixtures
 

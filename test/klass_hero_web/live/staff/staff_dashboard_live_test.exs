@@ -5,11 +5,12 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   import KlassHero.Factory, only: [insert: 2]
   import KlassHero.ProviderFixtures
 
+  alias KlassHero.Accounts.User
   alias KlassHero.Provider.Domain.Models.PayRate
 
   describe "staff dashboard" do
     setup %{conn: conn} do
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
       provider = provider_profile_fixture()
 
       staff =
@@ -149,7 +150,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider =
         provider_profile_fixture()
 
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
 
       staff =
         staff_member_fixture(%{
@@ -262,7 +263,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   describe "staff roster messaging controls (former starter-tier provider)" do
     setup %{conn: conn} do
       provider = provider_profile_fixture()
-      user = user_fixture(intended_roles: [:staff_provider])
+      user = user_fixture(intended_roles: [:staff])
 
       staff =
         staff_member_fixture(%{
@@ -325,25 +326,125 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
     end
   end
 
+  # Shared wiring: a staff-only user (no provider profile of their own),
+  # employed at someone else's business, logged in.
+  defp staff_only_setup(%{conn: conn}) do
+    user = user_fixture(intended_roles: [:staff])
+    provider = provider_profile_fixture()
+
+    staff =
+      staff_member_fixture(%{
+        provider_id: provider.id,
+        user_id: user.id,
+        active: true,
+        invitation_status: :accepted
+      })
+
+    %{conn: log_in_user(conn, user), user: user, provider: provider, staff: staff}
+  end
+
   describe "cross-navigation for staff-only users" do
-    setup %{conn: conn} do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
-      provider = KlassHero.ProviderFixtures.provider_profile_fixture()
-
-      staff =
-        KlassHero.ProviderFixtures.staff_member_fixture(
-          provider_id: provider.id,
-          user_id: user.id,
-          invitation_status: :accepted
-        )
-
-      conn = log_in_user(conn, user)
-      %{conn: conn, user: user, staff: staff}
-    end
+    setup :staff_only_setup
 
     test "does NOT show link to provider dashboard for staff-only users", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
       refute has_element?(view, "#cross-nav-provider-link")
+    end
+  end
+
+  describe "become a provider CTA (#968)" do
+    setup :staff_only_setup
+
+    test "staff-only user sees the CTA", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      assert has_element?(view, "#become-provider-cta")
+      assert has_element?(view, "#become-provider-cta-button")
+    end
+
+    test "user with their own provider profile sees no CTA", %{conn: conn, user: user} do
+      provider_profile_fixture(identity_id: user.id)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      refute has_element?(view, "#become-provider-cta")
+    end
+
+    test "clicking the CTA reveals the confirm step", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      refute has_element?(view, "#become-provider-confirm")
+
+      view |> element("#become-provider-cta-button") |> render_click()
+
+      assert has_element?(view, "#become-provider-confirm")
+      assert has_element?(view, "#become-provider-confirm-button")
+      assert has_element?(view, "#become-provider-cancel-button")
+    end
+
+    test "cancelling the confirm step returns to the CTA", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      view |> element("#become-provider-cta-button") |> render_click()
+      view |> element("#become-provider-cancel-button") |> render_click()
+
+      refute has_element?(view, "#become-provider-confirm")
+      assert has_element?(view, "#become-provider-cta-button")
+    end
+
+    test "confirming creates the draft profile, grants :provider, and navigates to profile completion",
+         %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      view |> element("#become-provider-cta-button") |> render_click()
+      view |> element("#become-provider-confirm-button") |> render_click()
+
+      assert_redirect(view, ~p"/provider/complete-profile")
+
+      # Both writes completed synchronously before the redirect.
+      assert {:ok, profile} = KlassHero.Provider.get_provider_by_identity(user.id)
+      assert profile.profile_status == :draft
+
+      reloaded = KlassHero.Repo.get!(User, user.id)
+      assert :provider in reloaded.intended_roles
+      assert :staff in reloaded.intended_roles
+    end
+
+    test "a crafted confirm event from an existing provider creates no second profile", %{
+      conn: conn,
+      user: user
+    } do
+      existing = provider_profile_fixture(identity_id: user.id)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      # No CTA rendered, but a client can still push the event.
+      render_click(view, "confirm_provider_upgrade", %{})
+
+      assert {:ok, profile} = KlassHero.Provider.get_provider_by_identity(user.id)
+      assert profile.id == existing.id
+      refute :provider in KlassHero.Repo.get!(User, user.id).intended_roles
+    end
+
+    test "stale tab: confirming after upgrading elsewhere re-converges the whole page", %{
+      conn: conn,
+      user: user
+    } do
+      # Mount while still staff-only — CTA visible, no cross-nav link.
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+      assert has_element?(view, "#become-provider-cta")
+      refute has_element?(view, "#cross-nav-provider-link")
+
+      # The upgrade happens in another tab.
+      provider_profile_fixture(identity_id: user.id)
+
+      view |> element("#become-provider-cta-button") |> render_click()
+      view |> element("#become-provider-confirm-button") |> render_click()
+
+      # The page converges to provider truth: CTA gone AND the provider
+      # dashboard link appears — not one without the other.
+      refute has_element?(view, "#become-provider-cta")
+      assert has_element?(view, "#cross-nav-provider-link")
     end
   end
 end

@@ -23,8 +23,9 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
   - `:staff_invitation_failed` - Emitted when a staff invitation email failed (critical).
     The Provider context reacts to update the staff member's invitation status.
 
-  - `:staff_user_registered` - Emitted when a staff member completes registration (critical).
-    The Provider context reacts to activate the staff member.
+  - `:staff_user_registered` - Emitted to link a user to their staff membership (critical).
+    The Provider context reacts to set `StaffMember.user_id` and accept the invitation —
+    no provider profile is created (ADR-0005).
   """
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -52,8 +53,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
           required(:user_id) => String.t(),
           required(:staff_member_id) => String.t(),
           required(:provider_id) => String.t(),
-          optional(:create_provider_profile) => boolean(),
-          optional(:user_name) => String.t(),
           optional(atom()) => term()
         }
 

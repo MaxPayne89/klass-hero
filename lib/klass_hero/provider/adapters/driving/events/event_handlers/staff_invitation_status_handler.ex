@@ -14,7 +14,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
-  alias KlassHero.Provider.Application.Commands.Providers.CreateProviderProfile
+  alias KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvitation
   alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -44,71 +44,50 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
   def handle_event(%IntegrationEvent{event_type: :staff_user_registered, payload: payload}) do
     payload = MapperHelpers.normalize_keys(payload)
 
+    # Links the User to the StaffMember and accepts the invitation via the same
+    # command the synchronous one-click path uses (single definition of "link").
+    # Per ADR-0005 this never creates a ProviderProfile.
     with {:ok, user_id} <- Map.fetch(payload, :user_id),
-         :ok <-
-           transition_and_persist(payload, :accepted, fn transitioned ->
-             %{transitioned | user_id: user_id}
-           end) do
-      if payload[:create_provider_profile] do
-        maybe_create_provider_profile(user_id, payload)
-      else
-        :ok
-      end
+         {:ok, staff_member_id} <- Map.fetch(payload, :staff_member_id),
+         {:ok, staff} <- @staff_query.get(staff_member_id) do
+      accept_idempotently(staff, user_id)
     else
       :error ->
-        Logger.error("[StaffInvitationStatusHandler] Missing :user_id in staff_user_registered payload")
-
+        Logger.error("[StaffInvitationStatusHandler] Missing :user_id/:staff_member_id in payload")
         {:error, :invalid_payload}
 
       {:error, reason} ->
+        Logger.error("[StaffInvitationStatusHandler] Staff member lookup failed",
+          reason: inspect(reason)
+        )
+
         {:error, reason}
     end
   end
 
   def handle_event(_event), do: :ignore
 
-  defp maybe_create_provider_profile(user_id, payload) do
-    # Check existence first to avoid a failed INSERT that taints the
-    # wrapping Repo.transaction (Postgres constraint errors are not recoverable
-    # within the same transaction, even if we catch them in Elixir).
-    if KlassHero.Provider.has_provider_profile?(user_id) do
-      Logger.info("[StaffInvitationStatusHandler] Provider profile already exists",
-        user_id: user_id
-      )
+  # Idempotent for at-least-once delivery: a replay whose invitation is already
+  # past :sent/:pending (e.g. already :accepted) is treated as success.
+  defp accept_idempotently(staff, user_id) do
+    case AcceptStaffInvitation.execute(staff, user_id) do
+      {:ok, _staff} ->
+        :ok
 
-      :ok
-    else
-      business_name = payload[:user_name] || "My Business"
+      {:error, :invalid_invitation_transition} ->
+        Logger.info("[StaffInvitationStatusHandler] Skipping accept (already past)",
+          staff_member_id: staff.id
+        )
 
-      case CreateProviderProfile.execute(%{
-             identity_id: user_id,
-             business_name: business_name,
-             originated_from: :staff_invite,
-             profile_status: :draft
-           }) do
-        {:ok, profile} ->
-          Logger.info("[StaffInvitationStatusHandler] Created provider profile for staff user",
-            user_id: user_id,
-            provider_id: profile.id
-          )
+        :ok
 
-          :ok
+      {:error, reason} ->
+        Logger.error("[StaffInvitationStatusHandler] Failed to accept invitation",
+          staff_member_id: staff.id,
+          reason: inspect(reason)
+        )
 
-        {:error, :duplicate_resource} ->
-          Logger.info("[StaffInvitationStatusHandler] Provider profile already exists (race)",
-            user_id: user_id
-          )
-
-          :ok
-
-        {:error, reason} ->
-          Logger.error("[StaffInvitationStatusHandler] Failed to create provider profile",
-            user_id: user_id,
-            reason: inspect(reason)
-          )
-
-          {:error, reason}
-      end
+        {:error, reason}
     end
   end
 

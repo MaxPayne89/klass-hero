@@ -81,6 +81,28 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
   end
 
   @impl true
+  def append_intended_role(%User{} = user, role) when is_atom(role) do
+    span do
+      set_attributes("db", operation: "update", entity: "user")
+
+      user
+      |> User.add_role_changeset(role)
+      |> Repo.update()
+    end
+  end
+
+  @impl true
+  def remove_intended_role(%User{} = user, role) when is_atom(role) do
+    span do
+      set_attributes("db", operation: "update", entity: "user")
+
+      user
+      |> User.remove_role_changeset(role)
+      |> Repo.update()
+    end
+  end
+
+  @impl true
   def anonymize(%User{} = user) do
     span do
       set_attributes("db", operation: "update", entity: "user")

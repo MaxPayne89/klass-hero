@@ -305,9 +305,11 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
 
     # Regression for PR #678 review: a user with active staff_member rows at
     # multiple providers must be authorised for *each* provider's broadcasts —
-    # not just the most recently inserted one. The pre-fix adapter delegated to
-    # `Provider.get_active_staff_member_by_user/1`, which returns the latest
-    # row only and would wrongly deny posts in older providers' broadcasts.
+    # not just the one the scope resolves to. The pre-fix adapter delegated to
+    # `Provider.get_active_staff_member_by_user/1`, which returns a single row
+    # (today: selection-ordered — last_selected_at, employer-first, newest;
+    # #969 switcher) and would wrongly deny posts in the other providers'
+    # broadcasts.
     test "allows staff active at multiple providers to send in non-latest provider's broadcast" do
       staff_user = AccountsFixtures.user_fixture()
 
@@ -321,8 +323,8 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
         active: true
       )
 
-      # Newer active staff_member at provider B (will be returned first by
-      # `get_active_staff_member_by_user/1` due to `order_by: desc(inserted_at)`)
+      # Newer active staff_member at provider B (the scope-resolved row here:
+      # no selection and both are employer rows, so newest wins)
       provider_b = insert(:provider_profile_schema)
 
       insert(:staff_member_schema,

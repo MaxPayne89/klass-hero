@@ -57,8 +57,7 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfileCompletionTest do
           id: "550e8400-e29b-41d4-a716-446655440000",
           identity_id: "660e8400-e29b-41d4-a716-446655440001",
           business_name: "My Business",
-          profile_status: :draft,
-          originated_from: :staff_invite
+          profile_status: :draft
         })
 
       %{draft: draft}
@@ -82,13 +81,12 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfileCompletionTest do
       assert completed.categories == ["sports", "outdoor"]
     end
 
-    test "preserves identity_id, id, and originated_from", %{draft: draft} do
+    test "preserves identity_id and id", %{draft: draft} do
       attrs = %{description: "A description", business_name: "New Name"}
 
       assert {:ok, completed} = ProviderProfile.complete_profile(draft, attrs)
       assert completed.id == draft.id
       assert completed.identity_id == draft.identity_id
-      assert completed.originated_from == :staff_invite
     end
 
     test "returns error for invalid attrs", %{draft: draft} do

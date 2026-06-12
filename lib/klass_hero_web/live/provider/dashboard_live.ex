@@ -12,6 +12,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   import KlassHeroWeb.ProviderComponents
 
+  alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
@@ -22,6 +23,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Entitlements
+  alias KlassHero.Shared.NameUtils
   alias KlassHero.Shared.Storage
   alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.ProgramPresenter
@@ -93,6 +95,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           |> assign(business: business)
           |> assign(:profile_draft?, ProviderProfile.draft?(provider_profile))
           |> assign(:dual_role?, Scope.dual_role?(socket.assigns.current_scope))
+          |> assign(:self_staffed?, self_staffed?(staff_members, socket.assigns.current_scope))
+          |> assign(:self_staffing?, false)
           |> stream(:team_members, staff_views)
           |> update_staff_count(length(staff_views))
           |> stream(:programs, programs)
@@ -324,8 +328,25 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   def handle_event("add_member", _params, socket) do
     {:noreply,
      socket
-     |> assign(show_staff_form: true, editing_staff_id: nil)
+     |> assign(show_staff_form: true, editing_staff_id: nil, self_staffing?: false)
      |> assign(staff_form: to_form(Provider.new_staff_member_changeset()))}
+  end
+
+  @impl true
+  def handle_event("add_self", _params, socket) do
+    user = socket.assigns.current_scope.user
+    {first_name, last_name} = NameUtils.split_first_last(user.name)
+
+    prefill = %{
+      "first_name" => first_name,
+      "last_name" => last_name,
+      "email" => user.email
+    }
+
+    {:noreply,
+     socket
+     |> assign(show_staff_form: true, editing_staff_id: nil, self_staffing?: true)
+     |> assign(staff_form: to_form(Provider.new_staff_member_changeset(prefill)))}
   end
 
   @impl true
@@ -336,7 +357,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
         {:noreply,
          socket
-         |> assign(show_staff_form: true, editing_staff_id: staff_id)
+         |> assign(show_staff_form: true, editing_staff_id: staff_id, self_staffing?: false)
          |> assign(staff_form: to_form(changeset))}
 
       {:error, :not_found} ->
@@ -346,7 +367,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   @impl true
   def handle_event("close_staff_form", _params, socket) do
-    {:noreply, assign(socket, show_staff_form: false)}
+    {:noreply, assign(socket, show_staff_form: false, self_staffing?: false)}
   end
 
   @impl true
@@ -383,20 +404,24 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     # Outcome: include headshot_url in attrs if upload succeeded
     headshot_result = upload_headshot(socket, provider.id)
 
-    case socket.assigns.editing_staff_id do
-      nil -> save_new_staff(socket, params, provider, headshot_result)
-      staff_id -> save_existing_staff(socket, params, staff_id, headshot_result)
+    case {socket.assigns.editing_staff_id, socket.assigns.self_staffing?} do
+      {nil, true} -> save_self_staff(socket, params, headshot_result)
+      {nil, false} -> save_new_staff(socket, params, provider, headshot_result)
+      {staff_id, _} -> save_existing_staff(socket, params, staff_id, headshot_result)
     end
   end
 
   @impl true
   def handle_event("delete_member", %{"id" => staff_id}, socket) do
-    case Provider.delete_staff_member(staff_id) do
-      :ok ->
+    # Accounts orchestrates: it deletes the Provider row AND durably drops :staff
+    # when no other active linked row remains (#972), atomically.
+    case Accounts.remove_staff_member(staff_id) do
+      {:ok, deleted} ->
         {:noreply,
          socket
          |> stream_delete_by_dom_id(:team_members, "team_members-#{staff_id}")
          |> update_staff_count(max(0, socket.assigns.staff_count - 1))
+         |> heal_after_self_delete({:ok, deleted})
          |> clear_flash(:error)
          |> put_flash(:info, gettext("Team member removed."))}
 
@@ -1183,6 +1208,90 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
+  defp save_self_staff(socket, params, headshot_result) do
+    {headshot_status, attrs} =
+      params
+      |> atomize_staff_params()
+      |> maybe_add_headshot(headshot_result)
+
+    case Accounts.add_self_as_staff(socket.assigns.current_scope.user, attrs) do
+      {:ok, _user, staff} ->
+        handle_self_staffed(socket, staff, headshot_status)
+
+      {:error, :already_staffed} ->
+        # Stale tab: they self-staffed elsewhere. The row exists but isn't in
+        # this tab's memory, so converge the whole page: flags, nav, roster.
+        staff_views =
+          socket.assigns.current_scope.provider.id
+          |> fetch_staff_members()
+          |> StaffMemberPresenter.to_admin_view_list()
+
+        {:noreply,
+         socket
+         |> stream(:team_members, staff_views, reset: true)
+         |> update_staff_count(length(staff_views))
+         |> assign(show_staff_form: false, self_staffing?: false)
+         |> assign(self_staffed?: true, dual_role?: true)
+         |> put_flash(:info, gettext("You're already on your team."))}
+
+      {:error, {:validation_error, _errors}} ->
+        changeset =
+          params
+          |> normalize_staff_form_params()
+          |> Provider.new_staff_member_changeset()
+          |> Map.put(:action, :validate)
+
+        {:noreply,
+         socket
+         |> assign(staff_form: to_form(changeset))
+         |> put_flash(:error, gettext("Please fix the errors below."))}
+
+      {:error, reason} ->
+        Logger.error("Failed to self-staff provider",
+          user_id: socket.assigns.current_scope.user.id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Could not add you to the team. Please try again."))}
+    end
+  end
+
+  defp self_staffed?(staff_members, scope) do
+    Enum.any?(staff_members, &(&1.user_id == scope.user.id and &1.active))
+  end
+
+  # The provider just deleted their OWN staff row: the self-staff CTA must
+  # come back, and the staff-dashboard cross-nav only stays if they're still
+  # active staff somewhere else (multi-employer).
+  defp heal_after_self_delete(socket, {:ok, %{user_id: user_id}}) do
+    if user_id == socket.assigns.current_scope.user.id do
+      still_staff_somewhere? =
+        match?({:ok, _}, Provider.get_active_staff_member_by_user(user_id))
+
+      assign(socket, self_staffed?: false, dual_role?: still_staff_somewhere?)
+    else
+      socket
+    end
+  end
+
+  defp heal_after_self_delete(socket, _not_found), do: socket
+
+  defp handle_self_staffed(socket, staff, headshot_status) do
+    flash_msg =
+      if headshot_status == :headshot_failed,
+        do: gettext("You're on the team, but the headshot upload failed."),
+        else: gettext("You're on the team — you can now be assigned to programs.")
+
+    {:noreply,
+     socket
+     |> stream_insert(:team_members, StaffMemberPresenter.to_admin_view(staff))
+     |> update_staff_count(socket.assigns.staff_count + 1)
+     |> assign(show_staff_form: false, self_staffing?: false)
+     |> assign(self_staffed?: true, dual_role?: true)
+     |> clear_flash(:error)
+     |> put_flash(:info, flash_msg)}
+  end
+
   defp handle_staff_created(socket, staff, headshot_status) do
     view = StaffMemberPresenter.to_admin_view(staff)
 
@@ -1305,6 +1414,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
                 staff_form={@staff_form}
                 uploads={@uploads}
                 categories={@categories}
+                self_staffed?={@self_staffed?}
+                self_staffing?={@self_staffing?}
               />
             <% :programs -> %>
               <.programs_section
@@ -1650,15 +1761,27 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
             )}
           </p>
         </div>
-        <.kh_button
-          id="add-member-btn"
-          variant={:yellow}
-          size={:sm}
-          icon="hero-user-plus-mini"
-          phx-click="add_member"
-        >
-          {gettext("Add Team Member")}
-        </.kh_button>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <.kh_button
+            :if={not @self_staffed?}
+            id="self-staff-btn"
+            variant={:secondary}
+            size={:sm}
+            icon="hero-academic-cap-mini"
+            phx-click="add_self"
+          >
+            {gettext("I'll be teaching")}
+          </.kh_button>
+          <.kh_button
+            id="add-member-btn"
+            variant={:yellow}
+            size={:sm}
+            icon="hero-user-plus-mini"
+            phx-click="add_member"
+          >
+            {gettext("Add Team Member")}
+          </.kh_button>
+        </div>
       </div>
 
       <%= if @show_staff_form do %>
@@ -1667,6 +1790,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           editing={@editing_staff_id != nil}
           uploads={@uploads}
           categories={@categories}
+          email_readonly={@self_staffing?}
         />
       <% end %>
 

@@ -103,35 +103,4 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
       assert Ecto.Changeset.get_change(changeset, :subscription_tier) == nil
     end
   end
-
-  describe "originated_from field" do
-    test "changeset accepts originated_from" do
-      attrs = %{
-        identity_id: Ecto.UUID.generate(),
-        business_name: "Test Biz",
-        originated_from: "staff_invite"
-      }
-
-      changeset = ProviderProfileSchema.changeset(%ProviderProfileSchema{}, attrs)
-      assert changeset.valid?
-      assert Ecto.Changeset.get_change(changeset, :originated_from) == "staff_invite"
-    end
-
-    test "changeset validates originated_from values" do
-      attrs = %{
-        identity_id: Ecto.UUID.generate(),
-        business_name: "Test Biz",
-        originated_from: "invalid"
-      }
-
-      changeset = ProviderProfileSchema.changeset(%ProviderProfileSchema{}, attrs)
-      refute changeset.valid?
-      assert {"is not a valid origin", _} = changeset.errors[:originated_from]
-    end
-
-    test "defaults to 'direct' in schema" do
-      schema = %ProviderProfileSchema{}
-      assert schema.originated_from == "direct"
-    end
-  end
 end

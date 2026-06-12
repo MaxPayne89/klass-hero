@@ -512,24 +512,32 @@ defmodule KlassHero.AccountsTest do
     end
   end
 
-  describe "emit_staff_user_registered/4" do
-    test "includes create_provider_profile in event payload when passed" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
-      staff_member_id = Ecto.UUID.generate()
-      provider_id = Ecto.UUID.generate()
-
-      assert :ok =
-               Accounts.emit_staff_user_registered(user.id, staff_member_id, provider_id, %{
-                 create_provider_profile: true
-               })
-    end
-
-    test "works without opts (backwards compatible)" do
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff_provider])
+  describe "emit_staff_user_registered/3" do
+    test "publishes the staff linkage event" do
+      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       staff_member_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
       assert :ok = Accounts.emit_staff_user_registered(user.id, staff_member_id, provider_id)
+    end
+  end
+
+  describe "emails_match?/2" do
+    test "matches identical emails" do
+      assert Accounts.emails_match?("a@example.com", "a@example.com")
+    end
+
+    test "matches case-insensitively, ignoring surrounding whitespace" do
+      assert Accounts.emails_match?("  A@Example.COM ", "a@example.com")
+    end
+
+    test "does not match different emails" do
+      refute Accounts.emails_match?("a@example.com", "b@example.com")
+    end
+
+    test "nil never matches a real email" do
+      refute Accounts.emails_match?(nil, "a@example.com")
+      refute Accounts.emails_match?("a@example.com", nil)
     end
   end
 end

@@ -51,6 +51,10 @@ defmodule KlassHero.ProviderFixtures do
 
   Uses the schema directly to insert into database, then maps to domain model.
   Supports invitation fields: invitation_status, invitation_token_hash, invitation_sent_at, user_id.
+
+  Also accepts `:inserted_at` and `:last_selected_at` timestamp overrides for
+  selection-ordering tests — applied AFTER insert via `update_all`, since both
+  fields are deliberately absent from every changeset cast list.
   """
   def staff_member_fixture(attrs \\ %{}) do
     defaults = %{
@@ -60,6 +64,11 @@ defmodule KlassHero.ProviderFixtures do
     }
 
     merged = Map.merge(defaults, Map.new(attrs))
+
+    # Timestamp overrides bypass changesets entirely — applied last via update_all.
+    timestamp_keys = [:inserted_at, :last_selected_at]
+    timestamp_overrides = Map.take(merged, timestamp_keys)
+    merged = Map.drop(merged, timestamp_keys)
 
     # Invitation fields are applied via invitation_changeset after initial insert
     invitation_keys = [:invitation_status, :invitation_token_hash, :invitation_sent_at, :user_id]
@@ -94,7 +103,23 @@ defmodule KlassHero.ProviderFixtures do
         schema
       end
 
+    schema = apply_timestamp_overrides(schema, timestamp_overrides)
+
     StaffMemberMapper.to_domain(schema)
+  end
+
+  defp apply_timestamp_overrides(schema, overrides) when map_size(overrides) == 0, do: schema
+
+  defp apply_timestamp_overrides(schema, overrides) do
+    import Ecto.Query, only: [from: 2]
+
+    {1, _} =
+      Repo.update_all(
+        from(s in StaffMemberSchema, where: s.id == ^schema.id),
+        set: Map.to_list(overrides)
+      )
+
+    Repo.get!(StaffMemberSchema, schema.id)
   end
 
   @doc """
@@ -207,9 +232,7 @@ defmodule KlassHero.ProviderFixtures do
     attrs_map = Map.new(attrs)
 
     user =
-      KlassHero.AccountsFixtures.user_fixture(
-        intended_roles: attrs_map[:intended_roles] || [:staff_provider, :provider]
-      )
+      KlassHero.AccountsFixtures.user_fixture(intended_roles: attrs_map[:intended_roles] || [:staff, :provider])
 
     provider = provider_profile_fixture(identity_id: attrs_map[:identity_id] || user.id)
 
