@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.53.0](https://github.com/MaxPayne89/klass-hero/compare/v0.52.0...v0.53.0) (2026-06-12)
+
+
+### Features
+
+* separate Provider from Staff Member as independent personas (ADR-0005) ([#973](https://github.com/MaxPayne89/klass-hero/issues/973)) ([ecdae28](https://github.com/MaxPayne89/klass-hero/commit/ecdae28c27ab63e96f71495c2d3e3aa4e2bec1b4))
+
 ## [0.52.0](https://github.com/MaxPayne89/klass-hero/compare/v0.51.4...v0.52.0) (2026-06-07)
 
 
