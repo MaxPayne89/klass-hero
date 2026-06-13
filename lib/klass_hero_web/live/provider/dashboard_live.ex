@@ -46,10 +46,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       provider_profile ->
         business = ProviderPresenter.to_business_view(provider_profile)
 
-        # Trigger: to_business_view defaults verification_status to :not_started
-        # Why: full docs-based derivation happens in handle_params(:overview),
-        #      but other tabs need a baseline so the "New Program" button gating works
-        # Outcome: verified providers get :verified immediately; detail refinement on overview tab
+        # Other tabs need a baseline; :overview refines from docs. Verified providers get :verified immediately.
         business =
           if provider_profile.verified do
             %{business | verification_status: :verified}
@@ -85,10 +82,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           [%{value: "all", label: gettext("All Staff")}] ++
             Enum.map(staff_views, &%{value: &1.id, label: &1.full_name})
 
-        # Trigger: uploads registered unconditionally in mount
-        # Why: allow_upload must happen once; registering in handle_params
-        #      would cause double-registration errors when patching between actions
-        # Outcome: upload channels are inert on non-edit tabs (no UI renders them)
+        # allow_upload must happen once in mount; re-registering in handle_params causes double-registration errors.
         socket =
           socket
           |> assign(page_title: gettext("Provider Dashboard"))
@@ -188,9 +182,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   def handle_params(_params, _uri, %{assigns: %{live_action: :overview}} = socket) do
     provider = socket.assigns.current_scope.provider
 
-    # Trigger: overview tab needs verification status derived from documents
-    # Why: provider.verified alone is boolean; documents give granular status
-    # Outcome: business map gets :verification_status (:verified/:pending/:rejected/:not_started)
     docs = fetch_verification_docs(provider.id)
 
     verification_status =
@@ -258,10 +249,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     {:noreply, assign(socket, active_nav: :home)}
   end
 
-  # ============================================================================
-  # PubSub Handlers
-  # ============================================================================
-
   @impl true
   def handle_info(:session_stats_updated, %{assigns: %{live_action: :overview}} = socket) do
     provider = socket.assigns.current_scope.provider
@@ -280,10 +267,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
-
-  # ============================================================================
-  # Pending Enrollment Events
-  # ============================================================================
 
   @impl true
   def handle_event("approve_enrollment", %{"id" => enrollment_id}, socket) do
@@ -319,10 +302,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         {:noreply, put_flash(socket, :error, gettext("Failed to approve"))}
     end
   end
-
-  # ============================================================================
-  # Staff Member CRUD Events
-  # ============================================================================
 
   @impl true
   def handle_event("add_member", _params, socket) do
@@ -380,9 +359,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           Provider.new_staff_member_changeset(params)
 
         staff_id ->
-          # Trigger: staff member may have been deleted between form open and keystroke
-          # Why: bare match on {:ok, _} would crash if member no longer exists
-          # Outcome: fall back to new changeset, preserving user's typed data
+          # Member may have been deleted between form open and keystroke; fall back to new changeset.
           case Provider.get_staff_member(staff_id) do
             {:ok, staff} ->
               Provider.change_staff_member(staff, params)
@@ -399,9 +376,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   def handle_event("save_staff", %{"staff_member_schema" => params}, socket) do
     provider = socket.assigns.current_scope.provider
 
-    # Trigger: headshot upload may be present or absent
-    # Why: staff member can be saved without a headshot
-    # Outcome: include headshot_url in attrs if upload succeeded
     headshot_result = upload_headshot(socket, provider.id)
 
     case {socket.assigns.editing_staff_id, socket.assigns.self_staffing?} do
@@ -462,10 +436,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
-  # ============================================================================
-  # Edit Profile Events
-  # ============================================================================
-
   @impl true
   def handle_event("validate_profile", %{"provider_profile_schema" => params}, socket) do
     provider = socket.assigns.current_scope.provider
@@ -479,9 +449,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     provider = socket.assigns.current_scope.provider
     Logger.info("save_profile: starting", provider_id: provider.id)
 
-    # Trigger: logo upload may succeed, be absent, or fail
-    # Why: provider can save without a new logo, but upload failures must not be silently ignored
-    # Outcome: :upload_error aborts save; :no_upload proceeds without logo; {:ok, url} includes logo
     logo_result = upload_logo(socket, provider.id)
     Logger.info("save_profile: logo upload result", provider_id: provider.id, result: logo_result)
 
@@ -588,10 +555,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     {:noreply, cancel_upload(socket, String.to_existing_atom(upload_name), ref)}
   end
 
-  # ============================================================================
-  # Program Creation Events
-  # ============================================================================
-
   @impl true
   def handle_event("add_program", _params, socket) do
     # Trigger: header CTA fires from any tab, but the program form lives in
@@ -612,9 +575,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   def handle_event("edit_program", %{"id" => program_id}, socket) do
     case ProgramCatalog.get_program_by_id(program_id) do
       {:ok, program} ->
-        # Trigger: pre-populate the form with existing program data
-        # Why: reuse the same program_form component for both create and edit
-        # Outcome: form opens with current values, submit handler checks editing_program_id
         changeset = ProgramCatalog.new_program_changeset(program_to_form_params(program))
 
         {:noreply,
@@ -637,9 +597,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   def handle_event("view_roster", %{"id" => program_id}, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    # Trigger: program_id comes from client params (untrusted)
-    # Why: without ownership check, any provider could view another's roster (IDOR)
-    # Outcome: verify program belongs to logged-in provider before loading data
+    # Verify ownership before loading — program_id is untrusted client input (IDOR guard).
     with {:ok, program} <- ProgramCatalog.get_program_by_id(program_id),
          true <- program.provider_id == provider_id do
       roster = Enrollment.list_program_enrollments(program_id)
@@ -692,14 +650,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
      )}
   end
 
-  # Trigger: "View sessions" action button on a row in the programs table
-  # Why: program_id comes from client params (untrusted) — list_by_program is
-  #      scoped to the provider_id from the server-side scope, so cross-provider
-  #      peeking is impossible even if the client spoofs the id. The modal's
-  #      title is derived from the authoritative projection result (not client
-  #      params) to avoid displaying a spoofed title.
-  # Outcome: modal opens with the program's sessions (empty list is valid);
-  #          title falls back to a generic label when the program has zero sessions.
+  # list_program_sessions/2 is scoped to provider_id, so a spoofed program_id leaks nothing.
+  # Title is derived from the projection result, not client params.
   @impl true
   def handle_event("view_sessions", %{"program-id" => program_id}, socket) do
     provider_id = socket.assigns.current_scope.provider.id
@@ -730,9 +682,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     provider_id = scope.provider.id
     roster_entries = socket.assigns.roster_entries
 
-    # Trigger: parent_user_id comes from client — could be tampered
-    # Why: validate against server-side roster to prevent messaging unauthorized parents
-    # Outcome: rejects requests for non-roster or unconfirmed enrollments
+    # parent_user_id is untrusted; validate against server-side roster to block unauthorized messaging.
     valid_confirmed? =
       Enum.any?(roster_entries, fn entry ->
         entry.parent_user_id == parent_user_id and entry.status == :confirmed
@@ -828,10 +778,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     provider_id = socket.assigns.current_scope.provider.id
     program_id = socket.assigns.roster_program_id
 
-    # Trigger: consume_uploaded_entries returns a list — may be empty if upload was cancelled
-    # Why: consume_uploaded_entries unwraps the outer {:ok, _} from the callback,
-    #      so we wrap File.read/1's result to preserve the inner {:ok, binary}/{:error, reason}
-    # Outcome: empty list or I/O failure produces user-facing flash error
+    # Wrap File.read/1 result so consume_uploaded_entries doesn't unwrap the inner {:ok, binary}.
     # sobelow_skip ["Traversal.FileModule"]
     case safe_consume_uploaded_entries(socket, :csv_file, fn %{path: path}, _entry ->
            {:ok, File.read(path)}
@@ -875,10 +822,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           {:ok, %{created: count, failed: failed}} ->
             socket = refresh_invites_silent(socket, program_id)
 
-            # Trigger: partial success — both `count` (imported) and `length(failed)` vary independently.
-            # Why: composing two ngettext calls keeps each plural rule independent so translators
-            #   can pluralise both halves correctly without combinatorial msgids.
-            # Outcome: e.g. "Imported 1 family. 2 rows could not be processed."
+            # Two separate ngettext calls keep plural rules independent — translators can pluralise each half correctly.
             imported_msg =
               ngettext("Imported %{count} family.", "Imported %{count} families.", count)
 
@@ -993,9 +937,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   def handle_event("save_program", %{"program_schema" => params} = all_params, socket) do
     provider = socket.assigns.current_scope.provider
 
-    # Trigger: cover image upload may succeed, be absent, or fail
-    # Why: upload failures warn but don't block program save
-    # Outcome: all results flow through; cover_failed appends warning flash after save
     cover_result = upload_program_cover(socket, provider.id)
 
     attrs =
@@ -1016,9 +957,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       }
       |> maybe_add_cover_image(cover_result)
 
-    # Trigger: editing_program_id is nil for new programs, a UUID for edits
-    # Why: reuse the same form and submit handler for both create and edit
-    # Outcome: dispatch to create_new_program or update_existing_program
     case socket.assigns.editing_program_id do
       nil ->
         create_new_program(socket, attrs, all_params, cover_result)
@@ -1027,10 +965,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         update_existing_program(socket, program_id, attrs, all_params, cover_result)
     end
   end
-
-  # ============================================================================
-  # Dashboard Tab Events
-  # ============================================================================
 
   @impl true
   def handle_event("search_programs", %{"search" => query}, socket) do
@@ -1047,10 +981,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
      |> assign(selected_staff: staff_id)
      |> reset_programs_stream()}
   end
-
-  # ============================================================================
-  # Program Save Helpers
-  # ============================================================================
 
   defp create_new_program(socket, attrs, all_params, cover_result) do
     program_params = all_params["program_schema"] || %{}
@@ -1111,9 +1041,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       policy_result = maybe_set_enrollment_policy(program_id, enrollment_params)
       set_participant_policy_on_update(program_id, participant_policy_params)
 
-      # Trigger: need enrollment data for the table view
-      # Why: preserve existing enrollment count, update capacity from policy
-      # Outcome: table row reflects updated program + current enrollment data
       capacity = resolve_capacity(policy_result, enrollment_params)
       active_counts = Enrollment.count_active_enrollments_batch([program_id])
       enrolled = Map.get(active_counts, program_id, 0)
@@ -1161,10 +1088,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
          |> put_flash(:error, gettext("Please fix the errors below."))}
     end
   end
-
-  # ============================================================================
-  # Staff Save Helpers
-  # ============================================================================
 
   defp save_new_staff(socket, params, provider, headshot_result) do
     {headshot_status, attrs} =
@@ -1359,10 +1282,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
-  # ============================================================================
-  # Render
-  # ============================================================================
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -1459,10 +1378,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   defp dashboard_tab(:programs), do: :programs
   defp dashboard_tab(_), do: :overview
 
-  # ============================================================================
-  # Profile Completion Banner
-  # ============================================================================
-
   defp profile_completion_banner(assigns) do
     ~H"""
     <div
@@ -1501,10 +1416,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     """
   end
 
-  # ============================================================================
-  # Edit Profile Template
-  # ============================================================================
-
   defp edit_profile_section(assigns) do
     ~H"""
     <div class="space-y-6">
@@ -1520,7 +1431,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
       <h1 class="text-2xl font-bold text-hero-charcoal">{gettext("Edit Profile")}</h1>
 
-      <%!-- Profile Form --%>
       <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
         <h2 class="text-lg font-semibold text-hero-charcoal mb-4">
           {gettext("Business Information")}
@@ -1541,7 +1451,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
             rows="4"
           />
 
-          <%!-- Logo Upload --%>
           <div>
             <label class="block text-sm font-semibold text-hero-charcoal mb-2">
               {gettext("Business Logo")}
@@ -1555,7 +1464,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
               ]}
               phx-drop-target={@uploads.logo.ref}
             >
-              <%!-- Current logo preview --%>
               <div :if={@business.initials} class="mb-4">
                 <div class={[
                   "w-16 h-16 mx-auto flex items-center justify-center text-white text-xl font-bold",
@@ -1634,10 +1542,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     """
   end
 
-  # ============================================================================
-  # Dashboard Tab Templates
-  # ============================================================================
-
   attr :business, :map, required: true
   attr :total_sessions_completed, :integer, required: true
   attr :active_program_count, :integer, required: true
@@ -1683,12 +1587,10 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         />
       </section>
 
-      <%!-- Earnings chart placeholder — empty data renders the coming-soon explainer. --%>
       <section id="provider-earnings-chart">
         <.pv_earnings_chart data={[]} />
       </section>
 
-      <%!-- Top programs + pending invites + pending enrollments side-by-side on desktop. --%>
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <.kh_card class="p-5">
           <div class="flex items-center justify-between mb-4">
@@ -1883,14 +1785,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     """
   end
 
-  # ============================================================================
-  # Upload Helpers
-  # ============================================================================
-
-  # Trigger: consume_uploaded_entries calls GenServer.call on the upload channel PID
-  # Why: if the WebSocket reconnects (tab sleep, network hiccup) the PID is dead
-  #      and an :exit propagates before the user callback runs
-  # Outcome: wraps the call so dead-channel crashes return a tagged error tuple
+  # Wraps consume_uploaded_entries to catch :exit when the upload channel PID dies (WebSocket reconnect/tab sleep).
   defp safe_consume_uploaded_entries(socket, upload_name, callback) do
     {:ok, consume_uploaded_entries(socket, upload_name, callback)}
   catch
@@ -1903,9 +1798,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       {:error, :upload_channel_died}
   end
 
-  # Trigger: upload entries may be empty (user didn't pick a file)
-  # Why: consume_uploaded_entries returns [] when no entries exist
-  # Outcome: {:ok, url} on success, :no_upload if no file selected, :upload_error on failure
   defp consume_single_upload(socket, upload_name, storage_prefix, provider_id) do
     case safe_consume_uploaded_entries(socket, upload_name, fn %{path: path}, entry ->
            try do
@@ -1916,9 +1808,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
              Storage.upload(:public, storage_path, file_binary, content_type: entry.client_type)
            catch
-             # Trigger: storage adapter raises (rescue) or process is dead (exit)
-             # Why: ExAws.request can raise; dead GenServer causes :exit
-             # Outcome: return error tuple so consume_uploaded_entries doesn't crash
+             # ExAws.request can raise; dead GenServer causes :exit — both must return an error tuple.
              kind, reason ->
                Logger.error("File upload failed",
                  upload: upload_name,
@@ -1931,9 +1821,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
            end
          end) do
       {:error, :upload_channel_died} -> :upload_error
-      # Trigger: consume_uploaded_entries unwraps {:ok, value} tuples
-      # Why: the callback returns {:ok, url}, but the list contains only the url string
-      # Outcome: match on a single-element list with a string URL
       {:ok, [url]} when is_binary(url) -> {:ok, url}
       {:ok, []} -> :no_upload
       {:ok, _other} -> :upload_error
@@ -1944,9 +1831,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     consume_single_upload(socket, :logo, "logos", provider_id)
   end
 
-  # Trigger: roster_program_id can be nil after close_roster fires
-  # Why: list_program_invites/1 guard requires binary — nil raises FunctionClauseError
-  # Outcome: nil program_id returns :no_program; valid id refreshes assigns
+  # nil program_id after close_roster: list_program_invites/1 guard requires binary, nil raises FunctionClauseError.
   defp refresh_invites(_socket, nil), do: {:error, :no_program}
 
   defp refresh_invites(socket, program_id) when is_binary(program_id) do
@@ -1955,9 +1840,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     {:ok, assign(socket, roster_invites: invites, roster_invite_count: invite_count)}
   end
 
-  # Trigger: caller doesn't need to distinguish success from no-program
-  # Why: avoids nesting a case inside an already-deep handler
-  # Outcome: returns the (possibly refreshed) socket unchanged on error
   defp refresh_invites_silent(socket, program_id) do
     case refresh_invites(socket, program_id) do
       {:ok, socket} -> socket
@@ -2126,10 +2008,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   defp atomize_staff_params(params) do
-    # Trigger: form params arrive as string keys with "" for unfilled optional fields
-    # Why: use cases and domain model expect atom keys; empty strings must become nil
-    #      for optional fields; hidden checkbox input sends [""] when unchecked
-    # Outcome: clean map ready for domain validation
     %{
       first_name: params["first_name"],
       last_name: params["last_name"],
@@ -2177,9 +2055,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   defp parse_decimal(%Decimal{} = d), do: d
 
   defp parse_decimal(value) when is_binary(value) do
-    # Trigger: user typed a non-numeric string in the price field
-    # Why: Decimal.new/1 raises on invalid input — must use parse/1 to avoid crash
-    # Outcome: nil lets downstream domain validation catch "price is required"
     value
     |> String.trim()
     |> Decimal.parse()
@@ -2233,9 +2108,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   defp parse_qualifications(quals) when is_list(quals), do: quals
 
-  # Trigger: validate_staff sends raw form params with qualifications as a comma-separated string
-  # Why: Ecto's cast rejects a plain string for {:array, :string} — must pre-parse before changeset
-  # Outcome: changeset receives a list, matching what atomize_staff_params does on the save path
+  # Ecto's {:array, :string} cast rejects a plain string; pre-parse to list before changeset.
   defp normalize_staff_form_params(params) do
     Map.put(params, "qualifications", parse_qualifications(params["qualifications"]))
   end
@@ -2253,9 +2126,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   defp maybe_add_cover_image(attrs, :upload_error), do: attrs
 
-  # Trigger: cover upload failed but program saved successfully
-  # Why: non-blocking UX — warn about upload failure without losing the program save
-  # Outcome: warning flash appended so user knows to retry the cover image
   defp maybe_flash_cover_warning(socket, :upload_error) do
     put_flash(
       socket,
@@ -2266,9 +2136,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   defp maybe_flash_cover_warning(socket, _cover_result), do: socket
 
-  # Trigger: instructor_id may be nil/"" (none selected) or a valid UUID
-  # Why: instructor is optional; when selected, we resolve display data from Provider
-  # Outcome: {:ok, attrs} enriched with instructor data, or {:error, :instructor_not_found}
   defp maybe_add_instructor(attrs, nil, _socket), do: {:ok, attrs}
   defp maybe_add_instructor(attrs, "", _socket), do: {:ok, attrs}
 
@@ -2317,9 +2184,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     Enum.map(members, fn m -> {Provider.staff_member_full_name(m), m.id} end)
   end
 
-  # Trigger: both capacity fields are blank
-  # Why: no policy needed when provider doesn't set capacity constraints
-  # Outcome: skip policy creation, return :ok
   defp maybe_set_enrollment_policy(program_id, params) do
     min = parse_integer(params["min_enrollment"])
     max = parse_integer(params["max_enrollment"])
@@ -2335,9 +2199,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         {:ok, _policy} ->
           :ok
 
-        # Trigger: policy save failed (e.g. min > max validation)
-        # Why: program already created — don't roll back, but warn provider
-        # Outcome: propagate error so with chain shows a warning flash
+        # Program already created — don't roll back, propagate error to show a warning flash.
         {:error, reason} ->
           Logger.warning("[Provider.DashboardLive] Failed to save enrollment policy",
             program_id: program_id,
@@ -2349,9 +2211,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
-  # Trigger: program just created and has no policy row yet
-  # Why: avoid persisting an all-nil policy when the provider set no restrictions
-  # Outcome: skip the upsert entirely if every restriction field is empty
+  # Skip upsert on create when all restriction fields are empty — avoid storing an all-nil row.
   defp set_participant_policy_on_create(program_id, params) do
     parsed = parse_participant_policy_params(params)
 
@@ -2379,9 +2239,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       max_age_months: parse_integer(params["max_age_months"]),
       min_grade: parse_integer(params["min_grade"]),
       max_grade: parse_integer(params["max_grade"]),
-      # Trigger: hidden input for checkbox group sends [""] when none checked
-      # Why: must filter empty strings to detect truly empty gender selection
-      # Outcome: clean list of selected gender values
+      # Hidden input for checkbox group sends [""] when none checked — reject to get a clean list.
       allowed_genders: Enum.reject(params["allowed_genders"] || [], &(&1 == ""))
     }
   end
@@ -2410,14 +2268,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
   defp any_restriction?(_parsed), do: true
 
-  # Trigger: eligibility_at parsed as nil — only reachable via malformed callers;
-  #   the LiveView form always submits one of the radio values
-  # Why: forwarding `nil` would violate the column's NOT NULL + check constraint;
-  #   the repo's on_conflict {:replace, [:eligibility_at, ...]} would *not* preserve
-  #   any stored value either, so we don't pretend to.
-  # Outcome: drop the key so the INSERT falls back to the schema default
-  #   ("registration"); on conflict that default still replaces any stored value,
-  #   which is acceptable because the form makes nil unreachable in practice.
+  # nil is unreachable from the form (radio always submits a value) but would violate NOT NULL.
+  # Drop the key so INSERT falls back to the schema default ("registration").
   defp drop_nil_eligibility_at(%{eligibility_at: nil} = attrs), do: Map.delete(attrs, :eligibility_at)
 
   defp drop_nil_eligibility_at(attrs), do: attrs
@@ -2437,16 +2289,10 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     end
   end
 
-  # Trigger: program created, but enrollment policy may have failed
-  # Why: program is already persisted — don't roll back, just adjust flash
-  # Outcome: success flash if policy ok, warning flash if policy failed
   defp resolve_capacity(:ok, enrollment_params), do: parse_integer(enrollment_params["max_enrollment"])
 
   defp resolve_capacity({:error, _}, _enrollment_params), do: nil
 
-  # Trigger: program created, but enrollment policy may have failed
-  # Why: program is already persisted — don't roll back, just adjust flash
-  # Outcome: success flash if policy ok, warning flash if policy failed
   defp flash_for_policy_result(socket, :ok) do
     socket
     |> clear_flash(:error)

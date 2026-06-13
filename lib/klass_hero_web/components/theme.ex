@@ -426,10 +426,6 @@ defmodule KlassHeroWeb.Theme do
   def transition(:normal), do: "transition-all duration-200"
   def transition(:slow), do: "transition-all duration-300"
 
-  # ============================================
-  # COMPONENT VARIANT HELPERS
-  # ============================================
-
   @doc """
   Returns combined classes for a button variant.
 

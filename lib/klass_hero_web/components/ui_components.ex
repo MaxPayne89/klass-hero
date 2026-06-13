@@ -1,10 +1,5 @@
 defmodule KlassHeroWeb.UIComponents do
-  @moduledoc """
-  Provides UI components for Klass Hero application.
-
-  This module contains reusable UI components that follow the Klass Hero design system
-  with custom gradients, rounded corners, and Tailwind utilities.
-  """
+  @moduledoc "Reusable UI components following the Klass Hero design system."
   use Phoenix.Component
 
   use Phoenix.VerifiedRoutes,
@@ -406,17 +401,13 @@ defmodule KlassHeroWeb.UIComponents do
   attr :rest, :global, include: ~w(phx-click phx-value-* disabled)
 
   def back_button(assigns) do
-    # Size mappings
     assigns = assign(assigns, :size_classes, back_button_size_classes(assigns.size))
 
-    # Determine click behavior
     assigns =
       if assigns.use_browser_back && !assigns.rest[:"phx-click"] && !assigns.on_click do
-        # Use browser back navigation via plain JavaScript onclick
         assigns
         |> assign(:use_browser_back_nav, true)
       else
-        # Support backwards compatibility with on_click
         assigns =
           if assigns.on_click && !assigns.rest[:"phx-click"] do
             Map.put(assigns, :rest, Map.put(assigns.rest, :"phx-click", assigns.on_click))
@@ -503,7 +494,6 @@ defmodule KlassHeroWeb.UIComponents do
   attr :rest, :global, include: ~w(phx-click phx-value-* disabled)
 
   def social_button(assigns) do
-    # Support both on_click and phx-click
     assigns =
       if assigns.on_click && !assigns.rest[:"phx-click"] do
         Map.put(assigns, :rest, Map.put(assigns.rest, :"phx-click", assigns.on_click))
@@ -998,7 +988,6 @@ defmodule KlassHeroWeb.UIComponents do
       @class
     ]}>
       <%= if @variant == "landing" do %>
-        <%!-- Landing page hero --%>
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div class="text-center">
             <div
@@ -1032,7 +1021,6 @@ defmodule KlassHeroWeb.UIComponents do
             </div>
           </div>
         </div>
-        <%!-- Decorative Wave --%>
         <div :if={@show_wave} class="absolute bottom-0 left-0 right-0">
           <svg class="w-full h-16 fill-white" viewBox="0 0 1200 120" preserveAspectRatio="none">
             <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z">
@@ -1042,7 +1030,6 @@ defmodule KlassHeroWeb.UIComponents do
       <% end %>
 
       <%= if @variant == "page" do %>
-        <%!-- Page header --%>
         <div class="p-6">
           <div class="flex items-center gap-4 mb-4">
             <.back_button
@@ -1064,7 +1051,6 @@ defmodule KlassHeroWeb.UIComponents do
       <% end %>
 
       <%= if @variant == "minimal" do %>
-        <%!-- Minimal header --%>
         <div class="p-6">
           <h1 class={[Theme.typography(:section_title), Theme.text_color(:heading)]}>
             {render_slot(@title)}
@@ -1172,7 +1158,6 @@ defmodule KlassHeroWeb.UIComponents do
     ]}>
       <div class={[@container_class]}>
         <%= if @profile != [] and @title == [] do %>
-          <%!-- Profile layout (Dashboard) --%>
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-4">
               {render_slot(@profile)}
@@ -1183,7 +1168,6 @@ defmodule KlassHeroWeb.UIComponents do
             </div>
           </div>
         <% else %>
-          <%!-- Standard title layout --%>
           <div class={[
             @centered && "text-center",
             !@centered && "flex items-center justify-between mb-4"
@@ -1222,7 +1206,6 @@ defmodule KlassHeroWeb.UIComponents do
             </div>
           </div>
 
-          <%!-- Additional content (search bars, tags, etc.) --%>
           <div :if={@inner_block != []} class={[@centered && "max-w-7xl mx-auto mt-6"]}>
             {render_slot(@inner_block)}
           </div>
@@ -1414,7 +1397,6 @@ defmodule KlassHeroWeb.UIComponents do
       @class
     ]}>
       <div class="flex items-start gap-4">
-        <%!-- Step Number Badge --%>
         <div class={[
           "flex-shrink-0 w-12 h-12 flex items-center justify-center",
           Theme.rounded(:full),
@@ -1425,7 +1407,6 @@ defmodule KlassHeroWeb.UIComponents do
         </div>
 
         <div class="flex-1 text-center">
-          <%!-- Icon (if provided) --%>
           <div
             :if={@icon || @icon_path}
             class={[
@@ -1449,7 +1430,6 @@ defmodule KlassHeroWeb.UIComponents do
             <% end %>
           </div>
 
-          <%!-- Title and Description --%>
           <h3 class={[Theme.typography(:card_title), "mb-2", Theme.text_color(:heading)]}>
             {@title}
           </h3>
@@ -1515,7 +1495,6 @@ defmodule KlassHeroWeb.UIComponents do
       Theme.transition(:normal),
       @class
     ]}>
-      <%!-- Most Popular Badge --%>
       <div
         :if={@popular}
         class={[
@@ -1528,7 +1507,6 @@ defmodule KlassHeroWeb.UIComponents do
         Most Popular
       </div>
 
-      <%!-- Header --%>
       <div class="mb-6">
         <h3 class={[Theme.typography(:card_title), "mb-1", Theme.text_color(:heading)]}>
           {@title}
@@ -1538,7 +1516,6 @@ defmodule KlassHeroWeb.UIComponents do
         </p>
       </div>
 
-      <%!-- Price --%>
       <div class="mb-6">
         <div class="flex items-baseline gap-1">
           <span class={[Theme.typography(:section_title), Theme.text_color(:heading)]}>
@@ -1550,7 +1527,6 @@ defmodule KlassHeroWeb.UIComponents do
         </div>
       </div>
 
-      <%!-- Features List --%>
       <ul class="space-y-3 mb-6">
         <li :for={feature <- @features} class="flex items-start gap-2">
           <.icon name="hero-check-circle" class="w-5 h-5 flex-shrink-0 mt-0.5 text-hero-blue-600" />
@@ -1558,7 +1534,6 @@ defmodule KlassHeroWeb.UIComponents do
         </li>
       </ul>
 
-      <%!-- CTA Button --%>
       <button
         class={[
           "w-full py-3 font-semibold",
@@ -1705,14 +1680,8 @@ defmodule KlassHeroWeb.UIComponents do
     """
   end
 
-  # ==========================================================================
-  # Klass Hero design-system primitives (Phase 0)
-  #
-  # These mirror the `Kh*` primitives from `design_handoff/shared/Primitives.jsx`.
-  # They consume the semantic CSS variables defined in `assets/css/app.css`
-  # (--brand-*, --bg-*, --fg-*, --border-*, --grad-*) and form the visual
-  # vocabulary every later phase composes from.
-  # ==========================================================================
+  # Kh* primitives mirror `design_handoff/shared/Primitives.jsx` and consume
+  # the semantic CSS variables in `assets/css/app.css` (--brand-*, --bg-*, etc.).
 
   @doc """
   Renders the Klass Hero brand logo.
