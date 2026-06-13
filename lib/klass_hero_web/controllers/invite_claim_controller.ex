@@ -18,12 +18,8 @@ defmodule KlassHeroWeb.InviteClaimController do
   def show(conn, %{"token" => token}) do
     case Enrollment.claim_invite(token) do
       {:ok, %ClaimResult{user_type: :new_user, user: user}} ->
-        # Trigger: new user account was just created from invite data
-        # Why: the user has no password yet; a magic-link login lets them
-        #      access the app immediately and set a password in settings
-        # Outcome: redirect to magic-link login URL
-        # Note: ClaimInvite returns a lightweight map to avoid cross-context
-        # type coupling; re-fetch the full %User{} struct for Accounts API
+        # No password yet — magic-link lets them in immediately.
+        # ClaimInvite returns a lightweight map; re-fetch full %User{} for Accounts API.
         full_user = Accounts.get_user!(user.id)
         magic_token = Accounts.generate_magic_link_token(full_user)
 
@@ -35,10 +31,6 @@ defmodule KlassHeroWeb.InviteClaimController do
         |> redirect(to: ~p"/users/log-in/#{magic_token}")
 
       {:ok, %ClaimResult{user_type: :existing_user}} ->
-        # Trigger: guardian_email matched an existing user
-        # Why: no new account needed; just prompt them to log in so the
-        #      enrollment saga can proceed against their existing identity
-        # Outcome: redirect to standard login page
         conn
         |> put_flash(
           :info,

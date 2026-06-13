@@ -98,10 +98,7 @@ defmodule KlassHeroWeb.ProgramsLive do
       |> assign(active_filter: active_filter)
       |> assign(sort_by: sort_by)
       |> assign(next_cursor: page_result.next_cursor)
-      # Load-more is only meaningful for the recommended sort — other sorts
-      # operate in-memory on the loaded page, and merging across paginated
-      # batches would visually break the order. Tracked as a follow-up
-      # (pass sort to ProgramCatalog.list_programs_paginated/3).
+      # Load-more disabled for non-recommended sorts: merging paginated batches would break the visual order (follow-up: pass sort to list_programs_paginated/3).
       |> assign(has_more: page_result.has_more and sort_by == "recommended")
       |> stream(:programs, programs, reset: true)
       |> assign(loaded_programs: programs)
