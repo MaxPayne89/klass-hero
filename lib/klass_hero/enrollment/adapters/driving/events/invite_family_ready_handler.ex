@@ -63,9 +63,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
         :ok
 
       {:error, :duplicate_resource} ->
-        # Trigger: enrollment already exists for this child+program
-        # Why: idempotent — replaying event must not fail
-        # Outcome: transition invite to enrolled without enrollment_id
+        # Idempotent: enrollment already exists — still transition invite to enrolled
         Logger.info(
           "[InviteFamilyReadyHandler] Enrollment already exists, transitioning invite",
           invite_id: invite_id
@@ -86,9 +84,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
 
   def handle_event(_event), do: :ignore
 
-  # Trigger: handler must only act on invites in :registered status
-  # Why: prevents double-processing or regressing an already-enrolled invite
-  # Outcome: returns {:ok, invite} or {:error, :not_found/:not_registered}
+  # Only act on :registered invites — prevents double-processing or regressing an already-enrolled invite.
   defp fetch_registered_invite(invite_id) do
     case @invite_reader.get_by_id(invite_id) do
       {:error, :not_found} = err -> err
@@ -97,9 +93,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
     end
   end
 
-  # Trigger: Family context has created parent + child from invite data
-  # Why: bulk invites use "transfer" payment and "confirmed" status (no online payment)
-  # Outcome: enrollment created via direct path (skips tier/eligibility validation)
+  # Bulk invites bypass payment/tier/eligibility checks — use "transfer" + "confirmed" directly.
   defp create_enrollment(child_id, parent_id, program_id) do
     Enrollment.create_enrollment(%{
       program_id: program_id,
@@ -118,10 +112,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
     })
   end
 
-  # Trigger: enrollment already exists (duplicate_resource from repository)
-  # Why: must still mark invite as enrolled for consistency
-  # Outcome: transitions invite without enrollment_id; logs result but always returns :ok
-  #          since enrollment exists and invite status is secondary
+  # Enrollment exists but invite status may still be :registered — transition it for consistency.
   defp handle_existing_enrollment(invite_id) do
     case @invite_reader.get_by_id(invite_id) do
       {:ok, %{status: :registered} = invite} ->

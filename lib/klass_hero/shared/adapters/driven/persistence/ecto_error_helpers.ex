@@ -1,63 +1,11 @@
 defmodule KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers do
   @moduledoc """
-  Shared utilities for detecting and categorizing Ecto changeset errors.
-
-  This module provides reusable functions for identifying specific types of database
-  constraint violations and changeset errors across all repository implementations.
-
-  ## Common Use Cases
-
-  - Detecting unique constraint violations (duplicate records)
-  - Detecting foreign key constraint violations (invalid references)
-  - Categorizing errors for proper error handling and user feedback
-
-  ## Examples
-
-      # Detect unique constraint violation
-      changeset = User.changeset(%User{}, %{email: "duplicate@example.com"})
-      {:error, %Ecto.Changeset{errors: errors}} = Repo.insert(changeset)
-
-      EctoErrorHelpers.unique_constraint_violation?(errors, :email)
-      # => true
-
-      # Detect foreign key violation
-      changeset = Post.changeset(%Post{}, %{user_id: "non-existent"})
-      {:error, %Ecto.Changeset{errors: errors}} = Repo.insert(changeset)
-
-      EctoErrorHelpers.foreign_key_violation?(errors, :user_id)
-      # => true
-
-      # Check if any constraint violation exists
-      EctoErrorHelpers.constraint_violation?(errors, :email, :unique)
-      # => true
+  Shared utilities for detecting and categorizing Ecto changeset constraint errors
+  across all repository implementations.
   """
 
   @doc """
-  Detects if a specific field has a unique constraint violation.
-
-  ## Parameters
-
-  - `errors` - List of Ecto changeset errors in format `[{field, {message, opts}}]`
-  - `field` - Atom representing the field name to check
-
-  ## Returns
-
-  - `true` if the field has a unique constraint violation
-  - `false` otherwise
-
-  ## Examples
-
-      errors = [{:email, {"has already been taken", [constraint: :unique]}}]
-      unique_constraint_violation?(errors, :email)
-      # => true
-
-      errors = [{:email, {"is invalid", []}}]
-      unique_constraint_violation?(errors, :email)
-      # => false
-
-      errors = [{:identity_id, {"has already been taken", [constraint: :unique]}}]
-      unique_constraint_violation?(errors, :identity_id)
-      # => true
+  Returns true if `field` has a unique constraint violation in the changeset error list.
   """
   @spec unique_constraint_violation?(
           errors :: [{atom(), {String.t(), Keyword.t()}}],
@@ -68,29 +16,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers do
   end
 
   @doc """
-  Detects if any field has a unique constraint violation.
-
-  Unlike `unique_constraint_violation?/2`, this does not check a specific field —
-  it returns true if any error in the list is a unique constraint violation.
-
-  ## Parameters
-
-  - `errors` - List of Ecto changeset errors in format `[{field, {message, opts}}]`
-
-  ## Returns
-
-  - `true` if any field has a unique constraint violation
-  - `false` otherwise
-
-  ## Examples
-
-      errors = [{:email, {"has already been taken", [constraint: :unique]}}]
-      any_unique_constraint_violation?(errors)
-      # => true
-
-      errors = [{:email, {"is invalid", []}}]
-      any_unique_constraint_violation?(errors)
-      # => false
+  Returns true if any field has a unique constraint violation (field-agnostic variant).
   """
   @spec any_unique_constraint_violation?(errors :: [{atom(), {String.t(), Keyword.t()}}]) ::
           boolean()
@@ -101,27 +27,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers do
   end
 
   @doc """
-  Detects if a specific field has a foreign key constraint violation.
-
-  ## Parameters
-
-  - `errors` - List of Ecto changeset errors in format `[{field, {message, opts}}]`
-  - `field` - Atom representing the field name to check
-
-  ## Returns
-
-  - `true` if the field has a foreign key constraint violation
-  - `false` otherwise
-
-  ## Examples
-
-      errors = [{:user_id, {"does not exist", [constraint: :foreign]}}]
-      foreign_key_violation?(errors, :user_id)
-      # => true
-
-      errors = [{:user_id, {"is invalid", []}}]
-      foreign_key_violation?(errors, :user_id)
-      # => false
+  Returns true if `field` has a foreign key constraint violation in the changeset error list.
   """
   @spec foreign_key_violation?(
           errors :: [{atom(), {String.t(), Keyword.t()}}],
@@ -132,34 +38,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers do
   end
 
   @doc """
-  Generic constraint violation detector.
-
-  Checks if a specific field has a specific type of constraint violation.
-
-  ## Parameters
-
-  - `errors` - List of Ecto changeset errors in format `[{field, {message, opts}}]`
-  - `field` - Atom representing the field name to check
-  - `constraint_type` - Atom representing the constraint type (`:unique`, `:foreign`, etc.)
-
-  ## Returns
-
-  - `true` if the field has the specified constraint violation
-  - `false` otherwise
-
-  ## Examples
-
-      errors = [{:email, {"has already been taken", [constraint: :unique]}}]
-      constraint_violation?(errors, :email, :unique)
-      # => true
-
-      errors = [{:user_id, {"does not exist", [constraint: :foreign]}}]
-      constraint_violation?(errors, :user_id, :foreign)
-      # => true
-
-      errors = [{:email, {"is invalid", []}}]
-      constraint_violation?(errors, :email, :unique)
-      # => false
+  Returns true if `field` has the specified constraint type (`:unique`, `:foreign`, etc.).
   """
   @spec constraint_violation?(
           errors :: [{atom(), {String.t(), Keyword.t()}}],

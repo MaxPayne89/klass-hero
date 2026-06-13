@@ -28,10 +28,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       |> assign(:session_id, session_id)
       |> assign(:provider_id, provider_id)
       |> assign(:session, nil)
-      # Uses regular assign (not stream) because:
-      # - Small, bounded collection (records for single session)
-      # - Need to filter/search records (Enum.find, Enum.filter)
-      # - Full replacement on updates (no incremental changes)
+      # Regular assign (not stream): small bounded collection, needs Enum.find/filter, always fully replaced.
       |> assign(:participation_records, [])
       |> assign(:checkout_form_expanded, nil)
       |> assign(:checkout_forms, %{})
@@ -95,8 +92,6 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     ParticipationLiveHandlers.confirm_checkout(socket, record_id, params, &load_session_data/1)
   end
 
-  # Behavioral note form handlers
-
   @impl true
   def handle_event("expand_note_form", %{"id" => record_id}, socket) do
     {:noreply, expand_form(socket, record_id, "note", "content", "", :note_form_expanded, :note_forms)}
@@ -116,8 +111,6 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   def handle_event("submit_note", %{"id" => record_id, "note" => params}, socket) do
     ParticipationLiveHandlers.submit_note(socket, record_id, params, &load_session_data/1)
   end
-
-  # Revision form handlers
 
   @impl true
   def handle_event("expand_revision_form", %{"id" => note_id}, socket) do
@@ -244,21 +237,17 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     end
   end
 
-  # PubSub event handler for participation record events
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id}}, socket)
       when event_type in [:child_checked_in, :child_checked_out, :participation_marked_absent] do
     {:noreply, update_participation_record(socket, record_id)}
   end
 
-  # PubSub handler for behavioral note events — reload session + provider notes
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
       when event_type in [:behavioral_note_submitted, :behavioral_note_approved, :behavioral_note_rejected] do
     {:noreply, load_session_data(socket)}
   end
-
-  # Private helper functions
 
   defp load_session_data(socket) do
     session_id = socket.assigns.session_id
@@ -318,9 +307,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     records = socket.assigns.participation_records
     record_ids = Enum.map(records, & &1.id)
 
-    # Trigger: batch-fetch this provider's notes for all participation records
-    # Why: single query instead of N+1 per record
-    # Outcome: provider_notes map keyed by note.id, record_note_map keyed by record.id
+    # Single batch query instead of N+1 per record.
     notes =
       Participation.list_behavioral_notes_by_records_and_provider(record_ids, provider_id)
 

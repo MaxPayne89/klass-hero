@@ -65,9 +65,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler do
     }
   end
 
-  # Trigger: Oban stores args as JSON
-  # Why: %Date{} must be serialized to ISO 8601 for JSON storage
-  # Outcome: worker deserializes back to %Date{} in perform/1
+  # %Date{} must be ISO 8601 for Oban JSON args; worker deserializes in perform/1
   defp serialize_date(%Date{} = date), do: Date.to_iso8601(date)
   defp serialize_date(nil), do: nil
   defp serialize_date(date) when is_binary(date), do: date

@@ -108,23 +108,15 @@ defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
     end
   end
 
-  # --- Construction validation helpers ---
-
   defp validate_program_id(errors, id) when is_binary(id) and byte_size(id) > 0, do: errors
   defp validate_program_id(errors, _), do: ["program ID is required" | errors]
 
-  # Trigger: min_age exceeds max_age when both are set
-  # Why: nonsensical — no child could satisfy a range where minimum exceeds maximum
-  # Outcome: rejected with descriptive error
   defp validate_age_range(errors, min, max) when is_integer(min) and is_integer(max) and min > max do
     ["minimum age must not exceed maximum age" | errors]
   end
 
   defp validate_age_range(errors, _min, _max), do: errors
 
-  # Trigger: min_grade exceeds max_grade when both are set
-  # Why: same as age — inverted range is meaningless
-  # Outcome: rejected with descriptive error
   defp validate_grade_range(errors, min, max) when is_integer(min) and is_integer(max) and min > max do
     ["minimum grade must not exceed maximum grade" | errors]
   end
@@ -166,19 +158,12 @@ defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
     year_months = (reference_date.year - date_of_birth.year) * 12
     month_diff = reference_date.month - date_of_birth.month
 
-    # Trigger: child hasn't had their birthday this month yet
-    # Why: if reference day < birth day, they haven't completed the current month
-    # Outcome: subtract one month to avoid rounding up
+    # Subtract one month if birthday hasn't occurred yet this month
     day_adjustment = if reference_date.day < date_of_birth.day, do: -1, else: 0
 
     max(year_months + month_diff + day_adjustment, 0)
   end
 
-  # --- Eligibility check helpers ---
-
-  # Trigger: policy has a minimum age and child is below it
-  # Why: program targets older participants; younger children may not be ready
-  # Outcome: ineligible with descriptive reason including the threshold
   defp check_age(reasons, %{min_age_months: min, max_age_months: max}, age_months) do
     reasons
     |> maybe_check_min_age(min, age_months)
@@ -201,9 +186,6 @@ defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
 
   defp maybe_check_max_age(reasons, _max, _age_months), do: reasons
 
-  # Trigger: policy has allowed_genders set and child's gender is not in the list
-  # Why: some programs are restricted to specific genders (e.g., girls-only swim class)
-  # Outcome: ineligible with reason listing allowed genders
   defp check_gender(reasons, %{allowed_genders: []}, _gender), do: reasons
 
   defp check_gender(reasons, %{allowed_genders: allowed}, gender) do
@@ -214,9 +196,6 @@ defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
     end
   end
 
-  # Trigger: policy has grade restrictions and child has no grade or is outside range
-  # Why: programs may target specific school levels (e.g., Klasse 1-4 only)
-  # Outcome: ineligible if grade is nil (required but missing) or out of range
   defp check_grade(reasons, %{min_grade: nil, max_grade: nil}, _grade), do: reasons
 
   defp check_grade(reasons, _policy, nil) do

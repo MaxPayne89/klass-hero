@@ -21,15 +21,11 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
       when is_binary(event_id) and is_binary(handler_ref) and is_function(handler_fn, 0) do
     Repo.transaction(fn ->
       case insert_processed_event(event_id, handler_ref) do
-        # Trigger: event-handler pair already in processed_events
-        # Why: another delivery path (PubSub or earlier Oban attempt) already handled it
-        # Outcome: skip handler, return :ok (idempotent no-op)
+        # Another delivery path already handled this pair — idempotent no-op.
         :already_processed ->
           :ok
 
-        # Trigger: row inserted — this is the first attempt for this pair
-        # Why: handler must run inside the transaction so rollback removes the row on failure
-        # Outcome: handler runs, success commits, failure rolls back
+        # Handler runs inside the transaction so rollback removes the row on failure.
         :inserted ->
           run_handler(handler_fn)
       end
@@ -43,10 +39,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
     :ok
   rescue
     error ->
-      # Trigger: DB failure (timeout, connection error) when marking event as processed
-      # Why: handler already succeeded — crashing would propagate a false failure to callers;
-      #      the Oban fallback will re-execute but idempotent handlers tolerate this
-      # Outcome: log the DB error for operator awareness, return :ok to avoid disrupting the caller
+      # Handler already succeeded — swallow DB failure and log; Oban may re-execute but idempotent handlers tolerate it.
       Logger.error(
         "Failed to mark event as processed: #{Exception.message(error)}",
         event_id: event_id,
@@ -69,8 +62,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
       {:error, _reason} = error -> error
     end
   end
-
-  # -- Private helpers --
 
   defp insert_processed_event(event_id, handler_ref) do
     now = DateTime.utc_now()
@@ -96,9 +87,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
     end
   rescue
     error ->
-      # Trigger: handler raised an exception inside the transaction
-      # Why: Repo.rollback loses the original stacktrace — log it now for debugging
-      # Outcome: operators see the crash cause in logs before the transaction rolls back
+      # Log before Repo.rollback, which loses the original stacktrace.
       Logger.error("Critical event handler crashed: #{Exception.message(error)}",
         stacktrace: Exception.format_stacktrace(__STACKTRACE__)
       )

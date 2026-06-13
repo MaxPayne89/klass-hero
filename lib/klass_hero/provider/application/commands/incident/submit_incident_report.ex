@@ -74,11 +74,8 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport 
     end
   end
 
-  # Read happens *outside* `Repo.transaction/1` deliberately: the two profile
-  # fields we forward (`business_owner_email`, `business_name`) are stable
-  # provider attributes, not data the transaction will mutate, so the
-  # "no read-outside-tx" rule (CLAUDE.md) does not apply. Loading once here
-  # replaces a per-email DB round-trip the worker used to make.
+  # Read outside the transaction deliberately: `business_owner_email`/`business_name` are stable,
+  # not mutated by the transaction, so the read-outside-tx rule (CLAUDE.md) does not apply.
   defp fetch_profile(%{provider_profile_id: id}) do
     case @profile_query.get(id) do
       {:ok, %ProviderProfile{} = profile} -> {:ok, profile}
@@ -86,9 +83,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport 
     end
   end
 
-  # Trigger: params carry program_id or session_id (one-of scope)
-  # Why: ownership is enforced via Provider-local projection — no cross-context sync read
-  # Outcome: :ok when the resource belongs to the provider, error otherwise
+  # Ownership enforced via Provider-local projection — no cross-context sync read.
   defp validate_ownership(%{program_id: pid, provider_profile_id: prov_id}) when is_binary(pid) do
     case ProviderProgramQueries.get_by_id(pid) do
       {:ok, %{provider_id: ^prov_id}} -> :ok
@@ -105,15 +100,9 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport 
 
   defp validate_ownership(_), do: {:error, [target: "exactly one of program_id or session_id must be set"]}
 
-  # Trigger: no photo binary supplied
-  # Why: photo is optional; skip storage entirely when nothing to upload
-  # Outcome: empty photo_ref returned for downstream report construction
   defp maybe_upload_photo(%{file_binary: nil}), do: {:ok, %{photo_url: nil, original_filename: nil}}
 
-  # Trigger: a photo binary AND a non-blank original filename were supplied
-  # Why: filename presence must be validated BEFORE the storage call to avoid orphaning
-  #      an upload when the downstream domain model rejects the photo_url/filename pair
-  # Outcome: persists the file to private storage and returns the storage key + filename
+  # Filename validated before the storage call to avoid orphaning an upload if the domain model rejects it.
   defp maybe_upload_photo(%{file_binary: file_binary, original_filename: filename} = params)
        when is_binary(file_binary) and is_binary(filename) and byte_size(filename) > 0 do
     path =
@@ -132,9 +121,6 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport 
     end
   end
 
-  # Trigger: a photo binary supplied without a usable filename (nil or empty string)
-  # Why: short-circuit before touching storage so we never leave an orphaned object
-  # Outcome: returns a validation error matching the IncidentReport domain contract
   defp maybe_upload_photo(%{file_binary: file_binary}) when is_binary(file_binary) do
     {:error, [original_filename: "is required when photo is uploaded"]}
   end
@@ -158,14 +144,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport 
     })
   end
 
-  # Trigger: report passes validation and is ready to persist
-  # Why: row insert and email-job insert must commit together — both rows live in
-  #      the same Postgres database, so ACID covers what an out-of-band integration
-  #      event handler used to provide. CriticalEventWorker (max_attempts: 3) is
-  #      no longer reached for this side-effect; the global retry contract documented
-  #      there still governs other critical events.
-  # Outcome: {:ok, persisted} when both rows commit; {:error, reason} when either
-  #          step fails, after which any uploaded photo is best-effort deleted
+  # Row insert and email-job insert commit together via ACID — replaces an out-of-band integration event handler.
   defp persist_and_enqueue(report, profile, photo_ref, storage_opts) do
     fn ->
       with {:ok, persisted} <- @repository.create(report),
@@ -179,11 +158,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport 
     |> finalise_transaction(photo_ref, storage_opts)
   end
 
-  # Skip clauses fall through to :ok so the report row still commits but no
-  # email job is enqueued. Two scenarios:
-  #   - Self-report: the owner is the reporter; notifying them is noise.
-  #   - Missing email: there is nobody to notify; enqueueing would just burn
-  #     the worker's retry budget against its own boundary guards.
+  # Skip when reporter is the owner (noise) or when there is no email address to notify.
   defp maybe_schedule_notification(%IncidentReport{reporter_user_id: rid}, %ProviderProfile{identity_id: rid}), do: :ok
 
   defp maybe_schedule_notification(_report, %ProviderProfile{business_owner_email: email}) when not is_present(email),
@@ -203,11 +178,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport 
     err
   end
 
-  # Trigger: transaction rolled back AFTER the photo was uploaded
-  # Why: rollback only undoes DB writes — storage is an external system and
-  #      would otherwise leave an orphan blob in private storage
-  # Outcome: best-effort delete; storage failures are logged and swallowed so
-  #          the original transaction error reaches the caller unmasked
+  # Rollback only undoes DB writes; storage is external and would leave an orphan blob without this cleanup.
   defp cleanup_photo(%{photo_url: nil}, _storage_opts), do: :ok
 
   defp cleanup_photo(%{photo_url: url}, storage_opts) when is_binary(url) do

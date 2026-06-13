@@ -22,9 +22,7 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
     end
   end
 
-  # Trigger: Oban serializes args as JSON (string keys, ISO date strings)
-  # Why: use case expects atom keys and native Elixir types
-  # Outcome: converts string keys to atoms, parses date string to Date struct
+  # Oban JSON args use string keys and ISO date strings; convert to atom keys and Date.
   defp deserialize_args(args) do
     with {:ok, date_of_birth} <- parse_date(args["child_date_of_birth"]) do
       {:ok,

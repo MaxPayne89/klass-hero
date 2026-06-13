@@ -1,42 +1,11 @@
 defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
   @moduledoc """
-  Shared retry logic with error classification and exponential backoff.
+  Shared retry logic with error classification for event-driven operations.
 
-  This module provides intelligent retry strategies for event-driven operations,
-  distinguishing between transient (retryable) and permanent (non-retryable) errors.
-
-  ## Error Classification
-
-  **Retryable Errors** (with backoff):
-  - `:database_connection_error` - Network/connection issues that may resolve
-
-  **Permanent Errors** (no retry):
-  - `:duplicate_resource` - Resource already exists (idempotent - returns `:ok`)
-  - `:resource_not_found` - Referenced resource doesn't exist
-  - `:database_query_error` - SQL/schema/validation errors
-  - `:database_unavailable` - Generic/unexpected database errors
-  - `{:validation_error, _}` - Domain validation failures
-
-  ## Examples
-
-      # Basic usage with default 100ms backoff
-      operation = fn -> create_profile(%{identity_id: "123"}) end
-      context = %{
-        operation_name: "create parent profile",
-        aggregate_id: "user-123"
-      }
-
-      RetryHelpers.retry_with_backoff(operation, context)
-      # => :ok | {:ok, result} | {:error, reason}
-
-      # Custom backoff timing
-      context = %{
-        operation_name: "create provider profile",
-        aggregate_id: "user-456",
-        backoff_ms: 200
-      }
-
-      RetryHelpers.retry_with_backoff(operation, context)
+  Retryable: `:database_connection_error`.
+  Permanent (no retry): `:duplicate_resource` (treated as `:ok`), `:resource_not_found`,
+  `:database_query_error`, `:database_unavailable`, `{:validation_error, _}`.
+  Step-tagged errors like `{:step_name, reason}` delegate classification to the inner reason.
   """
 
   require Logger
@@ -44,61 +13,11 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
   @default_backoff_ms 100
 
   @doc """
-  Executes an operation with intelligent retry logic and error classification.
+  Executes `operation` with one retry on transient errors and error classification.
 
-  ## Parameters
-
-  - `operation` - A zero-arity function that returns `:ok`, `{:ok, result}`, or `{:error, reason}`
-  - `context` - A map containing:
-    - `:operation_name` (required) - Human-readable operation name for logging
-    - `:aggregate_id` (required) - Identifier for the aggregate being operated on
-    - `:backoff_ms` (optional) - Milliseconds to wait before retry (default: 100)
-
-  ## Return Values
-
-  - `:ok` - Operation succeeded
-  - `{:ok, result}` - Operation succeeded with result
-  - `{:error, reason}` - Operation failed (after retry if applicable)
-
-  ## Retry Behavior
-
-  1. **First Attempt**: Execute operation immediately
-  2. **Transient Errors**: Wait `backoff_ms` and retry once
-  3. **Permanent Errors**: Return immediately without retry
-  4. **Duplicate Resource**: Treated as success (idempotent operation)
-
-  All retry attempts are logged with unique error IDs for correlation.
-
-  ## Examples
-
-      # Success on first attempt
-      operation = fn -> {:ok, %Parent{}} end
-      retry_with_backoff(operation, context)
-      # => {:ok, %Parent{}}
-
-      # Transient error with successful retry
-      attempts = :counters.new(1, [])
-      operation = fn ->
-        case :counters.get(attempts, 1) do
-          0 ->
-            :counters.add(attempts, 1, 1)
-            {:error, :database_connection_error}
-          _ ->
-            {:ok, %Parent{}}
-        end
-      end
-      retry_with_backoff(operation, context)
-      # => {:ok, %Parent{}} (after 100ms retry)
-
-      # Permanent error (no retry)
-      operation = fn -> {:error, :resource_not_found} end
-      retry_with_backoff(operation, context)
-      # => {:error, :resource_not_found}
-
-      # Duplicate resource (idempotent)
-      operation = fn -> {:error, :duplicate_resource} end
-      retry_with_backoff(operation, context)
-      # => :ok
+  `context` must contain `:operation_name` and `:aggregate_id` (for logging) and
+  may contain `:backoff_ms` (default 100). `:duplicate_resource` errors are treated
+  as idempotent success. Permanent errors return immediately without retry.
   """
   @spec retry_with_backoff(
           operation :: (-> :ok | {:ok, term()} | {:error, atom() | {atom(), term()}}),
@@ -132,7 +51,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
     end
   end
 
-  # Attempt retry for transient errors, return immediately for permanent errors
   defp maybe_retry(operation, context, reason, error) do
     if retryable_error?(reason) do
       backoff_ms = Map.get(context, :backoff_ms, @default_backoff_ms)
@@ -145,7 +63,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
     end
   end
 
-  # Handle the retry attempt
   defp handle_retry(operation, context, original_error) do
     case normalize_result(operation.(), context) do
       {:success, result} ->
@@ -158,8 +75,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
     end
   end
 
-  # Normalize operation results into success or error tuples
-  # Duplicate resources are treated as idempotent success
+  # :duplicate_resource is treated as idempotent success.
   defp normalize_result(:ok, _context), do: {:success, :ok}
   defp normalize_result({:ok, result}, _context), do: {:success, {:ok, result}}
 
@@ -172,8 +88,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
     {:error, reason, error}
   end
 
-  # Classify errors as retryable or permanent
-
   @doc """
   Determines if an error is transient and should be retried.
 
@@ -182,8 +96,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
   @spec retryable_error?(atom() | {atom(), term()} | {atom(), atom() | {atom(), term()}}) ::
           boolean()
   def retryable_error?(:database_connection_error), do: true
-  # Trigger: step-tagged error like {:anonymize_messages, :database_connection_error}
-  # Why: use case tags errors with the step name for traceability; we delegate to classify the inner reason
+  # Use case step-tagged errors like {:anonymize_messages, :database_connection_error} — classify the inner reason.
   def retryable_error?({_step, reason}) when is_atom(reason), do: retryable_error?(reason)
   def retryable_error?(_), do: false
 
@@ -197,13 +110,10 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
   def permanent_error?(:database_query_error), do: true
   def permanent_error?(:database_unavailable), do: true
   def permanent_error?({:validation_error, _}), do: true
-  # Trigger: step-tagged error where the step is NOT :validation_error (already matched above)
-  # Why: delegates classification to the inner reason for use case step-tagged errors
+  # Step-tagged errors (not :validation_error, already matched above) — classify the inner reason.
   def permanent_error?({step, reason}) when is_atom(step) and step != :validation_error, do: permanent_error?(reason)
 
   def permanent_error?(_), do: false
-
-  # Logging functions with error IDs for correlation
 
   defp log_retry_attempt(reason, context) do
     error_id = generate_error_id()

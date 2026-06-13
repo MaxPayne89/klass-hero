@@ -1,40 +1,9 @@
 defmodule KlassHero.Accounts.Types.UserRoles do
   @moduledoc """
-  Custom Ecto type for user role arrays.
+  Custom Ecto type for user role arrays. Stores as `text[]` in PostgreSQL,
+  loads as atoms in Elixir. Accepts both atoms and strings; deduplicates on cast.
 
-  Stores roles as PostgreSQL `text[]` (array of strings) in the database,
-  but loads them as a list of atoms in Elixir for better pattern matching
-  and type safety.
-
-  ## Database Representation
-  `["parent", "provider"]`
-
-  ## Elixir Representation
-  `[:parent, :provider]`
-
-  ## Event Serialization
-  Uses `embed_as(:dump)` to ensure domain events receive string values
-  for JSON serialization, maintaining compatibility with event handlers.
-
-  ## Features
-  - Automatic deduplication (no duplicate roles)
-  - Nil → empty list conversion
-  - Accepts both strings (from forms) and atoms (from code)
-  - Validates all roles against UserRole.valid_roles()
-
-  ## Examples
-
-      iex> UserRoles.cast([:parent, :provider])
-      {:ok, [:parent, :provider]}
-
-      iex> UserRoles.cast(["parent", "provider"])
-      {:ok, [:parent, :provider]}
-
-      iex> UserRoles.cast([:parent, :parent])
-      {:ok, [:parent]}  # Deduplicated
-
-      iex> UserRoles.cast([:invalid])
-      :error
+  Uses `embed_as(:dump)` so domain event payloads receive string values for JSON compatibility.
   """
 
   use Ecto.Type
@@ -86,8 +55,6 @@ defmodule KlassHero.Accounts.Types.UserRoles do
 
   @impl true
   def embed_as(_), do: :dump
-
-  # Private helpers
 
   defp transform_roles(roles, transform_fn, opts \\ []) do
     finalize = Keyword.get(opts, :finalize, &Function.identity/1)

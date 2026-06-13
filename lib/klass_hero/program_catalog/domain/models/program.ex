@@ -60,15 +60,13 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
           registration_period: RegistrationPeriod.t()
         }
 
-  # Internal: constructs from trusted persistence data (post-Ecto validation).
-  # External callers must use create/1 (untrusted) or apply_changes/2 (mutation).
+  # Trusted path from persistence; external callers must use create/1 or apply_changes/2.
   @doc false
   @spec new(map()) :: {:ok, t()}
   def new(attrs) when is_map(attrs) do
     {:ok, struct!(__MODULE__, attrs)}
   end
 
-  # Internal: bang variant for mapper reconstruction from trusted data.
   @doc false
   @spec new!(map()) :: t()
   def new!(attrs) when is_map(attrs) do
@@ -76,10 +74,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
   end
 
   @doc """
-  Checks if the program struct has valid business invariants.
-
-  Note: Full validation is performed by the Ecto schema. This function
-  only checks runtime invariants that matter for business logic.
+  Checks runtime business invariants (full validation lives in the Ecto schema).
   """
   @spec valid?(t()) :: boolean()
   def valid?(%__MODULE__{} = program) do
@@ -89,11 +84,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
   end
 
   @doc """
-  Creates a new Program from untrusted input, validating business invariants.
-
-  Unlike `new/1` (which assumes trusted data from persistence), this function
-  validates all business rules before constructing the struct.
-
+  Creates a Program from untrusted input, validating all business rules.
   Returns `{:ok, Program.t()}` with `id: nil` — the persistence layer assigns the ID.
   """
   @spec create(map()) :: {:ok, t()} | {:error, [String.t()]}
@@ -108,9 +99,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
 
   @doc """
   Applies changes to an existing Program, re-validating all business invariants.
-
-  Takes the current program and a map of changes. Only keys present in the
-  changes map are updated; all others are preserved.
+  Only keys present in `changes` are updated; others are preserved.
   """
   @spec apply_changes(t(), map()) :: {:ok, t()} | {:error, [String.t()]}
   def apply_changes(%__MODULE__{} = program, changes) when is_map(changes) do
@@ -126,32 +115,20 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
     end
   end
 
-  @doc """
-  Checks if the program is free (price is $0).
-  """
+  @doc "Returns true if the program price is $0."
   @spec free?(t()) :: boolean()
   def free?(%__MODULE__{price: price}), do: Decimal.equal?(price, Decimal.new(0))
 
-  @doc """
-  Checks if the program's registration is currently open.
-  """
+  @doc "Returns true if registration is currently open."
   @spec registration_open?(t()) :: boolean()
   def registration_open?(%__MODULE__{registration_period: rp}), do: RegistrationPeriod.open?(rp)
 
-  @doc """
-  Returns the current registration status of the program.
-  """
+  @doc "Returns the current registration status."
   @spec registration_status(t()) :: RegistrationPeriod.status()
   def registration_status(%__MODULE__{registration_period: rp}), do: RegistrationPeriod.status(rp)
 
-  # ============================================================================
-  # create/1 helpers
-  # ============================================================================
-
-  # Trigger: attrs may arrive with string keys (e.g. from form params)
-  # Why: domain model expects atom keys; String.to_existing_atom/1 prevents
-  #      atom table exhaustion since struct fields are already defined
-  # Outcome: unknown string keys raise ArgumentError (correct — unknown field)
+  # String.to_existing_atom/1 prevents atom table exhaustion; unknown string keys
+  # correctly raise ArgumentError (unknown field on the struct).
   defp normalize_keys(%{__struct__: _} = attrs), do: Map.from_struct(attrs)
 
   defp normalize_keys(attrs) do
@@ -249,10 +226,6 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
   defp validate_provider_id(errors, id) when is_binary(id) and byte_size(id) > 0, do: errors
   defp validate_provider_id(errors, _), do: ["provider ID is required" | errors]
 
-  # ============================================================================
-  # apply_changes/2 helpers
-  # ============================================================================
-
   defp resolve_instructor(_program, %{instructor: nil}), do: {:ok, nil}
 
   defp resolve_instructor(_program, %{instructor: attrs}) when is_map(attrs) do
@@ -294,9 +267,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
     |> validate_registration_period_struct(program.registration_period)
   end
 
-  # Trigger: registration_period struct already constructed (mutation path)
-  # Why: ensure date ordering is valid even when updating an existing program
-  # Outcome: rejects updates where start_date >= end_date
+  # Re-validates date ordering on mutation path (struct already constructed).
   defp validate_registration_period_struct(errors, %RegistrationPeriod{start_date: nil, end_date: nil}), do: errors
 
   defp validate_registration_period_struct(errors, %RegistrationPeriod{} = rp) do
@@ -305,10 +276,6 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Program do
       {:error, rp_errors} -> rp_errors ++ errors
     end
   end
-
-  # ============================================================================
-  # Scheduling validation
-  # ============================================================================
 
   @valid_weekdays ~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday)
 

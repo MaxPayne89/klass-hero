@@ -41,16 +41,10 @@ defmodule KlassHero.Provider.Application.Commands.Verification.RejectVerificatio
   - `{:error, :document_not_pending}` if document is not in pending status
   """
   def execute(%{document_id: document_id, reviewer_id: reviewer_id, reason: reason}) do
-    # Trigger: reason may be nil or empty string
-    # Why: rejection requires explanation for provider to understand and fix
-    # Outcome: early validation prevents rejecting without reason
     with :ok <- validate_reason(reason),
          {:ok, document} <- @query.get(document_id),
          {:ok, rejected} <- VerificationDocument.reject(document, reviewer_id, reason),
          {:ok, persisted} <- @repository.update(rejected) do
-      # Trigger: document successfully rejected and persisted
-      # Why: other handlers need to evaluate provider verification status
-      # Outcome: domain event dispatched (fire-and-forget), rejected doc returned
       dispatch_event(persisted, reviewer_id)
       {:ok, persisted}
     end

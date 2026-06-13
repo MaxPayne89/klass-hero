@@ -32,9 +32,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
         Logger.warning("[SendInviteEmailWorker] Invite not found", invite_id: invite_id)
         :ok
 
-      # Trigger: invite already processed (not pending)
-      # Why: Oban may retry, or event re-dispatched — skip to avoid duplicate emails
-      # Outcome: return :ok without sending
+      # Oban may retry or event may be re-dispatched — skip non-pending to avoid duplicate emails.
       {:ok, %BulkEnrollmentInvite{status: status}} when status != :pending ->
         Logger.info("[SendInviteEmailWorker] Skipping non-pending invite",
           invite_id: invite_id,
@@ -59,9 +57,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
       {:ok, _email} ->
         now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-        # Trigger: transition_status may fail (e.g. DB error after email sent)
-        # Why: email already delivered — retrying the job would send duplicates
-        # Outcome: log critical if transition fails, but return :ok to prevent Oban retry
+        # Email already delivered — return :ok even if status transition fails to prevent Oban retry/duplicate send.
         case @invite_repository.transition_status(invite, %{
                status: :invite_sent,
                invite_sent_at: now
@@ -94,9 +90,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
     end
   end
 
-  # Trigger: worker needs to build full invite URLs
-  # Why: referencing KlassHeroWeb.Endpoint directly violates boundary rules
-  # Outcome: reads URL config from application env at runtime instead
+  # Reads URL config at runtime — referencing KlassHeroWeb.Endpoint directly would violate boundary rules.
   defp base_url do
     endpoint_config = Application.get_env(:klass_hero, KlassHeroWeb.Endpoint, [])
     url_config = Keyword.get(endpoint_config, :url, [])

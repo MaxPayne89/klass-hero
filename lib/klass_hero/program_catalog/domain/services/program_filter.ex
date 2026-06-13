@@ -85,9 +85,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramFilter do
     |> String.split(~r/\s+/, trim: true)
   end
 
-  # Normalizes text by removing special characters and converting to lowercase.
-  # Special characters removed: !, ., ,, ?, ;, :, @, #, $, %, &, *, (, ), [, ], {, }, ", ', `
-  # Unicode word characters (\w with /u flag) are preserved, including accented letters.
+  # Strips non-word punctuation (preserves Unicode \w including accented letters), lowercases.
   @spec normalize(String.t()) :: String.t()
   defp normalize(text) do
     text

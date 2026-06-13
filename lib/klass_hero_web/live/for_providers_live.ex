@@ -25,10 +25,6 @@ defmodule KlassHeroWeb.ForProvidersLive do
     """
   end
 
-  ## ---------------------------------------------------------------------------
-  ## Sections
-  ## ---------------------------------------------------------------------------
-
   defp dark_hero(assigns) do
     ~H"""
     <section
@@ -292,10 +288,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
     """
   end
 
-  ## ---------------------------------------------------------------------------
-  ## Static data — mirrors design_handoff/marketing/Sections.jsx#MkForProviders
-  ## ---------------------------------------------------------------------------
-
+  # mirrors design_handoff/marketing/Sections.jsx#MkForProviders
   defp ghost_dark_cta_classes do
     # typography-lint-ignore: ghost-on-dark CTA mirrors KhButton primary surface
     "inline-flex items-center justify-center gap-2 px-7 py-3.5 text-lg rounded-xl font-display font-bold tracking-tight border border-white/30 text-white hover:bg-white/10 transition-all"

@@ -39,18 +39,6 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRoster do
           {:ok, %{session: ProgramSession.t(), roster: [roster_entry()]}}
           | {:error, :not_found}
 
-  @doc """
-  Retrieves a session with its complete roster.
-
-  ## Parameters
-
-  - `session_id` - ID of the session
-
-  ## Returns
-
-  - `{:ok, %{session: session, roster: roster}}` on success
-  - `{:error, :not_found}` if session doesn't exist
-  """
   @spec execute(String.t()) :: result()
   def execute(session_id) when is_binary(session_id) do
     with {:ok, session} <- @session_repository.get_by_id(session_id) do
@@ -70,21 +58,6 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRoster do
     end
   end
 
-  @doc """
-  Retrieves a session with participation records attached for UI display.
-
-  Returns the session with a `participation_records` field containing
-  enriched records with child names resolved.
-
-  ## Parameters
-
-  - `session_id` - ID of the session
-
-  ## Returns
-
-  - `{:ok, session}` where session has `participation_records` list
-  - `{:error, :not_found}` if session doesn't exist
-  """
   @spec execute_enriched(String.t()) :: {:ok, map()} | {:error, :not_found}
   def execute_enriched(session_id) when is_binary(session_id) do
     with {:ok, session} <- @session_repository.get_by_id(session_id) do
@@ -96,21 +69,13 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRoster do
           info = Map.get(child_info_map, record.child_id, unknown_child_info())
           notes = Map.get(notes_map, record.child_id, [])
 
-          # Trigger: record is a struct — Map.put on structs bypasses struct enforcement
-          # Why: convert to plain map so presentation fields can be safely merged
-          # Outcome: downstream consumers (templates) get a flat map with all fields
+          # Convert struct to plain map so presentation fields can be merged without struct enforcement.
           Map.from_struct(record)
           |> Map.merge(build_enrichment_fields(info, notes))
         end)
 
-      # Trigger: admin show page needs program_name for display
-      # Why: ProgramSession domain struct only holds program_id; name requires cross-table lookup
-      # Outcome: enriched session map includes program_name for use in template header
       program_name = @session_repository.get_program_name(session.program_id)
 
-      # Trigger: session is a struct — Map.put on structs bypasses struct enforcement
-      # Why: convert to plain map so presentation fields can be safely merged
-      # Outcome: returns a plain map with all session fields + enriched records + program_name
       enriched_session =
         Map.from_struct(session)
         |> Map.put(:participation_records, enriched_records)
@@ -120,16 +85,12 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRoster do
     end
   end
 
-  # Trigger: records list may contain N children requiring info + notes
-  # Why: batch resolution eliminates N+1 queries — single round-trip per resource type
-  # Outcome: returns {child_info_map, notes_map} for O(1) lookup per record
+  # Batches child-info and notes resolution to avoid N+1 queries.
   defp batch_resolve(records) do
     child_ids = records |> Enum.map(& &1.child_id) |> Enum.uniq()
     child_info_map = @child_info_resolver.resolve_children_info(child_ids)
 
-    # Trigger: consent check determines note visibility
-    # Why: behavioral notes contain provider observations — only visible when parent consented
-    # Outcome: only fetch notes for children with active consent
+    # Behavioral notes are only visible when parent has consented — filter before fetching.
     consented_child_ids =
       child_info_map
       |> Enum.filter(fn {_id, info} -> info.has_consent? end)

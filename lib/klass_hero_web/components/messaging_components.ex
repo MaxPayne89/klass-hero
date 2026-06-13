@@ -1,12 +1,6 @@
 defmodule KlassHeroWeb.MessagingComponents do
   @moduledoc """
   UI components for the messaging system.
-
-  Provides reusable components for:
-  - Conversation list cards
-  - Message bubbles
-  - Empty states
-  - Input forms
   """
 
   use Phoenix.Component
@@ -74,7 +68,6 @@ defmodule KlassHeroWeb.MessagingComponents do
       ]}
     >
       <div class="flex items-start gap-3">
-        <!-- Avatar -->
         <div class={[
           "w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0",
           avatar_color(@display_name)
@@ -82,7 +75,6 @@ defmodule KlassHeroWeb.MessagingComponents do
           {String.first(@display_name) |> String.upcase()}
         </div>
 
-        <!-- Content -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between gap-2">
             <h3 class={[
@@ -319,7 +311,6 @@ defmodule KlassHeroWeb.MessagingComponents do
   def message_input(assigns) do
     ~H"""
     <div id="message-input-area" class={["border-t", Theme.border_color(:light), Theme.bg(:surface)]}>
-      <%!-- Upload error display --%>
       <div
         :if={@uploads && upload_errors(@uploads.attachments) != []}
         class="px-4 pt-2"
@@ -331,7 +322,6 @@ defmodule KlassHeroWeb.MessagingComponents do
           {upload_error_to_string(err)}
         </p>
       </div>
-      <%!-- Attachment previews --%>
       <div
         :if={@uploads && @uploads.attachments.entries != []}
         class="px-4 pt-3 flex gap-2 overflow-x-auto"
@@ -356,7 +346,6 @@ defmodule KlassHeroWeb.MessagingComponents do
           >
             &times;
           </button>
-          <%!-- Upload progress indicator --%>
           <div
             :if={entry.progress > 0 and entry.progress < 100}
             class="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden"
@@ -365,7 +354,6 @@ defmodule KlassHeroWeb.MessagingComponents do
           </div>
         </div>
       </div>
-      <%!-- Form with input and buttons --%>
       <.form
         for={@form}
         phx-submit="send_message"
@@ -373,7 +361,6 @@ defmodule KlassHeroWeb.MessagingComponents do
         id="message-form"
         class="flex items-end gap-2 p-4"
       >
-        <%!-- Attachment button --%>
         <label
           :if={@uploads}
           for={@uploads.attachments.ref}
@@ -487,15 +474,10 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   defp empty_state_message(_parent), do: gettext("Your conversations with providers will appear here")
 
-  # Page-level components
-  # These encapsulate the full page layout for messaging views,
-  # with variant-based dispatch for parent vs provider styling.
-
   @doc """
   Renders the conversation index page.
 
-  Uses multi-clause dispatch on `variant` to render the appropriate
-  page chrome (header, wrapper) while sharing the conversation list.
+  Uses multi-clause dispatch on `variant` for parent vs provider chrome.
   """
   attr :variant, :atom, required: true, values: [:parent, :provider]
   attr :streams, :any, required: true
@@ -573,8 +555,7 @@ defmodule KlassHeroWeb.MessagingComponents do
   @doc """
   Renders the conversation show (detail) page.
 
-  Uses multi-clause dispatch on `variant` to render the appropriate
-  page chrome (header, avatar) while sharing the message area.
+  Uses multi-clause dispatch on `variant` for parent vs provider chrome.
   """
   attr :variant, :atom, required: true, values: [:parent, :provider]
   attr :streams, :any, required: true
@@ -721,8 +702,6 @@ defmodule KlassHeroWeb.MessagingComponents do
     """
   end
 
-  # Helpers
-
   @avatar_colors {"bg-hero-blue-600", "bg-rose-500", "bg-hero-yellow-500", "bg-emerald-500", "bg-blue-500",
                   "bg-purple-500", "bg-rose-500"}
 
@@ -732,11 +711,7 @@ defmodule KlassHeroWeb.MessagingComponents do
     elem(@avatar_colors, index)
   end
 
-  # Trigger: render an inbox row label that fits the conversation type
-  # Why: broadcasts have no "other participant" — falling back to "Unknown" surfaced
-  #      as the UX bug in #892. Branch on type so each kind gets a meaningful label.
-  # Outcome: program title (or generic broadcast label) for broadcasts; participant
-  #          name (or "Unknown") for direct threads.
+  # Broadcasts have no "other participant" — fallback to "Unknown" was the UX bug in #892.
   defp derive_display_name(%{conversation: %{type: :program_broadcast}, program_name: name})
        when is_binary(name) and byte_size(name) > 0 do
     name

@@ -35,9 +35,6 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler do
   def handle_event(%{event_type: :user_registered, entity_id: user_id, payload: payload}) do
     intended_roles = Map.get(payload, :intended_roles, [])
 
-    # Trigger: user_registered event with role list
-    # Why: only create parent profile if "parent" role requested
-    # Outcome: parent profile created or skipped
     if "parent" in intended_roles do
       create_parent_profile_with_retry(user_id)
     else
@@ -49,10 +46,6 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler do
   def handle_event(%{event_type: :user_confirmed, entity_id: user_id, payload: payload}) do
     intended_roles = Map.get(payload, :intended_roles, [])
 
-    # Trigger: user_confirmed event — compensation path for profile creation
-    # Why: if user_registered delivery was delayed, this ensures the profile
-    #      exists before the user's first authenticated session
-    # Outcome: creates profile or returns :ok if already exists (idempotent)
     if "parent" in intended_roles do
       create_parent_profile_with_retry(user_id)
     else

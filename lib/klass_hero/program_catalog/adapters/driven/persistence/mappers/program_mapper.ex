@@ -14,31 +14,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Mappers.ProgramMa
 
   require Logger
 
-  @doc """
-  Converts an Ecto ProgramSchema to a domain Program entity.
-
-  Returns the domain Program struct with all fields mapped from the schema.
-  The ID is converted to a string to maintain domain independence from Ecto types.
-
-  ## Examples
-
-      iex> schema = %ProgramSchema{
-      ...>   id: "550e8400-e29b-41d4-a716-446655440000",
-      ...>   title: "Art Adventures",
-      ...>   description: "Creative art exploration",
-
-      ...>   age_range: "6-8 years",
-      ...>   price: Decimal.new("120.00"),
-      ...>   pricing_period: "per month",
-
-      ...>   inserted_at: ~U[2025-11-15 10:00:00Z],
-      ...>   updated_at: ~U[2025-11-15 10:00:00Z]
-      ...> }
-      iex> program = ProgramMapper.to_domain(schema)
-      iex> program.title
-      "Art Adventures"
-
-  """
+  @doc "Converts an Ecto ProgramSchema to a domain Program entity. ID is stringified for domain independence."
   @spec to_domain(ProgramSchema.t()) :: Program.t()
   def to_domain(%ProgramSchema{} = schema) do
     %Program{
@@ -66,29 +42,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Mappers.ProgramMa
     }
   end
 
-  @doc """
-  Converts a domain Program entity to a map of attributes for update operations.
-
-  Returns a map containing only the updatable fields. Excludes id, timestamps,
-  and lock_version as these are managed by Ecto.
-
-  ## Examples
-
-      iex> program = %Program{
-      ...>   id: "550e8400-e29b-41d4-a716-446655440000",
-      ...>   title: "Updated Art Adventures",
-      ...>   description: "New description",
-
-      ...>   age_range: "6-8 years",
-      ...>   price: Decimal.new("150.00"),
-      ...>   pricing_period: "per month",
-
-      ...> }
-      iex> attrs = ProgramMapper.to_schema(program)
-      iex> attrs.title
-      "Updated Art Adventures"
-
-  """
+  @doc "Converts a domain Program entity to update attrs. Excludes id, timestamps, and lock_version."
   def to_schema(%Program{} = program) do
     base = %{
       title: program.title,
@@ -113,9 +67,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Mappers.ProgramMa
     add_instructor_fields(base, program.instructor)
   end
 
-  # Trigger: registration date columns present on schema
-  # Why: RegistrationPeriod is a value object assembled from flat columns
-  # Outcome: always returns a RegistrationPeriod struct (dates may be nil)
+  # RegistrationPeriod is a value object assembled from flat schema columns; dates may be nil.
   defp build_registration_period(%ProgramSchema{} = schema) do
     %RegistrationPeriod{
       start_date: schema.registration_start_date,
@@ -123,9 +75,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Mappers.ProgramMa
     }
   end
 
-  # Trigger: instructor columns may all be nil (no instructor assigned)
-  # Why: instructor is optional — don't create a VO from nil data
-  # Outcome: nil when no instructor, Instructor VO when data present
+  # Instructor is optional — guard against building a VO from nil data.
   defp build_instructor(%ProgramSchema{instructor_id: nil}), do: nil
 
   defp build_instructor(%ProgramSchema{} = schema) do

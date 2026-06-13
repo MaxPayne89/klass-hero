@@ -22,9 +22,7 @@ defmodule KlassHeroWeb.DashboardLive do
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
 
-    # Trigger: enrollments are stored with parent_id (Family context), not identity_id (Accounts)
-    # Why: user.id is the Accounts identity_id, but enrollment.parent_id is the Family parent profile ID
-    # Outcome: resolve parent profile once, then fetch children + programs in parallel
+    # user.id is the Accounts identity_id; enrollment.parent_id is the Family profile ID — resolve once, then fan out.
     {parent, children, active_programs, expired_programs} =
       case Family.get_parent_by_identity(user.id) do
         {:ok, parent} ->
@@ -77,9 +75,7 @@ defmodule KlassHeroWeb.DashboardLive do
     {:ok, socket}
   end
 
-  # Build %{id, name, age, programs, color} items for pa_kid_picker.
-  # Stable color rotation per child index keeps the palette consistent across
-  # mount cycles without needing a stored attribute on Child.
+  # Stable color rotation per child index keeps the palette consistent across mount cycles.
   defp build_kid_picker_items(children, active_programs) do
     counts =
       Enum.reduce(active_programs, %{}, fn {enrollment, _program}, acc ->
@@ -103,9 +99,7 @@ defmodule KlassHeroWeb.DashboardLive do
     end)
   end
 
-  # Top 5 upcoming sessions across the family's active programs.
-  # Per locked decision MQ.6/Q2.5: ProgramSession exists, so this card is
-  # backed today via Participation.list_sessions/1 per program.
+  # Top 5 upcoming sessions across active programs, ascending by date.
   defp load_upcoming_sessions([], _children), do: []
 
   defp load_upcoming_sessions(active_programs, children) do
@@ -145,7 +139,6 @@ defmodule KlassHeroWeb.DashboardLive do
 
   defp format_session_time(_), do: nil
 
-  # Top 4 recent conversations for the dashboard preview card.
   defp load_recent_messages(user_id) do
     case Messaging.list_conversations(user_id, limit: 4) do
       {:ok, conversations, _has_more} ->
@@ -188,9 +181,6 @@ defmodule KlassHeroWeb.DashboardLive do
 
   defp relative_time(_), do: nil
 
-  # Trigger: parent is nil when no parent profile exists or data loading failed
-  # Why: reuse the already-resolved parent to avoid a duplicate get_parent_by_identity query
-  # Outcome: skip booking usage entirely when parent is unavailable
   defp assign_booking_usage_info(socket, nil), do: assign(socket, show_booking_usage: false)
 
   defp assign_booking_usage_info(socket, parent) do
@@ -224,9 +214,6 @@ defmodule KlassHeroWeb.DashboardLive do
             [{enrollment, program}]
 
           :error ->
-            # Trigger: enrollment references a program that no longer exists
-            # Why: program may have been deleted; orphaned enrollment is a data issue
-            # Outcome: skip this enrollment but log for data hygiene monitoring
             Logger.warning("[DashboardLive] Enrollment references missing program",
               enrollment_id: enrollment.id,
               program_id: enrollment.program_id
@@ -239,9 +226,6 @@ defmodule KlassHeroWeb.DashboardLive do
     Enrollment.classify_family_programs(enrollment_programs, Date.utc_today())
   end
 
-  # Trigger: streams require items with an :id field
-  # Why: active and expired programs merge into one stream with an expired flag per item
-  # Outcome: single stream preserving active-first ordering with expired metadata
   defp build_family_program_items(active, expired) do
     active_items =
       Enum.map(active, fn {e, p} ->
@@ -262,8 +246,7 @@ defmodule KlassHeroWeb.DashboardLive do
   end
 
   def handle_event("select_kid", _params, socket) do
-    # Kid-scoped filtering is a future enhancement (FLAGS ❌ on dashboard
-    # kid-scoped sections). For now the picker is purely visual.
+    # Kid-scoped filtering is a future enhancement; picker is purely visual for now.
     {:noreply, socket}
   end
 
@@ -303,7 +286,6 @@ defmodule KlassHeroWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <div class="space-y-6">
-      <%!-- Kid picker — horizontal chip-picker per family child --%>
       <section :if={@kid_picker_items != []} id="kid-picker">
         <.pa_kid_picker
           kids={@kid_picker_items}
@@ -313,7 +295,6 @@ defmodule KlassHeroWeb.DashboardLive do
         />
       </section>
 
-      <%!-- 4-up KPI grid. Spend hidden (FLAGS ❌). --%>
       <section id="dashboard-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <.pa_stat_card
           title={gettext("Active programs")}
@@ -335,7 +316,6 @@ defmodule KlassHeroWeb.DashboardLive do
         />
       </section>
 
-      <%!-- Two-column: weekly goal + booking usage (or sessions filler if unlimited) --%>
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <.pa_weekly_goal />
         <.pa_booking_usage
@@ -346,8 +326,6 @@ defmodule KlassHeroWeb.DashboardLive do
         />
       </section>
 
-      <%!-- Upcoming sessions list — backed by Participation.list_sessions
-            per active program, top 5 ascending. --%>
       <section id="upcoming-sessions" class="bg-white rounded-2xl shadow-sm p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-bold text-lg">{gettext("Upcoming sessions")}</h3>
@@ -366,11 +344,9 @@ defmodule KlassHeroWeb.DashboardLive do
         </div>
       </section>
 
-      <%!-- Recent messages preview --%>
       <section id="messages-preview">
         <.pa_message_preview messages={@recent_messages} on_open_navigate="/messages" />
       </section>
-      <%!-- Family Programs --%>
       <section id="family-programs" class="mb-8">
         <div class="flex items-center gap-2 mb-4">
           <.icon name="hero-academic-cap-mini" class="w-6 h-6 text-hero-cyan" />

@@ -66,9 +66,7 @@ defmodule KlassHero.Shared.Domain.Events.DomainEvent do
   """
   @spec new(atom(), String.t() | integer(), atom(), map(), keyword()) :: t()
   def new(event_type, aggregate_id, aggregate_type, payload, opts \\ []) do
-    # Trigger: DomainEvent includes :user_id in metadata unlike IntegrationEvent
-    # Why: domain events track which user caused the action for audit/tracing
-    # Outcome: metadata map may contain :user_id when provided in opts
+    # DomainEvent includes :user_id in metadata (unlike IntegrationEvent) for audit/tracing.
     metadata = EventMetadata.build_metadata(opts, [:user_id])
 
     %__MODULE__{
@@ -82,27 +80,15 @@ defmodule KlassHero.Shared.Domain.Events.DomainEvent do
     }
   end
 
-  @doc """
-  Returns the criticality level of the event (defaults to :normal).
-  """
   @spec criticality(t()) :: criticality()
   defdelegate criticality(event), to: EventMetadata
 
-  @doc """
-  Returns true if this is a critical event.
-  """
   @spec critical?(t()) :: boolean()
   defdelegate critical?(event), to: EventMetadata
 
-  @doc """
-  Returns the correlation_id from metadata if present.
-  """
   @spec correlation_id(t()) :: String.t() | nil
   defdelegate correlation_id(event), to: EventMetadata
 
-  @doc """
-  Returns the causation_id from metadata if present.
-  """
   @spec causation_id(t()) :: String.t() | nil
   defdelegate causation_id(event), to: EventMetadata
 end

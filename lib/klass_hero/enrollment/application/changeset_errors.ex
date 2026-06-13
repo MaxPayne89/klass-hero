@@ -27,9 +27,7 @@ defmodule KlassHero.Enrollment.Application.ChangesetErrors do
     Regex.replace(~r"%{(\w+)}", msg, fn match, key -> lookup(opts, key, match) end)
   end
 
-  # Returns the opts value for `key` as a string, or `default` when the atom
-  # isn't loaded or the key is absent. Catches ArgumentError narrowly; any
-  # other failure would still surface.
+  # Catches only ArgumentError from String.to_existing_atom/1 — other failures surface.
   defp lookup(opts, key, default) do
     atom = String.to_existing_atom(key)
 

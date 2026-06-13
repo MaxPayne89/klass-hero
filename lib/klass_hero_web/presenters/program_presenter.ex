@@ -1,16 +1,6 @@
 defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   @moduledoc """
-  Presentation layer for transforming Program domain models to UI-ready formats.
-
-  This module follows the DDD/Ports & Adapters pattern by keeping presentation
-  concerns in the web layer while the domain model stays pure.
-
-  ## Usage
-
-      alias KlassHeroWeb.Presenters.ProgramPresenter
-
-      # For table views (provider dashboard)
-      programs_for_view = Enum.map(programs, &ProgramPresenter.to_table_view/1)
+  Transforms Program domain models to UI-ready formats.
   """
 
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -22,21 +12,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   require Logger
 
   @doc """
-  Transforms a Program domain model to table view format.
-
-  Used for the provider dashboard program inventory table.
-
-  Returns a map with: id, name, category, price, assigned_staff, status, enrolled, capacity
-
-  ## Placeholder Values
-
-  The following fields return placeholder values pending feature implementation:
-
-  - `status: :active` - Program status tracking not yet implemented
-  - `enrolled: 0` - Enrollment count integration not yet implemented
-
-  These placeholders ensure the UI can render properly while the underlying
-  features are developed in future iterations.
+  Table view for the provider dashboard. `status` is a placeholder (tracking not yet implemented).
   """
   @spec to_table_view(Program.t() | ProgramListing.t(), map()) :: map()
   def to_table_view(program, enrollment_data \\ %{})
@@ -50,16 +26,13 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       category: humanize_category(program.category),
       price: format_price(program.price),
       assigned_staff: format_instructor(program.instructor),
-      # Placeholder: Program status tracking pending implementation
       status: :active,
       enrolled: Map.get(data, :enrolled),
       capacity: Map.get(data, :capacity)
     }
   end
 
-  # Trigger: CQRS read model now returns ProgramListing DTOs instead of Program entities
-  # Why: read side uses flat instructor_name field, not a nested instructor struct
-  # Outcome: same table view shape for UI rendering
+  # ProgramListing is a flat read-model DTO (no nested instructor struct).
   def to_table_view(%ProgramListing{} = listing, enrollment_data) do
     data = Map.get(enrollment_data, listing.id, %{})
 
@@ -91,9 +64,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       description: program.description,
       category: humanize_category(program.category),
       age_range: program.age_range,
-      # Trigger: program_card calls ProgramCatalog.format_price/1 which expects Decimal.t()
-      # Why: converting to string would cause FunctionClauseError at runtime
-      # Outcome: price stays as Decimal for safe downstream formatting
+      # Keep as Decimal — program_card/format_price expects Decimal.t(), not a string.
       price: if(program.price, do: Decimal.round(program.price, 2), else: Decimal.new(0)),
       period: program.pricing_period,
       icon_name: icon_name(program.category),
@@ -139,10 +110,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
     "hero-academic-cap"
   end
 
-  # Trigger: no category-specific gradient mapping exists yet
-  # Why: a single default gradient keeps the card visually consistent until
-  #      category-based theming is implemented
-  # Outcome: all cards share the same blue gradient background
+  # Single gradient until category-based theming is implemented.
   defp default_gradient_class do
     "bg-gradient-to-br from-hero-blue-400 to-hero-blue-600"
   end
@@ -165,9 +133,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   @spec format_schedule(Program.t()) ::
           %{days: String.t() | nil, times: String.t() | nil, date_range: String.t() | nil} | nil
   def format_schedule(%Program{meeting_days: days} = program) when days == [] or is_nil(days) do
-    # Trigger: no meeting days provided
-    # Why: if there's also no start time and no date range, there's nothing to display
-    # Outcome: returns nil so UI can hide the schedule section entirely
+    # Return nil when there is truly nothing to display; UI hides the section.
     if !(is_nil(program.meeting_start_time) and is_nil(program.start_date)) do
       %{
         days: nil,
@@ -201,9 +167,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   defp format_times(_, nil), do: nil
 
   defp format_times(%Time{} = start_time, %Time{} = end_time) do
-    # Trigger: both times in the same AM/PM period
-    # Why: "4:00 - 5:30 PM" reads cleaner than "4:00 PM - 5:30 PM"
-    # Outcome: omit period from start time when both share the same period
+    # Omit period from start time when same AM/PM: "4:00 - 5:30 PM" vs "4:00 PM - 5:30 PM".
     same_period? = start_time.hour >= 12 == end_time.hour >= 12
 
     if same_period? do
@@ -229,17 +193,13 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   defp format_date_range(nil, _), do: nil
 
-  # Trigger: end_date is nil but start_date exists
-  # Why: open-ended programs still benefit from showing when they begin
-  # Outcome: displays "From Sep 1, 2026" instead of nil
+  # Open-ended programs show start date only.
   defp format_date_range(%Date{} = start_date, nil) do
     "From #{format_short_date(start_date)}, #{start_date.year}"
   end
 
   defp format_date_range(%Date{} = start_date, %Date{} = end_date) do
-    # Trigger: start and end years differ (e.g. Nov 2026 - Mar 2027)
-    # Why: omitting start year is ambiguous for cross-year ranges
-    # Outcome: "Nov 1, 2026 - Mar 15, 2027" vs "Mar 1 - Jun 30, 2026"
+    # Include start year for cross-year ranges to avoid ambiguity.
     if start_date.year == end_date.year do
       "#{format_short_date(start_date)} - #{format_short_date(end_date)}, #{end_date.year}"
     else
@@ -298,9 +258,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
     }
   end
 
-  # Trigger: ProgramListing stores instructor as flat fields, not a nested struct
-  # Why: read model denormalizes data for display, no need for separate entity
-  # Outcome: builds same shape map for UI rendering from flat fields
+  # ProgramListing denormalizes instructor as flat fields; build same shape map for UI.
   defp format_listing_instructor(%ProgramListing{instructor_name: nil}), do: nil
 
   defp format_listing_instructor(%ProgramListing{} = listing) do

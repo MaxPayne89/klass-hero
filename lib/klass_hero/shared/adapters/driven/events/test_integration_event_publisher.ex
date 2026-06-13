@@ -89,9 +89,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher 
 
   @impl true
   def publish(%IntegrationEvent{} = event) do
-    # Trigger: error flag set via configure_publish_error/1
-    # Why: allows tests to simulate publish failures for error path coverage
-    # Outcome: event is NOT stored, caller receives {:error, reason}
     case Process.get(@error_key) do
       nil ->
         store_event(event)

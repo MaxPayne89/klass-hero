@@ -34,23 +34,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
     timestamps()
   end
 
-  @doc """
-  Creates a changeset for validation.
-
-  Required fields:
-  - identity_id (must be a valid UUID)
-  - business_name (1-200 characters)
-
-  Optional fields:
-  - description (1-1000 characters if provided)
-  - phone (1-20 characters if provided)
-  - website (1-500 characters if provided, must start with https://)
-  - address (1-500 characters if provided)
-  - logo_url (1-500 characters if provided)
-  - verified (boolean, defaults to false)
-  - verified_at (DateTime if provided)
-  - categories (list of strings, defaults to [])
-  """
+  @doc "Changeset for insert/update of a provider profile."
   def changeset(provider_profile_schema, attrs) do
     provider_profile_schema
     |> cast(attrs, [
@@ -124,10 +108,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
     |> maybe_set_verification_fields(metadata)
   end
 
-  # Trigger: admin toggled the `verified` checkbox in the Backpex form
-  # Why: verified_at and verified_by_id must stay in sync with verified flag,
-  #      matching what VerifyProvider / UnverifyProvider use cases set
-  # Outcome: DB record has consistent audit trail after Backpex save
+  # Keeps verified_at and verified_by_id in sync with verified flag (audit trail).
   defp maybe_set_verification_fields(changeset, metadata) do
     case get_change(changeset, :verified) do
       true ->

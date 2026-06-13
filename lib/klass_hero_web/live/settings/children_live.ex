@@ -66,9 +66,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
   defp apply_action(socket, :edit, %{"child_id" => child_id}) do
     case Family.get_child_by_id(child_id) do
       {:ok, child} ->
-        # Trigger: verify child belongs to the current parent
-        # Why: prevent editing another parent's children via join table lookup
-        # Outcome: redirect unauthorized users back to index
+        # Verify ownership via join table before editing.
         if Family.child_belongs_to_parent?(child.id, socket.assigns.parent_id) do
           changeset = Family.change_child(child, %{})
           consent = Family.child_has_active_consent?(child.id, @consent_type)
@@ -117,9 +115,6 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
   end
 
   def handle_event("request_delete_child", %{"id" => child_id}, socket) do
-    # Trigger: verify child belongs to current parent before proceeding
-    # Why: prevent unauthorized deletion
-    # Outcome: only proceed if ownership confirmed
     if Family.child_belongs_to_parent?(child_id, socket.assigns.parent_id) do
       case Family.prepare_child_deletion(child_id) do
         {:ok, :no_enrollments} ->
@@ -143,9 +138,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
     end
   end
 
-  # Trigger: stale browser tab or crafted WebSocket message with no delete_candidate
-  # Why: guard against nil child_id reaching Family.delete_child/1 (has binary guard)
-  # Outcome: user sees flash instead of silent no-op
+  # Guards against stale/crafted events with no delete_candidate.
   def handle_event("confirm_delete_child", _params, %{assigns: %{delete_candidate: nil}} = socket) do
     Logger.warning("[ChildrenLive] confirm_delete_child with nil delete_candidate")
 
@@ -197,9 +190,6 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
   end
 
   defp save_child(socket, mode, child_params) do
-    # Trigger: validate via changeset before calling domain layer
-    # Why: domain layer expects atom keys and typed values; changeset catches form errors first
-    # Outcome: user sees field-level errors if validation fails
     changeset =
       build_changeset(mode, socket.assigns.child, child_params)
       |> Map.put(:action, :validate)
@@ -253,9 +243,6 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
       |> put_flash(:info, child_saved_flash(mode, consent_result))
       |> push_patch(to: ~p"/settings/children")
 
-    # Trigger: new child creation increments count; edit doesn't
-    # Why: count tracks list length for empty state display
-    # Outcome: only :new mode updates the counter
     socket =
       if mode == :new do
         new_count = socket.assigns.children_count + 1
@@ -295,8 +282,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
   defp normalize_consent_result({:ok, _}, _child_id), do: :ok
   defp normalize_consent_result(:noop, _child_id), do: :ok
 
-  # Trigger: concurrent grant or stale UI state
-  # Why: consent already exists — idempotent, treat as success
+  # Idempotent: consent already exists, treat as success.
   defp normalize_consent_result({:error, :already_active}, _child_id), do: :ok
 
   defp normalize_consent_result({:error, reason}, child_id) do
@@ -335,9 +321,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
     end
   end
 
-  # Trigger: form sends date_of_birth as ISO 8601 string
-  # Why: domain model validates %Date{} struct, not strings
-  # Outcome: parse string to Date before passing to domain layer
+  # Domain expects %Date{}, not a string.
   defp coerce_value(:date_of_birth, value) when is_binary(value) and value != "" do
     case Date.from_iso8601(value) do
       {:ok, date} -> date
@@ -345,9 +329,6 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
     end
   end
 
-  # Trigger: form sends school_grade as string
-  # Why: domain model expects integer or nil
-  # Outcome: parse string to integer before passing to domain layer
   defp coerce_value(:school_grade, ""), do: nil
 
   defp coerce_value(:school_grade, value) when is_binary(value) do
@@ -485,7 +466,6 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
               </div>
             </div>
 
-            <%!-- Optional details --%>
             <div class="mt-3 flex flex-wrap gap-2">
               <%= if child.consent_active do %>
                 <span class={[
@@ -535,7 +515,6 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
         </div>
       </div>
 
-      <%!-- Delete Confirmation Modal --%>
       <%= if @delete_candidate do %>
         <div
           id="delete-modal-backdrop"
@@ -616,7 +595,6 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
         </div>
       <% end %>
 
-      <%!-- Add/Edit Modal --%>
       <%= if @show_modal do %>
         <div
           id="child-modal-backdrop"

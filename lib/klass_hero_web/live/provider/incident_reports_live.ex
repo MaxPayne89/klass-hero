@@ -29,11 +29,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
     end
   end
 
-  # Trigger: a program_id arrives from the route (untrusted) for an authenticated provider
-  # Why: a single projection read both verifies ownership and surfaces the program record;
-  #      avoids the small race window where a second `list_provider_programs/1` call could
-  #      see a different snapshot of the projection
-  # Outcome: list assigns + stream on success, dashboard redirect on missing/foreign id
+  # A single projection read verifies ownership and fetches the record, avoiding a race between two queries.
   defp mount_for_provider(socket, provider, program_id) do
     case Provider.get_provider_program(program_id) do
       {:ok, %{provider_id: prov_id} = program} when prov_id == provider.id ->

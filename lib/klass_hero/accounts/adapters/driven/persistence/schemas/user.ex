@@ -58,12 +58,9 @@ defmodule KlassHero.Accounts.User do
   @doc """
   A user changeset for registration.
 
-  Validates name, email, and intended_roles fields, sets a default role.
-
   ## Options
 
-    * `:validate_unique` - Set to false if you don't want to validate the
-      uniqueness of the email. Defaults to `true`.
+    * `:validate_unique` - Set to false to skip email uniqueness validation. Defaults to `true`.
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
@@ -79,15 +76,12 @@ defmodule KlassHero.Accounts.User do
   @doc """
   A user changeset for staff registration via an invitation link.
 
-  Sets `intended_roles` to `[:staff]` only. Per ADR-0005, being hired as
-  staff is NOT becoming a provider — provider-hood is a deliberate, separate
-  act (self-registration or an explicit staff→provider upgrade). Accepting an
-  invite therefore never grants `:provider` and never creates a ProviderProfile.
+  Forces `intended_roles` to `[:staff]` only. Per ADR-0005, accepting a staff invite
+  never grants `:provider` or creates a ProviderProfile — provider-hood is a separate act.
 
   ## Options
 
-    * `:validate_unique` - Set to false if you don't want to validate the
-      uniqueness of the email. Defaults to `true`.
+    * `:validate_unique` - Set to false to skip email uniqueness validation. Defaults to `true`.
   """
   def staff_registration_changeset(user, attrs, opts \\ []) do
     user
@@ -100,13 +94,7 @@ defmodule KlassHero.Accounts.User do
   end
 
   @doc """
-  A changeset that grants an additional role, preserving the user's existing ones.
-
-  Unlike `registration_changeset` (casts user-supplied roles) and
-  `staff_registration_changeset` (sets `[:staff]`), this unions a server-decided
-  `role` into the persisted `intended_roles`. Used when an existing account is
-  linked as staff (ADR-0005 multi-persona): a `:parent` becoming also-`:staff`
-  keeps `:parent`. Idempotent — adding a role already held is a no-op.
+  Grants an additional role, preserving existing ones. Idempotent (ADR-0005 multi-persona).
   """
   def add_role_changeset(user, role) when is_atom(role) do
     next_roles = Enum.uniq((user.intended_roles || []) ++ [role])
@@ -118,12 +106,7 @@ defmodule KlassHero.Accounts.User do
   end
 
   @doc """
-  A changeset that revokes a role, preserving the user's other ones.
-
-  The mirror of `add_role_changeset/2` (ADR-0005, #972): when a persona is lost
-  — the last linked staff row deleted — the matching atom is dropped from
-  `intended_roles` so intent stays in step with reality. Idempotent — removing a
-  role the user doesn't hold is a no-op.
+  Revokes a role, preserving others. Idempotent; mirror of `add_role_changeset/2` (ADR-0005, #972).
   """
   def remove_role_changeset(user, role) when is_atom(role) do
     next_roles = Enum.reject(user.intended_roles || [], &(&1 == role))
@@ -145,13 +128,9 @@ defmodule KlassHero.Accounts.User do
   @doc """
   A user changeset for registering or changing the email.
 
-  It requires the email to change otherwise an error is added.
-
   ## Options
 
-    * `:validate_unique` - Set to false if you don't want to validate the
-      uniqueness of the email, useful when displaying live validations.
-      Defaults to `true`.
+    * `:validate_unique` - Set to false for live-validation (skips uniqueness check). Defaults to `true`.
   """
   def email_changeset(user, attrs, opts \\ []) do
     user
@@ -197,17 +176,10 @@ defmodule KlassHero.Accounts.User do
   @doc """
   A user changeset for changing the password.
 
-  It is important to validate the length of the password, as long passwords may
-  be very expensive to hash for certain algorithms.
-
   ## Options
 
-    * `:hash_password` - Hashes the password so it can be stored securely
-      in the database and ensures the password field is cleared to prevent
-      leaks in the logs. If password hashing is not needed and clearing the
-      password field is not desired (like when using this changeset for
-      validations on a LiveView form), this option can be set to `false`.
-      Defaults to `true`.
+    * `:hash_password` - Hash and clear the password field. Set to `false` for live
+      validations on a LiveView form. Defaults to `true`.
   """
   def password_changeset(user, attrs, opts \\ []) do
     user
@@ -246,19 +218,9 @@ defmodule KlassHero.Accounts.User do
   end
 
   @doc """
-  Anonymizes the user account for GDPR deletion requests.
-
-  Replaces PII fields with anonymized values:
-  - Email: `deleted_<user_id>@anonymized.local`
-  - Name: `"Deleted User"` (placeholder)
-  - Avatar: `nil` (cleared)
-
-  Timestamps and other non-PII data are preserved for data integrity.
+  Anonymizes PII fields for GDPR deletion. Delegates anonymized values to the domain model.
   """
   def anonymize_changeset(%__MODULE__{id: id} = user) do
-    # Trigger: domain model owns the definition of "anonymized"
-    # Why: single source of truth for GDPR anonymization values
-    # Outcome: schema changeset delegates field values to the domain model
     attrs = DomainUser.anonymized_attrs()
     anonymized_email = attrs.email_fn.(id)
 
@@ -268,9 +230,7 @@ defmodule KlassHero.Accounts.User do
   @supported_locales ~w(en de)
 
   @doc """
-  A user changeset for changing locale preference.
-
-  Validates that the locale is one of the supported locales: #{inspect(@supported_locales)}.
+  A user changeset for changing locale preference. Validates against #{inspect(@supported_locales)}.
   """
   def locale_changeset(user, attrs) do
     user

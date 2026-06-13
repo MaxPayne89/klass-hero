@@ -1,24 +1,10 @@
 defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationDocumentMapper do
   @moduledoc """
-  Maps between VerificationDocument domain model and Ecto schema.
+  Maps between `VerificationDocument` domain model and Ecto schema.
 
-  This adapter provides bidirectional conversion:
-  - to_domain/1: VerificationDocumentSchema -> VerificationDocument (for reading from database)
-  - to_schema/1: VerificationDocument -> map of attributes (for creating/updating in database)
-  ## Field Name Translation
-
-  The database uses `provider_id` to reference the `providers` table.
-  The domain model uses `provider_profile_id` for semantic clarity.
-  This mapper handles the translation between these names.
-
-  ## Design Note: to_schema Excludes Database-Managed Fields
-
-  The `to_schema/1` function intentionally excludes:
-  - `id` - Managed by Ecto on insert (conditionally included via maybe_add_id/2)
-  - `inserted_at`, `updated_at` - Managed by Ecto timestamps
-
-  This follows standard Ecto patterns where the database/framework manages
-  these fields automatically.
+  DB uses `provider_id`; domain uses `provider_profile_id` — this mapper translates.
+  `to_schema/1` excludes `id`, `inserted_at`, `updated_at` (Ecto-managed);
+  `id` is conditionally included via `maybe_add_id/2`.
   """
 
   import KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers,
@@ -30,15 +16,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationDoc
   # Valid statuses - ensures atoms exist for String.to_existing_atom/1
   @valid_statuses [:pending, :approved, :rejected]
 
-  @doc """
-  Converts an Ecto VerificationDocumentSchema to a domain VerificationDocument entity.
-
-  Field translation:
-  - provider_id (DB) -> provider_profile_id (domain)
-  - status string -> status atom
-
-  Returns the domain VerificationDocument struct with all fields mapped from the schema.
-  """
+  @doc "Converts an Ecto `VerificationDocumentSchema` to a domain `VerificationDocument`."
   @spec to_domain(VerificationDocumentSchema.t()) :: VerificationDocument.t()
   def to_domain(%VerificationDocumentSchema{} = schema) do
     %VerificationDocument{
@@ -56,15 +34,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationDoc
     }
   end
 
-  @doc """
-  Converts a domain VerificationDocument entity to a map of attributes for Ecto operations.
-
-  Field translation:
-  - provider_profile_id (domain) -> provider_id (DB)
-  - status atom -> status string
-
-  Returns a map suitable for Ecto changeset operations (insert/update).
-  """
+  @doc "Converts a domain `VerificationDocument` to a map of attributes for Ecto insert/update."
   @spec to_schema(VerificationDocument.t()) :: map()
   def to_schema(%VerificationDocument{} = domain) do
     %{
@@ -80,10 +50,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationDoc
     |> maybe_add_id(domain.id)
   end
 
-  # Converts a string status to an atom, raising on unknown values.
-  # Uses String.to_existing_atom/1 to prevent atom table exhaustion.
-  # Unknown status = corrupt data — raising surfaces the issue immediately
-  # rather than silently downgrading (e.g., approved docs appearing as pending).
+  # Raises on unknown status — corrupt data should surface immediately rather than
+  # silently downgrading (e.g. approved docs appearing as pending).
   defp string_to_status(nil), do: :pending
 
   defp string_to_status(status) when is_binary(status) do
@@ -100,7 +68,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationDoc
               __STACKTRACE__
   end
 
-  # Converts an atom status to a string, defaulting to "pending" if nil.
   defp status_to_string(nil), do: "pending"
   defp status_to_string(status) when is_atom(status), do: Atom.to_string(status)
 end

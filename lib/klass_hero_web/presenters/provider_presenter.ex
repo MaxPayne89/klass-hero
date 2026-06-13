@@ -1,16 +1,6 @@
 defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   @moduledoc """
-  Presentation layer for transforming Provider domain models to UI-ready formats.
-
-  This module follows the DDD/Ports & Adapters pattern by keeping presentation
-  concerns in the web layer while the domain model stays pure.
-
-  ## Usage
-
-      alias KlassHeroWeb.Presenters.ProviderPresenter
-
-      # For dashboard business card
-      business = ProviderPresenter.to_business_view(provider)
+  Transforms Provider domain models to UI-ready formats.
   """
 
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -74,10 +64,7 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   def verification_status_from_docs(_verified, []), do: :not_started
 
   def verification_status_from_docs(_verified, docs) do
-    # Trigger: at least one document exists but provider not yet verified
-    # Why: pending means review in progress; rejected means action needed;
-    #      all-approved means awaiting admin final verification (still pending from provider POV)
-    # Outcome: :pending, :rejected, or :pending (all approved, awaiting admin)
+    # All-approved also maps to :pending — awaiting admin final sign-off.
     cond do
       Enum.any?(docs, &(&1.status == :pending)) -> :pending
       Enum.any?(docs, &(&1.status == :rejected)) -> :rejected

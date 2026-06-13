@@ -58,9 +58,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
     end
   end
 
-  # Trigger: id param arrives from URL as raw string
-  # Why: non-UUID strings cause Ecto.Query.CastError before Repo.one executes
-  # Outcome: invalid UUIDs redirect to index with error flash instead of crashing
+  # Non-UUID strings cause Ecto.Query.CastError — redirect instead of crashing.
   defp apply_action(socket, :show, %{"id" => id}) do
     case Ecto.UUID.cast(id) do
       {:ok, uuid} ->
@@ -95,9 +93,6 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
     end
   end
 
-  # Trigger: status param is a known value like "pending"
-  # Why: only allow valid status filters, ignore garbage input
-  # Outcome: returns atom for valid statuses, nil for "all" or unknown
   defp parse_status_filter(%{"status" => status}) when status in @valid_statuses do
     String.to_existing_atom(status)
   end
@@ -432,10 +427,6 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
     """
   end
 
-  # ------------------------------------------------------------------
-  # Components
-  # ------------------------------------------------------------------
-
   attr :label, :string, required: true
   attr :status, :atom, required: true
   attr :current_status, :atom, required: true
@@ -508,10 +499,6 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
     </div>
     """
   end
-
-  # ------------------------------------------------------------------
-  # Helpers
-  # ------------------------------------------------------------------
 
   defp filter_path(nil), do: ~p"/admin/verifications"
   defp filter_path(status), do: ~p"/admin/verifications?status=#{status}"

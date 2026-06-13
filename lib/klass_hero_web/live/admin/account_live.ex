@@ -33,25 +33,19 @@ defmodule KlassHeroWeb.Admin.AccountLive do
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
 
-  # Trigger: :new action is denied; :delete excluded from routes
-  # Why: users register themselves; deletion follows GDPR anonymization
-  # Outcome: hides "New Account" button, denies unknown future actions
+  # :new denied (users self-register); deletion uses GDPR anonymization flow.
   @impl Backpex.LiveResource
   def can?(_assigns, :new, _item), do: false
   def can?(_assigns, :index, _item), do: true
   def can?(_assigns, :show, _item), do: true
 
-  # Trigger: admin attempts to edit their own record
-  # Why: toggling own is_admin flag would lock the admin out
-  # Outcome: Backpex raises ForbiddenError, blocking the edit page
+  # Prevent self-edit: toggling own is_admin would lock the admin out.
   def can?(assigns, :edit, item), do: item.id != assigns.current_scope.user.id
 
   def can?(_assigns, _action, _item), do: false
 
   @doc false
-  # Trigger: edit action only needs the `is_admin` boolean toggle
-  # Why: roles/subscription fields use `only: [:index, :show]`, so associations are unused on edit
-  # Outcome: skips 2 unnecessary preload queries for the single-row edit form
+  # Edit only needs is_admin toggle; roles/subscription fields are index/show-only, so skip preloads.
   def item_query(query, :edit, _assigns), do: query
 
   def item_query(query, _live_action, _assigns) do
@@ -154,8 +148,6 @@ defmodule KlassHeroWeb.Admin.AccountLive do
       }
     ]
   end
-
-  # Parent tier display helpers
 
   defp parent_tier_label("explorer"), do: "Explorer"
   defp parent_tier_label("active"), do: "Active"

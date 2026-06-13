@@ -1,9 +1,6 @@
 defmodule KlassHeroWeb.ParticipationComponents do
   @moduledoc """
-  Provides participation-specific components for Klass Hero application.
-
-  This module contains domain-specific components for participation check-in/out workflows,
-  session management, and participation status tracking for providers and parents.
+  Components for participation check-in/out workflows and session management.
   """
   use Phoenix.Component
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -51,7 +48,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
       Theme.shadow(:md),
       @class
     ]}>
-      <%!-- Session header --%>
       <div class="flex items-start justify-between gap-4 mb-4">
         <div class="flex-1">
           <h3 class="text-lg font-semibold text-hero-black">
@@ -64,7 +60,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
         <.participation_status status={@session.status} />
       </div>
 
-      <%!-- Session details --%>
       <div class="space-y-2 mb-4">
         <div class="flex items-center gap-2 text-sm text-hero-black-100">
           <.icon name="hero-map-pin" class="w-4 h-4 text-hero-grey-400" />
@@ -84,7 +79,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
         <% end %>
       </div>
 
-      <%!-- Actions slot --%>
       <%= if @actions != [] do %>
         <div class="flex gap-2 flex-wrap">
           {render_slot(@actions)}
@@ -173,7 +167,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
       @class
     ]}>
       <.form for={@form} id="participation-form" phx-submit={@on_submit}>
-        <%!-- Session context --%>
         <div class="mb-6">
           <h3 class="text-lg font-semibold text-hero-black mb-2">
             {gettext("Participation Check-In")}
@@ -183,7 +176,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
           </p>
         </div>
 
-        <%!-- Roster grid --%>
         <div class="space-y-3 mb-6">
           <h4 class="text-sm font-medium text-hero-black-100">{gettext("Session Roster")}</h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -224,7 +216,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
           </div>
         </div>
 
-        <%!-- Notes field --%>
         <div class="mb-6">
           <.input
             field={@form[:notes]}
@@ -235,7 +226,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
           />
         </div>
 
-        <%!-- Submit button --%>
         <div class="flex gap-3">
           <button
             type="submit"
@@ -312,7 +302,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
       Theme.shadow(:md),
       @class
     ]}>
-      <%!-- Header with count --%>
       <div class="p-4 md:p-6 border-b border-hero-grey-200">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-hero-black">
@@ -327,14 +316,12 @@ defmodule KlassHeroWeb.ParticipationComponents do
         </div>
       </div>
 
-      <%!-- Roster list --%>
       <div class="divide-y divide-hero-grey-200">
         <div
           :for={record <- @participation_records}
           class="p-4 md:p-6 hover:bg-hero-grey-50 transition-colors"
         >
           <div class="flex items-start justify-between gap-4">
-            <%!-- Child info --%>
             <div class="flex-1">
               <div class="font-medium text-hero-black mb-1">
                 {record.child_first_name} {record.child_last_name}
@@ -343,7 +330,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
               <%!-- Consent-gated safety info --%>
               <.safety_info_badges record={record} id={"safety-info-#{record.id}"} />
 
-              <%!-- Check-in/out times --%>
               <div class="space-y-1 text-sm text-hero-grey-600">
                 <%= if record.check_in_at do %>
                   <div class="flex items-center gap-2">
@@ -359,7 +345,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
                 <% end %>
               </div>
 
-              <%!-- Notes (check-in and check-out) --%>
               <%= if Map.get(record, :check_in_notes) || Map.get(record, :check_out_notes) do %>
                 <div class="mt-2 space-y-1">
                   <%= if Map.get(record, :check_in_notes) do %>
@@ -378,7 +363,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
               <% end %>
             </div>
 
-            <%!-- Status and actions --%>
             <div class="flex flex-col items-end gap-2">
               <.participation_status status={record.status} />
               <%= if @editable && @actions != [] do %>
@@ -389,7 +373,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
             </div>
           </div>
 
-          <%!-- Checkout form (inline, below child info) --%>
           <%= if @checkout_form_expanded == to_string(record.id) do %>
             <div class="mt-4 border-t border-hero-grey-200 pt-4">
               <.form
@@ -400,7 +383,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
                 phx-value-id={record.id}
               >
                 <div class="space-y-3">
-                  <%!-- Notes textarea --%>
                   <.input
                     field={Map.get(@checkout_forms, to_string(record.id))[:notes]}
                     type="textarea"
@@ -409,7 +391,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
                     rows="2"
                   />
 
-                  <%!-- Action buttons --%>
                   <div class="flex gap-2 flex-wrap">
                     <button
                       type="submit"
@@ -447,7 +428,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
           <% end %>
         </div>
 
-        <%!-- Empty state --%>
         <%= if @participation_records == [] do %>
           <div class="p-8 text-center text-hero-grey-500">
             <.icon name="hero-user-group" class="w-12 h-12 mx-auto mb-2 text-hero-grey-400" />
@@ -658,8 +638,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
     """
   end
 
-  # Private components
-
   attr :form, Form, required: true
   attr :entity_id, :string, required: true
   attr :id_prefix, :string, required: true
@@ -751,8 +729,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
     """
   end
 
-  # Private helper functions
-
   defp format_session_datetime(session) do
     date = Map.get(session, :session_date) || Map.get(session, :date) || Date.utc_today()
     start_time = Map.get(session, :start_time) || ~T[00:00:00]
@@ -767,8 +743,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
   defp format_time(%Time{} = time) do
     Calendar.strftime(time, "%I:%M %p")
   end
-
-  # Status badge helper functions
 
   defp size_classes(:sm), do: "px-2 py-0.5 text-xs"
   defp size_classes(:md), do: "px-2.5 py-1 text-sm"
@@ -813,8 +787,6 @@ defmodule KlassHeroWeb.ParticipationComponents do
   defp status_label(:absent), do: gettext("Absent")
   defp status_label(:expected), do: gettext("Expected")
   defp status_label(:cancelled), do: gettext("Cancelled")
-
-  # Behavioral note status helpers
 
   defp note_status_classes(:pending_approval), do: "bg-yellow-50 text-yellow-700 border border-yellow-300"
 

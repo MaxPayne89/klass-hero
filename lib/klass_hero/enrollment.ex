@@ -2,40 +2,8 @@ defmodule KlassHero.Enrollment do
   @moduledoc """
   Public API for the Enrollment bounded context.
 
-  This module provides the public interface for managing program enrollments,
-  including creating enrollments, tracking booking counts for entitlements,
-  and retrieving enrollment history.
-
-  ## Usage
-
-      # Create an enrollment (total = program price, no derived fees)
-      {:ok, enrollment} = Enrollment.create_enrollment(%{
-        program_id: "program-uuid",
-        child_id: "child-uuid",
-        parent_id: "parent-uuid",
-        payment_method: "card",
-        subtotal: Decimal.new("45.00"),
-        vat_amount: Decimal.new("0.00"),
-        card_fee_amount: Decimal.new("0.00"),
-        total_amount: Decimal.new("45.00")
-      })
-
-      # Get an enrollment
-      {:ok, enrollment} = Enrollment.get_enrollment("enrollment-uuid")
-
-      # List enrollments for a parent
-      enrollments = Enrollment.list_parent_enrollments("parent-uuid")
-
-      # Count monthly bookings (for entitlement enforcement)
-      count = Enrollment.count_monthly_bookings("parent-uuid")
-
-  ## Architecture
-
-  This context follows the Ports & Adapters architecture:
-  - Public API (this module) → delegates to use cases
-  - Use cases (application layer) → orchestrate domain operations
-  - Repository ports (domain layer) → define persistence contracts
-  - Repository implementations (adapter layer) → implement persistence
+  Manages program enrollments, capacity policies, participant eligibility, and bulk invite flows.
+  Follows Ports & Adapters: this module delegates to use cases in the application layer.
   """
 
   use Boundary,
@@ -90,29 +58,11 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.Application.SingleInviteForm
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
 
-  # ===========================================================================
-  # Commands
-  # ===========================================================================
-
   @doc """
   Creates a new enrollment.
 
-  Required parameters:
-  - program_id: UUID of the program
-  - child_id: UUID of the child
-  - parent_id: UUID of the parent
-
-  Optional parameters:
-  - status: Enrollment status (defaults to "pending")
-  - enrolled_at: DateTime (defaults to now)
-  - subtotal, vat_amount, card_fee_amount, total_amount: Fee amounts
-  - payment_method: "card" or "transfer"
-  - special_requirements: Special needs text
-
-  Returns:
-  - `{:ok, Enrollment.t()}` - Enrollment created successfully
-  - `{:error, :duplicate_resource}` - Active enrollment already exists for child/program
-  - `{:error, term()}` - Validation or persistence failure
+  Returns `{:ok, Enrollment.t()}`, `{:error, :duplicate_resource}` if an active enrollment
+  already exists for the child/program, or `{:error, term()}` on validation failure.
   """
   def create_enrollment(params) when is_map(params) do
     CreateEnrollment.execute(params)
@@ -121,21 +71,10 @@ defmodule KlassHero.Enrollment do
   @doc """
   Cancels an enrollment by admin action.
 
-  Enforces domain lifecycle guards (only pending/confirmed can be cancelled),
-  persists the status change, and dispatches an enrollment_cancelled domain event.
+  Only pending/confirmed enrollments may be cancelled. Dispatches `enrollment_cancelled`.
 
-  ## Parameters
-
-  - `enrollment_id` — UUID of the enrollment
-  - `admin_id` — UUID of the admin performing the cancellation
-  - `reason` — human-readable cancellation reason
-
-  ## Returns
-
-  - `{:ok, Enrollment.t()}` — cancellation succeeded
-  - `{:error, :not_found}` — enrollment does not exist
-  - `{:error, :invalid_status_transition}` — enrollment is completed or already cancelled
-  - `{:error, :invalid_reason}` — reason is empty
+  Returns `{:ok, Enrollment.t()}`, `{:error, :not_found}`, `{:error, :invalid_status_transition}`,
+  or `{:error, :invalid_reason}`.
   """
   def cancel_enrollment_by_admin(enrollment_id, admin_id, reason)
       when is_binary(enrollment_id) and is_binary(admin_id) and is_binary(reason) and byte_size(reason) > 0 do
@@ -145,17 +84,8 @@ defmodule KlassHero.Enrollment do
   @doc """
   Confirms a pending enrollment when the owning provider approves it.
 
-  ## Parameters
-
-  - `:enrollment_id` — UUID of the enrollment
-  - `:provider_id` — UUID of the provider performing the approval
-
-  ## Returns
-
-  - `{:ok, Enrollment.t()}` — confirmation succeeded
-  - `{:error, :not_found}` — enrollment does not exist
-  - `{:error, :unauthorized}` — provider does not own the program
-  - `{:error, :invalid_status_transition}` — enrollment is not pending
+  Returns `{:ok, Enrollment.t()}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  or `{:error, :invalid_status_transition}`.
   """
   def confirm_enrollment(%{enrollment_id: enrollment_id, provider_id: provider_id} = params)
       when is_binary(enrollment_id) and is_binary(provider_id) do
@@ -163,23 +93,14 @@ defmodule KlassHero.Enrollment do
   end
 
   @doc """
-  Creates or updates enrollment capacity policy for a program.
-
-  ## Parameters
-  - attrs: Map with :program_id (required), :min_enrollment, :max_enrollment (at least one required)
-
-  ## Returns
-  - `{:ok, EnrollmentPolicy.t()}` on success
-  - `{:error, term()}` on validation failure
+  Creates or updates the enrollment capacity policy for a program (upsert).
   """
   def set_enrollment_policy(attrs) when is_map(attrs) do
     UpsertEnrollmentPolicy.execute(attrs)
   end
 
   @doc """
-  Creates or updates a participant eligibility policy for a program.
-
-  Uses upsert semantics -- if a policy already exists for the program_id, it is updated.
+  Creates or updates the participant eligibility policy for a program (upsert).
   """
   def set_participant_policy(attrs) when is_map(attrs) do
     SetParticipantPolicy.execute(attrs)
@@ -278,26 +199,15 @@ defmodule KlassHero.Enrollment do
     ClaimInvite.execute(token)
   end
 
-  # ===========================================================================
-  # Queries
-  # ===========================================================================
-
   @doc """
-  Retrieves an enrollment by ID.
-
-  Returns:
-  - `{:ok, Enrollment.t()}` - Enrollment found
-  - `{:error, :not_found}` - No enrollment exists with the given ID
+  Retrieves an enrollment by ID. Returns `{:ok, Enrollment.t()}` or `{:error, :not_found}`.
   """
   def get_enrollment(id) when is_binary(id) do
     GetEnrollment.execute(id)
   end
 
   @doc """
-  Lists all enrollments for a parent.
-
-  Returns list of Enrollment.t(), ordered by enrolled_at descending.
-  Returns empty list if no enrollments found.
+  Lists all enrollments for a parent, ordered by `enrolled_at` descending.
   """
   def list_parent_enrollments(parent_id) when is_binary(parent_id) do
     ListParentEnrollments.execute(parent_id)
@@ -344,52 +254,24 @@ defmodule KlassHero.Enrollment do
   defdelegate provider_scoped_topic(event_type, provider_id), to: NotifyLiveViews
 
   @doc """
-  Counts active enrollments for a parent in the current month.
-
-  This is used by the entitlements system to enforce monthly booking limits.
-  Only counts enrollments with status 'pending' or 'confirmed'.
-
-  Parameters:
-  - parent_id: The parent's ID
-  - month: Optional Date representing the month (defaults to current month)
-
-  Returns non-negative integer count.
+  Counts active (pending/confirmed) enrollments for a parent in the given month (defaults to current month).
+  Used by the entitlements system to enforce monthly booking limits.
   """
   def count_monthly_bookings(parent_id, month \\ nil) when is_binary(parent_id) do
     CountMonthlyBookings.execute(parent_id, month)
   end
 
   @doc """
-  Returns booking usage information for a parent.
-
-  This encapsulates the logic for fetching booking limits, current usage,
-  and remaining capacity based on the parent's subscription tier.
-
-  ## Parameters
-
-  - `identity_id` - The user's identity ID (from authentication)
-
-  ## Returns
-
-  - `{:ok, info}` with booking usage map containing:
-    - `parent_id` - The parent's UUID
-    - `tier` - The subscription tier atom
-    - `cap` - The monthly booking cap (integer or :unlimited)
-    - `used` - Number of bookings used this month
-    - `remaining` - Number of bookings remaining (:unlimited or integer)
-  - `{:error, :no_parent_profile}` if no parent profile exists
+  Returns `{:ok, info}` with booking usage for a parent's subscription tier
+  (`parent_id`, `tier`, `cap`, `used`, `remaining`), or `{:error, :no_parent_profile}`.
   """
   def get_booking_usage_info(identity_id) when is_binary(identity_id) do
     GetBookingUsageInfo.execute(identity_id)
   end
 
   @doc """
-  Returns identity IDs of parents with active enrollments in a program.
-
-  Active enrollments are those with status "pending" or "confirmed".
-  Used by the Messaging context for program broadcast recipient resolution.
-
-  Returns a distinct list of identity_ids (user IDs).
+  Returns distinct identity IDs of parents with active (pending/confirmed) enrollments in a program.
+  Used by the Messaging context for broadcast recipient resolution.
   """
   @spec list_enrolled_identity_ids(String.t()) :: [String.t()]
   def list_enrolled_identity_ids(program_id) when is_binary(program_id) do
@@ -494,15 +376,8 @@ defmodule KlassHero.Enrollment do
     CountProgramInvites.execute(program_id)
   end
 
-  # ===========================================================================
-  # Forms
-  # ===========================================================================
-
   @doc """
   Returns a changeset for enrollment policy form validation.
-
-  Used by the provider dashboard to validate capacity fields inline
-  before the program is created.
   """
   def new_policy_changeset(attrs \\ %{}) do
     EnrollmentPolicySchema.changeset(%EnrollmentPolicySchema{}, attrs)
@@ -510,9 +385,6 @@ defmodule KlassHero.Enrollment do
 
   @doc """
   Returns a changeset for participant policy form validation.
-
-  Used by the provider dashboard to validate eligibility restriction fields
-  inline before the program is created.
   """
   def new_participant_policy_changeset(attrs \\ %{}) do
     ParticipantPolicyForm.changeset(%ParticipantPolicyForm{}, attrs)

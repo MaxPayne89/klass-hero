@@ -43,13 +43,12 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
       |> assign(:record_note_map, %{})
 
     if connected?(socket) do
-      # Provider-scoped topic for participation events (check-in, check-out, absent)
       Phoenix.PubSub.subscribe(
         KlassHero.PubSub,
         "participation:provider:#{staff_member.provider_id}"
       )
 
-      # Behavioral note events — global topics only (no provider-scoped version exists)
+      # Behavioral note events use global topics; no provider-scoped version exists.
       Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_submitted")
       Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_approved")
       Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_rejected")
@@ -180,14 +179,12 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     end
   end
 
-  # PubSub event handler for participation record events
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id}}, socket)
       when event_type in [:child_checked_in, :child_checked_out, :participation_marked_absent] do
     {:noreply, update_participation_record(socket, record_id)}
   end
 
-  # PubSub handler for behavioral note events — reload session + provider notes
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
       when event_type in [:behavioral_note_submitted, :behavioral_note_approved, :behavioral_note_rejected] do
@@ -204,7 +201,6 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
 
     case Participation.get_session_with_roster_enriched(session_id) do
       {:ok, session} ->
-        # Authorization: verify session's program is in assigned set
         if MapSet.member?(socket.assigns.assigned_program_ids, session.program_id) do
           socket
           |> assign(:session, session)

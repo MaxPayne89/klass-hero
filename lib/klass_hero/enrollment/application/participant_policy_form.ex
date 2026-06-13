@@ -63,9 +63,6 @@ defmodule KlassHero.Enrollment.Application.ParticipantPolicyForm do
     end
   end
 
-  # Trigger: min_age_months exceeds max_age_months when both are set
-  # Why: nonsensical — no child could satisfy a range where minimum exceeds maximum
-  # Outcome: changeset error added
   defp validate_age_range(changeset) do
     min = get_field(changeset, :min_age_months)
     max = get_field(changeset, :max_age_months)
@@ -77,9 +74,6 @@ defmodule KlassHero.Enrollment.Application.ParticipantPolicyForm do
     end
   end
 
-  # Trigger: min_grade exceeds max_grade when both are set
-  # Why: inverted range is meaningless
-  # Outcome: changeset error added
   defp validate_grade_range(changeset) do
     min = get_field(changeset, :min_grade)
     max = get_field(changeset, :max_grade)

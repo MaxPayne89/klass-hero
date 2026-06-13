@@ -48,9 +48,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventHandlers.NotifyLiveViews 
         :ok
 
       {:error, reason} ->
-        # Trigger: PubSub publish failed after use case committed
-        # Why: transaction is durable, LiveView notification is best-effort
-        # Outcome: log warning, return :ok so bus reports success
         Logger.warning("Failed to publish #{event.event_type} to #{topic}",
           event_type: event.event_type,
           topic: topic,

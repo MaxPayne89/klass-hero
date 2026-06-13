@@ -64,19 +64,6 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEvents do
           "participant_policy_set/3 requires a non-empty program_id string, got: #{inspect(program_id)}"
   end
 
-  @doc """
-  Creates an `:invite_claimed` integration event when a guardian claims an invite.
-
-  ## Parameters
-
-  - `invite_id` - the invite being claimed
-  - `payload` - invite data including user_id, child info, guardian info
-  - `opts` - metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `invite_id` is nil or empty
-  """
   def invite_claimed(invite_id, payload \\ %{}, opts \\ [])
 
   def invite_claimed(invite_id, payload, opts) when is_binary(invite_id) and byte_size(invite_id) > 0 do
@@ -85,10 +72,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEvents do
     IntegrationEvent.new(
       :invite_claimed,
       @source_context,
-      # Trigger: invite_claimed uses a different entity type than the module default
-      # Why: @entity_type is :participant_policy for the existing function; invites
-      #   are a separate entity type in the enrollment context
-      # Outcome: hardcoded :invite ensures correct entity classification
+      # @entity_type is :participant_policy; invites are a separate entity type
       :invite,
       invite_id,
       Map.merge(payload, base_payload),
@@ -101,19 +85,6 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEvents do
           "invite_claimed/3 requires a non-empty invite_id string, got: #{inspect(invite_id)}"
   end
 
-  @doc """
-  Creates an `:enrollment_cancelled` integration event.
-
-  ## Parameters
-
-  - `enrollment_id` - the cancelled enrollment's ID
-  - `payload` - event data including admin_id, reason, etc.
-  - `opts` - metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `enrollment_id` is nil or empty
-  """
   def enrollment_cancelled(enrollment_id, payload \\ %{}, opts \\ [])
 
   def enrollment_cancelled(enrollment_id, payload, opts)
@@ -123,10 +94,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEvents do
     IntegrationEvent.new(
       :enrollment_cancelled,
       @source_context,
-      # Trigger: enrollment_cancelled uses a different entity type than the module default
-      # Why: @entity_type is :participant_policy for existing functions; enrollments
-      #   are a separate entity type in the enrollment context
-      # Outcome: hardcoded :enrollment ensures correct entity classification
+      # @entity_type is :participant_policy; enrollments are a separate entity type
       :enrollment,
       enrollment_id,
       Map.merge(payload, base_payload),
@@ -145,19 +113,6 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEvents do
           optional(atom()) => term()
         }
 
-  @doc """
-  Creates an `:enrollment_created` integration event.
-
-  ## Parameters
-
-  - `enrollment_id` - the new enrollment's ID
-  - `payload` - event data including child_id, parent_id, parent_user_id, program_id, status
-  - `opts` - metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `enrollment_id` is nil or empty
-  """
   def enrollment_created(enrollment_id, payload \\ %{}, opts \\ [])
 
   def enrollment_created(enrollment_id, payload, opts) when is_binary(enrollment_id) and byte_size(enrollment_id) > 0 do

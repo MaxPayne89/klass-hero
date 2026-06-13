@@ -195,9 +195,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
     end
   end
 
-  # rate_type and rate_currency use Ecto.Enum (value inclusion handled at cast).
-  # This validates non-negativity and enforces the all-or-none invariant —
-  # mirrors the DB CHECK constraint pay_rate_all_or_none.
+  # Validates non-negativity and all-or-none invariant, mirroring DB CHECK constraint pay_rate_all_or_none.
   defp validate_pay_rate(changeset) do
     changeset
     |> validate_number(:rate_amount, greater_than_or_equal_to: 0)
@@ -225,9 +223,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSche
     end
   end
 
-  # Callers may hand us a `%PayRate{}` via a `:pay_rate` key (e.g. use-case flow)
-  # or the three flat fields directly (e.g. a LiveView form). Normalize to flat
-  # so `cast/2` picks them up.
+  # Normalizes a nested %PayRate{} struct or nil to flat fields so cast/2 picks them up.
   defp apply_pay_rate_struct(%{pay_rate: nil} = attrs) do
     attrs
     |> Map.delete(:pay_rate)

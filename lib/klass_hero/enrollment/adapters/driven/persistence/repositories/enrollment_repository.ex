@@ -1,19 +1,9 @@
 defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentRepository do
   @moduledoc """
-  Repository implementation for managing enrollments in the database.
+  Ecto-backed implementation of `ForManagingEnrollments` and `ForQueryingEnrollments`.
 
-  Implements the ForManagingEnrollments port with:
-  - Domain entity mapping via EnrollmentMapper
-  - Composable queries via EnrollmentQueries
-  - Idiomatic "let it crash" error handling
-
-  Data integrity is enforced at the database level through:
-  - NOT NULL constraints on required fields
-  - UNIQUE partial index on (program_id, child_id) for active enrollments
-  - Foreign key constraints to programs, children, and parents tables
-
-  Infrastructure errors (connection, query) are not caught - they crash and
-  are handled by the supervision tree.
+  Infrastructure errors propagate to the supervision tree ("let it crash").
+  Data integrity is enforced via DB constraints (NOT NULL, UNIQUE partial index, FKs).
   """
 
   @behaviour KlassHero.Enrollment.Domain.Ports.ForManagingEnrollments
@@ -40,14 +30,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   @active_statuses ~w(pending confirmed)
 
   @impl true
-  @doc """
-  Creates a new enrollment in the database.
-
-  Returns:
-  - `{:ok, Enrollment.t()}` on success
-  - `{:error, :duplicate_resource}` - Active enrollment already exists for this child/program
-  - `{:error, changeset}` - Validation failure
-  """
   def create(attrs) when is_map(attrs) do
     span do
       set_attributes("db", operation: "insert", entity: "enrollment")
@@ -89,16 +71,12 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   @doc """
-  Creates an enrollment with atomic capacity check.
+  Creates an enrollment with an atomic capacity check.
 
-  Uses Ecto.Multi to lock the enrollment policy row (SELECT FOR UPDATE),
-  verify remaining capacity, and create the enrollment in a single transaction.
-  Prevents TOCTOU race conditions where concurrent requests could both pass
-  the capacity check and exceed max enrollment.
+  Locks the enrollment policy row (`SELECT FOR UPDATE`) inside a transaction to prevent
+  TOCTOU races where concurrent requests could both pass the capacity check.
+  Falls through to `create/1` when `program_id` is nil (no policy to lock).
   """
-  # Trigger: program_id is nil (missing required field)
-  # Why: let downstream changeset validation handle missing fields
-  # Outcome: skip capacity check, changeset will reject the enrollment
   def create_with_capacity_check(attrs, nil), do: create(attrs)
 
   def create_with_capacity_check(attrs, program_id) when is_map(attrs) and is_binary(program_id) do
@@ -107,9 +85,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:lock_and_check, fn repo, _changes ->
-        # Trigger: lock the policy row to prevent concurrent capacity checks
-        # Why: SELECT FOR UPDATE serializes concurrent enrollment attempts
-        # Outcome: only one request proceeds at a time per program
         query =
           from(p in EnrollmentPolicySchema,
             where: p.program_id == ^program_id,
@@ -120,9 +95,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
           nil ->
             {:ok, :unlimited}
 
-          # Trigger: policy row exists — use domain model to check capacity
-          # Why: avoids duplicating EnrollmentPolicy.has_capacity?/2 logic inline
-          # Outcome: single source of truth for capacity rules
           %EnrollmentPolicySchema{} = schema ->
             policy = EnrollmentPolicyMapper.to_domain(schema)
             active = count_active_enrollments_in_tx(repo, program_id)
@@ -163,13 +135,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   end
 
   @impl true
-  @doc """
-  Retrieves an enrollment by ID from the database.
-
-  Returns:
-  - `{:ok, Enrollment.t()}` when enrollment is found
-  - `{:error, :not_found}` when no enrollment exists with the given ID
-  """
   def get_by_id(id) when is_binary(id) do
     span do
       set_attributes("db", operation: "select", entity: "enrollment")
@@ -178,12 +143,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   end
 
   @impl true
-  @doc """
-  Lists all enrollments for a parent from the database.
-
-  Returns list of Enrollment.t(), ordered by enrolled_at descending.
-  Returns empty list if no enrollments found.
-  """
   def list_by_parent(parent_id) when is_binary(parent_id) do
     span do
       set_attributes("db", operation: "select", entity: "enrollment")
@@ -197,13 +156,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   end
 
   @impl true
-  @doc """
-  Counts active enrollments for a parent within a date range.
-
-  Only counts enrollments with status 'pending' or 'confirmed'.
-
-  Returns non-negative integer count.
-  """
   def count_monthly_bookings(parent_id, start_date, end_date) when is_binary(parent_id) do
     span do
       set_attributes("db", operation: "select", entity: "enrollment")
@@ -261,12 +213,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   end
 
   @impl true
-  @doc """
-  Lists active enrollments for a program from the database.
-
-  Returns list of Enrollment.t(), ordered by enrolled_at descending.
-  Returns empty list if no active enrollments found.
-  """
   def list_by_program(program_id) when is_binary(program_id) do
     span do
       set_attributes("db", operation: "select", entity: "enrollment")
@@ -281,14 +227,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   end
 
   @impl true
-  @doc """
-  Updates an existing enrollment in the database.
-
-  Returns:
-  - `{:ok, Enrollment.t()}` on success
-  - `{:error, :not_found}` when enrollment doesn't exist
-  - `{:error, changeset}` on validation failure
-  """
   def update(id, attrs) when is_binary(id) and is_map(attrs) do
     span do
       set_attributes("db", operation: "update", entity: "enrollment")

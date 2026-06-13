@@ -49,10 +49,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
   @spec get_user_id_for_provider(String.t()) :: {:ok, String.t()} | {:error, :not_found}
   def get_user_id_for_provider(provider_id) do
     acl_span source: "messaging", target: "accounts" do
-      # Trigger: need identity_id for a provider_id stored on a conversation
-      # Why: delegate to Provider facade to respect bounded context boundaries —
-      #      Messaging is not allowed to query Provider schemas directly
-      # Outcome: returns the user ID (identity_id) for permission checks
+      # Delegate to Provider facade — Messaging cannot query Provider schemas directly.
       KlassHero.Provider.get_identity_id_for_provider(provider_id)
     end
   end

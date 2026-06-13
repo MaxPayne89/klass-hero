@@ -61,10 +61,7 @@ defmodule KlassHero.Messaging.Application.Shared do
 
   Accepts optional `metadata` keyword list forwarded to `check_entitlement/2`.
   """
-  # Trigger: skip_entitlement_check opt is set
-  # Why: ReplyPrivatelyToBroadcast use case allows all tiers to reply
-  #      privately — the provider initiated contact via broadcast.
-  # Outcome: entitlement check is skipped, conversation creation proceeds
+  # ReplyPrivatelyToBroadcast skips entitlement: provider initiated contact, so all tiers may reply.
   @spec maybe_check_entitlement(Scope.t(), keyword(), keyword()) :: :ok | {:error, :not_entitled}
   def maybe_check_entitlement(%Scope{} = scope, opts, metadata \\ []) do
     if Keyword.get(opts, :skip_entitlement_check, false) do

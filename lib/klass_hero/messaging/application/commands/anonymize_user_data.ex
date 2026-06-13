@@ -58,7 +58,6 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserData do
     end)
   end
 
-  # Passes through success, tags errors with the step name for traceability
   defp tag_step(_step, {:ok, _} = result), do: result
   defp tag_step(step, {:error, reason}), do: {:error, {step, reason}}
 

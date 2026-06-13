@@ -58,22 +58,7 @@ defmodule KlassHero.Participation.Domain.Models.BehavioralNote do
 
   @max_content_length 1000
 
-  @doc """
-  Creates a new behavioral note in pending_approval status.
-
-  Content must be non-blank and at most #{@max_content_length} characters.
-
-  ## Examples
-
-      iex> BehavioralNote.new(%{
-      ...>   id: "note-123",
-      ...>   participation_record_id: "rec-456",
-      ...>   child_id: "child-789",
-      ...>   provider_id: "prov-abc",
-      ...>   content: "Child was very engaged today"
-      ...> })
-      {:ok, %BehavioralNote{status: :pending_approval, ...}}
-  """
+  @doc "Creates a new behavioral note in `:pending_approval` status. Content must be non-blank and at most #{@max_content_length} chars."
   @spec new(map()) ::
           {:ok, t()} | {:error, :missing_required_fields | :blank_content | :content_too_long}
   def new(attrs) when is_map(attrs) do
@@ -160,20 +145,12 @@ defmodule KlassHero.Participation.Domain.Models.BehavioralNote do
   def rejected?(%__MODULE__{status: :rejected}), do: true
   def rejected?(%__MODULE__{}), do: false
 
-  @doc """
-  Returns the canonical anonymized attribute values for GDPR account deletion.
-
-  The domain model owns the definition of what "anonymized" means for a
-  behavioral note, keeping this business decision out of persistence adapters.
-  """
+  @doc "Returns anonymized attribute values for GDPR account deletion. Domain model owns this definition."
   def anonymized_attrs do
     %{
       content: "[Removed - account deleted]",
       rejection_reason: nil,
-      # Trigger: account deletion / GDPR anonymization
-      # Why: rejected status ensures anonymized notes are excluded from active/visible
-      #   views and cannot be re-surfaced through approval workflows
-      # Outcome: note becomes permanently inert in the system
+      # :rejected ensures anonymized notes are excluded from visible views and cannot re-enter approval workflows.
       status: :rejected
     }
   end

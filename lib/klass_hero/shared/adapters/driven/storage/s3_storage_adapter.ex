@@ -19,9 +19,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
       bucket = get_bucket()
       content_type = Keyword.get(opts, :content_type, "application/octet-stream")
 
-      # Trigger: bucket_type is :public
-      # Why: single bucket — visibility is controlled per-object via S3 ACLs
-      # Outcome: public files are directly accessible, private files require signed URLs
+      # Single bucket — visibility controlled per-object via S3 ACLs.
       put_opts =
         case bucket_type do
           :public -> [content_type: content_type, acl: :public_read]
@@ -50,15 +48,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
   end
 
   @impl true
-  # Signed URLs are typically used for private files — public files are accessed
-  # directly via their public URL, so bucket_type is intentionally ignored.
+  # bucket_type intentionally ignored — public files use their URL directly; signed URLs are for private files.
   def signed_url(_bucket_type, key, expires_in, _opts) do
     span do
       set_attributes("http", service: "s3", operation: "signed_url")
 
       bucket = get_bucket()
 
-      # presigned_url/5 requires config as a map, not keyword list
+      # presigned_url/5 requires a map, not keyword list
       config_map = ex_aws_config() |> Map.new()
 
       case ExAws.S3.presigned_url(config_map, :get, bucket, key, expires_in: expires_in) do
@@ -78,9 +75,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
   end
 
   @impl true
-  # Trigger: need to verify file exists before generating signed URL
-  # Why: signed URLs succeed even for nonexistent files (just URL math), causing broken previews
-  # Outcome: returns boolean so callers can skip URL generation for missing files
+  # Signed URLs are pure URL math — they succeed even for nonexistent files, causing broken previews.
   def file_exists?(_bucket_type, key, _opts) do
     span do
       set_attributes("http", service: "s3", operation: "file_exists?")
@@ -136,12 +131,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
   defp get_bucket, do: storage_config(:bucket)
 
   defp public_url(bucket, path) do
-    # Trigger: Public URL construction requested
-    # Why: Different S3-compatible services have different URL patterns
-    # Outcome: Appropriate public URL for the storage backend
     case storage_config(:endpoint) do
       nil ->
-        # Production default: Fly.io Tigris (S3-compatible storage backend)
+        # Tigris (production default)
         "https://#{bucket}.fly.storage.tigris.dev/#{path}"
 
       endpoint ->
@@ -157,12 +149,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
   defp ex_aws_config do
     config = Application.get_env(:klass_hero, :storage)
 
-    # Trigger: ExAws config construction
-    # Why: Tigris uses S3-compatible API but different host/region; MinIO uses custom endpoint
-    # Outcome: Properly configured ExAws for the target storage backend
     case config[:endpoint] do
       nil ->
-        # Tigris: region must be "auto" per Tigris docs for global bucket routing
+        # Tigris: region "auto" required per Tigris docs for global bucket routing.
         [
           access_key_id: config[:access_key_id],
           secret_access_key: config[:secret_access_key],

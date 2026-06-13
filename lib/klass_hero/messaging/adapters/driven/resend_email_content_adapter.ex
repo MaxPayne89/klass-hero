@@ -64,9 +64,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter do
   end
 
   defp api_key do
-    # Trigger: test env has no Mailer api_key (Swoosh.Adapters.Test)
-    # Why: Req.Test stubs intercept before the key is used, so any value works
-    # Outcome: "unconfigured" placeholder in test, real key required in prod
+    # Test env uses Swoosh.Adapters.Test with no api_key; Req.Test stubs intercept before use.
     Application.get_env(:klass_hero, KlassHero.Mailer)[:api_key] || "unconfigured"
   end
 end

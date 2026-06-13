@@ -94,8 +94,6 @@ defmodule KlassHero.Enrollment.Domain.Models.EnrollmentPolicy do
   def remaining_capacity(%__MODULE__{max_enrollment: nil}, _count), do: :unlimited
   def remaining_capacity(%__MODULE__{max_enrollment: max}, count), do: max(max - count, 0)
 
-  # --- Validation helpers ---
-
   defp validate_program_id(errors, id) when is_binary(id) and byte_size(id) > 0, do: errors
   defp validate_program_id(errors, _), do: ["program ID is required" | errors]
 
@@ -107,18 +105,12 @@ defmodule KlassHero.Enrollment.Domain.Models.EnrollmentPolicy do
   defp validate_max(errors, max) when is_integer(max) and max >= 1, do: errors
   defp validate_max(errors, _), do: ["maximum enrollment must be at least 1" | errors]
 
-  # Trigger: min exceeds max when both are set
-  # Why: nonsensical policy — program could never run and accept enrollments simultaneously
-  # Outcome: rejected with descriptive error
   defp validate_min_max_relationship(errors, min, max) when is_integer(min) and is_integer(max) and min > max do
     ["minimum enrollment must not exceed maximum enrollment" | errors]
   end
 
   defp validate_min_max_relationship(errors, _min, _max), do: errors
 
-  # Trigger: neither min nor max provided
-  # Why: a policy with no constraints carries no information
-  # Outcome: rejected — caller must supply at least one bound
   defp validate_at_least_one(errors, nil, nil) do
     ["at least one of minimum or maximum enrollment is required" | errors]
   end

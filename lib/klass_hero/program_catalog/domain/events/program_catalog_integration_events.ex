@@ -1,15 +1,9 @@
 defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramCatalogIntegrationEvents do
   @moduledoc """
-  Factory module for creating ProgramCatalog integration events.
+  Factory for ProgramCatalog integration events (public cross-context contract).
 
-  Integration events are the public contract between bounded contexts.
-
-  ## Events
-
-  - `:program_created` - Emitted when a new program is created.
-    Downstream contexts can react (e.g., notifications).
-  - `:program_updated` - Emitted when a program is updated.
-    Downstream contexts can react (e.g., read model refresh).
+  - `:program_created` — new program created; downstream contexts may react
+  - `:program_updated` — program fields changed; downstream read models should refresh
   """
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -39,9 +33,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramCatalogIntegrationEvents
       @source_context,
       @entity_type,
       program_id,
-      # Trigger: caller may pass a conflicting :program_id in payload
-      # Why: base_payload contains the canonical program_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Map.merge order ensures base_payload's :program_id wins over any caller-supplied value.
       Map.merge(payload, base_payload),
       opts
     )
@@ -62,9 +54,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramCatalogIntegrationEvents
       @source_context,
       @entity_type,
       program_id,
-      # Trigger: caller may pass a conflicting :program_id in payload
-      # Why: base_payload contains the canonical program_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Map.merge order ensures base_payload's :program_id wins over any caller-supplied value.
       Map.merge(payload, base_payload),
       opts
     )

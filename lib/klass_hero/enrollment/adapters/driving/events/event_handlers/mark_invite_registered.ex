@@ -34,16 +34,11 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
     end
   end
 
-  # Trigger: invite is already at or beyond the registered state
-  # Why: claiming is idempotent — replaying the event must not regress status
-  # Outcome: silently succeeds without touching the database
+  # Idempotent: already at or past registered — replaying must not regress status.
   defp maybe_transition(%{status: status}) when status in [:registered, :enrolled] do
     :ok
   end
 
-  # Trigger: invite is in :invite_sent status (the only valid source for this transition)
-  # Why: state machine allows invite_sent → registered; other statuses must not regress
-  # Outcome: transitions to registered, or returns error if persistence fails
   defp maybe_transition(%{status: :invite_sent} = invite) do
     case @invite_repository.transition_status(invite, %{
            status: :registered,
@@ -66,9 +61,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
     end
   end
 
-  # Trigger: invite is in an unexpected status (not registered/enrolled, not invite_sent)
-  # Why: statuses like "pending" or "failed" are not valid sources for this transition
-  # Outcome: log warning and return :ok (idempotent no-op)
+  # Unexpected status (e.g. pending, failed) — not a valid source for this transition; no-op.
   defp maybe_transition(%{status: status} = invite) do
     Logger.warning("[MarkInviteRegistered] Unexpected status, skipping",
       invite_id: invite.id,

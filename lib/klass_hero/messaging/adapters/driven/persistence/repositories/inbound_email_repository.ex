@@ -79,9 +79,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
         |> InboundEmailQueries.paginate(opts)
         |> Repo.all()
 
-      # Trigger: fetched limit+1 records so we can detect if more pages exist
-      # Why: avoids a separate COUNT query while still signalling pagination
-      # Outcome: has_more is true when results exceed the requested page size
+      # Fetch limit+1 to detect next page without a separate COUNT query.
       has_more = length(results) > limit
       emails = results |> Enum.take(limit) |> Enum.map(&InboundEmailMapper.to_domain/1)
 

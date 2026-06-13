@@ -19,9 +19,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMember
     with {:ok, existing} <- @query.get(staff_id),
          merged = Map.merge(Map.from_struct(existing), attrs),
          {:ok, _validated} <- StaffMember.new(merged),
-         # Trigger: domain validation passed
-         # Why: update existing struct to preserve timestamps
-         # Outcome: persistence layer manages updated_at
+         # Update the existing struct (not the validated one) to preserve timestamps.
          updated = struct(existing, attrs),
          {:ok, persisted} <- @repository.update(updated) do
       {:ok, persisted}

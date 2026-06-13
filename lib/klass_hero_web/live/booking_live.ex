@@ -18,10 +18,7 @@ defmodule KlassHeroWeb.BookingLive do
          :ok <- validate_program_capacity(program) do
       identity_id = socket.assigns.current_scope.user.id
 
-      # Trigger: both get_children_for_current_user and assign_booking_limit_info previously called
-      #          Family.get_parent_by_identity(identity_id) — two separate DB queries for the same row.
-      # Why: resolve parent once, then reuse for children lookup and booking limits.
-      # Outcome: 1 DB round-trip saved per booking page load.
+      # Resolve parent once and reuse for both children lookup and booking limits (1 DB round-trip).
       {parent, children} =
         case Family.get_parent_by_identity(identity_id) do
           {:ok, parent} -> {parent, Family.get_children(parent.id)}
@@ -31,7 +28,6 @@ defmodule KlassHeroWeb.BookingLive do
       children_for_view = Enum.map(children, &ChildPresenter.to_simple_view/1)
       children_by_id = Map.new(children, &{&1.id, &1})
 
-      # Provider's price is the total amount the parent pays — no derived fees.
       # price is NOT NULL in DB and @enforce_keys in domain — nil here is a bug, not a normal condition.
       total_amount = program.price
 
@@ -99,15 +95,9 @@ defmodule KlassHeroWeb.BookingLive do
 
   @impl true
   def handle_event("select_child", %{"child_id" => child_id}, socket) do
-    # Trigger: parent picks a child from the dropdown
-    # Why: pre-fill special requirements from stored medical/support data
-    # Outcome: textarea shows child's known needs, parent can edit before submitting
     child = Map.get(socket.assigns.children_by_id, child_id)
     special_requirements = build_special_requirements(child)
 
-    # Trigger: child selected for a program with participant restrictions
-    # Why: give immediate feedback on whether the child qualifies
-    # Outcome: UI shows green/red eligibility banner; submit button disabled if ineligible
     eligibility =
       case Enrollment.check_participant_eligibility(socket.assigns.program.id, child_id) do
         {:ok, :eligible} -> :eligible
@@ -125,9 +115,6 @@ defmodule KlassHeroWeb.BookingLive do
 
   @impl true
   def handle_event("complete_enrollment", params, socket) do
-    # Trigger: client-side eligibility state is {:ineligible, _}
-    # Why: prevent form submission for ineligible children (server enforces too)
-    # Outcome: flash error, no enrollment attempt
     case socket.assigns.eligibility_status do
       {:ineligible, _reasons} ->
         {:noreply,
@@ -241,9 +228,6 @@ defmodule KlassHeroWeb.BookingLive do
   end
 
   defp validate_registration_open(program) do
-    # Trigger: program has a registration_period field
-    # Why: prevent bookings outside the configured registration window
-    # Outcome: blocks mount and enrollment if registration is closed
     if ProgramCatalog.registration_open?(program) do
       :ok
     else
@@ -259,9 +243,6 @@ defmodule KlassHeroWeb.BookingLive do
       {:ok, remaining} when remaining > 0 ->
         :ok
 
-      # Trigger: remaining is 0 or negative (covers any non-positive value)
-      # Why: exhaustive match — atomic create_with_capacity_check enforces at create time
-      # Outcome: program shown as full for 0 or any unexpected non-positive value
       {:ok, _} ->
         {:error, :program_full}
     end
@@ -297,9 +278,7 @@ defmodule KlassHeroWeb.BookingLive do
     Enrollment.create_enrollment(enrollment_params)
   end
 
-  # Trigger: parent is nil when no parent profile exists
-  # Why: reuse the already-resolved parent to avoid a duplicate get_parent_by_identity query
-  # Outcome: skip booking limits display when parent is unavailable
+  # Reuses already-resolved parent; skips booking limits when parent unavailable.
   defp assign_booking_limit_info(socket, nil) do
     assign(socket,
       booking_tier: nil,

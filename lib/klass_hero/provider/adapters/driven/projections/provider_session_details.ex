@@ -50,16 +50,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
 
-  # Behaviour callbacks ─────────────────────────────────────────────────────────
-
   @impl Projection
   def bootstrap_impl, do: bootstrap_session_details()
 
-  # Trigger: Received a session_created integration event
-  # Why: a new session exists — project a row with defaults, resolving
-  #      program_title/provider_id from the programs write table and the
-  #      currently assigned staff from program_staff_assignments
-  # Outcome: one row upserted into provider_session_details
   @impl Projection
   def handle_event(:session_created, %IntegrationEvent{} = event) do
     Logger.debug("ProviderSessionDetails projecting session_created",
@@ -70,29 +63,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     project_session_created(event.payload)
   end
 
-  # Trigger: session entered the live window (instructor started it)
-  # Why: dashboard badge flips from scheduled → in_progress
-  # Outcome: row's status column updated to :in_progress
   def handle_event(:session_started, %IntegrationEvent{} = event) do
     update_status(event.entity_id, :in_progress)
   end
 
-  # Trigger: session finished (end-of-session finalization)
-  # Why: dashboard badge flips from in_progress → completed
-  # Outcome: row's status column updated to :completed
   def handle_event(:session_completed, %IntegrationEvent{} = event) do
     update_status(event.entity_id, :completed)
   end
 
-  # Trigger: session cancelled (by provider or system)
-  # Why: dashboard badge reflects cancellation, independent of prior status
-  # Outcome: row's status column updated to :cancelled
   def handle_event(:session_cancelled, %IntegrationEvent{} = event) do
     update_status(event.entity_id, :cancelled)
   end
 
-  # Participation seeded the roster for a session — set total_count so the
-  # dashboard can render "X / Y checked in" denominators.
   def handle_event(:roster_seeded, %IntegrationEvent{payload: %{seeded_count: seeded_count}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -101,9 +83,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     |> warn_if_missing("roster_seeded", session_id: event.entity_id, seeded_count: seeded_count)
   end
 
-  # Bump the monotonic checked_in counter. Check-outs and absences are
-  # intentionally not reflected (see below) — once counted on check-in, a child
-  # stays counted for the "how many showed up" view.
+  # Monotonic: once counted on check-in, a child stays counted for "how many showed up".
   def handle_event(:child_checked_in, %IntegrationEvent{payload: %{session_id: session_id}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -112,35 +92,21 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     |> warn_if_missing("child_checked_in", session_id: session_id, record_id: event.entity_id)
   end
 
-  # Trigger: attendance taker undid a check-in (child_checked_out)
-  # Why: once a child is counted on check-in, they stay counted for the day's
-  #      "how many showed up" view; undo events are intentionally not reflected
-  #      in checked_in_count. Logged at debug to confirm the no-op is deliberate.
-  # Outcome: no state change.
+  # Intentional no-op: counter is monotonic; check-outs don't reduce "how many showed up".
   def handle_event(:child_checked_out, %IntegrationEvent{} = event) do
     Logger.debug("ProviderSessionDetails ignoring child_checked_out (counter is monotonic)",
       record_id: event.entity_id
     )
   end
 
-  # Trigger: attendance taker marked a child absent
-  # Why: absence is the complement of check-in and does not change the "how
-  #      many showed up" count. Logged at debug to confirm the no-op is deliberate.
-  # Outcome: no state change.
+  # Intentional no-op: absences are the complement of check-in and don't affect the counter.
   def handle_event(:child_marked_absent, %IntegrationEvent{} = event) do
     Logger.debug("ProviderSessionDetails ignoring child_marked_absent (no effect on checked_in_count)",
       record_id: event.entity_id
     )
   end
 
-  # Trigger: staff_assigned_to_program integration event (provider assigned a
-  #          new staff member to one of their programs)
-  # Why: upcoming sessions should reflect the new assignment on the dashboard.
-  #      Historical (in_progress/completed/cancelled) rows retain their
-  #      pre-existing attribution — bulk update is intentionally scoped to
-  #      :scheduled rows only.
-  # Outcome: all :scheduled rows for the program get current_assigned_staff_id
-  #          and current_assigned_staff_name set to the new staff values.
+  # Bulk update scoped to :scheduled rows only — historical rows retain pre-existing attribution.
   def handle_event(:staff_assigned_to_program, %IntegrationEvent{
         payload: %{staff_member_id: staff_id, program_id: program_id}
       }) do
@@ -159,13 +125,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
   end
 
-  # Trigger: staff_unassigned_from_program integration event (provider removed
-  #          a staff member's assignment from one of their programs)
-  # Why: upcoming sessions must drop the stale attribution. Historical rows
-  #      intentionally retain their pre-existing staff_id/name as part of the
-  #      session's audit trail — bulk clear is scoped to :scheduled rows only.
-  # Outcome: all :scheduled rows for the program have current_assigned_staff_*
-  #          columns cleared to nil.
+  # Historical rows retain pre-existing attribution as audit trail; only :scheduled rows are cleared.
   def handle_event(:staff_unassigned_from_program, %IntegrationEvent{payload: %{program_id: program_id}}) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -181,39 +141,16 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
   end
 
-  # Private — Bootstrap ─────────────────────────────────────────────────────────
-
-  # Trigger: bootstrap_impl/0 called on init or rebuild
-  # Why: self-heal the read table from the authoritative write tables. Seeds
-  #      bypass the event bus, and long-running event drift can leave the read
-  #      table out of sync — a single bootstrap query rebuilds every row from
-  #      programs + program_sessions + program_staff_assignments + staff_members
-  #      + aggregated participation_records counts.
-  #
+  # Rebuilds from programs + program_sessions + staff assignments + participation counts.
   # Design notes:
-  #
-  # * The SQL casts UUIDs to ::text so Postgrex returns them as string UUIDs
-  #   (Ecto's :binary_id fields accept the string form directly on insert).
-  # * Staff display uses first_name/last_name columns (staff_members has no
-  #   display_name); we concatenate in Elixir via build_staff_name/2 to match
-  #   the event-handler resolution path.
-  # * Status comes back from SQL as text ("scheduled", "in_progress", ...);
-  #   the schema is Ecto.Enum, so inserting via the schema module requires an
-  #   atom — we convert via String.to_existing_atom/1 (safe: values are the
-  #   fixed four enum members).
-  # * Upsert preserves only identity-ish fields (session_id, inserted_at) and
-  #   cover_staff_* (which cannot be derived from write tables yet — rebuilding
-  #   would otherwise clobber whatever was evolved by a future cover handler).
-  #   Everything else (status, counts, assigned staff) is intentionally
-  #   refreshed, which is the whole point of rebuild/0.
-  #
-  # Outcome: integer row count on success; raises on DB failure so
-  #          WithBootstrapRetry can schedule a retry.
+  # * UUIDs cast to ::text so Postgrex returns strings (Ecto :binary_id accepts them on insert).
+  # * Status arrives as text; String.to_existing_atom/1 converts (safe: fixed four enum values).
+  # * Upsert preserves session_id, inserted_at, and cover_staff_* (not derivable from write tables).
+  # * Raises on DB failure so WithBootstrapRetry can schedule a retry.
   defp bootstrap_session_details do
-    # LATERAL subquery picks exactly one active staff assignment per program
-    # (earliest-assigned wins, matching resolve_program_context/1). Without it,
-    # a program with N active staff members would produce N rows per session
-    # and break the upsert's ON CONFLICT target.
+    # LATERAL subquery picks exactly one active staff assignment (earliest-assigned wins, matching
+    # resolve_program_context/1). Without LIMIT 1 a program with N staff would produce N rows per
+    # session and break the ON CONFLICT target.
     sql = """
     SELECT
       ps.id::text                            AS session_id,
@@ -305,8 +242,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     end
   end
 
-  # Private — Event Projection Helpers ─────────────────────────────────────────
-
   defp project_session_created(%{session_id: session_id, program_id: program_id} = payload) do
     case resolve_program_context(program_id) do
       %{program_title: title, provider_id: provider_id} = ctx
@@ -371,8 +306,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
   end
 
-  # Shared by session_started/completed/cancelled handlers. Missing rows
-  # (unknown session_id) are logged per spec.
   defp update_status(session_id, status) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -381,8 +314,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     |> warn_if_missing("status transition", session_id: session_id, target_status: status)
   end
 
-  # Surfaces zero-row UPDATE results from event handlers so that events arriving
-  # for unknown session_ids are observable rather than silently dropped.
+  # Makes zero-row UPDATEs observable — events for unknown session_ids aren't silently dropped.
   defp warn_if_missing({0, _}, event_name, metadata) do
     Logger.warning(
       "ProviderSessionDetails #{event_name} skipped: session not found",
@@ -392,9 +324,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   defp warn_if_missing(_result, _event_name, _metadata), do: :ok
 
-  # Single LEFT JOIN resolves program title/provider + (optionally) the earliest
-  # active staff assignment's id + name. Returns nil fields when the program is
-  # missing or has no active assignment.
   defp resolve_program_context(program_id) do
     sql = """
     SELECT p.title,
@@ -429,12 +358,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   defp cast_uuid_or_nil(nil), do: nil
   defp cast_uuid_or_nil(bin), do: Ecto.UUID.cast!(bin)
 
-  # Trigger: staff_assigned_to_program handler needs the staff display name
-  # Why: the integration event payload carries only ids — the name is looked up
-  #      from the staff_members write table (source of truth); reusing
-  #      build_staff_name/2 keeps the display convention identical to
-  #      resolve_current_assigned_staff/1.
-  # Outcome: "First Last" string, or nil if the staff row cannot be found
+  # Event payload carries only IDs; looks up name from staff_members (source of truth).
   defp lookup_staff_name(staff_id) do
     case Repo.query(
            "SELECT first_name, last_name FROM staff_members WHERE id = $1",

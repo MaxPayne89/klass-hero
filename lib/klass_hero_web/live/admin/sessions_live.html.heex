@@ -1,10 +1,8 @@
-<%!-- Index view --%>
 <div :if={@live_action == :index}>
   <div class="mb-6">
     <h1 class={Theme.typography(:page_title)}>{gettext("Sessions")}</h1>
   </div>
 
-  <%!-- Unified filter bar --%>
   <%!-- SearchableSelects have their own internal forms, so they live outside #filter-bar --%>
   <div class="flex flex-wrap gap-3 mb-4 items-end">
     <div class="w-full sm:w-auto sm:min-w-[200px]">
@@ -31,7 +29,6 @@
       />
     </div>
 
-    <%!-- Date/status filters in their own form for phx-change --%>
     <form id="filter-bar" phx-change="filter_change" class="contents">
       <div class="flex gap-2 items-end">
         <div>
@@ -85,7 +82,6 @@
     </form>
   </div>
 
-  <%!-- Session list --%>
   <div id="sessions-list" phx-update="stream" class="space-y-1">
     <div id="sessions-empty" class="hidden only:block p-8 text-center text-sm opacity-50">
       {gettext("No sessions found for the selected filters.")}
@@ -122,7 +118,6 @@
   </div>
 </div>
 
-<%!-- Show view (unchanged) --%>
 <div :if={@live_action == :show}>
   <div class="mb-6">
     <.link
@@ -149,7 +144,6 @@
     </div>
   </div>
 
-  <%!-- Roster table --%>
   <div class="overflow-x-auto" id="roster-table">
     <table class="table table-sm">
       <thead>

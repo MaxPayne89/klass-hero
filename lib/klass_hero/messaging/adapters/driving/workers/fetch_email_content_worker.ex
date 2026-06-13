@@ -21,10 +21,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
                         :for_managing_inbound_emails
                       ])
 
-  # Trigger: Resend API enforces rate limits
-  # Why: default Oban backoff doesn't account for 429 responses — retries
-  #      fire too soon and hit the limit again
-  # Outcome: rate-limited jobs wait 30s+ before retry; other failures use 10s base
+  # Custom backoff: 429 responses need longer delay than Oban's default.
   @impl Oban.Worker
   def backoff(%Oban.Job{} = job), do: RateLimitedEmailWorker.backoff(job)
 

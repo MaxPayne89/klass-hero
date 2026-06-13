@@ -69,12 +69,12 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
     end
   end
 
-  # No account yet → registration-style invitation.
+  # No account → registration-style invitation
   defp send_invitation_email(%{email: email, business_name: business_name, first_name: first_name}, nil, url) do
     UserNotifier.deliver_staff_invitation(email, %{business_name: business_name, first_name: first_name}, url)
   end
 
-  # Existing account → log-in-and-link invitation (no registration, no auto-link).
+  # Existing account → log-in-and-link invitation (no auto-link)
   defp send_invitation_email(%{email: email, business_name: business_name}, %User{name: name}, url) do
     UserNotifier.deliver_staff_link_invitation(email, %{business_name: business_name, name: name}, url)
   end

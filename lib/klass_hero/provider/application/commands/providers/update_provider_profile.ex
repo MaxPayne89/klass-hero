@@ -31,9 +31,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.UpdateProviderProfil
     with {:ok, existing} <- @query.get(provider_id),
          merged = Map.merge(Map.from_struct(existing), attrs),
          {:ok, _validated} <- ProviderProfile.new(merged),
-         # Trigger: domain validation passed, now persist
-         # Why: we update the existing struct (not the validated one) with new attrs
-         #      to preserve fields that ProviderProfile.new/1 might reset (timestamps)
+         # Update the existing struct (not the validated one) to preserve timestamps that ProviderProfile.new/1 would reset.
          updated = struct(existing, attrs),
          {:ok, persisted} <- @repository.update(updated) do
       {:ok, persisted}

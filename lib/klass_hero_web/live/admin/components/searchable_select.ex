@@ -37,17 +37,11 @@ defmodule KlassHeroWeb.Admin.Components.SearchableSelect do
 
   @impl true
   def update(%{id: id} = assigns, socket) do
-    # Trigger: props arrive from parent on mount and on every parent re-render
-    # Why: must update options (e.g. program list narrowed by provider) while
-    #      preserving any in-progress search the user is typing
-    # Outcome: re-filter options against current search_term only if options changed
     options = assigns[:options] || []
     selected = assigns[:selected]
     current_term = socket.assigns[:search_term] || ""
 
-    # Trigger: parent re-renders frequently (any filter change in SessionsLive)
-    # Why: avoid re-filtering when options haven't changed — saves work on every parent render
-    # Outcome: only recompute filtered list when the option set actually changes
+    # Skip re-filtering when options haven't changed — parent re-renders frequently.
     filtered =
       if options == socket.assigns[:options] do
         socket.assigns[:filtered_options] || options
@@ -130,9 +124,7 @@ defmodule KlassHeroWeb.Admin.Components.SearchableSelect do
 
   @impl true
   def handle_event("search", params, socket) do
-    # Trigger: phx-change on the component's internal form sends all input values
-    # Why: form sends %{"provider_id_search" => "text", "provider_id" => ""} etc.
-    # Outcome: extract search term from the params map by the input's name key
+    # Form params include a hidden field; extract only the search input by its name key.
     search_key = "#{socket.assigns.field_name}_search"
     term = params[search_key] || ""
 
@@ -145,9 +137,6 @@ defmodule KlassHeroWeb.Admin.Components.SearchableSelect do
 
   @impl true
   def handle_event("open", _params, socket) do
-    # Trigger: user focuses the search input
-    # Why: filtered_options already reflects current search_term — no recompute needed
-    # Outcome: dropdown opens showing the existing filtered list
     {:noreply, assign(socket, :open?, true)}
   end
 

@@ -1,5 +1,4 @@
 <div class="max-w-4xl mx-auto p-4 md:p-6">
-  <%!-- Back button --%>
   <div class="mb-6">
     <.link
       navigate={~p"/provider/sessions"}
@@ -10,16 +9,13 @@
     </.link>
   </div>
 
-  <%!-- Error state --%>
   <.error_alert :if={assigns[:session_error]} errors={[@session_error]} />
 
   <%= if @session do %>
-    <%!-- Session context card --%>
     <div class="mb-6">
       <.participation_card session={@session} role={:provider} />
     </div>
 
-    <%!-- Roster list with individual actions --%>
     <div class="mt-6">
       <h2 class="text-xl font-semibold text-gray-900 mb-4">
         {gettext("Participation Management")}
@@ -92,11 +88,9 @@
               </button>
           <% end %>
 
-          <%!-- Behavioral note section (only for checked-in / checked-out records) --%>
           <%= if record.status in [:checked_in, :checked_out] do %>
             <% existing_note = Map.get(@record_note_map, to_string(record.id)) %>
             <%= cond do %>
-              <%!-- No note yet: show "Add Note" button --%>
               <% is_nil(existing_note) && @note_form_expanded != to_string(record.id) -> %>
                 <button
                   id={"add-note-btn-#{record.id}"}
@@ -111,15 +105,12 @@
                 >
                   {gettext("Add Note")}
                 </button>
-                <%!-- Note form is expanded for this record --%>
               <% is_nil(existing_note) && @note_form_expanded == to_string(record.id) -> %>
-                <%!-- Note exists: show status badge --%>
               <% true -> %>
                 <.note_status_badge
                   status={existing_note.status}
                   id={"note-badge-#{existing_note.id}"}
                 />
-                <%!-- Rejected note: show rejection reason and revision button --%>
                 <%= if existing_note.status == :rejected do %>
                   <%= if existing_note.rejection_reason do %>
                     <p

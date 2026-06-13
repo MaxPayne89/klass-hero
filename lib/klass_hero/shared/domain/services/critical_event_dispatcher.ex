@@ -27,11 +27,8 @@ defmodule KlassHero.Shared.Domain.Services.CriticalEventDispatcher do
   """
   @spec handler_ref({module(), atom()}) :: String.t()
   def handler_ref({module, function}) when is_atom(module) and is_atom(function) do
-    # Trigger: module atom needs canonical "Elixir.Module.Name" prefix
-    # Why: inspect/1 strips the "Elixir." prefix in Elixir >= 1.3; Atom.to_string/1
-    #      gives the raw atom string including the "Elixir." prefix, which is
-    #      required for stable cross-path deduplication in processed_events table.
-    # Outcome: both PubSub and Oban paths produce identical handler_ref strings
+    # Atom.to_string/1 preserves the "Elixir." prefix that inspect/1 strips (>= 1.3),
+    # required so PubSub and Oban paths produce identical handler_ref strings.
     "#{Atom.to_string(module)}:#{function}"
   end
 

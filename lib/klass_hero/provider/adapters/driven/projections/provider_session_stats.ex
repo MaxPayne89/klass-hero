@@ -31,8 +31,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
 
   @acl Application.compile_env!(:klass_hero, [:provider, :for_resolving_session_stats])
 
-  # Behaviour callbacks ───────────────────────────────────────────────────────
-
   @impl Projection
   def bootstrap_impl, do: bootstrap_counts()
 
@@ -45,11 +43,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
     notify_dashboard(provider_id)
   end
 
-  # Private ──────────────────────────────────────────────────────────────────
-
-  # Trigger: bootstrap phase -- read table may be empty or stale
-  # Why: cold start recovery -- populate read table from ACL cross-context query
-  # Outcome: provider_session_stats contains one row per provider+program with correct counts
   defp bootstrap_counts do
     case @acl.list_completed_session_counts() do
       {:ok, []} ->
@@ -84,9 +77,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
     end
   end
 
-  # Trigger: session_completed event received
-  # Why: atomic increment avoids race conditions with concurrent events
-  # Outcome: row inserted with count=1 or existing count incremented by 1
+  # Atomic SQL upsert avoids race conditions from concurrent session_completed events.
   defp upsert_session_count(provider_id, program_id, program_title) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -115,9 +106,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
     )
   end
 
-  # Trigger: upsert completed successfully
-  # Why: dashboard LiveView needs to know stats changed to refresh the counter
-  # Outcome: PubSub broadcast to provider-specific topic
   defp notify_dashboard(provider_id) do
     Phoenix.PubSub.broadcast(
       KlassHero.PubSub,

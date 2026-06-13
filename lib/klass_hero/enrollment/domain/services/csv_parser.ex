@@ -15,17 +15,8 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
       {:error, [{row_number, "reason"}]}
   """
 
-  # -- custom NimbleCSV parser ------------------------------------------------
-  # Trigger: need to keep headers for column mapping
-  # Why: NimbleCSV.RFC4180 skips headers by default and we can't control it
-  #      without skip_headers: false, but we need to parse headers + data together
-  # Outcome: custom parser gives us full control over header handling
+  # Custom parser so we can pass skip_headers: false and control header handling ourselves
   NimbleCSV.define(__MODULE__.Parser, separator: ",", escape: "\"")
-
-  # -- header → atom mapping -------------------------------------------------
-  # Trigger: CSV headers are verbose and may vary slightly in formatting
-  # Why: prefix matching is more robust than exact string comparison
-  # Outcome: each header maps to an internal atom, or :skip for ignored columns
 
   @header_mappings [
     {"Participant information: First", :child_first_name},
@@ -52,8 +43,6 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   @required_keys @header_mappings
                  |> Enum.map(&elem(&1, 1))
                  |> Enum.reject(&(&1 == :skip))
-
-  # -- public API ------------------------------------------------------------
 
   @type prepared :: %{column_keys: [atom() | :skip | nil], remainder: binary()}
 
@@ -185,19 +174,9 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   defp blank_row?([cell]) when is_binary(cell), do: String.trim(cell) == ""
   defp blank_row?(_), do: false
 
-  # Wraps an enumerable so that any exception raised during enumeration is
-  # surfaced as a single trailing `{:parse_halt, msg}` element, after which
-  # the wrapped stream is treated as exhausted.
-  #
-  # Trigger: NimbleCSV.parse_stream/2 raises NimbleCSV.ParseError mid-stream
-  #   when it hits a structurally malformed cell (e.g. unbalanced quote).
-  # Why: a raised exception inside a lazy pipeline cannot be caught by a
-  #   downstream Stream.map's try/rescue — the raise happens in the producer.
-  #   Wrapping at the producer boundary converts the raise into a
-  #   well-known sentinel so the caller can preserve rows committed before
-  #   the error and decide whether to keep going.
-  # Outcome: a malformed CSV yields at most one `:parse_halt` followed by
-  #   end-of-stream, never a runtime crash.
+  # NimbleCSV.parse_stream/2 raises mid-stream on malformed cells; a downstream
+  # try/rescue can't catch that because the raise is in the producer. Wrapping here
+  # converts the raise into a {:parse_halt, msg} sentinel at the producer boundary.
   defp with_halt_on_raise(stream) do
     Stream.resource(
       fn ->
@@ -258,15 +237,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     end
   end
 
-  # Trigger: parse_stream/1's sentinel contract states subsequent stream
-  #   elements after a :parse_halt are undefined.
-  # Why: an earlier Enum.reduce/3 would walk the WHOLE list, converting every
-  #   :parse_halt-shaped element to a duplicate error. A single mid-stream
-  #   structural break should surface as exactly one error tuple, not N.
-  # Outcome: reduce_while halts on the first :parse_halt, attributing the
-  #   error to the file row it actually occurred on. Row numbers are 2-based
-  #   (applied by parse/1 via Stream.with_index(2)) so the header is row 1
-  #   and the first data row is row 2.
+  # reduce_while stops on the first :parse_halt so exactly one error is emitted, not N
   defp partition_results(results) do
     {oks, errs} =
       Enum.reduce_while(results, {[], []}, fn
@@ -286,13 +257,9 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     end
   end
 
-  # Trigger: spreadsheet apps (Google Sheets, Excel on Android) prepend UTF-8 BOM
-  # Why: the BOM bytes corrupt the first header, breaking column resolution
-  # Outcome: BOM is silently removed so the parser sees clean UTF-8 text
+  # Google Sheets and Excel (Android) prepend a UTF-8 BOM that corrupts the first header
   defp strip_bom(<<0xEF, 0xBB, 0xBF, rest::binary>>), do: rest
   defp strip_bom(text), do: text
-
-  # -- header resolution -----------------------------------------------------
 
   defp resolve_headers(raw_headers) do
     mapped =
@@ -316,8 +283,6 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
       if String.starts_with?(header, prefix), do: key
     end)
   end
-
-  # -- row building ----------------------------------------------------------
 
   defp pad_cells(cells, expected_count) do
     actual = length(cells)
@@ -343,12 +308,6 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     end)
   end
 
-  # -- type conversions ------------------------------------------------------
-
-  # Trigger: each column has a known type based on its key
-  # Why: raw CSV values are all strings; domain expects typed values
-  # Outcome: strings become dates, booleans, integers, or trimmed/nilled strings
-
   defp convert_value(:child_date_of_birth, raw) do
     parse_date(raw, :child_date_of_birth)
   end
@@ -365,16 +324,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     {:ok, clean_string(raw)}
   end
 
-  # -- date parsing ----------------------------------------------------------
-  # Trigger: dates arrive as M/D/YYYY or MM/DD/YYYY
-  # Why: parents fill forms with inconsistent date formatting
-  # Outcome: a %Date{} struct or an error scoped to the column and bad value
-
-  # Trigger: per-cell converters used to embed `(row N)` in their error messages
-  # Why: row numbers are owned by the caller via Stream.with_index/2; embedding
-  #      them inside the converter produced contradictory output when numbering
-  #      schemes diverged. The caller tags each error tuple positionally.
-  # Outcome: messages stay column/value-specific; numbering happens at the boundary
+  # Dates arrive as M/D/YYYY or MM/DD/YYYY from parent forms; row numbering is caller-owned via Stream.with_index/2
   defp parse_date(raw, field) do
     trimmed = String.trim(raw)
 
@@ -395,12 +345,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
     end
   end
 
-  # -- boolean parsing -------------------------------------------------------
-
   defp parse_boolean(raw) do
-    # Trigger: CSV exports may use varying boolean representations
-    # Why: case-insensitive matching avoids silent data loss from "yes" vs "Yes"
-    # Outcome: "yes", "true", "1" (any case) → true; everything else → false
     raw
     |> String.trim()
     |> String.downcase()
@@ -409,8 +354,6 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
       _ -> false
     end
   end
-
-  # -- grade parsing ---------------------------------------------------------
 
   defp parse_grade(raw) do
     raw
@@ -421,8 +364,6 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
       _ -> {:ok, nil}
     end
   end
-
-  # -- string cleaning -------------------------------------------------------
 
   defp clean_string(raw) do
     case String.trim(raw) do

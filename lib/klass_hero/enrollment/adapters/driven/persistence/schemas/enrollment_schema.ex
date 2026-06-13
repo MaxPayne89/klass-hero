@@ -1,9 +1,7 @@
 defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema do
   @moduledoc """
-  Ecto schema for the enrollments table.
-
-  This is an infrastructure adapter that maps database records to Ecto structs.
-  Use EnrollmentMapper to convert between EnrollmentSchema and domain Enrollment entities.
+  Ecto schema for the `enrollments` table.
+  Use `EnrollmentMapper` to convert to/from domain `Enrollment`.
   """
 
   use Ecto.Schema
@@ -53,21 +51,10 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSch
   )a
 
   @doc """
-  Creates a changeset for new enrollment creation.
+  Changeset for new enrollment creation.
 
-  Required fields:
-  - program_id (valid UUID)
-  - parent_id (valid UUID)
-  - child_id (valid UUID, required on create; nullable in DB after child deletion via `ON DELETE: :nilify_all`)
-  - status (pending, confirmed, completed, or cancelled)
-  - enrolled_at (UTC datetime)
-
-  Optional fields:
-  - confirmed_at, completed_at, cancelled_at (UTC datetime)
-  - cancellation_reason (text, max 1000 chars)
-  - subtotal, vat_amount, card_fee_amount, total_amount (decimal)
-  - payment_method (card or transfer)
-  - special_requirements (text, max 500 chars)
+  `child_id` is required here but nullable in the DB — it is nullified via `ON DELETE SET NULL`
+  when a child is deleted, never via application code.
   """
   def create_changeset(enrollment_schema \\ %__MODULE__{}, attrs) do
     enrollment_schema
@@ -90,14 +77,10 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSch
   end
 
   @doc """
-  Creates a changeset for updating an existing enrollment.
-
-  Does not allow modification of program_id, child_id, or parent_id.
+  Changeset for updating an existing enrollment. `program_id`, `child_id`, and `parent_id` are immutable.
   """
   def update_changeset(enrollment_schema, attrs) do
-    # Trigger: child_id is in @optional_fields for create_changeset but must not be updatable
-    # Why: child_id is only nullified at the DB level via ON DELETE SET NULL, never via application code
-    # Outcome: update path excludes child_id from castable fields
+    # child_id is excluded here — it is only nullified at the DB level via ON DELETE SET NULL.
     updatable_fields = Enum.reject(@optional_fields, &(&1 == :child_id))
 
     enrollment_schema
@@ -112,7 +95,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSch
   end
 
   @doc """
-  No-op changeset required by Backpex even when edit is disabled via `can?/3`.
+  No-op changeset required by Backpex when edit is disabled via `can?/3`.
   """
   def admin_changeset(schema, _attrs, _metadata), do: change(schema)
 end

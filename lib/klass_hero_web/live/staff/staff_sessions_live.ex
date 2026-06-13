@@ -123,7 +123,6 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     end
   end
 
-  # PubSub event handlers — session lifecycle events
   @impl true
   def handle_info(
         {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id, payload: payload}},
@@ -222,7 +221,6 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   def render(assigns) do
     ~H"""
     <div id="staff-sessions" class="max-w-4xl mx-auto p-4 md:p-6">
-      <%!-- Page header — no Create Session button for staff --%>
       <div class="mb-6">
         <.page_header>
           <:title>{gettext("My Sessions")}</:title>
@@ -230,7 +228,6 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
         </.page_header>
       </div>
 
-      <%!-- Date selector --%>
       <div class="mb-6">
         <.date_selector
           id="date-select"
@@ -241,10 +238,8 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
         />
       </div>
 
-      <%!-- Error state --%>
       <.error_alert :if={assigns[:sessions_error]} errors={[@sessions_error]} />
 
-      <%!-- Sessions list --%>
       <div id="sessions" phx-update="stream" class="space-y-4">
         <div :for={{id, session} <- @streams.sessions} id={id}>
           <.participation_card session={session} role={:staff}>

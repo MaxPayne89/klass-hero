@@ -51,21 +51,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VerificationDoc
     "other"
   ]
 
-  @doc """
-  Creates a changeset for inserting or updating a verification document.
-
-  Required fields:
-  - provider_id (reference to providers table)
-  - document_type (one of: business_registration, insurance_certificate, id_document, tax_certificate, other)
-  - file_url (path to file in object storage)
-  - original_filename (original name of uploaded file)
-
-  Optional fields:
-  - status (defaults to "pending", must be one of: pending, approved, rejected)
-  - rejection_reason (only relevant when status is rejected)
-  - reviewed_by_id (reference to users table)
-  - reviewed_at (timestamp of review)
-  """
+  @doc "Changeset for inserting or updating a verification document."
   def changeset(schema, attrs) do
     schema
     |> cast(attrs, @required_fields ++ @optional_fields)

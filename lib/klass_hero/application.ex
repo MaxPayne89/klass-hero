@@ -154,43 +154,30 @@ defmodule KlassHero.Application do
            {:user_data_anonymized,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
-           # conversation_created: promote to integration event for CQRS projections,
-           # then notify LiveViews for real-time UI updates
            {:conversation_created,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:conversation_created,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # message_sent: promote to integration event for CQRS projections,
-           # then notify LiveViews for real-time UI updates
            {:message_sent,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:message_sent, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # messages_read: promote to integration event for CQRS projections,
-           # then notify LiveViews for real-time UI updates
            {:messages_read,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:messages_read, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # conversation_archived: promote to integration event for CQRS projections
            {:conversation_archived,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
-           # conversations_archived: promote to integration event for CQRS projections,
-           # then notify LiveViews for real-time UI updates
            {:conversations_archived,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:conversations_archived,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # participant_added: promote to integration event so CQRS projection
-           # upserts a summary row for the newly added participant
            {:participant_added,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
-           # participant_removed: promote to integration event so CQRS projection
-           # archives the removed participant's summary row
            {:participant_removed,
             {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
@@ -202,59 +189,49 @@ defmodule KlassHero.Application do
         {DomainEventBus,
          context: KlassHero.Participation,
          handlers: [
-           # session_created: promote to integration event, then notify LiveViews
            {:session_created,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:session_created, {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # session_started: promote to integration event, then notify LiveViews
            {:session_started,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:session_started, {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # session_completed: promote to integration event, then notify LiveViews
            {:session_completed,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:session_completed,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # child_checked_in: promote to integration event, then notify LiveViews
            {:child_checked_in,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:child_checked_in,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # child_checked_out: promote to integration event, then notify LiveViews
            {:child_checked_out,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:child_checked_out,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # child_marked_absent: promote to integration event, then notify LiveViews
            {:child_marked_absent,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:child_marked_absent,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # behavioral_note_submitted: promote to integration event, then notify LiveViews
            {:behavioral_note_submitted,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:behavioral_note_submitted,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # behavioral_note_approved: promote to integration event, then notify LiveViews
            {:behavioral_note_approved,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:behavioral_note_approved,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # behavioral_note_rejected: promote to integration event, then notify LiveViews
            {:behavioral_note_rejected,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:behavioral_note_rejected,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           # roster_seeded: promote to integration event, then notify LiveViews
            {:roster_seeded,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},

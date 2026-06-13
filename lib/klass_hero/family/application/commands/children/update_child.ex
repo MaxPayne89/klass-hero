@@ -36,9 +36,7 @@ defmodule KlassHero.Family.Application.Commands.Children.UpdateChild do
   end
 
   defp dispatch_child_updated(child) do
-    # Trigger: child record successfully updated
-    # Why: downstream contexts (e.g. Messaging) need to refresh local child name lookups
-    # Outcome: fire-and-forget dispatch; parent_id omitted (not on child struct)
+    # Downstream contexts (e.g. Messaging) refresh local child name lookups; parent_id not on child struct.
     FamilyEvents.child_updated(child.id, %{
       child_id: child.id,
       first_name: child.first_name,

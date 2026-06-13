@@ -52,7 +52,6 @@ defmodule KlassHeroWeb.HomeLive do
     {:noreply, push_navigate(socket, to: ~p"/programs/#{program_id}")}
   end
 
-  # Converts a ProgramListing read model into the map shape expected by mk_program_card
   defp listing_to_card_map(%ProgramListing{} = program) do
     %{
       id: program.id,

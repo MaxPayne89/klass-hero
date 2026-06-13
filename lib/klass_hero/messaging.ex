@@ -75,10 +75,6 @@ defmodule KlassHero.Messaging do
 
   alias KlassHero.Messaging.Domain.Models.{Conversation, EmailReply, Message, Participant}
 
-  # ===========================================================================
-  # Commands
-  # ===========================================================================
-
   @doc """
   Creates or retrieves a direct conversation between provider and user.
 
@@ -371,10 +367,6 @@ defmodule KlassHero.Messaging do
   def subscribe_to_user_messages(user_id) do
     Phoenix.PubSub.subscribe(KlassHero.PubSub, user_messages_topic(user_id))
   end
-
-  # ===========================================================================
-  # Queries
-  # ===========================================================================
 
   @doc """
   Retrieves a conversation with its messages.

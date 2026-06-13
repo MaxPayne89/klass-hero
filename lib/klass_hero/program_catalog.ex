@@ -68,10 +68,6 @@ defmodule KlassHero.ProgramCatalog do
     TrendingSearches
   }
 
-  # ===========================================================================
-  # Commands
-  # ===========================================================================
-
   @doc """
   Creates a new program.
 
@@ -113,42 +109,15 @@ defmodule KlassHero.ProgramCatalog do
     UpdateProgram.execute(id, changes)
   end
 
-  # ===========================================================================
-  # Queries
-  # ===========================================================================
-
-  @doc """
-  Lists all available programs.
-
-  Returns programs ordered by title.
-
-  ## Examples
-
-      programs = ProgramCatalog.list_all_programs()
-  """
+  @doc "Lists all available programs ordered by title."
   @spec list_all_programs() :: [ProgramListing.t()]
   defdelegate list_all_programs, to: ListAllPrograms, as: :execute
 
-  @doc """
-  Gets a program by its unique ID.
-
-  ## Examples
-
-      {:ok, program} = ProgramCatalog.get_program_by_id("uuid")
-      {:error, :not_found} = ProgramCatalog.get_program_by_id("invalid")
-  """
+  @doc "Gets a program by its unique ID. Returns `{:error, :not_found}` if absent."
   @spec get_program_by_id(String.t()) :: {:ok, Program.t()} | {:error, atom()}
   defdelegate get_program_by_id(id), to: GetProgramById, as: :execute
 
-  @doc """
-  Lists featured programs for homepage display.
-
-  Returns the first 2 programs ordered by title.
-
-  ## Examples
-
-      featured = ProgramCatalog.list_featured_programs()
-  """
+  @doc "Lists featured programs for homepage display (first 2 ordered by title)."
   @spec list_featured_programs() :: [ProgramListing.t()]
   defdelegate list_featured_programs, to: ListFeaturedPrograms, as: :execute
 
@@ -172,94 +141,37 @@ defmodule KlassHero.ProgramCatalog do
     ListProgramsPaginated.execute(limit, cursor, category)
   end
 
-  @doc """
-  Lists all programs belonging to a specific provider.
-
-  Returns programs ordered by title for consistent display.
-
-  ## Examples
-
-      programs = ProgramCatalog.list_programs_for_provider(provider_id)
-  """
+  @doc "Lists all programs for a provider, ordered by title."
   @spec list_programs_for_provider(String.t()) :: [ProgramListing.t()]
   defdelegate list_programs_for_provider(provider_id), to: ListProviderPrograms, as: :execute
 
-  @doc """
-  Filters programs by search query using word-boundary matching.
-
-  Returns all programs if query is empty.
-
-  ## Examples
-
-      filtered = ProgramCatalog.filter_programs(programs, "art")
-  """
+  @doc "Filters programs by search query using word-boundary matching. Returns all if query is empty."
   @spec filter_programs([Program.t() | ProgramListing.t()], String.t()) :: [
           Program.t() | ProgramListing.t()
         ]
   defdelegate filter_programs(programs, query), to: ProgramFilter, as: :execute
 
-  @doc """
-  Sanitizes a search query by trimming and limiting length.
-
-  ## Examples
-
-      "art" = ProgramCatalog.sanitize_query("  art  ")
-      "" = ProgramCatalog.sanitize_query(nil)
-  """
+  @doc "Trims and length-limits a search query. Returns empty string for nil."
   @spec sanitize_query(String.t() | nil) :: String.t()
   defdelegate sanitize_query(query), to: ProgramFilter
 
-  @doc """
-  Returns all valid category identifiers including "all".
-
-  ## Examples
-
-      ["all", "sports", "arts", ...] = ProgramCatalog.valid_categories()
-  """
+  @doc "Returns all valid category identifiers including \"all\"."
   @spec valid_categories() :: [String.t()]
   defdelegate valid_categories, to: ProgramCategories
 
-  @doc """
-  Returns valid categories for programs (excludes "all").
-
-  ## Examples
-
-      ["sports", "arts", ...] = ProgramCatalog.program_categories()
-  """
+  @doc "Returns valid program categories (excludes \"all\")."
   @spec program_categories() :: [String.t()]
   defdelegate program_categories, to: ProgramCategories
 
-  @doc """
-  Validates a category filter, returning "all" for invalid values.
-
-  ## Examples
-
-      "sports" = ProgramCatalog.validate_category_filter("sports")
-      "all" = ProgramCatalog.validate_category_filter("invalid")
-  """
+  @doc "Validates a category filter, returning \"all\" for invalid values."
   @spec validate_category_filter(String.t() | nil) :: String.t()
   defdelegate validate_category_filter(filter), to: ProgramCategories, as: :validate_filter
 
-  @doc """
-  Checks if a category is valid for assignment to a program.
-
-  Excludes "all" which is only valid as a filter.
-
-  ## Examples
-
-      true = ProgramCatalog.valid_program_category?("sports")
-      false = ProgramCatalog.valid_program_category?("all")
-  """
+  @doc "Returns true if category is valid for program assignment (excludes \"all\")."
   @spec valid_program_category?(String.t()) :: boolean()
   defdelegate valid_program_category?(category), to: ProgramCategories
 
-  @doc """
-  Formats a price for display with currency symbol.
-
-  ## Examples
-
-      "€45.00" = ProgramCatalog.format_price(Decimal.new("45.00"))
-  """
+  @doc "Formats a price for display with currency symbol (e.g. \"€45.00\")."
   @spec format_price(Decimal.t() | number() | nil) :: String.t()
   defdelegate format_price(price), to: ProgramPricing
 
@@ -275,67 +187,33 @@ defmodule KlassHero.ProgramCatalog do
   @spec registration_status(Program.t()) :: atom()
   defdelegate registration_status(program), to: Program
 
-  @doc """
-  Returns trending search terms.
-
-  ## Examples
-
-      tags = ProgramCatalog.trending_searches()
-      tags = ProgramCatalog.trending_searches(3)  # limited to 3
-  """
+  @doc "Returns trending search terms, optionally limited to `limit` entries."
   @spec trending_searches(pos_integer() | nil) :: [String.t()]
   def trending_searches(limit \\ nil)
   def trending_searches(nil), do: TrendingSearches.list()
   def trending_searches(limit), do: TrendingSearches.list(limit)
 
-  @doc """
-  Returns IDs of programs whose end_date is before the given cutoff date.
-
-  Used by the Messaging context's retention policy to archive broadcast
-  conversations for ended programs.
-  """
+  @doc "Returns IDs of programs with end_date before cutoff. Used by Messaging retention policy."
   @spec list_ended_program_ids(Date.t()) :: [String.t()]
   def list_ended_program_ids(cutoff_date) do
     ProgramCatalogQueries.list_ended_program_ids(cutoff_date)
   end
 
-  @doc """
-  Fetches multiple programs by a list of IDs in a single database query.
-
-  Returns a list of Program structs for all matching IDs. IDs with no corresponding
-  program are silently omitted. Use this instead of calling `get_program_by_id/1`
-  in a loop to avoid N+1 queries.
-
-  ## Examples
-
-      programs = ProgramCatalog.get_programs_by_ids(["uuid1", "uuid2"])
-  """
+  @doc "Fetches multiple programs by ID in one query. Missing IDs are silently omitted. Prefer over `get_program_by_id/1` in a loop."
   @spec get_programs_by_ids([String.t()]) :: [Program.t()]
   def get_programs_by_ids(ids) when is_list(ids) do
     ProgramCatalogQueries.get_programs_by_ids(ids)
   end
 
-  @doc """
-  Returns remaining enrollment capacity for a program via ACL.
-  Delegates to the Enrollment context.
-  """
+  @doc "Returns remaining enrollment capacity for a program via Enrollment ACL."
   defdelegate remaining_capacity(program_id),
     to: EnrollmentCapacityACL
 
-  @doc """
-  Returns remaining enrollment capacity for multiple programs via ACL.
-  Returns a map of `program_id => remaining_count | :unlimited`.
-  """
+  @doc "Returns a map of `program_id => remaining_count | :unlimited` for multiple programs."
   defdelegate remaining_capacities(program_ids),
     to: EnrollmentCapacityACL
 
-  # ===========================================================================
-  # Forms
-  # ===========================================================================
-
-  @doc """
-  Returns an empty changeset for the program creation form.
-  """
+  @doc "Returns an empty changeset for the program creation form."
   def new_program_changeset(attrs \\ %{}) do
     ProgramCatalogQueries.new_program_changeset(attrs)
   end

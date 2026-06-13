@@ -22,9 +22,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReceiveInboundEmail do
 
   @spec execute(map()) :: {:ok, struct()} | {:ok, :duplicate} | {:error, term()}
   def execute(attrs) when is_map(attrs) do
-    # Trigger: same email may arrive multiple times (Resend retries on non-2xx)
-    # Why: idempotent handling prevents duplicate storage
-    # Outcome: duplicate silently acknowledged, new emails persisted
+    # Resend retries on non-2xx; deduplicate by resend_id.
     case @inbound_email_reader.get_by_resend_id(attrs.resend_id) do
       {:ok, _existing} ->
         Logger.debug("Duplicate inbound email ignored: #{attrs.resend_id}")
@@ -35,9 +33,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReceiveInboundEmail do
     end
   end
 
-  # Trigger: concurrent webhook deliveries may both pass the dedup check
-  # Why: unique_index on resend_id catches the race; treat as duplicate, not failure
-  # Outcome: constraint violation returns {:ok, :duplicate} to maintain idempotency
+  # Concurrent deliveries may both pass the dedup check; unique_index catches the race.
   defp create_with_race_handling(attrs) do
     case @inbound_email_repo.create(attrs) do
       {:ok, email} ->
@@ -57,9 +53,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReceiveInboundEmail do
     end
   end
 
-  # Trigger: email stored successfully with metadata only
-  # Why: Resend webhook doesn't include body; content must be fetched via API
-  # Outcome: background job enqueued to fetch html, text, and headers
+  # Resend webhook omits body; fetch html/text/headers via API in a background job.
   defp schedule_content_fetch(email) do
     case @email_job_scheduler.schedule_content_fetch(email.id, email.resend_id) do
       {:ok, _job} ->

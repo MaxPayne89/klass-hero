@@ -1,18 +1,13 @@
 defmodule KlassHeroWeb.Layouts do
   @moduledoc """
-  This module holds layouts and related functionality
-  used by your application.
+  Layouts and shared layout components.
   """
   use KlassHeroWeb, :html
 
-  # Embed all files in layouts/* within this module.
-  # The default root.html.heex file contains the HTML
-  # skeleton of your application, namely HTML headers
-  # and other static content.
   embed_templates "layouts/*"
 
   @doc """
-  Shows the flash group with standard titles and content.
+  Renders info, error, and warning flashes plus reconnect notices.
 
   ## Examples
 
@@ -56,10 +51,7 @@ defmodule KlassHeroWeb.Layouts do
   end
 
   @doc """
-  Provides language switcher for German/English localization.
-
-  Renders buttons that switch the locale by navigating with a query parameter.
-  The current locale is highlighted with a different style.
+  Language switcher pill for German/English; switches via `?locale=` query param.
 
   ## Examples
 
@@ -100,8 +92,6 @@ defmodule KlassHeroWeb.Layouts do
     """
   end
 
-  # Backpex admin dashboard layout
-  # Provides the shell (sidebar, topbar, flash) for all admin LiveResource pages.
   attr :flash, :map, required: true
   attr :fluid?, :boolean, default: true
   attr :current_url, :string, required: true

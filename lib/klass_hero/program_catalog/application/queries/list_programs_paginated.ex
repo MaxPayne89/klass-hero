@@ -27,39 +27,10 @@ defmodule KlassHero.ProgramCatalog.Application.Queries.ListProgramsPaginated do
                      [:program_catalog, :for_listing_program_summaries]
                    )
 
-  @doc """
-  Lists programs with pagination.
-
-  ## Parameters
-
-    * `limit` - Maximum number of programs to return (1-100)
-    * `cursor` - Optional cursor from previous page result (nil for first page)
-
-  ## Returns
-
-    * `{:ok, PageResult.t()}` - Page of programs with pagination metadata
-    * `{:error, :invalid_cursor}` - Cursor is malformed or invalid
-
-  """
   def execute(limit, cursor) do
     execute(limit, cursor, nil)
   end
 
-  @doc """
-  Lists programs with pagination and optional category filter.
-
-  ## Parameters
-
-    * `limit` - Maximum number of programs to return (1-100)
-    * `cursor` - Optional cursor from previous page result (nil for first page)
-    * `category` - Optional category to filter by (nil or "all" for all programs)
-
-  ## Returns
-
-    * `{:ok, PageResult.t()}` - Page of programs with pagination metadata
-    * `{:error, :invalid_cursor}` - Cursor is malformed or invalid
-
-  """
   def execute(limit, cursor, category) do
     validated_category = ProgramCategories.validate_filter(category)
     @read_repository.list_paginated(limit, cursor, validated_category)

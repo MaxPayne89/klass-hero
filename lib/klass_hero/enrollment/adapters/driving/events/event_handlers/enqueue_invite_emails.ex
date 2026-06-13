@@ -52,11 +52,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
 
     {:ok, pairs} = UseCase.execute([program_id], provider_id)
 
-    # Trigger: UseCase returns ALL pending invites without tokens in this program
-    # Why: other invites may be pending from a recent bulk import — only the
-    #      explicitly requested invite should get an immediate email
-    # Outcome: tokens are generated for all (correct), but only the resend
-    #          target gets an Oban job
+    # UseCase assigns tokens for ALL pending invites in the program (correct), but only
+    # the requested invite should get an immediate Oban job — other pending invites wait.
     pairs_for_invite = Enum.filter(pairs, fn {id, _name} -> id == invite_id end)
 
     if pairs_for_invite != [] do

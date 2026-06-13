@@ -41,7 +41,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
           {:ok, participant}
 
         {:error, %Ecto.Changeset{} = changeset} = result ->
-          # Check specifically for unique constraint violation (already participant)
           case changeset.errors[:conversation_id] do
             {"has already been taken", _} -> {:error, :already_participant}
             _ -> result
@@ -73,10 +72,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
         {1, [schema]} ->
           {:ok, ParticipantMapper.to_domain(schema)}
 
-        # Trigger: row already existed; on_conflict: :nothing skipped the insert
-        # Why: callers (BroadcastToProgram follow-up) need to keep going inside Repo.transaction
-        #      without poisoning it via a unique-constraint failure
-        # Outcome: fetch the existing row so the caller gets a Participant.t() either way
+        # on_conflict: :nothing skipped the insert; fetch existing row to avoid
+        # poisoning the caller's transaction with a unique-constraint failure.
         {0, _} ->
           get(attrs.conversation_id, attrs.user_id)
       end
@@ -295,10 +292,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
       {count, _} =
         Repo.insert_all(ParticipantSchema, entries,
-          # Re-activation semantics for soft-left rows:
-          # - clear `left_at` so the participant becomes active again
-          # - bump `updated_at` to capture the re-activation moment
-          # - preserve original `joined_at` (audit trail of first-join time stays authoritative)
+          # Re-activation: clear left_at, bump updated_at; preserve original joined_at (audit trail).
           on_conflict:
             from(p in ParticipantSchema,
               update: [set: [left_at: nil, updated_at: fragment("EXCLUDED.updated_at")]]

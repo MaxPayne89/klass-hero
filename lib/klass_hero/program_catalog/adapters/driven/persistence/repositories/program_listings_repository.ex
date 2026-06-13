@@ -37,9 +37,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
       with {:ok, cursor_data} <- CursorCodec.decode(cursor) do
         schemas = fetch_page(limit, cursor_data, category)
 
-        # Trigger: fetched one extra record beyond the limit
-        # Why: determines if more pages exist without a separate COUNT query
-        # Outcome: sets has_more flag and trims result to requested limit
+        # Fetched limit+1 rows to detect has_more without a separate COUNT query.
         {items, has_more} =
           if length(schemas) > limit do
             {Enum.take(schemas, limit), true}
@@ -141,7 +139,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
     span do
       set_attributes("db", operation: "select", entity: "program_listing")
 
-      # Use dump/1 to validate UUID format — cast/1 incorrectly accepts 16-byte binaries
+      # dump/1 validates UUID format; cast/1 incorrectly accepts 16-byte binaries.
       case Ecto.UUID.dump(id) do
         {:ok, _binary} ->
           case Repo.get(ProgramListingSchema, id) do
@@ -160,8 +158,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
     end
   end
 
-  # --- Private helpers ---
-
   defp fetch_page(limit, cursor_data, category) do
     ProgramListingSchema
     |> apply_category_filter(category)
@@ -179,13 +175,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
     where(query, [l], l.category == ^category)
   end
 
-  # Trigger: public listing queries -- fetch_page/3 (list_paginated/3) and list_active/0
-  # Why: programs that have already ended should not appear on public-facing surfaces
-  #      such as the /programs catalog (issue #610) or the home page featured section;
-  #      programs without an end_date are open-ended and continue to appear
-  # Outcome: excludes rows where end_date < today, keeps end_date >= today and nil end_date
-  # Scope: list_all/0 and list_for_provider/1 intentionally bypass this filter so the
-  #        provider dashboard and admin tooling still surface expired programs.
+  # Public-facing surfaces only (fetch_page, list_active). list_all/0 and list_for_provider/1
+  # intentionally bypass this so provider/admin tooling still surfaces expired programs (#610).
   defp apply_end_date_filter(query) do
     today = Date.utc_today()
     where(query, [l], is_nil(l.end_date) or l.end_date >= ^today)
@@ -194,9 +185,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   defp apply_cursor_filter(query, nil), do: query
 
   defp apply_cursor_filter(query, {cursor_ts, cursor_id}) do
-    # Trigger: cursor present from a previous page request
-    # Why: seek pagination — skip all rows at or before the cursor position
-    # Outcome: returns only rows after the cursor in (inserted_at DESC, id DESC) order
+    # Seek pagination: skip rows at or before the cursor in (inserted_at DESC, id DESC) order.
     where(
       query,
       [l],

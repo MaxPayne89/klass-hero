@@ -2,27 +2,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
   @moduledoc """
   Phoenix.PubSub implementation of the ForPublishingIntegrationEvents port.
 
-  This adapter publishes integration events to Phoenix.PubSub topics following
-  the topic naming convention: `integration:{source_context}:{event_type}`
-
-  ## Configuration
-
-  The PubSub server name is configured in config:
-
-      config :klass_hero, :integration_event_publisher,
-        module: KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher,
-        pubsub: KlassHero.PubSub
-
-  ## Message Format
-
-  Events are broadcast as tuples: `{:integration_event, %IntegrationEvent{}}`
-
-  Subscribers receive events via `handle_info/2`:
-
-      def handle_info({:integration_event, event}, state) do
-        # Process event
-        {:noreply, state}
-      end
+  Topic convention: `integration:{source_context}:{event_type}`. Messages are broadcast as
+  `{:integration_event, %IntegrationEvent{}}` and received via `handle_info/2`.
+  Also enqueues one `CriticalEventWorker` Oban job per registered handler for critical events.
   """
 
   @behaviour KlassHero.Shared.Domain.Ports.ForPublishingIntegrationEvents
@@ -43,9 +25,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
 
     case publish(event, topic) do
       :ok ->
-        # Trigger: event may be marked critical
-        # Why: critical integration events need durable delivery as Oban fallback
-        # Outcome: one CriticalEventWorker job enqueued per registered handler
         maybe_enqueue_critical_jobs(event, topic)
         :ok
 
@@ -77,37 +56,20 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
   end
 
   @doc """
-  Builds a topic string from source context and event type.
-
-  Format: `integration:{source_context}:{event_type}`
-
-  ## Examples
-
-      iex> PubSubIntegrationEventPublisher.build_topic(:identity, :child_data_anonymized)
-      "integration:identity:child_data_anonymized"
+  Builds a topic string. Format: `integration:{source_context}:{event_type}`.
   """
   @spec build_topic(atom(), atom()) :: String.t()
   def build_topic(source_context, event_type) do
     "integration:#{source_context}:#{event_type}"
   end
 
-  @doc """
-  Derives the topic name from an integration event.
-
-  ## Examples
-
-      iex> event = IntegrationEvent.new(:child_data_anonymized, :identity, :child, "uuid", %{})
-      iex> PubSubIntegrationEventPublisher.derive_topic(event)
-      "integration:identity:child_data_anonymized"
-  """
+  @doc false
   @spec derive_topic(IntegrationEvent.t()) :: String.t()
   def derive_topic(%IntegrationEvent{source_context: ctx, event_type: event_type}) do
     build_topic(ctx, event_type)
   end
 
-  # Trigger: event has criticality: :critical and handlers are registered
-  # Why: PubSub is fire-and-forget — Oban provides durable retry if PubSub path fails
-  # Outcome: one Oban job per handler, each going through CriticalEventDispatcher
+  # PubSub is fire-and-forget — enqueue one Oban job per handler for durable retry if PubSub fails.
   defp maybe_enqueue_critical_jobs(%IntegrationEvent{} = event, topic) do
     if IntegrationEvent.critical?(event) do
       handlers = CriticalEventHandlerRegistry.handlers_for(topic)
@@ -132,9 +94,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
         :ok
 
       {:error, reason} ->
-        # Trigger: Oban job insertion failed for a critical integration event
-        # Why: PubSub broadcast already succeeded, but the durable fallback is now absent
-        # Outcome: error-level log for operator alerting — event relies solely on PubSub path
+        # PubSub already delivered, but durable fallback is now absent — alert operators.
         Logger.error(
           "Failed to enqueue durable delivery job for critical integration event " <>
             "#{event.event_type} (#{event.event_id}), handler #{handler_ref}. " <>

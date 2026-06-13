@@ -34,9 +34,7 @@ defmodule KlassHeroWeb.Admin.ConsentLive do
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
 
-  # Trigger: all mutation actions denied — this is a read-only compliance view
-  # Why: consents are granted/withdrawn by parents, not admins
-  # Outcome: hides New button, denies edit/delete/new actions
+  # Read-only compliance view: consents are granted/withdrawn by parents, not admins.
   @impl Backpex.LiveResource
   def can?(_assigns, :new, _item), do: false
   def can?(_assigns, :edit, _item), do: false
@@ -64,9 +62,6 @@ defmodule KlassHeroWeb.Admin.ConsentLive do
     from c in query, preload: [:child, :parent]
   end
 
-  # Trigger: index page renders — show compliance context
-  # Why: admins need to understand that consent records are immutable audit trails
-  # Outcome: info banner displayed above the main table
   @impl Backpex.LiveResource
   def render_resource_slot(assigns, :index, :before_main) do
     ~H"""

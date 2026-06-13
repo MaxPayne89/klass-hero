@@ -2,27 +2,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher do
   @moduledoc """
   Phoenix.PubSub implementation of the ForPublishingEvents port.
 
-  This adapter publishes domain events to Phoenix.PubSub topics following
-  the topic naming convention: `{aggregate_type}:{event_type}`
-
-  ## Configuration
-
-  The PubSub server name is configured in config:
-
-      config :klass_hero, :event_publisher,
-        module: KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher,
-        pubsub: KlassHero.PubSub
-
-  ## Message Format
-
-  Events are broadcast as tuples: `{:domain_event, %DomainEvent{}}`
-
-  Subscribers receive events via `handle_info/2`:
-
-      def handle_info({:domain_event, event}, state) do
-        # Process event
-        {:noreply, state}
-      end
+  Topic convention: `{aggregate_type}:{event_type}`. Messages are broadcast as
+  `{:domain_event, %DomainEvent{}}` and received via `handle_info/2`.
   """
 
   @behaviour KlassHero.Shared.Domain.Ports.ForPublishingEvents
@@ -60,40 +41,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher do
   end
 
   @doc """
-  Builds a topic string from aggregate type and event type.
-
-  This is the canonical function for topic string construction.
-  Use this for subscribing to specific event topics.
-
-  Format: `{aggregate_type}:{event_type}`
-
-  ## Examples
-
-      iex> PubSubEventPublisher.build_topic(:user, :registered)
-      "user:registered"
-
-      iex> PubSubEventPublisher.build_topic(:enrollment, :confirmed)
-      "enrollment:confirmed"
+  Builds a topic string. Format: `{aggregate_type}:{event_type}`. Use for subscribing to specific event topics.
   """
   @spec build_topic(atom(), atom()) :: String.t()
   def build_topic(aggregate_type, event_type) do
     "#{aggregate_type}:#{event_type}"
   end
 
-  @doc """
-  Derives the topic name from a domain event.
-
-  Extracts aggregate type and event type from the event and builds
-  the topic string. Used internally when publishing events.
-
-  ## Examples
-
-      iex> alias KlassHero.Shared.Domain.Events.DomainEvent
-      iex> alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
-      iex> event = DomainEvent.new(:user_registered, 1, :user, %{})
-      iex> PubSubEventPublisher.derive_topic(event)
-      "user:user_registered"
-  """
+  @doc false
   @spec derive_topic(DomainEvent.t()) :: String.t()
   def derive_topic(%DomainEvent{aggregate_type: agg_type, event_type: event_type}) do
     build_topic(agg_type, event_type)

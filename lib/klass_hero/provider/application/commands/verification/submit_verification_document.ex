@@ -45,9 +45,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
     end
   end
 
-  # Trigger: params map may be missing required fields
-  # Why: early validation prevents partial operations (e.g., uploading file then failing)
-  # Outcome: returns validation errors before any side effects occur
+  # Validates before any side effects — prevents uploading a file then failing on a missing field.
   defp validate_params(params) do
     errors =
       Enum.reduce(@required_string_fields, [], fn field, acc ->
@@ -68,9 +66,6 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
     end
   end
 
-  # Trigger: params contain file binary and metadata
-  # Why: files are stored in private bucket for security (verification docs are sensitive)
-  # Outcome: file stored in object storage, returns storage path/key
   defp upload_file(params) do
     path =
       Storage.build_timestamped_path(

@@ -11,18 +11,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
   require Logger
 
   @doc """
-  Converts a list of persistence schemas to domain entities using the given mapper module.
-
-  The mapper module must implement `to_domain/1`.
-
-  ## Examples
-
-      iex> MapperHelpers.to_domain_list([], MyMapper)
-      []
-
-      iex> MapperHelpers.to_domain_list([schema1, schema2], MyMapper)
-      [%DomainModel{}, %DomainModel{}]
-
+  Maps a list of persistence schemas to domain entities via `mapper_module.to_domain/1`.
   """
   @spec to_domain_list([input], module()) :: [output]
         when input: term(), output: term()
@@ -80,10 +69,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
   end
 
   @doc """
-  Converts :subscription_tier in an attrs map from atom to string.
-
-  No-op if the key is absent, nil, or already a string.
-  Delegates to `normalize_atom_field/2`.
+  Converts `:subscription_tier` in an attrs map from atom to string. Delegates to `normalize_atom_field/2`.
   """
   @spec normalize_subscription_tier(map()) :: map()
   def normalize_subscription_tier(attrs), do: normalize_atom_field(attrs, :subscription_tier)
@@ -118,7 +104,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
     end)
   end
 
-  @doc "Converts a value to a string, leaving nil untouched."
   @spec maybe_to_string(term()) :: String.t() | nil
   def maybe_to_string(nil), do: nil
   def maybe_to_string(value), do: to_string(value)

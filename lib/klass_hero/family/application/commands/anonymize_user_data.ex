@@ -59,9 +59,7 @@ defmodule KlassHero.Family.Application.Commands.AnonymizeUserData do
         with {:ok, consent_count} <- @consent_repository.delete_all_for_child(child.id),
              {:ok, _anonymized_child} <-
                @child_repository.anonymize(child.id, anonymized_child_attrs),
-             # Trigger: child PII anonymized and consents deleted
-             # Why: downstream contexts own their own child data and must clean it
-             # Outcome: Participation context will anonymize behavioral notes
+             # Downstream contexts (e.g. Participation) must anonymize their own child data.
              :ok <- dispatch_child_anonymized(child.id) do
           {:cont,
            {:ok,

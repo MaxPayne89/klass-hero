@@ -1,45 +1,20 @@
 defmodule KlassHeroWeb.Theme do
   @moduledoc """
-  Centralized theme utilities for Klass Hero design system.
-
-  This module provides consistent access to gradients, colors, spacing, shadows,
-  typography, and other design tokens used throughout the Klass Hero application.
-
-  ## Design Tokens
-
-  - **Colors**: Primary (hero-blue), Secondary (pink), Accent (yellow)
-  - **Gradients**: 15+ pre-defined gradients for various use cases
-  - **Icon Styles**: Paired background + text colors for icons
-  - **Status**: Color combinations for availability states
-  - **Spacing**: Consistent scale from xs to 2xl
-  - **Shadows**: None to xl shadow levels
-  - **Typography**: Hero to caption text styles
-  - **Rounded**: Border radius scale
-  - **Transitions**: Animation duration presets
+  Centralized design tokens: gradients, colors, spacing, shadows, typography, rounded, transitions.
 
   ## Usage
 
-      # In components:
       alias KlassHeroWeb.Theme
 
       <div class={Theme.gradient(:primary)}>...</div>
       <div class={Theme.bg(:primary)}>...</div>
       <span class={Theme.text_color(:heading)}>Title</span>
 
-      # Icon with background:
       {bg, text} = Theme.icon_styles(:primary)
-      <div class={bg}><span class={text}>...</span></div>
-
-      # Status badge:
       <span class={Theme.status(:available)}>Available</span>
   """
 
-  # ============================================
-  # GRADIENTS
-  # ============================================
-
   @gradients %{
-    # Primary brand gradients - Superhero theme
     primary: "bg-gradient-to-r from-hero-blue-500 to-hero-blue-600",
     hero: "bg-gradient-to-br from-hero-blue-400 via-hero-yellow-400 to-hero-yellow-500",
     comic: "bg-gradient-to-r from-hero-yellow-400 to-hero-blue-400",
@@ -79,10 +54,6 @@ defmodule KlassHeroWeb.Theme do
   @doc "Returns a map of all gradients."
   def all_gradients, do: @gradients
 
-  # ============================================
-  # COLOR TOKENS
-  # ============================================
-
   @colors %{
     primary: "hero-blue",
     secondary: "hero-grey",
@@ -101,42 +72,23 @@ defmodule KlassHeroWeb.Theme do
   def color(:secondary), do: @colors.secondary
   def color(:accent), do: @colors.accent
 
-  # ============================================
-  # BRAND COLORS
-  # ============================================
-
   @brand_colors %{
-    # Primary brand color (hero blue)
     primary: "hero-blue-600",
     primary_hover: "hero-blue-700",
     primary_light: "hero-blue-50",
-
-    # Secondary color (hero grey)
     secondary: "hero-grey-500",
     secondary_hover: "hero-grey-600",
-
-    # Accent color (hero yellow)
     accent: "hero-yellow-400",
     accent_hover: "hero-yellow-500",
-
-    # Background color (hero pink)
     background: "hero-pink-50",
     background_light: "hero-pink-100",
-
-    # Surface colors
     surface: "white",
     surface_light: "hero-pink-50",
-
-    # Text colors (hero black)
     text_primary: "hero-black",
     text_secondary: "hero-black-100",
     text_muted: "hero-grey-500",
-
-    # Border colors (hero grey)
     border_light: "hero-grey-200",
     border_medium: "hero-grey-300",
-
-    # Footer
     footer_bg: "hero-black",
     footer_text: "hero-grey-300"
   }
@@ -188,10 +140,6 @@ defmodule KlassHeroWeb.Theme do
   """
   def brand_color(key), do: Map.get(@brand_colors, key)
 
-  # ============================================
-  # BACKGROUND CLASSES
-  # ============================================
-
   @doc """
   Returns the background class for the specified variant.
 
@@ -224,10 +172,6 @@ defmodule KlassHeroWeb.Theme do
   def bg(:muted), do: "bg-hero-grey-50"
   def bg(:light), do: "bg-hero-grey-100"
   def bg(:medium), do: "bg-hero-grey-200"
-
-  # ============================================
-  # TEXT COLOR CLASSES
-  # ============================================
 
   @doc """
   Returns the text color class for the specified variant.
@@ -262,10 +206,6 @@ defmodule KlassHeroWeb.Theme do
   def text_color(:subtle), do: "text-hero-grey-400"
   def text_color(:inverse), do: "text-white"
 
-  # ============================================
-  # BORDER COLOR CLASSES
-  # ============================================
-
   @doc """
   Returns the border color class for the specified variant.
 
@@ -284,10 +224,6 @@ defmodule KlassHeroWeb.Theme do
   def border_color(:light), do: "border-hero-grey-200"
   def border_color(:medium), do: "border-hero-grey-300"
   def border_color(:dark), do: "border-hero-grey-400"
-
-  # ============================================
-  # ICON STYLE PAIRS (bg + text)
-  # ============================================
 
   @doc """
   Returns a tuple of {background_class, text_class} for icon styling.
@@ -311,10 +247,6 @@ defmodule KlassHeroWeb.Theme do
   def icon_styles(:danger), do: {"bg-red-100", "text-red-600"}
   def icon_styles(:info), do: {"bg-hero-blue-100", "text-hero-blue-600"}
   def icon_styles(:neutral), do: {"bg-gray-100", "text-gray-600"}
-
-  # ============================================
-  # STATUS CLASSES (for badges, pills, info boxes)
-  # ============================================
 
   @doc """
   Returns combined classes for status indicators (badges, pills, info boxes).
@@ -340,10 +272,6 @@ defmodule KlassHeroWeb.Theme do
   def status(:info), do: "bg-blue-50 border-blue-200 text-blue-700"
   def status(:neutral), do: "bg-gray-50 border-gray-200 text-gray-700"
 
-  # ============================================
-  # ICON SIZES
-  # ============================================
-
   @doc """
   Returns width and height classes for icon sizing.
 
@@ -367,10 +295,6 @@ defmodule KlassHeroWeb.Theme do
   def icon_size(:lg), do: "w-6 h-6"
   def icon_size(:xl), do: "w-8 h-8"
   def icon_size(:"2xl"), do: "w-10 h-10"
-
-  # ============================================
-  # SPACING SCALE
-  # ============================================
 
   @doc """
   Returns the Tailwind spacing value (number only) for the specified size.
@@ -398,10 +322,6 @@ defmodule KlassHeroWeb.Theme do
   def spacing(:xl), do: "8"
   def spacing(:"2xl"), do: "12"
 
-  # ============================================
-  # SHADOW SCALE
-  # ============================================
-
   @doc """
   Returns the shadow class for the specified level.
 
@@ -423,10 +343,6 @@ defmodule KlassHeroWeb.Theme do
   def shadow(:md), do: "shadow-md"
   def shadow(:lg), do: "shadow-lg"
   def shadow(:xl), do: "shadow-xl"
-
-  # ============================================
-  # TYPOGRAPHY SCALE
-  # ============================================
 
   @doc """
   Returns typography classes for the specified style.
@@ -455,7 +371,6 @@ defmodule KlassHeroWeb.Theme do
       iex> Theme.typography(:body)
       "font-sans text-base"
   """
-  # Display font (Plus Jakarta Sans) for hero/heading text
   def typography(:hero), do: "font-display text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight"
 
   def typography(:page_title), do: "font-display text-3xl md:text-4xl font-bold tracking-tight"
@@ -464,15 +379,10 @@ defmodule KlassHeroWeb.Theme do
 
   def typography(:cta), do: "font-display text-lg md:text-xl font-bold tracking-tight"
 
-  # Sans font (Outfit) for functional text
   def typography(:card_title), do: "font-sans text-lg font-semibold"
   def typography(:body), do: "font-sans text-base"
   def typography(:body_small), do: "font-sans text-sm"
   def typography(:caption), do: "font-sans text-xs text-gray-500"
-
-  # ============================================
-  # BORDER RADIUS
-  # ============================================
 
   @doc """
   Returns the border radius class for the specified size.
@@ -497,10 +407,6 @@ defmodule KlassHeroWeb.Theme do
   def rounded(:lg), do: "rounded-xl"
   def rounded(:xl), do: "rounded-2xl"
   def rounded(:full), do: "rounded-full"
-
-  # ============================================
-  # TRANSITIONS
-  # ============================================
 
   @doc """
   Returns transition classes for the specified speed.

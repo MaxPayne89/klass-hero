@@ -68,6 +68,3 @@ npm-debug.log
 # Local debug artefacts (do not commit)
 /*.png
 .playwright-mcp/
-
-# graphify knowledge graph — local-only; rebuild with `/graphify`
-graphify-out/

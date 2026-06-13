@@ -26,9 +26,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   """
   @spec handle(DomainEvent.t()) :: :ok | {:error, term()}
   def handle(%DomainEvent{event_type: :user_data_anonymized} = event) do
-    # Trigger: user_data_anonymized domain event received
-    # Why: downstream contexts need notification; but event is non-critical (state already durable)
-    # Outcome: best-effort publish; swallow failures and return :ok
     user_id = event.payload.user_id
 
     MessagingIntegrationEvents.message_data_anonymized(user_id)
@@ -38,12 +35,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :conversation_created} = event) do
-    # Trigger: conversation_created domain event dispatched from CreateDirectConversation use case
-    # Why: CQRS projections need this to build denormalized conversation summaries
-    # Outcome: publish critical integration event; the conversation is already
-    #          committed before dispatch (post-commit pattern), and a publish
-    #          failure is caught by EventDispatchHelper which enqueues an
-    #          Oban retry for this handler.
     event.aggregate_id
     |> MessagingIntegrationEvents.conversation_created(event.payload)
     |> IntegrationEventPublishing.publish_critical("conversation_created",
@@ -52,13 +43,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :message_sent} = event) do
-    # Trigger: message_sent domain event dispatched from SendMessage use case
-    # Why: CQRS projections need this to update last-message summaries and unread counts
-    # Outcome: publish critical integration event; the message persistence is
-    #          already committed before this fires. Dispatch failures are
-    #          retried by EventDispatchHelper once issue #849 lands; until
-    #          then SendMessage uses the lower-level bus which logs failures
-    #          but does not retry.
+    # NOTE: SendMessage uses the lower-level bus (no Oban retry) until #849 lands.
     event.aggregate_id
     |> MessagingIntegrationEvents.message_sent(event.payload)
     |> IntegrationEventPublishing.publish_critical("message_sent",
@@ -67,9 +52,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :messages_read} = event) do
-    # Trigger: messages_read domain event dispatched from MarkAsRead use case
-    # Why: CQRS projections use this to update unread counts
-    # Outcome: best-effort publish; swallow failure since read-receipt is non-critical
     MessagingIntegrationEvents.messages_read(event.aggregate_id, event.payload)
     |> IntegrationEventPublishing.publish_best_effort("messages_read",
       conversation_id: event.aggregate_id
@@ -77,9 +59,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :conversation_archived} = event) do
-    # Trigger: conversation_archived domain event dispatched from archive use case
-    # Why: CQRS projections use this to mark conversations as archived
-    # Outcome: best-effort publish; swallow failure since archive status is non-critical
     MessagingIntegrationEvents.conversation_archived(event.aggregate_id, event.payload)
     |> IntegrationEventPublishing.publish_best_effort("conversation_archived",
       conversation_id: event.aggregate_id
@@ -87,9 +66,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :conversations_archived} = event) do
-    # Trigger: conversations_archived domain event dispatched from bulk archive use case
-    # Why: CQRS projections use this to mark multiple conversations as archived
-    # Outcome: best-effort publish; swallow failure since bulk archive status is non-critical
     MessagingIntegrationEvents.conversations_archived(event.aggregate_id, event.payload)
     |> IntegrationEventPublishing.publish_best_effort("conversations_archived",
       aggregate_id: event.aggregate_id
@@ -97,13 +73,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :participant_added} = event) do
-    # Trigger: participant_added domain event dispatched from AddAssignedStaff command
-    # Why: CQRS projection must upsert summary rows for newly added participants;
-    #      missing this leaves staff inboxes empty until a server restart re-derives
-    # Outcome: publish critical integration event; the participant insert is
-    #          already committed before dispatch (post-commit pattern). A
-    #          publish failure does NOT roll back — EventDispatchHelper
-    #          enqueues an Oban retry so the projection eventually catches up.
     event.aggregate_id
     |> MessagingIntegrationEvents.participant_added(event.payload)
     |> IntegrationEventPublishing.publish_critical("participant_added",
@@ -112,13 +81,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :participant_removed} = event) do
-    # Trigger: participant_removed domain event dispatched from RemoveAssignedStaff command
-    # Why: CQRS projection must soft-remove (archive) the participant's summary row
-    #      so the conversation disappears from their inbox immediately
-    # Outcome: publish critical integration event; the leave write is already
-    #          committed before dispatch (post-commit pattern). A publish
-    #          failure does NOT roll back — EventDispatchHelper enqueues an
-    #          Oban retry so the archive eventually lands.
     event.aggregate_id
     |> MessagingIntegrationEvents.participant_removed(event.payload)
     |> IntegrationEventPublishing.publish_critical("participant_removed",

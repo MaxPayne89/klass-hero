@@ -113,7 +113,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
       |> Repo.all()
       |> Map.new()
       |> then(fn counts ->
-        # Ensure all requested IDs appear in result (0 for missing)
+        # Programs with no enrollments are absent from the GROUP BY result; default to 0.
         Map.new(program_ids, fn id -> {id, Map.get(counts, id, 0)} end)
       end)
     end

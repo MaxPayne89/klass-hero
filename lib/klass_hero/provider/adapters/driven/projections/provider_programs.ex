@@ -36,8 +36,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
 
   @default_status "active"
 
-  # Behaviour callbacks ───────────────────────────────────────────────────────
-
   @impl Projection
   def bootstrap_impl, do: bootstrap_from_write_table()
 
@@ -45,8 +43,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
   def handle_event(event_type, %IntegrationEvent{} = event) when event_type in [:program_created, :program_updated] do
     upsert_from_event(event)
   end
-
-  # Private ──────────────────────────────────────────────────────────────────
 
   defp bootstrap_from_write_table do
     programs =

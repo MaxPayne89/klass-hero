@@ -40,24 +40,6 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNote do
 
   @type result :: {:ok, BehavioralNote.t()} | {:error, term()}
 
-  @doc """
-  Submits a behavioral note for a participation record.
-
-  ## Parameters
-
-  - `params` - Map containing:
-    - `participation_record_id` - ID of the participation record
-    - `provider_id` - ID of the provider submitting the note
-    - `content` - Note content (max 1000 chars)
-
-  ## Returns
-
-  - `{:ok, note}` on success
-  - `{:error, :not_found}` if record doesn't exist
-  - `{:error, :invalid_record_status}` if record not checked_in/checked_out
-  - `{:error, :blank_content}` if content is blank after normalization
-  - `{:error, :duplicate_note}` if provider already submitted a note
-  """
   @spec execute(params()) :: result()
   def execute(%{participation_record_id: record_id, provider_id: provider_id, content: content} = _params) do
     normalized_content = Shared.normalize_notes(content)
@@ -70,13 +52,7 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNote do
       Shared.log_publish_result(publish_event(persisted), persisted.id)
       {:ok, persisted}
     else
-      # Trigger: content was blank or whitespace-only
-      # Why: normalize_notes returns nil for blank strings
-      # Outcome: return blank_content error before any DB calls
       {:content, nil} -> {:error, :blank_content}
-      # Trigger: record is not in a note-eligible status
-      # Why: notes should only be added after the child has been checked in
-      # Outcome: blocks note creation for registered/absent records
       false -> {:error, :invalid_record_status}
       error -> error
     end

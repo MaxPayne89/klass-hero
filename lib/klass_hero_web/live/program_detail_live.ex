@@ -19,9 +19,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   def mount(%{"id" => program_id}, _session, socket) do
     case ProgramCatalog.get_program_by_id(program_id) do
       {:ok, program} ->
-        # Trigger: LiveView connected to server
-        # Why: receive real-time updates when provider changes participant restrictions
-        # Outcome: handle_info callback re-fetches policy on change
         if connected?(socket) do
           Phoenix.PubSub.subscribe(
             KlassHero.PubSub,
@@ -29,7 +26,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
           )
         end
 
-        # Run independent DB queries in parallel to reduce total mount latency.
         team_task =
           Task.Supervisor.async_nolink(KlassHero.TaskSupervisor, fn ->
             load_team_members(program.id)
@@ -92,9 +88,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
 
   @impl true
   def handle_event("enroll_now", _params, socket) do
-    # Trigger: registration period is open (or always_open)
-    # Why: prevent enrollment when registration is upcoming or closed
-    # Outcome: navigates to booking page or shows error flash
     if ProgramCatalog.registration_open?(socket.assigns.program) do
       {:noreply, push_navigate(socket, to: ~p"/programs/#{socket.assigns.program.id}/booking")}
     else
@@ -109,9 +102,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
 
   @impl true
   def handle_info({:domain_event, %{event_type: :participant_policy_set, payload: payload}}, socket) do
-    # Trigger: provider changed participant restrictions for a program
-    # Why: only re-fetch if the event is for the program this LiveView is displaying
-    # Outcome: participant_policy assign is refreshed, template re-renders
     if payload.program_id == socket.assigns.program.id do
       participant_policy =
         case Enrollment.get_participant_policy(payload.program_id) do
@@ -133,13 +123,8 @@ defmodule KlassHeroWeb.ProgramDetailLive do
 
   defp load_provider_profile(provider_id) do
     case Provider.get_provider_profile(provider_id) do
-      # Trigger: provider exists and is publicly visible
-      # Why: only :active providers should be surfaced to parents; drafts are incomplete
-      # Outcome: presenter view returned for the template
+      # Only :active providers are surfaced to parents; nil suppresses the card.
       {:ok, %{profile_status: :active} = provider} -> ProviderPresenter.to_public_view(provider)
-      # Trigger: provider is :draft, missing, or in any other non-public state
-      # Why: nil lets the :if guard in the template suppress the card
-      # Outcome: no card is rendered
       _ -> nil
     end
   end
@@ -252,7 +237,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   def render(assigns) do
     ~H"""
     <div class={["min-h-screen pb-24 md:pb-6", Theme.bg(:muted)]}>
-      <%!-- Hero Section --%>
       <%= if @program.cover_image_url do %>
         <div id="program-hero" class="relative">
           <img
@@ -261,10 +245,8 @@ defmodule KlassHeroWeb.ProgramDetailLive do
             alt={@program.title}
             class="w-full h-64 sm:h-80 object-cover"
           />
-          <%!-- Subtle bottom gradient for text readability --%>
           <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 
-          <%!-- Navigation Bar --%>
           <div class="absolute top-0 left-0 right-0 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
             <div class="flex items-center justify-between">
               <.back_button phx-click="back_to_programs" />
@@ -281,14 +263,12 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         <div id="program-hero" class={["relative", Theme.gradient(:hero)]}>
           <div class="absolute inset-0 bg-black/20"></div>
 
-          <%!-- Navigation Bar --%>
           <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
             <div class="flex items-center justify-between">
               <.back_button phx-click="back_to_programs" />
             </div>
           </div>
 
-          <%!-- Program Icon --%>
           <div class="relative flex justify-center py-6">
             <div class={[
               "w-20 h-20 bg-white/20 backdrop-blur-sm flex items-center justify-center",
@@ -306,7 +286,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         </div>
       <% end %>
 
-      <%!-- Registration Status Banner --%>
       <div
         :if={@registration_status in [:upcoming, :closed]}
         class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-3 relative z-10 mb-3"

@@ -43,15 +43,11 @@ defmodule KlassHero.Enrollment.Application.Commands.ResendInvite do
     end
   end
 
-  # Trigger: invite_id comes from untrusted client params
-  # Why: without ownership check, any provider could resend another's invite
-  # Outcome: return :not_found to avoid leaking invite existence
+  # Returns :not_found (not :forbidden) to avoid leaking invite existence to other providers.
   defp authorize_owner(%{provider_id: pid} = invite, pid), do: {:ok, invite}
   defp authorize_owner(_invite, _provider_id), do: {:error, :not_found}
 
-  # Trigger: invite reset to pending without token
-  # Why: dedicated event distinguishes single resend from bulk import
-  # Outcome: EnqueueInviteEmails assigns new token + enqueues Oban job
+  # Dedicated event distinguishes single resend from bulk import; EnqueueInviteEmails assigns token + enqueues job.
   defp dispatch_resend_event(reset) do
     reset.provider_id
     |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)

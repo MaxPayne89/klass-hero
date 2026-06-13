@@ -50,11 +50,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
     end
   end
 
-  # Trigger: guardian_email already exists in the Accounts context
-  # Why: returning parents should not get a duplicate account; instead we
-  #      link the invite to their existing user record
-  # Outcome: returns :existing_user so the caller (and downstream saga) can
-  #          skip the onboarding flow
+  # Returning parents must not get a duplicate account — link invite to existing user and skip onboarding.
   defp resolve_user(invite) do
     case @user_accounts.get_user_by_email(invite.guardian_email) do
       %{} = user ->
@@ -87,10 +83,6 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
     end
   end
 
-  # Trigger: invite resolved + user known; broadcast for downstream saga handlers
-  # Why: dispatch_or_error returns `:ok` on success — wrap to keep `with` chain
-  #      uniform on a `{:ok, _} | {:error, _}` shape
-  # Outcome: tuple `{:ok, %ClaimResult{}} | {:error, term()}`
   @spec build_and_publish(BulkEnrollmentInvite.t(), ClaimResult.user_type(), map()) ::
           {:ok, ClaimResult.t()} | {:error, term()}
   defp build_and_publish(invite, user_type, user) do

@@ -2,11 +2,9 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   @moduledoc """
   Use case for privately replying to a broadcast message.
 
-  When a parent wants to respond to a broadcast, this use case:
-  1. Fetches the broadcast conversation to get the provider
-  2. Creates (or finds) a direct conversation with that provider
-  3. Inserts a system message for context (idempotent)
-  4. Returns the direct conversation ID for navigation
+  Finds or creates a direct conversation with the broadcast's provider, inserts
+  a deduped system note referencing the broadcast, and returns the direct
+  conversation ID for navigation.
   """
 
   alias KlassHero.Accounts.Scope
@@ -43,21 +41,16 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   @doc """
   Orchestrates a private reply to a broadcast.
 
-  ## Parameters
-  - scope: The parent's scope
-  - broadcast_conversation_id: The broadcast conversation being replied to
-
   ## Returns
-  - `{:ok, direct_conversation_id}` - Direct conversation ready for messaging
-  - `{:error, :not_found}` - Broadcast conversation not found
-  - `{:error, reason}` - Other errors
+  - `{:ok, direct_conversation_id}`
+  - `{:error, :not_found}` — broadcast conversation not found
+  - `{:error, reason}`
   """
   @spec execute(Scope.t(), String.t()) :: {:ok, String.t()} | {:error, term()}
   def execute(%Scope{} = scope, broadcast_conversation_id) do
-    # Trigger: crafted call with a non-broadcast or unauthorized conversation ID
-    # Why: get_by_id doesn't verify type or participant status — pattern match
-    #      on :program_broadcast and check participation for defense in depth
-    # Outcome: only broadcast participants can initiate private replies
+    # Defense in depth: get_by_id doesn't verify type or participant status;
+    # pattern match on :program_broadcast + participation check ensures only
+    # broadcast participants can initiate private replies.
     with {:ok, broadcast} <- fetch_broadcast(broadcast_conversation_id),
          :ok <- Shared.verify_participant(broadcast.id, scope.user.id, @participant_reader),
          {:ok, provider_user_id} <- @user_resolver.get_user_id_for_provider(broadcast.provider_id),
@@ -92,14 +85,8 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
     end
   end
 
-  # Trigger: parent wants a direct conversation with the broadcast's provider
-  # Why: find_direct_conversation(provider_id, user_id) expects the NON-PROVIDER
-  #      user as the lookup key — the parent's user_id uniquely identifies the
-  #      conversation. CreateDirectConversation was designed for provider-initiated
-  #      flows and searches by target_user_id, which doesn't work when the parent
-  #      is the initiator (it would match any provider conversation).
-  #      We handle find and create separately to get the correct lookup semantics.
-  # Outcome: returns the unique direct conversation between this parent and provider
+  # Lookup by parent's user_id (not provider's) — uniquely identifies this (parent, provider)
+  # pair. Provider-user lookup would collide across multiple parents.
   defp find_or_create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
     case @conversation_reader.find_direct_conversation(provider_id, scope.user.id) do
       {:ok, existing} ->
@@ -146,12 +133,8 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
     |> handle_commit()
   end
 
-  # Trigger: Repo.transaction returns {:ok, {conversation, events}}
-  # Why: dispatching events post-commit lets the ConversationSummaries
-  #      projection (separate DB connection) read the committed conversation
-  #      when it processes the events.
-  # Outcome: each event fans out via EventDispatchHelper.dispatch/2; critical
-  #          events get Oban-backed retry on publish failure.
+  # Dispatch post-commit so the ConversationSummaries projection (separate DB
+  # connection) can read the committed row when it processes these events.
   defp handle_commit({:ok, {conversation, events}}) do
     Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
     {:ok, conversation}
@@ -159,11 +142,8 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
 
   defp handle_commit({:error, reason}), do: {:error, reason}
 
-  # Trigger: parent initiates a private reply to a broadcast
-  # Why: inserts a system note in the direct conversation so the provider
-  #      knows which broadcast prompted the message. Dedup prevents duplicate
-  #      notes if the parent taps "Reply privately" multiple times.
-  # Outcome: exactly one system note per broadcast reference in the conversation
+  # Inserts a system note referencing the broadcast so the provider knows context.
+  # Dedup prevents duplicate notes if the parent taps "Reply privately" multiple times.
   defp maybe_insert_system_note(direct_conversation, sender_id, broadcast) do
     token = "[broadcast:#{broadcast.id}]"
 
@@ -178,12 +158,9 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
                message_type: :system,
                conversation: direct_conversation
              ) do
-        # Trigger: system note just written to messages table
-        # Why: the projection processes message_sent events asynchronously —
-        #      without this write-through, a rapid second call could miss the
-        #      token and insert a duplicate
-        # Outcome: token immediately visible in the projection table; the
-        #          projection's async handler is idempotent and harmless
+        # Write-through: projection processes message_sent asynchronously; without
+        # this, a rapid second call could miss the token and insert a duplicate.
+        # Projection's async handler is idempotent, so the double-write is harmless.
         try do
           @conversation_summaries_repo.write_system_note_token(
             direct_conversation.id,

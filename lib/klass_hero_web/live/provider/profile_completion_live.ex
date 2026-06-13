@@ -145,8 +145,6 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   defp maybe_put_logo(attrs, :no_upload), do: attrs
   defp maybe_put_logo(attrs, {:ok, url}), do: Map.put(attrs, :logo_url, url)
 
-  # Matches the dashboard's consume_single_upload pattern: reads file binary,
-  # sanitizes filename, calls Storage.upload/4 with correct arity.
   defp upload_logo(socket, provider_id) do
     case safe_consume_uploaded_entries(socket, fn %{path: path}, entry ->
            try do

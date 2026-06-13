@@ -119,26 +119,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
 
   @source_context :participation
 
-  # ---------------------------------------------------------------------------
-  # session_created (entity type: :session)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `session_created` integration event.
-
-  Published when a new session is scheduled for a program.
-
-  ## Parameters
-
-  - `session_id` - The ID of the newly created session
-  - `payload` - Event-specific data (program_id, session_date, start_time, end_time)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `session_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `session_created` integration event. Raises `ArgumentError` on invalid args."
   def session_created(session_id, payload \\ %{}, opts \\ [])
 
   def session_created(session_id, %{program_id: _, session_date: _, start_time: _, end_time: _} = payload, opts)
@@ -150,9 +131,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
       @source_context,
       :session,
       session_id,
-      # Trigger: caller may pass a conflicting :session_id in payload
-      # Why: base_payload contains the canonical session_id from the function argument
-      # Outcome: Map.merge/2 gives precedence to the second argument, so base_payload keys always win
+      # base_payload wins: Map.merge puts the second arg's keys last, overriding any :session_id in payload.
       Map.merge(payload, base_payload),
       opts
     )
@@ -170,26 +149,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "session_created/3 requires a non-empty session_id string, got: #{inspect(session_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # session_started (entity type: :session)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `session_started` integration event.
-
-  Published when a session begins (instructor opens it).
-
-  ## Parameters
-
-  - `session_id` - The ID of the session that started
-  - `payload` - Event-specific data (program_id)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `session_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `session_started` integration event. Raises `ArgumentError` on invalid args."
   def session_started(session_id, payload \\ %{}, opts \\ [])
 
   def session_started(session_id, %{program_id: _} = payload, opts)
@@ -218,26 +178,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "session_started/3 requires a non-empty session_id string, got: #{inspect(session_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # session_completed (entity type: :session)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `session_completed` integration event.
-
-  Published when a session ends (all check-outs done).
-
-  ## Parameters
-
-  - `session_id` - The ID of the completed session
-  - `payload` - Event-specific data (program_id, provider_id, program_title)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `session_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `session_completed` integration event. Raises `ArgumentError` on invalid args."
   def session_completed(session_id, payload \\ %{}, opts \\ [])
 
   def session_completed(session_id, %{program_id: _, provider_id: _, program_title: _} = payload, opts)
@@ -266,15 +207,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "session_completed/3 requires a non-empty session_id string, got: #{inspect(session_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # roster_seeded (entity type: :session)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `roster_seeded` integration event.
-
-  Published after participation records have been bulk-seeded for a new session.
-  """
+  @doc "Creates a `roster_seeded` integration event."
   def roster_seeded(session_id, payload \\ %{}, opts \\ [])
 
   def roster_seeded(session_id, %{program_id: _, seeded_count: _} = payload, opts)
@@ -303,26 +236,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "roster_seeded/3 requires a non-empty session_id string, got: #{inspect(session_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # child_checked_in (entity type: :participation_record)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `child_checked_in` integration event.
-
-  Published when a child is checked into a session.
-
-  ## Parameters
-
-  - `record_id` - The ID of the participation record
-  - `payload` - Event-specific data (session_id, child_id)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `record_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `child_checked_in` integration event. Raises `ArgumentError` on invalid args."
   def child_checked_in(record_id, payload \\ %{}, opts \\ [])
 
   def child_checked_in(record_id, %{session_id: _, child_id: _} = payload, opts)
@@ -351,26 +265,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "child_checked_in/3 requires a non-empty record_id string, got: #{inspect(record_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # child_checked_out (entity type: :participation_record)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `child_checked_out` integration event.
-
-  Published when a child is checked out of a session.
-
-  ## Parameters
-
-  - `record_id` - The ID of the participation record
-  - `payload` - Event-specific data (session_id, child_id)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `record_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `child_checked_out` integration event. Raises `ArgumentError` on invalid args."
   def child_checked_out(record_id, payload \\ %{}, opts \\ [])
 
   def child_checked_out(record_id, %{session_id: _, child_id: _} = payload, opts)
@@ -399,26 +294,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "child_checked_out/3 requires a non-empty record_id string, got: #{inspect(record_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # child_marked_absent (entity type: :participation_record)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `child_marked_absent` integration event.
-
-  Published when a child is marked absent for a session.
-
-  ## Parameters
-
-  - `record_id` - The ID of the participation record
-  - `payload` - Event-specific data (session_id, child_id)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `record_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `child_marked_absent` integration event. Raises `ArgumentError` on invalid args."
   def child_marked_absent(record_id, payload \\ %{}, opts \\ [])
 
   def child_marked_absent(record_id, %{session_id: _, child_id: _} = payload, opts)
@@ -447,26 +323,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "child_marked_absent/3 requires a non-empty record_id string, got: #{inspect(record_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # behavioral_note_submitted (entity type: :behavioral_note)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `behavioral_note_submitted` integration event.
-
-  Published when a behavioral note is submitted for review.
-
-  ## Parameters
-
-  - `note_id` - The ID of the behavioral note
-  - `payload` - Event-specific data (participation_record_id, child_id, provider_id)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `note_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `behavioral_note_submitted` integration event. Raises `ArgumentError` on invalid args."
   def behavioral_note_submitted(note_id, payload \\ %{}, opts \\ [])
 
   def behavioral_note_submitted(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
@@ -495,26 +352,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "behavioral_note_submitted/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # behavioral_note_approved (entity type: :behavioral_note)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `behavioral_note_approved` integration event.
-
-  Published when a behavioral note is approved.
-
-  ## Parameters
-
-  - `note_id` - The ID of the behavioral note
-  - `payload` - Event-specific data (participation_record_id, child_id, provider_id)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `note_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `behavioral_note_approved` integration event. Raises `ArgumentError` on invalid args."
   def behavioral_note_approved(note_id, payload \\ %{}, opts \\ [])
 
   def behavioral_note_approved(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
@@ -543,26 +381,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "behavioral_note_approved/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # behavioral_note_rejected (entity type: :behavioral_note)
-  # ---------------------------------------------------------------------------
-
-  @doc """
-  Creates a `behavioral_note_rejected` integration event.
-
-  Published when a behavioral note is rejected.
-
-  ## Parameters
-
-  - `note_id` - The ID of the behavioral note
-  - `payload` - Event-specific data (participation_record_id, child_id, provider_id)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `note_id` is nil or empty
-  - `ArgumentError` if required payload keys are missing
-  """
+  @doc "Creates a `behavioral_note_rejected` integration event. Raises `ArgumentError` on invalid args."
   def behavioral_note_rejected(note_id, payload \\ %{}, opts \\ [])
 
   def behavioral_note_rejected(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
@@ -590,10 +409,6 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
     raise ArgumentError,
           "behavioral_note_rejected/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
   end
-
-  # ---------------------------------------------------------------------------
-  # session_cancelled (entity type: :session)
-  # ---------------------------------------------------------------------------
 
   @typedoc "Payload for `:session_cancelled` events."
   @type session_cancelled_payload :: %{

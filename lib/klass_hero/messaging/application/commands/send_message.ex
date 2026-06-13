@@ -2,16 +2,9 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   @moduledoc """
   Use case for sending a message in a conversation.
 
-  This use case:
-  1. Validates that content or attachments are present
-  2. Validates attachment files against domain model rules (type, size, count)
-  3. Verifies the sender is a participant in the conversation
-  4. Verifies broadcast send permission
-  5. Uploads attachment files to S3
-  6. Creates the message and persists attachments
-  7. Cleans up S3 files on DB failure
-  8. Updates the sender's last_read_at (they've seen what they sent)
-  9. Publishes a message_sent event with attachment metadata
+  Validates content/attachments, checks participant and broadcast-send permissions,
+  uploads files to S3, persists message + attachments (cleaning up S3 on DB failure),
+  updates sender's last_read_at, and publishes a message_sent event.
   """
 
   alias KlassHero.Messaging.Application.Shared
@@ -43,25 +36,15 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   @doc """
   Sends a message to a conversation.
 
-  ## Parameters
-  - conversation_id: The conversation to send to
-  - sender_id: The user sending the message
-  - content: The message content (string or nil when attachments present)
-  - opts: Optional parameters
-    - message_type: :text (default) or :system
-    - conversation: pre-fetched %Conversation{} domain struct for the same
-      conversation_id (skips DB fetch in broadcast permission check; ignored
-      if ID doesn't match)
-    - attachments: list of `%{binary: <<>>, filename: "x.jpg", content_type: "image/jpeg", size: 1000}`
+  ## Options
+  - `:message_type` — `:text` (default) or `:system`
+  - `:conversation` — pre-fetched `%Conversation{}` for the same `conversation_id`
+    (skips DB round-trip in broadcast permission check; ignored if ID doesn't match)
+  - `:attachments` — list of `%{binary: <<>>, filename: "x.jpg", content_type: "image/jpeg", size: 1000}`
 
   ## Returns
-  - `{:ok, message}` - Message sent successfully (with attachments populated)
-  - `{:error, :empty_message}` - Neither content nor attachments provided
-  - `{:error, :too_many_attachments}` - Exceeds max attachments per message
-  - `{:error, :invalid_attachment_type}` - Content type not in allowed list
-  - `{:error, :attachment_too_large}` - File exceeds max size
-  - `{:error, :not_participant}` - Sender is not in the conversation
-  - `{:error, reason}` - Other errors
+  - `{:ok, message}` — message sent (attachments populated)
+  - `{:error, :empty_message | :too_many_attachments | :invalid_attachment_type | :attachment_too_large | :not_participant | :broadcast_reply_not_allowed | term()}`
   """
   @spec execute(String.t(), String.t(), String.t() | nil, keyword()) ::
           {:ok, Message.t()}
@@ -106,8 +89,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
     end
   end
 
-  # --- Content and attachment validation ---
-
   defp trim_content(content) when is_binary(content), do: String.trim(content)
   defp trim_content(nil), do: nil
 
@@ -132,8 +113,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
         :ok
     end
   end
-
-  # --- S3 upload ---
 
   defp upload_files([], _conversation_id), do: {:ok, []}
 
@@ -187,8 +166,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
     end
   end
 
-  # --- Persist message + attachments ---
-
   defp persist_message_and_attachments(conversation_id, sender_id, content, message_type, uploaded_files) do
     message_attrs = %{
       conversation_id: conversation_id,
@@ -234,8 +211,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
     @attachment_repo.create_many(attrs_list)
   end
 
-  # --- Cleanup ---
-
   defp cleanup_uploaded_files([]), do: :ok
 
   defp cleanup_uploaded_files(uploaded_files) do
@@ -260,18 +235,11 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
     |> String.slice(0, 255)
   end
 
-  # --- Broadcast permission ---
-
-  # Trigger: sender is trying to post in a broadcast conversation
-  # Why: broadcast conversations are one-way — only the provider owner and assigned staff
-  #      can send. Parents replying would expose their messages to all other parents
-  #      (privacy breach).
-  # Outcome: non-provider, non-staff senders are rejected; direct conversations pass through.
+  # Broadcast conversations are one-way: only the provider owner and assigned staff may send.
+  # Parents replying would expose messages to all other participants (privacy breach).
   defp verify_broadcast_send_permission(conversation_id, sender_id, conversation) do
-    # Trigger: caller may pass a pre-fetched conversation to skip DB round-trip
-    # Why: must validate conversation.id matches conversation_id to prevent
-    #      a mismatched struct from bypassing broadcast guards (privacy breach)
-    # Outcome: uses passed conversation only if ID matches; otherwise fetches from DB
+    # Validates conversation.id matches conversation_id to prevent a mismatched
+    # pre-fetched struct from bypassing broadcast guards.
     result =
       if conversation && conversation.id == conversation_id,
         do: {:ok, conversation},
@@ -312,20 +280,12 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
     sender_id in staff_user_ids
   end
 
-  # Trigger: program-staff projection check above returned false
-  # Why: any active staff member of the broadcast's provider should be able to
-  #      post follow-ups, even if they aren't assigned to the specific program.
-  #      The `program_staff_participants` projection only covers explicit
-  #      program assignments, but staff are authorised to broadcast for any
-  #      program of their provider (see `StaffBroadcastLive.mount/3`); the two
-  #      permission checks must agree to avoid bug #669.
-  # Outcome: staff of the provider can send; everyone else still falls through
-  #          to `:broadcast_reply_not_allowed`.
+  # `program_staff_participants` projection covers only explicit program assignments;
+  # provider-level staff are also authorised to broadcast for any program of their
+  # provider (see `StaffBroadcastLive.mount/3`). The two checks must agree — bug #669.
   defp active_staff_for_provider?(provider_id, sender_id) do
     @provider_staff_resolver.active_staff_for_provider?(provider_id, sender_id)
   end
-
-  # --- Read status ---
 
   defp update_sender_read_status(conversation_id, sender_id) do
     now = DateTime.utc_now()
@@ -344,8 +304,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
         :ok
     end
   end
-
-  # --- Event publishing ---
 
   defp publish_event(message) do
     event =

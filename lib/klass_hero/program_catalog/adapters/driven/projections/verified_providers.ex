@@ -32,19 +32,14 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   alias KlassHero.Provider
   alias KlassHero.Shared.Projection
 
-  # ── Behaviour callbacks ────────────────────────────────────────────────────
-
   @impl Projection
   def bootstrap_impl do
     MapSet.size(load_verified_ids())
   end
 
-  # The macro's handle_info dispatcher calls handle_event/2 then discards the
-  # return value (returns {:noreply, state} with unchanged state). To mutate
-  # the custom verified_ids, we cast to self() so the cast is processed as the
-  # next mailbox message — after handle_info returns — with access to state.
-  # Tests use :sys.get_state/1 as a sync fence which drains the mailbox, so
-  # cast ordering is not a concern.
+  # The macro's handle_info discards handle_event/2's return value without updating state.
+  # We cast to self() so MapSet mutation happens in the next handle_cast with access to state.
+  # Tests use :sys.get_state/1 as a sync fence that drains the mailbox, so cast ordering is safe.
   @impl Projection
   def handle_event(:provider_verified, event) do
     GenServer.cast(self(), {:add_verified, event.payload.provider_id})
@@ -53,8 +48,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   def handle_event(:provider_unverified, event) do
     GenServer.cast(self(), {:remove_verified, event.payload.provider_id})
   end
-
-  # ── Cast handlers for MapSet mutation ─────────────────────────────────────
 
   @impl true
   def handle_cast({:add_verified, id}, state) do
@@ -67,11 +60,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
     {:noreply, %{state | verified_ids: MapSet.delete(state.verified_ids, id)}}
   end
 
-  # ── Custom query API ───────────────────────────────────────────────────────
-
   @doc """
-  Checks if a provider is verified.
-
   Returns `true` if the provider ID is in the verified set, `false` otherwise.
   """
   @spec verified?(String.t(), GenServer.name()) :: boolean()
@@ -79,8 +68,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
     GenServer.call(name, {:verified?, provider_id})
   end
 
-  # Override handle_call/3 to handle both the custom :verified? query and the
-  # :rebuild message (the macro's default :rebuild does not update verified_ids).
+  # Override to handle :verified? and :rebuild; the macro's default :rebuild does not update verified_ids.
   @impl true
   def handle_call({:verified?, provider_id}, _from, state) do
     {:reply, MapSet.member?(state.verified_ids, provider_id), state}
@@ -89,16 +77,13 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   def handle_call(:rebuild, _from, state) do
     verified_ids = load_verified_ids()
     Logger.info("#{inspect(__MODULE__)} rebuilt", count: MapSet.size(verified_ids))
-    # Map.merge (not %{state | ...}) so rebuild stays safe even when the GenServer
-    # was started with skip_bootstrap: true (init state lacks :verified_ids).
+
+    # Map.merge (not %{state | ...}) keeps rebuild safe when started with skip_bootstrap: true (state lacks :verified_ids).
     {:reply, :ok, Map.merge(state, %{bootstrapped: true, verified_ids: verified_ids})}
   end
 
-  # ── Override apply_bootstrap to populate the MapSet in state ──────────────
-  # The base macro's default apply_bootstrap/1 returns
-  # {:noreply, %{state | bootstrapped: true}} with no hook for custom keys.
-  # This override writes verified_ids alongside the bootstrapped flag.
-
+  # Override: the macro's default apply_bootstrap/1 returns {:noreply, %{state | bootstrapped: true}} with no hook
+  # for custom keys; this override also populates verified_ids.
   defp apply_bootstrap(state) do
     verified_ids = load_verified_ids()
 
@@ -108,8 +93,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
 
     {:noreply, Map.merge(state, %{bootstrapped: true, verified_ids: verified_ids})}
   end
-
-  # ── Private ────────────────────────────────────────────────────────────────
 
   defp load_verified_ids do
     case Provider.list_verified_provider_ids() do

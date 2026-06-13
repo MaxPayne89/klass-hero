@@ -33,25 +33,16 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.RegistrationPeriod do
   def status(%__MODULE__{start_date: nil, end_date: nil}), do: :always_open
 
   def status(%__MODULE__{start_date: start_date, end_date: nil}) do
-    # Trigger: only start_date is set
-    # Why: no end date means registration stays open once it starts
-    # Outcome: :upcoming if before start, :open if on or after start
     if Date.before?(Date.utc_today(), start_date), do: :upcoming, else: :open
   end
 
   def status(%__MODULE__{start_date: nil, end_date: end_date}) do
-    # Trigger: only end_date is set
-    # Why: no start date means registration was open from the beginning
-    # Outcome: :open if on or before end, :closed if after end
     if Date.after?(Date.utc_today(), end_date), do: :closed, else: :open
   end
 
   def status(%__MODULE__{start_date: start_date, end_date: end_date}) do
     today = Date.utc_today()
 
-    # Trigger: both dates are set
-    # Why: defines a closed window [start, end] inclusive on both sides
-    # Outcome: :upcoming before start, :open within range, :closed after end
     cond do
       Date.before?(today, start_date) -> :upcoming
       Date.after?(today, end_date) -> :closed

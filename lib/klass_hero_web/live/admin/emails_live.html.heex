@@ -58,7 +58,6 @@
     </button>
   </div>
 
-  <%!-- Email list --%>
   <div id="emails-table" phx-update="stream">
     <div id="emails-empty" class="hidden only:block p-8 text-center text-sm opacity-50">
       {gettext("No emails found.")}
@@ -175,7 +174,6 @@
     <pre class="whitespace-pre-wrap text-sm">{@email.body_text}</pre>
   </div>
 
-  <%!-- Replies list --%>
   <div id="replies-list" phx-update="stream" class="space-y-3 mb-6">
     <div id="replies-empty" class="hidden only:block"></div>
     <div
@@ -195,7 +193,6 @@
     </div>
   </div>
 
-  <%!-- Reply form --%>
   <div class="rounded-lg border border-base-300 p-6">
     <h2 class={Theme.typography(:card_title)}>{gettext("Reply")}</h2>
     <.form for={@reply_form} id="reply-form" phx-submit="submit_reply" class="mt-4 space-y-4">

@@ -37,9 +37,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
           {:ok, ConsentMapper.to_domain(schema)}
 
         {:error, %Ecto.Changeset{} = changeset} ->
-          # Trigger: unique partial index on (child_id, consent_type) WHERE withdrawn_at IS NULL
-          # Why: prevent duplicate active consents for the same child and type
-          # Outcome: return domain-specific :already_active error
+          # Unique partial index on (child_id, consent_type) WHERE withdrawn_at IS NULL
           if EctoErrorHelpers.any_unique_constraint_violation?(changeset.errors) do
             {:error, :already_active}
           else

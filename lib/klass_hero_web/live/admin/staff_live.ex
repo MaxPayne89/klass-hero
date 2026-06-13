@@ -17,7 +17,6 @@ defmodule KlassHeroWeb.Admin.StaffLive do
       schema: KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema,
       repo: KlassHero.Repo,
       update_changeset: &KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema.admin_changeset/3,
-      # Required by Backpex even though :new is disabled via can?/3
       create_changeset: &KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema.admin_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
@@ -32,9 +31,7 @@ defmodule KlassHeroWeb.Admin.StaffLive do
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
 
-  # Trigger: :new and :delete are not valid operations for staff members in admin
-  # Why: staff members are created/deleted by their providers
-  # Outcome: hides "New" button, denies create/delete actions
+  # Staff members are created/deleted by their providers — hides "New" button, denies create/delete.
   @impl Backpex.LiveResource
   def can?(_assigns, :new, _item), do: false
   def can?(_assigns, :delete, _item), do: false

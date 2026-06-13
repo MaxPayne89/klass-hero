@@ -19,9 +19,6 @@ defmodule KlassHeroWeb.Plugs.VerifyWebhookSignature do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    # Trigger: test env disables signature verification to allow tests without real Svix headers
-    # Why: tests send plain JSON without real webhook signing infrastructure
-    # Outcome: verification skipped in test, enforced in all other envs
     if Application.get_env(:klass_hero, :verify_webhook_signature, true) do
       verify(conn)
     else
@@ -76,22 +73,17 @@ defmodule KlassHeroWeb.Plugs.VerifyWebhookSignature do
   end
 
   defp validate_signature(secret, raw_body, svix_id, svix_timestamp, svix_signature) do
-    # Strip "whsec_" prefix and decode base64
     stripped = String.replace_prefix(secret, "whsec_", "")
 
     case Base.decode64(stripped) do
       {:ok, secret_bytes} ->
-        # Construct signed content per Svix spec
         signed_content = "#{svix_id}.#{svix_timestamp}.#{raw_body}"
 
-        # HMAC-SHA256 and base64-encode to get expected signature
         expected =
           :crypto.mac(:hmac, :sha256, secret_bytes, signed_content)
           |> Base.encode64()
 
-        # Trigger: Resend may send multiple signatures (key rotation)
-        # Why: any matching signature is sufficient for verification
-        # Outcome: conn passes if at least one signature matches
+        # Resend may send multiple signatures during key rotation; any match is sufficient.
         signatures =
           svix_signature
           |> String.split(" ")

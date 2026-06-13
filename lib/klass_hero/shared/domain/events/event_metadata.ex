@@ -10,8 +10,6 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
 
   @type criticality :: :critical | :normal
 
-  # -- Accessors (work on any struct with a :metadata map field) --
-
   @spec criticality(%{metadata: map()}) :: criticality()
   def criticality(%{metadata: %{criticality: level}}), do: level
   def criticality(%{metadata: _}), do: :normal
@@ -26,8 +24,6 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   @spec causation_id(%{metadata: map()}) :: String.t() | nil
   def causation_id(%{metadata: %{causation_id: id}}), do: id
   def causation_id(%{metadata: _}), do: nil
-
-  # -- Builders --
 
   @doc """
   Generates a unique event ID (UUID v4).

@@ -37,9 +37,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
         limit: limit
       )
 
-      # Trigger: fetch limit + 1 rows
-      # Why: determines if more pages exist without a separate COUNT query
-      # Outcome: sets has_more flag and trims result to requested limit
+      # Fetch limit+1 to detect next page without a separate COUNT query.
       schemas =
         from(s in ConversationSummarySchema,
           where: s.user_id == ^user_id and is_nil(s.archived_at),
@@ -128,13 +126,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
         )
         |> Repo.update_all([])
 
-      # Trigger: update_all affected 0 rows — summary rows don't exist yet
-      # Why: the projection creates summary rows asynchronously via the
-      #      conversation_created event. If the use case calls write-through
-      #      before the projection processes that event, there are no rows to
-      #      update and the token is silently lost.
-      # Outcome: seed minimal summary rows carrying the token; the projection's
-      #          upsert will merge the remaining fields when it catches up
+      # Summary rows are created asynchronously by the projection. If write-through
+      # races ahead of the projection, seed minimal rows so the token isn't lost;
+      # the projection's upsert merges remaining fields when it catches up.
       if updated == 0 do
         seed_summary_rows_with_token(conversation_id, token_json, now)
       end
@@ -189,11 +183,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
             }
           end)
 
-        # Trigger: summary rows may have been created by the projection between
-        #          the update_all (0 rows) and this insert_all
-        # Why: {:replace, [:system_notes]} would overwrite tokens the projection
-        #      already wrote; JSONB || merge preserves both sets of tokens
-        # Outcome: seed tokens merged with any existing projection tokens
+        # JSONB || merge: {:replace, [:system_notes]} would overwrite tokens the
+        # projection already wrote between our update_all and this insert_all.
         Repo.insert_all(ConversationSummarySchema, entries,
           on_conflict:
             from(s in ConversationSummarySchema,

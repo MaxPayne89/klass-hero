@@ -39,9 +39,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
   def handle(%DomainEvent{event_type: :verification_document_approved, payload: payload}) do
     %{provider_id: provider_id, reviewer_id: reviewer_id} = payload
 
-    # Trigger: a document was just approved
-    # Why: provider should be auto-verified when ALL their docs are approved
-    # Outcome: if all docs approved, VerifyProvider is called (publishes integration event)
     with {:ok, docs} <- @doc_repository.get_by_provider(provider_id),
          true <- all_approved?(docs) do
       case VerifyProvider.execute(%{provider_id: provider_id, admin_id: reviewer_id}) do
@@ -53,9 +50,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
           :ok
       end
     else
-      # Trigger: not all docs approved yet
-      # Why: false from all_approved? is normal (not all docs reviewed yet)
-      # Outcome: no action needed, return :ok
       false -> :ok
       {:error, reason} -> {:error, {:verification_check_failed, reason}}
     end
@@ -64,9 +58,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
   def handle(%DomainEvent{event_type: :verification_document_rejected, payload: payload}) do
     %{provider_id: provider_id, reviewer_id: reviewer_id} = payload
 
-    # Trigger: a document was rejected
-    # Why: a verified provider with a rejected doc violates the invariant
-    # Outcome: if provider was verified, UnverifyProvider is called
     with {:ok, profile} <- @profile_repository.get(provider_id),
          true <- profile.verified do
       case UnverifyProvider.execute(%{provider_id: provider_id, admin_id: reviewer_id}) do
@@ -78,17 +69,12 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
           :ok
       end
     else
-      # Trigger: provider not verified — rejection is expected/normal
-      # Why: no invariant violation when unverified provider has rejected doc
-      # Outcome: no action needed
       false -> :ok
       {:error, reason} -> {:error, {:unverification_check_failed, reason}}
     end
   end
 
-  # Trigger: need to check if every document for a provider has been approved
-  # Why: provider verification requires ALL documents reviewed and approved
-  # Outcome: returns true only when list is non-empty and every doc is :approved
+  # Verification requires ALL documents approved and at least one present.
   defp all_approved?([]), do: false
   defp all_approved?(docs), do: Enum.all?(docs, &(&1.status == :approved))
 end

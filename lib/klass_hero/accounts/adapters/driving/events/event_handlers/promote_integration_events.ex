@@ -17,32 +17,21 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.IntegrationEventPublishing
 
-  @doc """
-  Handles a domain event by promoting it to the corresponding integration event.
-  """
+  @doc false
   @spec handle(DomainEvent.t()) :: :ok | {:error, term()}
   def handle(%DomainEvent{event_type: :user_registered} = event) do
-    # Trigger: user_registered domain event dispatched from accounts.ex
-    # Why: Identity context needs this to auto-create parent/provider profiles
-    # Outcome: publish integration event; propagate failure so caller knows
     event.aggregate_id
     |> AccountsIntegrationEvents.user_registered(event.payload)
     |> IntegrationEventPublishing.publish()
   end
 
   def handle(%DomainEvent{event_type: :user_confirmed} = event) do
-    # Trigger: user_confirmed domain event dispatched after email confirmation
-    # Why: compensation path — downstream contexts verify/create profiles before first login
-    # Outcome: publish integration event; propagate failure so caller knows
     event.aggregate_id
     |> AccountsIntegrationEvents.user_confirmed(event.payload)
     |> IntegrationEventPublishing.publish()
   end
 
   def handle(%DomainEvent{event_type: :user_anonymized} = event) do
-    # Trigger: user_anonymized domain event dispatched from accounts.ex
-    # Why: Identity and Messaging must anonymize their own data (GDPR cascade)
-    # Outcome: publish integration event; propagate failure to halt cascade on error
     event.aggregate_id
     |> AccountsIntegrationEvents.user_anonymized(event.payload)
     |> IntegrationEventPublishing.publish()

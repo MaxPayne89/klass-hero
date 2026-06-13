@@ -5,19 +5,12 @@ defmodule KlassHeroWeb.Helpers.FamilyHelpers do
 
   alias KlassHero.Family
 
-  @doc """
-  Retrieves children for the current user from socket assigns.
-
-  Returns empty list if no parent profile exists.
-  """
+  @doc "Returns children for the current user's parent profile, or `[]` if none exists."
   def get_children_for_current_user(socket) do
     with %{current_scope: %{user: %{id: identity_id}}} <- socket.assigns,
          {:ok, parent} <- Family.get_parent_by_identity(identity_id) do
       Family.get_children(parent.id)
     else
-      # Trigger: no user in scope (anonymous) or no parent profile
-      # Why: normal states, not errors
-      # Outcome: empty list — UI shows "no children" state
       %{} -> []
       {:error, :not_found} -> []
     end
@@ -35,9 +28,6 @@ defmodule KlassHeroWeb.Helpers.FamilyHelpers do
          {:ok, parent} <- Family.get_parent_by_identity(identity_id) do
       {:ok, parent}
     else
-      # Trigger: no user in scope (anonymous) or no parent profile
-      # Why: normal states, not errors
-      # Outcome: caller handles :no_parent appropriately
       %{} -> {:error, :no_parent}
       {:error, :not_found} -> {:error, :no_parent}
     end

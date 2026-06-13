@@ -48,9 +48,7 @@ defmodule KlassHero.Provider.Application.Queries.Verification.GetVerificationDoc
     end
   end
 
-  # Trigger: document has a non-nil file_url stored in private bucket
-  # Why: signed URLs succeed for nonexistent files (just URL math), producing broken previews
-  # Outcome: returns signed URL only when file actually exists, nil otherwise
+  # Checks file existence before generating: signed_url/3 succeeds even for missing files (URL math only).
   defp generate_verified_url(file_url) when is_binary(file_url) do
     with {:ok, true} <- Storage.file_exists?(:private, file_url),
          {:ok, url} <- Storage.signed_url(:private, file_url, 900) do
@@ -72,9 +70,6 @@ defmodule KlassHero.Provider.Application.Queries.Verification.GetVerificationDoc
 
   defp generate_verified_url(_), do: nil
 
-  # Trigger: filename has a known extension
-  # Why: determines whether to show inline image, embedded PDF, or download-only
-  # Outcome: atom for template branching
   defp file_preview_type(filename) when is_binary(filename) do
     ext = filename |> String.downcase() |> Path.extname()
 

@@ -27,10 +27,6 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   require Logger
 
-  # ============================================================================
-  # Read operations
-  # ============================================================================
-
   @impl true
   def get_by_id(user_id) when is_binary(user_id) do
     span do
@@ -62,10 +58,6 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
       |> Repo.exists?()
     end
   end
-
-  # ============================================================================
-  # Write operations
-  # ============================================================================
 
   @impl true
   def register(attrs, opts \\ []) when is_map(attrs) do
@@ -130,9 +122,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:verify_token, fn _repo, _ ->
-        # Trigger: token may be malformed (bad base64)
-        # Why: verify_change_email_token_query returns bare :error for bad base64
-        # Outcome: normalize to {:error, :invalid_token} instead of crashing
+        # verify_change_email_token_query returns bare :error for bad base64; normalize to tagged tuple
         case UserToken.verify_change_email_token_query(token, context) do
           {:ok, query} -> {:ok, query}
           :error -> {:error, :invalid_token}
@@ -172,9 +162,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
     span do
       set_attributes("db", operation: "select", entity: "user")
 
-      # Trigger: token may be malformed (bad base64)
-      # Why: verify_magic_link_token_query returns bare :error for bad base64
-      # Outcome: normalize to {:error, :invalid_token} instead of crashing
+      # verify_magic_link_token_query returns bare :error for bad base64; normalize to tagged tuple
       case UserToken.verify_magic_link_token_query(token) do
         {:ok, query} ->
           resolve_magic_link_query(Repo.one(query))
@@ -185,23 +173,16 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
     end
   end
 
-  # Trigger: unconfirmed user has a password set
-  # Why: prevents session fixation attacks via magic link
-  # Outcome: returns error instead of raising (use case decides how to handle)
+  # Unconfirmed user with a password set — reject to prevent session fixation via magic link
   defp resolve_magic_link_query({%User{confirmed_at: nil, hashed_password: hash}, _token}) when not is_nil(hash) do
     {:error, :security_violation}
   end
 
-  # Trigger: unconfirmed user without password (normal registration flow)
-  # Why: first login confirms the email — use case handles confirmation
-  # Outcome: returns {:unconfirmed, user} for use case to proceed
+  # Unconfirmed user without password — first login; use case handles confirmation
   defp resolve_magic_link_query({%User{confirmed_at: nil} = user, _token}) do
     {:ok, {:unconfirmed, user}}
   end
 
-  # Trigger: confirmed user clicking magic link
-  # Why: standard login — use case deletes the specific token
-  # Outcome: returns {:confirmed, user, token} with the token to delete
   defp resolve_magic_link_query({user, token}) do
     {:ok, {:confirmed, user, token}}
   end
@@ -230,18 +211,14 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
         {:ok, _} ->
           :ok
 
-        # Trigger: constraint violation (e.g. foreign key)
-        # Why: Repo.delete returns {:error, changeset} for constraint failures
-        # Outcome: log for visibility but treat as success — token is invalidated either way
+        # Constraint failure: log for visibility but treat as success — token is invalidated either way
         {:error, changeset} ->
           Logger.warning("Token deletion failed: #{inspect(changeset)}")
           :ok
       end
     end
   rescue
-    # Trigger: token already deleted by concurrent request
-    # Why: Repo.delete raises StaleEntryError when the row is gone
-    # Outcome: treat as success since the token is already gone
+    # Concurrent delete: Repo.delete raises StaleEntryError when row is already gone
     Ecto.StaleEntryError -> :ok
   end
 end

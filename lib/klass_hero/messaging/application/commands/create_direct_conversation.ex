@@ -105,12 +105,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
     |> handle_commit(scope, provider_id)
   end
 
-  # Trigger: Repo.transaction returns {:ok, {conversation, events}}
-  # Why: events must be dispatched *after* commit so the projection — which
-  #      reads the write tables from a separate DB connection — can see the
-  #      committed conversation row when it processes the integration event.
-  # Outcome: events fan out via EventDispatchHelper.dispatch/2 (fire-and-
-  #          forget; critical events get Oban-backed retry on publish failure).
+  # Events dispatched after commit so the projection (separate DB connection) sees the row.
   defp handle_commit({:ok, {conversation, events}}, scope, provider_id) do
     Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 

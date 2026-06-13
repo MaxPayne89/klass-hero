@@ -39,7 +39,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   alias KlassHero.Repo
   alias KlassHero.Shared.Projection
 
-  # Fields shared between ProgramSchema and ProgramListingSchema
   @shared_fields [
     :title,
     :description,
@@ -62,8 +61,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     :provider_id
   ]
 
-  # Fields that program_updated events may change; excludes season and provider_verified
-  # which are only set during bootstrap or by provider verification events respectively.
+  # Excludes season and provider_verified: season is bootstrap-only, provider_verified is set by verification events.
   @update_fields [
     :title,
     :description,
@@ -86,8 +84,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     :updated_at
   ]
 
-  # Behaviour callbacks ───────────────────────────────────────────────────────
-
   @impl Projection
   def bootstrap_impl, do: bootstrap_from_write_table()
 
@@ -97,11 +93,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   def handle_event(:provider_verified, event), do: set_provider_verification(event.payload.provider_id, true)
   def handle_event(:provider_unverified, event), do: set_provider_verification(event.payload.provider_id, false)
 
-  # Private ──────────────────────────────────────────────────────────────────
-
-  # Trigger: bootstrap phase — read table may be empty or stale
-  # Why: cold start recovery — populate read table from authoritative write table
-  # Outcome: program_listings contains one row per program with correct provider_verified status
   defp bootstrap_from_write_table do
     programs = Repo.all(ProgramSchema)
 
@@ -120,9 +111,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
           |> Map.put(:updated_at, program.updated_at || now)
         end)
 
-      # Trigger: programs may already have rows in program_listings from a previous run
-      # Why: upsert avoids duplicate key errors while keeping data fresh
-      # Outcome: all programs projected, preserving original inserted_at on conflicts
       {count, _} =
         Repo.insert_all(ProgramListingSchema, entries,
           on_conflict: {:replace_all_except, [:id, :inserted_at]},
@@ -138,9 +126,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   # discarded. Icon resolution is now handled by ProgramPresenter.icon_name/1
   # at render time using the :category field.
 
-  # Trigger: program_created event received
-  # Why: new program needs a listing row; uses upsert for idempotency
-  # Outcome: row inserted (or replaced if duplicate event)
   defp upsert_listing_from_event(event) do
     payload = event.payload
 
@@ -176,12 +161,9 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     )
   end
 
-  # Trigger: program_updated event received
-  # Why: upsert instead of get-then-update so events for listings missing from the read
-  #      table (race with bootstrap) still project instead of being silently dropped.
-  #      season and provider_verified are NOT in @update_fields — on conflict they are
-  #      preserved; on fresh insert they default to nil/false (next bootstrap corrects).
-  # Outcome: listing row updated or inserted with event data
+  # Upsert (not get-then-update) so events that race with bootstrap still project rather than being silently dropped.
+  # season and provider_verified are not in @update_fields: on conflict they are preserved; fresh inserts default
+  # to nil/false and are corrected by the next bootstrap.
   defp update_listing_from_event(event) do
     program_id = event.entity_id
     payload = event.payload
@@ -218,9 +200,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     )
   end
 
-  # Trigger: provider verification status changed
-  # Why: all listings for this provider need their provider_verified flag updated
-  # Outcome: bulk update of provider_verified for all matching rows
   defp set_provider_verification(provider_id, verified) do
     from(pl in ProgramListingSchema, where: pl.provider_id == ^provider_id)
     |> Repo.update_all(
@@ -231,10 +210,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     )
   end
 
-  # Trigger: bootstrap needs to know if a provider is currently verified
-  # Why: VerifiedProviders projection starts before ProgramListings in the supervision tree,
-  #      so it should be available. If not (e.g., test env), default to false.
-  # Outcome: returns true/false based on VerifiedProviders state, or false if unavailable
+  # VerifiedProviders starts before ProgramListings in the supervision tree, so it should always be available.
+  # Catch :exit in case it isn't (e.g. test env) and default to unverified.
   defp lookup_provider_verified(provider_id) do
     VerifiedProviders.verified?(provider_id)
   catch
@@ -247,9 +224,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       false
   end
 
-  # Trigger: payload may have instructor data in nested or flat format
-  # Why: program_created has flat fields, program_updated has nested instructor map
-  # Outcome: extract instructor name from whichever format is present
+  # program_created uses flat fields; program_updated uses a nested instructor map.
   defp extract_instructor_name(payload) do
     case Map.get(payload, :instructor) do
       %{name: name} -> name
@@ -258,9 +233,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     end
   end
 
-  # Trigger: same as extract_instructor_name but for headshot URL
-  # Why: consistent extraction logic for both instructor fields
-  # Outcome: extract instructor headshot URL from whichever format is present
   defp extract_instructor_headshot_url(payload) do
     case Map.get(payload, :instructor) do
       %{headshot_url: url} -> url

@@ -30,17 +30,12 @@ defmodule KlassHeroWeb.ResendWebhookController do
       {:error, reason} ->
         Logger.error("Failed to process inbound email #{data["email_id"]}: #{inspect(reason)}")
 
-        # Trigger: processing failed but we still return 200
-        # Why: returning non-2xx would cause Resend to retry indefinitely,
-        #   potentially flooding the database with bad records
-        # Outcome: event acknowledged, error logged for investigation
+        # Return 200 even on failure — non-2xx causes Resend to retry indefinitely.
         json(conn, %{status: "ok"})
     end
   end
 
-  # Trigger: Resend sends events other than email.received (delivered, bounced, etc.)
-  # Why: we only care about received emails; returning 200 prevents Resend retries
-  # Outcome: event is acknowledged but not processed
+  # Acknowledge but ignore non-email.received events; 200 prevents Resend retries.
   def handle(conn, %{"type" => type}) do
     Logger.debug("Ignoring Resend webhook event", type: type)
     json(conn, %{status: "ok"})

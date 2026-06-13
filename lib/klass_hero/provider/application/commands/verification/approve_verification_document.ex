@@ -41,9 +41,6 @@ defmodule KlassHero.Provider.Application.Commands.Verification.ApproveVerificati
     with {:ok, document} <- @query.get(document_id),
          {:ok, approved} <- VerificationDocument.approve(document, reviewer_id),
          {:ok, persisted} <- @repository.update(approved) do
-      # Trigger: document successfully approved and persisted
-      # Why: other handlers need to evaluate provider verification status
-      # Outcome: domain event dispatched (fire-and-forget), approved doc returned
       dispatch_event(persisted, reviewer_id)
       {:ok, persisted}
     end

@@ -27,9 +27,6 @@ defmodule KlassHero.Family.Application.Commands.Children.CreateChild do
   - `{:error, changeset}` for persistence validation failures
   """
   def execute(attrs) when is_map(attrs) do
-    # Trigger: parent_id is provided in attrs for guardian link creation
-    # Why: child does not own parent_id — relationship lives in join table
-    # Outcome: parent_id is extracted, child is created (with or without link)
     {parent_id, child_attrs} = Map.pop(attrs, :parent_id)
     child_attrs = Map.put_new(child_attrs, :id, Ecto.UUID.generate())
 
@@ -52,13 +49,6 @@ defmodule KlassHero.Family.Application.Commands.Children.CreateChild do
     |> EventDispatchHelper.dispatch(@context)
   end
 
-  # Trigger: no guardian specified
-  # Why: some children may be created without an immediate guardian link
-  # Outcome: child created without a guardian relationship
   defp persist_child(attrs, nil), do: @repository.create(attrs)
-
-  # Trigger: guardian_id provided
-  # Why: child and guardian link must be created atomically
-  # Outcome: both child and guardian link created in a single transaction
   defp persist_child(attrs, guardian_id), do: @repository.create_with_guardian(attrs, guardian_id)
 end
