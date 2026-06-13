@@ -359,6 +359,123 @@ textarea.f-input{resize:vertical;min-height:120px}
 .table td{padding:.75rem;border-bottom:1px solid var(--border-light)}
 .fade-in{animation:fadeIn .25s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ============ Airbnb-style filter bar ============ */
+.filterbar{position:sticky;top:64px;z-index:25;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);border-bottom:1px solid var(--border-light)}
+@media(min-width:1024px){.filterbar{top:80px}}
+.filterbar .frow{display:flex;align-items:center;gap:.6rem;padding:.6rem 0}
+.filterbar .frow+.frow{border-top:1px solid var(--grey-100)}
+.flbl{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-subtle);width:62px;flex-shrink:0}
+.chiprow{display:flex;gap:.5rem;overflow-x:auto;scrollbar-width:thin;flex:1;padding-bottom:2px;scroll-snap-type:x proximity}
+.chiprow::-webkit-scrollbar{height:5px}
+.chiprow::-webkit-scrollbar-thumb{background:var(--border-medium);border-radius:999px}
+.chiprow>*{flex-shrink:0;scroll-snap-align:start}
+.chip-pill{padding:.4rem .85rem;border-radius:999px;font-size:.82rem;font-weight:600;border:1.5px solid var(--border-light);background:#fff;color:var(--fg-body);transition:all .15s;cursor:pointer;white-space:nowrap}
+.chip-pill:hover{border-color:var(--brand-primary)}
+.chip-pill.on{background:var(--brand-primary);border-color:var(--brand-primary);color:#000}
+.chip-pill.on-yellow{background:var(--yellow-500);border-color:var(--yellow-500);color:#000}
+.chip-pill.on-skill{background:var(--blue-50);border-color:var(--blue-500);color:var(--blue-800)}
+.filterbtn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:12px;border:1.5px solid var(--fg-primary);background:#fff;font-weight:700;font-size:.85rem;flex-shrink:0;cursor:pointer}
+.filterbtn:hover{background:var(--grey-50)}
+.filterbtn .cnt{background:var(--brand-primary);color:#000;border-radius:999px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;padding:0 .35rem}
+
+/* ============ Modal (advanced filters / generic) ============ */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);z-index:60;display:none;align-items:flex-end;justify-content:center}
+.modal-backdrop.open{display:flex}
+@media(min-width:640px){.modal-backdrop{align-items:center}}
+.modal{background:#fff;width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column;border-radius:22px 22px 0 0;box-shadow:var(--shadow-xl);animation:fadeIn .2s ease}
+@media(min-width:640px){.modal{border-radius:22px}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.5rem;border-bottom:1px solid var(--border-light)}
+.modal-head h3{font-family:var(--font-sans);font-weight:700;font-size:1.1rem}
+.modal-x{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--border-light)}
+.modal-body{padding:1.5rem;overflow-y:auto}
+.modal-foot{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-top:1px solid var(--border-light)}
+.fsection{padding:1.1rem 0;border-bottom:1px solid var(--grey-100)}
+.fsection:first-child{padding-top:0}
+.fsection h4{font-family:var(--font-sans);font-weight:700;font-size:.95rem;margin-bottom:.85rem}
+.toggle-pill{padding:.45rem .9rem;border-radius:999px;border:1.5px solid var(--border-light);background:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s}
+.toggle-pill.on{border-color:var(--fg-primary);background:var(--cream-100)}
+input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
+.priceval{font-family:var(--font-display);font-weight:800;font-size:1.4rem;color:var(--fg-primary)}
+
+/* ============ Map view ============ */
+.maplayout{display:grid;grid-template-columns:1fr;gap:1rem;margin-top:1.5rem}
+@media(min-width:1024px){.maplayout{grid-template-columns:1.25fr 1fr}}
+.mapcanvas{position:relative;height:360px;border-radius:18px;overflow:hidden;border:1px solid var(--border-light);background:linear-gradient(135deg,#e8f3ec 0%,#e4edf6 100%)}
+@media(min-width:1024px){.mapcanvas{height:620px;position:sticky;top:104px}}
+.mapcanvas .road{position:absolute;background:rgba(255,255,255,.7)}
+.mapcanvas .river{position:absolute;height:34px;background:linear-gradient(90deg,#bcdcef,#a9d2ea);opacity:.85;filter:blur(.5px)}
+.mapcanvas .green{position:absolute;border-radius:50%;background:rgba(125,196,148,.4)}
+.maplabel{position:absolute;transform:translate(-50%,-50%);font-size:.62rem;font-weight:700;color:var(--grey-600);text-transform:uppercase;letter-spacing:.04em;pointer-events:none}
+.you-pin{position:absolute;transform:translate(-50%,-50%);z-index:6}
+.you-pin .dotp{width:16px;height:16px;border-radius:50%;background:var(--blue-500);border:3px solid #fff;box-shadow:0 0 0 4px rgba(15,195,255,.3),var(--shadow-md)}
+.mappin{position:absolute;transform:translate(-50%,-100%);background:#fff;border:2px solid var(--fg-primary);color:var(--fg-primary);font-weight:800;font-size:.78rem;padding:.22rem .55rem;border-radius:999px;box-shadow:var(--shadow-md);cursor:pointer;white-space:nowrap;transition:transform .12s,background .12s,color .12s}
+.mappin:hover,.mappin.on{background:var(--fg-primary);color:#fff;z-index:8;transform:translate(-50%,-100%) scale(1.1)}
+.mappin::after{content:"";position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#fff}
+.mappin.on::after,.mappin:hover::after{border-top-color:var(--fg-primary)}
+.maplist{display:flex;flex-direction:column;gap:.75rem;max-height:620px;overflow-y:auto;padding-right:.25rem}
+.maplist .mlcard.on{outline:2px solid var(--brand-primary);outline-offset:1px}
+
+/* ============ Agent Heroes (#102) ============ */
+.agent{border:1.5px solid var(--border-light);border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
+.agent-head{display:flex;align-items:center;gap:.85rem;padding:1rem 1.25rem;color:#fff}
+.agent-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;background:rgba(255,255,255,.2);box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
+.agent-head .nm{font-family:var(--font-display);font-weight:800;font-size:1.05rem;line-height:1.1}
+.agent-head .tg{font-size:.78rem;opacity:.9}
+.agent-badge{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:.18rem .5rem;border-radius:999px;background:rgba(255,255,255,.25);margin-left:auto;align-self:flex-start}
+.agent-body{padding:1.1rem 1.25rem;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:.55rem;background:var(--grey-50)}
+.agent-msg{max-width:88%;padding:.6rem .85rem;border-radius:15px;font-size:.88rem;line-height:1.5}
+.agent-msg.bot{background:#fff;border:1px solid var(--border-light);align-self:flex-start;border-bottom-left-radius:5px}
+.agent-msg.bot a{color:var(--blue-700);font-weight:600}
+.agent-msg.me{background:var(--blue-100);color:var(--blue-800);align-self:flex-end;border-bottom-right-radius:5px;font-weight:500}
+.agent-chips{display:flex;gap:.5rem;flex-wrap:wrap;padding:.85rem 1.25rem 0}
+.agent-chip{border:1px solid var(--border-medium);border-radius:999px;padding:.38rem .8rem;font-size:.78rem;font-weight:600;cursor:pointer;background:#fff;transition:all .15s;text-align:left}
+.agent-chip:hover{border-color:var(--brand-primary);background:var(--blue-50)}
+.agent-input{display:flex;gap:.5rem;padding:.85rem 1.25rem 1.1rem}
+.agent-input input{flex:1;padding:.6rem .9rem;border-radius:999px;border:1.5px solid var(--border-light);font-size:.88rem}
+.agent-input input:focus{outline:none;border-color:var(--brand-primary)}
+.typing{display:inline-flex;gap:4px;padding:.7rem .9rem}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--fg-subtle);animation:blink 1.1s infinite}
+.typing span:nth-child(2){animation-delay:.18s}.typing span:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+/* ============ Calendars (planner + provider) ============ */
+.calscroll{overflow-x:auto;border:1px solid var(--border-light);border-radius:16px;background:#fff}
+.weekgrid{display:grid;grid-template-columns:repeat(7,minmax(140px,1fr));min-width:920px}
+.weekgrid.compact{grid-template-columns:repeat(7,minmax(116px,1fr));min-width:780px}
+.wkcol{border-right:1px solid var(--grey-100);min-height:240px}
+.wkcol:last-child{border-right:0}
+.wkcol.today{background:var(--blue-50)}
+.wkhead{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border-light);padding:.55rem;text-align:center;z-index:1}
+.wkcol.today .wkhead{background:var(--blue-50)}
+.wkhead .dname{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--fg-muted)}
+.wkhead .dnum{font-family:var(--font-display);font-weight:800;font-size:1.1rem}
+.wkbody{padding:.45rem;display:flex;flex-direction:column;gap:.4rem}
+.evchip{border-radius:10px;padding:.45rem .55rem;font-size:.74rem;font-weight:600;color:#fff;line-height:1.25;cursor:pointer;box-shadow:var(--shadow-sm)}
+.evchip .et{font-weight:800;font-size:.66rem;opacity:.95;display:block}
+.evchip.ghost{background:repeating-linear-gradient(45deg,rgba(139,92,246,.85),rgba(139,92,246,.85) 6px,rgba(139,92,246,.65) 6px,rgba(139,92,246,.65) 12px)}
+.callegend{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.85rem}
+.callegend span{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--fg-muted)}
+
+/* ============ Finances / Stripe embed ============ */
+.stripe-embed{border:1px solid var(--border-light);border-radius:16px;overflow:hidden;box-shadow:var(--shadow-md);background:#fff}
+.stripe-bar{background:#635bff;color:#fff;padding:.7rem 1.1rem;display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:.85rem}
+.stripe-bar .live{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.2);padding:.15rem .6rem;border-radius:999px;font-size:.7rem}
+.stripe-bal{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border-light)}
+.stripe-bal>div{background:#fff;padding:1.1rem 1.25rem}
+.stripe-bal .v{font-family:var(--font-display);font-weight:800;font-size:1.5rem}
+.stripe-bal .l{font-size:.74rem;color:var(--fg-muted);font-weight:600;margin-top:.15rem}
+.barchart{display:flex;align-items:flex-end;gap:.5rem;height:190px;padding:1rem .25rem 0}
+.bargroup{flex:1;display:flex;flex-direction:column;align-items:center;gap:.4rem;height:100%;justify-content:flex-end}
+.bars{display:flex;gap:3px;align-items:flex-end;height:100%;width:100%;justify-content:center}
+.bar{width:13px;border-radius:4px 4px 0 0;transition:height .4s}
+.bar-rev{background:var(--grad-primary)}
+.bar-exp{background:var(--grey-300)}
+.bargroup .bl{font-size:.7rem;color:var(--fg-muted);font-weight:600}
+.pl-tile{padding:1.1rem 1.25rem;border-radius:14px}
+.pl-tile .v{font-family:var(--font-display);font-weight:800;font-size:1.5rem}
+.pl-tile .l{font-size:.76rem;font-weight:600;opacity:.85}
+.spouse-banner{display:flex;align-items:center;gap:.85rem;padding:.9rem 1.1rem;border-radius:14px;background:linear-gradient(135deg,#f3eefe,#eef4ff);border:1px solid #e0d8fb}
 </style>
 </head>
 <body>
@@ -575,6 +692,19 @@ function weeklyPrice(p){
   if(p.period==="per month") return p.price/4.33;
   return p.price/ (p.days.length>=5 ? 1 : 4); /* camps: whole price */
 }
+/* Berlin districts — stylized map coords (% of canvas) + distance from "you" in Mitte (#108) */
+const DISTRICTS = {
+  "Mitte":           {x:50, y:45, km:0.8},
+  "Prenzlauer Berg": {x:61, y:33, km:2.3},
+  "Wedding":         {x:45, y:27, km:3.4},
+  "Friedrichshain":  {x:67, y:49, km:3.1},
+  "Kreuzberg":       {x:55, y:60, km:2.8},
+  "Neukölln":        {x:60, y:73, km:4.6},
+  "Schöneberg":      {x:40, y:64, km:4.0},
+  "Charlottenburg":  {x:23, y:47, km:5.2},
+  "Grunewald":       {x:11, y:64, km:8.7}
+};
+const distKm = p => (DISTRICTS[p.district] ? DISTRICTS[p.district].km : null);
 const REVIEWS = {
   p1:[{name:"Sophie K.", stars:5, text:"My son counts the days until Tuesday training. Coach Jonas is patient and the communication through the app is excellent."},{name:"Daniel M.", stars:5, text:"Well organised, safe, and genuinely fun. The check-in notifications give real peace of mind."}],
   p4:[{name:"Aylin T.", stars:5, text:"Our daughter built her first game in week three. The instructors explain everything twice without ever making kids feel slow."},{name:"Marco P.", stars:4, text:"Great content. Saturday slot fills fast — book early!"}],
@@ -837,7 +967,7 @@ function goSearch(q){
    skills #704, sort, grid/list, waitlist #13, early bird #150,
    grade restrictions #547)
    ============================================================ */
-const catalogState = {q:"", cat:"all", quick:new Set(), skill:"", sort:"recommended", view:"grid"};
+const catalogState = {q:"", cat:"all", quick:new Set(), skills:new Set(), district:"all", priceMax:500, sort:"recommended", view:"grid"};
 function filteredPrograms(){
   let list = PROGRAMS.slice();
   const s = catalogState;
@@ -847,61 +977,138 @@ function filteredPrograms(){
   }
   if(s.cat !== "all") list = list.filter(p=>p.category===s.cat);
   for(const qf of QUICK_FILTERS) if(s.quick.has(qf.id)) list = list.filter(qf.test);
-  if(s.skill) list = list.filter(p=>p.skills.includes(s.skill));
+  if(s.skills.size) list = list.filter(p=>p.skills.some(sk=>s.skills.has(sk)));
+  if(s.district !== "all") list = list.filter(p=>p.district===s.district);
+  if(s.priceMax < 500) list = list.filter(p=>ebPriceCalc(p) <= s.priceMax);
   if(s.sort==="newest") list.sort((a,b)=>(b.isNew?1:0)-(a.isNew?1:0));
   if(s.sort==="price_low") list.sort((a,b)=>a.price-b.price);
   if(s.sort==="price_high") list.sort((a,b)=>b.price-a.price);
   if(s.sort==="recommended") list.sort((a,b)=>(b.popular?1:0)-(a.popular?1:0) || b.rating-a.rating);
   return list;
 }
+function activeFilterCount(){ const s=catalogState; return s.quick.size + s.skills.size + (s.district!=="all"?1:0) + (s.priceMax<500?1:0); }
 function pageBrowse(){
   const s = catalogState;
   return `
-  <section class="mk-hero" style="padding:3.5rem 0 3rem">
+  <section class="mk-hero" style="padding:3.5rem 0 2.5rem">
     ${orbs()}
     <div class="container rel">
       <span class="pill pill-outline" style="margin-bottom:1.25rem">Explore Programs</span>
       <h1 class="hero-h1-sm" style="max-width:880px;margin:0 auto">Discover <span class="hl">activities</span>, camps &amp; classes for your child</h1>
-      <p class="lede" style="max-width:640px;margin:1.25rem auto 0">Hand-picked, vetted programs across Berlin — filter by category, age, schedule, or the skills your child will build.</p>
-      <div style="max-width:640px;margin:2.25rem auto 0">
-        <form onsubmit="event.preventDefault();">
+      <p class="lede" style="max-width:640px;margin:1.25rem auto 0">Hand-picked, vetted programs across Berlin — search, filter, or explore them on the map.</p>
+      <div style="max-width:640px;margin:2rem auto 0">
+        <form onsubmit="event.preventDefault();renderCatalog()">
           <div class="searchbar">
             <div class="field">${ic('search')}<input id="browse-q" type="text" value="${s.q.replace(/"/g,'&quot;')}" placeholder="Search programs, providers, neighborhoods..." aria-label="Search" oninput="catalogState.q=this.value;renderCatalog()"></div>
             <button type="submit" class="btn btn-primary">Search</button>
           </div>
         </form>
-        <div class="tagrow" style="margin-top:1rem">
-          ${QUICK_FILTERS.map(f=>`<button class="tag ${s.quick.has(f.id)?'on':''}" onclick="toggleQuick('${f.id}')">${f.label}</button>`).join("")}
-        </div>
-      </div>
-      <div class="filterpills">
-        ${CATEGORIES.map(c=>`<button class="fpill ${s.cat===c.id?'on':''}" onclick="catalogState.cat='${c.id}';renderCatalog(true)">${c.label}</button>`).join("")}
-      </div>
-      <div style="margin-top:1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap" class="small muted">
-        <span>Skills:</span>
-        <select class="f-input" style="width:auto;padding:.4rem 2rem .4rem .8rem;border-radius:999px;font-size:.85rem" onchange="catalogState.skill=this.value;renderCatalog()">
-          <option value="">All skills</option>
-          ${ALL_SKILLS.map(sk=>`<option value="${sk}" ${s.skill===sk?'selected':''}>${sk}</option>`).join("")}
-        </select>
       </div>
     </div>
   </section>
-  <section class="band-white" style="padding-bottom:5rem">
+
+  <div class="filterbar"><div class="container" id="filter-bar">${filterBarInner()}</div></div>
+
+  <section class="band-white" style="padding:2rem 0 5rem">
     <div class="container">
+      <div style="margin-bottom:1.75rem">${agentHero('maven')}</div>
       <div id="catalog-zone"></div>
     </div>
-  </section>`;
+  </section>
+
+  <div class="modal-backdrop" id="fmodal" onclick="if(event.target===this)closeFilters()">
+    <div class="modal">
+      <div class="modal-head"><h3>Filters</h3><button class="modal-x" aria-label="Close" onclick="closeFilters()">${ic('x','icon-sm')}</button></div>
+      <div class="modal-body" id="fmodal-body">${fModalInner()}</div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear all</button>
+        <button class="btn btn-primary" onclick="closeFilters()">Show <span id="fmodal-count">${filteredPrograms().length}</span> results</button>
+      </div>
+    </div>
+  </div>`;
 }
-function toggleQuick(id){
-  if(catalogState.quick.has(id)) catalogState.quick.delete(id); else catalogState.quick.add(id);
-  route(); /* re-render hero tags too */
+
+/* Three one-line chip rows (categories, quick filters, skills) + Airbnb "Filters" button */
+function filterBarInner(){
+  const s = catalogState;
+  const sliders = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" d="M3 6.5h11M18 6.5h3M3 12h3m4 0h11M3 17.5h11m4 0h3"/><circle cx="16" cy="6.5" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="17.5" r="2"/></svg>`;
+  return `
+    <div class="frow">
+      <span class="flbl">Category</span>
+      <div class="chiprow">
+        ${CATEGORIES.map(c=>`<button class="chip-pill ${s.cat===c.id?'on':''}" onclick="setCat('${c.id}')">${c.label}</button>`).join("")}
+      </div>
+    </div>
+    <div class="frow">
+      <span class="flbl">Quick</span>
+      <div class="chiprow">
+        ${QUICK_FILTERS.map(f=>`<button class="chip-pill ${s.quick.has(f.id)?'on-yellow':''}" onclick="toggleQuick('${f.id}')">${f.label}</button>`).join("")}
+      </div>
+      <button class="filterbtn" onclick="openFilters()">${sliders} Filters${activeFilterCount()?`<span class="cnt">${activeFilterCount()}</span>`:""}</button>
+    </div>
+    <div class="frow">
+      <span class="flbl">Skills</span>
+      <div class="chiprow">
+        ${ALL_SKILLS.map(sk=>`<button class="chip-pill ${s.skills.has(sk)?'on-skill':''}" onclick="toggleSkill('${sk.replace(/'/g,"\\'")}')">${sk}</button>`).join("")}
+      </div>
+    </div>`;
 }
+
+/* Advanced filter modal body — everything in one place + location & price (Airbnb-style) */
+function fModalInner(){
+  const s = catalogState;
+  return `
+    <div class="fsection">
+      <h4>Availability &amp; type</h4>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        ${QUICK_FILTERS.map(f=>`<button class="toggle-pill ${s.quick.has(f.id)?'on':''}" onclick="toggleQuick('${f.id}')">${f.label}</button>`).join("")}
+      </div>
+    </div>
+    <div class="fsection">
+      <h4>Skills your child will build</h4>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        ${ALL_SKILLS.map(sk=>`<button class="toggle-pill ${s.skills.has(sk)?'on':''}" onclick="toggleSkill('${sk.replace(/'/g,"\\'")}')">${sk}</button>`).join("")}
+      </div>
+    </div>
+    <div class="fsection">
+      <h4>Neighborhood</h4>
+      <select class="f-input" onchange="setDistrict(this.value)">
+        <option value="all" ${s.district==='all'?'selected':''}>All of Berlin</option>
+        ${Object.keys(DISTRICTS).map(d=>`<option value="${d}" ${s.district===d?'selected':''}>${d} · ${DISTRICTS[d].km} km away</option>`).join("")}
+      </select>
+    </div>
+    <div class="fsection" style="border-bottom:0">
+      <h4>Max price</h4>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem">
+        <span class="priceval">${s.priceMax>=500?'€500+':'€'+s.priceMax}</span>
+        <span class="small muted">per period</span>
+      </div>
+      <input type="range" min="50" max="500" step="10" value="${s.priceMax}" oninput="setPrice(this.value)">
+      <div style="display:flex;justify-content:space-between" class="tiny muted"><span>€50</span><span>€500+</span></div>
+    </div>`;
+}
+function setCat(id){ catalogState.cat=id; syncFilters(); }
+function toggleQuick(id){ const q=catalogState.quick; q.has(id)?q.delete(id):q.add(id); syncFilters(); }
+function toggleSkill(sk){ const s=catalogState.skills; s.has(sk)?s.delete(sk):s.add(sk); syncFilters(); }
+function setDistrict(d){ catalogState.district=d; syncFilters(); }
+function setPrice(v){ catalogState.priceMax=+v; syncFilters(); }
+function setView(v){ catalogState.view=v; renderCatalog(); }
+function openFilters(){ const m=document.getElementById('fmodal'); if(m) m.classList.add('open'); }
+function closeFilters(){ const m=document.getElementById('fmodal'); if(m) m.classList.remove('open'); }
 function clearFilters(){
-  Object.assign(catalogState, {q:"", cat:"all", skill:"", quick:new Set()});
-  route();
+  Object.assign(catalogState, {q:"", cat:"all", district:"all", priceMax:500});
+  catalogState.quick=new Set(); catalogState.skills=new Set();
+  const qi=document.getElementById('browse-q'); if(qi) qi.value="";
+  syncFilters();
 }
-function renderCatalog(rerenderPills){
-  if(rerenderPills){ route(); return; }
+/* Re-render the chip rows, the modal body, and the results — all without a full route() */
+function syncFilters(){
+  const fb=document.getElementById('filter-bar'); if(fb) fb.innerHTML=filterBarInner();
+  const fm=document.getElementById('fmodal-body'); if(fm) fm.innerHTML=fModalInner();
+  const fc=document.getElementById('fmodal-count'); if(fc) fc.textContent=filteredPrograms().length;
+  renderCatalog();
+}
+function renderCatalog(){
   const zone = document.getElementById("catalog-zone");
   if(!zone) return;
   const list = filteredPrograms();
@@ -913,8 +1120,9 @@ function renderCatalog(rerenderPills){
         <strong class="font-display" style="color:var(--fg-primary);font-size:1rem">${list.length}</strong>
         ${list.length===1?"program":"programs"}
         ${s.cat!=="all" ? `in <strong style="color:var(--fg-primary)">${CAT_LABEL[s.cat]}</strong>` : ""}
+        ${s.district!=="all" ? `near <strong style="color:var(--fg-primary)">${s.district}</strong>` : ""}
         ${s.q ? `matching <strong style="color:var(--fg-primary)">"${s.q}"</strong>` : ""}
-        ${s.skill ? `building <strong style="color:var(--fg-primary)">${s.skill}</strong>` : ""}
+        ${s.priceMax<500 ? `under <strong style="color:var(--fg-primary)">€${s.priceMax}</strong>` : ""}
       </div>
       <div style="display:flex;align-items:center;gap:.75rem">
         <details class="sort-dd" id="sort-dd">
@@ -924,8 +1132,9 @@ function renderCatalog(rerenderPills){
           </div>
         </details>
         <div class="viewtoggle">
-          <button class="${s.view==='grid'?'on':''}" onclick="catalogState.view='grid';renderCatalog()">Grid</button>
-          <button class="${s.view==='list'?'on':''}" onclick="catalogState.view='list';renderCatalog()">List</button>
+          <button class="${s.view==='grid'?'on':''}" onclick="setView('grid')">Grid</button>
+          <button class="${s.view==='list'?'on':''}" onclick="setView('list')">List</button>
+          <button class="${s.view==='map'?'on':''}" onclick="setView('map')">${ic('map','icon-sm')} Map</button>
         </div>
       </div>
     </div>
@@ -936,8 +1145,62 @@ function renderCatalog(rerenderPills){
            <div style="margin-top:1.5rem"><button class="btn btn-primary" onclick="clearFilters()">Clear filters</button></div></div>`
       : s.view==="grid"
         ? `<div class="grid grid-3 fade-in" style="margin-top:1.5rem">${list.map(programCard).join("")}</div>`
-        : `<div class="fade-in" style="margin-top:1.5rem;display:flex;flex-direction:column;gap:1rem">${list.map(programRow).join("")}</div>`}
+        : s.view==="list"
+          ? `<div class="fade-in" style="margin-top:1.5rem;display:flex;flex-direction:column;gap:1rem">${list.map(programRow).join("")}</div>`
+          : mapView(list)}
   `;
+}
+
+/* ---- Map view (#108): stylized Berlin map with price pins + synced list ---- */
+let mapSel = null;
+function mapView(list){
+  const seen = {};
+  const pins = list.map(p=>{
+    const d = DISTRICTS[p.district] || {x:50,y:50};
+    const n = (seen[p.district] = (seen[p.district]||0)+1) - 1;
+    return {p, x:d.x + (n%3-1)*6, y:d.y + Math.floor(n/3)*-7};
+  });
+  return `
+  <div class="maplayout fade-in">
+    <div class="mapcanvas">
+      <div class="river" style="left:-5%;top:42%;width:75%;transform:rotate(-8deg)"></div>
+      <div class="river" style="left:30%;top:58%;width:80%;transform:rotate(6deg)"></div>
+      <div class="green" style="left:4%;top:58%;width:120px;height:120px"></div>
+      <div class="green" style="right:6%;top:14%;width:90px;height:90px"></div>
+      <div class="road" style="left:0;top:45%;width:100%;height:2px"></div>
+      <div class="road" style="left:50%;top:0;width:2px;height:100%"></div>
+      ${Object.entries(DISTRICTS).map(([n,d])=>`<div class="maplabel" style="left:${d.x}%;top:${d.y+8}%">${n}</div>`).join("")}
+      <div class="you-pin" style="left:50%;top:45%"><div class="dotp"></div></div>
+      <div class="maplabel" style="left:50%;top:40%;color:var(--blue-700)">You</div>
+      ${pins.map(({p,x,y})=>`<button class="mappin ${mapSel===p.id?'on':''}" data-id="${p.id}" style="left:${x}%;top:${y}%" onclick="selectPin('${p.id}')" title="${p.title}">€${ebPriceCalc(p)}</button>`).join("")}
+    </div>
+    <div class="maplist" id="maplist">
+      <div class="small muted" style="padding:.25rem .25rem .5rem">${list.length} ${list.length===1?"program":"programs"} on the map · tap a pin or card</div>
+      ${list.map(mapListCard).join("")}
+    </div>
+  </div>`;
+}
+function mapListCard(p){
+  return `
+  <div class="card card-hover mlcard ${mapSel===p.id?'on':''}" data-id="${p.id}" style="padding:.85rem;display:flex;gap:.85rem;cursor:pointer"
+       onmouseenter="selectPin('${p.id}',true)" onclick="location.hash='#/programs/${p.id}'">
+    <div style="width:84px;height:84px;border-radius:12px;flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;color:#fff;background:${p.grad}">${ic(p.icon)}</div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap"><span class="pill pill-dark" style="font-size:.65rem">${CAT_LABEL[p.category]}</span><span class="tiny muted">${ic('map','icon-sm')} ${p.district} · ${DISTRICTS[p.district]?DISTRICTS[p.district].km+' km':''}</span></div>
+      <div style="font-weight:700;margin-top:.25rem;line-height:1.2">${p.title}</div>
+      <div class="tiny muted" style="margin-top:.15rem">${p.days.join(", ")} · ${p.time} · Ages ${p.age}</div>
+      <div style="margin-top:.3rem"><strong>€${ebPriceCalc(p)}</strong> <span class="tiny muted">${p.period}</span> · <span class="tiny" style="color:#b45309">${p.rating}★</span></div>
+    </div>
+  </div>`;
+}
+function selectPin(id, fromList){
+  mapSel = id;
+  document.querySelectorAll('.mappin').forEach(el=>el.classList.toggle('on', el.dataset.id===id));
+  document.querySelectorAll('.maplist .mlcard').forEach(el=>el.classList.toggle('on', el.dataset.id===id));
+  if(!fromList){
+    const card = document.querySelector('.maplist .mlcard[data-id="'+id+'"]');
+    if(card) card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
 }
 
 /* ============================================================
@@ -1468,6 +1731,17 @@ function pageTrust(){
     </div>
   </section>
 
+  <!-- Guardian — safety Agent Hero (#102) -->
+  <section class="band band-white">
+    <div class="container-mid">
+      <div class="sec-head" style="margin-bottom:2rem">
+        <span class="pill pill-primary" style="margin-bottom:.75rem">Ask our Safety Hero</span>
+        <h2 class="section-title">Got a safety question? Guardian has answers.</h2>
+      </div>
+      ${agentHero('guardian')}
+    </div>
+  </section>
+
   <section class="band band-peach" style="text-align:center">
     <div class="container-narrow">
       <h2 class="section-title">Have questions?</h2>
@@ -1678,7 +1952,7 @@ function pageParentDash(){
       <a href="#/dashboard" class="on-blue">${ic('chart','icon-sm')} Dashboard</a>
       <a href="#/programs">${ic('search','icon-sm')} Browse Programs</a>
       <a onclick="toast('Demo: messaging requires sign-in')">${ic('chat','icon-sm')} Messages <span class="pill pill-info" style="margin-left:auto">1</span></a>
-      <a onclick="toast('Demo: planner')">${ic('calendar','icon-sm')} Planner</a>
+      <a href="#/planner">${ic('calendar','icon-sm')} Planner</a>
       <a onclick="toast('Demo: community feed')">${ic('users','icon-sm')} Community</a>
       <a onclick="toast('Demo: settings — add a Provider profile here to switch roles')">${ic('user','icon-sm')} Settings</a>
     </aside>
@@ -1701,9 +1975,15 @@ function pageParentDash(){
           .map(([v,l])=>`<div class="stat role-blue"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}
       </div>
 
+      <!-- Agent Heroes: dashboard helper + parent tips (#102) -->
+      <div class="grid grid-2" style="margin-top:1.5rem;align-items:start">
+        ${agentHero('helphero')}
+        ${agentHero('pal')}
+      </div>
+
       <div class="grid grid-2" style="margin-top:1.5rem;align-items:start">
         <div class="card" style="padding:1.5rem">
-          <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Upcoming sessions</h3><a class="view-link small" onclick="toast('Demo: full planner')">Open planner →</a></div>
+          <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Upcoming sessions</h3><a class="view-link small" href="#/planner">Open planner →</a></div>
           ${sessions.map(([m,d,t,meta,kid,st])=>`
             <div class="session-row">
               <div class="datebadge"><div class="m">${m}</div><div class="d">${d}</div></div>
@@ -1770,7 +2050,7 @@ function pageParentDash(){
    #838, 4 tabs #904, GMV widget #883, duplicate #184, confirm/cancel
    #623, checklist #560, payouts tooltip #392/#390, sessions #470-475)
    ============================================================ */
-const provState = {tab:"overview", programs:[
+const provState = {tab:"overview", sessView:"list", programs:[
   {name:"Soccer Fundamentals", enrolled:11, cap:16, status:"published", season:"Season 2"},
   {name:"Basketball League", enrolled:12, cap:20, status:"published", season:"Season 2"},
   {name:"Holiday Football Camp", enrolled:0, cap:24, status:"draft", season:"No Season"}
@@ -1784,6 +2064,7 @@ function pageProviderDash(){
       <a class="${provState.tab==='overview'?'on-yellow':''}" onclick="provState.tab='overview';route()">${ic('chart','icon-sm')} Overview</a>
       <a class="${provState.tab==='programs'?'on-yellow':''}" onclick="provState.tab='programs';route()">${ic('calendar','icon-sm')} My Programs</a>
       <a class="${provState.tab==='team'?'on-yellow':''}" onclick="provState.tab='team';route()">${ic('users','icon-sm')} Team &amp; Profiles</a>
+      <a class="${provState.tab==='finances'?'on-yellow':''}" onclick="provState.tab='finances';route()">${ic('euro','icon-sm')} Finances</a>
       <a class="${provState.tab==='edit'?'on-yellow':''}" onclick="provState.tab='edit';route()">${ic('user','icon-sm')} Edit Profile</a>
       <a onclick="toast('Demo: provider settings (account, business profile, billing)')">${ic('info','icon-sm')} Settings</a>
     </aside>
@@ -1797,7 +2078,7 @@ function pageProviderDash(){
         </div>
       </div>
       <div class="tabbar" style="margin-top:1.25rem">
-        ${[["overview","Overview"],["programs","My Programs"],["team","Team & Profiles"],["edit","Edit Profile"]]
+        ${[["overview","Overview"],["programs","My Programs"],["team","Team & Profiles"],["finances","Finances"],["edit","Edit Profile"]]
           .map(([k,l])=>`<button class="${provState.tab===k?'on':''}" onclick="provState.tab='${k}';route()">${l}</button>`).join("")}
       </div>
       <div id="prov-tab">${provTab()}</div>
@@ -1865,28 +2146,35 @@ function provTab(){
         </tbody>
       </table>
     </div>
-    <!-- Sessions merged under inventory (#473), program name shown (#470), filters (#474/#475) -->
+    <!-- Sessions merged under inventory (#473), program name (#470), filters (#474/#475), list/calendar views -->
     <div class="card" style="margin-top:1.25rem;padding:1.5rem">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
         <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Sessions</h3>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
           <select class="f-input" style="width:auto;padding:.4rem 2rem .4rem .8rem;font-size:.85rem" onchange="toast('Demo: filtered to '+this.value)">
             <option>All programs</option><option>Soccer Fundamentals</option><option>Basketball League</option>
           </select>
           <input type="date" class="f-input" style="width:auto;padding:.4rem .8rem;font-size:.85rem" value="2026-06-12" onchange="toast('Demo: date filter applied')">
+          <div class="viewtoggle">
+            <button class="${provState.sessView==='list'?'on':''}" onclick="provState.sessView='list';route()">List</button>
+            <button class="${provState.sessView==='calendar'?'on':''}" onclick="provState.sessView='calendar';route()">Calendar</button>
+          </div>
         </div>
       </div>
-      ${[["TODAY","","Soccer Fundamentals — U8 group","16:00–17:30 · Sportplatz Prenzlauer Berg","11 expected"],
-         ["AUG","18","Soccer Fundamentals — U10 group","16:00–17:30 · Sportplatz Prenzlauer Berg","9 expected"],
-         ["AUG","22","Basketball League — Match day","11:00–13:00 · Halle Friedrichshain","12 expected"]]
-        .map(([m,d,t2,meta,n])=>`
-        <div class="session-row">
-          <div class="datebadge" style="background:var(--yellow-100)"><div class="m" style="color:#92400e">${m}</div><div class="d">${d||"·"}</div></div>
-          <div style="flex:1;min-width:0"><div style="font-weight:600">${t2}</div><div class="tiny muted">${meta}</div></div>
-          <span class="pill pill-outline">${n}</span>
-          <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens attendance roster & check-in')">Roster</button>
-        </div>`).join("")}
+      ${provState.sessView==='calendar'
+        ? `<div style="margin-top:1rem"><div class="tiny uc muted" style="font-weight:700;margin-bottom:.5rem">Week of Aug 17–23</div>${weekCalendar(PROV_SESSIONS,{compact:true})}</div>`
+        : [["TODAY","","Soccer Fundamentals — U8 group","16:00–17:30 · Sportplatz Prenzlauer Berg","11 expected"],
+           ["AUG","18","Soccer Fundamentals — U10 group","16:00–17:30 · Sportplatz Prenzlauer Berg","9 expected"],
+           ["AUG","22","Basketball League — Match day","11:00–13:00 · Halle Friedrichshain","12 expected"]]
+          .map(([m,d,t2,meta,n])=>`
+          <div class="session-row">
+            <div class="datebadge" style="background:var(--yellow-100)"><div class="m" style="color:#92400e">${m}</div><div class="d">${d||"·"}</div></div>
+            <div style="flex:1;min-width:0"><div style="font-weight:600">${t2}</div><div class="tiny muted">${meta}</div></div>
+            <span class="pill pill-outline">${n}</span>
+            <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens attendance roster &amp; check-in')">Roster</button>
+          </div>`).join("")}
     </div>`;
+  if(t==="finances") return provFinances();
   if(t==="team") return `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
       <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Team &amp; Profiles</h3>
@@ -2030,6 +2318,304 @@ function legalShell(title, sub, body){
 }
 
 /* ============================================================
+   Agent Heroes (#102) — superhero AI helper widgets
+   ============================================================ */
+const agentConvos = {};
+const AGENTS = {
+  maven:{name:"Match Maven", emoji:"🦸‍♀️", grad:"var(--grad-primary)", badge:"AI Hero · Search", tagline:"Your program-matching Hero",
+    intro:"Tell me about your child — age, interests, budget, neighborhood — and I'll match you with vetted Berlin programs.",
+    chips:["Creative &amp; gentle for a shy 7-year-old","Weekend sports under €30/week","Help with primary-school maths"],
+    answer:matchAnswer},
+  helphero:{name:"Dash", emoji:"🦾", grad:"var(--grad-cool)", badge:"AI Hero · Dashboard", tagline:"Your dashboard sidekick",
+    intro:"I keep your week on track. Ask what's coming up, who has unread messages, or how the kids are progressing.",
+    chips:["What's on this week?","Any unread messages?","How is Emma progressing?"],
+    answer:helpAnswer},
+  pal:{name:"Parent Pal", emoji:"💛", grad:"var(--grad-art)", badge:"AI Hero · Tips", tagline:"Friendly parenting tips",
+    intro:"I share gentle, practical tips for getting the most out of your child's activities.",
+    chips:["First-camp jitters","Motivating practice at home","Balancing screen time"],
+    answer:palAnswer},
+  guardian:{name:"Guardian", emoji:"🛡️", grad:"var(--grad-safety)", badge:"AI Hero · Safety", tagline:"Your trust &amp; safety guide",
+    intro:"Ask me anything about how we vet providers, protect your data, or handle concerns and incidents.",
+    chips:["How are providers vetted?","Is my family's data safe?","What if there's an incident?"],
+    answer:guardAnswer},
+  prophet:{name:"Profit Prophet", emoji:"📈", grad:"linear-gradient(135deg,#635bff,#00a3d9)", badge:"AI Hero · Earnings", tagline:"Your earnings co-pilot",
+    intro:"I read your Stripe numbers and help you grow. Ask about payouts, commission tiers, or a forecast.",
+    chips:["How do I reach the 8% rate?","Forecast next month","Where can I cut costs?"],
+    answer:prophetAnswer}
+};
+function agentHero(id){
+  const a = AGENTS[id];
+  return `
+  <div class="agent" id="agent-${id}">
+    <div class="agent-head" style="background:${a.grad}">
+      <div class="agent-av">${a.emoji}</div>
+      <div><div class="nm">${a.name}</div><div class="tg">${a.tagline}</div></div>
+      <span class="agent-badge">${a.badge}</span>
+    </div>
+    <div class="agent-body" id="agent-body-${id}"></div>
+    <div class="agent-chips">
+      ${a.chips.map(c=>`<button class="agent-chip" onclick="agentAsk('${id}', this.textContent.trim())">${c}</button>`).join("")}
+    </div>
+    <form class="agent-input" onsubmit="event.preventDefault();var i=this.q;if(i.value.trim()){agentAsk('${id}', i.value.trim());i.value=''}">
+      <input name="q" placeholder="Ask ${a.name}…" autocomplete="off" aria-label="Ask ${a.name}">
+      <button class="btn btn-primary btn-sm" type="submit">Ask</button>
+    </form>
+  </div>`;
+}
+function renderAgentBody(id, typing){
+  const body = document.getElementById('agent-body-'+id); if(!body) return;
+  const a = AGENTS[id]; const convo = agentConvos[id]||[];
+  body.innerHTML = `<div class="agent-msg bot">${a.intro}</div>` +
+    convo.map(m=>`<div class="agent-msg ${m.role}">${m.text}</div>`).join("") +
+    (typing ? `<div class="agent-msg bot typing"><span></span><span></span><span></span></div>` : "");
+  body.scrollTop = body.scrollHeight;
+}
+function agentAsk(id, q){
+  agentConvos[id] = agentConvos[id] || [];
+  agentConvos[id].push({role:'me', text:escapeHtml(q)});
+  renderAgentBody(id, true);
+  setTimeout(()=>{
+    agentConvos[id].push({role:'bot', text:AGENTS[id].answer(q)});
+    renderAgentBody(id, false);
+  }, 700);
+}
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function matchAnswer(q){
+  const t = q.toLowerCase();
+  const want = [];
+  if(/art|creativ|paint|draw|clay|craft|sculpt/.test(t)) want.push("arts","workshops");
+  if(/sport|football|soccer|basket|fit|active|swim|ball/.test(t)) want.push("sports","camps");
+  if(/music|piano|sing|choir|instrument/.test(t)) want.push("music");
+  if(/math|maths|cod|coding|science|stem|tutor|read|learn|homework|study/.test(t)) want.push("education","workshops");
+  if(/life|skill|cook|independ|confidence/.test(t)) want.push("life-skills");
+  let pool = want.length ? PROGRAMS.filter(p=>want.includes(p.category)) : PROGRAMS.slice();
+  if(/weekend|saturday|sunday/.test(t)) pool = pool.filter(p=>p.weekend);
+  const m = t.match(/(\d+)\s*€|€\s*(\d+)|under\s*(?:€)?\s*(\d+)/);
+  if(m){ const amt = +(m[1]||m[2]||m[3]); pool = pool.filter(p=>weeklyPrice(p) <= amt); }
+  pool = pool.sort((a,b)=>b.rating-a.rating).slice(0,3);
+  if(!pool.length) return "I couldn't find an exact match for that — try removing the price cap or browsing all programs. Want me to widen the search?";
+  return "Here are my top matches:<br>" + pool.map(p=>`• <a href="#/programs/${p.id}">${p.title}</a> — ${CAT_LABEL[p.category]}, ${p.district}, €${ebPriceCalc(p)} ${p.period} (${p.rating}★)`).join("<br>") + "<br><br>Tap any one to see the full program. Want me to filter the catalog to these?";
+}
+function helpAnswer(q){
+  const t = q.toLowerCase();
+  if(/message|unread|inbox|msg/.test(t)) return "You have <strong>1 unread message</strong> from Berlin Kickers Academy: \"Reminder: bring shin guards tomorrow! ⚽\". Want me to open Messages?";
+  if(/progress|skill|badge|emma|leo|doing/.test(t)) return "Emma is at <strong>80% on Teamwork</strong> — she just earned the 🏅 Team Player badge! She's at 55% Coordination and 35% Creativity. Leo started Science Explorers; his first skills will log after the next attended session.";
+  if(/week|upcoming|schedule|session|on |today/.test(t)) return "This week you have <strong>4 sessions</strong>: Soccer (Tue &amp; Thu — Emma), Watercolor (Wed — Emma), Science Explorers (Thu — Leo). Coding for Kids (Sat — Leo) is still <strong>pending confirmation</strong>. Open the <a href='#/planner'>planner</a> to see it all?";
+  return "I can summarize your week, flag unread messages, or track each child's progress. Try a suggestion below!";
+}
+function palAnswer(q){
+  const t = q.toLowerCase();
+  if(/camp|jitter|nervous|first|shy|anxious/.test(t)) return "First-camp nerves are completely normal! Pack a familiar item, arrive a few minutes early so your child settles before the crowd, and tell the Hero one thing your child loves — it gives them an instant icebreaker.";
+  if(/practice|motivat|home|reluctan|lazy/.test(t)) return "Keep it short and playful — 10 focused minutes beats an hour of resistance. Celebrate effort over results, and let your child 'teach you' what they learned that day. The progress bars on your dashboard make a great visual reward.";
+  if(/screen|balance|time|tablet|phone/.test(t)) return "Try the 'active first' rule: an outdoor or hands-on activity before screen time. Klass Hero's coding and STEM programs are a nice bridge — screen-based but creative and social rather than passive.";
+  return "I've got gentle, practical tips on settling in, building routines, and keeping activities fun. Pick a topic below!";
+}
+function guardAnswer(q){
+  const t = q.toLowerCase();
+  if(/vet|check|background|verif|trust|how.*safe.*provider/.test(t)) return "Every Hero clears <strong>6 checks</strong>: identity &amp; age (18+), one year of validated experience, an extended police background check (erweitertes Führungszeugnis), a recorded video screening, child-safeguarding training, and a signed community-standards agreement. <a href='#/trust-safety'>See the full breakdown.</a>";
+  if(/data|privacy|gdpr|safe|secur/.test(t)) return "Your data is GDPR-protected and stored encrypted in EU data centers. Child profiles are visible only to you and the providers you book — we never sell data or profile children, and you can export or delete everything anytime.";
+  if(/incident|report|concern|complain|wrong|problem/.test(t)) return "If something feels off, use the in-app report on any conversation or program. Our team reviews concerns within <strong>24 hours</strong>, and providers who fall short of our standards can be suspended or removed.";
+  return "Ask me about provider vetting, data protection, or how we handle concerns and incidents.";
+}
+function prophetAnswer(q){
+  const t = q.toLowerCase();
+  if(/8%|pro|tier|rate|commission|reach|lower/.test(t)) return "You're at <strong>€2,140</strong> of monthly bookings — the 12% Growth rate. The 8% Pro rate kicks in above <strong>€4,000</strong>, so about <strong>€1,860</strong> more. Filling your two open U10 spots plus the Saturday league would get you ~80% of the way there.";
+  if(/forecast|next month|predict|project|future/.test(t)) return "Based on your last 6 months and current enrollments, next month projects to <strong>€2,480</strong> GMV (+16%) and a <strong>€2,090</strong> net payout after commission. Summer-camp pre-bookings could push it higher.";
+  if(/cost|cut|expense|save|margin|spend/.test(t)) return "Your biggest expenses are venue hire (€480) and equipment (€210). Equipment is trending up 12% — bulk-ordering before the autumn season could save ~€60/month. Your net margin is a healthy <strong>72%</strong>.";
+  return "I read your Stripe data to help you grow. Ask about commission tiers, a revenue forecast, or where to trim costs.";
+}
+
+/* ============================================================
+   Week calendar (planner #113 + provider sessions #470-475)
+   ============================================================ */
+function weekCalendar(events, opts){
+  opts = opts || {};
+  const days = [["Mon","17"],["Tue","18"],["Wed","19"],["Thu","20"],["Fri","21"],["Sat","22"],["Sun","23"]];
+  const today = 2; // Wed for the demo
+  return `<div class="calscroll"><div class="weekgrid ${opts.compact?'compact':''}">
+    ${days.map(([nm,nu],i)=>`
+      <div class="wkcol ${i===today?'today':''}">
+        <div class="wkhead"><div class="dname">${nm}</div><div class="dnum">${nu}</div></div>
+        <div class="wkbody">
+          ${events.filter(e=>e.d===i).sort((a,b)=>a.t.localeCompare(b.t)).map(e=>`
+            <div class="evchip ${e.c==='ghost'?'ghost':''}" ${e.c!=='ghost'?`style="background:${e.c}"`:''} onclick="toast('${(e.who+' · '+e.title).replace(/'/g,'’')}')">
+              <span class="et">${e.t}</span>${e.title}<div style="font-weight:500;opacity:.92;font-size:.66rem;margin-top:1px">${e.who}</div>
+            </div>`).join("") || `<div class="tiny muted" style="text-align:center;padding:.6rem 0;opacity:.45">—</div>`}
+        </div>
+      </div>`).join("")}
+  </div></div>`;
+}
+const PLANNER_EVENTS = [
+  {d:0, t:"15:00", title:"Pick up Leo", who:"Max (spouse)", c:"ghost"},
+  {d:1, t:"16:00", title:"Soccer Fundamentals", who:"Emma", c:"var(--blue-500)"},
+  {d:2, t:"15:30", title:"Watercolor Workshop", who:"Emma", c:"var(--blue-500)"},
+  {d:3, t:"15:30", title:"Science Explorers", who:"Leo", c:"#10b981"},
+  {d:3, t:"16:00", title:"Soccer Fundamentals", who:"Emma", c:"var(--blue-500)"},
+  {d:4, t:"14:00", title:"Dentist — Leo", who:"Max (spouse)", c:"ghost"},
+  {d:5, t:"10:00", title:"Coding for Kids", who:"Leo", c:"#10b981"},
+  {d:5, t:"15:00", title:"Family park picnic", who:"Family", c:"var(--yellow-600)"}
+];
+const PROV_SESSIONS = [
+  {d:1, t:"16:00", title:"Soccer — U8 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
+  {d:1, t:"17:45", title:"Soccer — U10 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
+  {d:3, t:"16:00", title:"Soccer — U8 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
+  {d:3, t:"17:45", title:"Soccer — U10 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
+  {d:5, t:"11:00", title:"Basketball — Match day", who:"Halle F'hain", c:"#f59e0b"}
+];
+
+/* ============================================================
+   PAGE: Family Planner (#113 calendar, #119 tiers, #120 spouse sync)
+   ============================================================ */
+function pagePlanner(){
+  return `
+  <div class="dash">
+    <aside class="dash-side" aria-label="Parent navigation">
+      <div class="tiny uc muted" style="padding:0 .9rem .75rem;font-weight:700">Family</div>
+      <a href="#/dashboard">${ic('chart','icon-sm')} Dashboard</a>
+      <a href="#/programs">${ic('search','icon-sm')} Browse Programs</a>
+      <a onclick="toast('Demo: messaging requires sign-in')">${ic('chat','icon-sm')} Messages <span class="pill pill-info" style="margin-left:auto">1</span></a>
+      <a href="#/planner" class="on-blue">${ic('calendar','icon-sm')} Planner</a>
+      <a onclick="toast('Demo: community feed')">${ic('users','icon-sm')} Community</a>
+      <a onclick="toast('Demo: settings')">${ic('user','icon-sm')} Settings</a>
+    </aside>
+    <div class="dash-main">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <div><h1 style="font-size:1.6rem">Family Planner</h1><p class="small muted">Week of August 17–23, 2026</p></div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+          <div class="viewtoggle">
+            <button onclick="toast('Demo: day view')">Day</button>
+            <button class="on">Week</button>
+            <button onclick="toast('Demo: month view')">Month</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="toast('Adding custom appointments is an Active Family feature (€8/mo).')">${ic('plus','icon-sm')} Add appointment</button>
+        </div>
+      </div>
+
+      <!-- Spouse calendar sync (#120) -->
+      <div class="spouse-banner" style="margin-top:1.25rem">
+        <div class="avatar" style="width:40px;height:40px;font-size:.9rem;background:linear-gradient(135deg,#8b5cf6,#6366f1)">MP</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700">Synced with Max's calendar ✓</div>
+          <div class="tiny muted">Your spouse can see family bookings and add shared events like pickups &amp; appointments.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="toast('Demo: manage who your planner is shared with')">Manage sharing</button>
+      </div>
+
+      <div class="callegend">
+        <span><span class="dot" style="background:var(--blue-500)"></span> Emma</span>
+        <span><span class="dot" style="background:#10b981"></span> Leo</span>
+        <span><span class="dot" style="background:var(--yellow-600)"></span> Family</span>
+        <span><span class="dot" style="background:#8b5cf6"></span> Max (spouse)</span>
+      </div>
+
+      <div style="margin-top:1rem">${weekCalendar(PLANNER_EVENTS)}</div>
+
+      <div class="grid grid-2" style="margin-top:1.5rem;align-items:start">
+        <div class="notice notice-info">${ic('info','icon-sm')}<span><strong>Free plan</strong> shows your Klass Hero bookings automatically. <strong>Active Family (€8/mo)</strong> adds custom appointments, reminders, and conflict alerts.</span></div>
+        <div class="card" style="padding:1.25rem">
+          <h3 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:700">Share with family</h3>
+          <p class="small muted" style="margin-top:.25rem">Invite a spouse or family friend to view (and optionally add to) your planner.</p>
+          <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+            <input class="f-input" style="flex:1;min-width:160px" placeholder="family@example.com">
+            <button class="btn btn-yellow btn-sm" onclick="toast('Invite sent ✉ (demo)')">Send invite</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   Provider Finances tab (#127/#128/#51/#46) — imagined Stripe embed
+   ============================================================ */
+function provFinances(){
+  const months = [["Jan",1650,520],["Feb",1820,560],["Mar",1980,540],["Apr",2240,610],["May",2080,580],["Jun",2140,690]];
+  const max = 2500;
+  return `
+    ${agentHero('prophet')}
+
+    <!-- Embedded Stripe dashboard (imagined) -->
+    <div class="stripe-embed" style="margin-top:1.5rem">
+      <div class="stripe-bar"><span>⬡ Stripe · Berlin Kickers Academy</span><span class="live">● Connected · Express</span></div>
+      <div class="stripe-bal">
+        <div><div class="v">€1,240</div><div class="l">Available balance</div></div>
+        <div><div class="v" style="color:#635bff">€900</div><div class="l">On the way · pays Mon</div></div>
+        <div><div class="v">€2,140</div><div class="l">Volume this month</div></div>
+      </div>
+      <div style="padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;border-top:1px solid var(--border-light)">
+        <span class="small muted">Next automatic payout <strong style="color:var(--fg-primary)">Monday, 15 Jun</strong> · weekly SEPA</span>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens full Stripe Express dashboard')">Open Stripe</button>
+          <button class="btn btn-primary btn-sm" onclick="toast('Demo: instant payout requested (min €50)')">Instant payout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- P&L tiles (#128) -->
+    <div class="grid grid-3" style="margin-top:1.25rem;gap:.75rem">
+      <div class="pl-tile" style="background:var(--success-bg);color:#065f46"><div class="v">€11,910</div><div class="l">YTD revenue</div></div>
+      <div class="pl-tile" style="background:var(--grey-100);color:var(--fg-body)"><div class="v">€3,300</div><div class="l">YTD expenses</div></div>
+      <div class="pl-tile" style="background:var(--blue-50);color:var(--blue-800)"><div class="v">€8,610</div><div class="l">Net profit · 72% margin</div></div>
+    </div>
+
+    <!-- Revenue vs expenses chart (#51) -->
+    <div class="card" style="padding:1.5rem;margin-top:1.25rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+        <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Revenue vs expenses</h3>
+        <div style="display:flex;gap:1rem" class="tiny muted">
+          <span style="display:inline-flex;align-items:center;gap:.35rem"><span class="dot" style="background:var(--blue-500)"></span> Revenue</span>
+          <span style="display:inline-flex;align-items:center;gap:.35rem"><span class="dot" style="background:var(--grey-300)"></span> Expenses</span>
+        </div>
+      </div>
+      <div class="barchart">
+        ${months.map(([m,rev,exp])=>`
+          <div class="bargroup">
+            <div class="bars">
+              <div class="bar bar-rev" style="height:${Math.round(rev/max*100)}%" title="€${rev}"></div>
+              <div class="bar bar-exp" style="height:${Math.round(exp/max*100)}%" title="€${exp}"></div>
+            </div>
+            <div class="bl">${m}</div>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:1.25rem;align-items:start">
+      <!-- Recent payouts -->
+      <div class="card" style="padding:1.5rem">
+        <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Recent payouts</h3>
+        <table class="table" style="margin-top:.75rem">
+          <thead><tr><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+          <tbody>
+            ${[["08 Jun","€820","paid"],["01 Jun","€760","paid"],["25 May","€910","paid"],["15 Jun","€900","scheduled"]]
+              .map(([d,a,st])=>`<tr><td>${d}</td><td style="font-weight:600">${a}</td><td><span class="pill ${st==='paid'?'pill-success':'pill-info'}">${st}</span></td></tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <!-- Expense tracker (#46) -->
+      <div class="card" style="padding:1.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap">
+          <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Expenses</h3>
+          <div style="display:flex;gap:.4rem">
+            <button class="btn btn-ghost btn-sm" onclick="toast('Demo: CSV exported')">Export CSV</button>
+            <button class="btn btn-primary btn-sm" onclick="toast('Demo: add expense')">${ic('plus','icon-sm')} Add</button>
+          </div>
+        </div>
+        <table class="table" style="margin-top:.75rem">
+          <thead><tr><th>Item</th><th>Category</th><th>Amount</th></tr></thead>
+          <tbody>
+            ${[["Sportplatz hire","Venue","€480"],["New footballs &amp; cones","Equipment","€210"],["Pitch insurance","Insurance","€95"]]
+              .map(([it,cat,a])=>`<tr><td>${it}</td><td class="muted">${cat}</td><td style="font-weight:600">${a}</td></tr>`).join("")}
+          </tbody>
+        </table>
+        <p class="tiny muted" style="margin-top:.5rem">Monthly net profit reflects these automatically.</p>
+      </div>
+    </div>
+
+    <div class="notice notice-info" style="margin-top:1.25rem">${ic('lock','icon-sm')}<span>Payments and payouts are handled by <strong>Stripe</strong> with Klass Hero as merchant of record. We never see or store card details.</span></div>`;
+}
+
+/* ============================================================
    Router
    ============================================================ */
 const routes = [
@@ -2043,6 +2629,7 @@ const routes = [
   {re:/^#\/about$/,              nav:"about",     cta:"default",   fn:()=>pageAbout()},
   {re:/^#\/contact$/,            nav:"contact",   cta:"contact",   fn:()=>pageContact()},
   {re:/^#\/dashboard$/,          nav:"",          cta:"default",   fn:()=>pageParentDash()},
+  {re:/^#\/planner$/,            nav:"",          cta:"default",   fn:()=>pagePlanner()},
   {re:/^#\/provider\/dashboard$/,nav:"",          cta:"providers", fn:()=>pageProviderDash()},
   {re:/^#\/login$/,              nav:"",          cta:"default",   fn:()=>pageLogin()},
   {re:/^#\/register$/,           nav:"",          cta:"default",   fn:()=>pageRegister()},
@@ -2057,6 +2644,8 @@ function route(){
       app.innerHTML = `<div class="fade-in">${r.fn(m)}</div>`;
       setNav(r.nav); setFooterCta(r.cta);
       if(r.after) r.after(m);
+      // Hydrate any Agent Hero widgets present on the page
+      document.querySelectorAll('.agent').forEach(el=>renderAgentBody(el.id.replace('agent-',''), false));
       toggleMenu(false);
       return;
     }
