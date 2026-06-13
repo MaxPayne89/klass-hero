@@ -67,8 +67,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   @enrolled_children_changed_topic "messaging:enrolled_children_changed"
 
-  # Behaviour callbacks ───────────────────────────────────────────────────────
-
   @impl Projection
   def bootstrap_impl, do: bootstrap_from_write_tables()
 
@@ -85,9 +83,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   # Private — Bootstrap ───────────────────────────────────────────────────────
 
-  # Trigger: bootstrap phase — read table may be empty or stale
-  # Why: cold start recovery — populate read table from authoritative write tables
-  # Outcome: messaging_enrolled_children contains one row per (parent_user, program, child)
   defp bootstrap_from_write_tables do
     entries =
       from(e in "enrollments",
@@ -127,9 +122,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   # Private — Event Projections ───────────────────────────────────────────────
 
-  # Trigger: enrollment_created event received
-  # Why: a new enrollment needs a lookup row so child names can be resolved
-  # Outcome: one row upserted, then re-derivation emits enrolled_children_changed
   defp project_enrollment_created(event) do
     payload = event.payload
     parent_user_id = payload.parent_user_id
@@ -137,11 +129,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     child_id = payload.child_id
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    # Trigger: event payload lacks child_first_name
-    # Why: Enrollment context doesn't know the name; without this, rows stay nil
-    #      until a child_updated event fires — which never happens for enrollments
-    #      of pre-existing, unedited children
-    # Outcome: name resolved from children table (nil only if child concurrently deleted)
+    # enrollment_created payload omits child_first_name; resolve from children table.
+    # Without this, rows stay nil until a child_updated fires (never for unedited children).
     child_first_name = resolve_child_first_name(child_id)
 
     %EnrolledChildrenSchema{}
@@ -162,9 +151,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     re_derive_and_emit(parent_user_id, program_id)
   end
 
-  # Trigger: project_enrollment_created needs child's first_name
-  # Why: the enrollment_created event payload does not carry the name
-  # Outcome: children.first_name for the given child_id, or nil if the row is missing
   defp resolve_child_first_name(child_id) do
     name =
       Repo.one(
@@ -183,12 +169,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     name
   end
 
-  # Trigger: enrollment_cancelled event received
-  # Why: cancelled enrollments should not appear in child name lists
-  # Outcome: row deleted, then re-derivation emits enrolled_children_changed
-  #
-  # Special: the event doesn't carry parent_user_id, so we look it up from
-  # the existing row before deleting it
+  # Event lacks parent_user_id; look it up from the existing row before deleting.
   defp project_enrollment_cancelled(event) do
     payload = event.payload
     child_id = payload.child_id
@@ -212,9 +193,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     end
   end
 
-  # Trigger: child_created or child_updated event received
-  # Why: child's first_name may have changed, update all matching lookup rows
-  # Outcome: child_first_name updated, then re-derivation for each affected (parent, program)
   defp project_child_name_change(event) do
     payload = event.payload
     child_id = payload.child_id
@@ -240,12 +218,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     end
   end
 
-  # Trigger: conversation_created event received
-  # Why: new conversations need child names resolved for their participants
-  # Outcome: enrolled_children_changed emitted for each participant with enrolled children
-  #
-  # Special: uses event payload directly for conversation_id and participant_ids
-  # because the ConversationSummaries row may not exist yet
+  # Uses event payload directly: ConversationSummaries row may not exist yet.
   defp project_conversation_created(event) do
     payload = event.payload
     program_id = Map.get(payload, :program_id)
@@ -272,9 +245,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   # Private — Re-derivation ───────────────────────────────────────────────────
 
-  # Trigger: a row in messaging_enrolled_children was added, removed, or updated
-  # Why: downstream consumers (ConversationSummaries) need the updated child name list
-  # Outcome: enrolled_children_changed domain event emitted for each affected conversation
   defp re_derive_and_emit(parent_user_id, program_id) do
     conversation_ids =
       from(s in ConversationSummarySchema,
@@ -296,9 +266,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     end
   end
 
-  # Trigger: need sorted child names for a (parent_user, program) pair
-  # Why: child names are displayed alphabetically, nil names excluded
-  # Outcome: list of non-nil first names, sorted alphabetically
   defp get_child_names(parent_user_id, program_id) do
     from(e in EnrolledChildrenSchema,
       where:
@@ -311,9 +278,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     |> Repo.all()
   end
 
-  # Trigger: child names resolved for a conversation
-  # Why: ConversationSummaries projection listens for this event to update its read table
-  # Outcome: domain event broadcast on PubSub
   defp emit_enrolled_children_changed(conversation_id, child_names) do
     event =
       DomainEvent.new(

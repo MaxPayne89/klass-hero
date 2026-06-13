@@ -16,12 +16,10 @@ defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents do
 
         @impl true
         def handle_event(%{event_type: :user_registered} = event) do
-          # Initialize family profile for new user
           :ok
         end
 
         def handle_event(%{event_type: :user_confirmed} = _event) do
-          # Activate family features
           :ok
         end
 

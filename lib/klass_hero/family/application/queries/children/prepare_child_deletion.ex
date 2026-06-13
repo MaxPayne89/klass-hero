@@ -22,9 +22,6 @@ defmodule KlassHero.Family.Application.Queries.Children.PrepareChildDeletion do
   - `{:error, :enrollment_check_failed}` -- database or infrastructure error
   """
   def execute(child_id) when is_binary(child_id) do
-    # Trigger: child_id passed to enrollment ACL port
-    # Why: determine whether parent needs a warning before deletion
-    # Outcome: empty list means safe to delete; non-empty triggers confirmation UI
     case list_enrollments(child_id) do
       {:ok, []} ->
         {:ok, :no_enrollments}
@@ -38,9 +35,7 @@ defmodule KlassHero.Family.Application.Queries.Children.PrepareChildDeletion do
     end
   end
 
-  # Trigger: Repo.all/1 raises on DB connection errors
-  # Why: isolate infrastructure failures at the use case boundary
-  # Outcome: callers get {:error, :enrollment_check_failed} instead of a crash
+  # Repo.all/1 raises on DB errors; rescue to return a structured error at the use case boundary.
   defp list_enrollments(child_id) do
     {:ok, @enrollment_acl.list_active_with_program_titles(child_id)}
   rescue

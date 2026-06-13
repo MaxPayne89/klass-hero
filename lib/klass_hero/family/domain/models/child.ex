@@ -110,9 +110,7 @@ defmodule KlassHero.Family.Domain.Models.Child do
   def new(attrs) do
     child = struct!(__MODULE__, attrs)
 
-    # Trigger: gender is nil (e.g. caller passed gender: nil explicitly)
-    # Why: nil overrides the struct default, so we normalize back to "not_specified"
-    # Outcome: downstream validation and persistence always see a valid gender string
+    # nil overrides the struct default; normalize back to "not_specified".
     child = %{child | gender: child.gender || "not_specified"}
 
     case validate(child) do
@@ -127,9 +125,7 @@ defmodule KlassHero.Family.Domain.Models.Child do
     year_months = (reference_date.year - dob.year) * 12
     month_diff = reference_date.month - dob.month
 
-    # Trigger: child hasn't had their birthday this month yet
-    # Why: if reference day < birth day, they haven't completed the current month
-    # Outcome: subtract one month to avoid rounding up
+    # Subtract one month if reference day < birth day (birthday not yet reached this month).
     day_adjustment = if reference_date.day < dob.day, do: -1, else: 0
 
     max(year_months + month_diff + day_adjustment, 0)

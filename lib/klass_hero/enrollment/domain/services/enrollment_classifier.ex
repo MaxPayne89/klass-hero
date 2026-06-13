@@ -43,25 +43,16 @@ defmodule KlassHero.Enrollment.Domain.Services.EnrollmentClassifier do
     {sort_active(active), sort_expired(expired)}
   end
 
-  # Trigger: enrollment completed/cancelled OR program end date passed
-  # Why: both conditions indicate the program is no longer active for this family
-  # Outcome: returns true if the enrollment should appear in the expired section
   defp expired?(%{status: status}, _program, _today) when status in [:completed, :cancelled], do: true
 
   defp expired?(_enrollment, %{end_date: end_date}, today) when not is_nil(end_date), do: Date.before?(end_date, today)
 
   defp expired?(_enrollment, _program, _today), do: false
 
-  # Trigger: parents want to see what's coming next first
-  # Why: soonest upcoming session at top, programs without dates at bottom
-  # Outcome: active list sorted ascending by start_date
   defp sort_active(pairs) do
     Enum.sort_by(pairs, fn {_e, p} -> p.start_date || ~D[9999-12-31] end, Date)
   end
 
-  # Trigger: most recently ended programs should appear first in expired section
-  # Why: recently ended programs are more relevant than old ones
-  # Outcome: expired list sorted descending by end_date
   defp sort_expired(pairs) do
     Enum.sort_by(pairs, fn {_e, p} -> p.end_date || ~D[0001-01-01] end, {:desc, Date})
   end

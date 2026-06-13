@@ -1,23 +1,7 @@
 defmodule KlassHero.Accounts.Domain.Models.User do
   @moduledoc """
-  User domain entity in the Accounts bounded context.
-
-  Pure domain model with no persistence or infrastructure concerns.
-  Excludes auth infrastructure fields (password, hashed_password,
-  authenticated_at) which live on the Ecto schema only.
-
-  ## Fields
-
-  - `id` - Unique identifier
-  - `email` - User's email address
-  - `name` - Display name
-  - `avatar` - Optional avatar URL
-  - `confirmed_at` - When email was confirmed
-  - `is_admin` - Admin flag
-  - `locale` - Preferred locale (en, de)
-  - `intended_roles` - Roles selected at registration
-  - `inserted_at` - Record creation timestamp
-  - `updated_at` - Record update timestamp
+  User domain entity. Pure domain model — excludes auth infrastructure fields
+  (password, hashed_password, authenticated_at) which live on the Ecto schema only.
   """
 
   @enforce_keys [:id, :email, :name]
@@ -50,13 +34,10 @@ defmodule KlassHero.Accounts.Domain.Models.User do
   @doc """
   Creates a new User with business validation.
 
-  Returns:
-  - `{:ok, user}` if all validations pass
-  - `{:error, [reasons]}` with list of validation errors
+  Returns `{:ok, user}` or `{:error, [reasons]}`.
   """
   def new(attrs) when is_map(attrs) do
-    # Validate attrs before struct construction so we get
-    # field-level errors instead of a generic ArgumentError
+    # Validate before struct!/2 to get field-level errors instead of a generic ArgumentError
     errors =
       []
       |> validate_id(attrs[:id])
@@ -71,22 +52,18 @@ defmodule KlassHero.Accounts.Domain.Models.User do
         {:error, errors}
     end
   rescue
-    # Safe: id, email, and name validated above; only missing @enforce_keys can trigger
+    # id/email/name validated above; only remaining risk is missing @enforce_keys
     ArgumentError -> {:error, ["Missing required fields"]}
   end
 
   @doc """
-  Reconstructs a User from persistence data.
-
-  Skips business validation since data was validated on write.
+  Reconstructs a User from persistence data, skipping business validation.
   """
   def from_persistence(attrs) when is_map(attrs) do
     {:ok, struct!(__MODULE__, attrs)}
   rescue
     e in ArgumentError ->
-      # Trigger: struct!/2 raises when @enforce_keys are missing
-      # Why: narrow catch prevents masking mapper bugs passing bad data types
-      # Outcome: missing-keys → tagged error; anything else → crash
+      # Narrow catch: only handle missing @enforce_keys; let type errors crash to surface mapper bugs
       if String.contains?(e.message, "the following keys must also be given") do
         {:error, :invalid_persistence_data}
       else
@@ -95,10 +72,7 @@ defmodule KlassHero.Accounts.Domain.Models.User do
   end
 
   @doc """
-  Returns canonical GDPR anonymization values.
-
-  The domain model owns the definition of what "anonymized" means,
-  keeping this business decision out of persistence adapters.
+  Returns canonical GDPR anonymization values. Domain model owns what "anonymized" means.
   """
   def anonymized_attrs do
     %{

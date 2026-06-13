@@ -277,10 +277,6 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
 
   defp validate_profile_status(errors, _), do: ["profile_status must be :draft or :active" | errors]
 
-  # -------------------------------------------------------------------
-  # Profile Completion
-  # -------------------------------------------------------------------
-
   @doc """
   Returns true if the profile is in draft status (needs completion).
   """

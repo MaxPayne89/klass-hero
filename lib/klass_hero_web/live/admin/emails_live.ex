@@ -72,8 +72,6 @@ defmodule KlassHeroWeb.Admin.EmailsLive do
     end
   end
 
-  # -- Event Handlers --
-
   @valid_status_filters ~w(unread read archived)
 
   @impl true
@@ -176,8 +174,6 @@ defmodule KlassHeroWeb.Admin.EmailsLive do
      |> assign(:allow_images, true)
      |> assign(:sanitized_html, sanitized_html)}
   end
-
-  # -- Private Helpers --
 
   defp load_emails(socket) do
     opts =

@@ -99,13 +99,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
     RetryHelpers.retry_and_normalize(operation, context)
   end
 
-  # Trigger: staff assigned to a program may need to back-fill participants
-  #          in every active conversation for that program.
-  # Why: events-as-data + post-commit dispatch — the projection lives on a
-  #      separate DB connection and can only see committed writes.
-  # Outcome: participants inserted inside a single transaction; one
-  #          `:participant_added` event per back-filled conversation is
-  #          dispatched after commit.
+  # Participants inserted in a single transaction; events dispatched after commit
+  # so the projection (separate DB connection) sees the committed writes.
   defp add_staff_to_existing_conversations(program_id, staff_user_id) do
     conversation_ids =
       @conversation_reader.list_active_program_conversation_ids_without_participant(
@@ -146,10 +141,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
     end
   end
 
-  # Trigger: staff unassigned from a program; existing participation rows must
-  #          be soft-removed so the user loses inbox visibility.
-  # Why: symmetric to add — RemoveAssignedStaff returns events as data; we
-  #      dispatch them after the wrapping transaction commits.
+  # Symmetric to add: RemoveAssignedStaff returns events as data; dispatch after commit.
   defp remove_staff_from_existing_conversations(program_id, staff_user_id) do
     Repo.transaction(fn ->
       case RemoveAssignedStaff.execute(program_id, staff_user_id) do

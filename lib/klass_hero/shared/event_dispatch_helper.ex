@@ -95,11 +95,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
     end
   end
 
-  # -- Critical event dispatch --
-
-  # Trigger: event has criticality: :critical
-  # Why: critical events must not be silently lost — failed handlers get Oban retry
-  # Outcome: successful handlers marked as processed, failed handlers enqueued for retry
+  # Critical events: successful handlers are marked processed; failed handlers get Oban retry.
   defp dispatch_critical(%DomainEvent{} = event, context) do
     {:ok, results} = DomainEventBus.dispatch_critical(context, event)
 
@@ -111,9 +107,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       {identity, {:error, _reason}} when identity != :anonymous ->
         enqueue_critical_retry(event, identity)
 
-      # Trigger: anonymous handlers (runtime-subscribed lambdas) have no identity
-      # Why: can't serialize anonymous functions for Oban — no retry possible
-      # Outcome: log and skip, same as normal event dispatch
+      # Anonymous lambdas can't be serialized for Oban — log and skip.
       {_identity, {:error, _} = failure} ->
         log_dispatch_failure(event, [failure])
 
@@ -152,9 +146,6 @@ defmodule KlassHero.Shared.EventDispatchHelper do
     end
   end
 
-  # Trigger: critical events (e.g. GDPR anonymization) fail to dispatch
-  # Why: critical events represent business-critical data that must not be silently lost
-  # Outcome: error-level log ensures alerting systems catch the failure
   defp log_dispatch_failure(%DomainEvent{} = event, failures) do
     if DomainEvent.critical?(event) do
       Logger.error("Critical event dispatch failed: event_type=#{event.event_type} failures=#{inspect(failures)}")
@@ -163,9 +154,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
     end
   end
 
-  # Trigger: DomainEventBus returns error tuples in various shapes
-  # Why: bus can produce {:error, reason}, {:error, {:handler_crashed, e}}, or bare terms
-  # Outcome: normalizes all shapes to a flat {:error, reason}
+  # Bus can produce {:error, reason}, {:error, {:handler_crashed, e}}, or bare terms.
   defp normalize_failure({:error, reason}), do: {:error, reason}
   defp normalize_failure(other), do: {:error, other}
 end

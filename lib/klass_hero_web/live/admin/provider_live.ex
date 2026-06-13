@@ -36,9 +36,7 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
 
-  # Trigger: :new and :delete are not valid operations for provider profiles
-  # Why: providers create their own profiles; deletion follows GDPR process
-  # Outcome: hides "New" button, denies create/delete actions
+  # Providers create their own profiles; deletion follows GDPR process — hides "New" button, denies create/delete.
   @impl Backpex.LiveResource
   def can?(_assigns, :new, _item), do: false
   def can?(_assigns, :delete, _item), do: false
@@ -117,10 +115,7 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
     ]
   end
 
-  # Trigger: Backpex saved a provider profile update
-  # Why: admin_changeset bypasses domain use cases; projections (VerifiedProviders,
-  #      ProgramListings) subscribe to integration/domain events to stay in sync
-  # Outcome: matching events are published so projections update correctly
+  # admin_changeset bypasses domain use cases; publish events so projections (VerifiedProviders, ProgramListings) stay in sync.
   KlassHeroWeb.BackpexCompat.override :on_item_updated, 2 do
     @impl Backpex.LiveResource
     def on_item_updated(socket, item) do
@@ -132,10 +127,6 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
     end
   end
 
-  # Trigger: verified status changed between old and new item
-  # Why: ProgramCatalog projections listen for provider_verified / provider_unverified
-  #      integration events to keep denormalized provider_verified flag in sync
-  # Outcome: integration event published to PubSub for cross-context consumption
   defp maybe_publish_verification_event(%{verified: same}, %{verified: same}, _socket), do: :ok
 
   defp maybe_publish_verification_event(_old, %{verified: true} = item, socket) do

@@ -55,10 +55,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       |> stream(:sessions, [])
 
     if connected?(socket) do
-      # Trigger: subscribing to provider-specific topic
-      # Why: events are already routed to provider's topic by NotifyLiveViews handler;
-      #      no client-side filtering needed
-      # Outcome: LiveView receives only events for this provider's programs
+      # Events are pre-routed to the provider topic by NotifyLiveViews; no client-side filtering needed.
       Phoenix.PubSub.subscribe(
         KlassHero.PubSub,
         "participation:provider:#{provider_id}"
@@ -73,9 +70,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     {:ok, socket}
   end
 
-  # Build the chrome's `business` view from the provider profile, enriched with
-  # the derived verification status. Mirrors the shape DashboardLive assigns so
-  # the shared `pv_dashboard_chrome` renders identically across both LiveViews.
+  # Mirrors the shape DashboardLive assigns so pv_dashboard_chrome renders identically across both LiveViews.
   defp build_business_view(provider, docs) do
     provider
     |> ProviderPresenter.to_business_view()
@@ -181,11 +176,8 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       program_id in [nil, ""] ->
         {:noreply, put_flash(socket, :error, gettext("Program is required"))}
 
-      # Trigger: provider submitted the create session form
-      # Why: verify program ownership server-side — dropdown only shows their programs,
-      #      but form data can be tampered with
-      # Outcome: reject if program_id not in provider's set
       not MapSet.member?(socket.assigns.provider_program_ids, program_id) ->
+        # Verify ownership server-side — the dropdown only shows their programs but form data can be tampered.
         {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
 
       true ->
@@ -193,16 +185,13 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     end
   end
 
-  # PubSub event handlers — session lifecycle events
   @impl true
   def handle_info(
         {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id, payload: payload}},
         socket
       )
       when event_type in [:session_started, :session_completed, :session_created, :roster_seeded] do
-    # Trigger: session_created events may be for a date not currently viewed
-    # Why: stream only shows sessions for selected_date; wrong-date sessions would pollute the view
-    # Outcome: for session_created, check date; start/complete are for existing stream items
+    # session_created may be for a different date; only insert if it matches the current view.
     if event_type == :session_created and
          Map.get(payload, :session_date) != socket.assigns.selected_date do
       {:noreply, socket}
@@ -218,8 +207,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       ) do
     {:noreply, update_session_in_stream(socket, session_id)}
   end
-
-  # Private helper functions
 
   defp build_initial_form_data(selected_date) do
     %{
@@ -267,9 +254,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
         params
 
       program ->
-        # Trigger: provider selected a program from the dropdown
-        # Why: pre-fill time/location from program defaults to reduce repetitive typing
-        # Outcome: form fields populated; provider can override any value
+        # Pre-fill time/location from program defaults; provider can still override any value.
         params
         |> maybe_set_default("start_time", format_time(program.meeting_start_time))
         |> maybe_set_default("end_time", format_time(program.meeting_end_time))
@@ -277,7 +262,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     end
   end
 
-  # Only set if the field is currently empty — don't overwrite provider edits
+  # Don't overwrite values the provider has already typed.
   defp maybe_set_default(params, key, default) do
     if params[key] in [nil, ""] do
       Map.put(params, key, default)
@@ -300,9 +285,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
              |> push_patch(to: ~p"/provider/sessions")}
 
           {:error, reason} when reason in [:invalid_time_range, :duplicate_session] ->
-            # Trigger: domain validation returned a known business rule violation
-            # Why: these are user-correctable errors, show directly without "Failed" prefix
-            # Outcome: flash shows the humanized error, modal stays open
+            # User-correctable domain error: show humanized message without "Failed" prefix.
             {:noreply, put_flash(socket, :error, humanize_error(reason))}
 
           {:error, reason} ->
@@ -370,9 +353,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   defp parse_time(""), do: {:error, gettext("Time is required")}
 
   defp parse_time(time_string) do
-    # Trigger: HTML time inputs produce "HH:MM" without seconds
-    # Why: Time.from_iso8601/1 requires "HH:MM:SS" format
-    # Outcome: append ":00" seconds for successful parsing
+    # HTML time inputs produce "HH:MM"; Time.from_iso8601/1 requires "HH:MM:SS".
     normalized = if byte_size(time_string) == 5, do: time_string <> ":00", else: time_string
 
     case Time.from_iso8601(normalized) do

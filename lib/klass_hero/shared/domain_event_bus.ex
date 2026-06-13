@@ -53,10 +53,6 @@ defmodule KlassHero.Shared.DomainEventBus do
 
   defstruct context: nil, handlers: %{}
 
-  # ============================================================================
-  # Client API
-  # ============================================================================
-
   @doc """
   Starts the DomainEventBus for a given context.
 
@@ -101,10 +97,6 @@ defmodule KlassHero.Shared.DomainEventBus do
   @spec dispatch(module(), DomainEvent.t()) :: :ok | {:error, [term()]}
   def dispatch(context, %DomainEvent{event_type: event_type} = event) do
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
-
-    # Trigger: handler list may be empty for unsubscribed event types
-    # Why: avoid unnecessary work and return :ok immediately
-    # Outcome: empty handler list short-circuits to :ok
     execute_handlers(handlers, event)
   end
 
@@ -123,11 +115,6 @@ defmodule KlassHero.Shared.DomainEventBus do
           {:ok, list({{module(), atom()} | :anonymous, :ok | {:error, term()}})}
   def dispatch_critical(context, %DomainEvent{event_type: event_type} = event) do
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
-
-    # Trigger: always returns {:ok, results} even when handlers fail
-    # Why: callers need the full per-handler result set to route retries;
-    #      they decide how to handle failures, not dispatch_critical
-    # Outcome: caller receives [{identity, :ok | {:error, reason}}] for every handler
     {:ok, execute_handlers_with_identity(handlers, event)}
   end
 
@@ -139,17 +126,9 @@ defmodule KlassHero.Shared.DomainEventBus do
     Module.concat(context, DomainEventBus)
   end
 
-  # ============================================================================
-  # Server Callbacks
-  # ============================================================================
-
   @impl true
   def init(%{context: context, handlers_spec: handlers_spec}) do
     Logger.info("DomainEventBus started for #{inspect(context)}")
-
-    # Trigger: init-time handler specs may include {Module, :function} tuples
-    # Why: allows static handler wiring at supervision tree startup
-    # Outcome: handlers are resolved to captured functions and stored in the registry
     handlers = register_init_handlers(handlers_spec)
 
     {:ok, %__MODULE__{context: context, handlers: handlers}}
@@ -157,15 +136,8 @@ defmodule KlassHero.Shared.DomainEventBus do
 
   @impl true
   def handle_call({:subscribe, event_type, handler_fn, opts}, _from, state) do
-    # Trigger: runtime lambda subscription — no module/function origin available
-    # Why: anonymous fns have no stable identity; :anonymous signals to callers
-    #      (e.g. dispatch_critical/2) that this handler has no named origin
-    # Outcome: entry stored as 3-tuple with :anonymous identity
+    # :anonymous identity signals to dispatch_critical/2 that this handler has no named origin for retry
     entry = {handler_fn, opts, :anonymous}
-
-    # Trigger: appending to existing handler list for this event type
-    # Why: preserves registration order for same-priority handlers
-    # Outcome: new handler added at the end of the list for its event type
     handlers = Map.update(state.handlers, event_type, [entry], &(&1 ++ [entry]))
     {:reply, :ok, %{state | handlers: handlers}}
   end
@@ -175,10 +147,6 @@ defmodule KlassHero.Shared.DomainEventBus do
     entries = Map.get(state.handlers, event_type, [])
     {:reply, entries, state}
   end
-
-  # ============================================================================
-  # Private — caller-side execution
-  # ============================================================================
 
   defp execute_handlers([], _event), do: :ok
 
@@ -202,10 +170,7 @@ defmodule KlassHero.Shared.DomainEventBus do
     end)
   end
 
-  # Trigger: entries may have mixed priorities
-  # Why: sort by priority so lower numbers execute first; stable sort preserves
-  #      registration order for entries with the same priority
-  # Outcome: handlers execute in deterministic priority order
+  # Lower priority number runs first; stable sort preserves registration order for ties.
   defp sort_by_priority(entries) do
     entries
     |> Enum.with_index()
@@ -230,10 +195,6 @@ defmodule KlassHero.Shared.DomainEventBus do
       {:error, {:handler_crashed, error}}
   end
 
-  # ============================================================================
-  # Private — init-time handler resolution
-  # ============================================================================
-
   defp register_init_handlers(specs) do
     Enum.reduce(specs, %{}, fn spec, acc ->
       {event_type, handler_fn, opts, identity} = normalize_handler_spec(spec)
@@ -243,10 +204,7 @@ defmodule KlassHero.Shared.DomainEventBus do
   end
 
   defp normalize_handler_spec({event_type, {module, function}}) do
-    # Trigger: init-time {Module, :function} spec without opts
-    # Why: capture identity at registration so dispatch_critical/2 can report
-    #      which named handler succeeded or failed
-    # Outcome: returns 4-tuple with {module, function} identity
+    # Capture identity at registration so dispatch_critical/2 can report per-handler outcomes.
     {event_type, Function.capture(module, function, 1), [], {module, function}}
   end
 

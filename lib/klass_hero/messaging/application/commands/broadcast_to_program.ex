@@ -94,10 +94,8 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   defp execute_broadcast(scope, program_id, content, provider_id, opts) do
     subject = Keyword.get(opts, :subject)
     attachments = Keyword.get(opts, :attachments, [])
-    # Trigger: attachment-only broadcast composer submits an empty content string
-    # Why: SendMessage.trim_content/1 preserves "", so the persisted message would
-    #      carry content: "" while attachment-only direct messages carry content: nil
-    # Outcome: attachment-only broadcasts match direct-message behaviour
+    # normalize_content: attachment-only broadcasts submit "" which must become nil
+    # to match direct-message behaviour (SendMessage.trim_content/1 preserves "").
     normalized_content = normalize_content(content, attachments)
 
     with :ok <- Shared.maybe_check_entitlement(scope, opts, provider_id: provider_id),
@@ -138,20 +136,8 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
     end
   end
 
-  # Trigger: broadcast participants need to be present before SendMessage runs.
-  # Why: SendMessage.verify_participant rejects senders not in the conversation;
-  #      parents and sender are inserted via a single add_batch so its
-  #      "only-newly-inserted" return list is the exact set the :broadcast_setup
-  #      :participant_added event should carry. Empty new-list ⇒ no event,
-  #      preserving idempotency on re-broadcast. AddAssignedStaff returns its
-  #      own :participant_added domain event as data; dispatch happens after
-  #      the transaction commits so projections on a separate DB connection
-  #      can read-their-own-writes.
-  # Outcome: parents, sender, and assigned staff added in a single transaction;
-  #          on commit, all collected events fan out via EventDispatchHelper.
   defp setup_participants(conversation, scope, parent_user_ids) do
-    # De-dupe sender against parents — degenerate case where provider's user
-    # account is also enrolled as a parent of the program.
+    # De-dupe: provider user may also be enrolled as a parent.
     candidate_ids = Enum.uniq([scope.user.id | parent_user_ids])
 
     Repo.transaction(fn ->
@@ -181,9 +167,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   end
 
   defp get_or_create_broadcast_conversation(provider_id, program_id, subject) do
-    # Trigger: check for existing broadcast BEFORE attempting insert
-    # Why: avoids unique constraint violation that would abort a parent transaction
-    # Outcome: existing conversation reused; new one created only if none exists
+    # Check before insert to avoid unique constraint violation aborting a parent transaction.
     case @conversation_reader.find_active_broadcast_for_program(provider_id, program_id) do
       {:ok, conversation} ->
         {:ok, conversation}
@@ -200,10 +184,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
           {:ok, conversation} ->
             {:ok, conversation}
 
-          # Trigger: race condition — another request created the conversation between
-          #          our find and our create
-          # Why: unique constraint fires; handle gracefully by re-querying
-          # Outcome: return the conversation that won the race
+          # Race: another request won between our find and create; re-query for the winner.
           {:error, :duplicate_broadcast} ->
             @conversation_reader.find_active_broadcast_for_program(provider_id, program_id)
         end

@@ -58,11 +58,8 @@ defmodule KlassHero.Messaging.Domain.Models.InboundEmail do
   @doc """
   Creates a new InboundEmail with validation.
 
-  Required fields: id, resend_id, from_address, to_addresses, subject, received_at.
-  Optional: from_name, cc_addresses, body_html, body_text, headers.
-  Status defaults to :unread.
-
-  Returns {:ok, email} if valid, {:error, [reasons]} with validation error list.
+  Required: `id`, `resend_id`, `from_address`, `to_addresses`, `subject`, `received_at`.
+  Status defaults to `:unread`. Returns `{:ok, email}` or `{:error, [reasons]}`.
   """
   @spec new(map()) :: {:ok, t()} | {:error, [String.t()]}
   def new(attrs) when is_map(attrs) do
@@ -83,9 +80,7 @@ defmodule KlassHero.Messaging.Domain.Models.InboundEmail do
   @doc """
   Marks the email as read by the given reader.
 
-  # Trigger: email is already :read
-  # Why: idempotent — preserve the original reader_id and read_at timestamp
-  # Outcome: returns the email unchanged
+  Idempotent: already-read or archived emails are returned unchanged.
   """
   @spec mark_read(t(), String.t()) :: {:ok, t()}
   def mark_read(%__MODULE__{status: :read} = email, _reader_id), do: {:ok, email}

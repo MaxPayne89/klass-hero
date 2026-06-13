@@ -38,9 +38,7 @@ defmodule KlassHeroWeb.Router do
     post "/resend", ResendWebhookController, :handle
   end
 
-  # Trigger: ThemeSelectorPlug reads session["backpex"]["theme"] for @theme assign
-  # Why: only Backpex layout templates use @theme; non-admin routes don't need it
-  # Outcome: avoids unnecessary session reads on every public/parent/provider request
+  # Only Backpex layout templates use @theme; skip the session read on non-admin routes.
   pipeline :backpex_admin do
     plug Backpex.ThemeSelectorPlug
   end
@@ -55,7 +53,6 @@ defmodule KlassHeroWeb.Router do
   scope "/", KlassHeroWeb do
     pipe_through :browser
 
-    # All public marketing routes — sticky horizontal mk_header + dark mk_footer chrome.
     live_session :marketing,
       layout: {KlassHeroWeb.Layouts, :marketing},
       on_mount: [
@@ -74,11 +71,8 @@ defmodule KlassHeroWeb.Router do
       live "/terms", TermsOfServiceLive, :index
     end
 
-    # Parent app surface — sidebar layout, parent-role required.
-    # Layout swap (:app → :parent_app) is Phase 2 of the design-handoff
-    # migration. /family/settings duplicates /settings under the bundle's
-    # canonical parent path; both keep working until a follow-up adds a
-    # 301 redirect for the legacy /settings tree.
+    # /family/settings dual-mounts /settings under the canonical parent path;
+    # both work until a follow-up adds a 301 redirect for the legacy /settings tree.
     live_session :authenticated,
       layout: {KlassHeroWeb.Layouts, :parent_app},
       on_mount: [
@@ -95,7 +89,6 @@ defmodule KlassHeroWeb.Router do
       live "/settings/children/new", Settings.ChildrenLive, :new
       live "/settings/children/:child_id/edit", Settings.ChildrenLive, :edit
 
-      # Bundle's canonical paths (Q2.4 — locked to dual-mount for v1).
       live "/family/settings", SettingsLive, :index
       live "/family/settings/children", Settings.ChildrenLive, :index
       live "/family/settings/children/new", Settings.ChildrenLive, :new
@@ -106,10 +99,6 @@ defmodule KlassHeroWeb.Router do
       live "/messages/:id", MessagesLive.Show, :show
     end
 
-    # Provider routes - provider role required.
-    # Layout swap (:app → :provider_app) is Phase 3 of the design-handoff
-    # migration. Black sidebar + yellow active accent across all
-    # /provider/* surfaces.
     live_session :require_provider,
       layout: {KlassHeroWeb.Layouts, :provider_app},
       on_mount: [
@@ -129,20 +118,17 @@ defmodule KlassHeroWeb.Router do
         live "/incidents/new", IncidentReportLive, :new
         live "/programs/:program_id/incidents", IncidentReportsLive, :index
 
-        # Provider dashboard routes
         live "/dashboard", DashboardLive, :overview
         live "/dashboard/team", DashboardLive, :team
         live "/dashboard/programs", DashboardLive, :programs
         live "/dashboard/edit", DashboardLive, :edit
 
-        # Provider messaging routes
         live "/messages", MessagesLive.Index, :index
         live "/messages/:id", MessagesLive.Show, :show
         live "/programs/:program_id/broadcast", BroadcastLive, :new
       end
     end
 
-    # Parent routes - parent role required (strict require_parent guard)
     live_session :require_parent,
       layout: {KlassHeroWeb.Layouts, :parent_app},
       on_mount: [
@@ -156,16 +142,13 @@ defmodule KlassHeroWeb.Router do
         live "/participation", ParticipationHistoryLive, :index
       end
 
-      # Bundle's canonical /participation path (no /parent prefix). Same
-      # LiveView; old /parent/participation kept as alias.
+      # /participation also mounted without /parent prefix; /parent/participation kept as alias.
       scope "/", Parent do
         live "/participation", ParticipationHistoryLive, :index
       end
     end
 
-    # Staff routes - :staff role required.
-    # Q3.1 locked: staff surface uses the same provider_app layout for
-    # visual consistency; bundle doesn't ship a separate staff design.
+    # Staff uses provider_app layout for visual consistency; no separate staff design.
     live_session :require_staff,
       layout: {KlassHeroWeb.Layouts, :provider_app},
       on_mount: [
@@ -185,7 +168,6 @@ defmodule KlassHeroWeb.Router do
       end
     end
 
-    # Admin routes - admin role required
     live_session :require_admin,
       layout: {KlassHeroWeb.Layouts, :app},
       on_mount: [
@@ -200,17 +182,13 @@ defmodule KlassHeroWeb.Router do
       end
     end
 
-    # Backpex admin dashboard - separate live_session with Backpex layout
     scope "/admin", Admin do
       pipe_through :backpex_admin
 
       backpex_routes()
 
-      # Trigger: no layout set on live_session for Backpex routes
-      # Why: Backpex resource templates internally call <.layout> which renders
-      #   the admin layout. Setting layout here would cause double-rendering
-      #   and duplicate DOM IDs (backpex-app-shell).
-      # Outcome: admin layout rendered once by Backpex, no duplicates
+      # No layout set here — Backpex resource templates call <.layout> internally;
+      # setting one would double-render and produce duplicate backpex-app-shell IDs.
       live_session :backpex_admin,
         on_mount: [
           {LiveViewHook, :trace},
@@ -227,7 +205,6 @@ defmodule KlassHeroWeb.Router do
       end
     end
 
-    # Custom admin LiveViews — separate live_session from Backpex
     scope "/admin", Admin do
       live_session :admin_custom,
         layout: {KlassHeroWeb.Layouts, :admin},
@@ -246,7 +223,6 @@ defmodule KlassHeroWeb.Router do
     end
   end
 
-  # Oban Web dashboard - admin only
   scope "/" do
     pipe_through :browser
 
@@ -258,18 +234,8 @@ defmodule KlassHeroWeb.Router do
     )
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", KlassHeroWeb do
-  #   pipe_through :api
-  # end
-
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:klass_hero, :dev_routes) do
-    # If you want to use the LiveDashboard in production, you should put
-    # it behind authentication and allow only admins to access it.
-    # If your application does not have an admins-only section yet,
-    # you can use Plug.BasicAuth to set up some basic authentication
-    # as long as you are also using SSL (which you should anyway).
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do
@@ -279,11 +245,6 @@ defmodule KlassHeroWeb.Router do
       forward "/mailbox", MailboxPreview
     end
   end
-
-  ## Authentication routes
-  ## Will be added by mix phx.gen.auth
-
-  ## Authentication routes
 
   scope "/", KlassHeroWeb do
     pipe_through [:browser, :require_authenticated_user]

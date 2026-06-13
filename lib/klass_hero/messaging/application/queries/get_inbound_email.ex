@@ -24,9 +24,6 @@ defmodule KlassHero.Messaging.Application.Queries.GetInboundEmail do
     end
   end
 
-  # Trigger: admin opens email with explicit mark_read intent and reader identity
-  # Why: domain model encodes status transition rules and idempotency
-  # Outcome: unread → read with reader tracked; already-read/archived unchanged
   defp maybe_mark_read(email, falsy, _reader_id) when falsy in [nil, false], do: {:ok, email}
 
   defp maybe_mark_read(email, _truthy, reader_id) do

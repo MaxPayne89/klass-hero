@@ -136,9 +136,6 @@ defmodule KlassHero.Provider.Domain.Models.VerificationDocument do
      }}
   end
 
-  # Trigger: pending doc but reviewer_id is nil, empty, or non-binary
-  # Why: domain boundary validates caller identity before state transition
-  # Outcome: rejects the operation with a specific error
   def approve(%__MODULE__{status: :pending}, _reviewer_id) do
     {:error, :invalid_reviewer}
   end
@@ -173,9 +170,6 @@ defmodule KlassHero.Provider.Domain.Models.VerificationDocument do
      }}
   end
 
-  # Trigger: pending doc but reviewer_id or reason is nil, empty, or non-binary
-  # Why: domain boundary validates both caller identity and rejection reason
-  # Outcome: rejects the operation with a specific error
   def reject(%__MODULE__{status: :pending}, _reviewer_id, _reason) do
     {:error, :invalid_review_params}
   end
@@ -183,8 +177,6 @@ defmodule KlassHero.Provider.Domain.Models.VerificationDocument do
   def reject(%__MODULE__{}, _reviewer_id, _reason) do
     {:error, :document_not_pending}
   end
-
-  # Validation functions
 
   defp validate(attrs) do
     []
@@ -208,7 +200,6 @@ defmodule KlassHero.Provider.Domain.Models.VerificationDocument do
   defp validate_document_type(errors, attrs) do
     case Map.get(attrs, :document_type) do
       nil ->
-        # Already caught by validate_required
         errors
 
       type when type in @valid_document_types ->

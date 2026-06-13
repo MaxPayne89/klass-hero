@@ -62,9 +62,6 @@ defmodule Mix.Tasks.Dev.Setup do
     end
   end
 
-  # Trigger: both postgres and minio containers are running
-  # Why: avoids unnecessary docker-compose up when services are already healthy
-  # Outcome: skips startup or force-recreates based on opts
   defp containers_running? do
     postgres_running? = container_running?(@postgres_container)
     minio_running? = container_running?(@minio_container)

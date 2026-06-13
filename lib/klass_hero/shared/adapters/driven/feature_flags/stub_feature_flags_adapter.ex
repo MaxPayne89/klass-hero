@@ -67,8 +67,6 @@ defmodule KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter 
     :ok
   end
 
-  # -- Test helpers --
-
   @doc "Enable a flag in the stub (test helper)."
   def set_enabled(flag_name, opts \\ []) do
     Agent.update(agent(opts), &MapSet.put(&1, flag_name))

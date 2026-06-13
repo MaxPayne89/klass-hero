@@ -17,9 +17,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
 
   @impl true
   def send_invite(invite, program_name, invite_url) do
-    # Trigger: guardian_first_name may be nil for imported invites without names
-    # Why: fall back to the email address so the recipient tuple is always valid
-    # Outcome: email.to is [{name_or_email, email}]
+    # guardian_first_name is nil for imports without names; fall back to email for a valid recipient tuple.
     recipient_name = invite.guardian_first_name || invite.guardian_email
 
     email =

@@ -39,12 +39,11 @@ defmodule KlassHero.Accounts.Application.Commands.RemoveStaffMember do
     end)
   end
 
-  # Unlinked display-only row — no persona to tear down.
+  # Unlinked display-only row — no persona to tear down
   defp maybe_revoke_staff_role(%StaffMember{user_id: nil}), do: :ok
 
   defp maybe_revoke_staff_role(%StaffMember{user_id: user_id}) do
-    # Queried AFTER the delete (same transaction), so the just-removed row is
-    # already gone: :not_found means this was the user's last active employment.
+    # Queried after the delete (same txn): :not_found means this was the last active employment
     case Provider.get_active_staff_member_by_user(user_id) do
       {:ok, _still_employed} -> :ok
       {:error, :not_found} -> revoke_staff(user_id)
@@ -53,7 +52,7 @@ defmodule KlassHero.Accounts.Application.Commands.RemoveStaffMember do
 
   defp revoke_staff(user_id) do
     case Repo.get(User, user_id) do
-      # Re-fetched inside the txn (lost-update guard, mirroring PersonaGrant).
+      # Re-fetched inside the txn as a lost-update guard (mirrors PersonaGrant)
       %User{} = user ->
         with {:ok, _updated} <- @user_repository.remove_intended_role(user, :staff), do: :ok
 

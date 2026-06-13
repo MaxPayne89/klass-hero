@@ -19,9 +19,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandle
 
   @impl true
   def handle_event(%{event_type: :participant_policy_set} = event) do
-    # Trigger: participant policy changed in the Enrollment context
-    # Why: future hook for search index updates (e.g., filter programs by age/gender)
-    # Outcome: no-op for now, returns :ok to acknowledge receipt
+    # No-op for now; placeholder for future search index updates (filter programs by eligibility criteria).
     Logger.debug("[EnrollmentEventHandler] Received participant_policy_set",
       program_id: event.entity_id
     )

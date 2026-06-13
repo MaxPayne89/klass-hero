@@ -31,9 +31,8 @@ defmodule KlassHeroWeb.Admin.Actions.CancelBookingAction do
     "This will free the reserved slot and cannot be undone. Are you sure?"
   end
 
-  # Trigger: Backpex's @before_compile unconditionally appends default confirm_label/1
-  # Why: Elixir 1.20 type checker flags the generated default as a redundant clause
-  # Outcome: BackpexCompat re-emits our definition after Backpex's, collapsing duplicates
+  # Backpex's @before_compile appends a default confirm_label/1; Elixir 1.20 type checker
+  # flags it as redundant. BackpexCompat re-emits our definition after Backpex's.
   KlassHeroWeb.BackpexCompat.override :confirm_label, 1 do
     @impl Backpex.ItemAction
     def confirm_label(_assigns), do: "Cancel Booking"
@@ -69,9 +68,6 @@ defmodule KlassHeroWeb.Admin.Actions.CancelBookingAction do
 
     {successes, failures} = Enum.split_with(results, fn {_id, r} -> match?({:ok, _}, r) end)
 
-    # Trigger: one or more cancellations failed
-    # Why: server-side traceability — correlate each failure with its enrollment ID
-    # Outcome: structured log entry per failure for debugging and audit
     Enum.each(failures, fn {id, {:error, reason}} ->
       Logger.warning("[Admin.CancelBookingAction] Failed to cancel booking",
         enrollment_id: id,
@@ -83,9 +79,6 @@ defmodule KlassHeroWeb.Admin.Actions.CancelBookingAction do
     total = length(items)
     fail_count = length(failures)
 
-    # Trigger: branch on how many cancellations succeeded vs failed
-    # Why: admin needs precise feedback — all-ok, partial, or total failure
-    # Outcome: flash severity matches the outcome for clear UX
     socket =
       cond do
         fail_count == 0 ->

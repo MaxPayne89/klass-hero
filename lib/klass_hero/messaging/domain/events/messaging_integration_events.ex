@@ -103,40 +103,12 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
 
   @source_context :messaging
 
-  # ---------------------------------------------------------------------------
-  # message_data_anonymized (entity type: :user)
-  # ---------------------------------------------------------------------------
-
   @doc """
   Creates a `message_data_anonymized` integration event.
 
-  This event is marked as `:critical` by default since it is part of the
-  GDPR deletion cascade and must not be lost.
+  Marked `:critical` — part of the GDPR deletion cascade and must not be lost.
 
-  ## Parameters
-
-  - `user_id` - The ID of the user whose messaging data was anonymized
-  - `payload` - Additional event-specific data
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Payload Fields
-
-  Standard payload includes:
-  - `user_id` - The user's ID
-
-  ## Raises
-
-  - `ArgumentError` if `user_id` is nil or empty
-
-  ## Examples
-
-      iex> event = MessagingIntegrationEvents.message_data_anonymized("user-uuid")
-      iex> event.event_type
-      :message_data_anonymized
-      iex> event.source_context
-      :messaging
-      iex> IntegrationEvent.critical?(event)
-      true
+  Raises `ArgumentError` if `user_id` is nil or empty.
   """
   def message_data_anonymized(user_id, payload \\ %{}, opts \\ [])
 
@@ -150,9 +122,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
       @source_context,
       :user,
       user_id,
-      # Trigger: caller may pass a conflicting :user_id in payload
-      # Why: base_payload contains the canonical user_id from the function argument
-      # Outcome: Map.merge/2 gives precedence to the second argument, so base_payload keys always win
+      # Map.merge/2 right-side wins — base_payload overrides any :user_id in caller-supplied payload.
       Map.merge(payload, base_payload),
       opts
     )
@@ -163,25 +133,11 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           "message_data_anonymized requires a non-empty user_id string, got: #{inspect(user_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # conversation_created (entity type: :conversation)
-  # ---------------------------------------------------------------------------
-
   @doc """
   Creates a `conversation_created` integration event.
 
-  Published when a new conversation is created (direct or broadcast).
-  Used by CQRS projections to build denormalized read models.
-
-  ## Parameters
-
-  - `conversation_id` - The ID of the newly created conversation
-  - `payload` - Event-specific data (type, provider_id, participant_ids)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `conversation_id` is nil or empty
+  Published when a new conversation is created. Requires `participant_ids` and
+  `provider_id` in `payload`. Raises `ArgumentError` if `conversation_id` is nil or empty.
   """
   def conversation_created(conversation_id, payload \\ %{}, opts \\ [])
 
@@ -212,25 +168,10 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           "conversation_created/3 requires a non-empty conversation_id string, got: #{inspect(conversation_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # message_sent (entity type: :conversation)
-  # ---------------------------------------------------------------------------
-
   @doc """
   Creates a `message_sent` integration event.
 
-  Published when a message is sent to a conversation.
-  Used by CQRS projections to update last-message summaries.
-
-  ## Parameters
-
-  - `conversation_id` - The conversation the message belongs to
-  - `payload` - Event-specific data (message_id, sender_id, content, message_type, sent_at)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `conversation_id` is nil or empty
+  Requires `sender_id` in `payload`. Raises `ArgumentError` if `conversation_id` is nil or empty.
   """
   def message_sent(conversation_id, payload \\ %{}, opts \\ [])
 
@@ -261,25 +202,10 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           "message_sent/3 requires a non-empty conversation_id string, got: #{inspect(conversation_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # messages_read (entity type: :conversation)
-  # ---------------------------------------------------------------------------
-
   @doc """
   Creates a `messages_read` integration event.
 
-  Published when a user marks messages as read in a conversation.
-  Used by CQRS projections to update unread counts.
-
-  ## Parameters
-
-  - `conversation_id` - The conversation where messages were read
-  - `payload` - Event-specific data (user_id, read_at)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `conversation_id` is nil or empty
+  Requires `user_id` in `payload`. Raises `ArgumentError` if `conversation_id` is nil or empty.
   """
   def messages_read(conversation_id, payload \\ %{}, opts \\ [])
 
@@ -310,25 +236,10 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           "messages_read/3 requires a non-empty conversation_id string, got: #{inspect(conversation_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # conversation_archived (entity type: :conversation)
-  # ---------------------------------------------------------------------------
-
   @doc """
-  Creates a `conversation_archived` integration event.
+  Creates a `conversation_archived` integration event (single conversation).
 
-  Published when a single conversation is archived (e.g., program ended).
-  Used by CQRS projections to update conversation status.
-
-  ## Parameters
-
-  - `conversation_id` - The ID of the archived conversation
-  - `payload` - Event-specific data (reason)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `conversation_id` is nil or empty
+  Raises `ArgumentError` if `conversation_id` is nil or empty.
   """
   def conversation_archived(conversation_id, payload \\ %{}, opts \\ [])
 
@@ -351,25 +262,11 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           "conversation_archived/3 requires a non-empty conversation_id string, got: #{inspect(conversation_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # conversations_archived (entity type: :conversation, bulk operation)
-  # ---------------------------------------------------------------------------
-
   @doc """
-  Creates a `conversations_archived` integration event for bulk archive operations.
+  Creates a `conversations_archived` integration event (bulk).
 
-  Published when multiple conversations are archived at once (e.g., program ended).
-  Uses a bulk aggregate_id rather than a single conversation_id.
-
-  ## Parameters
-
-  - `aggregate_id` - Bulk operation identifier (e.g., "bulk_archive_1234567890")
-  - `payload` - Event-specific data (conversation_ids, reason, count)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `aggregate_id` is nil or empty
+  `aggregate_id` is a bulk operation identifier (e.g. `"bulk_archive_1234567890"`).
+  Requires `conversation_ids` in `payload`. Raises `ArgumentError` if `aggregate_id` is nil or empty.
   """
   def conversations_archived(aggregate_id, payload \\ %{}, opts \\ [])
 
@@ -398,33 +295,14 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           "conversations_archived/3 requires a non-empty aggregate_id string, got: #{inspect(aggregate_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # participant_added (entity type: :conversation)
-  # ---------------------------------------------------------------------------
-
   @doc """
   Creates a `participant_added` integration event.
 
-  Published when one or more users are added to a conversation's
-  `participants` table (e.g., assigned staff joining a conversation at
-  creation time, or back-filled when staff are assigned to a program after
-  the conversation already exists).
+  Marked `:critical` — without durable delivery, late participants would be missing
+  from read-model summaries until a server restart re-derives them.
 
-  Marked critical so CQRS projections receive every participant addition
-  durably — without this, late participants would be missing from
-  read-model summaries until a server restart re-derives them.
-
-  ## Parameters
-
-  - `conversation_id` - The conversation users were added to
-  - `payload` - Event-specific data (participant_user_ids, source)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `conversation_id` is nil or empty
-  - `ArgumentError` if `participant_user_ids` or `source` payload keys are missing
-  - `ArgumentError` if `participant_user_ids` is an empty list
+  Requires `participant_user_ids` (non-empty) and `source` in `payload`.
+  Raises `ArgumentError` if `conversation_id` is nil or empty, or if required keys are missing.
   """
   def participant_added(conversation_id, payload \\ %{}, opts \\ [])
 
@@ -461,30 +339,13 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
           "participant_added/3 requires a non-empty conversation_id string, got: #{inspect(conversation_id)}"
   end
 
-  # ---------------------------------------------------------------------------
-  # participant_removed (entity type: :conversation)
-  # ---------------------------------------------------------------------------
-
   @doc """
   Creates a `participant_removed` integration event.
 
-  Published when one or more users are removed from a conversation's
-  `participants` table (e.g., staff unassigned from a program).
+  Marked `:critical` so CQRS projections soft-remove (archive) read-model summary rows durably.
 
-  Marked critical so CQRS projections soft-remove (archive) the read-model
-  summary rows durably.
-
-  ## Parameters
-
-  - `conversation_id` - The conversation users were removed from
-  - `payload` - Event-specific data (participant_user_ids, source)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `conversation_id` is nil or empty
-  - `ArgumentError` if `participant_user_ids` or `source` payload keys are missing
-  - `ArgumentError` if `participant_user_ids` is an empty list
+  Requires `participant_user_ids` (non-empty) and `source` in `payload`.
+  Raises `ArgumentError` if `conversation_id` is nil or empty, or if required keys are missing.
   """
   def participant_removed(conversation_id, payload \\ %{}, opts \\ [])
 

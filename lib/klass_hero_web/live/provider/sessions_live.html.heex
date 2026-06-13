@@ -1,5 +1,4 @@
 <.pv_dashboard_chrome business={@business} current_tab={:sessions}>
-  <%!-- Section header — sits inside the chrome's inner block --%>
   <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
     <div>
       <h2 class={["mb-1", Theme.typography(:section_title)]}>{gettext("My Sessions")}</h2>
@@ -20,7 +19,6 @@
     </.link>
   </div>
 
-  <%!-- Date selector --%>
   <div class="mb-6">
     <.date_selector
       id="date-select"
@@ -31,10 +29,8 @@
     />
   </div>
 
-  <%!-- Error state --%>
   <.error_alert :if={assigns[:sessions_error]} errors={[@sessions_error]} />
 
-  <%!-- Sessions list --%>
   <div id="sessions" phx-update="stream" class="space-y-4">
     <div :for={{id, session} <- @streams.sessions} id={id}>
       <.participation_card session={session} role={:provider}>
@@ -112,7 +108,6 @@
     </div>
   </div>
 
-  <%!-- Create Session Modal --%>
   <%= if @live_action == :new do %>
     <div
       id="create-session-backdrop"

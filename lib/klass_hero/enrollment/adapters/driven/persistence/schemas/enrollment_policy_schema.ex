@@ -1,10 +1,7 @@
 defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema do
   @moduledoc """
-  Ecto schema for the enrollment_policies table.
-
-  This is an infrastructure adapter that maps database records to Ecto structs.
-  Use EnrollmentPolicyMapper to convert between EnrollmentPolicySchema and
-  domain EnrollmentPolicy entities.
+  Ecto schema for the `enrollment_policies` table.
+  Use `EnrollmentPolicyMapper` to convert to/from domain `EnrollmentPolicy`.
   """
 
   use Ecto.Schema
@@ -27,20 +24,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPol
   @optional_fields ~w(min_enrollment max_enrollment)a
 
   @doc """
-  Creates a changeset for enrollment policy creation or update.
-
-  Required fields:
-  - program_id (valid UUID referencing a program)
-
-  Optional fields:
-  - min_enrollment (positive integer, minimum headcount to run)
-  - max_enrollment (positive integer, hard enrollment cap)
-
-  Database constraints enforce:
-  - min_enrollment >= 1 when set
-  - max_enrollment >= 1 when set
-  - min_enrollment <= max_enrollment when both are set
-  - One policy per program (unique on program_id)
+  Changeset for enrollment policy creation or update.
+  Both `min_enrollment` and `max_enrollment` are optional positive integers;
+  DB constraints enforce bounds and uniqueness per program.
   """
   def changeset(schema \\ %__MODULE__{}, attrs) do
     schema
@@ -55,9 +41,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPol
     |> check_constraint(:min_enrollment, name: :min_not_exceeds_max)
   end
 
-  # Trigger: min_enrollment exceeds max_enrollment when both are set
-  # Why: nonsensical policy — program could never run and accept enrollments simultaneously
-  # Outcome: changeset error added before hitting the database constraint
   defp validate_min_not_exceeds_max(changeset) do
     min = get_field(changeset, :min_enrollment)
     max = get_field(changeset, :max_enrollment)

@@ -50,12 +50,8 @@ defmodule KlassHero.Participation.Application.Shared do
   @doc """
   Runs the shared attendance action pipeline: fetch → domain call → persist → fetch session → publish event.
 
-  Accepts the domain function (e.g. `&ParticipationRecord.check_in/3`) and event function
-  (e.g. `&ParticipationEvents.child_checked_in/2`) to keep the pipeline generic while each
-  use case controls the specific action and event.
-
-  The session is fetched after persisting so the event factory can include `program_id` in
-  the payload, enabling provider-specific PubSub topic routing.
+  Session is fetched after persisting so the event payload can include `program_id` for
+  provider-specific PubSub topic routing.
   """
   @type domain_fn ::
           (ParticipationRecord.t(), String.t(), String.t() | nil ->
@@ -70,11 +66,7 @@ defmodule KlassHero.Participation.Application.Shared do
     with {:ok, record} <- @participation_reader.get_by_id(record_id),
          {:ok, updated} <- domain_fn.(record, actor_id, notes),
          {:ok, persisted} <- @participation_repository.update(updated) do
-      # Trigger: session fetch is best-effort for event enrichment
-      # Why: the attendance action already succeeded; session fetch failure
-      #      should not make the caller see an error
-      # Outcome: if session found, event includes program_id; if not, event
-      #          still dispatched without it (NotifyLiveViews handles gracefully)
+      # Best-effort: attendance already succeeded; session fetch failure must not surface as an error.
       session =
         case @session_reader.get_by_id(persisted.session_id) do
           {:ok, session} ->
@@ -95,12 +87,7 @@ defmodule KlassHero.Participation.Application.Shared do
     end
   end
 
-  @doc """
-  Logs the result of a PubSub event publish attempt.
-
-  Silently succeeds on `:ok`, logs a warning on error so callers
-  don't need to duplicate logging logic.
-  """
+  @doc "Logs a warning on event publish failure; no-op on success."
   @spec log_publish_result(:ok | {:error, term()}, String.t()) :: :ok
   def log_publish_result(:ok, _note_id), do: :ok
 

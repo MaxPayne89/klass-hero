@@ -45,9 +45,6 @@ defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollments do
 
     enrollments = @enrollment_repository.list_by_program(program_id)
 
-    # Trigger: no enrollments exist for this program
-    # Why: skip the ACL call entirely when there's nothing to enrich
-    # Outcome: return empty list immediately
     if enrollments == [] do
       []
     else
@@ -70,9 +67,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollments do
         child -> "#{child.first_name} #{child.last_name}"
       end
 
-    # Trigger: parent profile might not exist (deleted, orphaned enrollment)
-    # Why: graceful degradation — roster still displays, messaging button disabled
-    # Outcome: nil parent_user_id causes the message button to be disabled in UI
+    # nil parent_user_id disables the message button in UI (orphaned/deleted parent profile)
     parent_user_id =
       case Map.get(parent_map, enrollment.parent_id) do
         nil -> nil

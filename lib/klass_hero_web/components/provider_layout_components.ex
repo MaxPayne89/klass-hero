@@ -567,9 +567,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     """
   end
 
-  ## ---------------------------------------------------------------------------
   ## Internal helpers
-  ## ---------------------------------------------------------------------------
 
   # typography-lint-ignore: PvTopbar provider name uses display font
   defp pv_topbar_title_classes, do: "font-display font-extrabold tracking-tight text-2xl"

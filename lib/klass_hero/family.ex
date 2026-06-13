@@ -49,10 +49,6 @@ defmodule KlassHero.Family do
   alias KlassHero.Family.Domain.Models.Child
   alias KlassHero.Family.Domain.Services.ReferralCodeGenerator
 
-  # ===========================================================================
-  # Commands
-  # ===========================================================================
-
   @doc """
   Creates a new parent profile.
 
@@ -142,10 +138,6 @@ defmodule KlassHero.Family do
   def generate_referral_code(name, opts \\ []) when is_binary(name) do
     ReferralCodeGenerator.generate(name, opts)
   end
-
-  # ===========================================================================
-  # Queries
-  # ===========================================================================
 
   @doc """
   Retrieves a parent profile by identity ID.
@@ -248,10 +240,6 @@ defmodule KlassHero.Family do
   or `%{}` when no parent profile exists.
   """
   defdelegate export_data_for_user(identity_id), to: ExportUserData, as: :execute
-
-  # ===========================================================================
-  # Forms
-  # ===========================================================================
 
   @doc """
   Returns a changeset for tracking child form changes.

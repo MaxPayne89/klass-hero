@@ -1,14 +1,8 @@
 defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramRepository do
   @moduledoc """
-  Repository implementation for creating, listing, and updating programs.
+  Implements ForCreatingPrograms, ForListingPrograms, and ForUpdatingPrograms ports.
 
-  Implements the ForCreatingPrograms, ForListingPrograms, and ForUpdatingPrograms ports with:
-  - Domain entity mapping via ProgramMapper
-  - Idiomatic "let it crash" error handling
-
-  Data integrity is enforced at the database level through NOT NULL constraints.
-  Infrastructure errors (connection, query) are not caught - they crash and
-  are handled by the supervision tree.
+  Infrastructure errors crash intentionally — the supervision tree handles recovery.
   """
 
   @behaviour KlassHero.ProgramCatalog.Domain.Ports.ForCreatingPrograms
@@ -35,7 +29,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   @doc """
   Returns a new changeset for the program creation form.
 
-  This is an Ecto-specific concern exposed for the web layer's form rendering.
   Not part of any port — changesets are an adapter detail.
   """
   def new_changeset(attrs \\ %{}) do
@@ -76,12 +69,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   @impl true
-  @doc """
-  Lists all programs from the database.
-
-  Programs are ordered by title in ascending order for consistent display.
-  Returns list of programs directly (may be empty).
-  """
   def list_all_programs do
     span do
       set_attributes("db", operation: "select", entity: "program")
@@ -101,12 +88,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   @impl true
-  @doc """
-  Lists all programs belonging to a specific provider.
-
-  Programs are ordered by title in ascending order for consistent display.
-  Returns list of programs directly (may be empty).
-  """
   def list_programs_for_provider(provider_id) when is_binary(provider_id) do
     span do
       set_attributes("db", operation: "select", entity: "program")
@@ -127,13 +108,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   @impl true
-  @doc """
-  Retrieves a single program by its unique ID (UUID) from the database.
-
-  Returns:
-  - `{:ok, Program.t()}` when program is found
-  - `{:error, :not_found}` when no program exists with the given ID or ID is invalid
-  """
   def get_by_id(id) when is_binary(id) do
     span do
       set_attributes("db", operation: "select", entity: "program")
@@ -142,31 +116,11 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   @impl true
-  @doc """
-  Lists programs with cursor-based pagination.
-
-  Uses seek pagination (cursor-based) for efficient pagination of large result sets.
-  Programs are ordered by creation time (newest first) using (inserted_at DESC, id DESC).
-
-  Returns:
-  - `{:ok, PageResult.t()}` - Page of programs with pagination metadata
-  - `{:error, :invalid_cursor}` - Cursor decoding/validation failure
-  """
   def list_programs_paginated(limit, cursor) do
     list_programs_paginated(limit, cursor, nil)
   end
 
   @impl true
-  @doc """
-  Lists programs with cursor-based pagination and optional category filter.
-
-  Same as `list_programs_paginated/2` but with an additional category filter.
-  Uses database-level filtering for efficient pagination with category constraints.
-
-  Returns:
-  - `{:ok, PageResult.t()}` - Page of programs with pagination metadata
-  - `{:error, :invalid_cursor}` - Cursor decoding/validation failure
-  """
   def list_programs_paginated(limit, cursor, category) do
     span do
       set_attributes("db", operation: "select", entity: "program")
@@ -227,19 +181,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   @impl true
-  @doc """
-  Updates an existing program with optimistic locking.
-
-  Uses the program's ID to fetch the current record from the database,
-  applies the updates via an update changeset with optimistic locking,
-  and returns the updated domain entity.
-
-  Returns:
-  - `{:ok, Program.t()}` - Successfully updated program
-  - `{:error, :stale_data}` - Optimistic lock conflict
-  - `{:error, :not_found}` - Program ID does not exist
-  - `{:error, changeset}` - Validation failure
-  """
   def update(%Program{} = program) do
     span do
       set_attributes("db", operation: "update", entity: "program")
@@ -266,22 +207,14 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   end
 
   defp do_update(current_schema, program) do
-    # Trigger: lock_version nil means program was not loaded from DB
-    # Why: optimistic locking requires the version the client saw at load time
-    # Outcome: crash early with clear message rather than silently defaulting
+    # Optimistic locking requires the version the caller saw at load time; nil means the program was never loaded from DB.
     if is_nil(program.lock_version) do
       raise ArgumentError,
             "Program lock_version must not be nil — program must be loaded from the database before updating"
     end
 
-    # Build a schema with the original lock_version from the domain model
-    # This is what the client saw when they loaded the program
     schema_with_client_version = %{current_schema | lock_version: program.lock_version}
-
-    # Convert domain Program to update attributes
     attrs = ProgramMapper.to_schema(program)
-
-    # Build update changeset with optimistic locking
     changeset = ProgramSchema.update_changeset(schema_with_client_version, attrs)
 
     case Repo.update(changeset) do
@@ -311,8 +244,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
       {:error, :stale_data}
   end
-
-  # Private helper functions
 
   defp validate_limit(limit) when is_integer(limit) and limit >= 1 and limit <= 100 do
     {:ok, limit}

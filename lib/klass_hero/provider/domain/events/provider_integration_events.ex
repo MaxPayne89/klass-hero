@@ -75,9 +75,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
       @source_context,
       @staff_entity_type,
       staff_member_id,
-      # Trigger: caller may pass a conflicting :staff_member_id in payload
-      # Why: base_payload contains the canonical staff_member_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Merge order: base_payload wins so callers cannot accidentally overwrite canonical IDs.
       Map.merge(payload, base_payload),
       opts
     )
@@ -115,9 +113,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
       @source_context,
       @staff_entity_type,
       staff_member_id,
-      # Trigger: caller may pass a conflicting key in payload
-      # Why: base_payload contains the canonical IDs from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Merge order: base_payload wins so callers cannot accidentally overwrite canonical IDs.
       Map.merge(payload, base_payload),
       opts
     )
@@ -155,9 +151,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
       @source_context,
       @staff_entity_type,
       staff_member_id,
-      # Trigger: caller may pass a conflicting key in payload
-      # Why: base_payload contains the canonical IDs from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Merge order: base_payload wins so callers cannot accidentally overwrite canonical IDs.
       Map.merge(payload, base_payload),
       opts
     )
@@ -196,9 +190,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
       @source_context,
       @incident_report_entity_type,
       incident_report_id,
-      # Trigger: caller may pass a conflicting :incident_report_id in payload
-      # Why: base_payload contains the canonical incident_report_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Merge order: base_payload wins so callers cannot accidentally overwrite canonical IDs.
       Map.merge(payload, base_payload),
       opts
     )

@@ -24,9 +24,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.EmailReplyMapp
     }
   end
 
-  # Trigger: Ecto stores status as a string; atom table is not guaranteed populated in async tests
-  # Why: String.to_existing_atom/1 raises ArgumentError if the atom hasn't been interned yet
-  # Outcome: safe pattern match ensures known values always produce the correct atom
+  # String.to_existing_atom/1 is unsafe in async tests; pattern-match instead.
   defp parse_status("sending"), do: :sending
   defp parse_status("sent"), do: :sent
   defp parse_status("failed"), do: :failed

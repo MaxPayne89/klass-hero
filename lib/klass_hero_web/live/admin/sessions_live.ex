@@ -51,9 +51,7 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     load_sessions(socket)
   end
 
-  # Trigger: id param arrives from URL as raw string
-  # Why: non-UUID strings cause Ecto.Query.CastError before Repo.get executes
-  # Outcome: invalid UUIDs redirect to index with error flash instead of crashing
+  # Non-UUID strings cause Ecto.Query.CastError — redirect instead of crashing.
   defp apply_action(socket, :show, %{"id" => id}) do
     case Ecto.UUID.cast(id) do
       {:ok, uuid} ->
@@ -77,13 +75,9 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     end
   end
 
-  # -- Filter Event Handlers --
-
   @impl true
   def handle_info({:select, "provider_id", selected}, socket) do
-    # Trigger: user selected or cleared a provider in the SearchableSelect
-    # Why: selecting a provider must cascade to narrow program options
-    # Outcome: filter programs in-memory, clear program if it doesn't belong
+    # Selecting a provider cascades to narrow program options in-memory; stale program selection is cleared.
     filtered_programs =
       case selected do
         nil ->
@@ -93,9 +87,6 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
           Enum.filter(socket.assigns.all_programs, &(&1.provider_id == provider_id))
       end
 
-    # Trigger: selected program may not belong to the newly selected provider
-    # Why: showing a stale program selection would produce confusing results
-    # Outcome: clear program selection if it's not in the filtered list
     selected_program =
       case socket.assigns.selected_program do
         nil ->
@@ -125,9 +116,6 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
 
   @impl true
   def handle_event("filter_change", params, socket) do
-    # Trigger: unified filter bar form emits phx-change on any input change
-    # Why: single handler for date and status changes avoids per-input phx-change attrs
-    # Outcome: parse all filter params, update assigns, reload sessions
     date_from = parse_date(params["date_from"], socket.assigns.date_from)
     date_to = parse_date(params["date_to"], socket.assigns.date_to)
     selected_status = parse_status(params["status"])
@@ -193,8 +181,6 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     end
   end
 
-  # -- Private Helpers --
-
   defp load_sessions(socket) do
     filters = build_filters(socket.assigns)
     sessions = Participation.list_admin_sessions(filters)
@@ -248,9 +234,6 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
   defp maybe_put_time(params, _key, ""), do: {:ok, params}
 
   defp maybe_put_time(params, key, time_string) do
-    # Trigger: datetime-local inputs submit "YYYY-MM-DDTHH:MM" (no timezone, no seconds)
-    # Why: NaiveDateTime.from_iso8601 requires seconds; datetime-local omits them
-    # Outcome: normalize by appending ":00", parse as NaiveDateTime, convert to UTC
     normalized = normalize_datetime_local(time_string)
 
     case NaiveDateTime.from_iso8601(normalized) do
@@ -259,9 +242,7 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     end
   end
 
-  # Trigger: HTML datetime-local inputs submit "YYYY-MM-DDTHH:MM" (16 chars, no seconds)
-  # Why: NaiveDateTime.from_iso8601/1 requires "YYYY-MM-DDTHH:MM:SS" format
-  # Outcome: appends ":00" to match the expected format
+  # datetime-local inputs omit seconds; NaiveDateTime.from_iso8601/1 requires them.
   defp normalize_datetime_local(s) when byte_size(s) == 16, do: s <> ":00"
   defp normalize_datetime_local(s), do: s
 
@@ -278,8 +259,6 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
   defp error_message(:invalid_time), do: gettext("Invalid time format")
 
   defp error_message(_), do: gettext("An error occurred")
-
-  # -- View Helpers (used in template) --
 
   defp status_badge_class(:scheduled), do: "badge-info"
   defp status_badge_class(:in_progress), do: "badge-success"

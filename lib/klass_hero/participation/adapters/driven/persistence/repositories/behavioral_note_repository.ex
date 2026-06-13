@@ -134,10 +134,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
   def anonymize_all_for_child(child_id, anonymized_attrs) when is_binary(child_id) and is_map(anonymized_attrs) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    # Build the set list from domain-provided attrs + updated_at timestamp
-    # Trigger: :status is an Ecto.Enum field on BehavioralNoteSchema
-    # Why: update_all bypasses Ecto.Enum casting, sending raw atoms to PostgreSQL
-    # Outcome: convert :status atom to string so PostgreSQL receives a valid value
+    # update_all bypasses Ecto.Enum casting — convert :status atom to string manually.
     set_fields =
       anonymized_attrs
       |> convert_enum_fields()
@@ -158,9 +155,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
   end
 
   defp handle_insert_result({:error, %Ecto.Changeset{errors: errors} = changeset}) do
-    # Trigger: unique constraint violation on [participation_record_id, provider_id]
-    # Why: one note per provider per participation record
-    # Outcome: return domain-specific error atom
+    # Unique constraint on [participation_record_id, provider_id] → :duplicate_note
     if EctoErrorHelpers.any_unique_constraint_violation?(errors) do
       {:error, :duplicate_note}
     else

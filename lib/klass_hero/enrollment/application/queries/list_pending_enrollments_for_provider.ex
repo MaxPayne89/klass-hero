@@ -55,11 +55,8 @@ defmodule KlassHero.Enrollment.Application.Queries.ListPendingEnrollmentsForProv
   end
 
   defp program_titles_map(program_ids) do
-    # Trigger: ProgramCatalog depends on Enrollment (for capacity ACL), so calling
-    #          back into ProgramCatalog would create a dependency cycle.
-    # Why: query the `programs` table directly — acceptable in the query layer,
-    #      mirrors the approach in ProgramCatalogACL.
-    # Outcome: returns a map of %{program_id_string => title}
+    # Querying `programs` directly avoids a ProgramCatalog↔Enrollment dependency cycle
+    # (ProgramCatalog already depends on Enrollment for capacity ACL).
     valid_ids =
       program_ids
       |> Enum.filter(fn id -> match?({:ok, _}, Ecto.UUID.cast(id)) end)

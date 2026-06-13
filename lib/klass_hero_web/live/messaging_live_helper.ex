@@ -2,19 +2,12 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   @moduledoc """
   Shared helper module for messaging LiveViews.
 
-  Provides common functionality for both parent and provider
-  conversation views, reducing code duplication while maintaining
-  the flexibility needed for different navigation paths.
-
-  ## Usage
-
   LiveViews `use` this module with a view type to inject shared callbacks:
 
       use KlassHeroWeb.MessagingLiveHelper, :show   # conversation detail callbacks
       use KlassHeroWeb.MessagingLiveHelper, :index   # conversation list callbacks
 
-  Each LiveView only needs to implement `mount/3` (for its unique back_path /
-  navigate_base) and `render/1`.
+  Each LiveView only needs to implement `mount/3` and `render/1`.
   """
 
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -107,12 +100,10 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
-  Trims a broadcast's subject/content and consumes its attachment uploads.
+  Trims a broadcast's subject/content and consumes attachment uploads.
 
-  Returns `{:ok, subject, content, attachments}` when there is something to send,
-  or `:empty` when both the trimmed content and the attachment list are blank —
-  letting the caller flash a validation error. Shared by the provider and staff
-  broadcast composers, whose actual send paths differ on authorization.
+  Returns `{:ok, subject, content, attachments}` or `:empty` when trimmed content
+  and attachment list are both blank. Shared by provider and staff broadcast composers.
   """
   @spec consume_and_validate_broadcast(Socket.t(), map()) ::
           {:ok, String.t(), String.t(), list()} | :empty
@@ -129,17 +120,10 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
-  Mounts a conversation show view with all necessary assigns.
+  Mounts a conversation show view.
 
-  ## Options
-  - `:back_path` - The path to navigate back to (required)
-  - `:variant` - Viewer role (`:parent`, `:provider`, or `:staff`). Defaults to
-    `:parent` as the least-privileged default. Controls whether the page title
-    includes the enrolled-child suffix (only non-parent variants see it).
-
-  ## Returns
-  - `{:ok, socket}` on success
-  - `{:ok, socket}` with flash and redirect on error
+  Options: `:back_path` (required), `:variant` (`:parent`/`:provider`/`:staff`, default `:parent`).
+  The `:variant` controls whether the page title includes the enrolled-child suffix.
   """
 
   def mount_conversation_show(socket, conversation_id, opts) do
@@ -197,10 +181,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
-  Handles the send_message event.
-
-  Consumes any pending uploads and sends the message with optional attachments.
-  Returns `{:noreply, socket}` with updated form or error flash.
+  Handles the send_message event. Consumes pending uploads and sends with optional attachments.
   """
   def handle_send_message(%{"content" => content}, socket) do
     content = String.trim(content)
@@ -235,17 +216,11 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   @doc """
   Handles the reply_privately event for broadcast conversations.
-
-  Creates a direct conversation with the broadcast's provider and
-  navigates to it.
   """
   def handle_reply_privately(socket) do
     conversation = socket.assigns.conversation
 
-    # Trigger: crafted event targets a non-broadcast conversation
-    # Why: the reply_privately handler is injected into all show LiveViews —
-    #      UI hides the button, but a crafted event could bypass that
-    # Outcome: reject early, only broadcast conversations proceed
+    # Handler is injected into all show LiveViews; UI hides the button, but crafted events could bypass it.
     if conversation.type == :program_broadcast do
       scope = socket.assigns.current_scope
       back_path = socket.assigns.back_path
@@ -274,9 +249,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
-  Handles incoming message_sent domain events.
-
-  Adds the new message to the stream and updates sender names if needed.
+  Handles incoming message_sent domain events; updates sender names if needed.
   """
   def handle_message_sent_event(%DomainEvent{payload: payload} = _event, socket) do
     if payload.conversation_id == socket.assigns.conversation.id do
@@ -307,10 +280,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
-  Mounts a conversation index view with all necessary assigns.
-
-  ## Options
-  - `:navigate_base` - Base path for conversation links (required)
+  Mounts a conversation index view. Option: `:navigate_base` (required).
   """
   def mount_conversation_index(socket, opts) do
     navigate_base = Keyword.fetch!(opts, :navigate_base)
@@ -333,9 +303,6 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     {:ok, socket}
   end
 
-  @doc """
-  Refreshes the conversation list after updates.
-  """
   def refresh_conversations(socket) do
     user_id = socket.assigns.current_scope.user.id
     {:ok, conversations, _has_more} = Messaging.list_conversations(user_id)
@@ -350,9 +317,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   @doc """
   Returns the title for a conversation.
-
-  For direct conversations with enrolled children (provider view):
-  "Sarah Johnson for Emma, Liam"
+  For provider view with enrolled children: "Sarah Johnson for Emma, Liam".
   """
   def get_conversation_title(conversation, enrolled_child_names \\ [], other_participant_name \\ nil)
 
@@ -378,24 +343,15 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     gettext("Conversation")
   end
 
-  @doc """
-  Checks if a message was sent by the given user.
-  """
   def own_message?(message, user_id) do
     message.sender_id == user_id
   end
 
-  @doc """
-  Gets the sender name from the sender_names map.
-  """
   def get_sender_name(sender_names, sender_id) do
     Map.get(sender_names, sender_id, "Unknown")
   end
 
-  # Trigger: page title is being assembled for a conversation show view
-  # Why: parents already know which of their own children are involved — suppress the
-  #      "for {names}" suffix for them; show it for provider and staff viewers
-  # Outcome: title string with or without the enrolled-child suffix
+  # Parents know their own children — suppress the "for {names}" suffix for them; show for provider/staff.
   defp build_page_title(conversation, user_id, variant) do
     context = fetch_conversation_context(conversation.id, user_id)
     child_names = enrolled_child_names_for(variant, context.enrolled_child_names)
@@ -403,8 +359,6 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc false
-  # Suppresses enrolled-child names for the parent viewer, passes them through for
-  # provider/staff viewers. Exposed so the variant-gating rule can be tested directly.
   def enrolled_child_names_for(:parent, _names), do: []
   def enrolled_child_names_for(_variant, names), do: names
 
@@ -412,9 +366,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     Messaging.get_conversation_context(conversation_id, user_id)
   end
 
-  # Fetches the provider profile once to extract both the owner's identity_id
-  # (for provider_user_ids) and business_name (for provider_name), avoiding
-  # a second providers-table round-trip that the old split approach incurred.
+  # Single fetch avoids separate round-trips for identity_id and business_name.
   defp resolve_provider_info(conversation) do
     staff_ids =
       if conversation.program_id do
@@ -482,19 +434,13 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   defp reply_privately_path(_back_path, conversation_id), do: ~p"/messages/#{conversation_id}"
 
-  @doc """
-  Cancels a pending attachment upload by ref.
-  """
   def cancel_attachment_upload(socket, ref) do
     cancel_upload(socket, :attachments, ref)
   end
 
   @doc """
-  Consumes pending `:attachments` uploads on the socket, reads each file
-  into memory, and returns a list of file-data maps in the shape expected
-  by `Messaging.send_message/4` and `Messaging.broadcast_to_program/4`:
-  `%{binary, filename, content_type, size}`. Files that fail to read are
-  logged and dropped.
+  Consumes pending `:attachments` uploads, reads each file into memory, and returns
+  a list of `%{binary, filename, content_type, size}` maps. Failed reads are logged and dropped.
   """
   def consume_attachment_uploads(socket) do
     results =
@@ -522,10 +468,6 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     Enum.reject(results, &is_nil/1)
   end
 
-  @doc """
-  Translates attachment / message error atoms into user-facing flash messages.
-  Unknown reasons fall through to a generic message.
-  """
   def upload_error_message(:empty_message), do: gettext("Please enter a message or attach a photo.")
 
   def upload_error_message(:too_many_attachments),

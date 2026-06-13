@@ -28,8 +28,6 @@ defmodule KlassHero.Shared.ErrorIds do
   handled by the supervision tree - they don't need explicit error IDs.
   """
 
-  # Program Catalog Context - Domain Errors
-
   @doc "Program not found when attempting to retrieve by ID."
   def program_not_found, do: "program.catalog.detail.not_found"
 
@@ -44,8 +42,6 @@ defmodule KlassHero.Shared.ErrorIds do
 
   @doc "Program update failed - program not found."
   def program_update_not_found, do: "program.catalog.update.not_found"
-
-  # Participation Context - Session Domain Errors
 
   @doc "Session update failed due to concurrent modification (optimistic lock conflict)."
   def session_update_stale_error, do: "participation.session.update.stale"
@@ -65,8 +61,6 @@ defmodule KlassHero.Shared.ErrorIds do
   @doc "Session update failed due to changeset errors."
   def session_update_failed(%Ecto.Changeset{} = _changeset), do: "participation.session.update.failed"
 
-  # Participation Context - Participation Record Domain Errors
-
   @doc "Participation update failed due to concurrent modification (optimistic lock conflict)."
   def participation_update_stale_error, do: "participation.record.update.stale_entry"
 
@@ -85,8 +79,6 @@ defmodule KlassHero.Shared.ErrorIds do
   @doc "Participation record update failed due to changeset errors."
   def participation_record_update_failed(%Ecto.Changeset{} = _changeset), do: "participation.record.update.failed"
 
-  # Identity Context - Domain Errors
-
   @doc "Duplicate parent profile - identity already has a parent profile."
   def parent_duplicate_identity, do: "identity.parent.create.duplicate_identity"
 
@@ -95,8 +87,6 @@ defmodule KlassHero.Shared.ErrorIds do
 
   @doc "Child validation error - changeset validation failed."
   def child_validation_error, do: "identity.child.validation.error"
-
-  # Repository changeset-validation failures (standardized logging)
 
   @doc "Consent grant failed due to changeset errors."
   def consent_grant_failed, do: "family.consent.grant.failed"

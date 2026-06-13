@@ -24,36 +24,24 @@ defmodule KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrat
   def handle(%DomainEvent{event_type: :child_data_anonymized} = event) do
     child_id = event.payload.child_id
 
-    # Trigger: child data anonymized domain event received
-    # Why: downstream contexts (e.g. Participation) need to anonymize their own child data
-    # Outcome: publish integration event; propagate failure to halt GDPR cascade on error
     child_id
     |> FamilyIntegrationEvents.child_data_anonymized()
     |> IntegrationEventPublishing.publish()
   end
 
   def handle(%DomainEvent{event_type: :invite_family_ready} = event) do
-    # Trigger: family unit (parent + child) created from invite claim
-    # Why: downstream contexts (e.g. Enrollment) need to auto-enroll the child
-    # Outcome: publish integration event on topic integration:family:invite_family_ready
     event.payload.invite_id
     |> FamilyIntegrationEvents.invite_family_ready(event.payload)
     |> IntegrationEventPublishing.publish()
   end
 
   def handle(%DomainEvent{event_type: :child_created} = event) do
-    # Trigger: child record created in Family context
-    # Why: downstream contexts (e.g. Messaging) need to maintain local child name lookups
-    # Outcome: publish integration event on topic integration:family:child_created
     event.payload.child_id
     |> FamilyIntegrationEvents.child_created(event.payload)
     |> IntegrationEventPublishing.publish()
   end
 
   def handle(%DomainEvent{event_type: :child_updated} = event) do
-    # Trigger: child record updated in Family context
-    # Why: downstream contexts (e.g. Messaging) need to refresh local child name lookups
-    # Outcome: publish integration event on topic integration:family:child_updated
     event.payload.child_id
     |> FamilyIntegrationEvents.child_updated(event.payload)
     |> IntegrationEventPublishing.publish()

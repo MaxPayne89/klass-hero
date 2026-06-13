@@ -12,139 +12,59 @@ defmodule KlassHero.Accounts.Domain.Ports.ForStoringUsers do
   """
 
   alias KlassHero.Accounts.Domain.Models.User
-  # Write operations return Ecto types because callers (LiveViews, auth plugs)
-  # depend on Ecto schemas for rendering and session management.
   alias KlassHero.Accounts.UserToken
 
   @type ecto_user :: KlassHero.Accounts.User.t()
   @type ecto_changeset :: Ecto.Changeset.t()
   @type ecto_token :: UserToken.t()
 
-  # ============================================================================
-  # Read operations
-  # ============================================================================
-
-  @doc """
-  Retrieves a user by their unique identifier.
-
-  Returns:
-  - `{:ok, User.t()}` - User found
-  - `{:error, :not_found}` - No user with this ID
-  """
+  @doc "Retrieves a user by ID. Returns `{:ok, User.t()}` or `{:error, :not_found}`."
   @callback get_by_id(binary()) :: {:ok, User.t()} | {:error, :not_found}
 
-  @doc """
-  Retrieves a user by email address.
-
-  Returns:
-  - `{:ok, User.t()}` - User found
-  - `{:error, :not_found}` - No user with this email
-  """
+  @doc "Retrieves a user by email. Returns `{:ok, User.t()}` or `{:error, :not_found}`."
   @callback get_by_email(String.t()) :: {:ok, User.t()} | {:error, :not_found}
 
-  @doc """
-  Checks if a user exists with the given ID.
-  """
+  @doc "Checks if a user exists with the given ID."
   @callback exists?(binary()) :: boolean()
 
-  # ============================================================================
-  # Write operations
-  # ============================================================================
-
-  @doc """
-  Registers a new user from the given attributes.
-
-  Accepts optional keyword opts for customization (e.g., `:changeset_fn`).
-
-  Returns:
-  - `{:ok, ecto_user()}` - User created
-  - `{:error, ecto_changeset()}` - Validation or persistence failure
-  """
+  @doc "Registers a new user. Accepts optional `:changeset_fn` in opts."
   @callback register(map(), keyword()) :: {:ok, ecto_user()} | {:error, ecto_changeset()}
 
   @doc """
-  Grants an additional intended role to a user, preserving existing roles.
-
-  Idempotent — adding a role the user already holds is a no-op. Used when an
-  existing account is linked as staff (ADR-0005 multi-persona).
-
-  Returns:
-  - `{:ok, ecto_user()}` - Updated user
-  - `{:error, ecto_changeset()}` - Update failure
+  Grants an additional intended role, preserving existing ones. Idempotent (ADR-0005).
   """
   @callback append_intended_role(ecto_user(), atom()) ::
               {:ok, ecto_user()} | {:error, ecto_changeset()}
 
   @doc """
-  Revokes an intended role from a user, preserving their other roles.
-
-  The mirror of `append_intended_role/2` (ADR-0005, #972). Idempotent —
-  removing a role the user doesn't hold is a no-op. Used when the last linked
-  staff row is deleted and `:staff` no longer has a backing persona.
-
-  Returns:
-  - `{:ok, ecto_user()}` - Updated user
-  - `{:error, ecto_changeset()}` - Update failure
+  Revokes an intended role, preserving others. Idempotent; mirror of `append_intended_role/2` (ADR-0005, #972).
   """
   @callback remove_intended_role(ecto_user(), atom()) ::
               {:ok, ecto_user()} | {:error, ecto_changeset()}
 
-  @doc """
-  Anonymizes a user's PII and deletes all their tokens atomically.
-
-  Returns:
-  - `{:ok, ecto_user()}` - Anonymized user
-  - `{:error, ecto_changeset()}` - Update failure
-  """
+  @doc "Anonymizes a user's PII and deletes all tokens atomically."
   @callback anonymize(ecto_user()) :: {:ok, ecto_user()} | {:error, ecto_changeset()}
 
   @doc """
-  Applies an email change using a confirmation token.
-
-  Verifies the token, updates the email, and deletes all change tokens
-  for the context atomically.
-
-  Returns:
-  - `{:ok, ecto_user()}` - Updated user
-  - `{:error, :invalid_token}` - Token malformed, expired, or not found
-  - `{:error, ecto_changeset()}` - Update failure
+  Applies an email change via confirmation token. Verifies, updates, and deletes change tokens atomically.
   """
   @callback apply_email_change(ecto_user(), binary()) ::
               {:ok, ecto_user()} | {:error, :invalid_token | ecto_changeset()}
 
   @doc """
-  Resolves a magic link token to a user and determines login scenario.
-
-  Returns tagged tuples to distinguish business cases:
-  - `{:ok, {:confirmed, user, token}}` - Already-confirmed user, token to delete
-  - `{:ok, {:unconfirmed, user}}` - Unconfirmed user needing confirmation
-  - `{:error, :not_found}` - Token invalid or expired
-  - `{:error, :invalid_token}` - Token malformed (bad base64)
-  - `{:error, :security_violation}` - Unconfirmed user with password set
+  Resolves a magic link token to a tagged login scenario:
+  - `{:ok, {:confirmed, user, token}}` - confirmed user; caller deletes token
+  - `{:ok, {:unconfirmed, user}}` - unconfirmed user; use case confirms
+  - `{:error, :not_found | :invalid_token | :security_violation}`
   """
   @callback resolve_magic_link(binary()) ::
               {:ok, {:confirmed, ecto_user(), ecto_token()} | {:unconfirmed, ecto_user()}}
               | {:error, :not_found | :invalid_token | :security_violation}
 
-  @doc """
-  Confirms a user and deletes all their tokens atomically.
-
-  Used after resolving a magic link for an unconfirmed user.
-
-  Returns:
-  - `{:ok, {ecto_user(), [ecto_token()]}}` - Confirmed user + deleted tokens
-  - `{:error, ecto_changeset()}` - Update failure
-  """
+  @doc "Confirms a user and deletes all their tokens atomically."
   @callback confirm_and_cleanup_tokens(ecto_user()) ::
               {:ok, {ecto_user(), [ecto_token()]}} | {:error, ecto_changeset()}
 
-  @doc """
-  Deletes a single token record.
-
-  Used to expire a magic link token after successful login for confirmed users.
-
-  Returns:
-  - `:ok` - Token deleted (or already gone)
-  """
+  @doc "Deletes a single token record. Returns `:ok` even if already gone."
   @callback delete_token(ecto_token()) :: :ok
 end

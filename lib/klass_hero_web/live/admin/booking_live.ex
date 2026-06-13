@@ -32,18 +32,14 @@ defmodule KlassHeroWeb.Admin.BookingLive do
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
 
-  # Trigger: :new, :edit, and :delete are not valid operations for bookings in admin
-  # Why: bookings are created by parents; cancellation goes through the cancel item action
-  # Outcome: hides "New" button, denies edit/delete actions
+  # Bookings are created by parents; cancellation goes through CancelEnrollmentByAdmin.
   @impl Backpex.LiveResource
   def can?(_assigns, :new, _item), do: false
   def can?(_assigns, :edit, _item), do: false
   def can?(_assigns, :delete, _item), do: false
   def can?(_assigns, :index, _item), do: true
   def can?(_assigns, :show, _item), do: true
-  # Trigger: cancel action should only be available for cancellable statuses
-  # Why: completed and cancelled enrollments cannot be cancelled again
-  # Outcome: cancel button only appears for pending/confirmed enrollments
+  # Only pending/confirmed enrollments can be cancelled.
   def can?(_assigns, :cancel_booking, item), do: item.status in [:pending, :confirmed]
   def can?(_assigns, _action, _item), do: false
 
@@ -60,9 +56,6 @@ defmodule KlassHeroWeb.Admin.BookingLive do
 
   @impl Backpex.LiveResource
   def item_actions(default_actions) do
-    # Trigger: override default actions to add custom cancel action
-    # Why: the cancel action calls through a domain use case, not a simple Backpex edit
-    # Outcome: cancel button appears per-row for eligible bookings
     Keyword.put(default_actions, :cancel_booking, %{
       module: CancelBookingAction,
       only: [:row, :show]

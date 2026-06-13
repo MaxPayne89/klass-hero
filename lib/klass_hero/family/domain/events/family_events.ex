@@ -54,9 +54,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
       :child_created,
       child_id,
       @aggregate_type,
-      # Trigger: caller may pass a conflicting :child_id in payload
-      # Why: base_payload contains the canonical child_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -98,9 +95,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
       :child_updated,
       child_id,
       @aggregate_type,
-      # Trigger: caller may pass a conflicting :child_id in payload
-      # Why: base_payload contains the canonical child_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -151,9 +145,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
       :child_data_anonymized,
       child_id,
       @aggregate_type,
-      # Trigger: caller may pass a conflicting :child_id in payload
-      # Why: base_payload contains the canonical child_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -196,9 +187,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
       :invite_family_ready,
       invite_id,
       :invite,
-      # Trigger: caller may pass a conflicting :invite_id in payload
-      # Why: base_payload contains the canonical invite_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )

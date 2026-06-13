@@ -20,14 +20,7 @@ defmodule KlassHero.ProgramCatalog.Application.Commands.UpdateProgram do
     with {:ok, program} <- @repository.get_by_id(id),
          {:ok, updated} <- Program.apply_changes(program, changes),
          {:ok, persisted} <- @repository.update(updated) do
-      # Trigger: any program field may have changed
-      # Why: CQRS projections need to know about all updates to rebuild read models
-      # Outcome: fire-and-forget event with full program state as payload
       dispatch_update_event(persisted)
-
-      # Trigger: scheduling fields may have changed
-      # Why: downstream consumers need to know about schedule changes
-      # Outcome: fire-and-forget event dispatch, failures logged
       maybe_dispatch_schedule_event(program, persisted)
       Logger.info("[UpdateProgram] Program updated successfully", program_id: id)
       {:ok, persisted}

@@ -202,7 +202,6 @@ defmodule KlassHeroWeb.ProviderComponents do
       </div>
 
       <div class="flex items-center gap-4">
-        <%!-- Logo: real image or initials placeholder --%>
         <img
           :if={@business.logo_url}
           src={@business.logo_url}
@@ -387,7 +386,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             {gettext("New Program")}
           </.kh_button>
-          <%!-- Tooltip: shown only when button is disabled --%>
           <div
             :if={@business.verification_status != :verified}
             id="new-program-tooltip"
@@ -435,7 +433,6 @@ defmodule KlassHeroWeb.ProviderComponents do
         >
           {@member.role}
         </div>
-        <%!-- Headshot image or initials avatar --%>
         <img
           :if={@member.headshot_url}
           src={@member.headshot_url}
@@ -470,7 +467,6 @@ defmodule KlassHeroWeb.ProviderComponents do
         <p :if={@member.email} class="text-sm text-hero-grey-500 mb-2">{@member.email}</p>
         <p :if={@member.bio} class="text-sm text-hero-grey-600 mb-3 line-clamp-2">{@member.bio}</p>
 
-        <%!-- Category tags as colored pills --%>
         <div :if={@member.tags != []} class="flex flex-wrap gap-1.5 mb-3">
           <span
             :for={tag <- @member.tags}
@@ -483,7 +479,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </span>
         </div>
 
-        <%!-- Qualifications as badge pills --%>
         <div :if={@member.qualifications != []} class="flex flex-wrap gap-1.5 mb-3">
           <span
             :for={qual <- @member.qualifications}
@@ -496,7 +491,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </span>
         </div>
 
-        <%!-- Pay rate (admin-only — caller passes the label explicitly) --%>
         <p :if={@rate_label} class="text-sm text-hero-charcoal mb-3">
           <span class="font-semibold">{gettext("Pay rate")}:</span> {@rate_label}
         </p>
@@ -635,7 +629,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           placeholder={gettext("Brief description of experience and specialties...")}
         />
 
-        <%!-- Tags as checkboxes --%>
         <div>
           <label class="block text-sm font-semibold text-hero-charcoal mb-2">
             {gettext("Specialties")}
@@ -656,7 +649,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           <input type="hidden" name="staff_member_schema[tags][]" value="" />
         </div>
 
-        <%!-- Qualifications as comma-separated text --%>
         <.input
           field={@form[:qualifications]}
           type="text"
@@ -720,7 +712,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
         </div>
 
-        <%!-- Headshot upload --%>
         <div>
           <label class="block text-sm font-semibold text-hero-charcoal mb-2">
             {gettext("Headshot Photo")}
@@ -891,11 +882,9 @@ defmodule KlassHeroWeb.ProviderComponents do
           />
         </div>
 
-        <%!-- Schedule Section --%>
         <div class="space-y-3">
           <p class="text-sm font-semibold text-hero-charcoal">{gettext("Schedule (optional)")}</p>
 
-          <%!-- Meeting Days Checkboxes --%>
           <fieldset id="meeting-days-fieldset">
             <legend class="text-sm text-hero-grey-600 mb-2">{gettext("Meeting Days")}</legend>
             <div class="flex flex-wrap gap-2">
@@ -923,7 +912,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             <input type="hidden" name="program_schema[meeting_days][]" value="" />
           </fieldset>
 
-          <%!-- Time Inputs --%>
           <div class="grid grid-cols-2 gap-4">
             <.input
               field={@form[:meeting_start_time]}
@@ -937,7 +925,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             />
           </div>
 
-          <%!-- Date Inputs --%>
           <div class="grid grid-cols-2 gap-4">
             <.input
               field={@form[:start_date]}
@@ -952,7 +939,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
         </div>
 
-        <%!-- Registration Period Section --%>
         <div class="space-y-3">
           <p class="text-sm font-semibold text-hero-charcoal">
             {gettext("Registration Period (optional)")}
@@ -974,7 +960,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
         </div>
 
-        <%!-- Enrollment Capacity Section --%>
         <div class="space-y-3">
           <p class="text-sm font-semibold text-hero-charcoal">
             {gettext("Enrollment Capacity (optional)")}
@@ -998,7 +983,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
         </div>
 
-        <%!-- Participant Restrictions Section --%>
         <div class="space-y-4">
           <div>
             <p class="text-sm font-semibold text-hero-charcoal">
@@ -1009,7 +993,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             </p>
           </div>
 
-          <%!-- Eligibility Timing --%>
           <fieldset id="eligibility-at-fieldset">
             <legend class="text-sm text-hero-grey-600 mb-2">
               {gettext("Check eligibility at")}
@@ -1046,7 +1029,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             </div>
           </fieldset>
 
-          <%!-- Age Restriction --%>
           <div class="grid grid-cols-2 gap-4">
             <.input
               field={@participant_policy_form[:min_age_months]}
@@ -1062,7 +1044,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             />
           </div>
 
-          <%!-- Gender Restriction --%>
           <fieldset id="allowed-genders-fieldset">
             <legend class="text-sm text-hero-grey-600 mb-2">
               {gettext("Allowed Genders")}
@@ -1102,7 +1083,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             <input type="hidden" name="participant_policy[allowed_genders][]" value="" />
           </fieldset>
 
-          <%!-- Grade Restriction --%>
           <div class="grid grid-cols-2 gap-4">
             <.input
               field={@participant_policy_form[:min_grade]}
@@ -1130,7 +1110,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           required
         />
 
-        <%!-- Cover Image Upload --%>
         <div>
           <label class="block text-sm font-semibold text-hero-charcoal mb-2">
             {gettext("Cover Image")}
@@ -1185,7 +1164,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
         </div>
 
-        <%!-- Assign Instructor --%>
         <.input
           field={@form[:instructor_id]}
           type="select"
@@ -1535,15 +1513,12 @@ defmodule KlassHeroWeb.ProviderComponents do
           "relative bg-white w-full max-w-2xl shadow-xl",
           Theme.rounded(:xl)
         ]}>
-          <%!-- Header --%>
           <div class="flex items-center justify-between p-4 border-b border-hero-grey-200">
             <h3 class="text-lg font-semibold text-hero-charcoal">
               {gettext("Roster: %{name}", name: @program_name)}
             </h3>
             <div class="flex items-center gap-1">
-              <%!-- Trigger: provider wants to broadcast to enrolled parents
-                   Why: navigates to existing BroadcastLive page with program context
-                   Outcome: disabled with title attribute when no parents enrolled --%>
+              <%!-- Disabled with tooltip when roster is empty; navigates to BroadcastLive with program context when populated --%>
               <%= if @enrolled_count > 0 do %>
                 <.link
                   id={"broadcast-#{@program_id}"}
@@ -1578,7 +1553,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             </div>
           </div>
 
-          <%!-- Tabs --%>
           <div class="flex border-b border-hero-grey-200" role="tablist">
             <button
               id="roster-tab-enrolled"
@@ -1616,7 +1590,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             </button>
           </div>
 
-          <%!-- Tab Content --%>
           <div class="p-4">
             <%= if @active_tab == "enrolled" do %>
               <div id="enrolled-tab-content">
@@ -1768,9 +1741,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             {format_enrollment_date(entry.enrolled_at)}
           </td>
           <td class="px-3 py-3 text-right">
-            <%!-- Trigger: can_message? is true AND enrollment is confirmed AND parent has a user account
-                 Why: only entitled providers can message confirmed enrollments with linked parents
-                 Outcome: enabled button fires send_message_to_parent event; otherwise disabled with explanation --%>
             <%= if @can_message? and entry.status == :confirmed and entry.parent_user_id do %>
               <button
                 id={"send-message-#{entry.enrollment_id}"}
@@ -1900,7 +1870,6 @@ defmodule KlassHeroWeb.ProviderComponents do
             </label>
             <.live_file_input upload={@uploads.csv_file} class="hidden" />
 
-            <%!-- Show selected file + import button --%>
             <div :for={entry <- @uploads.csv_file.entries} class="mt-3 flex items-center gap-3">
               <span class="text-sm text-hero-charcoal">{entry.client_name}</span>
               <button
@@ -1923,7 +1892,6 @@ defmodule KlassHeroWeb.ProviderComponents do
               </button>
             </div>
 
-            <%!-- Upload errors --%>
             <div :for={err <- upload_errors(@uploads.csv_file)} class="mt-2 text-sm text-red-600">
               {upload_error_to_string(err)}
             </div>
@@ -1943,7 +1911,6 @@ defmodule KlassHeroWeb.ProviderComponents do
           </a>
         </div>
 
-        <%!-- Import errors (CSV path only) --%>
         <div
           :if={@import_errors}
           id="import-errors"
@@ -1961,7 +1928,6 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
       <% end %>
 
-      <%!-- Empty state --%>
       <div :if={@invites == []} id="invites-empty" class="text-center py-8">
         <.icon name="hero-envelope" class="w-12 h-12 mx-auto text-hero-grey-300 mb-3" />
         <p class="text-hero-grey-500">
@@ -1969,7 +1935,6 @@ defmodule KlassHeroWeb.ProviderComponents do
         </p>
       </div>
 
-      <%!-- Invites table — scrollable container for mobile viewports --%>
       <div :if={@invites != []} class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
         <table id="invites-table" class="w-full min-w-[500px]">
           <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
@@ -2181,9 +2146,7 @@ defmodule KlassHeroWeb.ProviderComponents do
 
   defp format_enrollment_date(_), do: "\u2014"
 
-  # Trigger: invite status values differ from enrollment status values
-  # Why: invites follow their own lifecycle (pending → invite_sent → registered → enrolled)
-  # Outcome: map each invite status to the correct status_pill color
+  # Invite lifecycle differs from enrollment lifecycle (pending → invite_sent → registered → enrolled)
   defp invite_status_color(:pending), do: "warning"
   defp invite_status_color(:invite_sent), do: "info"
   defp invite_status_color(:registered), do: "info"
@@ -2198,7 +2161,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp invite_status_label(:failed), do: gettext("Failed")
   defp invite_status_label(status), do: status |> to_string() |> String.capitalize()
 
-  # Partial-success path: list of row-level failure maps from ImportEnrollmentCsv
+  # Row-level failures: list of %{row, category, errors} maps from ImportEnrollmentCsv
   defp format_import_errors(failures) when is_list(failures) do
     Enum.map(failures, fn %{row: row, category: category, errors: errors} ->
       row_label = if row, do: gettext("Row %{row}", row: row), else: gettext("Row —")
@@ -2208,7 +2171,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     end)
   end
 
-  # Whole-file fatal path: map with parse_errors key
+  # Whole-file parse failure: %{parse_errors: [{row, msg}]}
   defp format_import_errors(%{parse_errors: errs}) when is_list(errs) do
     Enum.map(errs, fn {_row, msg} -> msg end)
   end
@@ -2221,9 +2184,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     Enum.map_join(errors, ", ", fn {field, msg} -> "#{humanize_field(field)}: #{msg}" end)
   end
 
-  # Trigger: each field atom needs a user-facing label
-  # Why: dgettext calls must happen at runtime (not in module attributes) for i18n
-  # Outcome: labels are translatable via the "enrollment" gettext domain
+  # dgettext must run at call-time (not module-attribute time) for i18n to work
   defp humanize_field(:child_first_name), do: dgettext("enrollment", "Child first name")
   defp humanize_field(:child_last_name), do: dgettext("enrollment", "Child last name")
   defp humanize_field(:child_date_of_birth), do: dgettext("enrollment", "Date of birth")
@@ -2272,7 +2233,6 @@ defmodule KlassHeroWeb.ProviderComponents do
         {gettext("Upload documents to verify your business. Documents are reviewed by our team.")}
       </p>
 
-      <%!-- Existing Documents --%>
       <div id="verification-docs" phx-update="stream" class="space-y-3 mb-6">
         <div id="vdoc-empty" class="hidden only:block text-sm text-hero-grey-400 italic py-4">
           {gettext("No documents uploaded yet.")}
@@ -2298,7 +2258,6 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
       </div>
 
-      <%!-- Upload New Document --%>
       <div class={[
         "border-t border-hero-grey-200 pt-6"
       ]}>

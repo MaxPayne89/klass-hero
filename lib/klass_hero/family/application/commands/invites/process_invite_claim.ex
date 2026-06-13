@@ -39,10 +39,8 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
     invite_id = Map.fetch!(attrs, :invite_id)
     program_id = Map.fetch!(attrs, :program_id)
 
-    # Trigger: parent and child are already committed at this point
-    # Why: event dispatch is not transactional (PubSub); if it fails, Oban retries
-    # Outcome: retry is safe because ensure_parent_profile and find_or_create_child
-    #   are idempotent -- they find existing records, no duplicates created
+    # PubSub dispatch is non-transactional; Oban retries are safe because ensure_parent_profile
+    # and find_or_create_child are idempotent — they find existing records, no duplicates created.
     with {:ok, parent} <- ensure_parent_profile(user_id, invite_id),
          {:ok, child} <- find_or_create_child(parent.id, attrs),
          :ok <- publish_family_ready(invite_id, user_id, child.id, parent.id, program_id) do
@@ -59,9 +57,7 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
     end
   end
 
-  # Trigger: user may already have a parent profile from a prior invite or registration
-  # Why: idempotent -- create if missing, fetch if exists
-  # Outcome: always returns {:ok, parent} or propagates unexpected error
+  # Idempotent: creates parent profile if missing, fetches if already exists.
   defp ensure_parent_profile(user_id, _invite_id) do
     attrs = %{id: Ecto.UUID.generate(), identity_id: user_id}
 
@@ -77,9 +73,7 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
     end
   end
 
-  # Trigger: invite payload contains child data mapped to domain fields
-  # Why: same child may be enrolled in multiple programs -- avoid duplicates
-  # Outcome: child found (idempotent) or created and linked to parent
+  # Same child may be enrolled in multiple programs — find-or-create to avoid duplicates.
   defp find_or_create_child(parent_id, attrs) do
     invite_id = Map.get(attrs, :invite_id)
     user_id = Map.get(attrs, :user_id)
@@ -87,11 +81,8 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
     last_name = Map.get(attrs, :child_last_name)
     date_of_birth = Map.get(attrs, :child_date_of_birth)
 
-    # Trigger: event may replay after a crash or redelivery
-    # Why: children table has no uniqueness constraint; unconditional create produces duplicates
-    # Outcome: find existing child by (first_name, last_name, date_of_birth) for this parent.
-    #   Safety relies on the family queue's concurrency-1 guarantee -- without serialized
-    #   execution, this find-then-create would be vulnerable to a TOCTOU race condition.
+    # children table has no uniqueness constraint; match by name+dob to avoid duplicates on replay.
+    # TOCTOU safety relies on the family queue's concurrency-1 guarantee.
     case find_existing_child(parent_id, first_name, last_name, date_of_birth) do
       %{} = child ->
         Logger.info("[ProcessInviteClaim] Child already exists, skipping creation",
@@ -127,16 +118,12 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
     end
   end
 
-  # Trigger: any nil identity field means we cannot reliably match
-  # Why: nil == nil is true in Elixir, which would false-match unrelated children
-  # Outcome: skip dedup and let domain validation catch the missing field downstream
+  # nil == nil is true in Elixir, so nil fields would false-match unrelated children; skip dedup.
   defp find_existing_child(_parent_id, nil, _last, _dob), do: nil
   defp find_existing_child(_parent_id, _first, nil, _dob), do: nil
   defp find_existing_child(_parent_id, _first, _last, nil), do: nil
 
-  # Trigger: need to check for duplicate child before creating
-  # Why: case-insensitive match aligns with the remediation script's lower() grouping
-  # Outcome: returns matching child or nil
+  # Case-insensitive match aligns with the remediation script's lower() grouping.
   defp find_existing_child(parent_id, first_name, last_name, date_of_birth) do
     parent_id
     |> @child_query.list_by_guardian()
@@ -147,9 +134,7 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
     end)
   end
 
-  # Trigger: nut_allergy boolean from invite needs to become a human-readable string
-  # Why: Child.allergies is a free-text string field, not a boolean
-  # Outcome: true -> "Nut allergy", false/nil -> nil
+  # Child.allergies is free-text; map invite boolean to a string value.
   defp map_nut_allergy(true), do: "Nut allergy"
   defp map_nut_allergy(_), do: nil
 

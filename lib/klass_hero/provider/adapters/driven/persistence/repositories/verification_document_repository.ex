@@ -2,12 +2,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   @moduledoc """
   Ecto-based repository for verification documents.
 
-  Implements the ForStoringVerificationDocuments port with:
-  - Domain entity mapping via VerificationDocumentMapper
-  - Idiomatic "let it crash" error handling
-
-  Infrastructure errors (connection, query) are not caught - they crash and
-  are handled by the supervision tree.
+  Implements `ForStoringVerificationDocuments` and `ForQueryingVerificationDocuments`.
+  Infrastructure errors are not caught — supervision tree handles them.
   """
 
   @behaviour KlassHero.Provider.Domain.Ports.ForQueryingVerificationDocuments
@@ -25,13 +21,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
 
   @impl true
-  @doc """
-  Creates a new verification document in the database.
-
-  Returns:
-  - `{:ok, VerificationDocument.t()}` on success
-  - `{:error, changeset}` on validation failure
-  """
   def create(document) do
     span do
       set_attributes("db", operation: "insert", entity: "verification_document")
@@ -48,13 +37,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   end
 
   @impl true
-  @doc """
-  Retrieves a verification document by its ID.
-
-  Returns:
-  - `{:ok, VerificationDocument.t()}` when document is found
-  - `{:error, :not_found}` when no document exists with the given ID
-  """
   def get(id) do
     span do
       set_attributes("db", operation: "select", entity: "verification_document")
@@ -64,14 +46,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   end
 
   @impl true
-  @doc """
-  Retrieves all verification documents for a specific provider.
-
-  Documents are ordered by inserted_at descending (most recent first).
-
-  Returns:
-  - `{:ok, [VerificationDocument.t()]}` - List of documents (may be empty)
-  """
   def get_by_provider(provider_id) do
     span do
       set_attributes("db", operation: "select", entity: "verification_document")
@@ -88,14 +62,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   end
 
   @impl true
-  @doc """
-  Updates an existing verification document in the database.
-
-  Returns:
-  - `{:ok, VerificationDocument.t()}` on success
-  - `{:error, :not_found}` when document doesn't exist
-  - `{:error, changeset}` on validation failure
-  """
   def update(document) do
     span do
       set_attributes("db", operation: "update", entity: "verification_document")
@@ -111,15 +77,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   end
 
   @impl true
-  @doc """
-  Lists all verification documents with pending status.
-
-  Documents are ordered by inserted_at ascending (oldest first) to support
-  FIFO processing of pending reviews.
-
-  Returns:
-  - `{:ok, [VerificationDocument.t()]}` - List of pending documents (may be empty)
-  """
   def list_pending do
     span do
       set_attributes("db", operation: "select", entity: "verification_document")
@@ -136,14 +93,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   end
 
   @impl true
-  @doc """
-  Lists all verification documents with the specified status.
-
-  Documents are ordered by inserted_at descending (most recent first).
-
-  Returns:
-  - `{:ok, [VerificationDocument.t()]}` - List of documents with matching status (may be empty)
-  """
   def list_by_status(status) when is_atom(status) do
     span do
       set_attributes("db", operation: "select", entity: "verification_document")
@@ -161,14 +110,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
     end
   end
 
+  # :pending orders oldest-first (FIFO); nil and other statuses order newest-first.
   @impl true
-  @doc """
-  Lists verification documents joined with provider business names for admin review.
-
-  When status is nil, returns all documents ordered by inserted_at descending.
-  When status is :pending, orders oldest-first (FIFO processing).
-  Other statuses order newest-first.
-  """
   def list_for_admin_review(status) when is_atom(status) or is_nil(status) do
     span do
       set_attributes("db", operation: "select", entity: "verification_document")
@@ -196,13 +139,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   end
 
   @impl true
-  @doc """
-  Retrieves a single verification document joined with provider business name.
-
-  Returns:
-  - `{:ok, admin_review_result()}` - Document found
-  - `{:error, :not_found}` when no document exists with the given ID
-  """
   def get_for_admin_review(id) do
     span do
       set_attributes("db", operation: "select", entity: "verification_document")
@@ -216,7 +152,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
     end
   end
 
-  # Shared base query joining documents with provider profiles for admin review.
   defp admin_review_base_query do
     from d in VerificationDocumentSchema,
       join: p in ProviderProfileSchema,
@@ -224,7 +159,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
       select: {d, p.business_name}
   end
 
-  # Maps a {schema, business_name} tuple to the admin review result map.
   defp to_admin_review_result({schema, business_name}) do
     %{
       document: VerificationDocumentMapper.to_domain(schema),

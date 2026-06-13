@@ -1,32 +1,11 @@
 defmodule KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver do
   @moduledoc """
-  Adapter for resolving child info (name + consent-gated safety data) from Family context.
+  ACL adapter resolving child info from the Family context.
 
-  ## Anti-Corruption Layer
+  Always returns name fields; returns safety fields (`allergies`, `support_needs`,
+  `emergency_contact`) only when `"provider_data_sharing"` consent is active.
 
-  This adapter serves as an anti-corruption layer between the Participation and Family
-  bounded contexts. It:
-
-  1. Fetches the child from Family context (single call)
-  2. Checks `"provider_data_sharing"` consent (single call)
-  3. Returns name fields always, safety fields only when consented
-
-  ## Architecture
-
-  ```
-  Participation Use Case → ForResolvingChildInfo Port → [THIS ADAPTER] → Family Public API
-       (uses map)           (behaviour contract)       (consent gate)     (owns Child model)
-  ```
-
-  The Participation context receives only primitive data (map of strings),
-  maintaining proper bounded context isolation per DDD principles.
-
-  ## Error Mapping
-
-  Family errors are mapped to Participation semantics:
-
-  - `:not_found` (Family) → `:child_not_found` (Participation)
-  - Other errors pass through unchanged
+  Maps Family's `:not_found` → `:child_not_found` for Participation semantics.
   """
 
   @behaviour KlassHero.Participation.Domain.Ports.ForResolvingChildInfo
@@ -53,7 +32,6 @@ defmodule KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver do
         {:ok, child_info}
 
       {:error, :not_found} ->
-        # Map Family error semantics to Participation semantics
         {:error, :child_not_found}
 
       {:error, error} ->

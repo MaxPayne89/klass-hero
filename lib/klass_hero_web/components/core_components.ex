@@ -1,8 +1,6 @@
 defmodule KlassHeroWeb.CoreComponents do
   @moduledoc """
-  Provides core UI components for Klass Hero application.
-
-  This module contains essential building blocks that are used across the application.
+  Core UI components used across the application.
   """
   use Phoenix.Component
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -74,8 +72,6 @@ defmodule KlassHeroWeb.CoreComponents do
     """
   end
 
-  ## JS Commands
-
   def show(js \\ %JS{}, selector) do
     JS.show(js,
       to: selector,
@@ -100,16 +96,6 @@ defmodule KlassHeroWeb.CoreComponents do
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do
-    # When using gettext, we typically pass the strings we want
-    # to translate as a static argument:
-    #
-    #     # Translate the number of files with plural rules
-    #     dngettext("errors", "1 file", "%{count} files", count)
-    #
-    # However the error messages in our forms and APIs are generated
-    # dynamically, so we need to translate them by calling Gettext
-    # with our gettext backend as first argument. Translations are
-    # available in the errors.po file (as we use the "errors" domain).
     if count = opts[:count] do
       Gettext.dngettext(KlassHeroWeb.Gettext, "errors", msg, msg, count, opts)
     else
@@ -132,8 +118,6 @@ defmodule KlassHeroWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
-
-  ## Standard Phoenix Components for Auth
 
   @doc """
   Renders a header with title.
@@ -255,29 +239,18 @@ defmodule KlassHeroWeb.CoreComponents do
       <textarea
         id={@id}
         name={@name}
-        class={
-          [
-            # Base styles - increased spacing and text
-            "mt-2 block w-full rounded-lg text-hero-black sm:text-sm sm:leading-6",
-            "min-h-[6rem]",
-            # Solid background for contrast
-            "bg-white/90 backdrop-blur-sm",
-            # Thicker, darker borders for visibility
-            "border-2",
-            # Default state - visible dark border
-            "phx-no-feedback:border-hero-grey-300 phx-no-feedback:focus:border-hero-blue-500",
-            # Valid state - darker border with hero-blue accent on focus
-            @errors == [] && "border-hero-grey-300 focus:border-hero-blue-500",
-            # Error state - red border
-            @errors != [] && "border-rose-500 focus:border-rose-600",
-            # Add subtle shadow for depth
-            "shadow-sm focus:shadow-md",
-            # Smooth transitions
-            "transition-all duration-200",
-            # Enhanced focus ring
-            "focus:ring-2 focus:ring-hero-blue-500/20 focus:ring-offset-0"
-          ]
-        }
+        class={[
+          "mt-2 block w-full rounded-lg text-hero-black sm:text-sm sm:leading-6",
+          "min-h-[6rem]",
+          "bg-white/90 backdrop-blur-sm",
+          "border-2",
+          "phx-no-feedback:border-hero-grey-300 phx-no-feedback:focus:border-hero-blue-500",
+          @errors == [] && "border-hero-grey-300 focus:border-hero-blue-500",
+          @errors != [] && "border-rose-500 focus:border-rose-600",
+          "shadow-sm focus:shadow-md",
+          "transition-all duration-200",
+          "focus:ring-2 focus:ring-hero-blue-500/20 focus:ring-offset-0"
+        ]}
         {@rest}
       >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
       <.error :for={msg <- @errors}>{msg}</.error>

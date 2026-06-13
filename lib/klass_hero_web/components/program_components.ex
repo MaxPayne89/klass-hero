@@ -1,9 +1,6 @@
 defmodule KlassHeroWeb.ProgramComponents do
   @moduledoc """
-  Provides program-specific components for Klass Hero application.
-
-  This module contains domain-specific components related to programs,
-  activities, and the program catalog.
+  Program-specific components for the program catalog.
   """
   use Phoenix.Component
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -253,9 +250,7 @@ defmodule KlassHeroWeb.ProgramComponents do
       ]}
       {@rest}
     >
-      <%!-- Program Image/Header --%>
       <%= if Map.get(@program, :cover_image_url) do %>
-        <%!-- Cover image fills header, no icon --%>
         <div class="h-48 relative overflow-hidden">
           <img
             id={"program-cover-#{@program.id}"}
@@ -267,12 +262,10 @@ defmodule KlassHeroWeb.ProgramComponents do
           <.card_header_badges program={@program} />
         </div>
       <% else %>
-        <%!-- Gradient fallback with icon when no cover image --%>
         <div class={["h-48 relative overflow-hidden", @program.gradient_class]}>
           <div class="absolute inset-0 bg-black/10"></div>
           <.card_header_badges program={@program} />
 
-          <%!-- Program Icon --%>
           <div class="absolute inset-0 flex items-center justify-center">
             <div class={[
               "w-16 h-16 bg-white/20 backdrop-blur-sm flex items-center justify-center",
@@ -284,7 +277,6 @@ defmodule KlassHeroWeb.ProgramComponents do
         </div>
       <% end %>
 
-      <!-- Program Info -->
       <div class="p-6">
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1">
@@ -349,7 +341,6 @@ defmodule KlassHeroWeb.ProgramComponents do
           </span>
         </div>
 
-        <!-- Program Details -->
         <div class="space-y-2 mb-4">
           <div class="flex items-center text-sm text-hero-black-100">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -389,7 +380,6 @@ defmodule KlassHeroWeb.ProgramComponents do
           </div>
         </div>
 
-        <!-- Price -->
         <div class="pt-4 border-t border-hero-grey-100">
           <div class={[Theme.typography(:card_title), Theme.text_color(:primary)]}>
             {ProgramCatalog.format_price(@program.price)}
@@ -397,7 +387,6 @@ defmodule KlassHeroWeb.ProgramComponents do
           <div class="text-sm text-hero-grey-500">{@program.period}</div>
         </div>
       </div>
-      <%!-- Actions slot --%>
       <%= if @actions != [] do %>
         <div class="px-6 pb-6">
           {render_slot(@actions)}
@@ -532,17 +521,14 @@ defmodule KlassHeroWeb.ProgramComponents do
       </div>
       <div class="p-6">
         <ul class={["space-y-2 text-sm", Theme.text_color(:secondary)]}>
-          <%!-- Age restriction --%>
           <li :if={@policy.min_age_months || @policy.max_age_months} class="flex items-start">
             <.icon name="hero-cake" class="w-5 h-5 text-hero-blue-500 mr-2 flex-shrink-0" />
             <span>{format_age_restriction(@policy)}</span>
           </li>
-          <%!-- Gender restriction --%>
           <li :if={@policy.allowed_genders != []} class="flex items-start">
             <.icon name="hero-users" class="w-5 h-5 text-hero-blue-500 mr-2 flex-shrink-0" />
             <span>{format_gender_restriction(@policy.allowed_genders)}</span>
           </li>
-          <%!-- Grade restriction --%>
           <li :if={@policy.min_grade || @policy.max_grade} class="flex items-start">
             <.icon name="hero-academic-cap" class="w-5 h-5 text-hero-blue-500 mr-2 flex-shrink-0" />
             <span>{format_grade_restriction(@policy)}</span>
@@ -553,9 +539,7 @@ defmodule KlassHeroWeb.ProgramComponents do
     """
   end
 
-  # Trigger: every restriction field on the policy is empty
-  # Why: rendering the card heading with no body confuses providers (issue #795)
-  # Outcome: caller renders nothing when the policy carries no restrictions
+  # Guard: empty heading with no body confuses providers (#795)
   defp has_any_restriction?(%{
          min_age_months: nil,
          max_age_months: nil,
@@ -580,9 +564,7 @@ defmodule KlassHeroWeb.ProgramComponents do
     gettext("Up to %{max}", max: format_months(max))
   end
 
-  # Trigger: months divide evenly into years with no remainder
-  # Why: display "5 years" instead of "5 years 0 months" for cleaner UX
-  # Outcome: returns human-readable age string
+  # Display "5 years" not "5 years 0 months" when months divide evenly
   defp format_months(months) when rem(months, 12) == 0 do
     years = div(months, 12)
     ngettext("%{count} year", "%{count} years", years)
@@ -606,9 +588,6 @@ defmodule KlassHeroWeb.ProgramComponents do
   defp format_gender_restriction(genders) when is_list(genders) do
     labels = Enum.map(genders, &humanize_gender/1)
 
-    # Trigger: only one gender allowed
-    # Why: display "Female only" for single-gender programs
-    # Outcome: appends "only" suffix for single-value lists
     case labels do
       [single] -> gettext("%{gender} only", gender: single)
       multiple -> Enum.join(multiple, ", ")

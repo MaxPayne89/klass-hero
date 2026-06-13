@@ -98,14 +98,9 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
       case get_schema(child_id) do
         {:ok, schema} ->
-          # Trigger: bare Repo.delete raises Ecto.ConstraintError on FK violations
-          # Why: wrapping in a changeset with foreign_key_constraint converts
-          #      constraint errors into {:error, changeset} tagged tuples
-          # Outcome: graceful error return instead of crash
-          #
-          # Note: constraint names span contexts (Enrollment, Participation, Family).
-          # Defined in migrations: 20260226000006, 20260226000007, 20260226000008,
-          # 20260306200504. Update here if those constraints are renamed.
+          # Bare Repo.delete raises Ecto.ConstraintError on FK violations; changeset wrapping
+          # converts them to {:error, changeset}. Constraint names span Enrollment, Participation,
+          # and Family — defined in migrations 20260226000006–20260226000008, 20260306200504.
           changeset =
             schema
             |> Ecto.Changeset.change()

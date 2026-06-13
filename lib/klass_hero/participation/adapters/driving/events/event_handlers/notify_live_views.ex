@@ -30,10 +30,6 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
   @doc "Handles a domain event by publishing to generic and provider-specific topics."
   @spec handle(DomainEvent.t()) :: :ok
   def handle(%DomainEvent{} = event) do
-    # Trigger: every participation event needs both generic and provider-specific routing
-    # Why: generic topic serves context-wide subscribers (ParticipationLive, ParticipationHistoryLive);
-    #      provider-specific topic serves SessionsLive without client-side filtering
-    # Outcome: two publishes per event, both best-effort
     generic_topic = SharedNotifyLiveViews.derive_topic(event)
     SharedNotifyLiveViews.safe_publish(event, generic_topic)
 
@@ -56,9 +52,6 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
         resolve_and_publish(event, program_id)
 
       :error ->
-        # Trigger: event payload has no program_id
-        # Why: some events may not have been enriched yet
-        # Outcome: skip provider-specific publish, log for visibility
         Logger.debug(
           "[Participation.NotifyLiveViews] Skipping provider topic — no program_id in payload",
           event_type: event.event_type
@@ -73,12 +66,9 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
         SharedNotifyLiveViews.safe_publish(event, provider_topic)
 
       {:error, reason} ->
-        # Trigger: program_id resolution failed (not found, DB error, etc.)
-        # Why: provider-specific publish is best-effort; generic topic already succeeded.
-        #      Demoted from :warning to :debug — sustained failures should be caught by
-        #      metrics/alerts, not per-event warns. See issue about test-isolation race
-        #      where this fires intermittently due to EventSubscriber GenServers running
-        #      outside the test sandbox after global Application.put_env config leaks.
+        # Best-effort: generic topic already published. Demoted from :warning — sustained
+        # failures belong in metrics/alerts. Can fire in tests due to EventSubscriber
+        # GenServers running outside the sandbox after global Application.put_env leaks.
         Logger.debug(
           "[Participation.NotifyLiveViews] Could not resolve provider for program",
           program_id: program_id,

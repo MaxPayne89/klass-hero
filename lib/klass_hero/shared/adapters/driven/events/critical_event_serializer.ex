@@ -90,8 +90,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
           "Missing event_kind in critical event job args: #{inspect(Map.keys(data))}"
   end
 
-  # -- Key conversion helpers --
-
   defp stringify_keys(%_{} = struct), do: struct
 
   defp stringify_keys(map) when is_map(map) do
@@ -118,11 +116,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
 
   defp atomize_keys(value), do: value
 
-  # -- Metadata serialization --
-
-  # Trigger: metadata contains a mix of atom values (:critical, :normal) and strings
-  # Why: criticality is an atom enum, other metadata values are strings/integers
-  # Outcome: atom values serialized to strings, restored on deserialization
   defp serialize_metadata(metadata) when is_map(metadata) do
     Map.new(metadata, fn
       {k, v} when is_atom(k) and is_atom(v) ->
@@ -136,7 +129,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
     end)
   end
 
-  # Keys that carry atom values and must be atomized on deserialization
   @atom_metadata_values ~w(criticality)
 
   # Keys that remain as binary strings after deserialization — they are
@@ -160,8 +152,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   end
 
   defp deserialize_metadata(nil), do: %{}
-
-  # -- DateTime parsing --
 
   defp parse_datetime!(iso_string) when is_binary(iso_string) do
     {:ok, dt, _offset} = DateTime.from_iso8601(iso_string)

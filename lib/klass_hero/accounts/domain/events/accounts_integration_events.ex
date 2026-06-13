@@ -61,34 +61,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
   @staff_entity_type :staff_member
 
   @doc """
-  Creates a `user_registered` integration event.
-
-  Marked `:critical` by default — Identity depends on this to create profiles.
-
-  ## Parameters
-
-  - `user_id` - The ID of the registered user
-  - `payload` - Additional event-specific data
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Payload Fields
-
-  Standard payload includes:
-  - `user_id` - The user's ID
-
-  ## Raises
-
-  - `ArgumentError` if `user_id` is nil or empty
-
-  ## Examples
-
-      iex> event = AccountsIntegrationEvents.user_registered("user-uuid")
-      iex> event.event_type
-      :user_registered
-      iex> event.source_context
-      :accounts
-      iex> IntegrationEvent.critical?(event)
-      true
+  Creates a `user_registered` integration event (critical — Identity depends on this to create profiles).
   """
   def user_registered(user_id, payload \\ %{}, opts \\ [])
 
@@ -101,9 +74,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
       @source_context,
       @entity_type,
       user_id,
-      # Trigger: caller may pass a conflicting :user_id in payload
-      # Why: base_payload contains the canonical user_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # base_payload keys win over caller-supplied payload to prevent :user_id overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -115,20 +86,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
   end
 
   @doc """
-  Creates a `user_confirmed` integration event.
-
-  Marked `:critical` by default — downstream contexts use this as a compensation
-  path to ensure profiles exist before first login.
-
-  ## Parameters
-
-  - `user_id` - The ID of the confirmed user
-  - `payload` - Additional event-specific data (intended_roles, tier, etc.)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `user_id` is nil or empty
+  Creates a `user_confirmed` integration event (critical — compensation path ensuring profiles exist before first login).
   """
   def user_confirmed(user_id, payload \\ %{}, opts \\ [])
 
@@ -141,9 +99,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
       @source_context,
       @entity_type,
       user_id,
-      # Trigger: caller may pass a conflicting :user_id in payload
-      # Why: base_payload contains the canonical user_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -155,34 +110,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
   end
 
   @doc """
-  Creates a `user_anonymized` integration event.
-
-  Marked `:critical` by default — GDPR cascade must not be lost.
-
-  ## Parameters
-
-  - `user_id` - The ID of the anonymized user
-  - `payload` - Additional event-specific data
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Payload Fields
-
-  Standard payload includes:
-  - `user_id` - The user's ID
-
-  ## Raises
-
-  - `ArgumentError` if `user_id` is nil or empty
-
-  ## Examples
-
-      iex> event = AccountsIntegrationEvents.user_anonymized("user-uuid")
-      iex> event.event_type
-      :user_anonymized
-      iex> event.source_context
-      :accounts
-      iex> IntegrationEvent.critical?(event)
-      true
+  Creates a `user_anonymized` integration event (critical — GDPR cascade must not be lost).
   """
   def user_anonymized(user_id, payload \\ %{}, opts \\ [])
 
@@ -195,9 +123,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
       @source_context,
       @entity_type,
       user_id,
-      # Trigger: caller may pass a conflicting :user_id in payload
-      # Why: base_payload contains the canonical user_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -209,24 +134,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
   end
 
   @doc """
-  Creates a `staff_invitation_sent` integration event.
-
-  Marked `:critical` by default — the Provider context must update the staff member's status.
-
-  ## Parameters
-
-  - `staff_member_id` - The ID of the staff member whose invitation was sent
-  - `payload` - Additional event-specific data (provider_id, etc.)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Payload Fields
-
-  Standard payload includes:
-  - `staff_member_id` - The staff member's ID
-
-  ## Raises
-
-  - `ArgumentError` if `staff_member_id` is nil or empty
+  Creates a `staff_invitation_sent` integration event (critical — Provider must update staff status).
   """
   def staff_invitation_sent(staff_member_id, payload \\ %{}, opts \\ [])
 
@@ -240,9 +148,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
       @source_context,
       @staff_entity_type,
       staff_member_id,
-      # Trigger: caller may pass a conflicting :staff_member_id in payload
-      # Why: base_payload contains the canonical staff_member_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -254,24 +159,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
   end
 
   @doc """
-  Creates a `staff_invitation_failed` integration event.
-
-  Marked `:critical` by default — the Provider context must update the staff member's status.
-
-  ## Parameters
-
-  - `staff_member_id` - The ID of the staff member whose invitation failed
-  - `payload` - Additional event-specific data (provider_id, reason, etc.)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Payload Fields
-
-  Standard payload includes:
-  - `staff_member_id` - The staff member's ID
-
-  ## Raises
-
-  - `ArgumentError` if `staff_member_id` is nil or empty
+  Creates a `staff_invitation_failed` integration event (critical — Provider must update staff status).
   """
   def staff_invitation_failed(staff_member_id, payload \\ %{}, opts \\ [])
 
@@ -285,9 +173,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
       @source_context,
       @staff_entity_type,
       staff_member_id,
-      # Trigger: caller may pass a conflicting :staff_member_id in payload
-      # Why: base_payload contains the canonical staff_member_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -299,36 +184,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
   end
 
   @doc """
-  Creates a `staff_user_registered` integration event.
-
-  Marked `:critical` by default — the Provider context must activate the staff member.
-
-  ## Parameters
-
-  - `user_id` - The ID of the newly registered user (staff member)
-  - `payload` - Additional event-specific data (staff_member_id, provider_id, etc.)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Payload Fields
-
-  Standard payload includes:
-  - `user_id` - The user's ID
-
-  ## Raises
-
-  - `ArgumentError` if `user_id` is nil or empty
-
-  ## Examples
-
-      iex> event = AccountsIntegrationEvents.staff_user_registered("user-uuid")
-      iex> event.event_type
-      :staff_user_registered
-      iex> event.source_context
-      :accounts
-      iex> event.entity_type
-      :user
-      iex> IntegrationEvent.critical?(event)
-      true
+  Creates a `staff_user_registered` integration event (critical — Provider must activate the staff member).
   """
   def staff_user_registered(user_id, payload \\ %{}, opts \\ [])
 
@@ -341,9 +197,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents do
       @source_context,
       @entity_type,
       user_id,
-      # Trigger: caller may pass a conflicting :user_id in payload
-      # Why: base_payload contains the canonical user_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )

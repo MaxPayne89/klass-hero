@@ -20,8 +20,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     {:ok, memberships} =
       Provider.list_active_staff_memberships(socket.assigns.current_scope.user.id)
 
-    # The memberships read model already carries everything this page needs
-    # about the employing business (id + name) — no separate profile lookup.
+    # memberships read model carries id + business_name — no separate profile lookup needed.
     case Enum.find(memberships, &(&1.provider_id == staff_member.provider_id)) do
       %{provider_id: provider_id, business_name: business_name} ->
         {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
@@ -59,8 +58,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     end
   end
 
-  # No assigns-guards on the upgrade events: the command is the sole gate
-  # (`:already_provider` with zero writes), and its answer re-converges the UI.
   @impl true
   def handle_event("request_provider_upgrade", _params, socket) do
     {:noreply, assign(socket, upgrade_confirm?: true)}
@@ -76,15 +73,14 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
          |> push_navigate(to: ~p"/provider/complete-profile")}
 
       {:error, :already_provider} ->
-        # Stale tab: they upgraded elsewhere. Re-converge the UI to the truth.
+        # Stale tab: upgraded elsewhere — re-converge the UI.
         {:noreply,
          socket
          |> assign(provider?: true, upgrade_confirm?: false)
          |> put_flash(:info, gettext("You already have a provider profile."))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        # Log only the errors — the changeset's changes carry the user's
-        # name/email and ProviderProfileSchema has no Inspect redaction.
+        # Log errors only — changeset.changes contains user's name/email (no Inspect redaction).
         Logger.error("Failed to upgrade staff user to provider",
           user_id: socket.assigns.current_scope.user.id,
           errors: inspect(changeset.errors)
@@ -159,10 +155,8 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   def handle_event("switch_employer", %{"provider-id" => provider_id}, socket) do
     user_id = socket.assigns.current_scope.user.id
 
-    # Both outcomes re-mount: success rebuilds the page for the new
-    # employment; failure (row deactivated elsewhere, or a tampered non-UUID
-    # id — same user-visible truth) re-resolves the scope so every stale
-    # assign converges, not just the picker.
+    # Both outcomes re-mount: success rebuilds for the new employment; failure (deactivated or
+    # tampered id) re-resolves the scope so all stale assigns converge, not just the picker.
     with {:ok, uuid} <- Ecto.UUID.cast(provider_id),
          {:ok, :selected} <- Provider.select_staff_context(user_id, uuid) do
       {:noreply, push_navigate(socket, to: ~p"/staff/dashboard")}
@@ -373,7 +367,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
         </div>
       </div>
 
-      <%!-- Staff Roster Modal --%>
       <%= if @show_roster do %>
         <div
           id="staff-roster-backdrop"

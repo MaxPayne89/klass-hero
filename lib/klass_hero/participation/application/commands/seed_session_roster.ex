@@ -50,11 +50,7 @@ defmodule KlassHero.Participation.Application.Commands.SeedSessionRoster do
   def execute(session_id, program_id) when is_binary(session_id) and is_binary(program_id) do
     child_ids = @enrolled_children_resolver.list_enrolled_child_ids(program_id)
 
-    # Trigger: max_capacity is intentionally not checked here
-    # Why: all enrolled children should appear on the roster — capacity is an enrollment-time
-    #      concern, not a per-session roster gate. A class of 25 enrolled kids should see all 25
-    #      on every session, even if max_capacity is set lower for scheduling purposes.
-    # Outcome: all child_ids are passed to seed_batch without filtering
+    # max_capacity is not checked: capacity is an enrollment-time concern, not a roster gate.
     {:ok, count} = @participation_repository.seed_batch(session_id, child_ids)
 
     Logger.info(
@@ -79,10 +75,7 @@ defmodule KlassHero.Participation.Application.Commands.SeedSessionRoster do
       :ok
   end
 
-  # Trigger: event dispatch is separated from the main rescue
-  # Why: if seed_batch succeeds but event dispatch fails, the error message should
-  #      reflect that records were persisted but notification failed — not "failed to seed"
-  # Outcome: distinct log messages for seeding vs. notification failures
+  # Separated from main rescue so a dispatch failure doesn't log "failed to seed" when records persisted successfully.
   defp safe_publish_event(session_id, program_id, count) do
     event = ParticipationEvents.roster_seeded(session_id, program_id, count)
 

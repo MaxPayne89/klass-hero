@@ -174,10 +174,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
 
     case Accounts.register_staff_user(params) do
       {:ok, user} ->
-        # Trigger: emit_staff_user_registered may fail (PubSub/Oban enqueue)
-        # Why: the user account IS created; the critical event infrastructure
-        #   guarantees eventual delivery via Oban durable retry
-        # Outcome: proceed with success UX; the staff linkage self-heals
+        # User is created; Oban guarantees eventual delivery of the event even if this enqueue fails.
         case Accounts.emit_staff_user_registered(user.id, staff.id, staff.provider_id) do
           :ok ->
             :ok
@@ -224,7 +221,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
          |> push_navigate(to: ~p"/staff/dashboard")}
 
       {:error, :email_mismatch} ->
-        # Defense in depth: a forged click from a non-matching session cannot link.
+        # Defense: a forged click from a non-matching session cannot link.
         {:noreply, assign(socket, mode: :wrong_account)}
 
       {:error, reason} ->
@@ -237,8 +234,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
     end
   end
 
-  # Linking is only valid in :link mode; ignore a "link" event pushed in any other
-  # mode (e.g. a crafted client event when the button isn't rendered).
+  # Ignore "link" events in any mode other than :link (e.g. crafted client events).
   def handle_event("link", _params, socket), do: {:noreply, socket}
 
   @impl true
@@ -264,9 +260,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
   end
 
   defp mount_for_mode(socket, staff_member) do
-    # Resolve the real mode (which needs a get_user_by_email lookup) only on the
-    # connected mount — the disconnected pass renders a lightweight placeholder,
-    # so the public token endpoint isn't double-queried per page load.
+    # Defer the email lookup to connected mount so the token endpoint isn't double-queried.
     mode =
       if connected?(socket),
         do: resolve_mode(current_user(socket), staff_member.email),
@@ -284,8 +278,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
     {:ok, maybe_assign_register_form(socket, mode, staff_member)}
   end
 
-  # Mode is computed from session truth only (never params), so the privileged
-  # :link button is rendered only when the logged-in email matches the invite.
+  # Mode derives from session truth only, never params — the :link button only renders on email match.
   defp resolve_mode(nil = _current_user, invite_email) do
     if Accounts.get_user_by_email(invite_email), do: :must_log_in, else: :register
   end

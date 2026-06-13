@@ -1,9 +1,6 @@
 defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema do
   @moduledoc """
-  Ecto schema for the programs table.
-
-  This is an infrastructure adapter that maps database records to Ecto structs.
-  Use ProgramMapper to convert between ProgramSchema and domain Program entities.
+  Ecto schema for the programs table. Use ProgramMapper to convert to/from domain entities.
   """
 
   use Ecto.Schema
@@ -73,19 +70,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
 
   @doc """
   Creates a changeset for validation.
-
-  Required fields:
-  - title (1-100 characters)
-  - description (1-500 characters)
-  - category (valid program category)
-  - age_range (non-empty)
-  - price (>= 0)
-  - pricing_period (non-empty)
-
-  Optional scheduling fields:
-  - meeting_days (list of valid weekday names)
-  - meeting_start_time / meeting_end_time (must be set together, end > start)
-  - start_date (must be before end_date when both present)
   """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(program_schema, attrs) do
@@ -134,10 +118,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
   end
 
   @doc """
-  Creates a changeset for program creation.
-
-  Requires only the minimal fields needed to create a program.
-  Schedule, age_range, and pricing_period are optional at creation time.
+  Creates a changeset for program creation. Schedule, age_range, and pricing_period are optional.
   """
   def create_changeset(program_schema, attrs) do
     program_schema
@@ -156,9 +137,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
       :registration_end_date,
       :season
     ])
-    # Trigger: provider_id, instructor fields arrive from trusted server-side code
-    # Why: including them in cast would allow form param injection
-    # Outcome: fields are set explicitly via put_change, not from user input
+    # provider_id and instructor fields come from trusted server-side code; bypassing cast prevents form param injection.
     |> maybe_put_change(:provider_id, attrs)
     |> maybe_put_change(:cover_image_url, attrs)
     |> maybe_put_change(:instructor_id, attrs)
@@ -184,13 +163,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
   end
 
   @doc """
-  Creates an update changeset with optimistic locking.
-
-  Applies the same validations as changeset/2 but adds optimistic locking
-  to prevent concurrent update conflicts.
-
-  Returns a changeset that will fail with Ecto.StaleEntryError if the
-  record has been modified by another process since it was loaded.
+  Creates an update changeset with optimistic locking. Raises `Ecto.StaleEntryError` on concurrent modification.
   """
   def update_changeset(program_schema, attrs) do
     program_schema
@@ -237,9 +210,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
 
   @valid_weekdays ~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday)
 
-  # Trigger: meeting_days contains values not in the valid weekday list
-  # Why: prevent typos or invalid day names from corrupting schedule data
-  # Outcome: changeset error listing the invalid day names
   defp validate_meeting_days(changeset) do
     validate_change(changeset, :meeting_days, fn :meeting_days, days ->
       invalid = Enum.reject(days, &(&1 in @valid_weekdays))
@@ -252,9 +222,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     end)
   end
 
-  # Trigger: only one of start_time/end_time is set, or end_time <= start_time
-  # Why: a half-specified time range is ambiguous; end must follow start chronologically
-  # Outcome: changeset error on the appropriate time field
   defp validate_time_pairing(changeset) do
     start_time = get_field(changeset, :meeting_start_time)
     end_time = get_field(changeset, :meeting_end_time)
@@ -274,9 +241,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     end
   end
 
-  # Trigger: start_date is strictly after end_date
-  # Why: a program's start must be on or before its end (single-day programs allowed)
-  # Outcome: changeset error on start_date
   defp validate_date_range(changeset) do
     start_date = get_field(changeset, :start_date)
     end_date = get_field(changeset, :end_date)
@@ -293,9 +257,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     end
   end
 
-  # Trigger: registration_start_date is on or after registration_end_date
-  # Why: registration window must have start before end for a valid period
-  # Outcome: changeset error on registration_start_date
   defp validate_registration_date_range(changeset) do
     start_date = get_field(changeset, :registration_start_date)
     end_date = get_field(changeset, :registration_end_date)
@@ -311,9 +272,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     end
   end
 
-  # Trigger: attrs may or may not contain the given key
-  # Why: programmatic fields must bypass cast but still appear as changes
-  # Outcome: put_change only when the key is present in the atom-keyed attrs map
+  # Programmatic fields bypass cast; put_change only when present so absent keys don't overwrite existing values.
   defp maybe_put_change(changeset, key, attrs) when is_atom(key) do
     if Map.has_key?(attrs, key) do
       put_change(changeset, key, Map.get(attrs, key))

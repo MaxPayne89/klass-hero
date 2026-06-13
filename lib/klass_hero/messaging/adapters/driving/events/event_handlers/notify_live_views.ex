@@ -32,8 +32,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveVi
   """
   @spec handle(DomainEvent.t()) :: :ok
 
-  # Per-conversation events → conversation:{id}
-
   def handle(%DomainEvent{event_type: :message_sent} = event) do
     topic = conversation_topic(event.payload.conversation_id)
     SharedNotifyLiveViews.safe_publish(event, topic)
@@ -44,8 +42,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveVi
     SharedNotifyLiveViews.safe_publish(event, topic)
   end
 
-  # Fan-out event → user:{id}:messages per participant
-
   def handle(%DomainEvent{event_type: :conversation_created} = event) do
     Enum.each(event.payload.participant_ids, fn user_id ->
       topic = user_messages_topic(user_id)
@@ -54,8 +50,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveVi
 
     :ok
   end
-
-  # Bulk operation events → messaging:bulk_operations
 
   def handle(%DomainEvent{event_type: :conversations_archived} = event) do
     SharedNotifyLiveViews.safe_publish(event, @bulk_topic)

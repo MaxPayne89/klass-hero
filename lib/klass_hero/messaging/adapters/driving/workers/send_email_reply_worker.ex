@@ -26,10 +26,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
                           :for_querying_inbound_emails
                         ])
 
-  # Trigger: Resend API enforces rate limits
-  # Why: default Oban backoff doesn't account for 429 responses — retries
-  #      fire too soon and hit the limit again
-  # Outcome: rate-limited jobs wait 30s+ before retry; other failures use 10s base
+  # Custom backoff: 429 responses need longer delay than Oban's default.
   @impl Oban.Worker
   def backoff(%Oban.Job{} = job), do: RateLimitedEmailWorker.backoff(job)
 
@@ -71,9 +68,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
     end
   end
 
-  # Trigger: email delivered but status update may fail (DB timeout, concurrent delete)
-  # Why: email already sent — retrying the job would send duplicates
-  # Outcome: log critical if update fails, but don't retry
+  # Email already sent — do not raise/retry on status update failure (would cause duplicate sends).
   defp mark_reply_sent(reply_id, attrs) do
     case @email_reply_repo.update_status(reply_id, "sent", attrs) do
       {:ok, _} ->

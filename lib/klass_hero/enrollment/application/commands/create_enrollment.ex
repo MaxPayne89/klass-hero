@@ -90,12 +90,8 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollment do
     end
   end
 
-  # Trigger: CheckParticipantEligibility may return a 3-tuple {:error, :ineligible, reasons}
-  #          or a 2-tuple {:error, term()} for ACL/lookup failures.
-  # Why: the 3-tuple should bubble up to the caller verbatim (it carries reasons),
-  #      while the 2-tuple maps to :processing_failed (fail-closed if eligibility
-  #      cannot be verified).
-  # Outcome: returns {:ok, :eligible} | {:error, :ineligible, reasons} | {:error, :processing_failed}.
+  # 3-tuple {:error, :ineligible, reasons} bubbles verbatim; 2-tuple lookup failures map to
+  # :processing_failed (fail-closed when eligibility cannot be verified).
   defp ensure_eligible(program_id, child_id) do
     case CheckParticipantEligibility.execute(program_id, child_id) do
       {:ok, :eligible} ->
@@ -142,10 +138,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollment do
     end
   end
 
-  # Trigger: enrollment persisted; broadcast for downstream handlers (projections, integration events)
-  # Why: :enrollment_created is non-critical — fire-and-forget via dispatch/2;
-  #      a failed handler must not roll back a successful enrollment.
-  # Outcome: returns :ok regardless of handler outcome (errors are logged inside the bus).
+  # Fire-and-forget — a failed handler must not roll back a successful enrollment.
   defp dispatch_enrollment_created(enrollment, identity_id) do
     EnrollmentEvents.enrollment_created(enrollment.id, %{
       enrollment_id: enrollment.id,

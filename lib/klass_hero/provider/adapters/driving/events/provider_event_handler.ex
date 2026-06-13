@@ -32,9 +32,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler do
   @impl true
   def handle_event(%{event_type: event_type, entity_id: user_id, payload: payload})
       when event_type in [:user_registered, :user_confirmed] do
-    # Why: create a provider profile only when the user deliberately registered
-    #   as a provider. Staff registration carries [:staff] alone (ADR-0005), so
-    #   this guard already excludes it — no special-casing needed.
+    # Guard: staff-only registrations carry [:staff] (ADR-0005) and are excluded here — no special-casing needed.
     intended_roles = Map.get(payload, :intended_roles, [])
 
     if "provider" in intended_roles do

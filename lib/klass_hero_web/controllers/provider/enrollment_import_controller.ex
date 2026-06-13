@@ -12,11 +12,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
 
   require Logger
 
-  # Trigger: CSV files from real enrollment rosters are typically under 500KB.
-  # Why: 2MB gives generous headroom while preventing abuse from multi-MB uploads
-  #   that would consume memory during parsing. Checked here rather than at the
-  #   endpoint level because this is the only route accepting file uploads.
-  # Outcome: requests with oversized files get a 413 before any CSV processing.
+  # 2MB: headroom over typical <500KB rosters; only this route accepts uploads so checked here.
   @max_file_size 2_000_000
 
   def create(conn, params) do
@@ -35,10 +31,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
             failed: 0
           )
 
-          # Trigger: every row succeeded — no partial-outcome to communicate.
-          # Why: pre-refactor clients branch on 201 for "fully created" responses;
-          #   reserving 201 here preserves that contract.
-          # Outcome: full-success path emits HTTP 201 Created.
+          # 201 reserved for full success; pre-refactor clients branch on this.
           conn |> put_status(:created) |> json(format_report(report))
 
         {:ok, report} ->
@@ -48,10 +41,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
             failed: length(report.failed)
           )
 
-          # Trigger: at least one row failed (mixed outcome or all-failed).
-          # Why: 200 OK signals "processed, see body" — the caller must inspect
-          #   `failed` to remediate. Distinct from 201 so clients can branch.
-          # Outcome: partial/all-failed paths emit HTTP 200 with structured body.
+          # 200 (not 201) signals partial/all-failed; caller inspects `failed` to remediate.
           conn |> put_status(:ok) |> json(format_report(report))
 
         {:error, %{parse_errors: _} = error_report} ->
@@ -77,13 +67,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
     end
   end
 
-  # -- private helpers -------------------------------------------------------
-
-  # Trigger: the current user may or may not have a provider profile.
-  # Why: we resolve roles inline instead of a dedicated plug because this is
-  #   currently the only provider controller endpoint — YAGNI on a plug until
-  #   we have multiple endpoints that need the same check.
-  # Outcome: returns the provider's UUID or a tagged error for the `with` chain.
+  # Inline role check rather than a plug — only one provider controller endpoint (YAGNI).
   defp resolve_provider(conn) do
     scope =
       conn.assigns.current_scope
@@ -109,11 +93,6 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
 
   defp read_upload(_params), do: {:error, :no_file}
 
-  # Trigger: the use case now returns {:ok, %{created: n, failed: [...]}} for
-  #   all row-level outcomes (full success, mixed, all-failed).
-  # Why: partial success is the normal case — we must serialise the structured
-  #   failed list so the client knows which rows to remediate.
-  # Outcome: a flat map with integer `created` and a list of failed-row maps.
   defp format_report(%{created: created, failed: failed}) do
     %{
       created: created,
@@ -130,19 +109,14 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportController do
 
   defp format_errors_field(errors) when is_binary(errors), do: errors
 
-  # Trigger: ChangesetErrors.field_list/1 produces one `{field, msg}` tuple per
-  #   message — a field with two validation failures yields two entries.
-  # Why: `Map.new/1` on those tuples would silently drop all but the last message.
-  # Outcome: group by field so callers receive every message: `%{field => [msg, ...]}`.
+  # Group by field: `Map.new/1` would drop duplicate-field tuples, losing messages.
   defp format_errors_field(errors) when is_list(errors) do
     errors
     |> Enum.group_by(fn {field, _msg} -> field end, fn {_field, msg} -> msg end)
     |> Map.new()
   end
 
-  # Trigger: whole-file fatals carry `parse_errors` tuples that Jason cannot encode.
-  # Why: tuples are not JSON-serializable; convert to maps for the HTTP response.
-  # Outcome: `%{"parse_errors" => [%{row: n, message: "..."}]}`.
+  # Tuples are not JSON-serializable; convert parse_error tuples to maps.
   defp format_fatal(%{parse_errors: errors}) do
     %{
       "parse_errors" => Enum.map(errors, fn {row, msg} -> %{row: row, message: msg} end)

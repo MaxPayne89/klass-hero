@@ -63,8 +63,6 @@ defmodule KlassHero.Shared.Entitlements do
     }
   }
 
-  # Parent entitlement functions
-
   @doc """
   Checks if a parent can create a new booking based on their tier's monthly cap.
 
@@ -159,8 +157,6 @@ defmodule KlassHero.Shared.Entitlements do
     get_parent_limit(tier, :progress_level)
   end
 
-  # Scope-based entitlement functions
-
   @doc """
   Checks if a scope can initiate messaging.
 
@@ -199,8 +195,6 @@ defmodule KlassHero.Shared.Entitlements do
   def can_initiate_messaging?(%{provider: provider}), do: provider_can_message?(provider)
   def can_initiate_messaging?(_scope), do: false
 
-  # Tier validation — delegates to Shared.SubscriptionTiers
-
   @doc """
   Returns the list of valid parent subscription tier atoms.
 
@@ -237,8 +231,6 @@ defmodule KlassHero.Shared.Entitlements do
   @spec default_parent_tier() :: atom()
   defdelegate default_parent_tier, to: SubscriptionTiers
 
-  # Tier info functions (for UI)
-
   @doc """
   Returns all entitlement information for a parent tier.
 
@@ -262,8 +254,6 @@ defmodule KlassHero.Shared.Entitlements do
   """
   @spec all_parent_tiers() :: keyword()
   def all_parent_tiers, do: Map.to_list(@parent_tier_limits)
-
-  # Private helpers
 
   defp within_limit?(:unlimited, _count), do: true
   defp within_limit?(limit, count) when is_integer(limit), do: count < limit

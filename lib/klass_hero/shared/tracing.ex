@@ -20,7 +20,6 @@ defmodule KlassHero.Shared.Tracing do
         end
       end
 
-  Adapted from the abstracing library pattern.
   """
 
   @noise_segments ~w[

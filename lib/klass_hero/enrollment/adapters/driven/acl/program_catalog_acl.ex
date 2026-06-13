@@ -23,9 +23,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL do
   @impl true
   def list_program_titles_for_provider(provider_id) when is_binary(provider_id) do
     acl_span source: "enrollment", target: "program_catalog" do
-      # Trigger: provider_id may not be a valid UUID
-      # Why: type(^provider_id, :binary_id) raises Ecto.Query.CastError on invalid format
-      # Outcome: invalid UUID returns empty map; build_context handles the empty-map case
+      # Guard: type(^provider_id, :binary_id) raises Ecto.Query.CastError on invalid format;
+      # an invalid UUID returns an empty map and build_context handles the empty-map case.
       case Ecto.UUID.cast(provider_id) do
         {:ok, _} ->
           from(p in "programs",

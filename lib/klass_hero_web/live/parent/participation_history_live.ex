@@ -19,10 +19,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
       |> assign(:parent_id, parent_id)
       |> assign(:child_names_map, %{})
       |> assign(:children_ids, MapSet.new())
-      # Uses stream for memory efficiency because:
-      # - Potentially large, unbounded collection (all parent's history)
-      # - Incremental updates (new check-ins prepended via PubSub)
-      # - No need to enumerate in memory (LiveView handles rendering)
       |> stream(:participation_records, [])
       |> assign(:pending_notes, [])
       |> assign(:reject_form_expanded, nil)
@@ -42,8 +38,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
 
     {:ok, load_participation_history(socket)}
   end
-
-  # Behavioral note review event handlers
 
   @impl true
   def handle_event("approve_note", %{"id" => note_id}, socket) do
@@ -119,7 +113,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
     end
   end
 
-  # PubSub event handler for participation record events
   @impl true
   def handle_info(
         {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id, payload: %{child_id: child_id}}},
@@ -128,7 +121,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
       when event_type in [:child_checked_in, :child_checked_out, :participation_marked_absent] do
     socket =
       if child_belongs_to_parent?(child_id, socket) do
-        # New check-ins are prepended (at: 0), updates replace in-place
         opts = if event_type == :child_checked_in, do: [at: 0], else: []
         load_and_stream_record(socket, record_id, opts)
       else
@@ -138,7 +130,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
     {:noreply, socket}
   end
 
-  # PubSub handler for new behavioral note — refresh pending notes if child belongs to parent
   @impl true
   def handle_info(
         {:domain_event, %DomainEvent{event_type: :behavioral_note_submitted, payload: %{child_id: child_id}}},
@@ -153,8 +144,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
 
     {:noreply, socket}
   end
-
-  # Private helper functions
 
   defp child_belongs_to_parent?(child_id, socket) do
     MapSet.member?(socket.assigns.children_ids, child_id)
@@ -186,7 +175,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
         {child.id, %{first_name: child.first_name, last_name: child.last_name}}
       end)
 
-    # Derive children_ids from already-fetched children list to avoid a redundant DB query.
     children_ids = MapSet.new(children, & &1.id)
 
     enriched_records =
@@ -250,9 +238,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
     child_info =
       Map.get(child_names_map, record.child_id, %{first_name: "Unknown", last_name: "Child"})
 
-    # Trigger: record is a struct — Map.put on structs bypasses struct enforcement
-    # Why: convert to plain map so presentation fields can be safely merged
-    # Outcome: template gets a flat map with all struct fields + enrichment keys
+    # Convert struct to plain map so presentation fields can be safely merged.
     Map.from_struct(record)
     |> Map.merge(%{
       child_first_name: child_info.first_name,
@@ -262,8 +248,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
       session_start_time: Map.get(record, :session_start_time)
     })
   end
-
-  # Template helper functions
 
   defp format_date(nil), do: "N/A"
   defp format_date(%Date{} = date), do: Calendar.strftime(date, "%B %d, %Y")

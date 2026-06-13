@@ -96,7 +96,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
     |> check_constraint(:school_grade, name: :valid_school_grade)
   end
 
-  @doc "Returns the valid status transitions map."
   def valid_transitions, do: @valid_transitions
 
   @doc """
@@ -135,9 +134,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
     |> check_constraint(:status, name: :valid_status)
   end
 
-  # Trigger: status is being changed
-  # Why: invites follow a strict lifecycle (pending -> invite_sent -> registered -> enrolled)
-  # Outcome: invalid transitions are rejected with a clear error message
   defp validate_status_transition(changeset) do
     case {changeset.data.status, get_change(changeset, :status)} do
       {_current, nil} ->

@@ -1,20 +1,6 @@
 defmodule KlassHeroWeb.Presenters.ChildPresenter do
   @moduledoc """
-  Presentation layer for transforming Child domain models to UI-ready formats.
-
-  This module follows the DDD/Ports & Adapters pattern by keeping presentation
-  concerns in the web layer while the domain model stays pure.
-
-  ## Usage
-
-      alias KlassHeroWeb.Presenters.ChildPresenter
-
-      # For simple views (booking dropdown)
-      children_for_view = Enum.map(children, &ChildPresenter.to_simple_view/1)
-
-      # For extended views with enrichment data (dashboard cards)
-      enrichment = %{sessions: "8/10", progress: 80, activities: ["Art"]}
-      children_for_view = Enum.map(children, &ChildPresenter.to_extended_view(&1, enrichment))
+  Transforms Child domain models to UI-ready formats.
   """
 
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -23,12 +9,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
   alias KlassHero.Shared.NameUtils
 
   @doc """
-  Transforms a Child domain model to a simple view format.
-
-  Used for contexts where only basic child information is needed,
-  such as dropdown selections in booking forms.
-
-  Returns a map with: id, name, age
+  Simple view with id, name, age — used for booking dropdowns.
   """
   def to_simple_view(%Child{} = child) do
     %{
@@ -39,23 +20,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
   end
 
   @doc """
-  Transforms a Child domain model to an extended view format.
-
-  When enrichment_data is provided (from Progress Tracking context),
-  merges additional fields into the view.
-
-  ## Parameters
-    - child: A Child domain model
-    - enrichment_data: Optional map with additional data (default: %{})
-
-  ## Example enrichment_data
-      %{
-        sessions: "8/10",
-        progress: 80,
-        activities: ["Art", "Chess"]
-      }
-
-  Returns a map with: id, name, age, plus any enrichment fields
+  Extended view merging simple view with optional enrichment data (e.g. sessions, progress).
   """
   def to_extended_view(%Child{} = child, enrichment_data \\ %{}) do
     child
@@ -64,12 +29,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
   end
 
   @doc """
-  Transforms a Child domain model to a profile view format.
-
-  Used for horizontal scrollable profile cards that display child's
-  initials in a circular avatar, along with name and age.
-
-  Returns a map with: id, name, age, initials
+  Profile view with id, name, age, initials — used for horizontal profile cards.
   """
   def to_profile_view(%Child{} = child) do
     %{

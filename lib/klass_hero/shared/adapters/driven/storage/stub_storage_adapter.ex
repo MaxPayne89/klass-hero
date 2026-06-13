@@ -15,9 +15,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   end
 
   @impl true
-  # Trigger: Agent may not be started in LiveView integration tests
-  # Why: LiveView tests can't pass custom storage_opts; matches signed_url/file_exists? pattern
-  # Outcome: stores file if agent alive, returns stub URL regardless
+  # Agent may not be started in LiveView integration tests (can't pass custom storage_opts) — store if alive, return stub URL regardless.
   def upload(bucket_type, path, binary, opts) do
     agent = Keyword.get(opts, :agent, __MODULE__)
     key = make_key(bucket_type, path)
@@ -35,9 +33,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   end
 
   @impl true
-  # Trigger: check if Agent process is running before verifying key existence
-  # Why: some tests don't start the StubStorageAdapter Agent
-  # Outcome: returns signed URL if file exists or Agent not started, :file_not_found otherwise
+  # Agent may not be started in all test setups — return stub URL when not running.
   def signed_url(bucket_type, key, expires_in, opts) do
     agent = Keyword.get(opts, :agent, __MODULE__)
 
@@ -56,9 +52,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   end
 
   @impl true
-  # Trigger: check if Agent process is running
-  # Why: some tests don't start the StubStorageAdapter Agent
-  # Outcome: returns actual state if running, defaults to true if not started
+  # Defaults to true when Agent not started (some test setups don't start it).
   def file_exists?(bucket_type, path, opts) do
     agent = Keyword.get(opts, :agent, __MODULE__)
     key = make_key(bucket_type, path)
@@ -72,9 +66,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   end
 
   @impl true
-  # Trigger: Agent may not be started in tests that don't exercise storage directly
-  # Why: retention policy and other use cases call Storage.delete; not all test setups start the agent
-  # Outcome: deletes file if agent alive, returns :ok regardless
+  # Agent may not be started in tests that don't exercise storage (e.g. retention policy tests) — no-op if not running.
   def delete(bucket_type, path, opts) do
     agent = Keyword.get(opts, :agent, __MODULE__)
     key = make_key(bucket_type, path)
@@ -109,9 +101,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
     Agent.update(agent, fn _state -> %{} end)
   end
 
-  # Trigger: agent can be a PID (from start_link) or an atom (registered name)
-  # Why: Process.whereis/1 only accepts atoms; PIDs are already process references
-  # Outcome: returns true if the agent process is alive, regardless of reference type
   defp agent_alive?(pid) when is_pid(pid), do: Process.alive?(pid)
   defp agent_alive?(name) when is_atom(name), do: Process.whereis(name) != nil
 

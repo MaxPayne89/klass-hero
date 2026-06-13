@@ -67,20 +67,6 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecord do
 
   @valid_statuses [:registered, :checked_in, :checked_out, :absent]
 
-  @doc """
-  Creates a new participation record in registered status.
-
-  ## Examples
-
-      iex> ParticipationRecord.new(%{
-      ...>   id: "rec-123",
-      ...>   session_id: "sess-456",
-      ...>   child_id: "child-789",
-      ...>   parent_id: "parent-abc"
-      ...> })
-      {:ok, %ParticipationRecord{status: :registered, ...}}
-
-  """
   @spec new(map()) :: {:ok, t()} | {:error, :missing_required_fields}
   def new(attrs) when is_map(attrs) do
     with {:ok, id} <- Map.fetch(attrs, :id),
@@ -236,9 +222,7 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecord do
     setting_check_out = Map.has_key?(attrs, :check_out_at)
     has_check_in = record.check_in_at != nil or Map.has_key?(attrs, :check_in_at)
 
-    # Trigger: transitioning to checked_out OR directly setting check_out_at
-    # Why: a child can't be checked out without first being checked in
-    # Outcome: rejects logically impossible corrections (e.g. check_out_at on :registered with no check_in_at)
+    # check_out requires check_in — rejects logically impossible corrections.
     if (new_status == :checked_out or setting_check_out) and not has_check_in do
       {:error, :check_out_requires_check_in}
     else
@@ -263,16 +247,12 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecord do
     end
   end
 
-  # Trigger: status corrected backwards (e.g. checked_out → checked_in)
-  # Why: downstream fields from a reversed state are no longer valid
-  # Outcome: clears check-out data when reverting from checked_out
+  # Reverting to :checked_in invalidates check-out data.
   defp clear_downstream_fields(record, %{status: :checked_in}) do
     %{record | check_out_at: nil, check_out_by: nil, check_out_notes: nil}
   end
 
-  # Trigger: status corrected to registered or absent
-  # Why: both states precede any check-in, so all timing data is invalid
-  # Outcome: clears all check-in and check-out fields
+  # :registered and :absent precede any check-in — clear all timing data.
   defp clear_downstream_fields(record, %{status: status}) when status in [:registered, :absent] do
     %{
       record
@@ -287,9 +267,7 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecord do
 
   defp clear_downstream_fields(record, _attrs), do: record
 
-  # Trigger: both check_in_at and check_out_at are non-nil after corrections
-  # Why: check-out cannot precede check-in — logically impossible
-  # Outcome: rejects corrections that would create an impossible timeline
+  # Rejects corrections where check_out_at would precede check_in_at.
   defp validate_temporal_ordering(%__MODULE__{check_in_at: %DateTime{} = ci, check_out_at: %DateTime{} = co} = record) do
     case DateTime.compare(ci, co) do
       :gt -> {:error, :check_in_must_precede_check_out}

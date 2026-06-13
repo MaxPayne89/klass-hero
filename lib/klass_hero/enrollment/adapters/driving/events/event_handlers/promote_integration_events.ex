@@ -11,9 +11,6 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteInte
 
   @spec handle(DomainEvent.t()) :: :ok | {:error, term()}
   def handle(%DomainEvent{event_type: :participant_policy_set} = event) do
-    # Trigger: participant_policy_set domain event dispatched from SetParticipantPolicy use case
-    # Why: other contexts may need to react to policy changes (e.g., search filtering)
-    # Outcome: publish integration event on topic integration:enrollment:participant_policy_set
     event.aggregate_id
     |> EnrollmentIntegrationEvents.participant_policy_set(event.payload)
     |> IntegrationEventPublishing.publish_critical("participant_policy_set",
@@ -22,9 +19,6 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteInte
   end
 
   def handle(%DomainEvent{event_type: :invite_claimed} = event) do
-    # Trigger: invite_claimed domain event dispatched when a guardian claims an invite link
-    # Why: downstream contexts (Family, Accounts) need to react — create profiles, link users
-    # Outcome: publish integration event on topic integration:enrollment:invite_claimed
     event.payload.invite_id
     |> EnrollmentIntegrationEvents.invite_claimed(event.payload)
     |> IntegrationEventPublishing.publish_critical("invite_claimed",
@@ -33,9 +27,6 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteInte
   end
 
   def handle(%DomainEvent{event_type: :enrollment_cancelled} = event) do
-    # Trigger: enrollment_cancelled domain event dispatched from CancelEnrollmentByAdmin use case
-    # Why: downstream contexts may react to cancellations (e.g., notifications, analytics)
-    # Outcome: publish integration event on topic integration:enrollment:enrollment_cancelled
     event.payload.enrollment_id
     |> EnrollmentIntegrationEvents.enrollment_cancelled(event.payload)
     |> IntegrationEventPublishing.publish_critical("enrollment_cancelled",
@@ -44,9 +35,6 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteInte
   end
 
   def handle(%DomainEvent{event_type: :enrollment_created} = event) do
-    # Trigger: enrollment_created domain event dispatched from CreateEnrollment use case
-    # Why: downstream contexts (e.g., Messaging) need to react to new enrollments
-    # Outcome: publish integration event on topic integration:enrollment:enrollment_created
     event.payload.enrollment_id
     |> EnrollmentIntegrationEvents.enrollment_created(event.payload)
     |> IntegrationEventPublishing.publish_critical("enrollment_created",

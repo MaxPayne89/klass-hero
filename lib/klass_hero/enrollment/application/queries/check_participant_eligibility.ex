@@ -28,9 +28,6 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckParticipantEligibility d
   @spec execute(binary(), binary()) ::
           {:ok, :eligible} | {:error, :ineligible, [String.t()]} | {:error, term()}
   def execute(program_id, child_id) do
-    # Trigger: no policy exists for this program
-    # Why: programs without restrictions accept everyone
-    # Outcome: short-circuit with :eligible, skip participant lookup entirely
     case load_policy(program_id) do
       {:ok, :no_policy} ->
         {:ok, :eligible}
@@ -57,10 +54,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckParticipantEligibility d
         child_id: child_id
       )
 
-      # Trigger: domain model returns {:error, reasons} for failing checks
-      # Why: the public API uses a three-element tuple to distinguish
-      #      ineligibility (policy violation) from other errors (not_found, etc.)
-      # Outcome: {:error, reasons} mapped to {:error, :ineligible, reasons}
+      # Map domain {:error, reasons} → public 3-tuple {:error, :ineligible, reasons}.
       case ParticipantPolicy.eligible?(policy, participant) do
         {:ok, :eligible} -> {:ok, :eligible}
         {:error, reasons} -> {:error, :ineligible, reasons}
@@ -75,10 +69,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckParticipantEligibility d
     end
   end
 
-  # Trigger: policy specifies eligibility_at "program_start"
-  # Why: some programs want age evaluated at the date the program begins,
-  #      not at the time of registration (e.g., summer camps)
-  # Outcome: uses program start_date, falls back to today if nil
+  # Some programs (e.g. summer camps) evaluate age at program start, not at registration.
   defp resolve_reference_date(%ParticipantPolicy{eligibility_at: "program_start"}, program_id) do
     case @program_schedule_adapter.get_program_start_date(program_id) do
       {:ok, nil} -> {:ok, Date.utc_today()}

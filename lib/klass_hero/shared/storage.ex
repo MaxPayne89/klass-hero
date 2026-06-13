@@ -102,9 +102,6 @@ defmodule KlassHero.Shared.Storage do
     "#{prefix}/#{owner_id}/#{timestamp}_#{safe_name}"
   end
 
-  # Trigger: adapter option is provided in opts
-  # Why: allows tests to inject a specific adapter instance for isolation
-  # Outcome: uses the provided adapter instead of the configured one
   defp adapter(opts) do
     Keyword.get_lazy(opts, :adapter, fn ->
       Application.get_env(:klass_hero, :storage)[:adapter]

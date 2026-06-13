@@ -24,12 +24,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL do
   @impl true
   def get_program_start_date(program_id) do
     acl_span source: "enrollment", target: "program_catalog" do
-      # Trigger: schemaless query on "programs" table
-      # Why: Ecto doesn't know field types without a schema, so we must
-      #      cast program_id to :binary_id for the UUID column comparison.
-      #      We select a {exists?, start_date} tuple to distinguish
-      #      "row not found" from "row found with nil start_date".
-      # Outcome: correct parameterized query against the binary_id primary key
+      # Schemaless query: explicit :binary_id cast required (Ecto can't infer types without a schema).
+      # The {true, start_date} tuple distinguishes "not found" from "found with nil start_date".
       query =
         from(p in "programs",
           where: p.id == type(^program_id, :binary_id),

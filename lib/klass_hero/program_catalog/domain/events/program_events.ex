@@ -22,9 +22,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEvents do
       :program_created,
       program_id,
       @aggregate_type,
-      # Trigger: caller may pass a conflicting :program_id in payload
-      # Why: base_payload contains the canonical program_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Map.merge order ensures base_payload's :program_id wins over any caller-supplied value.
       Map.merge(payload, base_payload),
       opts
     )
@@ -44,9 +42,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEvents do
       :program_updated,
       program_id,
       @aggregate_type,
-      # Trigger: caller may pass a conflicting :program_id in payload
-      # Why: base_payload contains the canonical program_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Map.merge order ensures base_payload's :program_id wins over any caller-supplied value.
       Map.merge(payload, base_payload),
       opts
     )
@@ -66,9 +62,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEvents do
       :program_schedule_updated,
       program_id,
       @aggregate_type,
-      # Trigger: caller may pass a conflicting :program_id in payload
-      # Why: base_payload contains the canonical program_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
+      # Map.merge order ensures base_payload's :program_id wins over any caller-supplied value.
       Map.merge(payload, base_payload),
       opts
     )

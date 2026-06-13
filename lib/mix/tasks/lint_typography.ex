@@ -50,7 +50,6 @@ defmodule Mix.Tasks.LintTypography do
           String.contains?(line, "font-display") and
             not String.contains?(line, @suppression_marker)
 
-        # Also check the preceding line for a suppression comment
         acc =
           if has_violation and not String.contains?(prev_line, @suppression_marker) do
             [{file, line_num, line} | acc]

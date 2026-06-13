@@ -91,9 +91,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyIntegrationEvents do
       @source_context,
       @entity_type,
       child_id,
-      # Trigger: caller may pass a conflicting :child_id in payload
-      # Why: base_payload contains the canonical child_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -140,9 +137,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyIntegrationEvents do
       @source_context,
       @entity_type,
       child_id,
-      # Trigger: caller may pass a conflicting :child_id in payload
-      # Why: base_payload contains the canonical child_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -196,9 +190,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyIntegrationEvents do
       @source_context,
       @entity_type,
       child_id,
-      # Trigger: caller may pass a conflicting :child_id in payload
-      # Why: base_payload contains the canonical child_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )
@@ -246,14 +237,8 @@ defmodule KlassHero.Family.Domain.Events.FamilyIntegrationEvents do
     IntegrationEvent.new(
       :invite_family_ready,
       @source_context,
-      # Trigger: invite events use a different entity type than child events
-      # Why: :invite accurately represents the aggregate this event belongs to
-      # Outcome: topic becomes integration:family:invite_family_ready
       :invite,
       invite_id,
-      # Trigger: caller may pass a conflicting :invite_id in payload
-      # Why: base_payload contains the canonical invite_id from the function argument
-      # Outcome: base_payload keys always win, preventing accidental overwrite
       Map.merge(payload, base_payload),
       opts
     )

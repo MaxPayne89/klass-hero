@@ -36,10 +36,7 @@ defmodule KlassHero.Enrollment.Application.ProviderProgramContext do
     end
   end
 
-  # Trigger: two programs whose titles differ only by case (e.g. "Yoga" vs "YOGA")
-  # Why: downcasing would silently collapse them into one key, mapping rows
-  #      to the wrong program_id without any error
-  # Outcome: early error listing the conflicting titles so the provider can rename
+  # Titles differing only by case (e.g. "Yoga" vs "YOGA") would silently collapse to the same key after downcasing.
   defp check_title_collisions(programs_by_title) do
     collisions =
       programs_by_title

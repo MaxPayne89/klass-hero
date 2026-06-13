@@ -91,10 +91,6 @@ defmodule KlassHero.Enrollment.Application.Queries.EnrollmentPolicyQueries do
     end)
   end
 
-  # ---------------------------------------------------------------------------
-  # Private helpers
-  # ---------------------------------------------------------------------------
-
   defp calculate_capacity(nil, _active), do: nil
 
   defp calculate_capacity(policy, active) do
@@ -104,8 +100,7 @@ defmodule KlassHero.Enrollment.Application.Queries.EnrollmentPolicyQueries do
     end
   end
 
-  # Shared data fetching for get_remaining_capacities/1 and get_enrollment_summary_batch/1.
-  # Both need the same two queries — centralising prevents drift if repo contracts change.
+  # Shared by get_remaining_capacities/1 and get_enrollment_summary_batch/1 to prevent query drift.
   defp fetch_policies_and_active_counts(program_ids) do
     policies = @policy_repo.get_policies_by_program_ids(program_ids)
     active_counts = @policy_repo.count_active_enrollments_batch(program_ids)

@@ -131,9 +131,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
     end
   end
 
-  # Trigger: a photo was attached to the form upload entry
-  # Why: SubmitIncidentReport expects file_binary + filename + content_type as a triple
-  # Outcome: a partial param map ready to merge into submit_params (or nil binary)
+  # Returns a partial param map with file data, or %{file_binary: nil} when no photo was uploaded.
   defp consume_photo(socket) do
     case safe_consume_photo(socket) do
       {:ok, [photo]} ->
@@ -179,10 +177,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
     }
   end
 
-  # Trigger: building the submit params for the authenticated reporter
-  # Why: User.name is optional; fall back to email so the reporter snapshot
-  #      is always populated for audit semantics
-  # Outcome: a non-blank string used as the immutable reporter display name
+  # User.name is optional; fall back to email so the reporter snapshot is always populated for audit.
   defp reporter_display_name(%{name: name, email: email}) when is_binary(name) do
     case String.trim(name) do
       "" -> email
@@ -200,11 +195,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   defp atomize(""), do: nil
   defp atomize(value) when is_atom(value), do: value
 
-  # Trigger: a category/severity arrives as a string from the form
-  # Why: form-tampered values (e.g. "foo_bar") could match an unrelated existing
-  #      atom, slipping past the downstream validator. Restrict to the explicit
-  #      allow-list of legitimate form atoms before passing the value along.
-  # Outcome: returns the atom on a valid hit, nil otherwise
+  # Guard against form-tampered values by restricting to the explicit allow-list of legitimate atoms.
   defp atomize(value) when is_binary(value) do
     atom = String.to_existing_atom(value)
     if atom in valid_form_atoms(), do: atom
@@ -214,9 +205,6 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
 
   defp valid_form_atoms, do: IncidentReport.valid_categories() ++ IncidentReport.valid_severities()
 
-  # Trigger: SubmitIncidentReport returned a keyword list of validation errors
-  # Why: <.input> reads errors from the form's field — surface them inline
-  # Outcome: a Phoenix.HTML.Form whose `errors` keyword list is consumed by .input
   defp form_with_errors(params, errors) do
     form_errors = Enum.map(errors, fn {field, message} -> {field, {to_string(message), []}} end)
     to_form(params, as: "incident", errors: form_errors)

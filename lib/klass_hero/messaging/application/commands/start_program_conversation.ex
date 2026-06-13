@@ -39,13 +39,9 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
     end
   end
 
-  # Trigger: parent wants a direct conversation with the provider for a program
-  # Why: find_direct_conversation/2 requires the user_id to be a participant.
-  #      The provider owner participates in every direct conversation for this
-  #      provider, so using owner_user_id as the lookup key would collide
-  #      across parents. The parent's user_id is uniquely 1:1 with this
-  #      conversation — see ReplyPrivatelyToBroadcast for the same pattern.
-  # Outcome: each (parent, provider) pair maps to exactly one conversation.
+  # Lookup by parent's user_id (not provider's) — provider owner participates in all
+  # direct conversations, so using their id would collide across parents.
+  # See ReplyPrivatelyToBroadcast for the same pattern.
   defp find_or_create(scope, provider_id, program_id, owner_user_id) do
     case @conversation_reader.find_direct_conversation(provider_id, scope.user.id) do
       {:ok, existing} ->
@@ -81,10 +77,7 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
     |> handle_commit(scope, provider_id, program_id)
   end
 
-  # Trigger: Repo.transaction returns {:ok, {conversation, events}}
-  # Why: events fire post-commit so the projection's separate-connection
-  #      read sees the conversation row.
-  # Outcome: events fan out via EventDispatchHelper.dispatch/2.
+  # Dispatch post-commit so the projection's separate DB connection sees the committed row.
   defp handle_commit({:ok, {conversation, events}}, scope, provider_id, program_id) do
     Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 

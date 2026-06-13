@@ -1,10 +1,7 @@
 defmodule KlassHero.Accounts.Application.Commands.AnonymizeUser do
   @moduledoc """
-  Use case for GDPR account anonymization.
-
-  Orchestrates:
-  1. Anonymize user PII and delete all tokens (via repository)
-  2. Publish user_anonymized event for downstream contexts
+  Use case for GDPR account anonymization. Anonymizes PII, deletes tokens,
+  and publishes `user_anonymized` for downstream cascade.
   """
 
   alias KlassHero.Accounts.Domain.Events.UserEvents
@@ -18,19 +15,13 @@ defmodule KlassHero.Accounts.Application.Commands.AnonymizeUser do
   @doc """
   Anonymizes a user account.
 
-  Returns:
-  - `{:ok, %User{}}` on success (dispatches user_anonymized event)
-  - `{:error, :user_not_found}` if nil user
-  - `{:error, changeset}` on update failure
+  Returns `{:ok, %User{}}`, `{:error, :user_not_found}`, or `{:error, changeset}`.
   """
   def execute(%{email: _} = user) do
     previous_email = user.email
 
     case @user_repository.anonymize(user) do
       {:ok, anonymized_user} ->
-        # Trigger: GDPR-critical event — log at error level if dispatch fails
-        # Why: anonymization events drive downstream data deletion
-        # Outcome: primary operation still succeeds, but failure is escalated
         UserEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
         |> EventDispatchHelper.dispatch(KlassHero.Accounts)
 

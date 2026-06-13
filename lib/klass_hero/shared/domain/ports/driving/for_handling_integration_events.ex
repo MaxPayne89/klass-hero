@@ -2,9 +2,9 @@ defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents do
   @moduledoc """
   Behaviour for integration event handlers.
 
-  Implement this behaviour to create handlers that react to integration
-  events from other bounded contexts. Integration events are the public
-  contract between contexts — they carry stable, versioned payloads.
+  Implement this behaviour to handle integration events from other bounded
+  contexts. Integration events are the public contract between contexts —
+  they carry stable, versioned payloads.
 
   ## Example
 
@@ -16,7 +16,6 @@ defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents do
 
         @impl true
         def handle_event(%IntegrationEvent{event_type: :child_data_anonymized} = event) do
-          # Anonymize participation data for child
           :ok
         end
 
@@ -27,12 +26,7 @@ defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents do
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @doc """
-  Handles an integration event.
-
-  Returns:
-  - `:ok` - Event handled successfully
-  - `{:error, reason}` - Handling failed (will be logged)
-  - `:ignore` - Event was intentionally ignored
+  Handles an integration event. Returns `:ok`, `{:error, reason}`, or `:ignore`.
   """
   @callback handle_event(IntegrationEvent.t()) :: :ok | {:error, term()} | :ignore
 

@@ -52,9 +52,7 @@ defmodule KlassHero.Messaging.Application.Queries.ListConversations do
     {:ok, enriched, has_more}
   end
 
-  # Trigger: ConversationSummary DTO needs to be mapped to the enriched map shape
-  # Why: LiveView templates expect the old enriched map structure with .conversation, .latest_message
-  # Outcome: backward-compatible map that works with existing templates
+  # Maps ConversationSummary DTO to the enriched map shape expected by LiveView templates.
   defp to_enriched_map(summary) do
     %{
       conversation: %{

@@ -19,10 +19,7 @@ defmodule KlassHero.ProgramCatalog.Application.Commands.CreateProgram do
   def execute(attrs) when is_map(attrs) do
     with {:ok, program} <- Program.create(attrs),
          {:ok, persisted} <- @repository.create(program) do
-      # Trigger: program was successfully persisted
-      # Why: event dispatch is fire-and-forget — failures are logged inside
-      #      dispatch_event/1 but must not roll back the creation
-      # Outcome: event dispatch result discarded; program returned regardless
+      # Fire-and-forget: dispatch failures are logged but must not roll back the creation.
       dispatch_event(persisted)
       {:ok, persisted}
     end

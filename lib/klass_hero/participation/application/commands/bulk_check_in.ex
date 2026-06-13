@@ -44,29 +44,11 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckIn do
           failed: [{String.t(), term()}]
         }
 
-  @doc """
-  Checks in multiple children to a session.
-
-  ## Parameters
-
-  - `params` - Map containing:
-    - `record_ids` - List of participation record IDs to check in
-    - `checked_in_by` - ID of the user performing check-ins
-    - `notes` - Optional notes to apply to all check-ins
-
-  ## Returns
-
-  Map with:
-  - `successful` - List of successfully checked-in records
-  - `failed` - List of {record_id, error_reason} tuples
-  """
   @spec execute(params()) :: result()
   def execute(%{record_ids: record_ids, checked_in_by: checked_in_by} = params) do
     notes = Map.get(params, :notes)
 
-    # Trigger: all records in a bulk check-in belong to the same session
-    # Why: fetching session once avoids N redundant queries for the same session_id
-    # Outcome: session resolved lazily from first successful record, reused for all
+    # Session resolved lazily from first successful record and reused — all records share the same session_id.
     {results, _session} =
       Enum.map_reduce(record_ids, nil, fn record_id, session ->
         case check_in_record(record_id, checked_in_by, notes, session) do

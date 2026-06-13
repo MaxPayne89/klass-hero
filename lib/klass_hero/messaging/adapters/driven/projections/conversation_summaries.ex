@@ -64,8 +64,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
   @broadcast_token_regex ~r/\[broadcast:[^\]]+\]/
 
-  # Behaviour callbacks ───────────────────────────────────────────────────────
-
   @impl Projection
   def bootstrap_impl, do: bootstrap_from_write_tables()
 
@@ -152,9 +150,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   # Private Functions — Bootstrap
 
-  # Trigger: bootstrap phase — read table may be empty or stale
-  # Why: cold start recovery — populate read table from authoritative write tables
-  # Outcome: conversation_summaries contains one row per (conversation, participant)
   defp bootstrap_from_write_tables do
     conversations =
       from(c in ConversationSchema, preload: [:participants])
@@ -163,9 +158,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     if conversations == [] do
       0
     else
-      # Trigger: need user names to populate other_participant_name
-      # Why: direct conversations show the other participant's display name
-      # Outcome: user_id -> name lookup map built from users table
       all_user_ids =
         conversations
         |> Enum.flat_map(fn c -> Enum.map(c.participants, & &1.user_id) end)
@@ -173,30 +165,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
       user_names = fetch_user_names(all_user_ids)
 
-      # Trigger: need latest message per conversation without loading all messages
-      # Why: preloading :messages loads N×M rows; this fetches N rows (one per conversation)
-      # Outcome: efficient lookup map of conversation_id -> latest message fields
       conversation_ids = Enum.map(conversations, & &1.id)
       latest_messages = fetch_latest_messages(conversation_ids)
 
-      # Trigger: need unread counts per (conversation, participant) without loading all messages
-      # Why: counting in the DB is far cheaper than loading all messages into memory
-      # Outcome: {conversation_id, user_id} -> unread_count lookup map
       unread_counts = fetch_unread_counts(conversations)
-
-      # Trigger: need system note tokens per conversation for dedup tracking
-      # Why: system messages with broadcast tokens must be pre-populated in the read table
-      # Outcome: conversation_id -> %{token => iso8601_timestamp} lookup map
       system_notes = fetch_system_notes(conversation_ids)
-
-      # Trigger: need to know which latest messages have attachments
-      # Why: inbox preview shows an attachment indicator for messages with files
-      # Outcome: MapSet of message_ids that have at least one attachment
       attachment_message_ids = fetch_attachment_message_ids(latest_messages)
-
-      # Trigger: program_broadcast rows need a human label (program title)
-      # Why: pre-existing nil for non-direct types surfaced as "Unknown" in the inbox (#892)
-      # Outcome: program_id -> title map; nil for missing programs (rare race), UI falls back
+      # program_broadcast rows need titles; nil on missing program (#892), UI falls back.
       program_names = fetch_program_names_for_broadcasts(conversations)
 
       globals = %{
@@ -214,9 +189,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       if entries == [] do
         0
       else
-        # Trigger: summaries may already exist from a previous run
-        # Why: upsert avoids duplicate key errors while keeping data fresh
-        # Outcome: all summaries projected, preserving original inserted_at on conflicts
         {count, _} =
           Repo.insert_all(ConversationSummarySchema, entries,
             on_conflict: {:replace_all_except, [:id, :inserted_at]},
@@ -296,9 +268,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   # Private Functions — Event Projections
 
-  # Trigger: conversation_created event received
-  # Why: each participant needs their own summary row with resolved display names
-  # Outcome: one row per participant inserted (upsert for idempotency)
   defp project_conversation_created(event) do
     payload = event.payload
     conversation_id = payload.conversation_id
@@ -312,10 +281,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     user_names = fetch_user_names(participant_ids)
     program_name = resolve_program_name(conversation_type, program_id)
 
-    # Trigger: multiple participant rows must be inserted atomically
-    # Why: a mid-loop crash without a transaction leaves partial rows,
-    #      resulting in some participants having summaries and others not
-    # Outcome: all-or-nothing insert — either every participant gets a row or none do
+    # Atomic insert: a mid-loop crash without a transaction would leave partial rows.
     Repo.transaction(fn ->
       Enum.each(participant_ids, fn user_id ->
         other_name =
@@ -367,11 +333,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     end)
   end
 
-  # Trigger: participant_added event received
-  # Why: one or more new participants joined a conversation; each needs a
-  #      summary row back-filled from the current write-model state
-  # Outcome: one row per new user_id upserted; meta refreshed on replay,
-  #          read-state fields preserved
   defp project_participant_added(event) do
     payload = event.payload
     conversation_id = payload.conversation_id
@@ -464,10 +425,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     }
   end
 
-  # Trigger: participant_removed event received
-  # Why: removed users should not see the conversation in their inbox
-  # Outcome: archived_at stamped on each affected row, preserving the first
-  #          removal's timestamp on replay via COALESCE
   defp project_participant_removed(event) do
     payload = event.payload
     conversation_id = payload.conversation_id
@@ -494,12 +451,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     end
   end
 
-  # Trigger: message_sent event received
-  # Why: all participants need updated latest_message fields;
-  #      non-sender participants need incremented unread_count.
-  #      Both updates wrapped in a transaction for atomicity — without it,
-  #      a crash between the two updates leaves inconsistent read state.
-  # Outcome: atomic bulk update for latest_message fields + selective unread increment
+  # Wrapped in a transaction: a crash between the two updates would leave inconsistent read state.
   defp project_message_sent(event) do
     payload = event.payload
     conversation_id = payload.conversation_id
@@ -510,7 +462,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     has_attachments = (Map.get(payload, :attachments) || []) != []
 
     Repo.transaction(fn ->
-      # Update latest_message fields for all participants of this conversation
       from(s in ConversationSummarySchema,
         where: s.conversation_id == ^conversation_id
       )
@@ -524,7 +475,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         ]
       )
 
-      # Increment unread_count only for non-sender participants
       from(s in ConversationSummarySchema,
         where: s.conversation_id == ^conversation_id and s.user_id != ^sender_id
       )
@@ -542,9 +492,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     end
   end
 
-  # Trigger: messages_read event received
-  # Why: user has caught up on messages, unread_count should be zeroed
-  # Outcome: single row updated with unread_count=0 and last_read_at
   defp project_messages_read(event) do
     payload = event.payload
     conversation_id = payload.conversation_id
@@ -564,9 +511,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     )
   end
 
-  # Trigger: conversation_archived event received
-  # Why: conversation is being archived, all summary rows must reflect this
-  # Outcome: archived_at set on all rows for this conversation
   defp project_conversation_archived(event) do
     payload = event.payload
     conversation_id = payload.conversation_id
@@ -584,9 +528,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     )
   end
 
-  # Trigger: conversations_archived bulk event received
-  # Why: multiple conversations archived at once (e.g. program ended)
-  # Outcome: archived_at set on all rows for all affected conversations
   defp project_conversations_archived(event) do
     payload = event.payload
     conversation_ids = Map.get(payload, :conversation_ids, [])
@@ -606,17 +547,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     end
   end
 
-  # Trigger: message_data_anonymized event received (GDPR deletion)
-  # Why: the anonymized user's name must no longer appear in other participants' summaries
-  # Outcome: rows where the anonymized user is the "other participant" get name replaced
   defp project_message_data_anonymized(event) do
     anonymized_user_id = event.payload.user_id
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    # Trigger: find all conversations where the anonymized user is a participant
-    # Why: we need to update the other_participant_name in rows belonging to
-    #      the *other* participants (not the anonymized user themselves)
-    # Outcome: "Deleted User" shown where the anonymized user was the counterpart
     conversation_ids =
       from(s in ConversationSummarySchema,
         where: s.user_id == ^anonymized_user_id,
@@ -639,9 +573,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     end
   end
 
-  # Trigger: enrolled_children_changed domain event received
-  # Why: update the enrolled_child_names for all participant rows of this conversation
-  # Outcome: simple field update — projection stays dumb
   defp project_enrolled_children_changed(event) do
     conversation_id = event.payload.conversation_id
     child_names = Map.get(event.payload, :enrolled_child_names, [])
@@ -660,18 +591,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   # Private Functions — System Note Projection
 
-  # Trigger: a message_sent event was received
-  # Why: only system messages with broadcast tokens need tracking in the projection
-  # Outcome: if a broadcast token is found, upsert into system_notes JSONB
   defp maybe_project_system_note(%{message_type: message_type, content: content} = payload)
        when message_type in [:system, "system"] do
     conversation_id = payload.conversation_id
 
     case Regex.run(@broadcast_token_regex, content || "") do
       [token] ->
-        # Trigger: use event timestamp for deterministic, replay-safe values
-        # Why: DateTime.utc_now() changes on each replay, causing unnecessary writes
-        # Outcome: same event always produces the same JSONB value (truly idempotent)
+        # Use event timestamp rather than DateTime.utc_now() for replay idempotency.
         sent_at = Map.get(payload, :sent_at) || DateTime.utc_now()
         truncated_at = DateTime.truncate(sent_at, :second)
         token_json = %{token => DateTime.to_iso8601(truncated_at)}
@@ -698,11 +624,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp maybe_project_system_note(_payload), do: :ok
 
-  # Trigger: bootstrap needs enrolled child names from the EnrolledChildren projection table
-  # Why: direct conversations with a program_id should display child context — query across
-  #      all participant user_ids (not just the current row's) so provider-side summary rows
-  #      receive the same list as parent-side rows, matching the event-driven path's semantics
-  # Outcome: list of child first names (deduped + sorted) or empty list
+  # Query across all participant_user_ids (not just the current row's) so provider-side
+  # summary rows receive the same child list as parent-side rows.
   defp resolve_enrolled_child_names(%{type: type, program_id: program_id}, participant_user_ids)
        when type in ["direct", :direct] and not is_nil(program_id) and participant_user_ids != [] do
     from(e in EnrolledChildrenSchema,
@@ -721,9 +644,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   # Private Functions — Helpers
 
-  # Trigger: need to look up display names for a set of user IDs
-  # Why: conversation summaries show the other participant's name
-  # Outcome: map of user_id -> display name (name or email fallback)
   defp fetch_user_names(user_ids) when is_list(user_ids) and user_ids != [] do
     {:ok, names} = @user_resolver.get_display_names(user_ids)
     names
@@ -731,15 +651,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp fetch_user_names(_), do: %{}
 
-  # Trigger: bootstrap / participant_added need to display program titles on
-  #          program_broadcast rows.
-  # Why: cross-context read of programs table mirrors EnrolledChildren precedent —
-  #      raw-string join sidesteps Boundary's compile-time isolation while
-  #      preserving the projection-extend pattern (#892). The eventual cross-context
-  #      port sweep is tracked by #685.
-  # Outcome: map of program_id -> title for every broadcast conversation that
-  #          carries a program_id; missing programs yield no entry, so callers
-  #          read Map.get(..., id) which returns nil for the UI fallback.
+  # Cross-context raw-string query to sidestep Boundary isolation (#892 pattern, #685 tracks cleanup).
   defp fetch_program_names_for_broadcasts(conversations) do
     program_ids =
       for c <- conversations,
@@ -768,9 +680,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp resolve_program_name(_type, _program_id), do: nil
 
-  # Trigger: resolving other participant name for bootstrap (has ParticipantSchema structs)
-  # Why: for direct conversations, each user sees the other's name
-  # Outcome: display name of the other participant, or nil for broadcasts
   defp resolve_other_participant_name("direct", user_id, participants, user_names) do
     case Enum.find(participants, fn p -> p.user_id != user_id end) do
       nil -> nil
@@ -780,9 +689,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp resolve_other_participant_name(_type, _user_id, _participants, _user_names), do: nil
 
-  # Trigger: resolving other participant name for events (has bare user_id list)
-  # Why: conversation_created event carries participant_ids, not full structs
-  # Outcome: display name of the other participant, or nil for broadcasts
   defp resolve_other_name_from_ids("direct", user_id, participant_ids, user_names) do
     case Enum.find(participant_ids, fn id -> id != user_id end) do
       nil -> nil
@@ -792,11 +698,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp resolve_other_name_from_ids(_type, _user_id, _participant_ids, _user_names), do: nil
 
-  # Trigger: bootstrap needs latest message per conversation without loading all messages
-  # Why: preloading :messages loads N×M rows; this fetches N rows (one per conversation)
-  # Outcome: map of conversation_id -> %{id, content, sender_id, inserted_at}
+  # Subquery avoids loading N×M rows via :messages preload.
   defp fetch_latest_messages(conversation_ids) when conversation_ids != [] do
-    # Subquery finds the max inserted_at per conversation
     latest_times =
       from(m in MessageSchema,
         where: m.conversation_id in ^conversation_ids,
@@ -821,9 +724,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp fetch_latest_messages(_), do: %{}
 
-  # Trigger: bootstrap needs to know which latest messages have file attachments
-  # Why: inbox preview displays an attachment indicator when the latest message has files
-  # Outcome: MapSet of message_ids that have at least one attachment row
   defp fetch_attachment_message_ids(latest_messages) when map_size(latest_messages) > 0 do
     message_ids = latest_messages |> Map.values() |> Enum.map(& &1.id)
 
@@ -838,9 +738,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp fetch_attachment_message_ids(_), do: MapSet.new()
 
-  # Trigger: bootstrap needs to pre-populate system note tokens from existing system messages
-  # Why: system messages with broadcast tokens must be tracked in the read table for dedup
-  # Outcome: map of conversation_id -> %{token => iso8601_timestamp}
   defp fetch_system_notes(conversation_ids) when conversation_ids != [] do
     from(m in MessageSchema,
       where:
@@ -870,11 +767,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp fetch_system_notes(_), do: %{}
 
-  # Trigger: bootstrap needs unread counts per (conversation, participant) without loading messages
-  # Why: counting in DB is far cheaper than loading all messages into memory
-  # Outcome: map of {conversation_id, user_id} -> unread_count
   defp fetch_unread_counts(conversations) do
-    # Build a list of {conversation_id, user_id, last_read_at} for each active participant
     participant_info =
       Enum.flat_map(conversations, fn conv ->
         conv.participants
@@ -882,8 +775,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         |> Enum.map(&{conv.id, &1.user_id, &1.last_read_at})
       end)
 
-    # Group by last_read_at to batch queries efficiently
-    # Most common case: nil (never read) or a few distinct timestamps
     {nil_readers, dated_readers} =
       Enum.split_with(participant_info, fn {_, _, lr} -> is_nil(lr) end)
 
@@ -893,13 +784,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     Map.merge(nil_counts, dated_counts)
   end
 
-  # Trigger: participants who have never read — all messages from others are unread
-  # Why: no last_read_at means every message from other senders counts
-  # Outcome: count of messages per (conversation, user) where sender != user
   defp fetch_unread_counts_nil([]), do: %{}
 
   defp fetch_unread_counts_nil(readers) do
-    # For nil last_read_at: count all messages from other senders
     Enum.reduce(readers, %{}, fn {conv_id, user_id, _}, acc ->
       count =
         from(m in MessageSchema,
@@ -912,9 +799,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     end)
   end
 
-  # Trigger: participants with a last_read_at — only messages after that timestamp are unread
-  # Why: messages before last_read_at have already been seen
-  # Outcome: count of messages per (conversation, user) where sender != user and after last_read_at
   defp fetch_unread_counts_dated([]), do: %{}
 
   defp fetch_unread_counts_dated(readers) do

@@ -18,7 +18,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSubscriber do
 
         @impl true
         def handle_event(%{event_type: :user_registered} = event) do
-          # Handle user registration
           :ok
         end
 
@@ -100,9 +99,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSubscriber do
     {:ok, state}
   end
 
-  # Trigger: incoming PubSub message matches the configured message_tag
-  # Why: single GenServer handles both domain and integration events via config
-  # Outcome: event is dispatched to the handler module
   @impl true
   def handle_info({tag, event}, %{message_tag: tag} = state) do
     handle_event_safely(event, state)
@@ -123,10 +119,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSubscriber do
   defp handle_event_safely(event, %{handler: handler, event_label: label}) do
     Context.attach_from_event(event)
 
-    # Trigger: integration event may be marked critical
-    # Why: critical events need idempotent processing via processed_events gate
-    # Outcome: critical events go through CriticalEventDispatcher, normal events
-    #          are handled directly as before
     if critical_integration_event?(event) do
       handle_critical_event(event, handler, label)
     else
@@ -134,10 +126,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSubscriber do
     end
   rescue
     error ->
-      # Trigger: handler raised an exception during event processing
-      # Why: critical events have a durable Oban fallback, but operators need clear
-      #      signal that the PubSub path failed for a critical event specifically
-      # Outcome: critical events get an urgent log prefix; normal events get generic error
+      # Critical events get an urgent log prefix; Oban fallback will retry.
       if critical_integration_event?(event) do
         Logger.error(
           "[CRITICAL EVENT HANDLER CRASH] Handler #{inspect(handler)} crashed for critical " <>

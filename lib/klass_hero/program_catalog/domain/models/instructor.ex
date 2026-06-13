@@ -48,9 +48,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.Instructor do
   end
 
   defp validate_id(errors, id) when is_binary(id) and byte_size(id) > 0 do
-    # Trigger: id is a non-empty binary
-    # Why: still need to check for whitespace-only strings
-    # Outcome: error added if trimmed string is empty
+    # Guard passes non-empty binaries, but whitespace-only strings must also be rejected.
     if String.trim(id) == "", do: ["ID cannot be empty" | errors], else: errors
   end
 

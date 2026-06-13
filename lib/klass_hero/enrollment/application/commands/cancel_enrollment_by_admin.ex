@@ -67,9 +67,6 @@ defmodule KlassHero.Enrollment.Application.Commands.CancelEnrollmentByAdmin do
     }
   end
 
-  # Trigger: enrollment cancelled and persisted; broadcast for downstream handlers
-  # Why: dispatch_or_error returns `:ok` on success — wrap to keep `with` chain uniform
-  # Outcome: tuple shape `{:ok, persisted} | {:error, term()}`
   @spec dispatch_cancellation_event(Enrollment.t(), String.t(), String.t()) ::
           {:ok, Enrollment.t()} | {:error, term()}
   defp dispatch_cancellation_event(%Enrollment{} = persisted, admin_id, reason) do

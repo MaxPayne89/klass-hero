@@ -1,10 +1,7 @@
 defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPolicySchema do
   @moduledoc """
-  Ecto schema for the participant_policies table.
-
-  This is an infrastructure adapter that maps database records to Ecto structs.
-  Use ParticipantPolicyMapper to convert between ParticipantPolicySchema and
-  domain ParticipantPolicy entities.
+  Ecto schema for the `participant_policies` table.
+  Use `ParticipantPolicyMapper` to convert to/from domain `ParticipantPolicy`.
   """
 
   use Ecto.Schema
@@ -33,18 +30,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPo
   @optional_fields ~w(eligibility_at min_age_months max_age_months allowed_genders min_grade max_grade)a
 
   @doc """
-  Creates a changeset for participant policy creation or update.
-
-  Required fields:
-  - program_id (valid UUID referencing a program)
-
-  Optional fields:
-  - eligibility_at ("registration" or "program_start")
-  - min_age_months / max_age_months (age range in months)
-  - allowed_genders (list of valid gender strings)
-  - min_grade / max_grade (school grade range, 1-13)
-
-  Database constraints enforce range validity and one policy per program.
+  Changeset for participant policy creation or update.
+  All restriction fields are optional; DB constraints enforce range validity and uniqueness per program.
   """
   def changeset(schema \\ %__MODULE__{}, attrs) do
     schema
@@ -66,9 +53,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPo
     |> check_constraint(:min_grade, name: :valid_grade_bounds)
   end
 
-  # Trigger: allowed_genders contains values not in the valid set
-  # Why: prevents invalid gender values from reaching the database
-  # Outcome: changeset error added with details of invalid values
   defp validate_allowed_genders(changeset) do
     case get_field(changeset, :allowed_genders) do
       nil ->
@@ -92,9 +76,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPo
     end
   end
 
-  # Trigger: min_age_months exceeds max_age_months when both are set
-  # Why: nonsensical — no child could satisfy a range where minimum exceeds maximum
-  # Outcome: changeset error added before hitting the database constraint
   defp validate_age_range(changeset) do
     min = get_field(changeset, :min_age_months)
     max = get_field(changeset, :max_age_months)
@@ -106,9 +87,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPo
     end
   end
 
-  # Trigger: min_grade exceeds max_grade when both are set
-  # Why: same as age — inverted range is meaningless
-  # Outcome: changeset error added before hitting the database constraint
   defp validate_grade_range(changeset) do
     min = get_field(changeset, :min_grade)
     max = get_field(changeset, :max_grade)

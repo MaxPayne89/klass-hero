@@ -37,30 +37,11 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNote do
 
   @type result :: {:ok, BehavioralNote.t()} | {:error, term()}
 
-  @doc """
-  Revises a rejected behavioral note with new content.
-
-  ## Parameters
-
-  - `params` - Map containing:
-    - `note_id` - ID of the behavioral note
-    - `provider_id` - ID of the provider (ownership enforced at DB level)
-    - `content` - New note content (max 1000 chars)
-
-  ## Returns
-
-  - `{:ok, note}` on success
-  - `{:error, :not_found}` if note doesn't exist or doesn't belong to provider
-  - `{:error, :invalid_status_transition}` if note not rejected
-  - `{:error, :blank_content}` if content is blank
-  """
   @spec execute(params()) :: result()
   def execute(%{note_id: note_id, provider_id: provider_id, content: content}) do
     normalized_content = Shared.normalize_notes(content)
 
-    # Trigger: scoped query ensures note belongs to this provider
-    # Why: DB-enforced ownership — no separate authorization check needed
-    # Outcome: returns :not_found if note doesn't belong to provider
+    # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to provider.
     with {:content, content} when content != nil <- {:content, normalized_content},
          {:ok, note} <- @behavioral_note_reader.get_by_id_and_provider(note_id, provider_id),
          {:ok, revised} <- BehavioralNote.revise(note, content),

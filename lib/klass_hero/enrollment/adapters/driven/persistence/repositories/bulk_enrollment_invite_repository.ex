@@ -28,12 +28,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
   @impl true
   @doc """
-  Inserts a single invite and returns the persisted domain struct.
-
-  Runs `BulkEnrollmentInviteSchema.import_changeset/2`, which validates
-  required fields and excludes lifecycle columns. Callers needing per-row
-  outcomes (e.g. ImportEnrollmentCsv collecting partial-success results)
-  invoke this in a loop.
+  Inserts a single invite via `import_changeset/2`, returning the persisted domain struct.
   """
   def create_one(attrs) when is_map(attrs) do
     span do
@@ -62,13 +57,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
   @impl true
   @doc """
-  Returns existing invite keys for the given program IDs.
-
-  Used for duplicate detection before batch insert. Keys are
-  `{program_id, guardian_email, child_first_name, child_last_name}` tuples
-  with email lowercased for case-insensitive comparison.
-
-  Returns an empty MapSet when given an empty list.
+  Returns a MapSet of dedup keys for all invites in the given programs (empty list → empty MapSet).
   """
   def list_existing_keys_for_programs([]), do: MapSet.new()
 
@@ -107,11 +96,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   end
 
   @impl true
-  @doc """
-  Retrieves a single invite by its ID.
-
-  Returns `{:ok, invite}` when found, `{:error, :not_found}` otherwise.
-  """
   def get_by_id(id) when is_binary(id) do
     span do
       set_attributes("db", operation: "select", entity: "bulk_enrollment_invite")
@@ -124,12 +108,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   end
 
   @impl true
-  @doc """
-  Retrieves a single invite by its invite token.
-
-  Returns `{:ok, invite}` when found, `{:error, :not_found}` otherwise.
-  Short-circuits on `nil` input to avoid unnecessary queries.
-  """
   def get_by_token(nil), do: {:error, :not_found}
 
   def get_by_token(token) when is_binary(token) do
@@ -147,12 +125,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   end
 
   @impl true
-  @doc """
-  Returns pending invites that have not yet been assigned an invite token.
-
-  Filters by program IDs, status "pending", and nil invite_token.
-  Returns an empty list when given an empty list of program IDs.
-  """
   def list_pending_without_token([]), do: []
 
   def list_pending_without_token(program_ids) when is_list(program_ids) do
@@ -169,10 +141,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   end
 
   @impl true
-  @doc """
-  Returns all invites for a given program, ordered alphabetically
-  by child last name then first name.
-  """
   def list_by_program(program_id) when is_binary(program_id) do
     span do
       set_attributes("db", operation: "select", entity: "bulk_enrollment_invite")
@@ -186,9 +154,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   end
 
   @impl true
-  @doc """
-  Returns the count of invites for a given program.
-  """
   def count_by_program(program_id) when is_binary(program_id) do
     span do
       set_attributes("db", operation: "select", entity: "bulk_enrollment_invite")
@@ -200,11 +165,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   end
 
   @impl true
-  @doc """
-  Deletes an invite by its ID.
-
-  Returns `:ok` on success, `{:error, :not_found}`, or `{:error, :delete_failed}`.
-  """
   def delete(id) when is_binary(id) do
     span do
       set_attributes("db", operation: "delete", entity: "bulk_enrollment_invite")
@@ -214,9 +174,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
           {:error, :not_found}
 
         schema ->
-          # Trigger: Repo.delete can return {:error, changeset} on FK constraint violations
-          # Why: bare match raises MatchError and crashes the caller
-          # Outcome: log warning and surface :delete_failed to callers
+          # Repo.delete may return {:error, changeset} on FK violations; surface as :delete_failed.
           case Repo.delete(schema) do
             {:ok, _deleted} ->
               :ok
@@ -232,11 +190,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
   @impl true
   @doc """
-  Assigns invite tokens to multiple invites in bulk.
-
-  Accepts a list of `{invite_id, token}` tuples. Each invite is updated
-  individually within a reduce. Returns `{:ok, count}` with the total
-  number of rows updated.
+  Bulk-assigns tokens to invites. Returns `{:ok, count}` with the number of rows updated.
   """
   def bulk_assign_tokens([]), do: {:ok, 0}
 
@@ -251,9 +205,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
           {[id | ids], [token | tokens]}
         end)
 
-      # Trigger: N pairs would cause N individual UPDATE queries (N+1 problem)
-      # Why: single UPDATE + unnest batches all token assignments into one round-trip
-      # Outcome: exactly 1 SQL statement regardless of batch size, fully static SQL
+      # Single UPDATE + unnest batches all assignments into one round-trip, avoiding N+1.
       sql = """
       UPDATE bulk_enrollment_invites AS b
       SET invite_token = v.token, updated_at = $3::timestamp
@@ -269,19 +221,11 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
   end
 
   @impl true
-  @doc """
-  Transitions an invite's status using the schema's state machine.
-
-  Delegates to `BulkEnrollmentInviteSchema.transition_changeset/2` for
-  validation, then persists the update.
-  """
   def transition_status(%{id: id}, attrs) when is_map(attrs) do
     span do
       set_attributes("db", operation: "update", entity: "bulk_enrollment_invite")
 
-      # Trigger: domain model passed in — must refetch schema for Ecto changeset
-      # Why: domain models are pure structs without Ecto metadata
-      # Outcome: load schema by ID, apply transition changeset, map result back
+      # Domain models lack Ecto metadata; refetch schema by ID before applying the changeset.
       case Repo.get(BulkEnrollmentInviteSchema, id) do
         nil ->
           {:error, :not_found}
@@ -300,11 +244,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
 
   @impl true
   @doc """
-  Resets a resendable invite back to pending status, clearing its token and metadata.
+  Resets a resendable invite to pending, clearing its token and sent metadata.
 
-  Bypasses the normal state machine (`transition_changeset`) intentionally —
-  this is a dedicated reset operation with its own guard on `@resendable_statuses`,
-  using a plain `change/2` since it clears fields rather than transitioning forward.
+  Bypasses `transition_changeset` intentionally — this is a reverse reset, not a forward transition.
   """
   def reset_for_resend(%{id: id, status: status}) when status in @resendable_statuses do
     span do
@@ -315,9 +257,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnro
           {:error, :not_found}
 
         schema ->
-          # Trigger: invite needs to re-enter the email pipeline
-          # Why: clearing token + invite_sent_at makes it eligible for list_pending_without_token
-          # Outcome: existing EnqueueInviteEmails picks it up on next dispatch
+          # Clearing token + invite_sent_at makes the invite eligible for list_pending_without_token.
           changeset =
             Ecto.Changeset.change(schema, %{
               status: :pending,

@@ -19,11 +19,8 @@ defmodule KlassHero.Accounts.Application.Commands.LoginByMagicLink do
   @doc """
   Logs in a user by magic link token.
 
-  Returns:
-  - `{:ok, {%User{}, expired_tokens}}` on success
-  - `{:error, :not_found}` if token is invalid/expired
-  - `{:error, :invalid_token}` if token is malformed
-  - `{:error, :security_violation}` if unconfirmed user has password
+  Returns `{:ok, {%User{}, expired_tokens}}`, `{:error, :not_found}`,
+  `{:error, :invalid_token}`, or `{:error, :security_violation}`.
   """
   def execute(token) when is_binary(token) do
     case @user_repository.resolve_magic_link(token) do
@@ -38,9 +35,7 @@ defmodule KlassHero.Accounts.Application.Commands.LoginByMagicLink do
     end
   end
 
-  # Trigger: unconfirmed user without password (normal registration flow)
-  # Why: first login confirms the email
-  # Outcome: user confirmed, all tokens expired, user_confirmed event dispatched
+  # First login for unconfirmed user: confirm email, expire all tokens, dispatch event
   defp handle_unconfirmed(user) do
     case @user_repository.confirm_and_cleanup_tokens(user) do
       {:ok, {confirmed_user, tokens}} ->
@@ -54,9 +49,6 @@ defmodule KlassHero.Accounts.Application.Commands.LoginByMagicLink do
     end
   end
 
-  # Trigger: confirmed user clicking magic link
-  # Why: standard login — just expire the specific token
-  # Outcome: user logged in, magic link token deleted
   defp handle_confirmed(user, token_record) do
     @user_repository.delete_token(token_record)
     {:ok, {user, []}}
