@@ -419,7 +419,12 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
 /* ============ Agent Heroes (#102) ============ */
 .agent{border:1.5px solid var(--border-light);border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
 .agent-head{display:flex;align-items:center;gap:.85rem;padding:1rem 1.25rem;color:#fff}
-.agent-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;background:rgba(255,255,255,.2);box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
+.agent-av{width:46px;height:46px;border-radius:50%;flex-shrink:0;overflow:hidden;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.agent-av svg{display:block;width:100%;height:100%}
+.agent-head{cursor:pointer;user-select:none}
+.agent-caret{flex-shrink:0;transition:transform .2s;color:#fff;opacity:.9}
+.agent:not(.collapsed) .agent-caret{transform:rotate(180deg)}
+.agent.collapsed .agent-body,.agent.collapsed .agent-chips,.agent.collapsed .agent-input{display:none}
 .agent-head .nm{font-family:var(--font-display);font-weight:800;font-size:1.05rem;line-height:1.1}
 .agent-head .tg{font-size:.78rem;opacity:.9}
 .agent-badge{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:.18rem .5rem;border-radius:999px;background:rgba(255,255,255,.25);margin-left:auto;align-self:flex-start}
@@ -489,6 +494,7 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
       <a href="#/programs" data-nav="programs">Programs</a>
       <a href="#/for-providers" data-nav="providers">For Providers</a>
       <a href="#/trust-safety" data-nav="trust">Trust &amp; Safety</a>
+      <a href="#/blog" data-nav="blog">Blog</a>
       <a href="#/about" data-nav="about">About</a>
       <a href="#/contact" data-nav="contact">Contact</a>
     </nav>
@@ -509,6 +515,7 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
       <a href="#/programs" data-nav="programs">Programs</a>
       <a href="#/for-providers" data-nav="providers">For Providers</a>
       <a href="#/trust-safety" data-nav="trust">Trust &amp; Safety</a>
+      <a href="#/blog" data-nav="blog">Blog</a>
       <a href="#/about" data-nav="about">About</a>
       <a href="#/contact" data-nav="contact">Contact</a>
     </nav>
@@ -585,6 +592,7 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
           <h4>Company</h4>
           <ul>
             <li><a href="#/about">About</a></li>
+            <li><a href="#/blog">Blog &amp; Resources</a></li>
             <li><a href="#/contact">Contact</a></li>
             <li><a href="#/privacy">Privacy</a></li>
             <li><a href="#/terms">Terms</a></li>
@@ -648,13 +656,27 @@ const ic = (n, cls) => I(ICONS[n] || ICONS.sparkles, cls);
 /* ============================================================
    Demo data — programs mirror priv/repo/seeds.exs
    ============================================================ */
+const PROVIDER_TAGS = ["STEM","Sport","Art","Music","Education","Tutoring","Camps","Life Skills"];
 const PROVIDERS = {
-  "berlin-kickers": {name:"Berlin Kickers Academy", initials:"BK", verified:true, rating:4.9, reviews:127, desc:"Youth football academy in Prenzlauer Berg run by licensed DFB coaches. Training kids since 2014.", contact:"info@berlinkickers.de"},
-  "atelier-luna": {name:"Atelier Luna", initials:"AL", verified:true, rating:4.8, reviews:84, desc:"Children's art studio in Kreuzberg — watercolor, clay, mixed media. Small groups, big imaginations.", contact:"hello@atelierluna.de"},
-  "musikgarten": {name:"Musikgarten Berlin", initials:"MG", verified:true, rating:5.0, reviews:62, desc:"Music school for early-years and primary children. Piano, choir, and theory taught with joy.", contact:"kontakt@musikgarten.berlin"},
-  "brainsprouts": {name:"BrainSprouts Learning", initials:"BS", verified:true, rating:4.7, reviews:95, desc:"STEM and academic enrichment. Math, science, and coding programs for curious minds.", contact:"team@brainsprouts.de"},
-  "campfire": {name:"Campfire Adventures", initials:"CA", verified:true, rating:4.9, reviews:143, desc:"Holiday camps and outdoor adventures across Berlin and Brandenburg since 2016.", contact:"ahoy@campfire-adventures.de"}
+  "berlin-kickers": {name:"Berlin Kickers Academy", initials:"BK", verified:true, rating:4.9, reviews:127, district:"Prenzlauer Berg", tags:["Sport"], requestOnly:false, grad:"var(--grad-cool)",
+    desc:"Youth football academy in Prenzlauer Berg run by licensed DFB coaches. Training kids since 2014.",
+    long:"Berlin Kickers Academy has been developing young footballers in Prenzlauer Berg since 2014. Our licensed DFB coaches focus on technique, teamwork, and confidence in a fun, pressure-free environment. Every child plays, every child grows — no benchwarmers here.", contact:"info@berlinkickers.de"},
+  "atelier-luna": {name:"Atelier Luna", initials:"AL", verified:true, rating:4.8, reviews:84, district:"Kreuzberg", tags:["Art"], requestOnly:false, grad:"var(--grad-art)",
+    desc:"Children's art studio in Kreuzberg — watercolor, clay, mixed media. Small groups, big imaginations.",
+    long:"Atelier Luna is a children's art studio in the heart of Kreuzberg. We keep groups small so every young artist gets real attention across watercolor, clay, and mixed media. Process over perfection — children leave with a portfolio and a love of making.", contact:"hello@atelierluna.de"},
+  "musikgarten": {name:"Musikgarten Berlin", initials:"MG", verified:true, rating:5.0, reviews:62, district:"Charlottenburg", tags:["Music"], requestOnly:false, grad:"var(--grad-primary)",
+    desc:"Music school for early-years and primary children. Piano, choir, and theory taught with joy.",
+    long:"Musikgarten Berlin brings music to early-years and primary children through piano, choir, and playful theory. Our certified pedagogues believe musicality builds confidence, focus, and friendships — with two public performances every season.", contact:"kontakt@musikgarten.berlin"},
+  "brainsprouts": {name:"BrainSprouts Learning", initials:"BS", verified:true, rating:4.7, reviews:95, district:"Mitte", tags:["STEM","Education","Tutoring"], requestOnly:false, grad:"var(--grad-comic)",
+    desc:"STEM and academic enrichment. Math, science, and coding programs for curious minds.",
+    long:"BrainSprouts Learning runs STEM and academic enrichment across Berlin — math mastery, science explorers, and coding for kids. We turn 'I can't' into 'watch me' with small groups, hands-on projects, and tutors who explain things twice without making anyone feel slow.", contact:"team@brainsprouts.de"},
+  "campfire": {name:"Campfire Adventures", initials:"CA", verified:true, rating:4.9, reviews:143, district:"Grunewald", tags:["Camps","Life Skills","Sport"], requestOnly:true, grad:"var(--grad-hero)",
+    desc:"Holiday camps and outdoor adventures across Berlin and Brandenburg since 2016.",
+    long:"Campfire Adventures runs holiday camps and outdoor adventures across Berlin and Brandenburg. Climbing, swimming, campfires, and life skills — our camps need a quick request so we can match each child to the right group and check dietary and medical needs before confirming.", contact:"ahoy@campfire-adventures.de"}
 };
+function providerPrograms(slug){ return PROGRAMS.filter(p=>p.provider===slug); }
+function providerPriceFrom(slug){ const ps=providerPrograms(slug); return ps.length?Math.min(...ps.map(ebPriceCalc)):null; }
+function providerSpaces(slug){ return providerPrograms(slug).reduce((n,p)=>n+Math.max(0,spotsLeft(p)),0); }
 
 const PROGRAMS = [
   {id:"p1", title:"Soccer Fundamentals", desc:"Build ball control, passing, and confidence in a fun, supportive team environment led by licensed coaches.", category:"sports", icon:"trophy", grad:"var(--grad-cool)", price:100, period:"per month", age:"6–10", grades:"Grades 1–4", days:["Tue","Thu"], time:"16:00–17:30", district:"Prenzlauer Berg", provider:"berlin-kickers", instructor:{name:"Jonas Weber", initials:"JW", bio:"DFB C-license coach, 8 years coaching youth teams."}, staff:[{name:"Mia Krüger", initials:"MK", bio:"Assistant coach & sports science student."}], skills:["Teamwork","Coordination","Discipline"], capacity:16, enrolled:11, isNew:false, popular:true, weekend:false, smallGroup:false, rating:4.9, reviewCount:38, startsThisWeek:true, earlyBird:null, siblingDiscount:true, start:"2026-08-17", end:"2026-12-18"},
@@ -967,15 +989,15 @@ function goSearch(q){
    skills #704, sort, grid/list, waitlist #13, early bird #150,
    grade restrictions #547)
    ============================================================ */
-const catalogState = {q:"", cat:"all", quick:new Set(), skills:new Set(), district:"all", priceMax:500, sort:"recommended", view:"grid"};
+const catalogState = {q:"", mode:"programs", cats:new Set(), quick:new Set(), skills:new Set(), district:"all", priceMax:500, provTags:new Set(), provExclusive:false, sort:"recommended", view:"grid"};
 function filteredPrograms(){
   let list = PROGRAMS.slice();
   const s = catalogState;
   if(s.q){
     const q = s.q.toLowerCase();
-    list = list.filter(p => (p.title+" "+p.desc+" "+p.district+" "+CAT_LABEL[p.category]+" "+PROVIDERS[p.provider].name+" "+p.skills.join(" ")).toLowerCase().includes(q));
+    list = list.filter(p => (p.title+" "+p.desc+" "+p.district+" "+CAT_LABEL[p.category]+" "+PROVIDERS[p.provider].name+" "+p.skills.join(" ")+" "+p.instructor.name).toLowerCase().includes(q));
   }
-  if(s.cat !== "all") list = list.filter(p=>p.category===s.cat);
+  if(s.cats.size) list = list.filter(p=>s.cats.has(p.category));
   for(const qf of QUICK_FILTERS) if(s.quick.has(qf.id)) list = list.filter(qf.test);
   if(s.skills.size) list = list.filter(p=>p.skills.some(sk=>s.skills.has(sk)));
   if(s.district !== "all") list = list.filter(p=>p.district===s.district);
@@ -986,28 +1008,66 @@ function filteredPrograms(){
   if(s.sort==="recommended") list.sort((a,b)=>(b.popular?1:0)-(a.popular?1:0) || b.rating-a.rating);
   return list;
 }
-function activeFilterCount(){ const s=catalogState; return s.quick.size + s.skills.size + (s.district!=="all"?1:0) + (s.priceMax<500?1:0); }
+function filteredProviders(){
+  const s = catalogState;
+  let list = Object.entries(PROVIDERS).map(([slug,p])=>({slug, ...p}));
+  if(s.q){ const q=s.q.toLowerCase(); list=list.filter(p=>(p.name+" "+p.desc+" "+p.long+" "+p.tags.join(" ")+" "+p.district).toLowerCase().includes(q)); }
+  if(s.provTags.size){
+    list = s.provExclusive
+      ? list.filter(p=>[...s.provTags].every(t=>p.tags.includes(t)))
+      : list.filter(p=>p.tags.some(t=>s.provTags.has(t)));
+  }
+  if(s.district !== "all") list = list.filter(p=>p.district===s.district);
+  list.sort((a,b)=>b.rating-a.rating);
+  return list;
+}
+function activeFilterCount(){
+  const s=catalogState;
+  if(s.mode==="providers") return s.provTags.size + (s.district!=="all"?1:0);
+  return s.cats.size + s.quick.size + s.skills.size + (s.district!=="all"?1:0) + (s.priceMax<500?1:0);
+}
+function slidersIcon(){ return `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" d="M3 6.5h11M18 6.5h3M3 12h3m4 0h11M3 17.5h11m4 0h3"/><circle cx="16" cy="6.5" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="17.5" r="2"/></svg>`; }
+function countText(){
+  const s=catalogState;
+  if(s.mode==="providers"){
+    const n=filteredProviders().length;
+    return `<strong class="font-display" style="color:var(--fg-primary);font-size:1rem">${n}</strong> ${n===1?"provider":"providers"}`+
+      `${s.provTags.size?` tagged <strong style="color:var(--fg-primary)">${[...s.provTags].join(", ")}</strong>`:""}`+
+      `${s.district!=="all"?` in <strong style="color:var(--fg-primary)">${s.district}</strong>`:""}`+
+      `${s.q?` matching <strong style="color:var(--fg-primary)">"${s.q}"</strong>`:""}`;
+  }
+  const n=filteredPrograms().length;
+  return `<strong class="font-display" style="color:var(--fg-primary);font-size:1rem">${n}</strong> ${n===1?"program":"programs"}`+
+    `${s.cats.size?` in <strong style="color:var(--fg-primary)">${[...s.cats].map(c=>CAT_LABEL[c]).join(", ")}</strong>`:""}`+
+    `${s.district!=="all"?` near <strong style="color:var(--fg-primary)">${s.district}</strong>`:""}`+
+    `${s.q?` matching <strong style="color:var(--fg-primary)">"${s.q}"</strong>`:""}`+
+    `${s.priceMax<500?` under <strong style="color:var(--fg-primary)">€${s.priceMax}</strong>`:""}`;
+}
 function pageBrowse(){
   const s = catalogState;
   return `
-  <section class="mk-hero" style="padding:3.5rem 0 2.5rem">
+  <section class="mk-hero" style="padding:3.5rem 0 2rem">
     ${orbs()}
     <div class="container rel">
-      <span class="pill pill-outline" style="margin-bottom:1.25rem">Explore Programs</span>
-      <h1 class="hero-h1-sm" style="max-width:880px;margin:0 auto">Discover <span class="hl">activities</span>, camps &amp; classes for your child</h1>
-      <p class="lede" style="max-width:640px;margin:1.25rem auto 0">Hand-picked, vetted programs across Berlin — search, filter, or explore them on the map.</p>
-      <div style="max-width:640px;margin:2rem auto 0">
-        <form onsubmit="event.preventDefault();renderCatalog()">
+      <span class="pill pill-outline" style="margin-bottom:1.25rem">Explore</span>
+      <h1 class="hero-h1-sm" style="max-width:880px;margin:0 auto">Find <span class="hl">activities</span> &amp; trusted providers near you</h1>
+      <p class="lede" style="max-width:600px;margin:1.25rem auto 0">Vetted programs and provider profiles across Berlin — search, filter, or explore on the map.</p>
+      <div style="max-width:640px;margin:1.75rem auto 0">
+        <form onsubmit="event.preventDefault();applyFilters()">
           <div class="searchbar">
-            <div class="field">${ic('search')}<input id="browse-q" type="text" value="${s.q.replace(/"/g,'&quot;')}" placeholder="Search programs, providers, neighborhoods..." aria-label="Search" oninput="catalogState.q=this.value;renderCatalog()"></div>
+            <div class="field">${ic('search')}<input id="browse-q" type="text" value="${s.q.replace(/"/g,'&quot;')}" placeholder="Search programs, providers, neighborhoods..." aria-label="Search" oninput="catalogState.q=this.value;applyFilters()"></div>
             <button type="submit" class="btn btn-primary">Search</button>
           </div>
         </form>
+        <div style="margin-top:1.1rem;display:flex;justify-content:center">
+          <div class="viewtoggle" style="background:#fff;border:1px solid var(--border-light);padding:5px">
+            <button class="${s.mode==='programs'?'on':''}" onclick="setMode('programs')">${ic('calendar','icon-sm')} Programs</button>
+            <button class="${s.mode==='providers'?'on':''}" onclick="setMode('providers')">${ic('users','icon-sm')} Provider profiles</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
-
-  <div class="filterbar"><div class="container" id="filter-bar">${filterBarInner()}</div></div>
 
   <section class="band-white" style="padding:2rem 0 5rem">
     <div class="container">
@@ -1022,42 +1082,39 @@ function pageBrowse(){
       <div class="modal-body" id="fmodal-body">${fModalInner()}</div>
       <div class="modal-foot">
         <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear all</button>
-        <button class="btn btn-primary" onclick="closeFilters()">Show <span id="fmodal-count">${filteredPrograms().length}</span> results</button>
+        <button class="btn btn-primary" onclick="closeFilters()">Show <span id="fmodal-count">0</span> results</button>
       </div>
     </div>
   </div>`;
 }
 
-/* Three one-line chip rows (categories, quick filters, skills) + Airbnb "Filters" button */
-function filterBarInner(){
-  const s = catalogState;
-  const sliders = `<svg class="icon-sm" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" d="M3 6.5h11M18 6.5h3M3 12h3m4 0h11M3 17.5h11m4 0h3"/><circle cx="16" cy="6.5" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="17.5" r="2"/></svg>`;
-  return `
-    <div class="frow">
-      <span class="flbl">Category</span>
-      <div class="chiprow">
-        ${CATEGORIES.map(c=>`<button class="chip-pill ${s.cat===c.id?'on':''}" onclick="setCat('${c.id}')">${c.label}</button>`).join("")}
-      </div>
-    </div>
-    <div class="frow">
-      <span class="flbl">Quick</span>
-      <div class="chiprow">
-        ${QUICK_FILTERS.map(f=>`<button class="chip-pill ${s.quick.has(f.id)?'on-yellow':''}" onclick="toggleQuick('${f.id}')">${f.label}</button>`).join("")}
-      </div>
-      <button class="filterbtn" onclick="openFilters()">${sliders} Filters${activeFilterCount()?`<span class="cnt">${activeFilterCount()}</span>`:""}</button>
-    </div>
-    <div class="frow">
-      <span class="flbl">Skills</span>
-      <div class="chiprow">
-        ${ALL_SKILLS.map(sk=>`<button class="chip-pill ${s.skills.has(sk)?'on-skill':''}" onclick="toggleSkill('${sk.replace(/'/g,"\\'")}')">${sk}</button>`).join("")}
-      </div>
-    </div>`;
-}
-
-/* Advanced filter modal body — everything in one place + location & price (Airbnb-style) */
+/* Advanced filter modal — holds everything; the toolbar just shows a Filters button */
 function fModalInner(){
   const s = catalogState;
+  if(s.mode==="providers"){
+    return `
+    <div class="fsection">
+      <h4>Provider tags</h4>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        ${PROVIDER_TAGS.map(t=>`<button class="toggle-pill ${s.provTags.has(t)?'on':''}" onclick="toggleProvTag('${t}')">${t}</button>`).join("")}
+      </div>
+      <label class="f-check" style="margin-top:.9rem"><input type="checkbox" ${s.provExclusive?'checked':''} onchange="toggleProvExclusive()"> Match <strong>all</strong> selected tags (exclusive)</label>
+    </div>
+    <div class="fsection" style="border-bottom:0">
+      <h4>Neighborhood</h4>
+      <select class="f-input" onchange="setDistrict(this.value)">
+        <option value="all" ${s.district==='all'?'selected':''}>All of Berlin</option>
+        ${Object.keys(DISTRICTS).map(d=>`<option value="${d}" ${s.district===d?'selected':''}>${d} · ${DISTRICTS[d].km} km away</option>`).join("")}
+      </select>
+    </div>`;
+  }
   return `
+    <div class="fsection">
+      <h4>Category</h4>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        ${CATEGORIES.filter(c=>c.id!=='all').map(c=>`<button class="toggle-pill ${s.cats.has(c.id)?'on':''}" onclick="toggleCat('${c.id}')">${c.label}</button>`).join("")}
+      </div>
+    </div>
     <div class="fsection">
       <h4>Availability &amp; type</h4>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
@@ -1087,68 +1144,122 @@ function fModalInner(){
       <div style="display:flex;justify-content:space-between" class="tiny muted"><span>€50</span><span>€500+</span></div>
     </div>`;
 }
-function setCat(id){ catalogState.cat=id; syncFilters(); }
-function toggleQuick(id){ const q=catalogState.quick; q.has(id)?q.delete(id):q.add(id); syncFilters(); }
-function toggleSkill(sk){ const s=catalogState.skills; s.has(sk)?s.delete(sk):s.add(sk); syncFilters(); }
-function setDistrict(d){ catalogState.district=d; syncFilters(); }
-function setPrice(v){ catalogState.priceMax=+v; syncFilters(); }
+function toggleCat(id){ const c=catalogState.cats; c.has(id)?c.delete(id):c.add(id); applyFilters(); }
+function toggleQuick(id){ const q=catalogState.quick; q.has(id)?q.delete(id):q.add(id); applyFilters(); }
+function toggleSkill(sk){ const s=catalogState.skills; s.has(sk)?s.delete(sk):s.add(sk); applyFilters(); }
+function toggleProvTag(t){ const s=catalogState.provTags; s.has(t)?s.delete(t):s.add(t); applyFilters(); }
+function toggleProvExclusive(){ catalogState.provExclusive=!catalogState.provExclusive; applyFilters(); }
+function setDistrict(d){ catalogState.district=d; applyFilters(); }
+function setPrice(v){ catalogState.priceMax=+v; applyFilters(); }
+function setMode(m){ catalogState.mode=m; if(m==="providers" && catalogState.view==="map") catalogState.view="grid"; renderCatalog(); }
 function setView(v){ catalogState.view=v; renderCatalog(); }
-function openFilters(){ const m=document.getElementById('fmodal'); if(m) m.classList.add('open'); }
+function setSort(k){ catalogState.sort=k; renderCatalog(); }
+function openFilters(){ const m=document.getElementById('fmodal'); if(m){ m.classList.add('open'); updateBadges(); } }
 function closeFilters(){ const m=document.getElementById('fmodal'); if(m) m.classList.remove('open'); }
 function clearFilters(){
-  Object.assign(catalogState, {q:"", cat:"all", district:"all", priceMax:500});
-  catalogState.quick=new Set(); catalogState.skills=new Set();
+  Object.assign(catalogState, {q:"", district:"all", priceMax:500, provExclusive:false});
+  catalogState.cats=new Set(); catalogState.quick=new Set(); catalogState.skills=new Set(); catalogState.provTags=new Set();
   const qi=document.getElementById('browse-q'); if(qi) qi.value="";
-  syncFilters();
+  applyFilters();
 }
-/* Re-render the chip rows, the modal body, and the results — all without a full route() */
-function syncFilters(){
-  const fb=document.getElementById('filter-bar'); if(fb) fb.innerHTML=filterBarInner();
+/* Partial update: results + modal body + badges, without rebuilding the toolbar (keeps modal open) */
+function applyFilters(){
+  const rz=document.getElementById('results-zone'); if(rz) rz.innerHTML=resultsHTML();
   const fm=document.getElementById('fmodal-body'); if(fm) fm.innerHTML=fModalInner();
-  const fc=document.getElementById('fmodal-count'); if(fc) fc.textContent=filteredPrograms().length;
-  renderCatalog();
+  updateBadges();
+}
+function updateBadges(){
+  const n=activeFilterCount();
+  const b=document.getElementById('filters-badge'); if(b){ b.textContent=n; b.style.display=n?'':'none'; }
+  const c=document.getElementById('result-count'); if(c) c.innerHTML=countText();
+  const fc=document.getElementById('fmodal-count'); if(fc) fc.textContent=(catalogState.mode==="providers"?filteredProviders():filteredPrograms()).length;
 }
 function renderCatalog(){
   const zone = document.getElementById("catalog-zone");
   if(!zone) return;
-  const list = filteredPrograms();
   const s = catalogState;
+  const n = activeFilterCount();
   const sortLabels = {recommended:"Recommended", newest:"Newest", price_low:"Price: low to high", price_high:"Price: high to low"};
   zone.innerHTML = `
     <div class="controls">
-      <div class="small muted">
-        <strong class="font-display" style="color:var(--fg-primary);font-size:1rem">${list.length}</strong>
-        ${list.length===1?"program":"programs"}
-        ${s.cat!=="all" ? `in <strong style="color:var(--fg-primary)">${CAT_LABEL[s.cat]}</strong>` : ""}
-        ${s.district!=="all" ? `near <strong style="color:var(--fg-primary)">${s.district}</strong>` : ""}
-        ${s.q ? `matching <strong style="color:var(--fg-primary)">"${s.q}"</strong>` : ""}
-        ${s.priceMax<500 ? `under <strong style="color:var(--fg-primary)">€${s.priceMax}</strong>` : ""}
-      </div>
-      <div style="display:flex;align-items:center;gap:.75rem">
-        <details class="sort-dd" id="sort-dd">
+      <div class="small muted" id="result-count">${countText()}</div>
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+        <button class="filterbtn" onclick="openFilters()">${slidersIcon()} Filters<span class="cnt" id="filters-badge" style="${n?'':'display:none'}">${n}</span></button>
+        ${s.mode==="programs" ? `<details class="sort-dd" id="sort-dd">
           <summary><span class="muted">Sort:</span> ${sortLabels[s.sort]} ${ic('chevdown','icon-sm')}</summary>
-          <div class="menu">
-            ${Object.entries(sortLabels).map(([k,l])=>`<button class="${s.sort===k?'on':''}" onclick="catalogState.sort='${k}';renderCatalog()">${l}</button>`).join("")}
-          </div>
-        </details>
+          <div class="menu">${Object.entries(sortLabels).map(([k,l])=>`<button class="${s.sort===k?'on':''}" onclick="setSort('${k}')">${l}</button>`).join("")}</div>
+        </details>` : ""}
         <div class="viewtoggle">
           <button class="${s.view==='grid'?'on':''}" onclick="setView('grid')">Grid</button>
           <button class="${s.view==='list'?'on':''}" onclick="setView('list')">List</button>
-          <button class="${s.view==='map'?'on':''}" onclick="setView('map')">${ic('map','icon-sm')} Map</button>
+          ${s.mode==="programs" ? `<button class="${s.view==='map'?'on':''}" onclick="setView('map')">${ic('map','icon-sm')} Map</button>` : ""}
         </div>
       </div>
     </div>
-    ${list.length === 0
-      ? `<div class="empty-state"><div class="ring">${ic('search')}</div>
-           <h3 class="font-display" style="font-size:1.5rem">No programs found</h3>
-           <p class="muted" style="margin-top:.5rem;max-width:420px;margin-left:auto;margin-right:auto">Try adjusting your search or filter criteria — there's plenty more in Berlin.</p>
-           <div style="margin-top:1.5rem"><button class="btn btn-primary" onclick="clearFilters()">Clear filters</button></div></div>`
-      : s.view==="grid"
-        ? `<div class="grid grid-3 fade-in" style="margin-top:1.5rem">${list.map(programCard).join("")}</div>`
-        : s.view==="list"
-          ? `<div class="fade-in" style="margin-top:1.5rem;display:flex;flex-direction:column;gap:1rem">${list.map(programRow).join("")}</div>`
-          : mapView(list)}
+    <div id="results-zone">${resultsHTML()}</div>
   `;
+}
+function emptyHTML(title, sub){
+  return `<div class="empty-state"><div class="ring">${ic('search')}</div>
+    <h3 class="font-display" style="font-size:1.5rem">${title}</h3>
+    <p class="muted" style="margin-top:.5rem;max-width:420px;margin-left:auto;margin-right:auto">${sub}</p>
+    <div style="margin-top:1.5rem"><button class="btn btn-primary" onclick="clearFilters()">Clear filters</button></div></div>`;
+}
+function resultsHTML(){
+  const s = catalogState;
+  if(s.mode==="providers"){
+    const list = filteredProviders();
+    if(!list.length) return emptyHTML("No providers found", "Try removing a tag or searching a different neighborhood.");
+    return s.view==="list"
+      ? `<div class="fade-in" style="margin-top:1.5rem;display:flex;flex-direction:column;gap:1rem">${list.map(providerRow).join("")}</div>`
+      : `<div class="grid grid-3 fade-in" style="margin-top:1.5rem">${list.map(providerCard).join("")}</div>`;
+  }
+  const list = filteredPrograms();
+  if(!list.length) return emptyHTML("No programs found", "Try adjusting your search or filter criteria — there's plenty more in Berlin.");
+  return s.view==="grid" ? `<div class="grid grid-3 fade-in" style="margin-top:1.5rem">${list.map(programCard).join("")}</div>`
+       : s.view==="list" ? `<div class="fade-in" style="margin-top:1.5rem;display:flex;flex-direction:column;gap:1rem">${list.map(programRow).join("")}</div>`
+       : mapView(list);
+}
+
+/* ---- Provider profile cards (search) ---- */
+function providerCard(p){
+  const progs=providerPrograms(p.slug); const from=providerPriceFrom(p.slug);
+  return `
+  <div class="card card-hover" onclick="location.hash='#/providers/${p.slug}'" role="link" tabindex="0" style="cursor:pointer;overflow:hidden;display:flex;flex-direction:column">
+    <div style="height:84px;background:${p.grad};position:relative"><div style="position:absolute;inset:0;background:rgba(0,0,0,.08)"></div></div>
+    <div style="padding:0 1.25rem 1.25rem;display:flex;flex-direction:column;flex:1">
+      <div style="display:flex;align-items:flex-end;gap:.6rem;margin-top:-28px">
+        <div class="avatar" style="width:56px;height:56px;border:3px solid #fff;font-size:1.1rem;box-shadow:var(--shadow-sm)">${p.initials}</div>
+        ${p.verified?`<span class="pill pill-success" style="margin-bottom:.35rem">✓ Verified</span>`:''}
+        ${p.requestOnly?`<span class="pill pill-warning" style="margin-bottom:.35rem">By request</span>`:''}
+      </div>
+      <h3 style="font-family:var(--font-sans);font-size:1.15rem;font-weight:700;margin-top:.6rem">${p.name}</h3>
+      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.25rem" class="small">
+        <span style="color:#b45309">${p.rating}★ <span class="muted">(${p.reviews})</span></span>
+        <span class="muted">·</span><span class="muted" style="display:inline-flex;align-items:center;gap:.25rem">${ic('map','icon-sm')} ${p.district}</span>
+      </div>
+      <div style="margin-top:.6rem;display:flex;gap:.35rem;flex-wrap:wrap">${p.tags.map(t=>`<span class="skillpill">${t}</span>`).join("")}</div>
+      <p class="small muted" style="margin-top:.6rem">${p.desc}</p>
+      <div style="margin-top:auto;padding-top:.85rem;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border-light);gap:.5rem">
+        <span class="small muted">${progs.length} program${progs.length!==1?'s':''}${from?` · from €${from}`:''}</span>
+        <span class="view-link">View profile →</span>
+      </div>
+    </div>
+  </div>`;
+}
+function providerRow(p){
+  const progs=providerPrograms(p.slug); const from=providerPriceFrom(p.slug);
+  return `
+  <div class="card prow" onclick="location.hash='#/providers/${p.slug}'" role="link" tabindex="0">
+    <div class="thumb" style="background:${p.grad}"><div class="avatar" style="width:60px;height:60px;background:rgba(255,255,255,.25);font-size:1.3rem">${p.initials}</div></div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.4rem">${p.tags.map(t=>`<span class="pill pill-outline">${t}</span>`).join("")}${p.requestOnly?'<span class="pill pill-warning">By request</span>':''}${p.verified?'<span class="pill pill-success">✓ Verified</span>':''}</div>
+      <h3 style="font-family:var(--font-sans);font-size:1.2rem;font-weight:700">${p.name}</h3>
+      <p class="small muted" style="margin-top:.25rem">${p.desc}</p>
+      <div class="small muted" style="margin-top:.5rem;display:flex;gap:1rem;flex-wrap:wrap"><span style="color:#b45309">${p.rating}★ (${p.reviews})</span><span style="display:inline-flex;align-items:center;gap:.25rem">${ic('map','icon-sm')} ${p.district}</span><span>${progs.length} programs${from?` · from €${from}`:''}</span></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:flex-end"><span class="view-link">View profile →</span></div>
+  </div>`;
 }
 
 /* ---- Map view (#108): stylized Berlin map with price pins + synced list ---- */
@@ -1201,6 +1312,82 @@ function selectPin(id, fromList){
     const card = document.querySelector('.maplist .mlcard[data-id="'+id+'"]');
     if(card) card.scrollIntoView({behavior:'smooth', block:'nearest'});
   }
+}
+
+/* ============================================================
+   PAGE: Provider profile — searchable + bookable, Facebook-page-like.
+   Tags, full description, schedule, instructors, price breakdown,
+   age eligibility, location, remaining spaces, clear CTA, request note.
+   ============================================================ */
+function pageProviderProfile(slug){
+  const p = PROVIDERS[slug];
+  if(!p) return `<div class="container" style="padding:5rem 1.25rem;text-align:center"><h2 class="section-title">Provider not found</h2><div style="margin-top:1.5rem"><a class="btn btn-primary" href="#/programs">Back to search</a></div></div>`;
+  const progs = providerPrograms(slug);
+  const from = providerPriceFrom(slug);
+  const spaces = providerSpaces(slug);
+  const heroes = [...new Map(progs.flatMap(pr=>[pr.instructor, ...pr.staff]).map(i=>[i.name,i])).values()];
+  const ageMin = progs.length ? Math.min(...progs.map(pr=>parseInt(pr.age.split("–")[0],10))) : null;
+  const ageMax = progs.length ? Math.max(...progs.map(pr=>parseInt(pr.age.split("–")[1],10))) : null;
+  const cta = p.requestOnly
+    ? `<button class="btn btn-yellow" onclick="toast('Sign in to send a booking request')">Request to book</button>`
+    : `<button class="btn btn-primary" onclick="toast('Sign in to book a program')">Book now</button>`;
+  return `
+  <div class="detail-hero" style="background:${p.grad};height:210px">
+    <a class="backbtn" href="#/programs">${ic('chevleft','icon-sm')} Back to search</a>
+    <div class="shade"></div>
+  </div>
+  <div class="container-mid" style="margin-top:-56px;position:relative;z-index:5">
+    <div class="card" style="padding:1.5rem">
+      <div style="display:flex;gap:1.25rem;flex-wrap:wrap">
+        <div class="avatar" style="width:88px;height:88px;border:4px solid #fff;font-size:1.8rem;margin-top:-54px;box-shadow:var(--shadow-md);flex-shrink:0">${p.initials}</div>
+        <div style="flex:1;min-width:220px">
+          <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap"><h1 style="font-size:1.6rem">${p.name}</h1>${p.verified?'<span class="pill pill-success">✓ Verified provider</span>':''}</div>
+          <div class="small" style="margin-top:.4rem;color:#b45309">${stars(p.rating)} <span class="muted">${p.rating} · ${p.reviews} reviews · ${ic('map','icon-sm')} ${p.district}, Berlin</span></div>
+          <div style="margin-top:.65rem;display:flex;gap:.4rem;flex-wrap:wrap">${p.tags.map(t=>`<span class="skillpill">${t}</span>`).join("")}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;min-width:200px">
+          ${cta}
+          <a class="btn btn-ghost btn-sm" href="#/login">Sign in to book</a>
+          <button class="btn btn-ghost btn-sm" onclick="toast('Sign in to message this provider')">${ic('chat','icon-sm')} Message</button>
+        </div>
+      </div>
+      ${p.requestOnly ? `<div class="notice notice-warn" style="margin-top:1rem">${ic('info','icon-sm')}<span><strong>Request, not instant booking.</strong> ${p.name} reviews each request — you'll share your child's details and they confirm availability before any payment is taken.</span></div>` : ""}
+    </div>
+  </div>
+  <div class="container-mid" style="padding:2rem 1.25rem 4rem">
+    <div class="grid grid-4" style="gap:.75rem">
+      <div class="stat"><div class="v">${progs.length}</div><div class="l">Programs</div></div>
+      <div class="stat"><div class="v">${from?'€'+from:'—'}</div><div class="l">From / period</div></div>
+      <div class="stat"><div class="v">${ageMin!=null?ageMin+'–'+ageMax:'—'}</div><div class="l">Age eligibility</div></div>
+      <div class="stat"><div class="v">${spaces}</div><div class="l">Spaces open</div></div>
+    </div>
+
+    <h2 class="section-title" style="font-size:1.4rem;margin-top:2.5rem">About ${p.name}</h2>
+    <p class="lede" style="margin-top:.6rem">${p.long}</p>
+
+    <h3 class="section-title" style="font-size:1.2rem;margin-top:2.5rem">Programs &amp; schedule</h3>
+    <div style="margin-top:.75rem;display:flex;flex-direction:column;gap:1rem">${progs.map(programRow).join("")}</div>
+
+    <h3 class="section-title" style="font-size:1.2rem;margin-top:2.5rem">Meet the ${heroes.length>1?'Heroes':'Hero'}</h3>
+    <div class="grid grid-2" style="margin-top:.75rem">
+      ${heroes.map(i=>`<div class="card" style="padding:1.25rem;display:flex;gap:1rem;align-items:flex-start"><div class="avatar" style="width:48px;height:48px">${i.initials}</div><div><div style="font-weight:700">${i.name}</div><div class="small muted" style="margin-top:.2rem">${i.bio}</div><div style="margin-top:.35rem"><span class="pill pill-success">✓ Hero verified</span></div></div></div>`).join("")}
+    </div>
+
+    <h3 class="section-title" style="font-size:1.2rem;margin-top:2.5rem">Price breakdown</h3>
+    <div class="card" style="padding:1.25rem;margin-top:.75rem">
+      ${progs.map(pr=>`<div class="rate-row"><span>${pr.title} <span class="tiny muted">· ${pr.period} · Ages ${pr.age}</span></span><strong>€${ebPriceCalc(pr)}</strong></div>`).join("")}
+      <p class="tiny muted" style="margin-top:.6rem">No booking fees for parents. ${p.requestOnly?'Final camp pricing is confirmed with your request.':'Instant booking available on every program.'}</p>
+    </div>
+
+    <h3 class="section-title" style="font-size:1.2rem;margin-top:2.5rem">Location</h3>
+    <p class="muted" style="margin-top:.5rem;display:flex;align-items:center;gap:.4rem">${ic('map','icon-sm')} Based in ${p.district}, Berlin${DISTRICTS[p.district]?` · ${DISTRICTS[p.district].km} km from central Mitte`:''}</p>
+
+    <div class="card-soft" style="padding:1.75rem;margin-top:2.5rem;text-align:center">
+      <h3 style="font-family:var(--font-sans);font-weight:700;font-size:1.25rem">${p.requestOnly?'Ready to request a spot?':'Ready to book?'}</h3>
+      <p class="small muted" style="margin-top:.4rem">${p.requestOnly?`Send your details — ${p.name} confirms availability before any payment.`:'Secure your spot in seconds. No booking fees.'}</p>
+      <div style="margin-top:1.1rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap">${cta}<a class="btn btn-ghost" href="#/login">Sign in to book</a></div>
+    </div>
+  </div>`;
 }
 
 /* ============================================================
@@ -1935,10 +2122,10 @@ function contactSuccess(){
 function pageParentDash(){
   const kids = [["Emma","8","var(--blue-500)","2 programs"],["Leo","10","#10b981","1 program"]];
   const sessions = [
-    ["AUG","18","Soccer Fundamentals","16:00–17:30 · Prenzlauer Berg","Emma","confirmed"],
-    ["AUG","19","Watercolor Workshop","15:30–17:00 · Kreuzberg","Emma","confirmed"],
-    ["AUG","20","Science Explorers","15:30–17:00 · Wedding","Leo","confirmed"],
-    ["AUG","22","Coding for Kids","10:00–12:00 · Mitte","Leo","pending"]
+    ["AUG","18","Soccer Fundamentals","16:00–17:30 · Prenzlauer Berg","Emma","confirmed","Coach Jonas Weber"],
+    ["AUG","19","Watercolor Workshop","15:30–17:00 · Kreuzberg","Emma","confirmed","Luna Hartmann"],
+    ["AUG","20","Science Explorers","15:30–17:00 · Wedding","Leo","confirmed","Dr. Anke Meyer"],
+    ["AUG","22","Coding for Kids","10:00–12:00 · Mitte","Leo","pending","David Okafor"]
   ];
   const msgs = [
     ["Berlin Kickers Academy","Reminder: bring shin guards tomorrow! ⚽","2h","var(--blue-500)",1],
@@ -1953,7 +2140,7 @@ function pageParentDash(){
       <a href="#/programs">${ic('search','icon-sm')} Browse Programs</a>
       <a onclick="toast('Demo: messaging requires sign-in')">${ic('chat','icon-sm')} Messages <span class="pill pill-info" style="margin-left:auto">1</span></a>
       <a href="#/planner">${ic('calendar','icon-sm')} Planner</a>
-      <a onclick="toast('Demo: community feed')">${ic('users','icon-sm')} Community</a>
+      <a href="#/community">${ic('users','icon-sm')} Community</a>
       <a onclick="toast('Demo: settings — add a Provider profile here to switch roles')">${ic('user','icon-sm')} Settings</a>
     </aside>
     <div class="dash-main">
@@ -1984,12 +2171,13 @@ function pageParentDash(){
       <div class="grid grid-2" style="margin-top:1.5rem;align-items:start">
         <div class="card" style="padding:1.5rem">
           <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Upcoming sessions</h3><a class="view-link small" href="#/planner">Open planner →</a></div>
-          ${sessions.map(([m,d,t,meta,kid,st])=>`
+          ${sessions.map(([m,d,t,meta,kid,st,hero])=>`
             <div class="session-row">
               <div class="datebadge"><div class="m">${m}</div><div class="d">${d}</div></div>
               <div style="flex:1;min-width:0">
                 <div style="font-weight:600">${t}</div>
                 <div class="tiny muted">${meta} · ${kid}</div>
+                <div class="tiny" style="color:var(--blue-700);font-weight:600;margin-top:1px;display:flex;align-items:center;gap:.25rem">${ic('user','icon-sm')} ${hero}</div>
               </div>
               <span class="pill ${st==="confirmed"?"pill-success":"pill-warning"}">${st}</span>
             </div>`).join("")}
@@ -2066,6 +2254,7 @@ function pageProviderDash(){
       <a class="${provState.tab==='team'?'on-yellow':''}" onclick="provState.tab='team';route()">${ic('users','icon-sm')} Team &amp; Profiles</a>
       <a class="${provState.tab==='finances'?'on-yellow':''}" onclick="provState.tab='finances';route()">${ic('euro','icon-sm')} Finances</a>
       <a class="${provState.tab==='edit'?'on-yellow':''}" onclick="provState.tab='edit';route()">${ic('user','icon-sm')} Edit Profile</a>
+      <a href="#/community">${ic('users','icon-sm')} Community</a>
       <a onclick="toast('Demo: provider settings (account, business profile, billing)')">${ic('info','icon-sm')} Settings</a>
     </aside>
     <div class="dash-main">
@@ -2163,13 +2352,13 @@ function provTab(){
       </div>
       ${provState.sessView==='calendar'
         ? `<div style="margin-top:1rem"><div class="tiny uc muted" style="font-weight:700;margin-bottom:.5rem">Week of Aug 17–23</div>${weekCalendar(PROV_SESSIONS,{compact:true})}</div>`
-        : [["TODAY","","Soccer Fundamentals — U8 group","16:00–17:30 · Sportplatz Prenzlauer Berg","11 expected"],
-           ["AUG","18","Soccer Fundamentals — U10 group","16:00–17:30 · Sportplatz Prenzlauer Berg","9 expected"],
-           ["AUG","22","Basketball League — Match day","11:00–13:00 · Halle Friedrichshain","12 expected"]]
-          .map(([m,d,t2,meta,n])=>`
+        : [["TODAY","","Soccer Fundamentals — U8 group","16:00–17:30 · Sportplatz Prenzlauer Berg","11 expected","Jonas Weber"],
+           ["AUG","18","Soccer Fundamentals — U10 group","16:00–17:30 · Sportplatz Prenzlauer Berg","9 expected","Mia Krüger"],
+           ["AUG","22","Basketball League — Match day","11:00–13:00 · Halle Friedrichshain","12 expected","Jonas Weber"]]
+          .map(([m,d,t2,meta,n,hero])=>`
           <div class="session-row">
             <div class="datebadge" style="background:var(--yellow-100)"><div class="m" style="color:#92400e">${m}</div><div class="d">${d||"·"}</div></div>
-            <div style="flex:1;min-width:0"><div style="font-weight:600">${t2}</div><div class="tiny muted">${meta}</div></div>
+            <div style="flex:1;min-width:0"><div style="font-weight:600">${t2}</div><div class="tiny muted">${meta}</div><div class="tiny" style="color:var(--blue-700);font-weight:600;margin-top:1px;display:flex;align-items:center;gap:.25rem">${ic('user','icon-sm')} Led by ${hero}</div></div>
             <span class="pill pill-outline">${n}</span>
             <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens attendance roster &amp; check-in')">Roster</button>
           </div>`).join("")}
@@ -2321,36 +2510,49 @@ function legalShell(title, sub, body){
    Agent Heroes (#102) — superhero AI helper widgets
    ============================================================ */
 const agentConvos = {};
+const agentOpen = new Set();
+/* Masked superhero face avatar — skin face + colored domino mask + eyes + smile */
+function maskFace(c){
+  return `<svg viewBox="0 0 48 48" aria-hidden="true">
+    <circle cx="24" cy="25" r="19" fill="#f6c89a"/>
+    <path d="M6.5 18.5 C13 13 35 13 41.5 18.5 C41.5 27.5 33.5 30.5 30.5 25.8 C27.8 21.8 20.2 21.8 17.5 25.8 C14.5 30.5 6.5 27.5 6.5 18.5 Z" fill="${c}"/>
+    <circle cx="17.6" cy="21.4" r="2.5" fill="#fff"/><circle cx="17.6" cy="21.6" r="1.15" fill="#1a1a1a"/>
+    <circle cx="30.4" cy="21.4" r="2.5" fill="#fff"/><circle cx="30.4" cy="21.6" r="1.15" fill="#1a1a1a"/>
+    <path d="M19 33 Q24 37.5 29 33" stroke="#b56b3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
 const AGENTS = {
-  maven:{name:"Match Maven", emoji:"🦸‍♀️", grad:"var(--grad-primary)", badge:"AI Hero · Search", tagline:"Your program-matching Hero",
+  maven:{name:"Match Maven", mask:"#0f9bd6", grad:"var(--grad-primary)", badge:"AI Hero · Search", tagline:"Your program-matching Hero",
     intro:"Tell me about your child — age, interests, budget, neighborhood — and I'll match you with vetted Berlin programs.",
     chips:["Creative &amp; gentle for a shy 7-year-old","Weekend sports under €30/week","Help with primary-school maths"],
     answer:matchAnswer},
-  helphero:{name:"Dash", emoji:"🦾", grad:"var(--grad-cool)", badge:"AI Hero · Dashboard", tagline:"Your dashboard sidekick",
+  helphero:{name:"Dash", mask:"#0e7490", grad:"var(--grad-cool)", badge:"AI Hero · Dashboard", tagline:"Your dashboard sidekick",
     intro:"I keep your week on track. Ask what's coming up, who has unread messages, or how the kids are progressing.",
     chips:["What's on this week?","Any unread messages?","How is Emma progressing?"],
     answer:helpAnswer},
-  pal:{name:"Parent Pal", emoji:"💛", grad:"var(--grad-art)", badge:"AI Hero · Tips", tagline:"Friendly parenting tips",
+  pal:{name:"Parent Pal", mask:"#e3a008", grad:"var(--grad-art)", badge:"AI Hero · Tips", tagline:"Friendly parenting tips",
     intro:"I share gentle, practical tips for getting the most out of your child's activities.",
     chips:["First-camp jitters","Motivating practice at home","Balancing screen time"],
     answer:palAnswer},
-  guardian:{name:"Guardian", emoji:"🛡️", grad:"var(--grad-safety)", badge:"AI Hero · Safety", tagline:"Your trust &amp; safety guide",
+  guardian:{name:"Guardian", mask:"#059669", grad:"var(--grad-safety)", badge:"AI Hero · Safety", tagline:"Your trust &amp; safety guide",
     intro:"Ask me anything about how we vet providers, protect your data, or handle concerns and incidents.",
     chips:["How are providers vetted?","Is my family's data safe?","What if there's an incident?"],
     answer:guardAnswer},
-  prophet:{name:"Profit Prophet", emoji:"📈", grad:"linear-gradient(135deg,#635bff,#00a3d9)", badge:"AI Hero · Earnings", tagline:"Your earnings co-pilot",
+  prophet:{name:"Profit Prophet", mask:"#635bff", grad:"linear-gradient(135deg,#635bff,#00a3d9)", badge:"AI Hero · Earnings", tagline:"Your earnings co-pilot",
     intro:"I read your Stripe numbers and help you grow. Ask about payouts, commission tiers, or a forecast.",
     chips:["How do I reach the 8% rate?","Forecast next month","Where can I cut costs?"],
     answer:prophetAnswer}
 };
 function agentHero(id){
   const a = AGENTS[id];
+  const caret = `<svg class="agent-caret icon-sm" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>`;
   return `
-  <div class="agent" id="agent-${id}">
-    <div class="agent-head" style="background:${a.grad}">
-      <div class="agent-av">${a.emoji}</div>
+  <div class="agent ${agentOpen.has(id)?'':'collapsed'}" id="agent-${id}">
+    <div class="agent-head" style="background:${a.grad}" onclick="toggleAgent('${id}')" role="button" aria-expanded="${agentOpen.has(id)}">
+      <div class="agent-av">${maskFace(a.mask)}</div>
       <div><div class="nm">${a.name}</div><div class="tg">${a.tagline}</div></div>
       <span class="agent-badge">${a.badge}</span>
+      ${caret}
     </div>
     <div class="agent-body" id="agent-body-${id}"></div>
     <div class="agent-chips">
@@ -2361,6 +2563,12 @@ function agentHero(id){
       <button class="btn btn-primary btn-sm" type="submit">Ask</button>
     </form>
   </div>`;
+}
+function toggleAgent(id){
+  const el=document.getElementById('agent-'+id); if(!el) return;
+  const nowCollapsed = el.classList.toggle('collapsed');
+  if(nowCollapsed){ agentOpen.delete(id); }
+  else { agentOpen.add(id); renderAgentBody(id,false); }
 }
 function renderAgentBody(id, typing){
   const body = document.getElementById('agent-body-'+id); if(!body) return;
@@ -2439,8 +2647,9 @@ function weekCalendar(events, opts){
         <div class="wkhead"><div class="dname">${nm}</div><div class="dnum">${nu}</div></div>
         <div class="wkbody">
           ${events.filter(e=>e.d===i).sort((a,b)=>a.t.localeCompare(b.t)).map(e=>`
-            <div class="evchip ${e.c==='ghost'?'ghost':''}" ${e.c!=='ghost'?`style="background:${e.c}"`:''} onclick="toast('${(e.who+' · '+e.title).replace(/'/g,'’')}')">
+            <div class="evchip ${e.c==='ghost'?'ghost':''}" ${e.c!=='ghost'?`style="background:${e.c}"`:''} onclick="toast('${(e.who+' · '+e.title+(e.hero?' · Hero: '+e.hero:'')).replace(/'/g,'’')}')">
               <span class="et">${e.t}</span>${e.title}<div style="font-weight:500;opacity:.92;font-size:.66rem;margin-top:1px">${e.who}</div>
+              ${e.hero?`<div style="font-weight:700;opacity:.95;font-size:.64rem;margin-top:1px">★ ${e.hero}</div>`:''}
             </div>`).join("") || `<div class="tiny muted" style="text-align:center;padding:.6rem 0;opacity:.45">—</div>`}
         </div>
       </div>`).join("")}
@@ -2448,20 +2657,20 @@ function weekCalendar(events, opts){
 }
 const PLANNER_EVENTS = [
   {d:0, t:"15:00", title:"Pick up Leo", who:"Max (spouse)", c:"ghost"},
-  {d:1, t:"16:00", title:"Soccer Fundamentals", who:"Emma", c:"var(--blue-500)"},
-  {d:2, t:"15:30", title:"Watercolor Workshop", who:"Emma", c:"var(--blue-500)"},
-  {d:3, t:"15:30", title:"Science Explorers", who:"Leo", c:"#10b981"},
-  {d:3, t:"16:00", title:"Soccer Fundamentals", who:"Emma", c:"var(--blue-500)"},
+  {d:1, t:"16:00", title:"Soccer Fundamentals", who:"Emma", hero:"Coach Jonas", c:"var(--blue-500)"},
+  {d:2, t:"15:30", title:"Watercolor Workshop", who:"Emma", hero:"Luna H.", c:"var(--blue-500)"},
+  {d:3, t:"15:30", title:"Science Explorers", who:"Leo", hero:"Dr. Meyer", c:"#10b981"},
+  {d:3, t:"16:00", title:"Soccer Fundamentals", who:"Emma", hero:"Coach Jonas", c:"var(--blue-500)"},
   {d:4, t:"14:00", title:"Dentist — Leo", who:"Max (spouse)", c:"ghost"},
-  {d:5, t:"10:00", title:"Coding for Kids", who:"Leo", c:"#10b981"},
+  {d:5, t:"10:00", title:"Coding for Kids", who:"Leo", hero:"David O.", c:"#10b981"},
   {d:5, t:"15:00", title:"Family park picnic", who:"Family", c:"var(--yellow-600)"}
 ];
 const PROV_SESSIONS = [
-  {d:1, t:"16:00", title:"Soccer — U8 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
-  {d:1, t:"17:45", title:"Soccer — U10 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
-  {d:3, t:"16:00", title:"Soccer — U8 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
-  {d:3, t:"17:45", title:"Soccer — U10 group", who:"Sportplatz P'berg", c:"var(--blue-600)"},
-  {d:5, t:"11:00", title:"Basketball — Match day", who:"Halle F'hain", c:"#f59e0b"}
+  {d:1, t:"16:00", title:"Soccer — U8 group", who:"Sportplatz P'berg", hero:"Jonas Weber", c:"var(--blue-600)"},
+  {d:1, t:"17:45", title:"Soccer — U10 group", who:"Sportplatz P'berg", hero:"Mia Krüger", c:"var(--blue-600)"},
+  {d:3, t:"16:00", title:"Soccer — U8 group", who:"Sportplatz P'berg", hero:"Jonas Weber", c:"var(--blue-600)"},
+  {d:3, t:"17:45", title:"Soccer — U10 group", who:"Sportplatz P'berg", hero:"Mia Krüger", c:"var(--blue-600)"},
+  {d:5, t:"11:00", title:"Basketball — Match day", who:"Halle F'hain", hero:"Jonas Weber", c:"#f59e0b"}
 ];
 
 /* ============================================================
@@ -2476,7 +2685,7 @@ function pagePlanner(){
       <a href="#/programs">${ic('search','icon-sm')} Browse Programs</a>
       <a onclick="toast('Demo: messaging requires sign-in')">${ic('chat','icon-sm')} Messages <span class="pill pill-info" style="margin-left:auto">1</span></a>
       <a href="#/planner" class="on-blue">${ic('calendar','icon-sm')} Planner</a>
-      <a onclick="toast('Demo: community feed')">${ic('users','icon-sm')} Community</a>
+      <a href="#/community">${ic('users','icon-sm')} Community</a>
       <a onclick="toast('Demo: settings')">${ic('user','icon-sm')} Settings</a>
     </aside>
     <div class="dash-main">
@@ -2616,6 +2825,218 @@ function provFinances(){
 }
 
 /* ============================================================
+   PAGE: Community (#18) — provider Highlights feed (Instagram-style,
+   no faces) + parent Job Board where providers apply (#799/#800/#801)
+   ============================================================ */
+const communityState = {tab:"highlights"};
+const HIGHLIGHTS = [
+  {prov:"berlin-kickers", grad:"var(--grad-cool)", icon:"trophy", when:"2h", likes:34, caption:"Friday scrimmage under the lights ⚽ Brilliant energy from the U10s — three new goal celebrations debuted today!", tags:["Sport","U10"]},
+  {prov:"atelier-luna", grad:"var(--grad-art)", icon:"palette", when:"5h", likes:51, caption:"Watercolor galaxies 🌌 This week's theme was 'the night sky' — every single piece came out completely different.", tags:["Art"]},
+  {prov:"brainsprouts", grad:"var(--grad-comic)", icon:"bolt", when:"1d", likes:28, caption:"First working game built in Scratch today! 🎮 From 'I can't code' to 'watch this' in three weeks.", tags:["STEM","Coding"]},
+  {prov:"campfire", grad:"var(--grad-hero)", icon:"sun", when:"2d", likes:73, caption:"Climbing day in Grunewald 🧗 Sunshine, problem-solving, and a whole lot of high-fives at the top.", tags:["Camps","Outdoors"]}
+];
+const JOBS = [
+  {parent:"Anna S.", kid:"7-year-old", title:"After-school guitar tutor, Prenzlauer Berg", body:"Looking for a patient guitar teacher for my daughter, once a week after school. She's a complete beginner and a little shy.", tags:["Music"], budget:"€20–30/session", when:"3h", applicants:2},
+  {parent:"Marco P.", kid:"two boys (9 & 11)", title:"Weekend football coaching, Friedrichshain", body:"Two energetic boys who'd love a small-group football session on Saturdays. Open to a coach who can build the basics and keep it fun.", tags:["Sport"], budget:"€40/session", when:"1d", applicants:5},
+  {parent:"Yuki T.", kid:"8-year-old", title:"Holiday science camp, last week of July", body:"Need engaging daytime cover for the last week of July — my son is obsessed with experiments and 'why' questions.", tags:["STEM","Camps"], budget:"€300–450/week", when:"2d", applicants:1}
+];
+function pageCommunity(){
+  const t = communityState.tab;
+  return `
+  <section class="band band-white" style="padding-top:2rem">
+    <div class="container">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+        <div>
+          <span class="pill pill-info">Community</span>
+          <h1 style="font-size:1.7rem;margin-top:.5rem">Klass Hero Community</h1>
+          <p class="muted small">Highlights from providers, and a job board where families post and Heroes apply.</p>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="#/dashboard">${ic('chevleft','icon-sm')} Back to dashboard</a>
+      </div>
+
+      <!-- Child-safety photo policy -->
+      <div class="notice notice-warn" style="margin-top:1.25rem">
+        ${ic('shield','icon-sm')}
+        <span><strong>Protecting children's privacy.</strong> Highlight posts can show activities, projects, and spaces — but never identifiable faces. Every upload is automatically screened, and anything showing a child's face or other personal details is flagged and held for review before it can go live.</span>
+      </div>
+
+      <div class="tabbar" style="margin-top:1.5rem">
+        <button class="${t==='highlights'?'on':''}" onclick="communityState.tab='highlights';route()">Highlights</button>
+        <button class="${t==='jobs'?'on':''}" onclick="communityState.tab='jobs';route()">Job Board</button>
+      </div>
+
+      ${t==='highlights' ? communityHighlights() : communityJobs()}
+    </div>
+  </section>`;
+}
+function communityHighlights(){
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+      <p class="small muted">Providers sharing what their classes got up to — like Instagram, minus the faces.</p>
+      <button class="btn btn-primary btn-sm" onclick="toast('Providers post highlights from their dashboard. Faces are auto-flagged before publishing.')">${ic('plus','icon-sm')} Post a highlight</button>
+    </div>
+    <div class="grid grid-2">
+      ${HIGHLIGHTS.map(h=>`
+      <div class="card" style="overflow:hidden">
+        <div style="display:flex;align-items:center;gap:.65rem;padding:.85rem 1rem">
+          <div class="avatar" style="width:40px;height:40px;font-size:.85rem">${PROVIDERS[h.prov].initials}</div>
+          <div style="flex:1;min-width:0"><div style="font-weight:700">${PROVIDERS[h.prov].name}</div><div class="tiny muted">${h.when} ago · ${PROVIDERS[h.prov].district}</div></div>
+          <span class="pill pill-success">✓ Verified</span>
+        </div>
+        <div style="height:220px;background:${h.grad};position:relative;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.92)">
+          ${ic(h.icon,'icon-lg')}
+          <span class="pill" style="position:absolute;bottom:.6rem;left:.6rem;background:rgba(0,0,0,.45);color:#fff;font-size:.6rem">${ic('shield','icon-sm')} No faces · activity photo</span>
+        </div>
+        <div style="padding:.85rem 1rem">
+          <div style="display:flex;gap:1rem;align-items:center;color:var(--fg-muted)">
+            <button class="small" style="display:inline-flex;align-items:center;gap:.3rem;font-weight:600" onclick="toast('❤ Liked (demo)')">${ic('heart','icon-sm')} ${h.likes}</button>
+            <button class="small" style="display:inline-flex;align-items:center;gap:.3rem;font-weight:600" onclick="toast('Demo: comments')">${ic('chat','icon-sm')} Comment</button>
+          </div>
+          <p class="small" style="margin-top:.6rem">${h.caption}</p>
+          <div style="margin-top:.5rem;display:flex;gap:.35rem;flex-wrap:wrap">${h.tags.map(t=>`<span class="skillpill">#${t}</span>`).join("")}</div>
+        </div>
+      </div>`).join("")}
+    </div>`;
+}
+function communityJobs(){
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+      <p class="small muted">Parents post what they need; vetted Heroes apply. Parent names stay private on public cards.</p>
+      <button class="btn btn-primary btn-sm" onclick="toast('Demo: post an activity request')">${ic('plus','icon-sm')} Post a request</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      ${JOBS.map(j=>`
+      <div class="card" style="padding:1.25rem">
+        <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.4rem">${j.tags.map(t=>`<span class="pill pill-outline">${t}</span>`).join("")}<span class="pill pill-cream">${j.budget}</span></div>
+            <h3 style="font-family:var(--font-sans);font-size:1.15rem;font-weight:700">${j.title}</h3>
+            <p class="small muted" style="margin-top:.35rem">${j.body}</p>
+            <div class="tiny muted" style="margin-top:.6rem">Posted by ${j.parent} · for a ${j.kid} · ${j.when} ago · ${j.applicants} Hero${j.applicants!==1?'es':''} applied</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;align-items:stretch;min-width:150px">
+            <button class="btn btn-yellow btn-sm" onclick="toast('Heroes apply with an intro message (demo)')">Apply as a Hero</button>
+            <button class="btn btn-ghost btn-sm" onclick="toast('Demo: ask the family a question')">Ask a question</button>
+          </div>
+        </div>
+      </div>`).join("")}
+    </div>
+    <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>When a parent accepts a Hero, everyone else who applied is automatically notified that the spot is filled.</span></div>`;
+}
+
+/* ============================================================
+   PAGE: Blog — two resource hubs (parents + providers) for trust + SEO
+   ============================================================ */
+const blogState = {audience:"parents"};
+const BLOG = [
+  {slug:"choosing-the-right-activity", audience:"parents", title:"How to choose the right after-school activity for your child", read:"5 min", icon:"academic", grad:"var(--grad-primary)",
+    excerpt:"Match interests, temperament, and schedule — a practical framework for picking activities your child will actually stick with.",
+    body:[
+      ["Start with your child, not the catalog","The best activity is the one your child looks forward to. Before browsing, jot down what genuinely lights them up — building things, moving their body, making music, being around other kids. Interests beat prestige every time at this age."],
+      ["Match the format to the temperament","A shy child often thrives in a small group or one-to-one setting before a big team. An energetic child may need movement before they can focus. On Klass Hero you can filter by 'Small Groups' and by the skills a program builds, which makes this easier."],
+      ["Protect your calendar","One or two activities a child loves beats five they tolerate. Leave space for downtime and unstructured play — it's where a lot of learning actually happens. Use the family planner to see the real week before you commit."],
+      ["Try, then commit","Most skills take a few sessions to click. Agree on a short trial in your head — say three or four sessions — before deciding. Watch for energy after class, not just performance during it."]
+    ]},
+  {slug:"managing-a-busy-family-schedule", audience:"parents", title:"Managing a busy family schedule without losing your mind", read:"4 min", icon:"calendar", grad:"var(--grad-cool)",
+    excerpt:"Pickups, practice, and downtime — how to plan a week that works for the whole family, not just the calendar.",
+    body:[
+      ["See the whole week at once","Scattered reminders cause more stress than the activities themselves. Put every commitment — yours, your partner's, and each child's — in one shared view. Klass Hero's planner syncs bookings automatically and lets you add a spouse so nothing falls through the cracks."],
+      ["Batch the logistics","Group pickups and errands where you can, and decide pickup duty for the week in advance rather than negotiating each day. A five-minute Sunday check-in saves a dozen mid-week scrambles."],
+      ["Build in margin","Back-to-back scheduling breaks the moment one thing runs late. Leave a buffer between activities, and treat one or two afternoons a week as genuinely free."]
+    ]},
+  {slug:"what-to-expect-camps-vs-classes", audience:"parents", title:"Camps vs. weekly classes vs. workshops: what to expect", read:"6 min", icon:"sun", grad:"var(--grad-art)",
+    excerpt:"Different formats suit different kids. Here's how each one works and who it's best for.",
+    body:[
+      ["Weekly classes: steady progress","A regular class builds a skill over a season with the same Hero and group. Best for children who benefit from routine and want to genuinely improve at something — an instrument, a sport, a language."],
+      ["Camps: immersive bursts","Holiday camps pack a lot into a few days, often full-day. Great for school breaks, making fast friendships, and trying something intensively. Many camps run as a request so the provider can check group fit and any medical needs first."],
+      ["Workshops: low-commitment sampling","One-off or short workshops are perfect for testing an interest without committing a whole season. A brilliant way to discover what your child gravitates toward before booking a longer class."]
+    ]},
+  {slug:"growing-your-class-business", audience:"providers", title:"Growing your class business from one room to a waitlist", read:"6 min", icon:"chart", grad:"var(--grad-primary)",
+    excerpt:"The levers that actually move enrollments — pricing, reviews, consistency, and word of mouth.",
+    body:[
+      ["Reviews are your growth engine","Parents trust other parents. After a strong session, prompt happy families to leave a review — a handful of genuine five-star reviews will out-perform any ad. Klass Hero surfaces your rating right on your profile and program cards."],
+      ["Price for value, not for fear","Underpricing signals low quality and starves your business. Anchor your price to the transformation you deliver and the small-group attention you give. The platform's progressive commission means growing never makes you worse off."],
+      ["Show your work","Post Highlights of what your classes actually do (no faces — activities and projects only). It builds trust with browsing parents and keeps your current families proud to be part of it."],
+      ["Consistency compounds","Same time, same quality, every week. Reliability is what turns a trial booking into a season, and a season into a referral."]
+    ]},
+  {slug:"managing-enrollments-and-no-shows", audience:"providers", title:"Managing enrollments, waitlists, and no-shows", read:"5 min", icon:"users", grad:"var(--grad-cool)",
+    excerpt:"Simple systems to keep classes full and parents happy — without the spreadsheet chaos.",
+    body:[
+      ["Let the platform do the admin","Bookings, rosters, and attendance live in one place. Confirm or auto-accept enrollments, and let waitlisted families get notified automatically the moment a spot opens."],
+      ["Make your cancellation terms clear","Clear, fair terms shown at booking prevent most disputes. For request-based programs like camps, confirm details before taking payment so everyone starts on the same page."],
+      ["Reduce no-shows with reminders","Automatic reminders and a quick day-before broadcast keep attendance high. Track no-shows over time so you can spot patterns and follow up with families who drift."]
+    ]},
+  {slug:"getting-the-most-from-klass-hero", audience:"providers", title:"Getting the most from Klass Hero as a provider", read:"4 min", icon:"bolt", grad:"var(--grad-comic)",
+    excerpt:"From your profile to broadcasts to highlights — the features that win you more bookings.",
+    body:[
+      ["A complete profile gets booked","Fill out your description, tags, schedule, and price breakdown. A searchable, well-tagged provider profile shows up for exactly the parents looking for what you offer."],
+      ["Use broadcasts and messaging","Keep enrolled families informed with one-to-many broadcasts, and answer questions fast with built-in messaging. Responsiveness is a booking multiplier."],
+      ["Watch your numbers","The Finances tab and Profit Prophet read your real Stripe data — use the GMV widget to see how close you are to a lower commission tier, and the P&L view to keep your margins healthy."]
+    ]}
+];
+function pageBlog(){
+  const aud = blogState.audience;
+  const posts = BLOG.filter(b=>b.audience===aud);
+  return `
+  <section class="mk-hero" style="padding-bottom:3rem">
+    ${orbs()}
+    <div class="container rel">
+      <span class="pill pill-outline" style="margin-bottom:1.25rem">Blog &amp; Resources</span>
+      <h1 class="hero-h1-sm">Guides for <span class="hl">${aud==='parents'?'parents':'providers'}</span></h1>
+      <p class="lede" style="max-width:620px;margin:1.25rem auto 0">${aud==='parents'?'Choosing activities, managing the family week, and what to expect from every program type.':'Growing your class business, managing enrollments, and getting the most from the platform.'}</p>
+      <div style="margin-top:1.5rem;display:flex;justify-content:center">
+        <div class="viewtoggle" style="background:#fff;border:1px solid var(--border-light);padding:5px">
+          <button class="${aud==='parents'?'on':''}" onclick="blogState.audience='parents';route()">For Parents</button>
+          <button class="${aud==='providers'?'on':''}" onclick="blogState.audience='providers';route()">For Providers</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="band band-white" style="padding-top:2rem">
+    <div class="container">
+      <div class="grid grid-3">
+        ${posts.map(b=>`
+        <a class="card card-hover" href="#/blog/${b.slug}" style="overflow:hidden;display:flex;flex-direction:column">
+          <div style="height:140px;background:${b.grad};display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.9)">${ic(b.icon,'icon-lg')}</div>
+          <div style="padding:1.25rem;display:flex;flex-direction:column;flex:1">
+            <div class="tiny uc muted" style="font-weight:700">${b.audience==='parents'?'For Parents':'For Providers'} · ${b.read} read</div>
+            <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700;margin-top:.4rem;line-height:1.3">${b.title}</h3>
+            <p class="small muted" style="margin-top:.5rem">${b.excerpt}</p>
+            <span class="view-link" style="margin-top:auto;padding-top:.85rem">Read article →</span>
+          </div>
+        </a>`).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+function pageBlogPost(slug){
+  const b = BLOG.find(x=>x.slug===slug);
+  if(!b) return `<div class="container" style="padding:5rem 1.25rem;text-align:center"><h2 class="section-title">Article not found</h2><div style="margin-top:1.5rem"><a class="btn btn-primary" href="#/blog">Back to the blog</a></div></div>`;
+  const related = BLOG.filter(x=>x.audience===b.audience && x.slug!==b.slug).slice(0,2);
+  return `
+  <div class="detail-hero" style="background:${b.grad};height:200px">
+    <a class="backbtn" href="#/blog">${ic('chevleft','icon-sm')} Blog</a>
+    <div class="shade"></div>
+    <div class="inner"><span class="pill pill-accent">${b.audience==='parents'?'For Parents':'For Providers'} · ${b.read} read</span></div>
+  </div>
+  <div class="container-narrow" style="padding:2.5rem 1.25rem 4rem">
+    <h1 style="font-size:clamp(26px,4vw,40px);line-height:1.15">${b.title}</h1>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:1.5rem">
+      ${b.body.map(([h,p])=>`<div><h3 style="font-family:var(--font-sans);font-size:1.2rem;font-weight:700">${h}</h3><p class="lede" style="margin-top:.5rem">${p}</p></div>`).join("")}
+    </div>
+    <div class="card-soft" style="padding:1.5rem;margin-top:2.5rem;text-align:center">
+      <h3 style="font-family:var(--font-sans);font-weight:700;font-size:1.15rem">${b.audience==='parents'?'Ready to find your child\'s next activity?':'Ready to grow your class business?'}</h3>
+      <div style="margin-top:1rem"><a class="btn btn-primary" href="${b.audience==='parents'?'#/programs':'#/for-providers'}">${b.audience==='parents'?'Browse programs →':'Start teaching →'}</a></div>
+    </div>
+    <h3 class="section-title" style="font-size:1.2rem;margin-top:2.5rem">Keep reading</h3>
+    <div class="grid grid-2" style="margin-top:.75rem">
+      ${related.map(r=>`<a class="card card-hover" href="#/blog/${r.slug}" style="padding:1.25rem"><div class="tiny uc muted" style="font-weight:700">${r.read} read</div><h4 style="font-family:var(--font-sans);font-weight:700;margin-top:.3rem">${r.title}</h4><p class="small muted" style="margin-top:.4rem">${r.excerpt}</p></a>`).join("")}
+    </div>
+  </div>`;
+}
+
+/* ============================================================
    Router
    ============================================================ */
 const routes = [
@@ -2625,9 +3046,13 @@ const routes = [
   {re:/^#\/booking\/(p\d+)$/,    nav:"programs",  cta:"default",   fn:m=>pageBooking(m[1]), after:m=>renderBooking(m[1])},
   {re:/^#\/for-providers$/,      nav:"providers", cta:"providers", fn:()=>pageProviders()},
   {re:/^#\/providers\/checklist$/,nav:"providers",cta:"providers", fn:()=>pageChecklist()},
+  {re:/^#\/providers\/([a-z0-9-]+)$/, nav:"programs", cta:"programs", fn:m=>pageProviderProfile(m[1])},
   {re:/^#\/trust-safety$/,       nav:"trust",     cta:"trust",     fn:()=>pageTrust()},
   {re:/^#\/about$/,              nav:"about",     cta:"default",   fn:()=>pageAbout()},
   {re:/^#\/contact$/,            nav:"contact",   cta:"contact",   fn:()=>pageContact()},
+  {re:/^#\/blog$/,               nav:"blog",      cta:"default",   fn:()=>pageBlog()},
+  {re:/^#\/blog\/([a-z0-9-]+)$/, nav:"blog",      cta:"default",   fn:m=>pageBlogPost(m[1])},
+  {re:/^#\/community$/,          nav:"",          cta:"default",   fn:()=>pageCommunity()},
   {re:/^#\/dashboard$/,          nav:"",          cta:"default",   fn:()=>pageParentDash()},
   {re:/^#\/planner$/,            nav:"",          cta:"default",   fn:()=>pagePlanner()},
   {re:/^#\/provider\/dashboard$/,nav:"",          cta:"providers", fn:()=>pageProviderDash()},
