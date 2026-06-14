@@ -7,12 +7,34 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
   returns `{:ok, email}`.
   """
 
-  use ExUnit.Case, async: true
+  # async: false — the interaction telemetry handler is global, so suite-wide
+  # interaction events would cross-talk into this test's assert_receive.
+  use ExUnit.Case, async: false
 
   alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
   alias KlassHero.Provider.Domain.Models.IncidentReport
 
   @recipient %{email: "owner@example.com", name: "Hannah Owner"}
+
+  defp attach_interaction_telemetry do
+    test_pid = self()
+    ref = make_ref()
+
+    :telemetry.attach_many(
+      {__MODULE__, ref},
+      [
+        [:klass_hero, :interaction, :start],
+        [:klass_hero, :interaction, :stop],
+        [:klass_hero, :interaction, :exception]
+      ],
+      fn event, measurements, metadata, _config ->
+        send(test_pid, {:telemetry, event, measurements, metadata})
+      end,
+      %{}
+    )
+
+    on_exit(fn -> :telemetry.detach({__MODULE__, ref}) end)
+  end
 
   defp build_report(overrides \\ %{}) do
     {:ok, report} =
@@ -127,6 +149,33 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
         IncidentReportedEmailNotifier.send_incident_report(recipient, build_report(), build_context())
 
       assert email.to == [{"owner@example.com", "owner@example.com"}]
+    end
+  end
+
+  describe "interaction telemetry" do
+    test "emits a :stop event with :email kind and :ok status" do
+      attach_interaction_telemetry()
+
+      assert {:ok, %Swoosh.Email{}} =
+               IncidentReportedEmailNotifier.send_incident_report(@recipient, build_report(), build_context())
+
+      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], %{duration_us: _},
+                      %{
+                        io_kind: :email,
+                        operation: :send_incident_report,
+                        status: :ok,
+                        attributes: %{"email.operation" => :send_incident_report}
+                      }}
+    end
+
+    test "never emits raw recipient or body — PII stays out of telemetry metadata" do
+      attach_interaction_telemetry()
+
+      IncidentReportedEmailNotifier.send_incident_report(@recipient, build_report(), build_context())
+
+      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _measurements, metadata}
+      refute Map.has_key?(metadata, :result)
+      refute match?(%Swoosh.Email{}, metadata.sanitized_input)
     end
   end
 end

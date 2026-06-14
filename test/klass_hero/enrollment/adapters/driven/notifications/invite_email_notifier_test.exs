@@ -6,9 +6,31 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
   {:ok, %{}} from Mailer.deliver/1, so send_invite/3 returns {:ok, email}.
   """
 
-  use ExUnit.Case, async: true
+  # async: false — the interaction telemetry handler is global, so suite-wide
+  # interaction events would cross-talk into this test's assert_receive.
+  use ExUnit.Case, async: false
 
   alias KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
+
+  defp attach_interaction_telemetry do
+    test_pid = self()
+    ref = make_ref()
+
+    :telemetry.attach_many(
+      {__MODULE__, ref},
+      [
+        [:klass_hero, :interaction, :start],
+        [:klass_hero, :interaction, :stop],
+        [:klass_hero, :interaction, :exception]
+      ],
+      fn event, measurements, metadata, _config ->
+        send(test_pid, {:telemetry, event, measurements, metadata})
+      end,
+      %{}
+    )
+
+    on_exit(fn -> :telemetry.detach({__MODULE__, ref}) end)
+  end
 
   defp build_invite(overrides \\ %{}) do
     Map.merge(
@@ -61,6 +83,32 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
       {:ok, email} = InviteEmailNotifier.send_invite(invite, "Dance Class", @url)
 
       assert email.to == [{"parent@example.com", "parent@example.com"}]
+    end
+  end
+
+  describe "interaction telemetry" do
+    test "emits a :stop event with :email kind and :ok status" do
+      attach_interaction_telemetry()
+
+      assert {:ok, %Swoosh.Email{}} = InviteEmailNotifier.send_invite(build_invite(), "Dance Class", @url)
+
+      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], %{duration_us: _},
+                      %{
+                        io_kind: :email,
+                        operation: :send_invite,
+                        status: :ok,
+                        attributes: %{"email.operation" => :send_invite}
+                      }}
+    end
+
+    test "never emits raw recipient or body — PII stays out of telemetry metadata" do
+      attach_interaction_telemetry()
+
+      InviteEmailNotifier.send_invite(build_invite(), "Dance Class", @url)
+
+      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _measurements, metadata}
+      refute Map.has_key?(metadata, :result)
+      refute match?(%Swoosh.Email{}, metadata.sanitized_input)
     end
   end
 end
