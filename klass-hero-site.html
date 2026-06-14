@@ -593,6 +593,7 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
           <ul>
             <li><a href="#/about">About</a></li>
             <li><a href="#/blog">Blog &amp; Resources</a></li>
+            <li><a href="#/glossary">Glossary</a></li>
             <li><a href="#/contact">Contact</a></li>
             <li><a href="#/privacy">Privacy</a></li>
             <li><a href="#/terms">Terms</a></li>
@@ -3053,6 +3054,124 @@ function pageBlogPost(slug){
 }
 
 /* ============================================================
+   PAGE: Glossary — the Klass Hero dictionary (public, searchable)
+   ============================================================ */
+const GLOSSARY = [
+  {group:"People & Roles", items:[
+    {t:"Hero", who:"Parents", d:"The trust badge for every verified educator on Klass Hero. Whether your child's activity is run by one person or a whole team, the adult leading it is a Hero."},
+    {t:"Provider", who:"Providers", d:"Anyone who lists and runs programs — from an independent educator to a registered organisation. Both get the same booking tools and features; only the vetting differs."},
+    {t:"Main contact", who:"Everyone", d:"The named, ID-verified adult accountable for a provider account. Parents see them as the Main contact; in vetting and legal documents they're called the Responsible Person."},
+    {t:"Team member", who:"Providers", d:"An additional Hero a provider adds to help run programs. They can be assigned to specific sessions and message the parents enrolled in them."},
+    {t:"Parent", who:"Parents", d:"A family member who browses, books and manages their children's activities. Free to join."},
+    {t:"Child", who:"Parents", d:"A young participant added to a family profile with a name and age. Visible only to the parent and the providers they book — never profiled or used for advertising."}
+  ]},
+  {group:"Profiles & Discovery", items:[
+    {t:"Provider profile", who:"Everyone", d:"A provider's public page: who they are, their Heroes, every current program, verified badges, reviews, and a clear way to book."},
+    {t:"Program", who:"Everyone", d:"A bookable activity — a weekly class, course, camp or workshop — with a schedule, age range, price and the Hero(es) who lead it."},
+    {t:"Session", who:"Everyone", d:"A single occurrence of a program: one day of a weekly class or one day of a camp. Attendance and check-in happen at the session level."},
+    {t:"Category", who:"Everyone", d:"The activity type a program belongs to — Sports, Arts, Music, Education, Life Skills, Camps or Workshops. Used to filter the catalogue."},
+    {t:"Tags", who:"Providers", d:"Keywords a provider picks so families can find them in search — like STEM, Sport, Art or Tutoring. They describe what a provider does."},
+    {t:"Skills", who:"Parents", d:"What a child builds by taking part — Teamwork, Creativity, Problem Solving and more. Tracked per child as they attend sessions."}
+  ]},
+  {group:"Booking & Payments", items:[
+    {t:"Instant Booking", who:"Parents", d:"A place that's confirmed the moment you pay — no waiting for approval. Most weekly classes work this way."},
+    {t:"Request to Book", who:"Parents", d:"A booking the provider approves first — used when group fit, dietary or medical needs should be checked. No payment is taken until it's accepted."},
+    {t:"Enrollment", who:"Everyone", d:"A confirmed booking: paid, accepted, and your child has a place. The cancellation terms that applied at booking are saved onto the record."},
+    {t:"Waitlist", who:"Parents", d:"Join when a program is full and we'll alert you the moment a spot opens. No payment is taken and no queue position is shown."},
+    {t:"Cancellation terms", who:"Parents", d:"For public programs: free cancellation up to 14 days before, 50% refund 7–13 days before. Private programs use the provider's own published terms, shown before you book."},
+    {t:"Commission", who:"Providers", d:"Klass Hero's success-based fee, deducted from each booking. It drops as your monthly bookings grow — 18%, then 12%, then 8% — applied in brackets like income tax. No subscriptions or setup fees."},
+    {t:"GMV", who:"Providers", d:"Gross Merchandise Value — the total value of bookings in a period. Decides which commission bracket applies, and is shown in your earnings widget."},
+    {t:"Payout", who:"Providers", d:"Your weekly SEPA bank transfer for completed sessions, every Monday, with commission already deducted. Instant payouts (min €50) are available any time."},
+    {t:"Rechnung", who:"Parents", d:"Your German-compliant payment receipt for a booking — usable as evidence of childcare spending for tax. Klass Hero is shown as merchant of record."},
+    {t:"Gutschrift", who:"Providers", d:"The self-billing credit note issued for each payout — gross booking value, commission deducted, and net paid. Required for German VAT."},
+    {t:"Early-bird price", who:"Parents", d:"A limited-time discount before a program fills or its start date approaches. Both the discounted and original prices are shown."},
+    {t:"Sibling discount", who:"Parents", d:"An automatic price reduction when a second child from the same family is enrolled in the same program."}
+  ]},
+  {group:"Trust, Safety & Vetting", items:[
+    {t:"Verified badge", who:"Parents", d:"The ✓ you see on a profile once a Hero has passed the full six-step vetting process."},
+    {t:"Hero Verification", who:"Providers", d:"The six checks every Hero completes before running programs: ID & age, experience, extended background check, video screening, safeguarding training, and the Community Standards Agreement."},
+    {t:"Erweitertes Führungszeugnis", who:"Providers", d:"The German extended criminal-record certificate (Belegart O) required to work with minors. Refreshed every year."},
+    {t:"Team Accountability Declaration", who:"Providers", d:"A signed statement from the Responsible Person that every team member who works with children holds the required checks. Klass Hero doesn't store staff certificates — the Responsible Person is accountable for their accuracy."},
+    {t:"Incident report", who:"Everyone", d:"A formal record of something that went wrong — an injury, safeguarding concern or conflict. Reviewed by Trust & Safety and moves from reported → under review → resolved."},
+    {t:"Session note", who:"Providers", d:"A note a Hero attaches to a session or child — positive, developmental, or a concern. Welfare-related notes can trigger a parent notification."}
+  ]},
+  {group:"Family & Provider Tools", items:[
+    {t:"Family Dashboard", who:"Parents", d:"Your home base: enrolled programs, upcoming sessions, messages, and each child's skills progress."},
+    {t:"Planner", who:"Parents", d:"A shared family calendar that fills in all your Klass Hero bookings automatically. Active Family members can add their own events and share it with a partner."},
+    {t:"Skills & Badges", who:"Parents", d:"A per-child progress tracker. Attending skill-tagged sessions logs progress, and hitting a threshold earns a badge like 🏅 Team Player."},
+    {t:"Explorer", who:"Parents", d:"The free parent account — all booking, messaging and session tracking included."},
+    {t:"Active Family", who:"Parents", d:"An €8/month upgrade adding custom planner events, conflict alerts, and calendar sharing with a partner or family member."},
+    {t:"Provider Dashboard", who:"Providers", d:"Your workspace: an overview with commission progress, your programs and sessions, your team, and a finances tab wired to Stripe."},
+    {t:"Broadcast", who:"Providers", d:"A single message to every parent enrolled in a program — for reminders or schedule changes. Parents who enroll later see the full history too."},
+    {t:"Highlight", who:"Providers", d:"A provider post in Community — a photo or moment from a session. Activity-focused; no identifiable faces of children, and every upload is auto-screened before publishing."}
+  ]},
+  {group:"Community & Platform", items:[
+    {t:"Community", who:"Everyone", d:"A social-lite space with two areas: Highlights (provider posts) and the Job Board (parent requests and provider applications)."},
+    {t:"Job Board", who:"Everyone", d:"Where parents post an activity request — a tutor, a coach, holiday cover — and vetted Heroes apply. Parent names stay private; unsuccessful applicants are notified once a spot is filled."},
+    {t:"Agent Hero", who:"Everyone", d:"An AI helper built into a section of the platform, each with its own role — Match Maven (search), Dash (your week), Parent Pal (tips), Guardian (safety) and Profit Prophet (provider earnings)."},
+    {t:"Merchant of record", who:"Everyone", d:"Klass Hero, not the individual provider, is the seller on record for payments — so we handle refunds, disputes and VAT."},
+    {t:"Stripe Express", who:"Providers", d:"The payment system that onboards providers, processes parent payments, and runs payouts. Klass Hero never sees or stores card details."},
+    {t:"SEPA", who:"Providers", d:"The European bank-transfer standard used for every provider payout."}
+  ]}
+];
+function whoPill(who){
+  return who==="Parents" ? "pill-info" : who==="Providers" ? "pill-accent" : "pill-outline";
+}
+function pageGlossary(){
+  return `
+  <section class="mk-hero" style="padding:3.25rem 0 2rem">
+    ${orbs()}
+    <div class="container rel" style="text-align:center">
+      <span class="pill pill-outline" style="margin-bottom:1rem">Glossary</span>
+      <h1 class="hero-h1-sm" style="max-width:760px;margin:0 auto">The Klass Hero <span class="hl">dictionary</span></h1>
+      <p class="lede" style="max-width:620px;margin:1rem auto 0">Every label on the platform, in plain language — what a Hero is, how booking works, and the words you'll meet along the way.</p>
+      <div style="max-width:520px;margin:1.5rem auto 0">
+        <div style="background:#fff;border:1px solid var(--border-light);border-radius:999px;padding:.65rem 1.15rem;display:flex;align-items:center;gap:.6rem">
+          ${ic('search')}<input id="gloss-q" type="text" placeholder="Search terms…" aria-label="Search glossary" oninput="filterGlossary(this.value)" style="border:0;outline:0;flex:1;font:inherit;background:transparent">
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="band-white" style="padding:2.5rem 0 5rem">
+    <div class="container-narrow">
+      <div id="gloss-empty" class="empty-state" style="display:none"><div class="ring">${ic('search')}</div><h3 class="font-display" style="font-size:1.3rem">No matching terms</h3><p class="muted" style="margin-top:.5rem">Try a different word.</p></div>
+      <div id="gloss-zone" style="display:flex;flex-direction:column;gap:2.25rem">
+        ${GLOSSARY.map(g=>`
+          <div class="gloss-group">
+            <h2 class="section-title" style="font-size:1.3rem">${g.group}</h2>
+            <div class="divider" style="margin:.75rem 0 1.25rem"></div>
+            <div style="display:flex;flex-direction:column;gap:1rem">
+              ${g.items.map(it=>`
+                <div class="gloss-term card" data-text="${(it.t+' '+it.d).toLowerCase().replace(/"/g,'&quot;')}" style="padding:1.1rem 1.25rem">
+                  <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+                    <h3 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:700">${it.t}</h3>
+                    <span class="pill ${whoPill(it.who)}">${it.who}</span>
+                  </div>
+                  <p class="small muted" style="margin-top:.45rem">${it.d}</p>
+                </div>`).join("")}
+            </div>
+          </div>`).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+function filterGlossary(q){
+  q = (q||"").trim().toLowerCase();
+  let any = false;
+  document.querySelectorAll('#gloss-zone .gloss-group').forEach(grp=>{
+    let shown = 0;
+    grp.querySelectorAll('.gloss-term').forEach(t=>{
+      const match = !q || t.getAttribute('data-text').includes(q);
+      t.style.display = match ? '' : 'none';
+      if(match) shown++;
+    });
+    grp.style.display = shown ? '' : 'none';
+    if(shown) any = true;
+  });
+  const e = document.getElementById('gloss-empty'); if(e) e.style.display = any ? 'none' : '';
+}
+
+/* ============================================================
    Router
    ============================================================ */
 const routes = [
@@ -3068,6 +3187,7 @@ const routes = [
   {re:/^#\/contact$/,            nav:"contact",   cta:"contact",   fn:()=>pageContact()},
   {re:/^#\/blog$/,               nav:"blog",      cta:"default",   fn:()=>pageBlog()},
   {re:/^#\/blog\/([a-z0-9-]+)$/, nav:"blog",      cta:"default",   fn:m=>pageBlogPost(m[1])},
+  {re:/^#\/glossary$/,           nav:"",          cta:"default",   fn:()=>pageGlossary()},
   {re:/^#\/community$/,          nav:"",          cta:"default",   fn:()=>pageCommunity()},
   {re:/^#\/dashboard$/,          nav:"",          cta:"default",   fn:()=>pageParentDash()},
   {re:/^#\/planner$/,            nav:"",          cta:"default",   fn:()=>pagePlanner()},
