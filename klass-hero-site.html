@@ -204,6 +204,9 @@ section.band{padding:4rem 0}
 .pcard .cover .icon-bubble svg{width:32px;height:32px}
 .badge-tl{position:absolute;top:.75rem;left:.75rem}.badge-tr{position:absolute;top:.75rem;right:.75rem}
 .badge-bl{position:absolute;bottom:.75rem;left:.75rem}
+/* Skills & Badges gamification */
+.skill-pill{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-size:.78rem;font-weight:600;color:var(--fg-primary);background:linear-gradient(white,white) padding-box,conic-gradient(from -90deg,var(--blue-500) calc(var(--p,0)*1%),#e5e7eb calc(var(--p,0)*1%)) border-box;border:2.5px solid transparent}
+.badge-pill{display:inline-flex;align-items:center;gap:.3rem;padding:3px 11px;border-radius:999px;font-size:.78rem;font-weight:700;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff}
 .sched-chip{background:rgba(255,255,255,.92);backdrop-filter:blur(4px);padding:.25rem .8rem;border-radius:999px;font-size:.75rem;font-weight:600;color:var(--fg-primary);display:inline-flex;align-items:center;gap:.35rem}
 .pcard .body{padding:1.25rem;display:flex;flex-direction:column;flex:1}
 .pcard h3{font-size:1.1rem;font-weight:700;font-family:var(--font-sans);line-height:1.35;color:var(--fg-primary)}
@@ -2212,20 +2215,27 @@ function pageParentDash(){
         <button class="kidchip" onclick="toast('Demo: add a child')">${ic('plus','icon-sm')} Add child</button>
       </div>
 
-      <!-- Skills & Badges — compact strip under kid chips -->
-      <div style="margin-top:.85rem;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid var(--border-light);border-radius:14px;padding:1rem 1.25rem">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.85rem">
+      <!-- Skills & Badges strip — progress border pill = in progress, gold pill = badge earned -->
+      <div style="margin-top:.85rem;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid var(--border-light);border-radius:14px;padding:.9rem 1.25rem">
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.8rem">
           <h3 style="font-family:var(--font-sans);font-size:1rem;font-weight:700">Skills &amp; Badges</h3>
-          <span class="pill pill-success" style="font-size:.78rem">🏅 1 earned</span>
+          <span class="tiny muted">Border fills as sessions add up — 10 sessions earns a badge.</span>
         </div>
-        <div class="grid grid-2" style="gap:1.25rem">
+        <div class="grid grid-2" style="gap:1rem">
           <div>
-            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem"><span class="dot" style="background:var(--blue-500);width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Emma</span><span class="pill pill-success" style="font-size:.75rem">🏅 Team Player</span></div>
-            ${[["Teamwork",80,"var(--success)"],["Coordination",55,"var(--blue-500)"],["Creativity",35,"#f59e0b"]].map(([s,p,c])=>`<div style="margin-bottom:.45rem"><div style="display:flex;justify-content:space-between" class="tiny"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div><div style="margin-top:.2rem;height:6px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px"></div></div></div>`).join("")}
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.55rem"><span class="dot" style="background:var(--blue-500);width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Emma</span></div>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+              <span class="badge-pill">🏅 Team Player</span>
+              <span class="skill-pill" style="--p:55">Coordination</span>
+              <span class="skill-pill" style="--p:35">Creativity</span>
+            </div>
           </div>
           <div>
-            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem"><span class="dot" style="background:#10b981;width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Leo</span><span class="tiny muted">Building skills…</span></div>
-            ${[["Curiosity",22,"#10b981"],["Scientific Thinking",15,"var(--blue-500)"]].map(([s,p,c])=>`<div style="margin-bottom:.45rem"><div style="display:flex;justify-content:space-between" class="tiny"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div><div style="margin-top:.2rem;height:6px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px"></div></div></div>`).join("")}
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.55rem"><span class="dot" style="background:#10b981;width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Leo</span></div>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+              <span class="skill-pill" style="--p:22">Curiosity</span>
+              <span class="skill-pill" style="--p:15">Scientific Thinking</span>
+            </div>
           </div>
         </div>
       </div>
