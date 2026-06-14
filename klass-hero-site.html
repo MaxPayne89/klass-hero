@@ -2164,10 +2164,63 @@ const CHILD_BADGES = {
 };
 function sbPill(key, pct){
   const c = SKILL_CATS[key]; if(!c) return '';
-  const preview = c.skills.slice(0,3).join(', ')+'…';
-  if(pct>=100) return `<span class="badge-pill tooltip" style="background:${c.color}">${c.emoji} ${c.badge}<span class="tip">${c.label}: ${preview}</span></span>`;
-  return `<span class="skill-pill tooltip" style="--p:${pct};--pc:${c.color}">${c.emoji} ${c.label.split(' & ')[0]}<span class="tip">${c.badge} · ${pct}% · ${preview}</span></span>`;
+  if(pct>=100) return `<span class="badge-pill" style="background:${c.color};cursor:pointer" onclick="openBadge('${key}',${pct})">${c.emoji} ${c.badge}</span>`;
+  return `<span class="skill-pill" style="--p:${pct};--pc:${c.color};cursor:pointer" onclick="openBadge('${key}',${pct})">${c.emoji} ${c.label.split(' &')[0]}</span>`;
 }
+function openBadge(key, pct){
+  const c=SKILL_CATS[key]; if(!c) return;
+  const m=document.getElementById('badge-modal'); if(!m) return;
+  const earned=pct>=100, left=earned?0:Math.ceil((100-pct)/10);
+  m.innerHTML=`
+    <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <div style="width:48px;height:48px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">${c.emoji}</div>
+          <div><h3 style="margin:0">${c.badge}</h3><span class="tiny muted">${c.label}</span></div>
+        </div>
+        <button class="modal-x" onclick="closeBadge()">✕</button>
+      </div>
+      <div class="modal-body">
+        ${earned
+          ? `<div style="background:#f0fdf4;border-radius:10px;padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem"><span style="font-size:1.4rem">🏆</span><div><div style="font-weight:700;color:#065f46">Badge earned!</div><div class="tiny muted">10 of 10 sessions completed</div></div></div>`
+          : `<div><div style="display:flex;justify-content:space-between;margin-bottom:.4rem" class="small"><span style="font-weight:600">Progress</span><span class="muted">${pct}% · ${left} session${left!==1?'s':''} to go</span></div><div style="height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${pct}%;height:100%;background:${c.color};border-radius:999px"></div></div></div>`}
+        <div style="margin-top:1.1rem">
+          <div class="tiny uc muted" style="font-weight:700;margin-bottom:.5rem">Skills that build this badge</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.35rem">
+            ${c.skills.map(s=>`<span style="background:#f3f4f6;border-radius:999px;padding:3px 10px;font-size:.78rem">${s}</span>`).join('')}
+          </div>
+        </div>
+        <div class="divider" style="margin:.9rem 0 .75rem"></div>
+        <button class="btn btn-ghost btn-sm" onclick="closeBadge();openSkillsRef()">See all Skills &amp; Badges →</button>
+      </div>
+    </div>`;
+  m.classList.add('open');
+}
+function closeBadge(){ const m=document.getElementById('badge-modal'); if(m) m.classList.remove('open'); }
+function openSkillsRef(){
+  const m=document.getElementById('skills-ref-modal'); if(!m) return;
+  m.innerHTML=`
+    <div class="modal" style="max-width:640px;max-height:80vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
+      <div class="modal-head"><h3>Skills &amp; Badges — Full Guide</h3><button class="modal-x" onclick="closeSkillsRef()">✕</button></div>
+      <div class="modal-body" style="overflow-y:auto">
+        <p class="small muted" style="margin-bottom:1.25rem">Every program on Klass Hero tags skills below. Attending 10 sessions that include a skill category earns that badge.</p>
+        <div style="display:flex;flex-direction:column;gap:.75rem">
+          ${Object.entries(SKILL_CATS).map(([k,c])=>`
+            <div style="border:1px solid var(--border-light);border-radius:12px;padding:.85rem 1rem">
+              <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.5rem">
+                <div style="width:36px;height:36px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${c.emoji}</div>
+                <div><div style="font-weight:700;font-size:.95rem">${c.label}</div><div class="tiny muted">Earns: <strong style="color:${c.color}">${c.badge}</strong></div></div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:.3rem">
+                ${c.skills.map(s=>`<span style="background:#f3f4f6;border-radius:999px;padding:2px 9px;font-size:.75rem;color:var(--fg-muted)">${s}</span>`).join('')}
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+  m.classList.add('open');
+}
+function closeSkillsRef(){ const m=document.getElementById('skills-ref-modal'); if(m) m.classList.remove('open'); }
 
 const CHILD_PROFILES = {
   Emma:{age:8,color:"var(--blue-500)",medical:"Mild tree nut allergy — carry EpiPen. No other restrictions on activity.",
@@ -2342,7 +2395,9 @@ function pageParentDash(){
       </div>
     </div>
   </div>
-  <div class="modal-backdrop" id="child-modal" onclick="if(event.target===this)closeChild()"></div>`;
+  <div class="modal-backdrop" id="child-modal" onclick="if(event.target===this)closeChild()"></div>
+  <div class="modal-backdrop" id="badge-modal" onclick="if(event.target===this)closeBadge()"></div>
+  <div class="modal-backdrop" id="skills-ref-modal" onclick="if(event.target===this)closeSkillsRef()"></div>`;
 }
 
 /* ============================================================
