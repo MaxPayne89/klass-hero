@@ -7,15 +7,13 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
 
   @behaviour KlassHero.Shared.Domain.Ports.ForStoringFiles
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   require Logger
 
   @impl true
   def upload(bucket_type, path, binary, opts) do
-    span do
-      set_attributes("http", service: "s3", operation: "upload")
-
+    s3_interaction operation: :upload do
       bucket = get_bucket()
       content_type = Keyword.get(opts, :content_type, "application/octet-stream")
 
@@ -50,9 +48,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
   @impl true
   # bucket_type intentionally ignored — public files use their URL directly; signed URLs are for private files.
   def signed_url(_bucket_type, key, expires_in, _opts) do
-    span do
-      set_attributes("http", service: "s3", operation: "signed_url")
-
+    s3_interaction operation: :signed_url do
       bucket = get_bucket()
 
       # presigned_url/5 requires a map, not keyword list
@@ -77,9 +73,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
   @impl true
   # Signed URLs are pure URL math — they succeed even for nonexistent files, causing broken previews.
   def file_exists?(_bucket_type, key, _opts) do
-    span do
-      set_attributes("http", service: "s3", operation: "file_exists?")
-
+    s3_interaction operation: :file_exists do
       bucket = get_bucket()
 
       ExAws.S3.head_object(bucket, key)
@@ -105,9 +99,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
 
   @impl true
   def delete(_bucket_type, key, _opts) do
-    span do
-      set_attributes("http", service: "s3", operation: "delete")
-
+    s3_interaction operation: :delete do
       bucket = get_bucket()
 
       ExAws.S3.delete_object(bucket, key)
