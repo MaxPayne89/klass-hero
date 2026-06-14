@@ -948,8 +948,8 @@ function pageHome(){
       </div>
       ${faqItem("What types of activities can I find on Klass Hero?",
         `<p>Tutoring, music lessons, sports clubs, arts & crafts, STEM and coding courses, language classes, holiday camps, and one-off workshops — all in Berlin, all run by vetted providers. Use the category filters on the <a href="#/programs" style="color:var(--blue-700);font-weight:600">Programs page</a> to explore.</p>`)}
-      ${faqItem("How does the 6-step provider vetting process work?",
-        `<p>Every provider completes identity and age verification, experience validation, an extended background check, video screening, child safeguarding training, and agreement to our Community Guidelines before being approved.</p>`)}
+      ${faqItem("How does the 7-step provider vetting process work?",
+        `<p>Every provider completes identity and age verification, experience validation, an extended background check (Erweitertes Führungszeugnis), video screening, child safeguarding training, proof of active liability insurance, and agreement to our Community Guidelines before being approved.</p>`)}
       ${faqItem("Can I list my programs on Klass Hero and what does it cost?",
         `<p>Yes! Register for free and start listing immediately.</p>
          <p><strong>What you can list:</strong></p>
@@ -1752,7 +1752,7 @@ function pageProviders(){
       ${faqItem("How much does Klass Hero cost?", `<p>Joining is free — every feature is included for all providers, with no subscription or setup fees. You pay a success-based commission only on bookings made through the platform: 18% on your first €750 of monthly bookings, 12% from €751–€4,000, and 8% above that. The rate applies progressively, so growing never makes you worse off.</p>`, true)}
       ${faqItem("How quickly can I start accepting bookings?", `<p>Once your listing is live and you've completed Hero verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week.</p>`)}
       ${faqItem("How and when do I get paid?", `<p>We use SEPA bank transfers, paid out every Monday for the previous week's completed sessions. You'll receive an automatic invoice for each payout, and VAT is handled per-booking.</p>`)}
-      ${faqItem("What's the verification process like?", `<p>It's the Hero standard: identity &amp; age verification, experience validation, extended police background check (Erweitertes Führungszeugnis), a short recorded video reviewed by our team, child safeguarding training, and signing our community standards. See the <a href="#/trust-safety" style="color:var(--blue-700);font-weight:600">Trust &amp; Safety page</a> for the full breakdown.</p>`)}
+      ${faqItem("What's the verification process like?", `<p>It's the Hero standard — 7 steps: identity &amp; age verification, experience validation, extended police background check (Erweitertes Führungszeugnis, Belegart O), a short recorded video reviewed by our team, child safeguarding training, proof of active liability insurance (Betriebshaftpflicht), and signing our community standards. See the <a href="#/trust-safety" style="color:var(--blue-700);font-weight:600">Trust &amp; Safety page</a> for the full breakdown.</p>`)}
       ${faqItem("Can I run programs at multiple locations?", `<p>Yes. You can run unlimited programs, each with its own schedule and venue, and add as many team members as you need to delegate management across instructors.</p>`)}
       <p style="text-align:center;margin-top:1.5rem" class="muted">Still curious? <a href="#/contact" style="color:var(--blue-700);font-weight:700">Talk to our team →</a></p>
     </div>
@@ -1821,10 +1821,11 @@ function pageChecklist(){
 const VETTING_STEPS = [
   ["id","Identity & Age Verification","All providers must be 18 years or older, ensuring legal accountability and professional responsibility."],
   ["academic","Experience Validation","Providers must demonstrate at least one year of experience working with children in their area of expertise."],
-  ["doc","Extended Background Checks","Each provider submits an extended police background check, confirming their eligibility to work safely with minors."],
+  ["doc","Extended Background Check","Each provider submits an Erweitertes Führungszeugnis (Belegart O) — Germany's extended police clearance for working with minors. Renewed annually."],
   ["video","Video Screening","Applicants submit a short recorded video that our team reviews to assess communication skills and alignment with our values."],
-  ["shield","Child Safeguarding Training","All Heroes must hold or complete a recognized child safeguarding course, ensuring up-to-date knowledge."],
-  ["users","Community Standards Agreement","Every provider agrees to follow our Community Guidelines, defining expectations around professionalism."]
+  ["shield","Child Safeguarding Training","All Heroes must hold or complete a recognized Kinderschutz course. Certificates older than three years must be renewed."],
+  ["briefcase","Liability Insurance","Every Hero — individual or organisation — must hold an active Betriebshaftpflicht policy covering their teaching activity before their first session."],
+  ["users","Community Standards Agreement","Every provider agrees to follow our Community Guidelines, defining expectations around professionalism, conduct, and child safety."]
 ];
 function pageTrust(){
   return `
@@ -1855,7 +1856,7 @@ function pageTrust(){
           <p style="color:rgba(255,255,255,.9);font-size:1.1rem;margin-top:1.25rem;line-height:1.6">From academic tutoring to sports, arts, and enrichment programs, every provider on Klass Hero is carefully reviewed to ensure they meet our high standards for child safety, professionalism, and educational quality.</p>
           <div style="height:4px;width:80px;background:var(--yellow-500);margin-top:1.5rem"></div>
           <div style="margin-top:auto;padding-top:1.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem">
-            ${[["100%","Vetted"],["6-step","Process"],["24h","Reporting"]].map(([v,l])=>`<div><div class="font-display" style="font-weight:800;font-size:1.5rem;color:var(--yellow-500)">${v}</div><div class="tiny uc" style="color:rgba(255,255,255,.7)">${l}</div></div>`).join("")}
+            ${[["100%","Vetted"],["7-step","Process"],["24h","Reporting"]].map(([v,l])=>`<div><div class="font-display" style="font-weight:800;font-size:1.5rem;color:var(--yellow-500)">${v}</div><div class="tiny uc" style="color:rgba(255,255,255,.7)">${l}</div></div>`).join("")}
           </div>
         </div>
       </div>
@@ -1866,8 +1867,8 @@ function pageTrust(){
     <div class="container">
       <div class="sec-head">
         <span class="pill pill-accent" style="margin-bottom:.75rem">How We Verify Providers</span>
-        <h2 class="section-title">Six checks. No shortcuts.</h2>
-        <p class="muted" style="margin-top:.75rem">Every educator and enrichment professional completes a 6-step verification process before being approved.</p>
+        <h2 class="section-title">Seven checks. No shortcuts.</h2>
+        <p class="muted" style="margin-top:.75rem">Every educator and enrichment professional completes a 7-step verification process before being approved.</p>
       </div>
       <div class="grid grid-3">
         ${VETTING_STEPS.map(([i,t,d],idx)=>`
@@ -2150,13 +2151,71 @@ function pageParentDash(){
           <h1 style="font-size:1.6rem">Hi, Anna 👋</h1>
           <p class="small muted">Here's what's happening in your family this week.</p>
         </div>
-        <span class="pill pill-info">Explorer · Free</span>
-        <button class="btn btn-yellow btn-sm" onclick="toast('Active Family — €8/month: custom appointments &amp; reminders, conflict alerts, and a shared planner for your whole household.')">Upgrade to Active Family</button>
+        <span class="pill pill-info">Explorer</span>
       </div>
 
       <div style="margin-top:1.25rem;display:flex;gap:.6rem;flex-wrap:wrap">
         ${kids.map(([n,a,c,p],i)=>`<button class="kidchip ${i===0?'on':''}" onclick="toast('Filtering for ${n} (demo)')"><span class="dot" style="background:${c}"></span> ${n} (${a}) <span class="tiny muted">· ${p}</span></button>`).join("")}
         <button class="kidchip" onclick="toast('Demo: add a child')">${ic('plus','icon-sm')} Add child</button>
+      </div>
+
+      <!-- Skills & Badges — prominent panel under kid chips -->
+      <div style="margin-top:1rem;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid var(--border-light);border-radius:16px;padding:1.25rem 1.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1.1rem">
+          <h3 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:700">Skills &amp; Badges</h3>
+          <span class="pill pill-success">🏅 1 badge earned</span>
+        </div>
+        <div class="grid grid-2" style="gap:1.5rem">
+          <!-- Emma -->
+          <div>
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem">
+              <span class="dot" style="background:var(--blue-500);width:10px;height:10px"></span>
+              <span style="font-weight:700;font-size:.95rem">Emma</span>
+            </div>
+            <div style="display:flex;gap:.85rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem">
+                <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 3px 10px rgba(245,158,11,.35)">🏅</div>
+                <span class="tiny" style="font-weight:700;color:#92400e;text-align:center;line-height:1.2">Team<br>Player</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
+                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">🎯</div>
+                <span class="tiny muted" style="text-align:center;line-height:1.2">Sharp<br>Focus</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
+                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">🎨</div>
+                <span class="tiny muted" style="text-align:center;line-height:1.2">Creative<br>Spark</span>
+              </div>
+            </div>
+            ${[["Teamwork",80,"var(--success)"],["Coordination",55,"var(--blue-500)"],["Creativity",35,"#f59e0b"]].map(([s,p,c])=>`
+              <div style="margin-bottom:.55rem">
+                <div style="display:flex;justify-content:space-between" class="small"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div>
+                <div style="margin-top:.25rem;height:7px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px;transition:width .4s"></div></div>
+              </div>`).join("")}
+          </div>
+          <!-- Leo -->
+          <div>
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem">
+              <span class="dot" style="background:#10b981;width:10px;height:10px"></span>
+              <span style="font-weight:700;font-size:.95rem">Leo</span>
+            </div>
+            <div style="display:flex;gap:.85rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
+                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">🔬</div>
+                <span class="tiny muted" style="text-align:center;line-height:1.2">Curious<br>Mind</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
+                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">💡</div>
+                <span class="tiny muted" style="text-align:center;line-height:1.2">Problem<br>Solver</span>
+              </div>
+            </div>
+            ${[["Curiosity",22,"#10b981"],["Scientific Thinking",15,"var(--blue-500)"]].map(([s,p,c])=>`
+              <div style="margin-bottom:.55rem">
+                <div style="display:flex;justify-content:space-between" class="small"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div>
+                <div style="margin-top:.25rem;height:7px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px"></div></div>
+              </div>`).join("")}
+            <p class="tiny muted" style="margin-top:.5rem">Skills log automatically after each attended session.</p>
+          </div>
+        </div>
       </div>
 
       <div class="grid grid-4" style="margin-top:1.25rem;gap:.75rem">
@@ -2197,19 +2256,6 @@ function pageParentDash(){
                 <span class="tiny muted">${when}</span>
                 ${unread?'<span class="pill pill-info">1</span>':''}
               </div>`).join("")}
-          </div>
-          <!-- Skills & Badges (issue #703) -->
-          <div class="card" style="padding:1.5rem">
-            <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Skills &amp; Badges — Emma</h3>
-            <div style="margin-top:.9rem;display:flex;flex-direction:column;gap:.8rem">
-              ${[["Teamwork",80,"🏅 Team Player badge earned"],["Coordination",55,""],["Creativity",35,""]]
-                .map(([s,pct,badge])=>`
-                <div>
-                  <div style="display:flex;justify-content:space-between" class="small"><span style="font-weight:600">${s}</span><span class="muted">${pct}%</span></div>
-                  <div class="gmv-bar" style="margin-top:.3rem"><div style="width:${pct}%"></div></div>
-                  ${badge?`<div class="tiny" style="color:#b45309;margin-top:.2rem">${badge}</div>`:""}
-                </div>`).join("")}
-            </div>
           </div>
         </div>
       </div>
@@ -2304,7 +2350,7 @@ function provTab(){
       <div class="card" style="padding:1.5rem">
         <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Hero verification</h3>
         <div style="margin-top:.9rem;display:flex;flex-direction:column;gap:.5rem" class="small">
-          ${[["Identity & age","done"],["Experience validation","done"],["Background check","done"],["Video screening","done"],["Safeguarding training","done"],["Community standards","done"]]
+          ${[["Identity & age","done"],["Experience validation","done"],["Background check","done"],["Video screening","done"],["Safeguarding training","done"],["Liability insurance","done"],["Community standards","done"]]
             .map(([s,st])=>`<div style="display:flex;align-items:center;gap:.5rem">${ic('checkcircle','icon-sm')} <span>${s}</span><span class="pill pill-success" style="margin-left:auto">complete</span></div>`).join("")}
         </div>
         <div class="divider"></div>
@@ -2638,7 +2684,7 @@ function palAnswer(q){
 }
 function guardAnswer(q){
   const t = q.toLowerCase();
-  if(/vet|check|background|verif|trust|how.*safe.*provider/.test(t)) return "Every Hero clears <strong>6 checks</strong>: identity &amp; age (18+), one year of validated experience, an extended police background check (erweitertes Führungszeugnis), a recorded video screening, child-safeguarding training, and a signed community-standards agreement. <a href='#/trust-safety'>See the full breakdown.</a>";
+  if(/vet|check|background|verif|trust|how.*safe.*provider/.test(t)) return "Every Hero clears <strong>7 checks</strong>: identity &amp; age (18+), one year of validated experience, an extended police background check (Erweitertes Führungszeugnis, Belegart O), a recorded video screening, child-safeguarding training, active liability insurance (Betriebshaftpflicht — required for everyone, individual or organisation), and a signed community-standards agreement. <a href='#/trust-safety'>See the full breakdown.</a>";
   if(/data|privacy|gdpr|safe|secur/.test(t)) return "Your data is GDPR-protected and stored encrypted in EU data centers. Child profiles are visible only to you and the providers you book — we never sell data or profile children, and you can export or delete everything anytime.";
   if(/incident|report|concern|complain|wrong|problem/.test(t)) return "If something feels off, use the in-app report on any conversation or program. Our team reviews concerns within <strong>24 hours</strong>, and providers who fall short of our standards can be suspended or removed.";
   return "Ask me about provider vetting, data protection, or how we handle concerns and incidents.";
@@ -2714,7 +2760,7 @@ function pagePlanner(){
             <button class="on">Week</button>
             <button onclick="toast('Demo: month view')">Month</button>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="toast('Adding custom appointments is an Active Family feature (€8/mo).')">${ic('plus','icon-sm')} Add appointment</button>
+          <button class="btn btn-primary btn-sm" onclick="toast('Demo: add a custom appointment to your planner.')">${ic('plus','icon-sm')} Add appointment</button>
         </div>
       </div>
 
@@ -2738,7 +2784,7 @@ function pagePlanner(){
       <div style="margin-top:1rem">${weekCalendar(PLANNER_EVENTS)}</div>
 
       <div class="grid grid-2" style="margin-top:1.5rem;align-items:start">
-        <div class="notice notice-info">${ic('info','icon-sm')}<span><strong>Free plan</strong> shows your Klass Hero bookings automatically. <strong>Active Family (€8/mo)</strong> adds custom appointments, reminders, and conflict alerts.</span></div>
+        <div class="notice notice-info">${ic('info','icon-sm')}<span>Your Klass Hero bookings fill in automatically. Add custom appointments, reminders, and share the calendar with a partner from the settings.</span></div>
         <div class="card" style="padding:1.25rem">
           <h3 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:700">Share with family</h3>
           <p class="small muted" style="margin-top:.25rem">Invite a spouse or family friend to view (and optionally add to) your planner.</p>
@@ -3088,8 +3134,8 @@ const GLOSSARY = [
     {t:"Sibling discount", who:"Parents", d:"An automatic price reduction when a second child from the same family is enrolled in the same program."}
   ]},
   {group:"Trust, Safety & Vetting", items:[
-    {t:"Verified badge", who:"Parents", d:"The ✓ you see on a profile once a Hero has passed the full six-step vetting process."},
-    {t:"Hero Verification", who:"Providers", d:"The six checks every Hero completes before running programs: ID & age, experience, extended background check, video screening, safeguarding training, and the Community Standards Agreement."},
+    {t:"Verified badge", who:"Parents", d:"The ✓ you see on a profile once a Hero has passed the full seven-step vetting process."},
+    {t:"Hero Verification", who:"Providers", d:"The seven checks every Hero completes before running programs: ID & age, experience, extended background check (Erweitertes Führungszeugnis), video screening, child safeguarding training, liability insurance (Betriebshaftpflicht — mandatory for all, individual or organisation), and the Community Standards Agreement."},
     {t:"Erweitertes Führungszeugnis", who:"Providers", d:"The German extended criminal-record certificate (Belegart O) required to work with minors. Refreshed every year."},
     {t:"Team Accountability Declaration", who:"Providers", d:"A signed statement from the Responsible Person that every team member who works with children holds the required checks. Klass Hero doesn't store staff certificates — the Responsible Person is accountable for their accuracy."},
     {t:"Incident report", who:"Everyone", d:"A formal record of something that went wrong — an injury, safeguarding concern or conflict. Reviewed by Trust & Safety and moves from reported → under review → resolved."},
@@ -3097,10 +3143,9 @@ const GLOSSARY = [
   ]},
   {group:"Family & Provider Tools", items:[
     {t:"Family Dashboard", who:"Parents", d:"Your home base: enrolled programs, upcoming sessions, messages, and each child's skills progress."},
-    {t:"Planner", who:"Parents", d:"A shared family calendar that fills in all your Klass Hero bookings automatically. Active Family members can add their own events and share it with a partner."},
+    {t:"Planner", who:"Parents", d:"A shared family calendar that fills in all your Klass Hero bookings automatically. You can add custom appointments and share it with a partner or family member."},
     {t:"Skills & Badges", who:"Parents", d:"A per-child progress tracker. Attending skill-tagged sessions logs progress, and hitting a threshold earns a badge like 🏅 Team Player."},
-    {t:"Explorer", who:"Parents", d:"The free parent account — all booking, messaging and session tracking included."},
-    {t:"Active Family", who:"Parents", d:"An €8/month upgrade adding custom planner events, conflict alerts, and calendar sharing with a partner or family member."},
+    {t:"Explorer", who:"Parents", d:"The parent account — all booking, messaging, session tracking, skills progress and the shared family planner included. Free."},
     {t:"Provider Dashboard", who:"Providers", d:"Your workspace: an overview with commission progress, your programs and sessions, your team, and a finances tab wired to Stripe."},
     {t:"Broadcast", who:"Providers", d:"A single message to every parent enrolled in a program — for reminders or schedule changes. Parents who enroll later see the full history too."},
     {t:"Highlight", who:"Providers", d:"A provider post in Community — a photo or moment from a session. Activity-focused; no identifiable faces of children, and every upload is auto-screened before publishing."}
