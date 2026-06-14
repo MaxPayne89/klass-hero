@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
   @behaviour KlassHero.Messaging.Domain.Ports.ForManagingConversations
   @behaviour KlassHero.Messaging.Domain.Ports.ForQueryingConversations
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -21,9 +21,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def create(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "conversation")
-
+    db_interaction operation: :create, entity: "conversation" do
       schema_attrs = ConversationMapper.to_create_attrs(attrs)
 
       %ConversationSchema{}
@@ -52,9 +50,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def get_by_id(id, opts \\ []) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :get_by_id, entity: "conversation" do
       preloads = Keyword.get(opts, :preload, [])
 
       ConversationQueries.base()
@@ -70,9 +66,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def find_direct_conversation(provider_id, user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :find_direct_conversation, entity: "conversation" do
       ConversationQueries.find_direct(provider_id, user_id)
       |> Repo.one()
       |> case do
@@ -84,9 +78,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def find_active_broadcast_for_program(provider_id, program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :find_active_broadcast_for_program, entity: "conversation" do
       ConversationQueries.base()
       |> ConversationQueries.by_provider(provider_id)
       |> ConversationQueries.by_type(:program_broadcast)
@@ -102,9 +94,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def list_for_user(user_id, opts \\ []) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :list_for_user, entity: "conversation" do
       limit = Keyword.get(opts, :limit, 50)
 
       results =
@@ -125,9 +115,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def list_for_provider(provider_id, opts \\ []) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :list_for_provider, entity: "conversation" do
       limit = Keyword.get(opts, :limit, 50)
       type = Keyword.get(opts, :type)
 
@@ -150,9 +138,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def archive(conversation) do
-    span do
-      set_attributes("db", operation: "update", entity: "conversation")
-
+    db_interaction operation: :archive, entity: "conversation" do
       now = DateTime.utc_now()
       retention_until = DateTime.add(now, 30, :day)
 
@@ -183,9 +169,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def delete_expired(before) do
-    span do
-      set_attributes("db", operation: "delete", entity: "conversation")
-
+    db_interaction operation: :delete_expired, entity: "conversation" do
       {count, _} =
         ConversationQueries.base()
         |> ConversationQueries.archived_only()
@@ -199,9 +183,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def archive_ended_program_conversations(cutoff_date, retention_days) do
-    span do
-      set_attributes("db", operation: "update", entity: "conversation")
-
+    db_interaction operation: :archive_ended_program_conversations, entity: "conversation" do
       now = DateTime.utc_now()
       retention_until = DateTime.add(now, retention_days, :day)
 
@@ -232,9 +214,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
   @impl true
   @spec get_total_unread_count(String.t()) :: non_neg_integer()
   def get_total_unread_count(user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :get_total_unread_count, entity: "conversation" do
       case Repo.one(ConversationQueries.total_unread_count(user_id)) do
         nil -> 0
         count -> count
@@ -244,9 +224,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def list_active_program_conversation_ids_without_participant(program_id, user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :list_active_program_conversation_ids_without_participant, entity: "conversation" do
       ConversationQueries.base()
       |> ConversationQueries.by_program(program_id)
       |> ConversationQueries.active_only()
@@ -258,9 +236,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def list_active_program_conversation_ids_with_participant(program_id, user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :list_active_program_conversation_ids_with_participant, entity: "conversation" do
       ConversationQueries.base()
       |> ConversationQueries.by_program(program_id)
       |> ConversationQueries.active_only()
@@ -272,9 +248,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def list_expired_ids(before) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation")
-
+    db_interaction operation: :list_expired_ids, entity: "conversation" do
       ConversationQueries.base()
       |> ConversationQueries.archived_only()
       |> ConversationQueries.retention_expired(before)

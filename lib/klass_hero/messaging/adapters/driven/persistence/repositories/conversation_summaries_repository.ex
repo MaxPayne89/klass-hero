@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
   @behaviour KlassHero.Messaging.Domain.Ports.ForManagingConversationSummaries
   @behaviour KlassHero.Messaging.Domain.Ports.ForQueryingConversationSummaries
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -27,9 +27,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def list_for_user(user_id, opts) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation_summary")
-
+    db_interaction operation: :list_for_user, entity: "conversation_summary" do
       limit = Keyword.get(opts, :limit, @default_limit)
 
       Logger.debug("[ConversationSummariesRepository] Listing summaries for user",
@@ -67,9 +65,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def get_total_unread_count(user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation_summary")
-
+    db_interaction operation: :get_total_unread_count, entity: "conversation_summary" do
       Logger.debug("[ConversationSummariesRepository] Getting total unread count",
         user_id: user_id
       )
@@ -92,9 +88,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def has_system_note?(conversation_id, token) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation_summary")
-
+    db_interaction operation: :has_system_note, entity: "conversation_summary" do
       ConversationSummaryQueries.base()
       |> ConversationSummaryQueries.by_conversation(conversation_id)
       |> ConversationSummaryQueries.has_system_note_key(token)
@@ -104,9 +98,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def write_system_note_token(conversation_id, token) do
-    span do
-      set_attributes("db", operation: "update", entity: "conversation_summary")
-
+    db_interaction operation: :write_system_note_token, entity: "conversation_summary" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       token_json = %{token => DateTime.to_iso8601(now)}
 
@@ -206,9 +198,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   @impl true
   def get_conversation_context(conversation_id, user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "conversation_summary")
-
+    db_interaction operation: :get_conversation_context, entity: "conversation_summary" do
       result =
         from(s in ConversationSummarySchema,
           where: s.conversation_id == ^conversation_id and s.user_id == ^user_id,

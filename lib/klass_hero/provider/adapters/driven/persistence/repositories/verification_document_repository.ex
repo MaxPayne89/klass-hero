@@ -9,7 +9,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   @behaviour KlassHero.Provider.Domain.Ports.ForQueryingVerificationDocuments
   @behaviour KlassHero.Provider.Domain.Ports.ForStoringVerificationDocuments
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -22,9 +22,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
 
   @impl true
   def create(document) do
-    span do
-      set_attributes("db", operation: "insert", entity: "verification_document")
-
+    db_interaction operation: :create, entity: "verification_document" do
       attrs = VerificationDocumentMapper.to_schema(document)
 
       with {:ok, schema} <-
@@ -38,18 +36,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
 
   @impl true
   def get(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "verification_document")
-
+    db_interaction operation: :get, entity: "verification_document" do
       RepositoryHelpers.get_by_id(VerificationDocumentSchema, id, VerificationDocumentMapper)
     end
   end
 
   @impl true
   def get_by_provider(provider_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "verification_document")
-
+    db_interaction operation: :get_by_provider, entity: "verification_document" do
       docs =
         VerificationDocumentSchema
         |> where([d], d.provider_id == ^provider_id)
@@ -63,9 +57,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
 
   @impl true
   def update(document) do
-    span do
-      set_attributes("db", operation: "update", entity: "verification_document")
-
+    db_interaction operation: :update, entity: "verification_document" do
       with {:ok, schema} <-
              RepositoryHelpers.get_schema_by_uuid(VerificationDocumentSchema, document.id),
            attrs = VerificationDocumentMapper.to_schema(document),
@@ -78,9 +70,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
 
   @impl true
   def list_pending do
-    span do
-      set_attributes("db", operation: "select", entity: "verification_document")
-
+    db_interaction operation: :list_pending, entity: "verification_document" do
       docs =
         VerificationDocumentSchema
         |> where([d], d.status == "pending")
@@ -94,9 +84,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
 
   @impl true
   def list_by_status(status) when is_atom(status) do
-    span do
-      set_attributes("db", operation: "select", entity: "verification_document")
-
+    db_interaction operation: :list_by_status, entity: "verification_document" do
       status_string = Atom.to_string(status)
 
       docs =
@@ -113,9 +101,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
   # :pending orders oldest-first (FIFO); nil and other statuses order newest-first.
   @impl true
   def list_for_admin_review(status) when is_atom(status) or is_nil(status) do
-    span do
-      set_attributes("db", operation: "select", entity: "verification_document")
-
+    db_interaction operation: :list_for_admin_review, entity: "verification_document" do
       query =
         case status do
           nil ->
@@ -140,9 +126,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.Verificati
 
   @impl true
   def get_for_admin_review(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "verification_document")
-
+    db_interaction operation: :get_for_admin_review, entity: "verification_document" do
       query = where(admin_review_base_query(), [d], d.id == ^id)
 
       case Repo.one(query) do

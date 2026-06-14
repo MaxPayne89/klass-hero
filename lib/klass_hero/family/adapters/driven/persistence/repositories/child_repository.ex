@@ -13,7 +13,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
   @behaviour KlassHero.Family.Domain.Ports.ForQueryingChildren
   @behaviour KlassHero.Family.Domain.Ports.ForStoringChildren
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -29,9 +29,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def get_by_id(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "child")
-
+    db_interaction operation: :get_by_id, entity: "child" do
       case get_schema(child_id) do
         {:ok, schema} -> {:ok, ChildMapper.to_domain(schema)}
         {:error, :not_found} -> {:error, :not_found}
@@ -41,9 +39,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def create(attrs) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "child")
-
+    db_interaction operation: :create, entity: "child" do
       changeset = ChildSchema.changeset(%ChildSchema{}, attrs)
 
       case Repo.insert(changeset) do
@@ -64,9 +60,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def update(child_id, attrs) when is_binary(child_id) and is_map(attrs) do
-    span do
-      set_attributes("db", operation: "update", entity: "child")
-
+    db_interaction operation: :update, entity: "child" do
       case get_schema(child_id) do
         {:ok, schema} ->
           changeset = ChildSchema.changeset(schema, attrs)
@@ -93,9 +87,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def delete(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("db", operation: "delete", entity: "child")
-
+    db_interaction operation: :delete, entity: "child" do
       case get_schema(child_id) do
         {:ok, schema} ->
           # Bare Repo.delete raises Ecto.ConstraintError on FK violations; changeset wrapping
@@ -144,9 +136,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def anonymize(child_id, anonymized_attrs) when is_binary(child_id) and is_map(anonymized_attrs) do
-    span do
-      set_attributes("db", operation: "update", entity: "child")
-
+    db_interaction operation: :anonymize, entity: "child" do
       with {:ok, schema} <- get_schema(child_id),
            {:ok, updated} <-
              schema
@@ -172,9 +162,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def list_by_ids(child_ids) when is_list(child_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "child")
-
+    db_interaction operation: :list_by_ids, entity: "child" do
       ChildSchema
       |> where([c], c.id in ^child_ids)
       |> Repo.all()
@@ -184,9 +172,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def create_with_guardian(attrs, guardian_id) when is_map(attrs) and is_binary(guardian_id) do
-    span do
-      set_attributes("db", operation: "insert", entity: "child")
-
+    db_interaction operation: :create_with_guardian, entity: "child" do
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:child, ChildSchema.changeset(%ChildSchema{}, attrs))
       |> Ecto.Multi.insert(:guardian_link, fn %{child: child} ->
@@ -225,9 +211,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def child_belongs_to_guardian?(child_id, guardian_id) when is_binary(child_id) and is_binary(guardian_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "child")
-
+    db_interaction operation: :child_belongs_to_guardian, entity: "child" do
       ChildGuardianSchema
       |> where([cg], cg.child_id == ^child_id and cg.guardian_id == ^guardian_id)
       |> Repo.exists?()
@@ -236,9 +220,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildReposit
 
   @impl true
   def list_by_guardian(guardian_id) when is_binary(guardian_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "child")
-
+    db_interaction operation: :list_by_guardian, entity: "child" do
       ChildSchema
       |> join(:inner, [c], cg in ChildGuardianSchema, on: c.id == cg.child_id)
       |> where([_c, cg], cg.guardian_id == ^guardian_id)

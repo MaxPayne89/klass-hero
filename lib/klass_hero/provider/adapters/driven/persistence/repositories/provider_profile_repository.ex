@@ -17,7 +17,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   @behaviour KlassHero.Provider.Domain.Ports.ForQueryingProviderProfiles
   @behaviour KlassHero.Provider.Domain.Ports.ForStoringProviderProfiles
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -41,9 +41,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   - `{:error, changeset}` - Validation failure
   """
   def create_provider_profile(attrs) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "provider_profile")
-
+    db_interaction operation: :create_provider_profile, entity: "provider_profile" do
       schema_attrs =
         attrs
         |> MapperHelpers.normalize_atom_field(:profile_status)
@@ -85,9 +83,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   - `{:error, :not_found}` when no provider profile exists with the given identity_id
   """
   def get_by_identity_id(identity_id) when is_binary(identity_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "provider_profile")
-
+    db_interaction operation: :get_by_identity_id, entity: "provider_profile" do
       case Repo.one(from p in ProviderProfileSchema, where: p.identity_id == ^identity_id) do
         nil -> {:error, :not_found}
         schema -> {:ok, ProviderProfileMapper.to_domain(schema)}
@@ -102,9 +98,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   Returns boolean directly.
   """
   def has_profile?(identity_id) when is_binary(identity_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "provider_profile")
-
+    db_interaction operation: :has_profile, entity: "provider_profile" do
       ProviderProfileSchema
       |> where([p], p.identity_id == ^identity_id)
       |> Repo.exists?()
@@ -120,9 +114,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   - `{:error, :not_found}` when no provider profile exists with the given ID
   """
   def get(id) when is_binary(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "provider_profile")
-
+    db_interaction operation: :get, entity: "provider_profile" do
       case Repo.get(ProviderProfileSchema, id) do
         nil -> {:error, :not_found}
         schema -> {:ok, ProviderProfileMapper.to_domain(schema)}
@@ -140,9 +132,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   - `{:error, changeset}` on validation failure
   """
   def update(provider_profile) do
-    span do
-      set_attributes("db", operation: "update", entity: "provider_profile")
-
+    db_interaction operation: :update, entity: "provider_profile" do
       with {:ok, schema} <-
              RepositoryHelpers.get_schema_by_uuid(ProviderProfileSchema, provider_profile.id),
            attrs = ProviderProfileMapper.to_schema(provider_profile),
@@ -163,9 +153,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   - `{:ok, [String.t()]}` - List of verified provider profile IDs (may be empty)
   """
   def list_verified_ids do
-    span do
-      set_attributes("db", operation: "select", entity: "provider_profile")
-
+    db_interaction operation: :list_verified_ids, entity: "provider_profile" do
       ids =
         ProviderProfileSchema
         |> where([p], p.verified == true)

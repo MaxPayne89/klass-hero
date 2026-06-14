@@ -17,7 +17,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfil
   @behaviour KlassHero.Family.Domain.Ports.ForQueryingParentProfiles
   @behaviour KlassHero.Family.Domain.Ports.ForStoringParentProfiles
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -40,9 +40,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfil
   - `{:error, changeset}` - Validation failure
   """
   def create_parent_profile(attrs) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "parent_profile")
-
+    db_interaction operation: :create_parent_profile, entity: "parent_profile" do
       schema_attrs = MapperHelpers.normalize_subscription_tier(attrs)
 
       %ParentProfileSchema{}
@@ -83,9 +81,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfil
   - `{:error, :not_found}` when no parent profile exists with the given identity_id
   """
   def get_by_identity_id(identity_id) when is_binary(identity_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "parent_profile")
-
+    db_interaction operation: :get_by_identity_id, entity: "parent_profile" do
       case Repo.one(from p in ParentProfileSchema, where: p.identity_id == ^identity_id) do
         nil -> {:error, :not_found}
         schema -> {:ok, ParentProfileMapper.to_domain(schema)}
@@ -100,9 +96,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfil
   Returns boolean directly.
   """
   def has_profile?(identity_id) when is_binary(identity_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "parent_profile")
-
+    db_interaction operation: :has_profile, entity: "parent_profile" do
       ParentProfileSchema
       |> where([p], p.identity_id == ^identity_id)
       |> Repo.exists?()
@@ -118,9 +112,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfil
   def list_by_ids([]), do: []
 
   def list_by_ids(parent_ids) when is_list(parent_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "parent_profile")
-
+    db_interaction operation: :list_by_ids, entity: "parent_profile" do
       ParentProfileSchema
       |> where([p], p.id in ^parent_ids)
       |> Repo.all()

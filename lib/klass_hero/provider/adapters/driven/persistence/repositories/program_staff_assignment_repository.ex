@@ -8,7 +8,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramSta
   @behaviour KlassHero.Provider.Domain.Ports.ForQueryingProgramStaffAssignments
   @behaviour KlassHero.Provider.Domain.Ports.ForStoringProgramStaffAssignments
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -22,9 +22,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramSta
 
   @impl true
   def create(attrs) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "program_staff_assignment")
-
+    db_interaction operation: :create, entity: "program_staff_assignment" do
       %ProgramStaffAssignmentSchema{}
       |> ProgramStaffAssignmentSchema.create_changeset(attrs)
       |> Repo.insert()
@@ -48,9 +46,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramSta
 
   @impl true
   def unassign(program_id, staff_member_id) do
-    span do
-      set_attributes("db", operation: "update", entity: "program_staff_assignment")
-
+    db_interaction operation: :unassign, entity: "program_staff_assignment" do
       ProgramStaffAssignmentSchema
       |> where(
         [a],
@@ -76,9 +72,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramSta
 
   @impl true
   def list_active_for_program(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program_staff_assignment")
-
+    db_interaction operation: :list_active_for_program, entity: "program_staff_assignment" do
       ProgramStaffAssignmentSchema
       |> where([a], a.program_id == ^program_id and is_nil(a.unassigned_at))
       |> order_by([a], asc: a.assigned_at)
@@ -89,9 +83,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramSta
 
   @impl true
   def list_active_for_staff_member(staff_member_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program_staff_assignment")
-
+    db_interaction operation: :list_active_for_staff_member, entity: "program_staff_assignment" do
       ProgramStaffAssignmentSchema
       |> where([a], a.staff_member_id == ^staff_member_id and is_nil(a.unassigned_at))
       |> order_by([a], asc: a.assigned_at)
@@ -102,9 +94,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramSta
 
   @impl true
   def list_active_for_provider(provider_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program_staff_assignment")
-
+    db_interaction operation: :list_active_for_provider, entity: "program_staff_assignment" do
       ProgramStaffAssignmentSchema
       |> where([a], a.provider_id == ^provider_id and is_nil(a.unassigned_at))
       |> order_by([a], asc: a.assigned_at)

@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
   @behaviour KlassHero.Messaging.Domain.Ports.ForManagingParticipants
   @behaviour KlassHero.Messaging.Domain.Ports.ForQueryingParticipants
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -20,9 +20,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def add(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "messaging_participant")
-
+    db_interaction operation: :add, entity: "messaging_participant" do
       schema_attrs = ParticipantMapper.to_create_attrs(attrs)
 
       %ParticipantSchema{}
@@ -51,9 +49,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def add_or_get(attrs) do
-    span do
-      set_attributes("db", operation: "upsert", entity: "messaging_participant")
-
+    db_interaction operation: :add_or_get, entity: "messaging_participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       entry =
@@ -82,9 +78,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def get(conversation_id, user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "messaging_participant")
-
+    db_interaction operation: :get, entity: "messaging_participant" do
       from(p in ParticipantSchema,
         where: p.conversation_id == ^conversation_id and p.user_id == ^user_id
       )
@@ -98,9 +92,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def list_for_conversation(conversation_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "messaging_participant")
-
+    db_interaction operation: :list_for_conversation, entity: "messaging_participant" do
       from(p in ParticipantSchema,
         where: p.conversation_id == ^conversation_id and is_nil(p.left_at),
         order_by: [asc: p.joined_at]
@@ -112,9 +104,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def mark_as_read(conversation_id, user_id, read_at) do
-    span do
-      set_attributes("db", operation: "update", entity: "messaging_participant")
-
+    db_interaction operation: :mark_as_read, entity: "messaging_participant" do
       from(p in ParticipantSchema,
         where: p.conversation_id == ^conversation_id and p.user_id == ^user_id
       )
@@ -146,9 +136,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def leave(conversation_id, user_id) do
-    span do
-      set_attributes("db", operation: "update", entity: "messaging_participant")
-
+    db_interaction operation: :leave, entity: "messaging_participant" do
       now = DateTime.utc_now()
 
       from(p in ParticipantSchema,
@@ -181,9 +169,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def is_participant?(conversation_id, user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "messaging_participant")
-
+    db_interaction operation: :is_participant, entity: "messaging_participant" do
       from(p in ParticipantSchema,
         where:
           p.conversation_id == ^conversation_id and
@@ -196,9 +182,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def mark_all_as_left(user_id) do
-    span do
-      set_attributes("db", operation: "update", entity: "messaging_participant")
-
+    db_interaction operation: :mark_all_as_left, entity: "messaging_participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       {count, _} =
@@ -234,9 +218,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
 
   @impl true
   def add_batch(conversation_id, user_ids) do
-    span do
-      set_attributes("db", operation: "insert", entity: "messaging_participant")
-
+    db_interaction operation: :add_batch, entity: "messaging_participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       entries =
@@ -273,9 +255,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Participa
   def add_to_conversations_batch(_user_id, []), do: {:ok, 0}
 
   def add_to_conversations_batch(user_id, conversation_ids) do
-    span do
-      set_attributes("db", operation: "insert", entity: "messaging_participant")
-
+    db_interaction operation: :add_to_conversations_batch, entity: "messaging_participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       entries =

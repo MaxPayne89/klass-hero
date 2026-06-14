@@ -11,7 +11,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @behaviour KlassHero.ProgramCatalog.Domain.Ports.ForListingProgramSummaries
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -25,9 +25,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_paginated(limit, cursor, category) do
-    span do
-      set_attributes("db", operation: "select", entity: "program_listing")
-
+    db_interaction operation: :list_paginated, entity: "program_listing" do
       Logger.debug("[ProgramListingsRepository] Listing paginated program listings",
         limit: limit,
         has_cursor: !is_nil(cursor),
@@ -65,9 +63,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_all do
-    span do
-      set_attributes("db", operation: "select", entity: "program_listing")
-
+    db_interaction operation: :list_all, entity: "program_listing" do
       Logger.debug("[ProgramListingsRepository] Listing all program listings")
 
       schemas =
@@ -87,9 +83,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_active do
-    span do
-      set_attributes("db", operation: "select", entity: "program_listing")
-
+    db_interaction operation: :list_active, entity: "program_listing" do
       Logger.debug("[ProgramListingsRepository] Listing active program listings")
 
       schemas =
@@ -110,9 +104,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_for_provider(provider_id) when is_binary(provider_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program_listing")
-
+    db_interaction operation: :list_for_provider, entity: "program_listing" do
       Logger.debug("[ProgramListingsRepository] Listing programs for provider",
         provider_id: provider_id
       )
@@ -136,9 +128,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def get_by_id(id) when is_binary(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program_listing")
-
+    db_interaction operation: :get_by_id, entity: "program_listing" do
       # dump/1 validates UUID format; cast/1 incorrectly accepts 16-byte binaries.
       case Ecto.UUID.dump(id) do
         {:ok, _binary} ->

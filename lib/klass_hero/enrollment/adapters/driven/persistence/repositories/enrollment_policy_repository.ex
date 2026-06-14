@@ -10,7 +10,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   @behaviour KlassHero.Enrollment.Domain.Ports.ForManagingEnrollmentPolicies
   @behaviour KlassHero.Enrollment.Domain.Ports.ForQueryingEnrollmentPolicies
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -25,9 +25,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def upsert(attrs) do
-    span do
-      set_attributes("db", operation: "upsert", entity: "enrollment_policy")
-
+    db_interaction operation: :upsert, entity: "enrollment_policy" do
       schema_attrs = EnrollmentPolicyMapper.to_schema_attrs(attrs)
 
       %EnrollmentPolicySchema{}
@@ -58,9 +56,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def get_by_program_id(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment_policy")
-
+    db_interaction operation: :get_by_program_id, entity: "enrollment_policy" do
       case Repo.get_by(EnrollmentPolicySchema, program_id: program_id) do
         nil -> {:error, :not_found}
         schema -> {:ok, EnrollmentPolicyMapper.to_domain(schema)}
@@ -72,9 +68,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   def get_policies_by_program_ids([]), do: %{}
 
   def get_policies_by_program_ids(program_ids) when is_list(program_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment_policy")
-
+    db_interaction operation: :get_policies_by_program_ids, entity: "enrollment_policy" do
       from(p in EnrollmentPolicySchema,
         where: p.program_id in ^program_ids
       )
@@ -87,9 +81,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def count_active_enrollments(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment_policy")
-
+    db_interaction operation: :count_active_enrollments, entity: "enrollment_policy" do
       from(e in EnrollmentSchema,
         where: e.program_id == ^program_id and e.status in ^@active_statuses,
         select: count(e.id)
@@ -102,9 +94,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   def count_active_enrollments_batch([]), do: %{}
 
   def count_active_enrollments_batch(program_ids) when is_list(program_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment_policy")
-
+    db_interaction operation: :count_active_enrollments_batch, entity: "enrollment_policy" do
       from(e in EnrollmentSchema,
         where: e.program_id in ^program_ids and e.status in ^@active_statuses,
         group_by: e.program_id,

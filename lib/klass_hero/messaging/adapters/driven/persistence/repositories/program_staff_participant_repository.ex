@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
 
   @behaviour KlassHero.Messaging.Domain.Ports.ForResolvingProgramStaff
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -17,9 +17,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
 
   @impl true
   def get_active_staff_user_ids(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program_staff_participant")
-
+    db_interaction operation: :get_active_staff_user_ids, entity: "program_staff_participant" do
       ProgramStaffParticipantSchema
       |> where([p], p.program_id == ^program_id and p.active == true)
       |> select([p], p.staff_user_id)
@@ -29,9 +27,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
 
   @impl true
   def upsert_active(attrs) do
-    span do
-      set_attributes("db", operation: "upsert", entity: "program_staff_participant")
-
+    db_interaction operation: :upsert_active, entity: "program_staff_participant" do
       %ProgramStaffParticipantSchema{}
       |> ProgramStaffParticipantSchema.changeset(Map.put(attrs, :active, true))
       |> Repo.insert(
@@ -52,9 +48,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
 
   @impl true
   def deactivate(program_id, staff_user_id) do
-    span do
-      set_attributes("db", operation: "update", entity: "program_staff_participant")
-
+    db_interaction operation: :deactivate, entity: "program_staff_participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:microsecond)
 
       from(p in ProgramStaffParticipantSchema,

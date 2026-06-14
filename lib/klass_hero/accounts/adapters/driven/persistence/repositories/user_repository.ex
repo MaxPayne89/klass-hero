@@ -15,7 +15,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @behaviour KlassHero.Accounts.Domain.Ports.ForStoringUsers
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -29,18 +29,14 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def get_by_id(user_id) when is_binary(user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "user")
-
+    db_interaction operation: :get_by_id, entity: "user" do
       RepositoryHelpers.get_by_id(User, user_id, UserMapper)
     end
   end
 
   @impl true
   def get_by_email(email) when is_binary(email) do
-    span do
-      set_attributes("db", operation: "select", entity: "user")
-
+    db_interaction operation: :get_by_email, entity: "user" do
       case Repo.get_by(User, email: email) do
         nil -> {:error, :not_found}
         schema -> {:ok, UserMapper.to_domain(schema)}
@@ -50,9 +46,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def exists?(user_id) when is_binary(user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "user")
-
+    db_interaction operation: :exists, entity: "user" do
       User
       |> where([u], u.id == ^user_id)
       |> Repo.exists?()
@@ -61,9 +55,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def register(attrs, opts \\ []) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "user")
-
+    db_interaction operation: :register, entity: "user" do
       changeset_fn = Keyword.get(opts, :changeset_fn, &User.registration_changeset/2)
 
       %User{}
@@ -74,9 +66,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def append_intended_role(%User{} = user, role) when is_atom(role) do
-    span do
-      set_attributes("db", operation: "update", entity: "user")
-
+    db_interaction operation: :append_intended_role, entity: "user" do
       user
       |> User.add_role_changeset(role)
       |> Repo.update()
@@ -85,9 +75,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def remove_intended_role(%User{} = user, role) when is_atom(role) do
-    span do
-      set_attributes("db", operation: "update", entity: "user")
-
+    db_interaction operation: :remove_intended_role, entity: "user" do
       user
       |> User.remove_role_changeset(role)
       |> Repo.update()
@@ -96,9 +84,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def anonymize(%User{} = user) do
-    span do
-      set_attributes("db", operation: "update", entity: "user")
-
+    db_interaction operation: :anonymize, entity: "user" do
       Ecto.Multi.new()
       |> Ecto.Multi.update(:anonymize_user, User.anonymize_changeset(user))
       |> Ecto.Multi.delete_all(:delete_tokens, fn %{anonymize_user: anonymized_user} ->
@@ -115,9 +101,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def apply_email_change(%User{} = user, token) when is_binary(token) do
-    span do
-      set_attributes("db", operation: "update", entity: "user")
-
+    db_interaction operation: :apply_email_change, entity: "user" do
       context = "change:#{user.email}"
 
       Ecto.Multi.new()
@@ -159,9 +143,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def resolve_magic_link(token) when is_binary(token) do
-    span do
-      set_attributes("db", operation: "select", entity: "user")
-
+    db_interaction operation: :resolve_magic_link, entity: "user" do
       # verify_magic_link_token_query returns bare :error for bad base64; normalize to tagged tuple
       case UserToken.verify_magic_link_token_query(token) do
         {:ok, query} ->
@@ -193,9 +175,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def confirm_and_cleanup_tokens(%User{} = user) do
-    span do
-      set_attributes("db", operation: "update", entity: "user")
-
+    db_interaction operation: :confirm_and_cleanup_tokens, entity: "user" do
       user
       |> User.confirm_changeset()
       |> TokenCleanup.update_user_and_delete_all_tokens()
@@ -204,9 +184,7 @@ defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserReposi
 
   @impl true
   def delete_token(%UserToken{} = token) do
-    span do
-      set_attributes("db", operation: "delete", entity: "user")
-
+    db_interaction operation: :delete_token, entity: "user" do
       case Repo.delete(token) do
         {:ok, _} ->
           :ok
