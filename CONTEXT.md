@@ -155,9 +155,33 @@ _Avoid_: Behavioral Note (current code name, being retired), Feedback, Review, C
 A **Guardian**'s recorded permission for a specific **Child** and a specific purpose — `photo_marketing`, `photo_social_media`, `medical`, `activity_participation` (currently `participation` in code — rename pending), or `provider_data_sharing`. Append-only for audit: re-granting or withdrawing adds a new record; the live state is the latest non-withdrawn one.
 _Avoid_: Permission, Agreement, Opt-in
 
+**Vetting**:
+The umbrella process a **Provider** undergoes to become trusted: an ordered, composable set of **Verification Steps** keyed by the Provider's `entity_type` (`:individual` | `:business`). When every required step is approved, the Provider is **verified**. "Vetting" is the whole; "verification" is reserved for a single step's outcome. A single Provider's run through it is a **Vetting Case**.
+_Avoid_: Verification (as the umbrella — that overloads the per-step outcome), Onboarding, Approval (as the process noun)
+
+**Vetting Case**:
+One **Provider**'s instance of **Vetting** — the aggregate owning that provider's ordered **Verification Steps**. Moves through a lifecycle `:not_started → :in_progress → :verified`; a reset (e.g. the business responsible person changes) moves it `:verified → :in_progress`. The granular `:submitted` / `:rejected` states live on the individual **Verification Steps**, not the case. The published `ProviderProfile.verified` flag is the case reaching `:verified`.
+_Avoid_: Application, Ticket, Review (Review is the **Admin**'s act on one step)
+
+**Track**:
+The ordered set of **Verification Steps** a **Vetting Case** must complete, selected by the Provider's `entity_type`: the **individual track** (6 steps) or the **business track** (5 steps, B1–B5). Which steps, in what order, and which depend on which is domain policy, not runtime data.
+_Avoid_: Path, Flow, Journey, Checklist (the checklist is the *UI view* of a Track)
+
+**Verification Step**:
+One unit of **Vetting** — e.g. identity, background check, community agreement. Carries a status (`:not_started | :submitted | :approved | :rejected`). A step is completed by evidence appropriate to its kind: a **Verification Document**, a Stripe identity outcome, an agreement, or an attestation. A few steps depend on others (`requires`); most run in parallel.
+_Avoid_: Check, Stage, Task
+
 **Verification Document**:
-A document a **Provider** uploads for **Admin** review to establish trust — `business_registration`, `insurance_certificate`, `id_document`, `tax_certificate`. Lifecycle `pending → approved / rejected`.
+*One kind* of evidence a **Verification Step** can be completed by: a document a **Provider** uploads for **Admin** review — `business_registration`, `insurance_certificate`, `id_document`, `tax_certificate`. Lifecycle `pending → approved / rejected`. No longer the unit of vetting itself (that is the **Verification Step**).
 _Avoid_: Credential, Proof; "Certificate"/"Registration" name *document types*, not the concept
+
+**Identity Verification**:
+*One kind* of **Verification Step** evidence: the outcome of a Stripe Identity session run against a person (the individual **Provider**, or a business's named responsible person). Klass Hero stores only the session id and pass/fail — never document images.
+_Avoid_: KYC, ID Check
+
+**Signed Agreement**:
+*One kind* of **Verification Step** evidence: a versioned declaration a **Provider** signs — `kind` is `:community_agreement` (the Community Standards Agreement) or `:staff_attestation` (the business Staff Vetting Liability Attestation). Records who signed, when, and which version; auto-approves on signing. Same persistence shape for both kinds; only the legal text differs.
+_Avoid_: Consent (that's a **Guardian**'s **Consent** for a Child), Contract
 
 ## Parked (not modelled)
 
