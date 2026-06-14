@@ -205,8 +205,8 @@ section.band{padding:4rem 0}
 .badge-tl{position:absolute;top:.75rem;left:.75rem}.badge-tr{position:absolute;top:.75rem;right:.75rem}
 .badge-bl{position:absolute;bottom:.75rem;left:.75rem}
 /* Skills & Badges gamification */
-.skill-pill{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-size:.78rem;font-weight:600;color:var(--fg-primary);background:linear-gradient(white,white) padding-box,conic-gradient(from -90deg,var(--blue-500) calc(var(--p,0)*1%),#e5e7eb calc(var(--p,0)*1%)) border-box;border:2.5px solid transparent}
-.badge-pill{display:inline-flex;align-items:center;gap:.3rem;padding:3px 11px;border-radius:999px;font-size:.78rem;font-weight:700;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff}
+.skill-pill{display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;font-size:.78rem;font-weight:600;color:var(--fg-primary);background:linear-gradient(white,white) padding-box,conic-gradient(from -90deg,var(--pc,var(--blue-500)) calc(var(--p,0)*1%),#e5e7eb calc(var(--p,0)*1%)) border-box;border:2.5px solid transparent}
+.badge-pill{display:inline-flex;align-items:center;gap:.3rem;padding:3px 11px;border-radius:999px;font-size:.78rem;font-weight:700;color:#fff}
 .sched-chip{background:rgba(255,255,255,.92);backdrop-filter:blur(4px);padding:.25rem .8rem;border-radius:999px;font-size:.75rem;font-weight:600;color:var(--fg-primary);display:inline-flex;align-items:center;gap:.35rem}
 .pcard .body{padding:1.25rem;display:flex;flex-direction:column;flex:1}
 .pcard h3{font-size:1.1rem;font-weight:700;font-family:var(--font-sans);line-height:1.35;color:var(--fg-primary)}
@@ -2124,6 +2124,51 @@ function contactSuccess(){
    PAGE: Parent dashboard demo (blue accents — issue #95;
    Skills & Badges #703, reviews CTA #689, planner #113)
    ============================================================ */
+/* ============================================================
+   Skill taxonomy — 13 categories, ~100 skills, one badge each
+   Skills within a category are tagged on programs; attending sessions
+   accumulates progress (1 session = +10%). 100% = badge earned.
+   ============================================================ */
+const SKILL_CATS = {
+  cognitive:    {label:"Cognitive & Thinking",       badge:"Deep Thinker",          emoji:"🧠", color:"#7c3aed",
+    skills:["Critical thinking","Problem solving","Decision making","Logical thinking","Analytical thinking","Strategy thinking","Scientific thinking","Experimentation","Data analysis","Pattern recognition","Observation","Curiosity","Reflection"]},
+  academic:     {label:"Academic & Learning",        badge:"Knowledge Seeker",      emoji:"📚", color:"#1d4ed8",
+    skills:["Reading","Writing","Spelling","Vocabulary","Grammar","Math skills","Number sense","Research skills","Note taking","Memory skills","Measurement skills"]},
+  communication:{label:"Communication & Language",   badge:"Master Communicator",   emoji:"💬", color:"#0369a1",
+    skills:["Communication","Listening skills","Public speaking","Storytelling","Presentation skills","Debate skills","Persuasion"]},
+  social:       {label:"Social & Interpersonal",     badge:"Team Player",            emoji:"🤝", color:"#0d9488",
+    skills:["Teamwork","Collaboration","Empathy","Social skills","Conflict resolution","Negotiation","Cultural awareness","Etiquette","Networking"]},
+  personal:     {label:"Personal Development",       badge:"Inner Champion",         emoji:"💪", color:"#059669",
+    skills:["Confidence","Self awareness","Emotional intelligence","Mindfulness","Patience","Resilience","Perseverance","Self discipline","Self motivation","Independence","Initiative","Stress management"]},
+  executive:    {label:"Executive Function",         badge:"Goal Getter",            emoji:"🎯", color:"#d97706",
+    skills:["Time management","Organization","Planning skills","Goal setting","Goal tracking","Focus","Attention to detail","Multitasking","Adaptability","Responsibility"]},
+  creative:     {label:"Creative & Artistic",        badge:"Creative Spirit",        emoji:"🎨", color:"#ec4899",
+    skills:["Creativity","Imagination","Drawing","Painting","Crafting","Design thinking","Color theory","Visual thinking"]},
+  performing:   {label:"Performing Arts",            badge:"Star Performer",         emoji:"🎭", color:"#8b5cf6",
+    skills:["Music skills","Rhythm","Singing","Instrument playing","Dance skills"]},
+  physical:     {label:"Physical & Motor",           badge:"Active Hero",            emoji:"⚡", color:"#ef4444",
+    skills:["Coordination","Balance","Flexibility","Fine motor skills","Gross motor skills","Hand eye coordination","Spatial awareness","Physical fitness","Sportsmanship"]},
+  technology:   {label:"Technology & Digital",       badge:"Digital Pioneer",        emoji:"💻", color:"#0ea5e9",
+    skills:["Coding","Digital literacy","Typing skills","Robotics"]},
+  stem:         {label:"Practical Life & STEM",      badge:"Life Builder",           emoji:"🔧", color:"#64748b",
+    skills:["Cooking skills","Gardening","DIY skills","Building skills","Engineering basics","Innovation"]},
+  financial:    {label:"Financial & Entrepreneurial",badge:"Future Entrepreneur",   emoji:"💰", color:"#ca8a04",
+    skills:["Financial literacy","Budgeting","Entrepreneurship"]},
+  awareness:    {label:"Awareness & Life Skills",    badge:"World Aware",            emoji:"🌍", color:"#16a34a",
+    skills:["Environmental awareness","Safety awareness"]}
+};
+/* Demo progress per child — key → 0-100; 100 = badge earned */
+const CHILD_BADGES = {
+  Emma: {social:100, physical:100, creative:55, cognitive:40, personal:30},
+  Leo:  {cognitive:22, physical:15, technology:10}
+};
+function sbPill(key, pct){
+  const c = SKILL_CATS[key]; if(!c) return '';
+  const preview = c.skills.slice(0,3).join(', ')+'…';
+  if(pct>=100) return `<span class="badge-pill tooltip" style="background:${c.color}">${c.emoji} ${c.badge}<span class="tip">${c.label}: ${preview}</span></span>`;
+  return `<span class="skill-pill tooltip" style="--p:${pct};--pc:${c.color}">${c.emoji} ${c.label.split(' & ')[0]}<span class="tip">${c.badge} · ${pct}% · ${preview}</span></span>`;
+}
+
 const CHILD_PROFILES = {
   Emma:{age:8,color:"var(--blue-500)",medical:"Mild tree nut allergy — carry EpiPen. No other restrictions on activity.",
     notes:[
@@ -2215,28 +2260,23 @@ function pageParentDash(){
         <button class="kidchip" onclick="toast('Demo: add a child')">${ic('plus','icon-sm')} Add child</button>
       </div>
 
-      <!-- Skills & Badges strip — progress border pill = in progress, gold pill = badge earned -->
+      <!-- Skills & Badges — category badges, progress border = building, filled = earned -->
       <div style="margin-top:.85rem;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid var(--border-light);border-radius:14px;padding:.9rem 1.25rem">
         <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.8rem">
           <h3 style="font-family:var(--font-sans);font-size:1rem;font-weight:700">Skills &amp; Badges</h3>
-          <span class="tiny muted">Border fills as sessions add up — 10 sessions earns a badge.</span>
+          <span class="tiny muted">Each session fills the border — 10 sessions earns the badge. Hover to see which skills count.</span>
         </div>
         <div class="grid grid-2" style="gap:1rem">
+          ${Object.entries(CHILD_BADGES).map(([name,prog])=>`
           <div>
-            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.55rem"><span class="dot" style="background:var(--blue-500);width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Emma</span></div>
-            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-              <span class="badge-pill">🏅 Team Player</span>
-              <span class="skill-pill" style="--p:55">Coordination</span>
-              <span class="skill-pill" style="--p:35">Creativity</span>
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.55rem">
+              <span class="dot" style="background:${name==='Emma'?'var(--blue-500)':'#10b981'};width:8px;height:8px"></span>
+              <span style="font-weight:700;font-size:.9rem">${name}</span>
             </div>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.55rem"><span class="dot" style="background:#10b981;width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Leo</span></div>
             <div style="display:flex;gap:.4rem;flex-wrap:wrap">
-              <span class="skill-pill" style="--p:22">Curiosity</span>
-              <span class="skill-pill" style="--p:15">Scientific Thinking</span>
+              ${Object.entries(prog).map(([k,p])=>sbPill(k,p)).join('')}
             </div>
-          </div>
+          </div>`).join('')}
         </div>
       </div>
 
