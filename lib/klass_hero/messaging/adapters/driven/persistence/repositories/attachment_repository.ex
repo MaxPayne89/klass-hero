@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Attachmen
   @behaviour KlassHero.Messaging.Domain.Ports.ForManagingAttachments
   @behaviour KlassHero.Messaging.Domain.Ports.ForQueryingAttachments
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -23,9 +23,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Attachmen
   def create_many([]), do: {:ok, []}
 
   def create_many(attrs_list) do
-    span do
-      set_attributes("db", operation: "insert_all", entity: "attachment")
-
+    db_interaction operation: :create_many, entity: "attachment" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       entries =
@@ -55,9 +53,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Attachmen
 
   @impl true
   def list_for_message(message_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "attachment")
-
+    db_interaction operation: :list_for_message, entity: "attachment" do
       AttachmentSchema
       |> where([a], a.message_id == ^message_id)
       |> order_by([a], asc: a.inserted_at)
@@ -70,9 +66,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Attachmen
   def list_for_messages([]), do: %{}
 
   def list_for_messages(message_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "attachment")
-
+    db_interaction operation: :list_for_messages, entity: "attachment" do
       AttachmentSchema
       |> where([a], a.message_id in ^message_ids)
       |> order_by([a], asc: a.inserted_at)
@@ -86,9 +80,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Attachmen
   def get_storage_paths_for_conversations([]), do: {:ok, []}
 
   def get_storage_paths_for_conversations(conversation_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "attachment")
-
+    db_interaction operation: :get_storage_paths_for_conversations, entity: "attachment" do
       paths =
         AttachmentSchema
         |> join(:inner, [a], m in MessageSchema, on: a.message_id == m.id)

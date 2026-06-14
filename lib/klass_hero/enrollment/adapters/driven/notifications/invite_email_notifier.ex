@@ -8,6 +8,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
 
   @behaviour KlassHero.Enrollment.Domain.Ports.ForSendingInviteEmails
 
+  use KlassHero.Shared.Interaction
+
   import Swoosh.Email
 
   alias KlassHero.Mailer
@@ -17,19 +19,21 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
 
   @impl true
   def send_invite(invite, program_name, invite_url) do
-    # guardian_first_name is nil for imports without names; fall back to email for a valid recipient tuple.
-    recipient_name = invite.guardian_first_name || invite.guardian_email
+    email_interaction operation: :send_invite do
+      # guardian_first_name is nil for imports without names; fall back to email for a valid recipient tuple.
+      recipient_name = invite.guardian_first_name || invite.guardian_email
 
-    email =
-      new()
-      |> to({recipient_name, invite.guardian_email})
-      |> from(@from)
-      |> subject("You're invited to enroll #{invite.child_first_name} in #{program_name}")
-      |> text_body(build_text_content(invite, program_name, invite_url))
-      |> html_body(build_html_content(invite, program_name, invite_url))
+      email =
+        new()
+        |> to({recipient_name, invite.guardian_email})
+        |> from(@from)
+        |> subject("You're invited to enroll #{invite.child_first_name} in #{program_name}")
+        |> text_body(build_text_content(invite, program_name, invite_url))
+        |> html_body(build_html_content(invite, program_name, invite_url))
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+      with {:ok, _metadata} <- Mailer.deliver(email) do
+        {:ok, email}
+      end
     end
   end
 

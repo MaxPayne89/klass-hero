@@ -8,6 +8,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   @behaviour KlassHero.Participation.Domain.Ports.ForManagingSessions
   @behaviour KlassHero.Participation.Domain.Ports.ForQueryingSessions
 
+  use KlassHero.Shared.Interaction
+
   import Ecto.Query
 
   alias KlassHero.Participation.Adapters.Driven.Persistence.Mappers.ProgramSessionMapper
@@ -24,112 +26,130 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
 
   @impl true
   def create(%ProgramSession{} = session) do
-    attrs = ProgramSessionMapper.to_persistence(session)
+    db_interaction operation: :create, entity: "session" do
+      attrs = ProgramSessionMapper.to_persistence(session)
 
-    attrs
-    |> ProgramSessionSchema.create_changeset()
-    |> Repo.insert()
-    |> handle_insert_result()
+      attrs
+      |> ProgramSessionSchema.create_changeset()
+      |> Repo.insert()
+      |> handle_insert_result()
+    end
   end
 
   @impl true
   def get_by_id(id) when is_binary(id) do
-    RepositoryHelpers.get_by_id(ProgramSessionSchema, id, ProgramSessionMapper)
+    db_interaction operation: :get_by_id, entity: "session" do
+      RepositoryHelpers.get_by_id(ProgramSessionSchema, id, ProgramSessionMapper)
+    end
   end
 
   @impl true
   def list_by_program(program_id) when is_binary(program_id) do
-    from(s in ProgramSessionSchema,
-      where: s.program_id == ^program_id,
-      order_by: [asc: s.session_date, asc: s.start_time]
-    )
-    |> Repo.all()
-    |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    db_interaction operation: :list_by_program, entity: "session" do
+      from(s in ProgramSessionSchema,
+        where: s.program_id == ^program_id,
+        order_by: [asc: s.session_date, asc: s.start_time]
+      )
+      |> Repo.all()
+      |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    end
   end
 
   @impl true
   def list_today_sessions(date) do
-    from(s in ProgramSessionSchema,
-      where: s.session_date == ^date,
-      order_by: [asc: s.start_time]
-    )
-    |> Repo.all()
-    |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    db_interaction operation: :list_today_sessions, entity: "session" do
+      from(s in ProgramSessionSchema,
+        where: s.session_date == ^date,
+        order_by: [asc: s.start_time]
+      )
+      |> Repo.all()
+      |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    end
   end
 
   @impl true
   def update(%ProgramSession{} = session) do
-    with {:ok, schema} <-
-           RepositoryHelpers.get_schema_by_uuid(ProgramSessionSchema, session.id) do
-      attrs = ProgramSessionMapper.update_schema(schema, session)
+    db_interaction operation: :update, entity: "session" do
+      with {:ok, schema} <-
+             RepositoryHelpers.get_schema_by_uuid(ProgramSessionSchema, session.id) do
+        attrs = ProgramSessionMapper.update_schema(schema, session)
 
-      schema
-      |> ProgramSessionSchema.update_changeset(attrs)
-      |> Repo.update()
-      |> handle_update_result()
+        schema
+        |> ProgramSessionSchema.update_changeset(attrs)
+        |> Repo.update()
+        |> handle_update_result()
+      end
     end
   end
 
   @impl true
   def list_by_provider_and_date(provider_id, date) when is_binary(provider_id) do
-    from(s in ProgramSessionSchema,
-      join: p in "programs",
-      on: p.id == s.program_id,
-      where: p.provider_id == type(^provider_id, Ecto.UUID) and s.session_date == ^date,
-      order_by: [asc: s.start_time]
-    )
-    |> Repo.all()
-    |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    db_interaction operation: :list_by_provider_and_date, entity: "session" do
+      from(s in ProgramSessionSchema,
+        join: p in "programs",
+        on: p.id == s.program_id,
+        where: p.provider_id == type(^provider_id, Ecto.UUID) and s.session_date == ^date,
+        order_by: [asc: s.start_time]
+      )
+      |> Repo.all()
+      |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    end
   end
 
   @impl true
   def get_many_by_ids(ids) when is_list(ids) do
-    from(s in ProgramSessionSchema,
-      where: s.id in ^ids
-    )
-    |> Repo.all()
-    |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    db_interaction operation: :get_many_by_ids, entity: "session" do
+      from(s in ProgramSessionSchema,
+        where: s.id in ^ids
+      )
+      |> Repo.all()
+      |> Enum.map(&ProgramSessionMapper.to_domain/1)
+    end
   end
 
   @impl true
   def get_program_name(program_id) when is_binary(program_id) do
-    from(p in "programs",
-      where: p.id == type(^program_id, Ecto.UUID),
-      select: p.title
-    )
-    |> Repo.one()
+    db_interaction operation: :get_program_name, entity: "session" do
+      from(p in "programs",
+        where: p.id == type(^program_id, Ecto.UUID),
+        select: p.title
+      )
+      |> Repo.one()
+    end
   end
 
   @impl true
   def list_admin_sessions(filters) when is_map(filters) do
-    ProgramSessionSchema
-    |> join(:inner, [s], p in "programs", on: p.id == s.program_id)
-    |> join(:left, [s, _p], pr in ParticipationRecordSchema, on: pr.session_id == s.id)
-    |> join(:inner, [_s, p, _pr], prov in "providers", on: prov.id == p.provider_id)
-    |> apply_admin_filters(filters)
-    |> group_by([s, p, _pr, prov], [s.id, p.title, prov.business_name])
-    |> select([s, p, _pr, prov], %{
-      id: s.id,
-      program_id: s.program_id,
-      program_name: p.title,
-      provider_name: prov.business_name,
-      session_date: s.session_date,
-      start_time: s.start_time,
-      end_time: s.end_time,
-      status: s.status,
-      checked_in_count:
-        count(
-          fragment(
-            "CASE WHEN ? = ANY(?) THEN 1 END",
-            _pr.status,
-            ^@checked_in_statuses
-          )
-        ),
-      total_count: count(_pr.id)
-    })
-    |> order_by([s, _p, _pr, _prov], asc: s.session_date, asc: s.start_time)
-    |> Repo.all()
-    |> Enum.map(&atomize_status/1)
+    db_interaction operation: :list_admin_sessions, entity: "session" do
+      ProgramSessionSchema
+      |> join(:inner, [s], p in "programs", on: p.id == s.program_id)
+      |> join(:left, [s, _p], pr in ParticipationRecordSchema, on: pr.session_id == s.id)
+      |> join(:inner, [_s, p, _pr], prov in "providers", on: prov.id == p.provider_id)
+      |> apply_admin_filters(filters)
+      |> group_by([s, p, _pr, prov], [s.id, p.title, prov.business_name])
+      |> select([s, p, _pr, prov], %{
+        id: s.id,
+        program_id: s.program_id,
+        program_name: p.title,
+        provider_name: prov.business_name,
+        session_date: s.session_date,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        status: s.status,
+        checked_in_count:
+          count(
+            fragment(
+              "CASE WHEN ? = ANY(?) THEN 1 END",
+              _pr.status,
+              ^@checked_in_statuses
+            )
+          ),
+        total_count: count(_pr.id)
+      })
+      |> order_by([s, _p, _pr, _prov], asc: s.session_date, asc: s.start_time)
+      |> Repo.all()
+      |> Enum.map(&atomize_status/1)
+    end
   end
 
   defp apply_admin_filters(query, filters) do

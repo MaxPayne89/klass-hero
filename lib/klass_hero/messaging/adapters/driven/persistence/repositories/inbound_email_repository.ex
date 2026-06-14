@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
   @behaviour KlassHero.Messaging.Domain.Ports.ForManagingInboundEmails
   @behaviour KlassHero.Messaging.Domain.Ports.ForQueryingInboundEmails
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.InboundEmailMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
@@ -20,9 +20,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
   @impl true
   def create(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "inbound_email")
-
+    db_interaction operation: :create, entity: "inbound_email" do
       schema_attrs = InboundEmailMapper.to_create_attrs(attrs)
 
       %InboundEmailSchema{}
@@ -44,9 +42,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
   @impl true
   def get_by_id(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "inbound_email")
-
+    db_interaction operation: :get_by_id, entity: "inbound_email" do
       InboundEmailQueries.base()
       |> InboundEmailQueries.by_id(id)
       |> RepositoryHelpers.fetch_one(InboundEmailMapper)
@@ -55,9 +51,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
   @impl true
   def get_by_resend_id(resend_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "inbound_email")
-
+    db_interaction operation: :get_by_resend_id, entity: "inbound_email" do
       InboundEmailQueries.base()
       |> InboundEmailQueries.by_resend_id(resend_id)
       |> RepositoryHelpers.fetch_one(InboundEmailMapper)
@@ -66,9 +60,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
   @impl true
   def list(opts \\ []) do
-    span do
-      set_attributes("db", operation: "select", entity: "inbound_email")
-
+    db_interaction operation: :list, entity: "inbound_email" do
       limit = Keyword.get(opts, :limit, 50)
       status = Keyword.get(opts, :status)
 
@@ -89,9 +81,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
   @impl true
   def update_status(id, status, attrs) do
-    span do
-      set_attributes("db", operation: "update", entity: "inbound_email")
-
+    db_interaction operation: :update_status, entity: "inbound_email" do
       InboundEmailSchema
       |> Repo.get(id)
       |> case do
@@ -118,9 +108,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
   @impl true
   def update_content(id, attrs) do
-    span do
-      set_attributes("db", operation: "update", entity: "inbound_email")
-
+    db_interaction operation: :update_content, entity: "inbound_email" do
       InboundEmailSchema
       |> Repo.get(id)
       |> case do
@@ -144,9 +132,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEm
 
   @impl true
   def count_by_status(status) do
-    span do
-      set_attributes("db", operation: "select", entity: "inbound_email")
-
+    db_interaction operation: :count_by_status, entity: "inbound_email" do
       InboundEmailQueries.count_by_status(status)
       |> Repo.one()
       |> Kernel.||(0)

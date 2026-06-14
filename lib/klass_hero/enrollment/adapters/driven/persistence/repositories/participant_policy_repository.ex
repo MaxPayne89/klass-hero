@@ -10,7 +10,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Particip
   @behaviour KlassHero.Enrollment.Domain.Ports.ForManagingParticipantPolicies
   @behaviour KlassHero.Enrollment.Domain.Ports.ForQueryingParticipantPolicies
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -22,9 +22,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Particip
 
   @impl true
   def upsert(attrs) do
-    span do
-      set_attributes("db", operation: "upsert", entity: "participant_policy")
-
+    db_interaction operation: :upsert, entity: "participant_policy" do
       schema_attrs = ParticipantPolicyMapper.to_schema_attrs(attrs)
 
       %ParticipantPolicySchema{}
@@ -65,9 +63,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Particip
 
   @impl true
   def get_by_program_id(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "participant_policy")
-
+    db_interaction operation: :get_by_program_id, entity: "participant_policy" do
       case Repo.get_by(ParticipantPolicySchema, program_id: program_id) do
         nil -> {:error, :not_found}
         schema -> {:ok, ParticipantPolicyMapper.to_domain(schema)}
@@ -79,9 +75,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Particip
   def get_policies_by_program_ids([]), do: %{}
 
   def get_policies_by_program_ids(program_ids) when is_list(program_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "participant_policy")
-
+    db_interaction operation: :get_policies_by_program_ids, entity: "participant_policy" do
       from(p in ParticipantPolicySchema,
         where: p.program_id in ^program_ids
       )

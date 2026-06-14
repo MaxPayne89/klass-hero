@@ -8,6 +8,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
 
   @behaviour KlassHero.Shared.Domain.Ports.ForTrackingProcessedEvents
 
+  use KlassHero.Shared.Interaction
+
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
@@ -19,24 +21,28 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
   @impl true
   def execute_atomically(event_id, handler_ref, handler_fn)
       when is_binary(event_id) and is_binary(handler_ref) and is_function(handler_fn, 0) do
-    Repo.transaction(fn ->
-      case insert_processed_event(event_id, handler_ref) do
-        # Another delivery path already handled this pair — idempotent no-op.
-        :already_processed ->
-          :ok
+    db_interaction operation: :execute_atomically, entity: "processed_event" do
+      Repo.transaction(fn ->
+        case insert_processed_event(event_id, handler_ref) do
+          # Another delivery path already handled this pair — idempotent no-op.
+          :already_processed ->
+            :ok
 
-        # Handler runs inside the transaction so rollback removes the row on failure.
-        :inserted ->
-          run_handler(handler_fn)
-      end
-    end)
-    |> unwrap_transaction_result()
+          # Handler runs inside the transaction so rollback removes the row on failure.
+          :inserted ->
+            run_handler(handler_fn)
+        end
+      end)
+      |> unwrap_transaction_result()
+    end
   end
 
   @impl true
   def mark_processed(event_id, handler_ref) when is_binary(event_id) and is_binary(handler_ref) do
-    insert_processed_event(event_id, handler_ref)
-    :ok
+    db_interaction operation: :mark_processed, entity: "processed_event" do
+      insert_processed_event(event_id, handler_ref)
+      :ok
+    end
   rescue
     error ->
       # Handler already succeeded — swallow DB failure and log; Oban may re-execute but idempotent handlers tolerate it.
@@ -52,14 +58,16 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
 
   @impl true
   def enqueue_durable_retry(event, handler_ref) when is_binary(handler_ref) do
-    args =
-      CriticalEventSerializer.serialize(event)
-      |> Map.put("handler", handler_ref)
-      |> Context.inject_into_args()
+    db_interaction operation: :enqueue_durable_retry, entity: "processed_event" do
+      args =
+        CriticalEventSerializer.serialize(event)
+        |> Map.put("handler", handler_ref)
+        |> Context.inject_into_args()
 
-    case CriticalEventWorker.insert_job(args) do
-      {:ok, _job} -> :ok
-      {:error, _reason} = error -> error
+      case CriticalEventWorker.insert_job(args) do
+        {:ok, _job} -> :ok
+        {:error, _reason} = error -> error
+      end
     end
   end
 

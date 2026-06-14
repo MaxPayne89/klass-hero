@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
   @behaviour KlassHero.Messaging.Domain.Ports.ForManagingMessages
   @behaviour KlassHero.Messaging.Domain.Ports.ForQueryingMessages
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -27,9 +27,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def create(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "message")
-
+    db_interaction operation: :create, entity: "message" do
       schema_attrs = MessageMapper.to_create_attrs(attrs)
 
       %MessageSchema{}
@@ -54,9 +52,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def get_by_id(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "message")
-
+    db_interaction operation: :get_by_id, entity: "message" do
       MessageQueries.base()
       |> MessageQueries.by_id(id)
       |> RepositoryHelpers.fetch_one(MessageMapper)
@@ -65,9 +61,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def list_for_conversation(conversation_id, opts \\ []) do
-    span do
-      set_attributes("db", operation: "select", entity: "message")
-
+    db_interaction operation: :list_for_conversation, entity: "message" do
       limit = Keyword.get(opts, :limit, 50)
 
       results =
@@ -88,9 +82,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def list_with_senders(conversation_id, opts \\ []) do
-    span do
-      set_attributes("db", operation: "select", entity: "message")
-
+    db_interaction operation: :list_with_senders, entity: "message" do
       limit = Keyword.get(opts, :limit, 50)
 
       results =
@@ -114,9 +106,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def get_latest(conversation_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "message")
-
+    db_interaction operation: :get_latest, entity: "message" do
       MessageQueries.latest_for_conversation(conversation_id)
       |> Repo.one()
       |> case do
@@ -128,9 +118,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def soft_delete(message) do
-    span do
-      set_attributes("db", operation: "update", entity: "message")
-
+    db_interaction operation: :soft_delete, entity: "message" do
       now = DateTime.utc_now()
 
       MessageSchema
@@ -157,9 +145,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def count_unread(conversation_id, last_read_at) do
-    span do
-      set_attributes("db", operation: "select", entity: "message")
-
+    db_interaction operation: :count_unread, entity: "message" do
       MessageQueries.count_unread(conversation_id, last_read_at)
       |> Repo.one()
       |> Kernel.||(0)
@@ -168,9 +154,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def anonymize_for_sender(sender_id) do
-    span do
-      set_attributes("db", operation: "update", entity: "message")
-
+    db_interaction operation: :anonymize_for_sender, entity: "message" do
       {count, _} =
         from(m in MessageSchema,
           where: m.sender_id == ^sender_id
@@ -204,9 +188,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   @impl true
   def delete_for_expired_conversations(before) do
-    span do
-      set_attributes("db", operation: "delete", entity: "message")
-
+    db_interaction operation: :delete_for_expired_conversations, entity: "message" do
       expired_conversation_ids =
         from(c in ConversationSchema,
           where: not is_nil(c.retention_until),

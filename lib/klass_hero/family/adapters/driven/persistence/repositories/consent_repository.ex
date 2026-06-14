@@ -13,7 +13,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
   @behaviour KlassHero.Family.Domain.Ports.ForQueryingConsents
   @behaviour KlassHero.Family.Domain.Ports.ForStoringConsents
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -27,9 +27,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   @impl true
   def grant(attrs) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "consent")
-
+    db_interaction operation: :grant, entity: "consent" do
       changeset = ConsentSchema.changeset(%ConsentSchema{}, attrs)
 
       case Repo.insert(changeset) do
@@ -50,9 +48,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   @impl true
   def withdraw(consent_id, %DateTime{} = withdrawn_at) when is_binary(consent_id) do
-    span do
-      set_attributes("db", operation: "update", entity: "consent")
-
+    db_interaction operation: :withdraw, entity: "consent" do
       case get_schema(consent_id) do
         {:ok, schema} ->
           changeset = ConsentSchema.withdraw_changeset(schema, withdrawn_at)
@@ -74,9 +70,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   @impl true
   def get_active_for_child(child_id, consent_type) when is_binary(child_id) and is_binary(consent_type) do
-    span do
-      set_attributes("db", operation: "select", entity: "consent")
-
+    db_interaction operation: :get_active_for_child, entity: "consent" do
       ConsentSchema
       |> where([c], c.child_id == ^child_id)
       |> where([c], c.consent_type == ^consent_type)
@@ -88,9 +82,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   @impl true
   def list_active_by_child(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "consent")
-
+    db_interaction operation: :list_active_by_child, entity: "consent" do
       ConsentSchema
       |> where([c], c.child_id == ^child_id)
       |> where([c], is_nil(c.withdrawn_at))
@@ -102,9 +94,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   @impl true
   def list_active_for_children(child_ids, consent_type) when is_list(child_ids) and is_binary(consent_type) do
-    span do
-      set_attributes("db", operation: "select", entity: "consent")
-
+    db_interaction operation: :list_active_for_children, entity: "consent" do
       ConsentSchema
       |> where([c], c.child_id in ^child_ids)
       |> where([c], c.consent_type == ^consent_type)
@@ -116,9 +106,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   @impl true
   def list_all_by_child(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "consent")
-
+    db_interaction operation: :list_all_by_child, entity: "consent" do
       ConsentSchema
       |> where([c], c.child_id == ^child_id)
       |> order_by([c], asc: c.consent_type, desc: c.granted_at)
@@ -129,9 +117,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   @impl true
   def delete_all_for_child(child_id) when is_binary(child_id) do
-    span do
-      set_attributes("db", operation: "delete", entity: "consent")
-
+    db_interaction operation: :delete_all_for_child, entity: "consent" do
       {count, _} =
         ConsentSchema
         |> where([c], c.child_id == ^child_id)

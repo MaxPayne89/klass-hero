@@ -11,7 +11,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentRe
   @behaviour KlassHero.Provider.Domain.Ports.ForQueryingIncidentReports
   @behaviour KlassHero.Provider.Domain.Ports.ForStoringIncidentReports
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -32,9 +32,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentRe
   - `{:error, Ecto.Changeset.t()}` on validation or FK failure
   """
   def create(report) do
-    span do
-      set_attributes("db", operation: "insert", entity: "incident_report")
-
+    db_interaction operation: :create, entity: "incident_report" do
       attrs = IncidentReportMapper.to_schema(report)
       changeset = IncidentReportSchema.changeset(%IncidentReportSchema{}, attrs)
 
@@ -53,9 +51,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentRe
   - `{:error, :not_found}` when no report exists with the given ID
   """
   def get(id) when is_binary(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "incident_report")
-
+    db_interaction operation: :get, entity: "incident_report" do
       case Repo.get(IncidentReportSchema, id) do
         nil -> {:error, :not_found}
         schema -> {:ok, IncidentReportMapper.to_domain(schema)}
@@ -74,9 +70,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentRe
   `provider_id` for IDOR defense.
   """
   def list_for_program(provider_id, program_id) when is_binary(provider_id) and is_binary(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "incident_report_summary")
-
+    db_interaction operation: :list_for_program, entity: "incident_report_summary" do
       program_direct = list_program_direct(provider_id, program_id)
       session_linked = list_session_linked(provider_id, program_id)
 

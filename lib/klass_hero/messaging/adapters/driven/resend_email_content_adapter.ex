@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter do
 
   @behaviour KlassHero.Messaging.Domain.Ports.ForFetchingEmailContent
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   require Logger
 
@@ -16,9 +16,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter do
 
   @impl true
   def fetch_content(resend_email_id) do
-    span "resend_api.fetch_email_content" do
-      set_attributes("http", service: "resend", operation: "fetch_email_content")
-
+    http_interaction operation: :fetch_email_content, service: "resend" do
       extra_opts = Application.get_env(:klass_hero, :resend_req_options, [])
       req = Req.new([base_url: @base_url, auth: {:bearer, api_key()}] ++ extra_opts)
 

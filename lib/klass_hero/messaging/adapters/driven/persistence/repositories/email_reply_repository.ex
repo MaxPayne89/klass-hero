@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailRepl
   @behaviour KlassHero.Messaging.Domain.Ports.ForManagingEmailReplies
   @behaviour KlassHero.Messaging.Domain.Ports.ForQueryingEmailReplies
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.EmailReplyMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQueries
@@ -19,9 +19,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailRepl
 
   @impl true
   def create(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "email_reply")
-
+    db_interaction operation: :create, entity: "email_reply" do
       schema_attrs = EmailReplyMapper.to_create_attrs(attrs)
 
       %EmailReplySchema{}
@@ -41,9 +39,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailRepl
 
   @impl true
   def get_by_id(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "email_reply")
-
+    db_interaction operation: :get_by_id, entity: "email_reply" do
       EmailReplyQueries.base()
       |> EmailReplyQueries.by_id(id)
       |> Repo.one()
@@ -56,9 +52,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailRepl
 
   @impl true
   def update_status(id, status, attrs) do
-    span do
-      set_attributes("db", operation: "update", entity: "email_reply")
-
+    db_interaction operation: :update_status, entity: "email_reply" do
       EmailReplySchema
       |> Repo.get(id)
       |> case do
@@ -85,9 +79,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailRepl
 
   @impl true
   def list_by_email(inbound_email_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "email_reply")
-
+    db_interaction operation: :list_by_email, entity: "email_reply" do
       replies =
         EmailReplyQueries.base()
         |> EmailReplyQueries.by_email(inbound_email_id)

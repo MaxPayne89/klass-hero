@@ -10,6 +10,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
 
   @behaviour KlassHero.Provider.Domain.Ports.ForSendingIncidentEmails
 
+  use KlassHero.Shared.Interaction
+
   import Swoosh.Email
 
   alias KlassHero.Mailer
@@ -20,18 +22,20 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
 
   @impl true
   def send_incident_report(recipient, %IncidentReport{} = report, context) do
-    recipient_name = recipient.name || recipient.email
+    email_interaction operation: :send_incident_report do
+      recipient_name = recipient.name || recipient.email
 
-    email =
-      new()
-      |> to({recipient_name, recipient.email})
-      |> from(@from)
-      |> subject(build_subject(report, context))
-      |> text_body(build_text_content(report, context))
-      |> html_body(build_html_content(report, context))
+      email =
+        new()
+        |> to({recipient_name, recipient.email})
+        |> from(@from)
+        |> subject(build_subject(report, context))
+        |> text_body(build_text_content(report, context))
+        |> html_body(build_html_content(report, context))
 
-    with {:ok, _metadata} <- Mailer.deliver(email) do
-      {:ok, email}
+      with {:ok, _metadata} <- Mailer.deliver(email) do
+        {:ok, email}
+      end
     end
   end
 

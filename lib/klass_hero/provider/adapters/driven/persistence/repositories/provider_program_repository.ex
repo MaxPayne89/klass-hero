@@ -8,6 +8,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
 
   @behaviour KlassHero.Provider.Domain.Ports.ForQueryingProviderPrograms
 
+  use KlassHero.Shared.Interaction
+
   import Ecto.Query
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProgramMapper
@@ -16,18 +18,22 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
 
   @impl true
   def get_by_id(program_id) when is_binary(program_id) do
-    case Repo.get(ProviderProgramProjectionSchema, program_id) do
-      nil -> {:error, :not_found}
-      row -> {:ok, ProviderProgramMapper.to_read_model(row)}
+    db_interaction operation: :get_by_id, entity: "provider_program" do
+      case Repo.get(ProviderProgramProjectionSchema, program_id) do
+        nil -> {:error, :not_found}
+        row -> {:ok, ProviderProgramMapper.to_read_model(row)}
+      end
     end
   end
 
   @impl true
   def list_by_provider(provider_id) when is_binary(provider_id) do
-    ProviderProgramProjectionSchema
-    |> where([p], p.provider_id == ^provider_id)
-    |> order_by([p], asc: p.name)
-    |> Repo.all()
-    |> Enum.map(&ProviderProgramMapper.to_read_model/1)
+    db_interaction operation: :list_by_provider, entity: "provider_program" do
+      ProviderProgramProjectionSchema
+      |> where([p], p.provider_id == ^provider_id)
+      |> order_by([p], asc: p.name)
+      |> Repo.all()
+      |> Enum.map(&ProviderProgramMapper.to_read_model/1)
+    end
   end
 end

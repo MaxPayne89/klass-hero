@@ -9,7 +9,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   @behaviour KlassHero.ProgramCatalog.Domain.Ports.ForListingPrograms
   @behaviour KlassHero.ProgramCatalog.Domain.Ports.ForUpdatingPrograms
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -37,9 +37,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def create(%Program{} = program) do
-    span do
-      set_attributes("db", operation: "insert", entity: "program")
-
+    db_interaction operation: :create, entity: "program" do
       attrs = ProgramMapper.to_schema(program)
 
       Logger.info("[ProgramRepository] Creating new program",
@@ -70,9 +68,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_all_programs do
-    span do
-      set_attributes("db", operation: "select", entity: "program")
-
+    db_interaction operation: :list_all_programs, entity: "program" do
       Logger.info("[ProgramRepository] Starting list_all_programs query")
 
       programs =
@@ -89,9 +85,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_programs_for_provider(provider_id) when is_binary(provider_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program")
-
+    db_interaction operation: :list_programs_for_provider, entity: "program" do
       Logger.info("[ProgramRepository] Starting list_programs_for_provider query for provider: #{provider_id}")
 
       programs =
@@ -109,8 +103,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def get_by_id(id) when is_binary(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "program")
+    db_interaction operation: :get_by_id, entity: "program" do
       RepositoryHelpers.get_by_uuid(ProgramSchema, id, ProgramMapper)
     end
   end
@@ -122,9 +115,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_programs_paginated(limit, cursor, category) do
-    span do
-      set_attributes("db", operation: "select", entity: "program")
-
+    db_interaction operation: :list_programs_paginated, entity: "program" do
       Logger.info(
         "[ProgramRepository] Starting list_programs_paginated query",
         limit: limit,
@@ -182,9 +173,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def update(%Program{} = program) do
-    span do
-      set_attributes("db", operation: "update", entity: "program")
-
+    db_interaction operation: :update, entity: "program" do
       Logger.info(
         "[ProgramRepository] Starting update operation for program",
         program_id: program.id,
@@ -270,9 +259,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
 
   @impl true
   def list_ended_program_ids(cutoff_date) do
-    span do
-      set_attributes("db", operation: "select", entity: "program")
-
+    db_interaction operation: :list_ended_program_ids, entity: "program" do
       ProgramSchema
       |> where([p], not is_nil(p.end_date))
       |> where([p], p.end_date < ^cutoff_date)
@@ -285,9 +272,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.Prog
   def get_by_ids([]), do: []
 
   def get_by_ids(ids) when is_list(ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "program")
-
+    db_interaction operation: :get_by_ids, entity: "program" do
       ProgramSchema
       |> where([p], p.id in ^ids)
       |> Repo.all()

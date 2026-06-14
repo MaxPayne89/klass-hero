@@ -8,7 +8,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
   @behaviour KlassHero.Provider.Domain.Ports.ForQueryingStaffMembers
   @behaviour KlassHero.Provider.Domain.Ports.ForStoringStaffMembers
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -24,9 +24,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def create(attrs) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "staff_member")
-
+    db_interaction operation: :create, entity: "staff_member" do
       %StaffMemberSchema{}
       |> StaffMemberSchema.create_changeset(attrs)
       |> Repo.insert()
@@ -43,18 +41,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def get(id) when is_binary(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "staff_member")
-
+    db_interaction operation: :get, entity: "staff_member" do
       RepositoryHelpers.get_by_id(StaffMemberSchema, id, StaffMemberMapper)
     end
   end
 
   @impl true
   def list_by_provider(provider_id) when is_binary(provider_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "staff_member")
-
+    db_interaction operation: :list_by_provider, entity: "staff_member" do
       members =
         StaffMemberSchema
         |> where([s], s.provider_id == ^provider_id)
@@ -68,9 +62,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def list_active_by_provider(provider_id) when is_binary(provider_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "staff_member")
-
+    db_interaction operation: :list_active_by_provider, entity: "staff_member" do
       members =
         StaffMemberSchema
         |> where([s], s.provider_id == ^provider_id and s.active == true)
@@ -84,9 +76,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def list_active_by_program(program_id) when is_binary(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "staff_member")
-
+    db_interaction operation: :list_active_by_program, entity: "staff_member" do
       members =
         from(s in StaffMemberSchema,
           join: a in ProgramStaffAssignmentSchema,
@@ -104,9 +94,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def update(staff_member) do
-    span do
-      set_attributes("db", operation: "update", entity: "staff_member")
-
+    db_interaction operation: :update, entity: "staff_member" do
       with {:ok, schema} <-
              RepositoryHelpers.get_schema_by_uuid(StaffMemberSchema, staff_member.id),
            attrs = StaffMemberMapper.to_schema(staff_member),
@@ -119,9 +107,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def delete(id) when is_binary(id) do
-    span do
-      set_attributes("db", operation: "delete", entity: "staff_member")
-
+    db_interaction operation: :delete, entity: "staff_member" do
       case Repo.get(StaffMemberSchema, id) do
         nil ->
           {:error, :not_found}
@@ -135,9 +121,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def get_by_token_hash(token_hash) when is_binary(token_hash) do
-    span do
-      set_attributes("db", operation: "select", entity: "staff_member")
-
+    db_interaction operation: :get_by_token_hash, entity: "staff_member" do
       query =
         from s in StaffMemberSchema,
           where: s.invitation_token_hash == ^token_hash and s.invitation_status == "sent"
@@ -151,9 +135,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def get_active_by_user(user_id) when is_binary(user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "staff_member")
-
+    db_interaction operation: :get_active_by_user, entity: "staff_member" do
       query = from [s, _p] in active_memberships_query(user_id), limit: 1, select: s
 
       case Repo.one(query) do
@@ -165,9 +147,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def list_active_memberships_by_user(user_id) when is_binary(user_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "staff_member")
-
+    db_interaction operation: :list_active_memberships_by_user, entity: "staff_member" do
       memberships =
         from([s, p] in active_memberships_query(user_id),
           select: %StaffMembership{
@@ -204,9 +184,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def touch_last_selected(user_id, provider_id) when is_binary(user_id) and is_binary(provider_id) do
-    span do
-      set_attributes("db", operation: "update", entity: "staff_member")
-
+    db_interaction operation: :touch_last_selected, entity: "staff_member" do
       query =
         from s in StaffMemberSchema,
           where: s.user_id == ^user_id and s.provider_id == ^provider_id and s.active == true
@@ -220,9 +198,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMembe
 
   @impl true
   def active_for_provider_and_user?(provider_id, user_id) when is_binary(provider_id) and is_binary(user_id) do
-    span do
-      set_attributes("db", operation: "exists", entity: "staff_member")
-
+    db_interaction operation: :active_for_provider_and_user, entity: "staff_member" do
       from(s in StaffMemberSchema,
         where: s.provider_id == ^provider_id and s.user_id == ^user_id and s.active == true
       )
