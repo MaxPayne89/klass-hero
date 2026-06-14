@@ -3,12 +3,16 @@ defmodule KlassHeroWeb.Telemetry do
 
   import Telemetry.Metrics
 
+  alias KlassHero.Shared.Interaction.TelemetryLogger
+
   def start_link(arg) do
     Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
   end
 
   @impl true
   def init(_arg) do
+    TelemetryLogger.attach()
+
     children = [
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
     ]
@@ -90,7 +94,19 @@ defmodule KlassHeroWeb.Telemetry do
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),
-      summary("vm.total_run_queue_lengths.io")
+      summary("vm.total_run_queue_lengths.io"),
+
+      # Outbound adapter I/O envelope (KlassHero.Shared.Interaction)
+      summary("klass_hero.interaction.stop.duration_us",
+        unit: :microsecond,
+        tags: [:io_kind, :operation, :status]
+      ),
+      counter("klass_hero.interaction.stop.count",
+        tags: [:io_kind, :operation, :status]
+      ),
+      counter("klass_hero.interaction.exception.count",
+        tags: [:io_kind, :operation]
+      )
     ]
   end
 

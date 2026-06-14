@@ -9,7 +9,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   @behaviour KlassHero.Enrollment.Domain.Ports.ForManagingEnrollments
   @behaviour KlassHero.Enrollment.Domain.Ports.ForQueryingEnrollments
 
-  use KlassHero.Shared.Tracing
+  use KlassHero.Shared.Interaction
 
   import Ecto.Query
 
@@ -31,9 +31,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def create(attrs) when is_map(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "enrollment")
-
+    db_interaction operation: :create, entity: "enrollment" do
       %EnrollmentSchema{}
       |> EnrollmentSchema.create_changeset(attrs)
       |> Repo.insert()
@@ -80,9 +78,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   def create_with_capacity_check(attrs, nil), do: create(attrs)
 
   def create_with_capacity_check(attrs, program_id) when is_map(attrs) and is_binary(program_id) do
-    span do
-      set_attributes("db", operation: "insert", entity: "enrollment")
-
+    db_interaction operation: :create_with_capacity_check, entity: "enrollment" do
       Ecto.Multi.new()
       |> Ecto.Multi.run(:lock_and_check, fn repo, _changes ->
         query =
@@ -136,17 +132,14 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def get_by_id(id) when is_binary(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment")
+    db_interaction operation: :get, entity: "enrollment" do
       RepositoryHelpers.get_by_id(EnrollmentSchema, id, EnrollmentMapper)
     end
   end
 
   @impl true
   def list_by_parent(parent_id) when is_binary(parent_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment")
-
+    db_interaction operation: :list_by_parent, entity: "enrollment" do
       EnrollmentQueries.base()
       |> EnrollmentQueries.by_parent(parent_id)
       |> EnrollmentQueries.order_by_enrolled_at_desc()
@@ -157,9 +150,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def count_monthly_bookings(parent_id, start_date, end_date) when is_binary(parent_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment")
-
+    db_interaction operation: :count_monthly_bookings, entity: "enrollment" do
       EnrollmentQueries.base()
       |> EnrollmentQueries.by_parent(parent_id)
       |> EnrollmentQueries.active_only()
@@ -171,9 +162,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def list_enrolled_identity_ids(program_id) when is_binary(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment")
-
+    db_interaction operation: :list_enrolled_identity_ids, entity: "enrollment" do
       EnrollmentQueries.base()
       |> EnrollmentQueries.by_program(program_id)
       |> EnrollmentQueries.active_only()
@@ -186,9 +175,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def enrolled?(program_id, identity_id) when is_binary(program_id) and is_binary(identity_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment")
-
+    db_interaction operation: :enrolled, entity: "enrollment" do
       EnrollmentQueries.base()
       |> EnrollmentQueries.by_program(program_id)
       |> EnrollmentQueries.active_only()
@@ -202,9 +189,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   def list_pending_by_programs([]), do: []
 
   def list_pending_by_programs(program_ids) when is_list(program_ids) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment")
-
+    db_interaction operation: :list_pending_by_programs, entity: "enrollment" do
       EnrollmentSchema
       |> where([e], e.status == :pending and e.program_id in ^program_ids)
       |> Repo.all()
@@ -214,9 +199,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def list_by_program(program_id) when is_binary(program_id) do
-    span do
-      set_attributes("db", operation: "select", entity: "enrollment")
-
+    db_interaction operation: :list_by_program, entity: "enrollment" do
       EnrollmentQueries.base()
       |> EnrollmentQueries.by_program(program_id)
       |> EnrollmentQueries.active_only()
@@ -228,9 +211,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
 
   @impl true
   def update(id, attrs) when is_binary(id) and is_map(attrs) do
-    span do
-      set_attributes("db", operation: "update", entity: "enrollment")
-
+    db_interaction operation: :update, entity: "enrollment" do
       case Repo.get(EnrollmentSchema, id) do
         nil ->
           {:error, :not_found}
