@@ -2149,7 +2149,8 @@ function pageParentDash(){
           <h1 style="font-size:1.6rem">Hi, Anna 👋</h1>
           <p class="small muted">Here's what's happening in your family this week.</p>
         </div>
-        <span class="pill pill-info">Parent account</span>
+        <span class="pill pill-info">Explorer · Free</span>
+        <button class="btn btn-yellow btn-sm" onclick="toast('Active Family — €8/month: custom appointments &amp; reminders, conflict alerts, and a shared planner for your whole household.')">Upgrade to Active Family</button>
       </div>
 
       <div style="margin-top:1.25rem;display:flex;gap:.6rem;flex-wrap:wrap">
@@ -2223,6 +2224,7 @@ function pageParentDash(){
             <div class="session-row" style="border:1px solid var(--border-light);border-radius:12px;padding:.9rem 1rem">
               <div style="flex:1;min-width:0"><div style="font-weight:600">${t}</div><div class="tiny muted">${meta}</div></div>
               <span class="pill ${st==="active"?"pill-success":"pill-cream"}">${st}</span>
+              <button class="btn btn-ghost btn-sm" onclick="toast('Demo: Rechnung downloaded — your German-compliant payment receipt, usable as childcare evidence for tax returns.')">${ic('info','icon-sm')} Rechnung</button>
               ${active
                 ? `<button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens provider chat')">Contact</button>`
                 : `<button class="btn btn-yellow btn-sm" onclick="toast('Thanks! Your 5★ review helps other families. (demo)')">★ Leave a Review</button>`}
@@ -2328,6 +2330,7 @@ function provTab(){
               <td>${p.enrolled}/${p.cap}</td>
               <td><span class="pill ${p.status==="published"?"pill-success":"pill-cream"}">${p.status}</span></td>
               <td style="white-space:nowrap;text-align:right">
+                <button class="btn btn-ghost btn-sm" onclick="toast('Demo: broadcast sent to all ${p.enrolled} enrolled families. Parents who enroll later will see the full message history from day one.')">${ic('chat','icon-sm')} Broadcast</button>
                 <button class="btn btn-ghost btn-sm" onclick="duplicateProgram(${i})">${ic('copy','icon-sm')} Duplicate</button>
                 <button class="btn btn-ghost btn-sm" onclick="toast('Demo: edit program')">Edit</button>
               </td>
@@ -2361,6 +2364,7 @@ function provTab(){
             <div style="flex:1;min-width:0"><div style="font-weight:600">${t2}</div><div class="tiny muted">${meta}</div><div class="tiny" style="color:var(--blue-700);font-weight:600;margin-top:1px;display:flex;align-items:center;gap:.25rem">${ic('user','icon-sm')} Led by ${hero}</div></div>
             <span class="pill pill-outline">${n}</span>
             <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens attendance roster &amp; check-in')">Roster</button>
+            <button class="btn btn-ghost btn-sm" onclick="toast('Demo: add a session note — developmental, positive, or welfare concern. Welfare notes trigger a parent notification.')">${ic('info','icon-sm')} Note</button>
           </div>`).join("")}
     </div>`;
   if(t==="finances") return provFinances();
@@ -2380,7 +2384,19 @@ function provTab(){
             : `<span class="pill pill-warning">pending</span><button class="btn btn-ghost btn-sm" onclick="toast('Invitation resent ✉')">Resend</button>`}
         </div>`).join("")}
     </div>
-    <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>Staff↔parent conversations are visible to you for oversight, and participants see a notice that provider-context messages may be monitored.</span></div>`;
+    <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>Staff↔parent conversations are visible to you for oversight, and participants see a notice that provider-context messages may be monitored.</span></div>
+
+    <!-- Team Accountability Declaration -->
+    <div class="card" style="margin-top:1.25rem;padding:1.5rem;border:2px solid var(--border-light)">
+      <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Team Accountability Declaration</h3>
+      <p class="small muted" style="margin-top:.5rem">As the Responsible Person on this account, you declare that every team member who delivers sessions or has unsupervised contact with children holds the required safety checks — including an up-to-date Erweitertes Führungszeugnis (Belegart O), at least one year's experience working with children, and a recognised child-safeguarding certificate. Klass Hero does not store staff certificates; you bear accountability for their accuracy.</p>
+      <div class="divider"></div>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <span class="pill pill-success">${ic('checkcircle','icon-sm')} Signed by Jonas Weber · 12 Jan 2026</span>
+        <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens declaration history. A new signature is required whenever team membership changes or annually, whichever comes first.')">View history</button>
+        <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="toast('Demo: re-sign declaration. This renews your annual accountability for all staff checks.')">Re-sign</button>
+      </div>
+    </div>`;
   return `
     <div class="card" style="padding:1.5rem;max-width:640px">
       <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Business profile</h3>
@@ -2794,10 +2810,10 @@ function provFinances(){
       <div class="card" style="padding:1.5rem">
         <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Recent payouts</h3>
         <table class="table" style="margin-top:.75rem">
-          <thead><tr><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+          <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
           <tbody>
             ${[["08 Jun","€820","paid"],["01 Jun","€760","paid"],["25 May","€910","paid"],["15 Jun","€900","scheduled"]]
-              .map(([d,a,st])=>`<tr><td>${d}</td><td style="font-weight:600">${a}</td><td><span class="pill ${st==='paid'?'pill-success':'pill-info'}">${st}</span></td></tr>`).join("")}
+              .map(([d,a,st])=>`<tr><td>${d}</td><td style="font-weight:600">${a}</td><td><span class="pill ${st==='paid'?'pill-success':'pill-info'}">${st}</span></td><td>${st==='paid'?`<button class="btn btn-ghost btn-sm" onclick="toast('Demo: Gutschrift downloaded — your self-billing credit note showing gross booking value, commission deducted, and net payout. Required for German VAT compliance.')">Gutschrift</button>`:''}</td></tr>`).join("")}
           </tbody>
         </table>
       </div>
