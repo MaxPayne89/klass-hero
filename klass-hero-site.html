@@ -2121,6 +2121,59 @@ function contactSuccess(){
    PAGE: Parent dashboard demo (blue accents — issue #95;
    Skills & Badges #703, reviews CTA #689, planner #113)
    ============================================================ */
+const CHILD_PROFILES = {
+  Emma:{age:8,color:"var(--blue-500)",medical:"Mild tree nut allergy — carry EpiPen. No other restrictions on activity.",
+    notes:[
+      {from:"Jonas Weber",prog:"Soccer Fundamentals",type:"positive",text:"Emma showed great leadership during today's scrimmage — took initiative to help a teammate who was struggling. Excellent session.",date:"12 Jun"},
+      {from:"Luna Hartmann",prog:"Watercolor Workshop",type:"developmental",text:"Emma is making wonderful progress with colour mixing. She's a bit reserved in group work — gently encouraging her to share ideas.",date:"11 Jun"}
+    ],incidents:[]},
+  Leo:{age:10,color:"#10b981",medical:"Asthma — inhaler kept in his bag at all times. Please confirm with instructors before each session.",
+    notes:[
+      {from:"Dr. Anke Meyer",prog:"Science Explorers",type:"positive",text:"Leo asked really sharp questions today — his curiosity is infectious! He's going to love the chemistry unit next week.",date:"13 Jun"}
+    ],incidents:[]}
+};
+function openChild(name){
+  const pr=CHILD_PROFILES[name]; if(!pr) return;
+  const m=document.getElementById('child-modal'); if(!m) return;
+  const typeStyle={positive:"background:#f0fdf4;color:#065f46",developmental:"background:#fffbeb;color:#92400e"};
+  m.innerHTML=`
+    <div class="modal" style="max-width:520px" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          <div class="avatar" style="width:42px;height:42px;background:${pr.color}">${name[0]}</div>
+          <div><h3 style="margin:0">${name}</h3><span class="tiny muted">${pr.age} years old</span></div>
+        </div>
+        <button class="modal-x" aria-label="Close" onclick="closeChild()">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:1.25rem">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+            <h4 style="font-family:var(--font-sans);font-weight:700;font-size:.95rem">Medical details</h4>
+            <button class="btn btn-ghost btn-sm" onclick="toast('Demo: edit medical details for ${name}')">Edit</button>
+          </div>
+          <div class="notice notice-info" style="margin:0">${ic('info','icon-sm')}<span>${pr.medical}</span></div>
+        </div>
+        <div>
+          <h4 style="font-family:var(--font-sans);font-weight:700;font-size:.95rem;margin-bottom:.6rem">Session notes from Heroes</h4>
+          ${pr.notes.map(n=>`
+            <div style="padding:.75rem;border-radius:10px;margin-bottom:.5rem;${typeStyle[n.type]||'background:#f9fafb'}">
+              <div class="tiny" style="font-weight:700;text-transform:uppercase;opacity:.7">${n.type}</div>
+              <div class="small" style="margin-top:.2rem">${n.text}</div>
+              <div class="tiny muted" style="margin-top:.3rem">${n.from} · ${n.prog} · ${n.date}</div>
+            </div>`).join('')}
+        </div>
+        <div>
+          <h4 style="font-family:var(--font-sans);font-weight:700;font-size:.95rem;margin-bottom:.5rem">Incident reports</h4>
+          ${pr.incidents.length
+            ? pr.incidents.map(ir=>`<div class="notice">${ir}</div>`).join('')
+            : `<p class="small" style="color:var(--success);font-weight:600">✓ No incidents on record.</p>`}
+        </div>
+      </div>
+    </div>`;
+  m.classList.add('open');
+}
+function closeChild(){ const m=document.getElementById('child-modal'); if(m) m.classList.remove('open'); }
+
 function pageParentDash(){
   const kids = [["Emma","8","var(--blue-500)","2 programs"],["Leo","10","#10b981","1 program"]];
   const sessions = [
@@ -2155,65 +2208,24 @@ function pageParentDash(){
       </div>
 
       <div style="margin-top:1.25rem;display:flex;gap:.6rem;flex-wrap:wrap">
-        ${kids.map(([n,a,c,p],i)=>`<button class="kidchip ${i===0?'on':''}" onclick="toast('Filtering for ${n} (demo)')"><span class="dot" style="background:${c}"></span> ${n} (${a}) <span class="tiny muted">· ${p}</span></button>`).join("")}
+        ${kids.map(([n,a,c,p],i)=>`<button class="kidchip ${i===0?'on':''}" onclick="openChild('${n}')"><span class="dot" style="background:${c}"></span> ${n} (${a}) <span class="tiny muted">· ${p}</span></button>`).join("")}
         <button class="kidchip" onclick="toast('Demo: add a child')">${ic('plus','icon-sm')} Add child</button>
       </div>
 
-      <!-- Skills & Badges — prominent panel under kid chips -->
-      <div style="margin-top:1rem;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid var(--border-light);border-radius:16px;padding:1.25rem 1.5rem">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:1.1rem">
-          <h3 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:700">Skills &amp; Badges</h3>
-          <span class="pill pill-success">🏅 1 badge earned</span>
+      <!-- Skills & Badges — compact strip under kid chips -->
+      <div style="margin-top:.85rem;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid var(--border-light);border-radius:14px;padding:1rem 1.25rem">
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.85rem">
+          <h3 style="font-family:var(--font-sans);font-size:1rem;font-weight:700">Skills &amp; Badges</h3>
+          <span class="pill pill-success" style="font-size:.78rem">🏅 1 earned</span>
         </div>
-        <div class="grid grid-2" style="gap:1.5rem">
-          <!-- Emma -->
+        <div class="grid grid-2" style="gap:1.25rem">
           <div>
-            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem">
-              <span class="dot" style="background:var(--blue-500);width:10px;height:10px"></span>
-              <span style="font-weight:700;font-size:.95rem">Emma</span>
-            </div>
-            <div style="display:flex;gap:.85rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
-              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem">
-                <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:1.6rem;box-shadow:0 3px 10px rgba(245,158,11,.35)">🏅</div>
-                <span class="tiny" style="font-weight:700;color:#92400e;text-align:center;line-height:1.2">Team<br>Player</span>
-              </div>
-              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
-                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">🎯</div>
-                <span class="tiny muted" style="text-align:center;line-height:1.2">Sharp<br>Focus</span>
-              </div>
-              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
-                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">🎨</div>
-                <span class="tiny muted" style="text-align:center;line-height:1.2">Creative<br>Spark</span>
-              </div>
-            </div>
-            ${[["Teamwork",80,"var(--success)"],["Coordination",55,"var(--blue-500)"],["Creativity",35,"#f59e0b"]].map(([s,p,c])=>`
-              <div style="margin-bottom:.55rem">
-                <div style="display:flex;justify-content:space-between" class="small"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div>
-                <div style="margin-top:.25rem;height:7px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px;transition:width .4s"></div></div>
-              </div>`).join("")}
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem"><span class="dot" style="background:var(--blue-500);width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Emma</span><span class="pill pill-success" style="font-size:.75rem">🏅 Team Player</span></div>
+            ${[["Teamwork",80,"var(--success)"],["Coordination",55,"var(--blue-500)"],["Creativity",35,"#f59e0b"]].map(([s,p,c])=>`<div style="margin-bottom:.45rem"><div style="display:flex;justify-content:space-between" class="tiny"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div><div style="margin-top:.2rem;height:6px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px"></div></div></div>`).join("")}
           </div>
-          <!-- Leo -->
           <div>
-            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem">
-              <span class="dot" style="background:#10b981;width:10px;height:10px"></span>
-              <span style="font-weight:700;font-size:.95rem">Leo</span>
-            </div>
-            <div style="display:flex;gap:.85rem;flex-wrap:wrap;margin-bottom:1rem;align-items:flex-end">
-              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
-                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">🔬</div>
-                <span class="tiny muted" style="text-align:center;line-height:1.2">Curious<br>Mind</span>
-              </div>
-              <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;opacity:.35">
-                <div style="width:54px;height:54px;border-radius:50%;background:#e5e7eb;border:2px dashed #9ca3af;display:flex;align-items:center;justify-content:center;font-size:1.6rem">💡</div>
-                <span class="tiny muted" style="text-align:center;line-height:1.2">Problem<br>Solver</span>
-              </div>
-            </div>
-            ${[["Curiosity",22,"#10b981"],["Scientific Thinking",15,"var(--blue-500)"]].map(([s,p,c])=>`
-              <div style="margin-bottom:.55rem">
-                <div style="display:flex;justify-content:space-between" class="small"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div>
-                <div style="margin-top:.25rem;height:7px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px"></div></div>
-              </div>`).join("")}
-            <p class="tiny muted" style="margin-top:.5rem">Skills log automatically after each attended session.</p>
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.6rem"><span class="dot" style="background:#10b981;width:8px;height:8px"></span><span style="font-weight:700;font-size:.9rem">Leo</span><span class="tiny muted">Building skills…</span></div>
+            ${[["Curiosity",22,"#10b981"],["Scientific Thinking",15,"var(--blue-500)"]].map(([s,p,c])=>`<div style="margin-bottom:.45rem"><div style="display:flex;justify-content:space-between" class="tiny"><span style="font-weight:600">${s}</span><span class="muted">${p}%</span></div><div style="margin-top:.2rem;height:6px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${p}%;height:100%;background:${c};border-radius:999px"></div></div></div>`).join("")}
           </div>
         </div>
       </div>
@@ -2279,7 +2291,8 @@ function pageParentDash(){
         </div>
       </div>
     </div>
-  </div>`;
+  </div>
+  <div class="modal-backdrop" id="child-modal" onclick="if(event.target===this)closeChild()"></div>`;
 }
 
 /* ============================================================
@@ -2302,7 +2315,6 @@ function pageProviderDash(){
       <a class="${provState.tab==='programs'?'on-yellow':''}" onclick="provState.tab='programs';route()">${ic('calendar','icon-sm')} My Programs</a>
       <a class="${provState.tab==='team'?'on-yellow':''}" onclick="provState.tab='team';route()">${ic('users','icon-sm')} Team &amp; Profiles</a>
       <a class="${provState.tab==='finances'?'on-yellow':''}" onclick="provState.tab='finances';route()">${ic('euro','icon-sm')} Finances</a>
-      <a class="${provState.tab==='edit'?'on-yellow':''}" onclick="provState.tab='edit';route()">${ic('user','icon-sm')} Edit Profile</a>
       <a href="#/community">${ic('users','icon-sm')} Community</a>
       <a onclick="toast('Demo: provider settings (account, business profile, billing)')">${ic('info','icon-sm')} Settings</a>
     </aside>
@@ -2316,7 +2328,7 @@ function pageProviderDash(){
         </div>
       </div>
       <div class="tabbar" style="margin-top:1.25rem">
-        ${[["overview","Overview"],["programs","My Programs"],["team","Team & Profiles"],["finances","Finances"],["edit","Edit Profile"]]
+        ${[["overview","Overview"],["programs","My Programs"],["team","Team & Profiles"],["finances","Finances"]]
           .map(([k,l])=>`<button class="${provState.tab===k?'on':''}" onclick="provState.tab='${k}';route()">${l}</button>`).join("")}
       </div>
       <div id="prov-tab">${provTab()}</div>
@@ -2360,6 +2372,16 @@ function provTab(){
           <span class="pill pill-success" style="margin-left:auto">Payouts active</span>
         </div>
       </div>
+    </div>
+    <!-- Hero Profile — inline in Overview -->
+    <div class="card" style="margin-top:1.25rem;padding:1.5rem;max-width:640px">
+      <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Hero Profile</h3>
+      <div class="f-group" style="margin-top:1rem"><label class="f-label">Display name</label><input class="f-input" value="Berlin Kickers Academy"></div>
+      <div class="f-group"><label class="f-label">About</label><textarea class="f-input">Youth football academy in Prenzlauer Berg run by licensed DFB coaches. Training kids since 2014.</textarea></div>
+      <div class="f-group"><label class="f-label">VAT status</label>
+        <select class="f-input"><option>Standard 19%</option><option>Reduced 7%</option><option selected>VAT exempt (Kleinunternehmer)</option></select>
+      </div>
+      <button class="btn btn-primary" onclick="toast('Hero Profile saved ✓ (demo)')">Save changes</button>
     </div>`;
   if(t==="programs") return `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
@@ -2416,6 +2438,7 @@ function provTab(){
     </div>`;
   if(t==="finances") return provFinances();
   if(t==="team") return `
+
     <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
       <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Team &amp; Profiles</h3>
       <button class="btn btn-primary btn-sm" onclick="toast('Demo: invite sent! You can resend invites while they are pending.')">${ic('plus','icon-sm')} Invite staff</button>
@@ -2443,16 +2466,6 @@ function provTab(){
         <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens declaration history. A new signature is required whenever team membership changes or annually, whichever comes first.')">View history</button>
         <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="toast('Demo: re-sign declaration. This renews your annual accountability for all staff checks.')">Re-sign</button>
       </div>
-    </div>`;
-  return `
-    <div class="card" style="padding:1.5rem;max-width:640px">
-      <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Business profile</h3>
-      <div class="f-group" style="margin-top:1rem"><label class="f-label">Business name</label><input class="f-input" value="Berlin Kickers Academy"></div>
-      <div class="f-group"><label class="f-label">Description</label><textarea class="f-input">Youth football academy in Prenzlauer Berg run by licensed DFB coaches. Training kids since 2014.</textarea></div>
-      <div class="f-group"><label class="f-label">VAT status</label>
-        <select class="f-input"><option>Standard 19%</option><option>Reduced 7%</option><option selected>VAT exempt (Kleinunternehmer)</option></select>
-      </div>
-      <button class="btn btn-primary" onclick="toast('Profile saved ✓ (demo)')">Save changes</button>
     </div>`;
 }
 function pendingList(){
