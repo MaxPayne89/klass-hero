@@ -32,7 +32,7 @@ defmodule KlassHero.Provider.Domain.Models.VerificationDocument do
   use KlassHero.Shared.Domain.Models.PersistenceSupport
 
   @valid_statuses [:pending, :approved, :rejected]
-  @valid_document_types ~w(business_registration insurance_certificate id_document tax_certificate other)
+  @valid_document_types ~w(business_registration insurance_certificate id_document tax_certificate experience_validation background_check safeguarding_certificate other)
 
   @doc """
   Returns the list of valid document statuses.

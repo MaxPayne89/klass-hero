@@ -55,7 +55,12 @@ defmodule KlassHero.Provider.Application.Commands.Verification.RejectVerificatio
       :verification_document_rejected,
       doc.id,
       :verification_document,
-      %{provider_id: doc.provider_profile_id, reviewer_id: reviewer_id}
+      %{
+        provider_id: doc.provider_profile_id,
+        reviewer_id: reviewer_id,
+        document_type: doc.document_type,
+        document_id: doc.id
+      }
     )
     |> EventDispatchHelper.dispatch(KlassHero.Provider)
   end

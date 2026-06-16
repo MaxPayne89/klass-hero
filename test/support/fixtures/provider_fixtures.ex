@@ -9,11 +9,13 @@ defmodule KlassHero.ProviderFixtures do
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCaseRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
   alias KlassHero.Provider.Domain.Models.IncidentReport
   alias KlassHero.Provider.Domain.Models.VerificationDocument
+  alias KlassHero.Provider.Domain.Models.VettingCase
   alias KlassHero.Repo
 
   @doc """
@@ -43,7 +45,15 @@ defmodule KlassHero.ProviderFixtures do
       |> ProviderProfileSchema.changeset(merged)
       |> Repo.insert()
 
-    ProviderProfileMapper.to_domain(schema)
+    profile = ProviderProfileMapper.to_domain(schema)
+
+    # Mirror CreateProviderProfile: every provider gets a seeded Vetting Case.
+    {:ok, _case} =
+      profile.id
+      |> VettingCase.new_for_track(profile.entity_type)
+      |> VettingCaseRepository.create()
+
+    profile
   end
 
   @doc """

@@ -41,6 +41,29 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfileTest do
       assert profile.verified == false
       assert profile.categories == []
     end
+
+    test "defaults entity_type to :individual" do
+      attrs = %{
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        identity_id: "660e8400-e29b-41d4-a716-446655440001",
+        business_name: "My Business"
+      }
+
+      assert {:ok, profile} = ProviderProfile.new(attrs)
+      assert profile.entity_type == :individual
+    end
+
+    test "accepts entity_type :business" do
+      attrs = %{
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        identity_id: "660e8400-e29b-41d4-a716-446655440001",
+        business_name: "My Business",
+        entity_type: :business
+      }
+
+      assert {:ok, profile} = ProviderProfile.new(attrs)
+      assert profile.entity_type == :business
+    end
   end
 
   describe "new/1 validation errors" do
@@ -87,6 +110,18 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfileTest do
 
       assert {:error, errors} = ProviderProfile.new(attrs)
       assert "Categories must be a list" in errors
+    end
+
+    test "returns error when entity_type is not :individual or :business" do
+      attrs = %{
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        identity_id: "uuid-123",
+        business_name: "My Business",
+        entity_type: :sole_trader
+      }
+
+      assert {:error, errors} = ProviderProfile.new(attrs)
+      assert "entity_type must be :individual or :business" in errors
     end
   end
 

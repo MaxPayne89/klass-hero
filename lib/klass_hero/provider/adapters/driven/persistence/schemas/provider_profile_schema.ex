@@ -28,6 +28,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
     field :verified_at, :utc_datetime
     field :categories, {:array, :string}, default: []
     field :profile_status, :string, default: "active"
+    field :entity_type, :string, default: "individual"
 
     belongs_to :verified_by, User, type: :binary_id
 
@@ -50,10 +51,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfile
       :verified_at,
       :verified_by_id,
       :categories,
-      :profile_status
+      :profile_status,
+      :entity_type
     ])
     |> validate_required([:identity_id, :business_name])
     |> validate_inclusion(:profile_status, ~w(draft active))
+    |> validate_inclusion(:entity_type, ~w(individual business))
     |> validate_profile_fields()
     |> validate_length(:logo_url, min: 1, max: 500)
     |> unique_constraint(:identity_id,

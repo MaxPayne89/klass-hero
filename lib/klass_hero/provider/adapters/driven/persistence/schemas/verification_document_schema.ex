@@ -48,6 +48,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VerificationDoc
     "insurance_certificate",
     "id_document",
     "tax_certificate",
+    "experience_validation",
+    "background_check",
+    "safeguarding_certificate",
     "other"
   ]
 

@@ -26,6 +26,7 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     :verified_by_id,
     :categories,
     :profile_status,
+    :entity_type,
     :inserted_at,
     :updated_at
   ]
@@ -45,6 +46,7 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
           verified_by_id: String.t() | nil,
           categories: [String.t()] | nil,
           profile_status: :draft | :active | nil,
+          entity_type: :individual | :business | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
@@ -83,6 +85,7 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     |> Map.put_new(:verified, false)
     |> Map.put_new(:categories, [])
     |> Map.put_new(:profile_status, :active)
+    |> Map.put_new(:entity_type, :individual)
   end
 
   @doc """
@@ -134,8 +137,15 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
     |> validate_verified_at(provider_profile.verified_at)
     |> validate_categories(provider_profile.categories)
     |> validate_profile_status(provider_profile.profile_status)
+    |> validate_entity_type(provider_profile.entity_type)
     |> validate_business_owner_email(provider_profile.business_owner_email)
   end
+
+  @valid_entity_types [:individual, :business]
+
+  defp validate_entity_type(errors, entity_type) when entity_type in @valid_entity_types, do: errors
+
+  defp validate_entity_type(errors, _), do: ["entity_type must be :individual or :business" | errors]
 
   defp validate_business_owner_email(errors, nil), do: errors
 

@@ -46,4 +46,43 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
       assert attrs.profile_status == "draft"
     end
   end
+
+  describe "entity_type mapping" do
+    test "to_domain/1 converts string to atom" do
+      schema = %ProviderProfileSchema{
+        id: Ecto.UUID.generate(),
+        identity_id: Ecto.UUID.generate(),
+        business_name: "Test",
+        entity_type: "business",
+        categories: [],
+        verified: false
+      }
+
+      assert ProviderProfileMapper.to_domain(schema).entity_type == :business
+    end
+
+    test "to_domain/1 defaults an unknown entity_type to :individual" do
+      schema = %ProviderProfileSchema{
+        id: Ecto.UUID.generate(),
+        identity_id: Ecto.UUID.generate(),
+        business_name: "Test",
+        entity_type: nil,
+        categories: [],
+        verified: false
+      }
+
+      assert ProviderProfileMapper.to_domain(schema).entity_type == :individual
+    end
+
+    test "to_schema/1 converts atom to string" do
+      domain = %ProviderProfile{
+        id: Ecto.UUID.generate(),
+        identity_id: Ecto.UUID.generate(),
+        business_name: "Test",
+        entity_type: :business
+      }
+
+      assert ProviderProfileMapper.to_schema(domain).entity_type == "business"
+    end
+  end
 end

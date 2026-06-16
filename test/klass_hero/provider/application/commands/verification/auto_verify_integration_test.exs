@@ -1,7 +1,7 @@
 defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegrationTest do
   @moduledoc """
-  Integration test for the full flow: approve all docs -> provider verified.
-  Reject a doc -> provider unverified.
+  Integration test for the full flow through the Vetting engine: approving every required
+  document step verifies the provider; rejecting a step's document unverifies it.
   """
 
   use KlassHero.DataCase, async: true
@@ -14,6 +14,9 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
   alias KlassHero.Provider.Application.Commands.Verification.RejectVerificationDocument
   alias KlassHero.ProviderFixtures
 
+  # The individual track's three document steps.
+  @individual_doc_types ~w(experience_validation background_check safeguarding_certificate)
+
   setup do
     setup_test_integration_events()
     provider = ProviderFixtures.provider_profile_fixture()
@@ -21,87 +24,46 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
     %{provider: provider, admin: admin}
   end
 
+  defp approve_doc(provider, admin, document_type) do
+    doc = ProviderFixtures.verification_document_fixture(provider_id: provider.id, document_type: document_type)
+    ApproveVerificationDocument.execute(%{document_id: doc.id, reviewer_id: admin.id})
+  end
+
+  defp verified?(provider) do
+    {:ok, profile} = ProviderProfileRepository.get(provider.id)
+    profile.verified
+  end
+
   describe "full approval flow" do
-    test "approving all documents auto-verifies provider", %{provider: provider, admin: admin} do
-      doc1 =
-        ProviderFixtures.verification_document_fixture(
-          provider_id: provider.id,
-          document_type: "business_registration"
-        )
+    test "verifies only once every required document step is approved", %{provider: provider, admin: admin} do
+      [first, second, last] = @individual_doc_types
 
-      doc2 =
-        ProviderFixtures.verification_document_fixture(
-          provider_id: provider.id,
-          document_type: "insurance_certificate"
-        )
+      approve_doc(provider, admin, first)
+      refute verified?(provider)
 
-      # Approve first doc -- provider should NOT be verified yet
-      ApproveVerificationDocument.execute(%{document_id: doc1.id, reviewer_id: admin.id})
+      approve_doc(provider, admin, second)
+      refute verified?(provider)
 
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
-      assert profile.verified == false
-
-      # Approve second doc -- NOW provider should be verified
-      ApproveVerificationDocument.execute(%{document_id: doc2.id, reviewer_id: admin.id})
-
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
-      assert profile.verified == true
-      assert profile.verified_at != nil
+      approve_doc(provider, admin, last)
+      assert verified?(provider)
     end
 
-    test "single document approval auto-verifies provider", %{provider: provider, admin: admin} do
-      doc =
-        ProviderFixtures.verification_document_fixture(
-          provider_id: provider.id,
-          document_type: "business_registration"
-        )
-
-      ApproveVerificationDocument.execute(%{document_id: doc.id, reviewer_id: admin.id})
-
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
-      assert profile.verified == true
+    test "a document type outside the track never verifies", %{provider: provider, admin: admin} do
+      approve_doc(provider, admin, "tax_certificate")
+      refute verified?(provider)
     end
   end
 
   describe "rejection after verification" do
-    test "rejecting a doc after verification auto-unverifies provider", %{
-      provider: provider,
-      admin: admin
-    } do
-      doc1 =
-        ProviderFixtures.verification_document_fixture(
-          provider_id: provider.id,
-          document_type: "business_registration"
-        )
+    test "rejecting a required step's document unverifies the provider", %{provider: provider, admin: admin} do
+      for document_type <- @individual_doc_types, do: approve_doc(provider, admin, document_type)
+      assert verified?(provider)
 
-      doc2 =
-        ProviderFixtures.verification_document_fixture(
-          provider_id: provider.id,
-          document_type: "insurance_certificate"
-        )
+      # A fresh background-check document is submitted and rejected, resetting that step.
+      doc = ProviderFixtures.verification_document_fixture(provider_id: provider.id, document_type: "background_check")
+      RejectVerificationDocument.execute(%{document_id: doc.id, reviewer_id: admin.id, reason: "Expired"})
 
-      # Approve both to get verified
-      ApproveVerificationDocument.execute(%{document_id: doc1.id, reviewer_id: admin.id})
-      ApproveVerificationDocument.execute(%{document_id: doc2.id, reviewer_id: admin.id})
-
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
-      assert profile.verified == true
-
-      # Now submit a new doc and have it rejected
-      doc3 =
-        ProviderFixtures.verification_document_fixture(
-          provider_id: provider.id,
-          document_type: "tax_certificate"
-        )
-
-      RejectVerificationDocument.execute(%{
-        document_id: doc3.id,
-        reviewer_id: admin.id,
-        reason: "Expired"
-      })
-
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
-      assert profile.verified == false
+      refute verified?(provider)
     end
   end
 end

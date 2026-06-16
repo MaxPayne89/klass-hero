@@ -12,6 +12,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CreateProviderProfil
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCaseRepository
   alias KlassHero.Provider.Domain.Models.ProviderProfile
 
   defp valid_attrs(overrides \\ %{}) do
@@ -37,6 +38,15 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CreateProviderProfil
       assert profile.business_name == attrs.business_name
       assert profile.verified == false
       assert profile.categories == []
+    end
+
+    test "seeds a vetting case with the individual track" do
+      assert {:ok, profile} = Provider.create_provider_profile(valid_attrs())
+
+      assert {:ok, case_} = VettingCaseRepository.get_by_provider(profile.id)
+      assert case_.entity_type == :individual
+      assert case_.lifecycle == :not_started
+      assert Enum.map(case_.steps, & &1.key) == [:experience, :background, :safeguarding]
     end
 
     test "auto-generates an id when not provided" do

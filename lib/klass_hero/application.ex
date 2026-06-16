@@ -31,7 +31,7 @@ defmodule KlassHero.Application do
   alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
   alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
   alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
-  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProviderVerificationStatus
+  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
   alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
   alias KlassHero.Shared.Adapters.Driven.Events.EventSubscriber
@@ -100,8 +100,8 @@ defmodule KlassHero.Application do
         {DomainEventBus,
          context: KlassHero.Provider,
          handlers: [
-           {:verification_document_approved, {CheckProviderVerificationStatus, :handle}},
-           {:verification_document_rejected, {CheckProviderVerificationStatus, :handle}},
+           {:verification_document_approved, {AdvanceVettingStepOnDocumentReview, :handle}},
+           {:verification_document_rejected, {AdvanceVettingStepOnDocumentReview, :handle}},
            {:staff_assigned_to_program,
             {KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle}},
            {:staff_unassigned_from_program,

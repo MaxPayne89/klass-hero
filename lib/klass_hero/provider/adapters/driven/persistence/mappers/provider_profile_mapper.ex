@@ -31,6 +31,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
       verified_by_id: schema.verified_by_id && to_string(schema.verified_by_id),
       categories: schema.categories,
       profile_status: string_to_profile_status(schema.profile_status),
+      entity_type: string_to_entity_type(schema.entity_type),
       inserted_at: schema.inserted_at,
       updated_at: schema.updated_at
     }
@@ -56,7 +57,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
       verified_at: provider_profile.verified_at,
       verified_by_id: provider_profile.verified_by_id,
       categories: provider_profile.categories,
-      profile_status: profile_status_to_string(provider_profile.profile_status)
+      profile_status: profile_status_to_string(provider_profile.profile_status),
+      entity_type: entity_type_to_string(provider_profile.entity_type)
     }
     |> maybe_add_id(provider_profile.id)
   end
@@ -67,4 +69,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfile
 
   defp profile_status_to_string(:draft), do: "draft"
   defp profile_status_to_string(_), do: "active"
+
+  defp string_to_entity_type("business"), do: :business
+  defp string_to_entity_type("individual"), do: :individual
+  defp string_to_entity_type(_), do: :individual
+
+  defp entity_type_to_string(:business), do: "business"
+  defp entity_type_to_string(_), do: "individual"
 end
