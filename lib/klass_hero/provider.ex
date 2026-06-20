@@ -26,6 +26,7 @@ defmodule KlassHero.Provider do
     top_level?: true,
     deps: [KlassHero, KlassHero.Shared],
     exports: [
+      Domain.Models.IdentityVerification,
       Domain.Models.IncidentReport,
       Domain.Models.ProviderProfile,
       Domain.Models.StaffMember,
@@ -78,10 +79,13 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Queries.StaffMembers.ListStaffAssignedPrograms
   alias KlassHero.Provider.Application.Queries.Verification.GetVerificationDocumentPreview
   alias KlassHero.Provider.Application.Queries.VerificationDocumentQueries
+  alias KlassHero.Provider.Domain.Models.IdentityVerification
   alias KlassHero.Provider.Domain.Models.ProgramStaffAssignment
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHero.Provider.Domain.Models.VerificationDocument
+  alias KlassHero.Provider.Domain.Models.VettingCase
+  alias KlassHero.Provider.Domain.Ports.ForQueryingIdentityVerifications
   alias KlassHero.Provider.Domain.Ports.ForQueryingVerificationDocuments
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
@@ -551,6 +555,36 @@ defmodule KlassHero.Provider do
   @spec get_total_session_count(String.t()) :: non_neg_integer()
   def get_total_session_count(provider_id) when is_binary(provider_id) do
     @session_stats_repo.get_total_count(provider_id)
+  end
+
+  @identity_query Application.compile_env!(:klass_hero, [:provider, :for_querying_identity_verifications])
+  @vetting_query Application.compile_env!(:klass_hero, [:provider, :for_querying_vetting_cases])
+
+  @doc "Returns the most recent Stripe Identity verification for a provider, or `{:error, :not_found}`."
+  @spec get_latest_identity_verification(String.t()) ::
+          {:ok, IdentityVerification.t()} | {:error, :not_found}
+  def get_latest_identity_verification(provider_id) when is_binary(provider_id) do
+    @identity_query.get_latest_by_provider(provider_id)
+  end
+
+  @doc "Lists all identity verifications with provider business names for admin review (newest first)."
+  @spec list_identity_verifications_for_admin() ::
+          {:ok, [ForQueryingIdentityVerifications.admin_result()]}
+  def list_identity_verifications_for_admin do
+    @identity_query.list_for_admin()
+  end
+
+  @doc """
+  Returns `true` when the provider's Stripe Identity vetting step is approved.
+
+  False for a provider with no vetting case, no identity step, or an identity step not yet approved.
+  """
+  @spec identity_step_approved?(String.t()) :: boolean()
+  def identity_step_approved?(provider_id) when is_binary(provider_id) do
+    case @vetting_query.get_by_provider(provider_id) do
+      {:ok, case_} -> VettingCase.identity_step_approved?(case_)
+      {:error, :not_found} -> false
+    end
   end
 
   @doc """

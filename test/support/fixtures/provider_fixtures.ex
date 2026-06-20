@@ -7,12 +7,14 @@ defmodule KlassHero.ProviderFixtures do
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IdentityVerificationRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCaseRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
+  alias KlassHero.Provider.Domain.Models.IdentityVerification
   alias KlassHero.Provider.Domain.Models.IncidentReport
   alias KlassHero.Provider.Domain.Models.VerificationDocument
   alias KlassHero.Provider.Domain.Models.VettingCase
@@ -254,5 +256,51 @@ defmodule KlassHero.ProviderFixtures do
       )
 
     %{user: user, provider: provider, staff: staff}
+  end
+
+  @doc """
+  Seeds a `VettingCase` (with its track's steps) for an existing provider.
+
+  Mirrors what `CreateProviderProfile` does in production — useful when the provider was inserted
+  via the factory (which doesn't seed a case). Defaults to the `:individual` track, which has a
+  Stripe Identity step.
+  """
+  def vetting_case_fixture(attrs \\ %{}) do
+    attrs_map = Map.new(attrs)
+    provider_id = attrs_map[:provider_id] || provider_profile_fixture().id
+    entity_type = attrs_map[:entity_type] || :individual
+
+    {:ok, case_} =
+      provider_id
+      |> VettingCase.new_for_track(entity_type)
+      |> VettingCaseRepository.create()
+
+    case_
+  end
+
+  @doc """
+  Creates an `IdentityVerification` (Stripe Identity evidence) for a provider.
+
+  Defaults to a `:processing` in-flight session. Pass `:status`, `:outcome`, and
+  `:failure_reason` to model a terminal outcome, e.g.
+  `identity_verification_fixture(provider_id: id, status: :verified, outcome: :pass)`.
+  """
+  def identity_verification_fixture(attrs \\ %{}) do
+    attrs_map = Map.new(attrs)
+    provider_id = attrs_map[:provider_id] || provider_profile_fixture().id
+
+    iv =
+      %IdentityVerification{
+        id: Ecto.UUID.generate(),
+        provider_id: provider_id,
+        stripe_session_id: attrs_map[:stripe_session_id] || "vs_test_#{System.unique_integer([:positive])}",
+        status: attrs_map[:status] || :processing,
+        outcome: attrs_map[:outcome],
+        failure_reason: attrs_map[:failure_reason],
+        verified_at: attrs_map[:verified_at]
+      }
+
+    {:ok, persisted} = IdentityVerificationRepository.create(iv)
+    persisted
   end
 end

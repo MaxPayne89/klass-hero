@@ -218,7 +218,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
      |> assign(enrolled_total: enrolled_total)
      |> assign(pending_requests: pending_requests)
      |> assign(pending_enrollments: pending_enrollments)
-     |> assign(top_programs: top_programs)}
+     |> assign(top_programs: top_programs)
+     |> assign(identity_step_approved?: Provider.identity_step_approved?(provider.id))}
   end
 
   @impl true
@@ -245,6 +246,22 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   @impl true
+  def handle_params(_params, _uri, %{assigns: %{live_action: :verification}} = socket) do
+    provider = socket.assigns.current_scope.provider
+
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "identity_verification:identity_verification_passed")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "identity_verification:identity_verification_failed")
+    end
+
+    {:noreply,
+     socket
+     |> assign(page_title: gettext("Identity verification"))
+     |> assign(active_nav: :home)
+     |> assign_identity_verification(provider.id)}
+  end
+
+  @impl true
   def handle_params(_params, _uri, socket) do
     {:noreply, assign(socket, active_nav: :home)}
   end
@@ -264,6 +281,17 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: :enrollment_confirmed}}, socket) do
     {:noreply, refresh_pending_enrollments(socket)}
+  end
+
+  @impl true
+  def handle_info({:domain_event, %DomainEvent{event_type: event_type, payload: %{provider_id: provider_id}}}, socket)
+      when event_type in [:identity_verification_passed, :identity_verification_failed] do
+    # The identity topics are global, so re-fetch only when the event is for this provider.
+    if provider_id == socket.assigns.current_scope.provider.id do
+      {:noreply, assign_identity_verification(socket, provider_id)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
@@ -300,6 +328,25 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         )
 
         {:noreply, put_flash(socket, :error, gettext("Failed to approve"))}
+    end
+  end
+
+  @impl true
+  def handle_event("start_identity_verification", _params, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+    return_url = url(~p"/provider/dashboard/verification")
+
+    case Provider.create_identity_verification_session(provider_id, return_url) do
+      {:ok, %{redirect_url: redirect_url}} ->
+        {:noreply, redirect(socket, external: redirect_url)}
+
+      {:error, reason} ->
+        Logger.error("[Dashboard.start_identity_verification] Failed",
+          provider_id: provider_id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Couldn't start identity verification. Please try again."))}
     end
   end
 
@@ -1316,6 +1363,21 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
           <%= case @live_action do %>
             <% :overview -> %>
+              <.link
+                :if={!@identity_step_approved?}
+                id="identity-verify-cta"
+                navigate={~p"/provider/dashboard/verification"}
+                class={[
+                  "flex items-center justify-between gap-3 mb-4 p-4 rounded-xl",
+                  "bg-hero-yellow-50 border border-hero-yellow-300 no-underline"
+                ]}
+              >
+                <span class="flex items-center gap-2 text-sm font-semibold">
+                  <.icon name="hero-identification" class="w-5 h-5 shrink-0" />
+                  {gettext("Verify your identity to get approved")}
+                </span>
+                <span class="text-sm font-semibold shrink-0">{gettext("Start")} →</span>
+              </.link>
               <.overview_section
                 business={@business}
                 total_sessions_completed={@total_sessions_completed}
@@ -1364,11 +1426,83 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
                 invite_mode={@invite_mode}
                 single_invite_form={@single_invite_form}
               />
+            <% :verification -> %>
+              <.identity_verification_section
+                identity_state={@identity_state}
+                failure_reason={@identity_failure_reason}
+              />
           <% end %>
         </.pv_dashboard_chrome>
     <% end %>
     """
   end
+
+  attr :identity_state, :atom, required: true
+  attr :failure_reason, :string, default: nil
+
+  defp identity_verification_section(assigns) do
+    ~H"""
+    <div id="identity-verification" class="max-w-xl mx-auto p-4 md:p-6">
+      <h1 class={[Theme.typography(:section_title), Theme.text_color(:heading), "mb-2"]}>
+        {gettext("Identity verification")}
+      </h1>
+
+      <%= case @identity_state do %>
+        <% :not_started -> %>
+          <div id="identity-verify-not-started" class={[Theme.card_variant(:default), "p-4 md:p-6"]}>
+            <p class={["mb-4 text-sm", Theme.text_color(:muted)]}>
+              {gettext(
+                "Verify your identity with our partner Stripe to get approved. You'll be sent to a secure page and brought back here."
+              )}
+            </p>
+            <.button id="identity-verify-start" phx-click="start_identity_verification">
+              {gettext("Verify identity")}
+            </.button>
+          </div>
+        <% :in_progress -> %>
+          <div id="identity-verify-in-progress" class={[Theme.card_variant(:default), "p-4 md:p-6"]}>
+            <p class={["text-sm", Theme.text_color(:body)]}>
+              {gettext("Verifying your identity… this can take a moment.")}
+            </p>
+          </div>
+        <% :approved -> %>
+          <div
+            id="identity-verify-approved"
+            class={[Theme.card_variant(:default), "p-4 md:p-6 flex items-center gap-2"]}
+          >
+            <.icon name="hero-check-circle-solid" class="w-6 h-6 text-green-600" />
+            <p class={["text-sm font-medium", Theme.text_color(:body)]}>
+              {gettext("Your identity is verified.")}
+            </p>
+          </div>
+        <% :failed -> %>
+          <div id="identity-verify-failed" class={[Theme.card_variant(:default), "p-4 md:p-6"]}>
+            <p class="mb-4 text-sm text-red-700">{failure_reason_message(@failure_reason)}</p>
+            <.button id="identity-verify-retry" phx-click="start_identity_verification">
+              {gettext("Retry verification")}
+            </.button>
+          </div>
+      <% end %>
+    </div>
+    """
+  end
+
+  # Maps a Stripe Identity failure_reason to the provider-facing copy on the failed state.
+  # "under_18" is terminal (Klass Hero is 18+); the rest are retryable, so the wording invites it.
+  defp failure_reason_message("under_18"),
+    do: gettext("Klass Hero is only open to providers aged 18 and over, so we can't approve this account.")
+
+  defp failure_reason_message("age_unverifiable"),
+    do:
+      gettext("We couldn't read your date of birth from your ID. A clearer photo of your document should do the trick.")
+
+  defp failure_reason_message("requires_input"),
+    do: gettext("Something tripped up the check — usually a blurry photo. Give it another go.")
+
+  defp failure_reason_message("canceled"),
+    do: gettext("Looks like the check didn't finish. Pick up where you left off whenever you're ready.")
+
+  defp failure_reason_message(_reason), do: gettext("We couldn't verify your identity. Please try again.")
 
   # Map this LV's live_action to the provider_nav_tabs vocabulary.
   # `:edit` falls back to :overview so the tab bar still shows a sensible
@@ -1931,6 +2065,22 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
         []
     end
+  end
+
+  # Derives the provider-facing identity verification state from the latest Stripe Identity record.
+  # `:not_started` when no session has been run yet; otherwise mapped from status/outcome.
+  defp assign_identity_verification(socket, provider_id) do
+    {state, failure_reason} =
+      case Provider.get_latest_identity_verification(provider_id) do
+        {:error, :not_found} -> {:not_started, nil}
+        {:ok, %{status: :processing}} -> {:in_progress, nil}
+        {:ok, %{outcome: :pass}} -> {:approved, nil}
+        {:ok, %{outcome: :fail, failure_reason: reason}} -> {:failed, reason}
+      end
+
+    socket
+    |> assign(identity_state: state)
+    |> assign(identity_failure_reason: failure_reason)
   end
 
   defp update_staff_count(socket, count) do

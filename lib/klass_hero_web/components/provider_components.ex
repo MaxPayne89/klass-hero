@@ -49,6 +49,42 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp doc_status_style(_), do: {"bg-hero-grey-100", "text-hero-grey-600", gettext("Unknown")}
 
   @doc """
+  Renders a colored status badge for a Stripe Identity verification outcome.
+
+  Takes the identity verification's `status` and `outcome` and shows pass/fail/in-progress/pending.
+
+  ## Examples
+
+      <.identity_status_badge status={:verified} outcome={:pass} />
+      <.identity_status_badge status={:processing} outcome={nil} />
+  """
+  attr :status, :atom, required: true
+  attr :outcome, :atom, default: nil
+
+  def identity_status_badge(assigns) do
+    {bg_class, text_class, label} = identity_status_style(assigns.status, assigns.outcome)
+    assigns = assign(assigns, bg_class: bg_class, text_class: text_class, label: label)
+
+    ~H"""
+    <span class={[
+      "px-2.5 py-1 text-xs font-medium",
+      Theme.rounded(:full),
+      @bg_class,
+      @text_class
+    ]}>
+      {@label}
+    </span>
+    """
+  end
+
+  defp identity_status_style(_status, :pass), do: {"bg-green-100", "text-green-800", gettext("Passed")}
+  defp identity_status_style(_status, :fail), do: {"bg-red-100", "text-red-800", gettext("Failed")}
+
+  defp identity_status_style(:processing, _outcome), do: {"bg-yellow-100", "text-yellow-800", gettext("In progress")}
+
+  defp identity_status_style(_status, _outcome), do: {"bg-hero-grey-100", "text-hero-grey-600", gettext("Pending")}
+
+  @doc """
   Renders the provider dashboard tab navigation.
 
   `current_tab` is the active tab as the *component* understands it

@@ -16,6 +16,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IdentityVe
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IdentityVerificationMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IdentityVerificationSchema
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
 
@@ -65,6 +66,29 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IdentityVe
         nil -> {:error, :not_found}
         schema -> {:ok, IdentityVerificationMapper.to_domain(schema)}
       end
+    end
+  end
+
+  @impl true
+  def list_for_admin do
+    db_interaction operation: :list_for_admin, entity: "identity_verification" do
+      query =
+        from(i in IdentityVerificationSchema,
+          join: p in ProviderProfileSchema,
+          on: p.id == i.provider_id,
+          order_by: [desc: i.inserted_at],
+          select: {i, p.business_name}
+        )
+
+      results =
+        Enum.map(Repo.all(query), fn {schema, business_name} ->
+          %{
+            identity_verification: IdentityVerificationMapper.to_domain(schema),
+            provider_business_name: business_name
+          }
+        end)
+
+      {:ok, results}
     end
   end
 

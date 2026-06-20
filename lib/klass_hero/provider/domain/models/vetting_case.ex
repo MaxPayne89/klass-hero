@@ -125,6 +125,14 @@ defmodule KlassHero.Provider.Domain.Models.VettingCase do
     end)
   end
 
+  @doc "Returns `true` when the track's Stripe Identity step exists and is approved."
+  @spec identity_step_approved?(t()) :: boolean()
+  def identity_step_approved?(%__MODULE__{steps: steps}) do
+    Enum.any?(steps, fn step ->
+      step.completed_via == {:stripe_identity} and step.status == :approved
+    end)
+  end
+
   @doc """
   Resets the step with the given key and every step that transitively depends on it (the
   reverse-edge closure of `requires`) back to `:not_started`, then recomputes the lifecycle.
