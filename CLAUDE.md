@@ -40,6 +40,10 @@ mix usage_rules.docs Enum.zip           # Get docs for function/module
 mix usage_rules.search_docs "query"     # Search across all packages
 ```
 
+## Development Workflow
+
+Use Test-Driven Development (TDD) for all feature implementation and refactoring: write failing tests first, then implement, then verify green before committing.
+
 ## Architecture
 
 ### Bounded Contexts (DDD + Ports & Adapters)
@@ -151,7 +155,7 @@ Router defines 5 `live_session` scopes with role-based access:
 
 **Tidewave MCP** (ALWAYS prefer over bash for Phoenix work): `project_eval`, `get_docs`, `execute_sql_query`, `get_logs`, `get_source_location`, `get_ecto_schemas`.
 
-If Tidewave unavailable: Alert user immediately - indicates Phoenix server not running or MCP issue.
+When an MCP server or tool appears unavailable, retry before declaring it down — verify the server is actually running first. Only after confirming it is genuinely down, alert the user (indicates Phoenix server not running or MCP issue).
 
 **Playwright MCP** for UI testing: test LiveView interactions, verify mobile-responsive designs.
 
@@ -173,6 +177,10 @@ Examples: `feat: add staff invitation flow`, `fix: correct enrollment fee calcul
 
 **Merge strategy:** Squash-merge all PRs onto `main`; always rebase the branch onto `origin/main` before opening or updating a PR. See `.claude/rules/workflow.md#merge-strategy`.
 
+**Before commit/push:** Run the full test suite and precommit checks before committing or pushing, and only commit the specific files relevant to the requested change.
+
+**Repo/version state:** Do not create new branches, hold back dependencies, or switch branches with uncommitted changes without explicit user confirmation; prefer asking before making decisions that alter repo or version state.
+
 ## CI Pipeline
 
 These checks run automatically on every PR — don't manually recheck what CI catches:
@@ -192,6 +200,10 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 
 - **Never** use `Multi.run` for side-effects — `Multi.run` is for operations that need to be part of the transaction
 - **Never** read data outside a `Multi` transaction and use it inside — fetch within the Multi to avoid race conditions
+
+## Debugging
+
+When debugging, confirm root cause with concrete data (e.g., live DOM snapshots, logs) before proposing a hypothesis; avoid jumping to speculative explanations like malicious injection.
 
 ## PR Review Comments
 
