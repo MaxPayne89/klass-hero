@@ -65,6 +65,8 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFromProgram
   alias KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMember
   alias KlassHero.Provider.Application.Commands.Verification.ApproveVerificationDocument
+  alias KlassHero.Provider.Application.Commands.Verification.CreateIdentityVerificationSession
+  alias KlassHero.Provider.Application.Commands.Verification.RecordIdentityVerificationOutcome
   alias KlassHero.Provider.Application.Commands.Verification.RejectVerificationDocument
   alias KlassHero.Provider.Application.Commands.Verification.SubmitVerificationDocument
   alias KlassHero.Provider.Application.Queries.IncidentReportQueries
@@ -197,6 +199,16 @@ defmodule KlassHero.Provider do
       reviewer_id: reviewer_id,
       reason: reason
     })
+  end
+
+  @doc "Starts a Stripe Identity verification session for a provider, returning the redirect url."
+  def create_identity_verification_session(provider_id, return_url) do
+    CreateIdentityVerificationSession.execute(%{provider_id: provider_id, return_url: return_url})
+  end
+
+  @doc "Records a Stripe Identity outcome (called by the webhook controller)."
+  def record_identity_verification_outcome(outcome) do
+    RecordIdentityVerificationOutcome.execute(outcome)
   end
 
   @doc "Verifies a provider (admin only)."

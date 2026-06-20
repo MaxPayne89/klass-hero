@@ -102,15 +102,23 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfile do
   def verified?(_), do: false
 
   @doc """
-  Marks a provider profile as verified by an admin.
+  Marks a provider profile as verified.
 
-  Records the admin who performed the verification and the timestamp.
+  Records the admin who performed the verification and the timestamp. A `nil` admin denotes a
+  **system verification** — the Vetting engine crossing to `:verified` with no human reviewer
+  (e.g. when a Stripe Identity outcome is the final required step); `verified_by_id` is left nil.
   Idempotent - verifying an already-verified provider updates the audit trail.
   """
   def verify(%__MODULE__{} = profile, admin_id) when is_binary(admin_id) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     {:ok, %{profile | verified: true, verified_at: now, verified_by_id: admin_id, updated_at: now}}
+  end
+
+  def verify(%__MODULE__{} = profile, nil) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    {:ok, %{profile | verified: true, verified_at: now, verified_by_id: nil, updated_at: now}}
   end
 
   @doc """

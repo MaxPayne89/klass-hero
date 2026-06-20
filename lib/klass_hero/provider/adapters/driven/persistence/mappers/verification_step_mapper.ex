@@ -50,6 +50,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.VerificationSte
   end
 
   defp encode_completed_via({:document, document_type}), do: "document:" <> document_type
+  defp encode_completed_via({:stripe_identity}), do: "stripe_identity"
 
   defp decode_completed_via("document:" <> document_type), do: {:document, document_type}
+  defp decode_completed_via("stripe_identity"), do: {:stripe_identity}
 end

@@ -25,12 +25,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCas
 
       assert {:ok, created} = VettingCaseRepository.create(case_)
       assert created.lifecycle == :not_started
-      assert Enum.map(created.steps, & &1.key) == [:experience, :background, :safeguarding]
+      assert Enum.map(created.steps, & &1.key) == [:identity, :experience, :background, :safeguarding]
       assert Enum.all?(created.steps, &(&1.id != nil))
 
       assert {:ok, loaded} = VettingCaseRepository.get_by_provider(pid)
       assert loaded.id == created.id
-      assert Enum.map(loaded.steps, & &1.key) == [:experience, :background, :safeguarding]
+      assert Enum.map(loaded.steps, & &1.key) == [:identity, :experience, :background, :safeguarding]
     end
 
     test "get_by_provider/1 returns :not_found for a provider with no case" do

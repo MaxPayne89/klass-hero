@@ -8,6 +8,7 @@ alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behaviora
 alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.ParticipationRepository
 alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
 alias KlassHero.Provider.Adapters.Driven.Notifications.StubIncidentNotificationScheduler
+alias KlassHero.Provider.Adapters.Driven.StripeIdentityAdapter
 alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
@@ -76,12 +77,16 @@ config :klass_hero, :storage,
   adapter: StubStorageAdapter,
   bucket: "klass-hero-test"
 
+# Stripe Identity: a dummy secret so the adapter proceeds, and a Req.Test transport so calls are
+# intercepted (no real HTTP). The adapter code path is identical to prod — only transport differs.
+config :klass_hero, :stripe, secret_key: "sk_test_dummy"
+
+config :klass_hero, :stripe_req_options,
+  plug: {Req.Test, StripeIdentityAdapter},
+  retry: false
+
 config :klass_hero, :verify_webhook_signature, false
 config :klass_hero, env: :test
-
-# Enable Ecto sandbox plug for Wallaby browser sessions
-# Why: that query runs outside the Ecto test sandbox, poisoning the connection pool
-# Trigger: VerifiedProviders GenServer bootstraps a DB query at app startup
 
 # Outcome: disabling projections prevents sandbox leaks across async tests
 config :klass_hero, sql_sandbox: true
@@ -90,7 +95,12 @@ config :klass_hero, start_projections: false
 # Print only warnings and errors during test
 config :logger, level: :warning
 
+# Enable Ecto sandbox plug for Wallaby browser sessions
+# Why: that query runs outside the Ecto test sandbox, poisoning the connection pool
+
 # OpenTelemetry: disable exporting in tests; tracing tests opt in via TracingHelpers.
+# Trigger: VerifiedProviders GenServer bootstraps a DB query at app startup
+
 # Sampler must be always_on so tracing tests receive every span deterministically.
 config :opentelemetry,
   traces_exporter: :none,

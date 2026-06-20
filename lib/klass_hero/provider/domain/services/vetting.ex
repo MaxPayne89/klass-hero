@@ -15,6 +15,7 @@ defmodule KlassHero.Provider.Domain.Services.Vetting do
   alias KlassHero.Provider.Domain.Models.StepDefinition
 
   @individual_track [
+    %StepDefinition{key: :identity, completed_via: {:stripe_identity}, admin_review?: false},
     %StepDefinition{key: :experience, completed_via: {:document, "experience_validation"}, admin_review?: true},
     %StepDefinition{key: :background, completed_via: {:document, "background_check"}, admin_review?: true},
     %StepDefinition{key: :safeguarding, completed_via: {:document, "safeguarding_certificate"}, admin_review?: true}

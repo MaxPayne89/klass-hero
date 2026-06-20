@@ -70,6 +70,24 @@ defmodule KlassHero.Provider.Domain.Models.VettingCase do
   end
 
   @doc """
+  Approves the step with the given key with no human reviewer (auto-approval driven by an external
+  outcome, e.g. the Stripe Identity webhook), then recomputes the lifecycle. Idempotent for an
+  already-approved step.
+  """
+  @spec auto_approve_step(t(), atom(), String.t() | nil) :: {:ok, t()} | {:error, term()}
+  def auto_approve_step(%__MODULE__{} = case_, key, evidence_ref) do
+    with {:ok, step} <- fetch_step(case_, key) do
+      if VerificationStep.approved?(step) do
+        {:ok, case_}
+      else
+        with {:ok, approved} <- VerificationStep.auto_approve(step, evidence_ref) do
+          {:ok, case_ |> replace_step(approved) |> recompute()}
+        end
+      end
+    end
+  end
+
+  @doc """
   Recomputes the lifecycle from the current step statuses:
   all approved → `:verified`; all not_started → `:not_started`; otherwise `:in_progress`.
   """
@@ -83,6 +101,27 @@ defmodule KlassHero.Provider.Domain.Models.VettingCase do
   def step_key_for_document(%__MODULE__{steps: steps}, document_type) do
     Enum.find_value(steps, fn step ->
       if step.completed_via == {:document, document_type}, do: step.key
+    end)
+  end
+
+  @doc """
+  Submits the step with the given key for review (from `:not_started` or `:rejected`), then
+  recomputes the lifecycle. Used when a provider starts an out-of-band step (e.g. a Stripe Identity
+  session) so the case reflects work in progress before the outcome arrives.
+  """
+  @spec submit_step(t(), atom()) :: {:ok, t()} | {:error, term()}
+  def submit_step(%__MODULE__{} = case_, key) do
+    with {:ok, step} <- fetch_step(case_, key),
+         {:ok, submitted} <- VerificationStep.submit(step) do
+      {:ok, case_ |> replace_step(submitted) |> recompute()}
+    end
+  end
+
+  @doc "Finds the step completed via Stripe Identity, if the track has one."
+  @spec step_key_for_identity(t()) :: atom() | nil
+  def step_key_for_identity(%__MODULE__{steps: steps}) do
+    Enum.find_value(steps, fn step ->
+      if step.completed_via == {:stripe_identity}, do: step.key
     end)
   end
 

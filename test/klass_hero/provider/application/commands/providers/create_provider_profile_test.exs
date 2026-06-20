@@ -46,7 +46,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CreateProviderProfil
       assert {:ok, case_} = VettingCaseRepository.get_by_provider(profile.id)
       assert case_.entity_type == :individual
       assert case_.lifecycle == :not_started
-      assert Enum.map(case_.steps, & &1.key) == [:experience, :background, :safeguarding]
+      assert Enum.map(case_.steps, & &1.key) == [:identity, :experience, :background, :safeguarding]
     end
 
     test "auto-generates an id when not provided" do

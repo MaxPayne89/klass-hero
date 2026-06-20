@@ -94,6 +94,16 @@ defmodule KlassHero.Provider.Domain.Models.VerificationStep do
   def approve(%__MODULE__{}, _reviewer_id, _evidence_ref), do: {:error, :step_not_submitted}
 
   @doc """
+  Approves a step with no human reviewer — for steps that auto-approve on an external outcome
+  (e.g. the Stripe Identity webhook). Allowed from any non-approved state; `reviewed_by_id` is nil.
+  """
+  def auto_approve(%__MODULE__{status: status} = step, evidence_ref) when status != :approved do
+    {:ok, %{step | status: :approved, reviewed_by_id: nil, reviewed_at: now(), evidence_ref: evidence_ref}}
+  end
+
+  def auto_approve(%__MODULE__{}, _evidence_ref), do: {:error, :step_already_approved}
+
+  @doc """
   Rejects a submitted step with a reason.
   """
   def reject(%__MODULE__{status: :submitted} = step, reviewer_id, reason)

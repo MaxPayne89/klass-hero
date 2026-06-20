@@ -36,15 +36,28 @@ A provider is approved only when **all six** steps are approved.
 ### Step 1 — Identity & Age Verification
 - **Goal:** the provider is a real person, ≥ 18, whose identity matches the name on their account.
 - **Mechanism:** Stripe Identity. Platform creates a Verification Session
-  (`POST /v1/identity/verification_sessions`); provider completes the hosted ID scan + liveness
-  selfie.
-- **Pass:** `identity.verification_session.verified` webhook. Handler enforces the 18+ age gate —
-  under 18 fails with a clear message.
-- **Fail:** `requires_input` / `canceled` marks the step failed and prompts a retry.
-- **Audit:** only the Stripe session ID and pass/fail outcome are stored. **No document images are
-  retained** (Stripe processes the biometric data).
-- **Team involvement:** only on a Stripe manual-review flag or an appeal.
-- _Issue #553._
+  (`POST /v1/identity/verification_sessions`, configured to require a document so a DOB is returned);
+  provider completes the hosted ID scan + liveness selfie.
+- **Outcome arrives by webhook, never by the redirect.** The result is asynchronous — the
+  `return_url` redirect means "the provider finished the form", not "verified". The session moves
+  `processing → verified | requires_input`; only the webhook carries the decision. See ADR-0007.
+- **Pass:** `identity.verification_session.verified` webhook, **gated by an 18+ age check** computed
+  from `verified_outputs.dob` at webhook-receipt time (`≥ 18` passes). The check is **fail-closed**:
+  under 18 fails (`under_18`); missing/unparseable DOB also fails (`age_unverifiable`). Both prompt a
+  retry.
+- **Fail:** `requires_input` / `canceled` marks the step failed and prompts a retry. `processing`
+  events are acknowledged but drive no state change (the step already sits at `:submitted`).
+- **Audit:** one `IdentityVerification` row **per session** (retries append, never overwrite) holds
+  the Stripe session id (unique), status, pass/fail outcome and failure reason. **No DOB and no
+  document images are retained** — the age check keeps only its boolean result. Stripe processes the
+  biometric data.
+- **Idempotency:** the webhook handler dedups on the session id and is safe under at-least-once /
+  out-of-order delivery (approving an already-approved step is a no-op; an unknown session acks 200
+  and no-ops).
+- **Team involvement:** read-only this slice. A failed/blocked identity step surfaces to Admin with
+  its reason; there is **no admin force-approve** for identity (no overriding a biometric outcome).
+  An appeal is a provider-initiated retry (new session).
+- _Issue #553. Engine + integration shape: ADR-0006 (engine), ADR-0007 (this step)._
 
 ### Step 2 — Experience Validation
 - **Goal:** at least one year of experience working with children in the provider's area of expertise.

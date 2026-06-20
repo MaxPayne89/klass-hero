@@ -58,6 +58,7 @@ alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramR
 alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
 alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentNotificationScheduler
 alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
+alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IdentityVerificationRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramStaffAssignmentRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfileRepository
@@ -67,6 +68,7 @@ alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRe
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMemberRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCaseRepository
+alias KlassHero.Provider.Adapters.Driven.StripeIdentityAdapter
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
@@ -301,6 +303,9 @@ config :klass_hero, :provider,
   for_querying_verification_documents: VerificationDocumentRepository,
   for_storing_vetting_cases: VettingCaseRepository,
   for_querying_vetting_cases: VettingCaseRepository,
+  for_storing_identity_verifications: IdentityVerificationRepository,
+  for_querying_identity_verifications: IdentityVerificationRepository,
+  for_verifying_identity: StripeIdentityAdapter,
   for_storing_staff_members: StaffMemberRepository,
   for_querying_staff_members: StaffMemberRepository,
   for_storing_program_staff_assignments: ProgramStaffAssignmentRepository,

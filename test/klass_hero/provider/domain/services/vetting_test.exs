@@ -10,15 +10,23 @@ defmodule KlassHero.Provider.Domain.Services.VettingTest do
   alias KlassHero.Provider.Domain.Services.Vetting
 
   describe "track/1 for :individual" do
-    test "returns the individual document steps in order" do
+    test "returns the identity step first, then the document steps in order" do
       assert [%StepDefinition{} | _] = steps = Vetting.track(:individual)
-      assert Enum.map(steps, & &1.key) == [:experience, :background, :safeguarding]
+      assert Enum.map(steps, & &1.key) == [:identity, :experience, :background, :safeguarding]
     end
 
-    test "every individual step is a document step requiring admin review" do
-      for %StepDefinition{completed_via: completed_via, admin_review?: admin_review?} <-
+    test "identity is a Stripe step that auto-approves (no admin review, no prerequisites)" do
+      [identity | _] = Vetting.track(:individual)
+
+      assert identity.key == :identity
+      assert identity.completed_via == {:stripe_identity}
+      assert identity.admin_review? == false
+      assert identity.requires == []
+    end
+
+    test "the document steps require admin review" do
+      for %StepDefinition{completed_via: {:document, type}, admin_review?: admin_review?} <-
             Vetting.track(:individual) do
-        assert {:document, type} = completed_via
         assert is_binary(type)
         assert admin_review? == true
       end

@@ -10,18 +10,28 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfileRepository
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCaseRepository
   alias KlassHero.Provider.Application.Commands.Verification.ApproveVerificationDocument
   alias KlassHero.Provider.Application.Commands.Verification.RejectVerificationDocument
+  alias KlassHero.Provider.Domain.Models.VettingCase
   alias KlassHero.ProviderFixtures
 
-  # The individual track's three document steps.
+  # The individual track's three document steps (identity is the fourth required step, completed
+  # out-of-band via Stripe and pre-approved in setup so these tests isolate the document flow).
   @individual_doc_types ~w(experience_validation background_check safeguarding_certificate)
 
   setup do
     setup_test_integration_events()
     provider = ProviderFixtures.provider_profile_fixture()
     admin = AccountsFixtures.user_fixture(%{is_admin: true})
+    approve_identity_step(provider.id, admin.id)
     %{provider: provider, admin: admin}
+  end
+
+  defp approve_identity_step(provider_id, admin_id) do
+    {:ok, case_} = VettingCaseRepository.get_by_provider(provider_id)
+    {:ok, updated} = VettingCase.approve_step(case_, :identity, admin_id, Ecto.UUID.generate())
+    {:ok, _} = VettingCaseRepository.update(updated)
   end
 
   defp approve_doc(provider, admin, document_type) do
