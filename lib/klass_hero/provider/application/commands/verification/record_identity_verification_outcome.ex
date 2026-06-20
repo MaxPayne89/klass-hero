@@ -21,6 +21,8 @@ defmodule KlassHero.Provider.Application.Commands.Verification.RecordIdentityVer
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.EventDispatchHelper
 
+  require Logger
+
   @query Application.compile_env!(:klass_hero, [:provider, :for_querying_identity_verifications])
   @store Application.compile_env!(:klass_hero, [:provider, :for_storing_identity_verifications])
 
@@ -38,41 +40,45 @@ defmodule KlassHero.Provider.Application.Commands.Verification.RecordIdentityVer
   end
 
   defp apply_and_dispatch(iv, outcome) do
-    {updated, event_type} = resolve_outcome(iv, outcome)
+    case resolve_outcome(iv, outcome) do
+      :ignore ->
+        {:ok, :ignored}
 
-    with {:ok, persisted} <- @store.update(updated) do
-      dispatch(event_type, persisted)
-      {:ok, persisted}
+      {updated, event_type} ->
+        with {:ok, persisted} <- @store.update(updated) do
+          dispatch(event_type, persisted)
+          {:ok, persisted}
+        end
     end
   end
 
-  # TODO(human): map the normalised Stripe outcome to the IdentityVerification transition and the
-  # domain event to emit. Return `{updated_identity_verification, event_type}` where `event_type`
-  # is `:identity_verification_passed` or `:identity_verification_failed`.
+  # Maps the normalised Stripe outcome to the IdentityVerification transition and the domain event
+  # to emit, returning `{updated_identity_verification, event_type}` — or `:ignore` to make the
+  # command a no-op (handled fail-closed by `apply_and_dispatch`).
   #
-  # The IdentityVerification model already provides the transitions:
-  #   - IdentityVerification.mark_verified(iv, dob, today)  # runs the fail-closed age gate
-  #   - IdentityVerification.mark_requires_input(iv)
-  #   - IdentityVerification.mark_canceled(iv)
-  #
-  # Decisions to make:
-  #   - A Stripe `:verified` status is NOT automatically a pass — the age gate can still fail it.
-  #     Inspect the resulting record's `outcome` (`:pass` / `:fail`) to choose the event.
-  #   - `:requires_input` and `:canceled` are always failures.
-  # `outcome` is the map documented in @moduledoc (stripe_status, dob, today).
+  # A Stripe `:verified` status is NOT automatically a pass — the age gate can still fail it, so we
+  # inspect the resulting record's `outcome` (`:pass` / `:fail`). `:requires_input` and `:canceled`
+  # are always failures.
   defp resolve_outcome(%IdentityVerification{} = iv, %{stripe_status: :verified, dob: dob, today: today}) do
     updated = IdentityVerification.mark_verified(iv, dob, today)
     {updated, event_for(updated.outcome)}
   end
 
-  defp resolve_outcome(%IdentityVerification{} = iv, %{stripe_status: stripe_status}) do
-    updated =
-      case stripe_status do
-        :requires_input -> IdentityVerification.mark_requires_input(iv)
-        :canceled -> IdentityVerification.mark_canceled(iv)
-      end
-
+  defp resolve_outcome(%IdentityVerification{} = iv, %{stripe_status: :requires_input}) do
+    updated = IdentityVerification.mark_requires_input(iv)
     {updated, event_for(updated.outcome)}
+  end
+
+  defp resolve_outcome(%IdentityVerification{} = iv, %{stripe_status: :canceled}) do
+    updated = IdentityVerification.mark_canceled(iv)
+    {updated, event_for(updated.outcome)}
+  end
+
+  # Fail-closed catch-all: an unmapped Stripe status must never fabricate a pass/fail. Log it loudly
+  # and no-op (`:ignore`), leaving the record untouched until the status is taught to the system.
+  defp resolve_outcome(%IdentityVerification{} = _iv, %{stripe_status: stripe_status}) do
+    Logger.warning("Ignoring unmapped Stripe identity status: #{inspect(stripe_status)}")
+    :ignore
   end
 
   defp event_for(:pass), do: :identity_verification_passed

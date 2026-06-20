@@ -1,6 +1,8 @@
 defmodule KlassHero.Provider.Application.Commands.Verification.RecordIdentityVerificationOutcomeTest do
   use KlassHero.DataCase, async: false
 
+  import ExUnit.CaptureLog
+
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IdentityVerificationRepository
   alias KlassHero.Provider.Application.Commands.Verification.RecordIdentityVerificationOutcome
   alias KlassHero.Provider.Domain.Models.IdentityVerification
@@ -62,6 +64,23 @@ defmodule KlassHero.Provider.Application.Commands.Verification.RecordIdentityVer
       assert {:ok, iv} = RecordIdentityVerificationOutcome.execute(outcome(%{stripe_status: :canceled}))
       assert iv.status == :canceled
       assert iv.outcome == :fail
+    end
+  end
+
+  describe "execute/1 — unexpected stripe_status (fail-closed)" do
+    test "an unmapped status is a no-op (no DB write, no event) and is logged" do
+      log =
+        capture_log(fn ->
+          assert {:ok, :ignored} =
+                   RecordIdentityVerificationOutcome.execute(outcome(%{stripe_status: :expired}))
+        end)
+
+      assert log =~ "expired"
+
+      # The processing record is left untouched — fail-closed, never fabricated a pass/fail.
+      {:ok, iv} = IdentityVerificationRepository.get_by_session_id("vs_live")
+      assert iv.status == :processing
+      assert iv.outcome == nil
     end
   end
 

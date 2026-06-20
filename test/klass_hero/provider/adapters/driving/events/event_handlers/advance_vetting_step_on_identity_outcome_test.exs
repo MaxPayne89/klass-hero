@@ -1,6 +1,7 @@
 defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcomeTest do
   use KlassHero.DataCase, async: true
 
+  import ExUnit.CaptureLog
   import KlassHero.EventTestHelper
 
   alias KlassHero.AccountsFixtures
@@ -61,11 +62,34 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
       assert :ok = AdvanceVettingStepOnIdentityOutcome.handle(failed_event(provider.id))
       assert_integration_event_published(:provider_unverified)
     end
+
+    test "does not unverify a provider that was never verified", %{provider: provider} do
+      AdvanceVettingStepOnIdentityOutcome.handle(passed_event(provider.id))
+      clear_integration_events()
+
+      assert :ok = AdvanceVettingStepOnIdentityOutcome.handle(failed_event(provider.id))
+      assert_no_integration_events_published()
+    end
   end
 
   describe "handle/1 for an unknown provider" do
     test "is a no-op" do
       assert :ok = AdvanceVettingStepOnIdentityOutcome.handle(passed_event(Ecto.UUID.generate()))
+      assert_no_integration_events_published()
+    end
+  end
+
+  describe "handle/1 when the track has no identity step" do
+    test "ignores and logs an identity outcome for a business provider" do
+      business = ProviderFixtures.provider_profile_fixture(entity_type: "business")
+      clear_integration_events()
+
+      log =
+        capture_log(fn ->
+          assert :ok = AdvanceVettingStepOnIdentityOutcome.handle(passed_event(business.id))
+        end)
+
+      assert log =~ "No Stripe Identity step in track for provider #{business.id}"
       assert_no_integration_events_published()
     end
   end

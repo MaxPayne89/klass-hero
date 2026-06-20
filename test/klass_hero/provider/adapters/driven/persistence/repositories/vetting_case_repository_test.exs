@@ -1,18 +1,23 @@
 defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCaseRepositoryTest do
   use KlassHero.DataCase, async: true
 
+  import Ecto.Query
+
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCaseRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VettingCaseSchema
   alias KlassHero.Provider.Domain.Models.VettingCase
   alias KlassHero.Repo
 
-  defp provider_id do
+  defp provider_id(attrs \\ %{}) do
+    base = %{
+      identity_id: KlassHero.AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider]).id,
+      business_name: "Repo Test #{System.unique_integer([:positive])}"
+    }
+
     {:ok, schema} =
       %ProviderProfileSchema{}
-      |> ProviderProfileSchema.changeset(%{
-        identity_id: KlassHero.AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider]).id,
-        business_name: "Repo Test #{System.unique_integer([:positive])}"
-      })
+      |> ProviderProfileSchema.changeset(Map.merge(base, attrs))
       |> Repo.insert()
 
     to_string(schema.id)
@@ -33,8 +38,32 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VettingCas
       assert Enum.map(loaded.steps, & &1.key) == [:identity, :experience, :background, :safeguarding]
     end
 
-    test "get_by_provider/1 returns :not_found for a provider with no case" do
+    test "get_by_provider/1 returns :not_found when the provider itself does not exist" do
       assert {:error, :not_found} = VettingCaseRepository.get_by_provider(Ecto.UUID.generate())
+    end
+  end
+
+  describe "get_by_provider/1 lazy backfill" do
+    test "lazily creates and persists a case for an existing individual provider with none" do
+      pid = provider_id(%{entity_type: "individual"})
+
+      assert {:ok, created} = VettingCaseRepository.get_by_provider(pid)
+      assert created.entity_type == :individual
+      assert Enum.map(created.steps, & &1.key) == [:identity, :experience, :background, :safeguarding]
+      assert Enum.all?(created.steps, &(&1.id != nil))
+
+      # Second read returns the same persisted case, not a duplicate.
+      assert {:ok, reloaded} = VettingCaseRepository.get_by_provider(pid)
+      assert reloaded.id == created.id
+      assert Repo.aggregate(from(c in VettingCaseSchema, where: c.provider_id == ^pid), :count) == 1
+    end
+
+    test "lazily creates the business track for an existing business provider" do
+      pid = provider_id(%{entity_type: "business"})
+
+      assert {:ok, created} = VettingCaseRepository.get_by_provider(pid)
+      assert created.entity_type == :business
+      assert Enum.map(created.steps, & &1.key) == [:business_registration, :insurance]
     end
   end
 

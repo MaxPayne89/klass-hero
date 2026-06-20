@@ -44,6 +44,15 @@ defmodule KlassHero.Provider.Domain.Models.IdentityVerificationTest do
       refute IdentityVerification.age_18_plus?(%{day: 1, month: 1}, ~D[2026-06-18])
       refute IdentityVerification.age_18_plus?(%{"day" => 1}, ~D[2026-06-18])
     end
+
+    test "a future birth date fails closed" do
+      refute IdentityVerification.age_18_plus?(%{day: 1, month: 1, year: 2030}, ~D[2026-06-18])
+    end
+
+    test "non-integer DOB fields fail closed" do
+      refute IdentityVerification.age_18_plus?(%{day: "1", month: "1", year: "1990"}, ~D[2026-06-18])
+      refute IdentityVerification.age_18_plus?(%{day: 1.0, month: 1.0, year: 1990.0}, ~D[2026-06-18])
+    end
   end
 
   describe "new/1" do

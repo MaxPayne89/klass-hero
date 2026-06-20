@@ -13,8 +13,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   - :identity_verification_failed
   """
 
-  alias KlassHero.Provider.Application.Commands.Providers.UnverifyProvider
-  alias KlassHero.Provider.Application.Commands.Providers.VerifyProvider
+  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.Provider.Domain.Models.VettingCase
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
@@ -22,7 +21,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
 
   @vetting_query Application.compile_env!(:klass_hero, [:provider, :for_querying_vetting_cases])
   @vetting_store Application.compile_env!(:klass_hero, [:provider, :for_storing_vetting_cases])
-  @profile_query Application.compile_env!(:klass_hero, [:provider, :for_querying_provider_profiles])
 
   @spec handle(DomainEvent.t()) :: :ok | {:error, term()}
   def handle(%DomainEvent{event_type: :identity_verification_passed, payload: payload}) do
@@ -32,12 +30,18 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
          step_key when not is_nil(step_key) <- VettingCase.step_key_for_identity(case_),
          {:ok, updated} <- VettingCase.auto_approve_step(case_, step_key, evidence_ref),
          {:ok, _} <- @vetting_store.update(updated) do
-      if VettingCase.verified?(updated), do: verify(provider_id)
+      if VettingCase.verified?(updated), do: VettingVerificationSync.verify(provider_id, nil)
       :ok
     else
-      nil -> :ok
-      {:error, :not_found} -> :ok
-      {:error, reason} -> {:error, {:vetting_advance_failed, reason}}
+      nil ->
+        log_no_identity_step(provider_id)
+        :ok
+
+      {:error, :not_found} ->
+        :ok
+
+      {:error, reason} ->
+        {:error, {:vetting_advance_failed, reason}}
     end
   end
 
@@ -48,32 +52,22 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
          step_key when not is_nil(step_key) <- VettingCase.step_key_for_identity(case_),
          {:ok, updated} <- VettingCase.reset_step(case_, step_key),
          {:ok, _} <- @vetting_store.update(updated) do
-      maybe_unverify(provider_id)
+      VettingVerificationSync.maybe_unverify(provider_id, nil)
       :ok
     else
-      nil -> :ok
-      {:error, :not_found} -> :ok
-      {:error, reason} -> {:error, {:vetting_reset_failed, reason}}
+      nil ->
+        log_no_identity_step(provider_id)
+        :ok
+
+      {:error, :not_found} ->
+        :ok
+
+      {:error, reason} ->
+        {:error, {:vetting_reset_failed, reason}}
     end
   end
 
-  defp verify(provider_id) do
-    case VerifyProvider.execute(%{provider_id: provider_id, admin_id: nil}) do
-      {:ok, _} -> :ok
-      {:error, reason} -> Logger.warning("Identity auto-verify failed for provider #{provider_id}: #{inspect(reason)}")
-    end
-  end
-
-  defp maybe_unverify(provider_id) do
-    with {:ok, profile} <- @profile_query.get(provider_id),
-         true <- profile.verified do
-      case UnverifyProvider.execute(%{provider_id: provider_id, admin_id: nil}) do
-        {:ok, _} ->
-          :ok
-
-        {:error, reason} ->
-          Logger.warning("Identity auto-unverify failed for provider #{provider_id}: #{inspect(reason)}")
-      end
-    end
+  defp log_no_identity_step(provider_id) do
+    Logger.warning("No Stripe Identity step in track for provider #{provider_id}; ignoring identity outcome")
   end
 end

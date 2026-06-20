@@ -1,6 +1,7 @@
 defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReviewTest do
   use KlassHero.DataCase, async: true
 
+  import ExUnit.CaptureLog
   import KlassHero.EventTestHelper
 
   alias KlassHero.AccountsFixtures
@@ -41,14 +42,29 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
       assert_no_integration_events_published()
     end
 
-    test "ignores a document type that is not part of the provider's track", %{provider: provider, admin: admin} do
-      assert :ok = AdvanceVettingStepOnDocumentReview.handle(approved_event(provider.id, admin.id, "tax_certificate"))
+    test "ignores and logs a document type that is not part of the provider's track", %{
+      provider: provider,
+      admin: admin
+    } do
+      log =
+        capture_log(fn ->
+          assert :ok =
+                   AdvanceVettingStepOnDocumentReview.handle(approved_event(provider.id, admin.id, "tax_certificate"))
+        end)
 
+      assert log =~ "No vetting step consumes document_type=\"tax_certificate\""
       assert_no_integration_events_published()
     end
   end
 
   describe "handle/1 for :verification_document_rejected" do
+    test "does not unverify a provider that was never verified", %{provider: provider, admin: admin} do
+      assert :ok =
+               AdvanceVettingStepOnDocumentReview.handle(rejected_event(provider.id, admin.id, "background_check"))
+
+      assert_no_integration_events_published()
+    end
+
     test "unverifies the provider when an approved step is later rejected", %{provider: provider, admin: admin} do
       approve_identity_step(provider.id, admin.id)
 

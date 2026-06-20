@@ -20,8 +20,8 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
 
   @aggregate_type :provider
 
-  @doc "Creates a provider_verified integration event."
-  @spec provider_verified(ProviderProfile.t(), String.t()) :: IntegrationEvent.t()
+  @doc "Creates a provider_verified integration event. `admin_id` is `nil` for system (e.g. Stripe Identity-driven) verifications."
+  @spec provider_verified(ProviderProfile.t(), String.t() | nil) :: IntegrationEvent.t()
   def provider_verified(%ProviderProfile{} = profile, admin_id) do
     IntegrationEvent.new(:provider_verified, @aggregate_type, @aggregate_type, profile.id, %{
       provider_id: profile.id,
@@ -31,8 +31,8 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
     })
   end
 
-  @doc "Creates a provider_unverified integration event."
-  @spec provider_unverified(ProviderProfile.t(), String.t()) :: IntegrationEvent.t()
+  @doc "Creates a provider_unverified integration event. `admin_id` is `nil` for system (e.g. Stripe Identity-driven) unverifications."
+  @spec provider_unverified(ProviderProfile.t(), String.t() | nil) :: IntegrationEvent.t()
   def provider_unverified(%ProviderProfile{} = profile, admin_id) do
     IntegrationEvent.new(:provider_unverified, @aggregate_type, @aggregate_type, profile.id, %{
       provider_id: profile.id,
