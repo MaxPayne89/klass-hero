@@ -22,25 +22,20 @@ defmodule KlassHero.Family do
     top_level?: true,
     deps: [KlassHero, KlassHero.Shared],
     exports: [
-      # Child and ParentProfile are each both the Ecto schema and the struct
-      # other contexts pattern-match / join against.
+      # Each is both the Ecto schema and the struct other contexts pattern-match,
+      # join, or (for Consent) read via Backpex admin.
       Child,
       ParentProfile,
-      Domain.Models.Consent,
-      # Schema exported for Backpex admin direct Ecto access (read-only compliance view)
-      Adapters.Driven.Persistence.Schemas.ConsentSchema
+      Consent
     ]
 
   import Ecto.Query
 
   alias KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL
   alias KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACL
-  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepository
-  alias KlassHero.Family.Application.Commands.Consents.GrantConsent
-  alias KlassHero.Family.Application.Commands.Consents.WithdrawConsent
-  alias KlassHero.Family.Application.Queries.Consents.ConsentQueries
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildGuardian
+  alias KlassHero.Family.Consent
   alias KlassHero.Family.Domain.Events.FamilyEvents
   alias KlassHero.Family.Domain.Services.ReferralCodeGenerator
   alias KlassHero.Family.ParentProfile
@@ -152,7 +147,7 @@ defmodule KlassHero.Family do
   """
   def delete_child(child_id) when is_binary(child_id) do
     Repo.transaction(fn ->
-      with {:ok, _} <- tag_step(:delete_consents, ConsentRepository.delete_all_for_child(child_id)),
+      with {:ok, _} <- tag_step(:delete_consents, delete_all_consents_for_child(child_id)),
            {:ok, _} <- tag_step(:cancel_enrollments, ChildEnrollmentACL.cancel_active_for_child(child_id)),
            {:ok, _} <- tag_step(:delete_participation, ChildParticipationACL.delete_all_for_child(child_id)),
            :ok <- tag_step(:delete_child, delete_child_record(child_id)) do
@@ -214,14 +209,41 @@ defmodule KlassHero.Family do
   Expects a map with `:parent_id`, `:child_id`, and `:consent_type`.
   """
   def grant_consent(attrs) when is_map(attrs) do
-    GrantConsent.execute(attrs)
+    attrs = Map.put_new(attrs, :granted_at, DateTime.utc_now())
+
+    %Consent{}
+    |> Consent.changeset(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, consent} ->
+        {:ok, consent}
+
+      {:error, %Ecto.Changeset{errors: errors} = changeset} ->
+        # Partial unique index on (child_id, consent_type) WHERE withdrawn_at IS NULL.
+        if EctoErrorHelpers.any_unique_constraint_violation?(errors) do
+          {:error, :already_active}
+        else
+          {:error, changeset}
+        end
+    end
   end
 
   @doc """
   Withdraws the active consent for a child and consent type.
+
+  Returns `{:ok, Consent.t()}`, or `{:error, :not_found}` when no active consent
+  exists.
   """
   def withdraw_consent(child_id, consent_type) when is_binary(child_id) and is_binary(consent_type) do
-    WithdrawConsent.execute(child_id, consent_type)
+    case active_consent(child_id, consent_type) do
+      nil ->
+        {:error, :not_found}
+
+      consent ->
+        consent
+        |> Consent.withdraw_changeset(DateTime.utc_now() |> DateTime.truncate(:second))
+        |> Repo.update()
+    end
   end
 
   @doc """
@@ -246,7 +268,7 @@ defmodule KlassHero.Family do
     anonymized_attrs = Child.anonymized_attrs()
 
     Enum.reduce_while(children, {:ok, %{children_anonymized: 0, consents_deleted: 0}}, fn child, {:ok, acc} ->
-      with {:ok, consent_count} <- ConsentRepository.delete_all_for_child(child.id),
+      with {:ok, consent_count} <- delete_all_consents_for_child(child.id),
            {:ok, _anonymized} <- child |> Child.anonymize_changeset(anonymized_attrs) |> Repo.update(),
            :ok <- dispatch_child_anonymized(child.id) do
         {:cont,
@@ -369,7 +391,7 @@ defmodule KlassHero.Family do
   Returns a MapSet of child IDs that have active consent of the given type.
   """
   def children_with_active_consents(child_ids, consent_type) when is_list(child_ids) and is_binary(consent_type) do
-    ConsentQueries.children_with_active_consents(child_ids, consent_type)
+    active_consent_child_ids(child_ids, consent_type)
   end
 
   @doc """
@@ -393,7 +415,7 @@ defmodule KlassHero.Family do
   Checks if a child has an active consent of the given type.
   """
   def child_has_active_consent?(child_id, consent_type) when is_binary(child_id) and is_binary(consent_type) do
-    ConsentQueries.child_has_active_consent?(child_id, consent_type)
+    active_consent(child_id, consent_type) != nil
   end
 
   @doc """
@@ -409,7 +431,7 @@ defmodule KlassHero.Family do
           parent.id
           |> get_children()
           |> Enum.map(fn child ->
-            format_child_export(child, ConsentRepository.list_all_by_child(child.id))
+            format_child_export(child, list_consents_by_child(child.id))
           end)
 
         %{children: children_data}
@@ -468,6 +490,40 @@ defmodule KlassHero.Family do
   """
   def change_child(%Child{} = child, attrs) when is_map(attrs) do
     Child.changeset(child, attrs)
+  end
+
+  # --- private: consents ---
+
+  defp active_consent(child_id, consent_type) do
+    Repo.one(
+      from(c in Consent,
+        where: c.child_id == ^child_id and c.consent_type == ^consent_type and is_nil(c.withdrawn_at),
+        limit: 1
+      )
+    )
+  end
+
+  defp active_consent_child_ids(child_ids, consent_type) do
+    from(c in Consent,
+      where: c.child_id in ^child_ids and c.consent_type == ^consent_type and is_nil(c.withdrawn_at),
+      select: c.child_id
+    )
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp delete_all_consents_for_child(child_id) do
+    {count, _} = Repo.delete_all(from(c in Consent, where: c.child_id == ^child_id))
+    {:ok, count}
+  end
+
+  defp list_consents_by_child(child_id) do
+    Repo.all(
+      from(c in Consent,
+        where: c.child_id == ^child_id,
+        order_by: [asc: c.consent_type, desc: c.granted_at]
+      )
+    )
   end
 
   # --- private: children ---

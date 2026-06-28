@@ -10,7 +10,7 @@ defmodule KlassHero.Family.DeleteChildTest do
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Family
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
+  alias KlassHero.Family.Consent
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
   alias KlassHero.Repo
@@ -32,7 +32,7 @@ defmodule KlassHero.Family.DeleteChildTest do
 
       assert :ok = Family.delete_child(child_schema.id)
 
-      assert Repo.all(from(c in ConsentSchema, where: c.child_id == ^child_schema.id)) == []
+      assert Repo.all(from(c in Consent, where: c.child_id == ^child_schema.id)) == []
     end
 
     test "returns :not_found for non-existent child" do

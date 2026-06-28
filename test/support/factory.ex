@@ -31,10 +31,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Enrollment.Domain.Models.Enrollment
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildGuardian
-  alias KlassHero.Family.Domain.Models.Consent
+  alias KlassHero.Family.Consent
   alias KlassHero.Family.ParentProfile
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
@@ -710,7 +709,7 @@ defmodule KlassHero.Factory do
   def consent_schema_factory do
     {child_schema, parent_schema} = insert_child_with_guardian()
 
-    %ConsentSchema{
+    %Consent{
       id: Ecto.UUID.generate(),
       parent_id: parent_schema.id,
       child_id: child_schema.id,

@@ -15,10 +15,10 @@ defmodule KlassHeroWeb.Admin.ConsentLive do
   # credo:disable-for-lines:11 Credo.Check.Design.AliasUsage
   use Backpex.LiveResource,
     adapter_config: [
-      schema: KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema,
+      schema: KlassHero.Family.Consent,
       repo: KlassHero.Repo,
-      update_changeset: &KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema.admin_changeset/3,
-      create_changeset: &KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema.admin_changeset/3,
+      update_changeset: &KlassHero.Family.Consent.admin_changeset/3,
+      create_changeset: &KlassHero.Family.Consent.admin_changeset/3,
       item_query: &__MODULE__.item_query/3
     ],
     pubsub: [server: KlassHero.PubSub],

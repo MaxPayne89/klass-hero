@@ -13,8 +13,8 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
   alias KlassHero.Family.Child
+  alias KlassHero.Family.Consent
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "anonymize_data_for_user/1" do
@@ -83,7 +83,7 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
 
       # Verify consents exist before
       assert Repo.aggregate(
-               from(c in ConsentSchema, where: c.child_id == ^child.id),
+               from(c in Consent, where: c.child_id == ^child.id),
                :count
              ) == 2
 
@@ -92,7 +92,7 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
       assert summary.consents_deleted == 2
 
       assert Repo.aggregate(
-               from(c in ConsentSchema, where: c.child_id == ^child.id),
+               from(c in Consent, where: c.child_id == ^child.id),
                :count
              ) == 0
     end
