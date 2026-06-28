@@ -18,17 +18,6 @@ defmodule KlassHero.Family do
       {:ok, child} = Family.get_child_by_id("child-uuid")
   """
 
-  use Boundary,
-    top_level?: true,
-    deps: [KlassHero, KlassHero.Shared],
-    exports: [
-      # Each is both the Ecto schema and the struct other contexts pattern-match,
-      # join, or (for Consent) read via Backpex admin.
-      Child,
-      ParentProfile,
-      Consent
-    ]
-
   import Ecto.Query
 
   alias KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL

@@ -11,7 +11,6 @@ defmodule Mix.Tasks.LintTypography do
 
       mix lint_typography
   """
-  use Boundary, classify_to: KlassHero.Application
   use Mix.Task
 
   @search_dir "lib/klass_hero_web/"

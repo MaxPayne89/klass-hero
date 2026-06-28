@@ -24,25 +24,6 @@ defmodule KlassHero.Messaging do
   - `"user:{id}:messages"` - User notification updates
   """
 
-  use Boundary,
-    top_level?: true,
-    deps: [
-      KlassHero,
-      KlassHero.Accounts,
-      KlassHero.Enrollment,
-      KlassHero.ProgramCatalog,
-      KlassHero.Provider,
-      KlassHero.Shared
-    ],
-    exports: [
-      Domain.Models.Attachment,
-      Domain.Models.Message,
-      Domain.Models.Conversation,
-      Domain.Models.Participant,
-      Domain.Models.InboundEmail,
-      Domain.Models.EmailReply
-    ]
-
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews

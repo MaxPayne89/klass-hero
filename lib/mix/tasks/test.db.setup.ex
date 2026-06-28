@@ -7,7 +7,6 @@ defmodule Mix.Tasks.Test.Db.Setup do
   Creates the test database if it doesn't exist, ensuring the test environment
   can connect properly.
   """
-  use Boundary, classify_to: KlassHero.Application
   use Mix.Task
 
   @impl Mix.Task

@@ -29,7 +29,6 @@ defmodule KlassHero.TestableEventHandler do
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents
 
-  use Boundary, top_level?: true, check: [in: false, out: false]
 
   @table :testable_handler_config
 

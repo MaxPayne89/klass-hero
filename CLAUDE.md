@@ -78,7 +78,7 @@ context/
 
 See `.claude/rules/domain-architecture.md` for patterns. For context-specific details, read the code under `lib/klass_hero/<context>/` directly — Claude Code explores on-demand.
 
-**Boundary enforcement:** Each context's root module (`lib/klass_hero/<context>.ex`) declares `use Boundary, deps: [...], exports: [...]`. Compile-time violations surface via `mix compile --warnings-as-errors`. There is no separate `boundary.ex`.
+**Context boundaries:** Not tooling-enforced. The `boundary` library was removed; cross-context isolation is a convention — call other contexts only through their root module's public API (e.g. `KlassHero.Family`), never reach into their internals. The Family context has been flattened to conventional Phoenix (context module + Ecto schemas, no ports/adapters/mappers); other contexts still follow DDD/Ports & Adapters pending similar flattening.
 
 **CQRS direction:** New use cases go under `application/commands/` or `application/queries/`. New ports separate read contracts (`ForQuerying*`, `ForListing*`, `ForResolving*`) from write contracts (`ForStoring*`, `ForCreating*`, `ForUpdating*`). Existing `ForManaging*` ports will be split incrementally.
 
@@ -179,7 +179,7 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 
 | Check | Catches |
 |---|---|
-| `mix compile --warnings-as-errors` | Unused vars/imports, deprecations, Boundary violations |
+| `mix compile --warnings-as-errors` | Unused vars/imports, deprecations |
 | `mix format --check-formatted` | Formatting issues |
 | `mix credo --min-priority=high` | Style violations, code smells |
 | `mix lint_typography` | Font/typography usage violations |

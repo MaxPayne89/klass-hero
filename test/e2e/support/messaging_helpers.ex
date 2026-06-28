@@ -7,7 +7,6 @@ defmodule KlassHeroWeb.E2E.MessagingHelpers do
   Page Object abstraction.
   """
 
-  use Boundary, top_level?: true, check: [in: false, out: false]
   use Wallaby.DSL
 
   import ExUnit.Callbacks, only: [start_supervised!: 1]
