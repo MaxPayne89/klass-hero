@@ -17,7 +17,7 @@ defmodule KlassHero.Shared.InteractionSweepTest do
 
   alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
-  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildRepository
+  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramRepository
@@ -49,11 +49,14 @@ defmodule KlassHero.Shared.InteractionSweepTest do
                       %{io_kind: :db, operation: :exists, status: :ok}}
     end
 
-    test "family — ChildRepository.list_by_guardian/1" do
-      assert ChildRepository.list_by_guardian(Ecto.UUID.generate()) == []
+    # Family's child I/O was inlined into the context (plain Repo, no envelope) during
+    # the conventional-Phoenix flatten; ConsentRepository still drives the envelope, so
+    # it stands in as the Family-context probe until the macro is reintroduced at the seam.
+    test "family — ConsentRepository.list_active_by_child/1" do
+      assert ConsentRepository.list_active_by_child(Ecto.UUID.generate()) == []
 
       assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :list_by_guardian, status: :ok}}
+                      %{io_kind: :db, operation: :list_active_by_child, status: :ok}}
     end
 
     test "program_catalog — ProgramRepository.list_all_programs/0" do

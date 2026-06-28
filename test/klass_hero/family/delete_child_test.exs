@@ -1,20 +1,25 @@
-defmodule KlassHero.Family.Application.Commands.Children.DeleteChildTest do
+defmodule KlassHero.Family.DeleteChildTest do
+  @moduledoc """
+  Cross-context cascade behaviour for `Family.delete_child/1`: consents,
+  enrollments, participation records, and behavioral notes.
+  """
+
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
+  alias KlassHero.Family
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
-  alias KlassHero.Family.Application.Commands.Children.DeleteChild
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
   alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
   alias KlassHero.Repo
 
-  describe "execute/1" do
+  describe "delete_child/1" do
     test "deletes existing child" do
       child_schema = insert(:child_schema)
 
-      assert :ok = DeleteChild.execute(child_schema.id)
+      assert :ok = Family.delete_child(child_schema.id)
     end
 
     test "deletes child with associated consent records" do
@@ -25,14 +30,13 @@ defmodule KlassHero.Family.Application.Commands.Children.DeleteChildTest do
         parent_id: parent_schema.id
       )
 
-      assert :ok = DeleteChild.execute(child_schema.id)
+      assert :ok = Family.delete_child(child_schema.id)
 
-      # Verify consent records are also deleted
       assert Repo.all(from(c in ConsentSchema, where: c.child_id == ^child_schema.id)) == []
     end
 
     test "returns :not_found for non-existent child" do
-      assert {:error, :not_found} = DeleteChild.execute(Ecto.UUID.generate())
+      assert {:error, :not_found} = Family.delete_child(Ecto.UUID.generate())
     end
 
     test "deletes child with active enrollments (cancels enrollments)" do
@@ -47,7 +51,7 @@ defmodule KlassHero.Family.Application.Commands.Children.DeleteChildTest do
           status: "confirmed"
         )
 
-      assert :ok = DeleteChild.execute(child.id)
+      assert :ok = Family.delete_child(child.id)
 
       # Enrollment should be cancelled, not deleted; child_id nullified by FK nilify_all
       updated = Repo.get(EnrollmentSchema, enrollment.id)
@@ -65,7 +69,7 @@ defmodule KlassHero.Family.Application.Commands.Children.DeleteChildTest do
         session_id: session.id
       )
 
-      assert :ok = DeleteChild.execute(child.id)
+      assert :ok = Family.delete_child(child.id)
 
       assert [] = Repo.all(from(r in ParticipationRecordSchema, where: r.child_id == ^child.id))
     end
@@ -80,7 +84,7 @@ defmodule KlassHero.Family.Application.Commands.Children.DeleteChildTest do
         parent_id: parent.id
       )
 
-      assert :ok = DeleteChild.execute(child.id)
+      assert :ok = Family.delete_child(child.id)
 
       assert [] = Repo.all(from(n in BehavioralNoteSchema, where: n.child_id == ^child.id))
       assert [] = Repo.all(from(r in ParticipationRecordSchema, where: r.child_id == ^child.id))
@@ -109,7 +113,7 @@ defmodule KlassHero.Family.Application.Commands.Children.DeleteChildTest do
         parent_id: parent.id
       )
 
-      assert :ok = DeleteChild.execute(child.id)
+      assert :ok = Family.delete_child(child.id)
     end
   end
 end

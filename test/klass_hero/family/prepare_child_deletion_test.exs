@@ -1,15 +1,15 @@
-defmodule KlassHero.Family.Application.Queries.Children.PrepareChildDeletionTest do
+defmodule KlassHero.Family.PrepareChildDeletionTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Family.Application.Queries.Children.PrepareChildDeletion
+  alias KlassHero.Family
 
-  describe "execute/1" do
+  describe "prepare_child_deletion/1" do
     test "returns :no_enrollments when child has no active enrollments" do
       {child, _parent} = insert_child_with_guardian()
 
-      assert {:ok, :no_enrollments} = PrepareChildDeletion.execute(child.id)
+      assert {:ok, :no_enrollments} = Family.prepare_child_deletion(child.id)
     end
 
     test "returns :has_enrollments with program titles when child has active enrollments" do
@@ -23,7 +23,7 @@ defmodule KlassHero.Family.Application.Queries.Children.PrepareChildDeletionTest
         status: "confirmed"
       )
 
-      assert {:ok, :has_enrollments, program_titles} = PrepareChildDeletion.execute(child.id)
+      assert {:ok, :has_enrollments, program_titles} = Family.prepare_child_deletion(child.id)
       assert "Art Class" in program_titles
     end
 
@@ -46,7 +46,7 @@ defmodule KlassHero.Family.Application.Queries.Children.PrepareChildDeletionTest
         status: "confirmed"
       )
 
-      assert {:ok, :has_enrollments, program_titles} = PrepareChildDeletion.execute(child.id)
+      assert {:ok, :has_enrollments, program_titles} = Family.prepare_child_deletion(child.id)
       assert length(program_titles) == 2
       assert "Soccer Camp" in program_titles
       assert "Art Class" in program_titles
@@ -63,7 +63,7 @@ defmodule KlassHero.Family.Application.Queries.Children.PrepareChildDeletionTest
         status: "cancelled"
       )
 
-      assert {:ok, :no_enrollments} = PrepareChildDeletion.execute(child.id)
+      assert {:ok, :no_enrollments} = Family.prepare_child_deletion(child.id)
     end
   end
 end

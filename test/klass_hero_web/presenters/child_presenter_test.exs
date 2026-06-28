@@ -8,7 +8,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Family.Child
   alias KlassHeroWeb.Presenters.ChildPresenter
 
   # ---------------------------------------------------------------------------

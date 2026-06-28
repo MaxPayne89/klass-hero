@@ -1,9 +1,9 @@
-defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchemaTest do
+defmodule KlassHero.Family.ChildGuardianTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
+  alias KlassHero.Family.ChildGuardian
 
   describe "changeset/2" do
     test "valid with all required fields" do
@@ -14,14 +14,14 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSche
         is_primary: true
       }
 
-      changeset = ChildGuardianSchema.changeset(%ChildGuardianSchema{}, attrs)
+      changeset = ChildGuardian.changeset(%ChildGuardian{}, attrs)
       assert changeset.valid?
     end
 
     test "requires child_id and guardian_id" do
       changeset =
-        %ChildGuardianSchema{}
-        |> ChildGuardianSchema.changeset(%{})
+        %ChildGuardian{}
+        |> ChildGuardian.changeset(%{})
         |> Map.put(:action, :validate)
 
       refute changeset.valid?
@@ -37,8 +37,8 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSche
       }
 
       changeset =
-        %ChildGuardianSchema{}
-        |> ChildGuardianSchema.changeset(attrs)
+        %ChildGuardian{}
+        |> ChildGuardian.changeset(attrs)
         |> Map.put(:action, :validate)
 
       refute changeset.valid?
@@ -51,7 +51,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSche
         guardian_id: Ecto.UUID.generate()
       }
 
-      changeset = ChildGuardianSchema.changeset(%ChildGuardianSchema{}, attrs)
+      changeset = ChildGuardian.changeset(%ChildGuardian{}, attrs)
       assert Ecto.Changeset.get_field(changeset, :relationship) == "parent"
       assert Ecto.Changeset.get_field(changeset, :is_primary) == false
     end
@@ -63,10 +63,9 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSche
       parent2 = insert(:parent_profile_schema)
       child = insert(:child_schema)
 
-      # First primary guardian succeeds
       {:ok, _} =
         Repo.insert(
-          ChildGuardianSchema.changeset(%ChildGuardianSchema{}, %{
+          ChildGuardian.changeset(%ChildGuardian{}, %{
             child_id: child.id,
             guardian_id: parent1.id,
             relationship: "parent",
@@ -74,10 +73,9 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSche
           })
         )
 
-      # Second primary guardian for same child fails
       {:error, changeset} =
         Repo.insert(
-          ChildGuardianSchema.changeset(%ChildGuardianSchema{}, %{
+          ChildGuardian.changeset(%ChildGuardian{}, %{
             child_id: child.id,
             guardian_id: parent2.id,
             relationship: "guardian",
@@ -95,7 +93,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSche
 
       {:ok, _} =
         Repo.insert(
-          ChildGuardianSchema.changeset(%ChildGuardianSchema{}, %{
+          ChildGuardian.changeset(%ChildGuardian{}, %{
             child_id: child.id,
             guardian_id: parent1.id,
             relationship: "parent",
@@ -105,7 +103,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSche
 
       {:ok, _} =
         Repo.insert(
-          ChildGuardianSchema.changeset(%ChildGuardianSchema{}, %{
+          ChildGuardian.changeset(%ChildGuardian{}, %{
             child_id: child.id,
             guardian_id: parent2.id,
             relationship: "guardian",

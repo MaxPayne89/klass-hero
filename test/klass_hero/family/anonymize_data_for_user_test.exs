@@ -13,8 +13,8 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
+  alias KlassHero.Family.Child
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "anonymize_data_for_user/1" do
@@ -39,7 +39,7 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
 
       {:ok, _summary} = Family.anonymize_data_for_user(user.id)
 
-      reloaded = Repo.get!(ChildSchema, child.id)
+      reloaded = Repo.get!(Child, child.id)
       assert reloaded.first_name == "Anonymized"
       assert reloaded.last_name == "Child"
       assert is_nil(reloaded.emergency_contact)
@@ -59,7 +59,7 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
 
       {:ok, _summary} = Family.anonymize_data_for_user(user.id)
 
-      reloaded = Repo.get!(ChildSchema, child.id)
+      reloaded = Repo.get!(Child, child.id)
       assert is_nil(reloaded.date_of_birth)
     end
 
@@ -134,8 +134,8 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
       assert summary.children_anonymized == 2
       assert summary.consents_deleted == 2
 
-      reloaded_a = Repo.get!(ChildSchema, child_a.id)
-      reloaded_b = Repo.get!(ChildSchema, child_b.id)
+      reloaded_a = Repo.get!(Child, child_a.id)
+      reloaded_b = Repo.get!(Child, child_b.id)
 
       assert reloaded_a.first_name == "Anonymized"
       assert reloaded_b.first_name == "Anonymized"
@@ -175,7 +175,7 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
       assert {:error, :pubsub_down} = Family.anonymize_data_for_user(user.id)
 
       # Child data was anonymized before publish was attempted
-      reloaded = Repo.get!(ChildSchema, child.id)
+      reloaded = Repo.get!(Child, child.id)
       assert reloaded.first_name == "Anonymized"
       assert reloaded.last_name == "Child"
     end

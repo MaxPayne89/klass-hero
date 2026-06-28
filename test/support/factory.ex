@@ -31,11 +31,10 @@ defmodule KlassHero.Factory do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Enrollment.Domain.Models.Enrollment
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
-  alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Family.Child
+  alias KlassHero.Family.ChildGuardian
   alias KlassHero.Family.Domain.Models.Consent
   alias KlassHero.Family.Domain.Models.ParentProfile
 
@@ -603,7 +602,7 @@ defmodule KlassHero.Factory do
       schema = insert(:child_schema)
   """
   def child_schema_factory do
-    %ChildSchema{
+    %Child{
       id: Ecto.UUID.generate(),
       first_name: sequence(:child_schema_first_name, &"Child#{&1}"),
       last_name: "Smith",
@@ -650,7 +649,7 @@ defmodule KlassHero.Factory do
       insert(:child_guardian_schema, child_id: child.id, guardian_id: parent.id)
   """
   def child_guardian_schema_factory do
-    %ChildGuardianSchema{
+    %ChildGuardian{
       id: Ecto.UUID.generate(),
       child_id: Ecto.UUID.generate(),
       guardian_id: Ecto.UUID.generate(),

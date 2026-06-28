@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
-  alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Family.Child
   alias KlassHero.Shared.NameUtils
 
   @doc """

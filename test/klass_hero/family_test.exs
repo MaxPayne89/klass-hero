@@ -8,9 +8,7 @@ defmodule KlassHero.FamilyTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Family
-  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildRepository
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
-  alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Family.Child
   alias KlassHero.Family.Domain.Models.ParentProfile
 
   # ============================================================================
@@ -85,15 +83,7 @@ defmodule KlassHero.FamilyTest do
   end
 
   defp create_child_linked_to_parent(parent, child_attrs) do
-    {:ok, child} = ChildRepository.create(child_attrs)
-
-    Repo.insert!(%ChildGuardianSchema{
-      child_id: child.id,
-      guardian_id: parent.id,
-      relationship: "parent",
-      is_primary: true
-    })
-
+    {:ok, child} = Family.create_child(Map.put(child_attrs, :parent_id, parent.id))
     child
   end
 

@@ -5,7 +5,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildRepository
+  alias KlassHero.Family
   alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepository
   alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfileRepository
   alias KlassHero.Family.Domain.Models.Consent
@@ -18,7 +18,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   defp create_child(parent) do
     {:ok, child} =
-      ChildRepository.create(%{
+      Family.create_child(%{
         parent_id: parent.id,
         first_name: "Emma",
         last_name: "Smith",

@@ -1,10 +1,8 @@
-defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema do
+defmodule KlassHero.Family.ChildGuardian do
   @moduledoc """
-  Ecto schema for the children_guardians join table.
-
-  Links children to their guardians (parents, legal guardians, etc.)
-  in a many-to-many relationship. Each link records the relationship type
-  and whether this guardian is the primary contact.
+  The `children_guardians` join table linking children to their guardians
+  (parents, legal guardians, etc.) in a many-to-many relationship. Each link
+  records the relationship type and whether this guardian is the primary contact.
   """
 
   use Ecto.Schema

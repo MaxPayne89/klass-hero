@@ -10,9 +10,9 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
 
   alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
   alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
+  alias KlassHero.Family.Child
 
   describe "handle_event/1 for :user_anonymized" do
     setup do
@@ -48,7 +48,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
 
       assert :ok == FamilyEventHandler.handle_event(event)
 
-      reloaded = Repo.get!(ChildSchema, child.id)
+      reloaded = Repo.get!(Child, child.id)
       assert reloaded.first_name == "Anonymized"
       assert reloaded.last_name == "Child"
       assert is_nil(reloaded.emergency_contact)
