@@ -10,15 +10,12 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACL do
   would block child deletion.
   """
 
-  @behaviour KlassHero.Family.Domain.Ports.ForManagingChildParticipation
-
   use KlassHero.Shared.Tracing
 
   import Ecto.Query, only: [from: 2]
 
   alias KlassHero.Repo
 
-  @impl true
   def delete_all_for_child(child_id) when is_binary(child_id) do
     acl_span source: "family", target: "participation" do
       # behavioral_notes.child_id has ON DELETE: nothing — must delete notes first
