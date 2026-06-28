@@ -9,7 +9,6 @@ defmodule KlassHeroWeb.I18nHelpers do
   - Viewport dimension helpers for responsive testing
   """
 
-
   import ExUnit.Assertions
   import Phoenix.LiveViewTest
 

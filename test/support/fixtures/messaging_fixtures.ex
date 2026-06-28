@@ -3,7 +3,6 @@ defmodule KlassHero.MessagingFixtures do
   Test fixtures for the Messaging bounded context.
   """
 
-
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.AttachmentSchema

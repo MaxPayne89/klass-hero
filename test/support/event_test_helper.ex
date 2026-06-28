@@ -45,7 +45,6 @@ defmodule KlassHero.EventTestHelper do
       end
   """
 
-
   import ExUnit.Assertions
 
   alias KlassHero.Shared.Adapters.Driven.Events.EventSubscriber

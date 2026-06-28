@@ -29,7 +29,6 @@ defmodule KlassHero.TestableEventHandler do
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents
 
-
   @table :testable_handler_config
 
   @doc """

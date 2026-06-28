@@ -20,7 +20,6 @@ defmodule KlassHero.TestableIntegrationEventHandler do
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
-
   alias KlassHero.TestableEventHandler
 
   @impl true

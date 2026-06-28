@@ -3,7 +3,6 @@ defmodule KlassHero.Test.CriticalFailingTestHandler do
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
-
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @impl true
