@@ -9,7 +9,7 @@ defmodule KlassHero.FamilyTest do
 
   alias KlassHero.Family
   alias KlassHero.Family.Child
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.ParentProfile
 
   # ============================================================================
   # Parent Profile Functions
@@ -29,11 +29,8 @@ defmodule KlassHero.FamilyTest do
       assert profile.display_name == "John Doe"
     end
 
-    test "returns validation error for invalid attrs" do
-      attrs = %{identity_id: ""}
-
-      assert {:error, {:validation_error, errors}} = Family.create_parent_profile(attrs)
-      assert "Identity ID cannot be empty" in errors
+    test "returns a changeset error for invalid attrs" do
+      assert {:error, %Ecto.Changeset{}} = Family.create_parent_profile(%{identity_id: ""})
     end
 
     test "returns duplicate error when profile exists" do

@@ -7,12 +7,11 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepos
 
   alias KlassHero.Family
   alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepository
-  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfileRepository
   alias KlassHero.Family.Domain.Models.Consent
 
   defp create_parent do
     user = KlassHero.AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:parent])
-    {:ok, parent} = ParentProfileRepository.create_parent_profile(%{identity_id: user.id})
+    {:ok, parent} = Family.create_parent_profile(%{identity_id: user.id})
     parent
   end
 

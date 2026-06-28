@@ -2,7 +2,7 @@ defmodule KlassHero.Shared.EntitlementsBypassTest do
   use ExUnit.Case, async: false
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
   alias KlassHero.Shared.Entitlements
 

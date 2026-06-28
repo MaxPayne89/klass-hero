@@ -9,14 +9,9 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
 
   alias KlassHero.Family
   alias KlassHero.Family.Domain.Events.FamilyEvents
-  alias KlassHero.Family.Domain.Models.ParentProfile
-  alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
-
-  @parent_query Application.compile_env!(:klass_hero, [:family, :for_querying_parent_profiles])
-  @parent_repository Application.compile_env!(:klass_hero, [:family, :for_storing_parent_profiles])
 
   @doc """
   Processes an invite claim by setting up the family unit.
@@ -57,17 +52,10 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
 
   # Idempotent: creates parent profile if missing, fetches if already exists.
   defp ensure_parent_profile(user_id, _invite_id) do
-    attrs = %{id: Ecto.UUID.generate(), identity_id: user_id}
-
-    with {:ok, _validated} <- ParentProfile.new(attrs),
-         {:ok, parent} <- @parent_repository.create_parent_profile(attrs) do
-      {:ok, parent}
-    else
-      {:error, :duplicate_resource} ->
-        @parent_query.get_by_identity_id(user_id)
-
-      result ->
-        CommandResult.wrap_validation_errors(result)
+    case Family.create_parent_profile(%{identity_id: user_id}) do
+      {:ok, parent} -> {:ok, parent}
+      {:error, :duplicate_resource} -> Family.get_parent_by_identity(user_id)
+      {:error, reason} -> {:error, reason}
     end
   end
 

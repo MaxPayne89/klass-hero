@@ -6,7 +6,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.CreateDirectConversation

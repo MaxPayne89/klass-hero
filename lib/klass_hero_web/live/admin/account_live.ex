@@ -149,11 +149,11 @@ defmodule KlassHeroWeb.Admin.AccountLive do
     ]
   end
 
-  defp parent_tier_label("explorer"), do: "Explorer"
-  defp parent_tier_label("active"), do: "Active"
-  defp parent_tier_label(tier), do: String.capitalize(tier || "")
+  defp parent_tier_label(:explorer), do: "Explorer"
+  defp parent_tier_label(:active), do: "Active"
+  defp parent_tier_label(nil), do: ""
+  defp parent_tier_label(tier), do: tier |> to_string() |> String.capitalize()
 
-  defp parent_tier_class("explorer"), do: "bg-gray-100 text-gray-700"
-  defp parent_tier_class("active"), do: "bg-green-100 text-green-700"
+  defp parent_tier_class(:active), do: "bg-green-100 text-green-700"
   defp parent_tier_class(_), do: "bg-gray-100 text-gray-700"
 end

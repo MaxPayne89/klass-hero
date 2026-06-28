@@ -19,7 +19,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Enrollment.Domain.Models.EnrollmentPolicy
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
@@ -166,7 +166,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
       EnrollmentQueries.base()
       |> EnrollmentQueries.by_program(program_id)
       |> EnrollmentQueries.active_only()
-      |> join(:inner, [e], p in ParentProfileSchema, on: e.parent_id == p.id)
+      |> join(:inner, [e], p in ParentProfile, on: e.parent_id == p.id)
       |> select([e, p], p.identity_id)
       |> distinct(true)
       |> Repo.all()
@@ -179,7 +179,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
       EnrollmentQueries.base()
       |> EnrollmentQueries.by_program(program_id)
       |> EnrollmentQueries.active_only()
-      |> join(:inner, [e], p in ParentProfileSchema, on: e.parent_id == p.id)
+      |> join(:inner, [e], p in ParentProfile, on: e.parent_id == p.id)
       |> where([e, p], p.identity_id == ^identity_id)
       |> Repo.exists?()
     end

@@ -21,9 +21,9 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema do
 
   import Ecto.Changeset
 
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
   alias KlassHero.Family.Child
   alias KlassHero.Family.Domain.Models.Consent
+  alias KlassHero.Family.ParentProfile
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -31,7 +31,7 @@ defmodule KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema do
 
   schema "consents" do
     belongs_to :parent,
-               ParentProfileSchema
+               ParentProfile
 
     belongs_to :child,
                Child

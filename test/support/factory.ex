@@ -32,11 +32,10 @@ defmodule KlassHero.Factory do
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Enrollment.Domain.Models.Enrollment
   alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildGuardian
   alias KlassHero.Family.Domain.Models.Consent
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.ParentProfile
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
     ConversationSchema,
@@ -305,7 +304,7 @@ defmodule KlassHero.Factory do
     # Outcome: every parent profile is linked to a real user record
     user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:parent])
 
-    %ParentProfileSchema{
+    %ParentProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
       display_name: sequence(:parent_schema_display_name, &"Test Parent #{&1}"),

@@ -22,12 +22,11 @@ defmodule KlassHero.Family do
     top_level?: true,
     deps: [KlassHero, KlassHero.Shared],
     exports: [
-      # Child is both the Ecto schema and the struct other contexts pattern-match.
+      # Child and ParentProfile are each both the Ecto schema and the struct
+      # other contexts pattern-match / join against.
       Child,
-      Domain.Models.ParentProfile,
+      ParentProfile,
       Domain.Models.Consent,
-      # Schema exported for Enrollment's enrollment→parent_profile join
-      Adapters.Driven.Persistence.Schemas.ParentProfileSchema,
       # Schema exported for Backpex admin direct Ecto access (read-only compliance view)
       Adapters.Driven.Persistence.Schemas.ConsentSchema
     ]
@@ -39,14 +38,14 @@ defmodule KlassHero.Family do
   alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepository
   alias KlassHero.Family.Application.Commands.Consents.GrantConsent
   alias KlassHero.Family.Application.Commands.Consents.WithdrawConsent
-  alias KlassHero.Family.Application.Commands.Parents.CreateParentProfile
   alias KlassHero.Family.Application.Queries.Consents.ConsentQueries
-  alias KlassHero.Family.Application.Queries.Parents.ParentProfileQueries
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildGuardian
   alias KlassHero.Family.Domain.Events.FamilyEvents
   alias KlassHero.Family.Domain.Services.ReferralCodeGenerator
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.EventDispatchHelper
 
   @context __MODULE__
@@ -61,7 +60,20 @@ defmodule KlassHero.Family do
   - `{:error, changeset}` - Persistence validation failed
   """
   def create_parent_profile(attrs) when is_map(attrs) do
-    CreateParentProfile.execute(attrs)
+    %ParentProfile{}
+    |> ParentProfile.changeset(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, parent} ->
+        {:ok, parent}
+
+      {:error, %Ecto.Changeset{errors: errors} = changeset} ->
+        if EctoErrorHelpers.unique_constraint_violation?(errors, :identity_id) do
+          {:error, :duplicate_resource}
+        else
+          {:error, changeset}
+        end
+    end
   end
 
   @doc """
@@ -224,7 +236,7 @@ defmodule KlassHero.Family do
   - `{:ok, %{children_anonymized: count, consents_deleted: count}}`
   """
   def anonymize_data_for_user(identity_id) when is_binary(identity_id) do
-    case ParentProfileQueries.get_by_identity(identity_id) do
+    case get_parent_by_identity(identity_id) do
       {:ok, parent} -> anonymize_children_data(get_children(parent.id))
       {:error, :not_found} -> {:ok, :no_data}
     end
@@ -271,14 +283,17 @@ defmodule KlassHero.Family do
   Returns `{:ok, ParentProfile.t()}` or `{:error, :not_found}`.
   """
   def get_parent_by_identity(identity_id) when is_binary(identity_id) do
-    ParentProfileQueries.get_by_identity(identity_id)
+    case Repo.get_by(ParentProfile, identity_id: identity_id) do
+      nil -> {:error, :not_found}
+      parent -> {:ok, parent}
+    end
   end
 
   @doc """
   Checks if a parent profile exists for the given identity ID.
   """
   def has_parent_profile?(identity_id) when is_binary(identity_id) do
-    ParentProfileQueries.has_profile?(identity_id)
+    Repo.exists?(from(p in ParentProfile, where: p.identity_id == ^identity_id))
   end
 
   @doc """
@@ -286,7 +301,8 @@ defmodule KlassHero.Family do
   silently excluded.
   """
   def get_parents_by_ids(parent_ids) when is_list(parent_ids) do
-    ParentProfileQueries.get_by_ids(parent_ids)
+    valid_ids = Enum.filter(parent_ids, &match?({:ok, _}, Ecto.UUID.dump(&1)))
+    Repo.all(from(p in ParentProfile, where: p.id in ^valid_ids))
   end
 
   @doc """
@@ -387,7 +403,7 @@ defmodule KlassHero.Family do
   when no parent profile exists.
   """
   def export_data_for_user(identity_id) when is_binary(identity_id) do
-    case ParentProfileQueries.get_by_identity(identity_id) do
+    case get_parent_by_identity(identity_id) do
       {:ok, parent} ->
         children_data =
           parent.id

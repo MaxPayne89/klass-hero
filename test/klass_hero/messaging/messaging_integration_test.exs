@@ -5,7 +5,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Provider.Domain.Models.ProviderProfile
