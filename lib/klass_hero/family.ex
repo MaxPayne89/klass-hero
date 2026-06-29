@@ -18,6 +18,8 @@ defmodule KlassHero.Family do
       {:ok, child} = Family.get_child_by_id("child-uuid")
   """
 
+  use KlassHero.Shared.Tracing
+
   import Ecto.Query
 
   alias KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL
@@ -44,19 +46,21 @@ defmodule KlassHero.Family do
   - `{:error, changeset}` - Persistence validation failed
   """
   def create_parent_profile(attrs) when is_map(attrs) do
-    %ParentProfile{}
-    |> ParentProfile.changeset(attrs)
-    |> Repo.insert()
-    |> case do
-      {:ok, parent} ->
-        {:ok, parent}
+    context_span entity: "parent" do
+      %ParentProfile{}
+      |> ParentProfile.changeset(attrs)
+      |> Repo.insert()
+      |> case do
+        {:ok, parent} ->
+          {:ok, parent}
 
-      {:error, %Ecto.Changeset{errors: errors} = changeset} ->
-        if EctoErrorHelpers.unique_constraint_violation?(errors, :identity_id) do
-          {:error, :duplicate_resource}
-        else
-          {:error, changeset}
-        end
+        {:error, %Ecto.Changeset{errors: errors} = changeset} ->
+          if EctoErrorHelpers.unique_constraint_violation?(errors, :identity_id) do
+            {:error, :duplicate_resource}
+          else
+            {:error, changeset}
+          end
+      end
     end
   end
 
@@ -71,15 +75,17 @@ defmodule KlassHero.Family do
   - `{:error, changeset}` for validation failures
   """
   def create_child(attrs) when is_map(attrs) do
-    {parent_id, child_attrs} = Map.pop(attrs, :parent_id)
+    context_span entity: "child" do
+      {parent_id, child_attrs} = Map.pop(attrs, :parent_id)
 
-    case insert_child(child_attrs, parent_id) do
-      {:ok, child} ->
-        dispatch_child_created(child, parent_id)
-        {:ok, child}
+      case insert_child(child_attrs, parent_id) do
+        {:ok, child} ->
+          dispatch_child_created(child, parent_id)
+          {:ok, child}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:error, changeset}
+        {:error, %Ecto.Changeset{} = changeset} ->
+          {:error, changeset}
+      end
     end
   end
 
@@ -116,10 +122,12 @@ defmodule KlassHero.Family do
   - `{:error, changeset}` for validation failures
   """
   def update_child(child_id, attrs) when is_binary(child_id) and is_map(attrs) do
-    with {:ok, child} <- fetch_child(child_id),
-         {:ok, updated} <- child |> Child.changeset(attrs) |> Repo.update() do
-      dispatch_child_updated(updated)
-      {:ok, updated}
+    context_span entity: "child" do
+      with {:ok, child} <- fetch_child(child_id),
+           {:ok, updated} <- child |> Child.changeset(attrs) |> Repo.update() do
+        dispatch_child_updated(updated)
+        {:ok, updated}
+      end
     end
   end
 
@@ -135,20 +143,22 @@ defmodule KlassHero.Family do
   Returns `:ok`, or `{:error, :not_found}` if the child doesn't exist.
   """
   def delete_child(child_id) when is_binary(child_id) do
-    Repo.transaction(fn ->
-      with {:ok, _} <- tag_step(:delete_consents, delete_all_consents_for_child(child_id)),
-           {:ok, _} <- tag_step(:cancel_enrollments, ChildEnrollmentACL.cancel_active_for_child(child_id)),
-           {:ok, _} <- tag_step(:delete_participation, ChildParticipationACL.delete_all_for_child(child_id)),
-           :ok <- tag_step(:delete_child, delete_child_record(child_id)) do
-        :ok
-      else
-        {:error, reason} -> Repo.rollback(reason)
+    context_span entity: "child" do
+      Repo.transaction(fn ->
+        with {:ok, _} <- tag_step(:delete_consents, delete_all_consents_for_child(child_id)),
+             {:ok, _} <- tag_step(:cancel_enrollments, ChildEnrollmentACL.cancel_active_for_child(child_id)),
+             {:ok, _} <- tag_step(:delete_participation, ChildParticipationACL.delete_all_for_child(child_id)),
+             :ok <- tag_step(:delete_child, delete_child_record(child_id)) do
+          :ok
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+      |> case do
+        {:ok, :ok} -> :ok
+        {:error, {:delete_child, :not_found}} -> {:error, :not_found}
+        {:error, reason} -> {:error, reason}
       end
-    end)
-    |> case do
-      {:ok, :ok} -> :ok
-      {:error, {:delete_child, :not_found}} -> {:error, :not_found}
-      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -198,22 +208,24 @@ defmodule KlassHero.Family do
   Expects a map with `:parent_id`, `:child_id`, and `:consent_type`.
   """
   def grant_consent(attrs) when is_map(attrs) do
-    attrs = Map.put_new(attrs, :granted_at, DateTime.utc_now())
+    context_span entity: "consent" do
+      attrs = Map.put_new(attrs, :granted_at, DateTime.utc_now())
 
-    %Consent{}
-    |> Consent.changeset(attrs)
-    |> Repo.insert()
-    |> case do
-      {:ok, consent} ->
-        {:ok, consent}
+      %Consent{}
+      |> Consent.changeset(attrs)
+      |> Repo.insert()
+      |> case do
+        {:ok, consent} ->
+          {:ok, consent}
 
-      {:error, %Ecto.Changeset{errors: errors} = changeset} ->
-        # Partial unique index on (child_id, consent_type) WHERE withdrawn_at IS NULL.
-        if EctoErrorHelpers.any_unique_constraint_violation?(errors) do
-          {:error, :already_active}
-        else
-          {:error, changeset}
-        end
+        {:error, %Ecto.Changeset{errors: errors} = changeset} ->
+          # Partial unique index on (child_id, consent_type) WHERE withdrawn_at IS NULL.
+          if EctoErrorHelpers.any_unique_constraint_violation?(errors) do
+            {:error, :already_active}
+          else
+            {:error, changeset}
+          end
+      end
     end
   end
 
@@ -224,14 +236,16 @@ defmodule KlassHero.Family do
   exists.
   """
   def withdraw_consent(child_id, consent_type) when is_binary(child_id) and is_binary(consent_type) do
-    case active_consent(child_id, consent_type) do
-      nil ->
-        {:error, :not_found}
+    context_span entity: "consent" do
+      case active_consent(child_id, consent_type) do
+        nil ->
+          {:error, :not_found}
 
-      consent ->
-        consent
-        |> Consent.withdraw_changeset(DateTime.utc_now() |> DateTime.truncate(:second))
-        |> Repo.update()
+        consent ->
+          consent
+          |> Consent.withdraw_changeset(DateTime.utc_now() |> DateTime.truncate(:second))
+          |> Repo.update()
+      end
     end
   end
 
@@ -247,9 +261,11 @@ defmodule KlassHero.Family do
   - `{:ok, %{children_anonymized: count, consents_deleted: count}}`
   """
   def anonymize_data_for_user(identity_id) when is_binary(identity_id) do
-    case get_parent_by_identity(identity_id) do
-      {:ok, parent} -> anonymize_children_data(get_children(parent.id))
-      {:error, :not_found} -> {:ok, :no_data}
+    context_span entity: "parent" do
+      case get_parent_by_identity(identity_id) do
+        {:ok, parent} -> anonymize_children_data(get_children(parent.id))
+        {:error, :not_found} -> {:ok, :no_data}
+      end
     end
   end
 

@@ -30,7 +30,15 @@ defmodule KlassHero.Shared.Tracing do
   defmacro __using__(_opts) do
     quote do
       import KlassHero.Shared.Tracing,
-        only: [span: 1, span: 2, acl_span: 2, set_attribute: 2, set_attributes: 2]
+        only: [
+          span: 1,
+          span: 2,
+          acl_span: 2,
+          context_span: 1,
+          context_span: 2,
+          set_attribute: 2,
+          set_attributes: 2
+        ]
 
       alias KlassHero.Shared.Tracing
 
@@ -105,6 +113,45 @@ defmodule KlassHero.Shared.Tracing do
           source: unquote(source),
           target: unquote(target),
           operation: unquote(operation)
+        )
+
+        unquote(block)
+      end
+    end
+  end
+
+  @doc """
+  Wraps a public context function body in a span tagged with the standard
+  `context.{name,operation}` attributes.
+
+  `name` is derived from the calling module's last segment (`KlassHero.Family` →
+  `"Family"`); `operation` from the calling function name — both at compile time.
+  This is the coarse, semantic seam for the flattened contexts: one span per
+  business operation, under which fine-grained DB spans (bridged from Ecto
+  telemetry) nest automatically.
+
+      def create_child(attrs) do
+        context_span entity: "child" do
+          # Multi insert + event dispatch
+        end
+      end
+
+  Extra opts are forwarded as additional `context.*` attributes. Expands in the
+  caller (like `span/2`), so the span name points at the context function.
+  """
+  defmacro context_span(do: block), do: build_context_span([], block, __CALLER__)
+  defmacro context_span(opts, do: block), do: build_context_span(opts, block, __CALLER__)
+
+  defp build_context_span(opts, block, caller) do
+    {function, _arity} = caller.function
+    operation = Atom.to_string(function)
+    name = caller.module |> Module.split() |> List.last()
+
+    quote do
+      span do
+        set_attributes(
+          "context",
+          [name: unquote(name), operation: unquote(operation)] ++ unquote(opts)
         )
 
         unquote(block)

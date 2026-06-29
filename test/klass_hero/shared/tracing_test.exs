@@ -63,6 +63,18 @@ defmodule KlassHero.Shared.TracingTest.TestAdapter do
       :ok
     end
   end
+
+  def context_traced do
+    context_span do
+      :ctx_result
+    end
+  end
+
+  def context_traced_with_attrs do
+    context_span entity: "child" do
+      :ok
+    end
+  end
 end
 
 defmodule KlassHero.Shared.TracingTest do
@@ -139,6 +151,27 @@ defmodule KlassHero.Shared.TracingTest do
       assert_span("Shared.TracingTest.TestAdapter.traced_with_namespaced_attributes/0",
         "db.operation": "insert",
         "db.entity": "enrollment"
+      )
+    end
+  end
+
+  describe "context_span" do
+    test "creates a span named for the context function with context attributes" do
+      assert :ctx_result == TestAdapter.context_traced()
+
+      assert_span("Shared.TracingTest.TestAdapter.context_traced/0",
+        "context.name": "TestAdapter",
+        "context.operation": "context_traced"
+      )
+    end
+
+    test "forwards extra opts as context.* attributes" do
+      TestAdapter.context_traced_with_attrs()
+
+      assert_span("Shared.TracingTest.TestAdapter.context_traced_with_attrs/0",
+        "context.name": "TestAdapter",
+        "context.operation": "context_traced_with_attrs",
+        "context.entity": "child"
       )
     end
   end
