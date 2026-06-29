@@ -1,6 +1,6 @@
-defmodule KlassHero.Accounts.Application.Commands.RegisterUserTest do
+defmodule KlassHero.Accounts.RegisterUserTest do
   @moduledoc """
-  Integration tests for RegisterUser use case.
+  Integration tests for `Accounts.register_user/1`.
 
   Verifies user creation orchestration: successful registration returns a
   User, validation failures surface the changeset, and duplicate emails are
@@ -11,38 +11,38 @@ defmodule KlassHero.Accounts.Application.Commands.RegisterUserTest do
 
   import KlassHero.AccountsFixtures
 
-  alias KlassHero.Accounts.Application.Commands.RegisterUser
+  alias KlassHero.Accounts
   # Auth uses phx.gen.auth: KlassHero.Accounts.User (the Ecto schema) is the
-  # canonical user type these commands return — not a separate domain model.
+  # canonical user type the context returns — not a separate domain model.
   alias KlassHero.Accounts.User
 
-  describe "execute/1 — success path" do
-    test "returns domain User on valid attributes" do
+  describe "register_user/1 — success path" do
+    test "returns the User on valid attributes" do
       attrs = valid_user_attributes()
 
-      assert {:ok, %User{} = user} = RegisterUser.execute(attrs)
+      assert {:ok, %User{} = user} = Accounts.register_user(attrs)
       assert user.email == attrs.email
       assert user.name == attrs.name
     end
   end
 
-  describe "execute/1 — validation failures" do
+  describe "register_user/1 — validation failures" do
     test "returns changeset error for empty attributes" do
-      assert {:error, %Ecto.Changeset{}} = RegisterUser.execute(%{})
+      assert {:error, %Ecto.Changeset{}} = Accounts.register_user(%{})
     end
 
     test "returns changeset error for missing email" do
       assert {:error, %Ecto.Changeset{} = cs} =
-               RegisterUser.execute(%{name: "Alice", intended_roles: [:parent]})
+               Accounts.register_user(%{name: "Alice", intended_roles: [:parent]})
 
       assert {:email, _} = hd(cs.errors)
     end
 
     test "returns changeset error for duplicate email" do
       attrs = valid_user_attributes()
-      {:ok, _} = RegisterUser.execute(attrs)
+      {:ok, _} = Accounts.register_user(attrs)
 
-      assert {:error, %Ecto.Changeset{}} = RegisterUser.execute(attrs)
+      assert {:error, %Ecto.Changeset{}} = Accounts.register_user(attrs)
     end
   end
 end

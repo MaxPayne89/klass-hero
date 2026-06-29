@@ -1,6 +1,6 @@
-defmodule KlassHero.Accounts.Application.Commands.PersonaGrant do
+defmodule KlassHero.Accounts.PersonaGrant do
   @moduledoc """
-  Shared transaction shape for persona-granting commands (ADR-0005).
+  Shared transaction shape for persona-granting flows (ADR-0005).
 
   Every flow where a user gains a persona — provider upgrade (#968), staff
   invitation link (#967), self-staffing (#969) — performs the same two-step
@@ -9,15 +9,13 @@ defmodule KlassHero.Accounts.Application.Commands.PersonaGrant do
   mount-stale session struct can never clobber concurrently granted roles
   (the lost-update class fixed in the #968 review).
 
-  Not a public API: commands in this directory call `grant/3`; everything
-  context-specific (guards, error vocabulary normalization) stays in the
-  calling command.
+  Internal to Accounts: the context's persona functions call `grant/3`;
+  everything context-specific (guards, error vocabulary normalization) stays in
+  the calling function.
   """
 
   alias KlassHero.Accounts.User
   alias KlassHero.Repo
-
-  @user_repository Application.compile_env!(:klass_hero, [:accounts, :for_storing_users])
 
   @doc """
   Runs `cross_context_write.(fresh_user)` and appends `role`, atomically.
@@ -32,7 +30,7 @@ defmodule KlassHero.Accounts.Application.Commands.PersonaGrant do
       fresh_user = Repo.get!(User, user.id)
 
       with {:ok, granted} <- cross_context_write.(fresh_user),
-           {:ok, updated_user} <- @user_repository.append_intended_role(fresh_user, role) do
+           {:ok, updated_user} <- fresh_user |> User.add_role_changeset(role) |> Repo.update() do
         {updated_user, granted}
       else
         {:error, reason} -> Repo.rollback(reason)

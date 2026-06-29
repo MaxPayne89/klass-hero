@@ -9,7 +9,6 @@ import Config
 
 alias ExAws.Request.Req
 alias FunWithFlags.Notifications.PhoenixPubSub
-alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
 alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
 alias KlassHero.Enrollment.Adapters.Driven.Accounts.UserAccountResolver
@@ -142,9 +141,6 @@ config :klass_hero, Oban,
   # email: 1 — serialized to stay under Resend's 2 req/sec rate limit (per-node;
   #   add a rate limiter if scaling to multiple Oban nodes)
   queues: [default: 10, messaging: 5, cleanup: 2, email: 1, family: 1, critical_events: 5]
-
-# Configure Accounts bounded context
-config :klass_hero, :accounts, for_storing_users: UserRepository
 
 # Base URL for constructing links in emails and event handlers
 # (avoids boundary violations from referencing KlassHeroWeb.Endpoint in domain code)

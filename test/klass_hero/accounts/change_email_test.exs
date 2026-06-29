@@ -1,6 +1,6 @@
-defmodule KlassHero.Accounts.Application.Commands.ChangeEmailTest do
+defmodule KlassHero.Accounts.ChangeEmailTest do
   @moduledoc """
-  Integration tests for ChangeEmail use case.
+  Integration tests for `Accounts.update_user_email/2`.
 
   Verifies email-change orchestration: a valid confirmation token updates the
   user's email, and invalid tokens surface an :invalid_token error.
@@ -11,10 +11,8 @@ defmodule KlassHero.Accounts.Application.Commands.ChangeEmailTest do
   import KlassHero.AccountsFixtures
 
   alias KlassHero.Accounts
-  alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
-  alias KlassHero.Accounts.Application.Commands.ChangeEmail
   # Auth uses phx.gen.auth: KlassHero.Accounts.User (the Ecto schema) is the
-  # canonical user type these commands return — not a separate domain model.
+  # canonical user type the context returns — not a separate domain model.
   alias KlassHero.Accounts.User
 
   defp generate_email_change_token(user, new_email) do
@@ -29,13 +27,13 @@ defmodule KlassHero.Accounts.Application.Commands.ChangeEmailTest do
     end)
   end
 
-  describe "execute/2 — success path" do
+  describe "update_user_email/2 — success path" do
     test "returns User with updated email" do
       user = user_fixture()
       new_email = unique_user_email()
       token = generate_email_change_token(user, new_email)
 
-      assert {:ok, %User{} = updated} = ChangeEmail.execute(user, token)
+      assert {:ok, %User{} = updated} = Accounts.update_user_email(user, token)
       assert updated.email == new_email
     end
 
@@ -44,25 +42,25 @@ defmodule KlassHero.Accounts.Application.Commands.ChangeEmailTest do
       new_email = unique_user_email()
       token = generate_email_change_token(user, new_email)
 
-      {:ok, _} = ChangeEmail.execute(user, token)
+      {:ok, _} = Accounts.update_user_email(user, token)
 
-      assert {:ok, persisted} = UserRepository.get_by_id(user.id)
+      persisted = Accounts.get_user!(user.id)
       assert persisted.email == new_email
     end
   end
 
-  describe "execute/2 — token errors" do
+  describe "update_user_email/2 — token errors" do
     test "returns :invalid_token for a malformed token" do
       user = user_fixture()
 
-      assert {:error, :invalid_token} = ChangeEmail.execute(user, "not-a-valid-token!")
+      assert {:error, :invalid_token} = Accounts.update_user_email(user, "not-a-valid-token!")
     end
 
     test "returns :invalid_token for a nonexistent token" do
       user = user_fixture()
       fake_token = Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
 
-      assert {:error, :invalid_token} = ChangeEmail.execute(user, fake_token)
+      assert {:error, :invalid_token} = Accounts.update_user_email(user, fake_token)
     end
   end
 end

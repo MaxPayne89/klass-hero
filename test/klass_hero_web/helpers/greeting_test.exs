@@ -8,7 +8,7 @@ defmodule KlassHeroWeb.Helpers.GreetingTest do
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Accounts.Domain.Models.User
+  alias KlassHero.Accounts.User
   alias KlassHeroWeb.Helpers.Greeting
 
   describe "default_tz/0" do

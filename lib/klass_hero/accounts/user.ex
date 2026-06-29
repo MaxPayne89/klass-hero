@@ -11,7 +11,6 @@ defmodule KlassHero.Accounts.User do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.Domain.Models.User, as: DomainUser
   alias KlassHero.Accounts.Types.{UserRole, UserRoles}
   # Cross-context references for admin dashboard preloading (read-only).
   # Pragmatic DDD boundary crossing — see AccountLive moduledoc.
@@ -218,13 +217,25 @@ defmodule KlassHero.Accounts.User do
   end
 
   @doc """
-  Anonymizes PII fields for GDPR deletion. Delegates anonymized values to the domain model.
+  Anonymizes PII fields for GDPR deletion. The schema owns what "anonymized" means.
   """
   def anonymize_changeset(%__MODULE__{id: id} = user) do
-    attrs = DomainUser.anonymized_attrs()
+    attrs = anonymized_attrs()
     anonymized_email = attrs.email_fn.(id)
 
     change(user, email: anonymized_email, name: attrs.name, avatar: attrs.avatar)
+  end
+
+  @doc """
+  Canonical GDPR anonymization values. `email_fn` derives a per-user tombstone
+  address so anonymized rows stay unique against the email constraint.
+  """
+  def anonymized_attrs do
+    %{
+      name: "Deleted User",
+      avatar: nil,
+      email_fn: fn user_id -> "deleted_#{user_id}@anonymized.local" end
+    }
   end
 
   @supported_locales ~w(en de)
