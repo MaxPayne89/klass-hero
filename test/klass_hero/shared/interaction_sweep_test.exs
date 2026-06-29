@@ -40,9 +40,10 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   end
 
   describe "every DB context drives I/O through the Interaction envelope" do
-    # Accounts and Family have no probe: the conventional-Phoenix flatten inlined
-    # their I/O into the context with plain Repo calls (no Interaction envelope).
-    # The observability span is a deferred follow-up to reintroduce at the context seam.
+    # Accounts and Family have no probe here: the conventional-Phoenix flatten replaced
+    # the per-adapter Interaction envelope with the seam-level `context_span` macro, which
+    # emits OTel spans (not the `[:klass_hero, :interaction, :stop]` event this sweep watches).
+    # Their observability is covered by their own `*/observability_test.exs` instead.
 
     test "program_catalog — ProgramRepository.list_all_programs/0" do
       assert ProgramRepository.list_all_programs() == []

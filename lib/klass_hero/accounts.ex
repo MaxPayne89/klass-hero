@@ -3,6 +3,8 @@ defmodule KlassHero.Accounts do
   The Accounts context.
   """
 
+  use KlassHero.Shared.Tracing
+
   import Ecto.Query, warn: false
 
   alias KlassHero.Accounts.Domain.Events.{AccountsIntegrationEvents, UserEvents}
@@ -18,7 +20,9 @@ defmodule KlassHero.Accounts do
   Registers a user.
   """
   def register_user(attrs) do
-    register(attrs, &User.registration_changeset/2)
+    context_span entity: "user" do
+      register(attrs, &User.registration_changeset/2)
+    end
   end
 
   @doc """
@@ -27,7 +31,9 @@ defmodule KlassHero.Accounts do
   Uses staff_registration_changeset which locks intended_roles to [:staff].
   """
   def register_staff_user(attrs) do
-    register(attrs, &User.staff_registration_changeset/2)
+    context_span entity: "user" do
+      register(attrs, &User.staff_registration_changeset/2)
+    end
   end
 
   defp register(attrs, changeset_fn) when is_map(attrs) do
@@ -58,12 +64,14 @@ defmodule KlassHero.Accounts do
   @spec link_staff_invitation(User.t(), StaffMember.t()) ::
           {:ok, User.t()} | {:error, :email_mismatch | term()}
   def link_staff_invitation(%User{} = user, %StaffMember{} = staff_member) do
-    with :ok <- ensure_email_match(user, staff_member),
-         {:ok, {updated_user, _linked}} <-
-           PersonaGrant.grant(user, :staff, fn fresh_user ->
-             Provider.accept_staff_invitation(staff_member, fresh_user.id)
-           end) do
-      {:ok, updated_user}
+    context_span entity: "user" do
+      with :ok <- ensure_email_match(user, staff_member),
+           {:ok, {updated_user, _linked}} <-
+             PersonaGrant.grant(user, :staff, fn fresh_user ->
+               Provider.accept_staff_invitation(staff_member, fresh_user.id)
+             end) do
+        {:ok, updated_user}
+      end
     end
   end
 
@@ -85,14 +93,16 @@ defmodule KlassHero.Accounts do
   """
   @spec upgrade_to_provider(User.t()) :: {:ok, User.t()} | {:error, :already_provider | term()}
   def upgrade_to_provider(%User{} = user) do
-    if Provider.has_provider_profile?(user.id) do
-      {:error, :already_provider}
-    else
-      user
-      |> PersonaGrant.grant(:provider, fn fresh_user ->
-        Provider.create_draft_provider_profile(fresh_user.id, fresh_user.name, fresh_user.email)
-      end)
-      |> normalize_upgrade_result()
+    context_span entity: "user" do
+      if Provider.has_provider_profile?(user.id) do
+        {:error, :already_provider}
+      else
+        user
+        |> PersonaGrant.grant(:provider, fn fresh_user ->
+          Provider.create_draft_provider_profile(fresh_user.id, fresh_user.name, fresh_user.email)
+        end)
+        |> normalize_upgrade_result()
+      end
     end
   end
 
@@ -143,15 +153,17 @@ defmodule KlassHero.Accounts do
   """
   @spec remove_staff_member(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
   def remove_staff_member(staff_id) when is_binary(staff_id) do
-    Repo.transaction(fn ->
-      with {:ok, staff} <- Provider.get_staff_member(staff_id),
-           :ok <- Provider.delete_staff_member(staff_id),
-           :ok <- maybe_revoke_staff_role(staff) do
-        staff
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+    context_span entity: "user" do
+      Repo.transaction(fn ->
+        with {:ok, staff} <- Provider.get_staff_member(staff_id),
+             :ok <- Provider.delete_staff_member(staff_id),
+             :ok <- maybe_revoke_staff_role(staff) do
+          staff
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    end
   end
 
   # Unlinked display-only row — no persona to tear down
@@ -212,17 +224,19 @@ defmodule KlassHero.Accounts do
   Returns `{:ok, %User{}}`, `{:error, :invalid_token}`, or `{:error, %Ecto.Changeset{}}`.
   """
   def update_user_email(%User{} = user, token) when is_binary(token) do
-    previous_email = user.email
+    context_span entity: "user" do
+      previous_email = user.email
 
-    case apply_email_change(user, token) do
-      {:ok, updated_user} ->
-        UserEvents.user_email_changed(updated_user, %{previous_email: previous_email})
-        |> EventDispatchHelper.dispatch(__MODULE__)
+      case apply_email_change(user, token) do
+        {:ok, updated_user} ->
+          UserEvents.user_email_changed(updated_user, %{previous_email: previous_email})
+          |> EventDispatchHelper.dispatch(__MODULE__)
 
-        {:ok, updated_user}
+          {:ok, updated_user}
 
-      {:error, reason} ->
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
@@ -269,9 +283,11 @@ defmodule KlassHero.Accounts do
   Returns `{:ok, {%User{}, expired_tokens}}` or `{:error, %Ecto.Changeset{}}`.
   """
   def update_user_password(user, attrs) do
-    user
-    |> User.password_changeset(attrs)
-    |> update_user_and_delete_all_tokens()
+    context_span entity: "user" do
+      user
+      |> User.password_changeset(attrs)
+      |> update_user_and_delete_all_tokens()
+    end
   end
 
   @doc """
@@ -291,9 +307,11 @@ defmodule KlassHero.Accounts do
   Updates the user locale preference.
   """
   def update_user_locale(user, attrs) do
-    user
-    |> User.locale_changeset(attrs)
-    |> Repo.update()
+    context_span entity: "user" do
+      user
+      |> User.locale_changeset(attrs)
+      |> Repo.update()
+    end
   end
 
   @doc """
@@ -327,16 +345,18 @@ defmodule KlassHero.Accounts do
   `{:error, :invalid_token}`, or `{:error, :security_violation}`.
   """
   def login_user_by_magic_link(token) when is_binary(token) do
-    case resolve_magic_link(token) do
-      {:ok, {:unconfirmed, user}} ->
-        confirm_magic_link_login(user)
+    context_span entity: "user" do
+      case resolve_magic_link(token) do
+        {:ok, {:unconfirmed, user}} ->
+          confirm_magic_link_login(user)
 
-      {:ok, {:confirmed, user, token_record}} ->
-        delete_magic_link_token(token_record)
-        {:ok, {user, []}}
+        {:ok, {:confirmed, user, token_record}} ->
+          delete_magic_link_token(token_record)
+          {:ok, {user, []}}
 
-      {:error, reason} ->
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
@@ -440,17 +460,19 @@ defmodule KlassHero.Accounts do
   and publishes `user_anonymized` for downstream cascade.
   """
   def anonymize_user(%User{} = user) do
-    previous_email = user.email
+    context_span entity: "user" do
+      previous_email = user.email
 
-    case anonymize(user) do
-      {:ok, anonymized_user} ->
-        UserEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
-        |> EventDispatchHelper.dispatch(__MODULE__)
+      case anonymize(user) do
+        {:ok, anonymized_user} ->
+          UserEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
+          |> EventDispatchHelper.dispatch(__MODULE__)
 
-        {:ok, anonymized_user}
+          {:ok, anonymized_user}
 
-      {:error, reason} ->
-        {:error, reason}
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 
