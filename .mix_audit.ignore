@@ -1,0 +1,35 @@
+# mix_audit advisory suppressions
+#
+# Format: one advisory ID per line. Lines starting with `#` and blank lines are
+# ignored. IDs are matched verbatim, so keep each ID alone on its line and put
+# justifications on `#` comment lines above it.
+#
+# Consumed by the Security workflow: `mix deps.audit --ignore-file .mix_audit.ignore`.
+#
+# Review trigger: drop these entries the moment hackney can move to >= 4.0.1.
+# That bump is currently blocked by transitive pins (ex_aws ~> 1.16,
+# httpoison ~> 1.21, wallaby/web_driver_client ~> 1.6). Tracked by #987.
+#
+# -----------------------------------------------------------------------------
+# hackney 1.25.0 — all four advisories first patched in 4.0.1, no 1.x backport.
+#
+# Exposure assessment (2026-06-28): the only app-code hackney consumer is
+# lib/klass_hero/shared/adapters/driven/storage/s3_storage_adapter.ex, which
+# calls ExAws.S3 against a fixed bucket endpoint with no user-controlled URLs.
+# httpoison and wallaby/web_driver_client are test-only. The SSRF/CRLF
+# advisories require attacker-controlled request URLs and are therefore not
+# reachable on our paths.
+# -----------------------------------------------------------------------------
+
+# SSRF allowlist bypass via percent-encoded host (moderate) — needs user-controlled URL; not reachable.
+GHSA-pj7v-xfvx-wmjq
+
+# CR/LF injection in query parameter (moderate) — needs user-controlled URL; not reachable.
+GHSA-j9wq-vxxc-94wf
+
+# CRLF / header injection via unvalidated `domain`/`path` options (low) — needs user-controlled input; not reachable.
+GHSA-mp55-p8c9-rfw2
+
+# ssl:connect/2 post-handshake upgrade has no timeout (high) — not URL-dependent; could let an S3
+# call hang. Accepted as low-impact: fixed endpoint, unbumpable today. Re-evaluate on hackney >= 4.0.1.
+GHSA-gp9c-pm5m-5cxr

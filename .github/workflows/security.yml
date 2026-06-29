@@ -91,4 +91,4 @@ jobs:
         run: mix deps.get
 
       - name: Audit dependencies for vulnerabilities
-        run: mix deps.audit
+        run: mix deps.audit --ignore-file .mix_audit.ignore
