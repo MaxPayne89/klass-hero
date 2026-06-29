@@ -1,6 +1,6 @@
-defmodule KlassHero.Accounts.Application.Commands.AnonymizeUserTest do
+defmodule KlassHero.Accounts.AnonymizeUserTest do
   @moduledoc """
-  Integration tests for AnonymizeUser use case.
+  Integration tests for `Accounts.anonymize_user/1`.
 
   Verifies GDPR anonymization orchestration: a valid user's PII is scrubbed,
   and nil input returns an :user_not_found error.
@@ -10,17 +10,16 @@ defmodule KlassHero.Accounts.Application.Commands.AnonymizeUserTest do
 
   import KlassHero.AccountsFixtures
 
-  alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
-  alias KlassHero.Accounts.Application.Commands.AnonymizeUser
+  alias KlassHero.Accounts
   # Auth uses phx.gen.auth: KlassHero.Accounts.User (the Ecto schema) is the
-  # canonical user type these commands return — not a separate domain model.
+  # canonical user type the context returns — not a separate domain model.
   alias KlassHero.Accounts.User
 
-  describe "execute/1 — success path" do
-    test "returns anonymized domain User" do
+  describe "anonymize_user/1 — success path" do
+    test "returns the anonymized User" do
       user = user_fixture()
 
-      assert {:ok, %User{} = anonymized} = AnonymizeUser.execute(user)
+      assert {:ok, %User{} = anonymized} = Accounts.anonymize_user(user)
       assert anonymized.id == user.id
       assert anonymized.email == "deleted_#{user.id}@anonymized.local"
       assert anonymized.name == "Deleted User"
@@ -29,17 +28,17 @@ defmodule KlassHero.Accounts.Application.Commands.AnonymizeUserTest do
     test "persists anonymized PII to the database" do
       user = user_fixture()
 
-      {:ok, _} = AnonymizeUser.execute(user)
+      {:ok, _} = Accounts.anonymize_user(user)
 
-      assert {:ok, persisted} = UserRepository.get_by_id(user.id)
+      persisted = Accounts.get_user!(user.id)
       assert persisted.email == "deleted_#{user.id}@anonymized.local"
       assert persisted.name == "Deleted User"
     end
   end
 
-  describe "execute/1 — nil guard" do
+  describe "anonymize_user/1 — nil guard" do
     test "returns :user_not_found for nil user" do
-      assert {:error, :user_not_found} = AnonymizeUser.execute(nil)
+      assert {:error, :user_not_found} = Accounts.anonymize_user(nil)
     end
   end
 end

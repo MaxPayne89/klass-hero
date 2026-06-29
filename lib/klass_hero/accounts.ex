@@ -5,31 +5,20 @@ defmodule KlassHero.Accounts do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Accounts.Adapters.Driven.Persistence.TokenCleanup
-
-  alias KlassHero.Accounts.Application.Commands.{
-    AddSelfAsStaff,
-    AnonymizeUser,
-    ChangeEmail,
-    LinkStaffInvitation,
-    LoginByMagicLink,
-    RegisterUser,
-    RemoveStaffMember,
-    UpgradeToProvider
-  }
-
-  alias KlassHero.Accounts.Application.Queries.ExportUserData
-  alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
-  alias KlassHero.Accounts.{User, UserNotifier, UserToken}
+  alias KlassHero.Accounts.Domain.Events.{AccountsIntegrationEvents, UserEvents}
+  alias KlassHero.Accounts.{PersonaGrant, User, UserNotifier, UserToken}
+  alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHero.Repo
-  alias KlassHero.Shared.IntegrationEventPublishing
+  alias KlassHero.Shared.{EventDispatchHelper, IntegrationEventPublishing}
+
+  require Logger
 
   @doc """
   Registers a user.
   """
   def register_user(attrs) do
-    RegisterUser.execute(attrs)
+    register(attrs, &User.registration_changeset/2)
   end
 
   @doc """
@@ -38,7 +27,23 @@ defmodule KlassHero.Accounts do
   Uses staff_registration_changeset which locks intended_roles to [:staff].
   """
   def register_staff_user(attrs) do
-    RegisterUser.execute(attrs, changeset_fn: &User.staff_registration_changeset/2)
+    register(attrs, &User.staff_registration_changeset/2)
+  end
+
+  defp register(attrs, changeset_fn) when is_map(attrs) do
+    %User{}
+    |> changeset_fn.(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, user} ->
+        UserEvents.user_registered(user, %{registration_source: :web})
+        |> EventDispatchHelper.dispatch(__MODULE__)
+
+        {:ok, user}
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """
@@ -53,7 +58,17 @@ defmodule KlassHero.Accounts do
   @spec link_staff_invitation(User.t(), StaffMember.t()) ::
           {:ok, User.t()} | {:error, :email_mismatch | term()}
   def link_staff_invitation(%User{} = user, %StaffMember{} = staff_member) do
-    LinkStaffInvitation.execute(user, staff_member)
+    with :ok <- ensure_email_match(user, staff_member),
+         {:ok, {updated_user, _linked}} <-
+           PersonaGrant.grant(user, :staff, fn fresh_user ->
+             Provider.accept_staff_invitation(staff_member, fresh_user.id)
+           end) do
+      {:ok, updated_user}
+    end
+  end
+
+  defp ensure_email_match(%User{email: user_email}, %StaffMember{email: invite_email}) do
+    if emails_match?(user_email, invite_email), do: :ok, else: {:error, :email_mismatch}
   end
 
   @doc """
@@ -64,12 +79,27 @@ defmodule KlassHero.Accounts do
   never params — provider-hood is a deliberate, person-initiated act.
 
   Returns `{:ok, %User{}}`, `{:error, :already_provider}`, or an error from
-  the underlying writes.
+  the underlying writes. The race where another request creates the profile
+  between the pre-check and the insert is normalized from the unique-index
+  backstop (`:duplicate_resource`) to `:already_provider`.
   """
   @spec upgrade_to_provider(User.t()) :: {:ok, User.t()} | {:error, :already_provider | term()}
   def upgrade_to_provider(%User{} = user) do
-    UpgradeToProvider.execute(user)
+    if Provider.has_provider_profile?(user.id) do
+      {:error, :already_provider}
+    else
+      user
+      |> PersonaGrant.grant(:provider, fn fresh_user ->
+        Provider.create_draft_provider_profile(fresh_user.id, fresh_user.name, fresh_user.email)
+      end)
+      |> normalize_upgrade_result()
+    end
   end
+
+  defp normalize_upgrade_result({:ok, {updated_user, _profile}}), do: {:ok, updated_user}
+  # Race loser hit the unique-index backstop: same condition as the pre-check.
+  defp normalize_upgrade_result({:error, :duplicate_resource}), do: {:error, :already_provider}
+  defp normalize_upgrade_result({:error, reason}), do: {:error, reason}
 
   @doc """
   Adds the user as a staff member of their OWN business (#969, ADR-0005).
@@ -84,9 +114,21 @@ defmodule KlassHero.Accounts do
   `{:error, :already_staffed}`, or an error from the underlying writes.
   """
   @spec add_self_as_staff(User.t(), map()) ::
-          {:ok, User.t(), struct()} | {:error, :not_a_provider | :already_staffed | term()}
+          {:ok, User.t(), StaffMember.t()} | {:error, :not_a_provider | :already_staffed | term()}
   def add_self_as_staff(%User{} = user, staff_attrs) when is_map(staff_attrs) do
-    AddSelfAsStaff.execute(user, staff_attrs)
+    case Provider.get_provider_by_identity(user.id) do
+      {:ok, provider} ->
+        with {:ok, {updated_user, staff}} <-
+               PersonaGrant.grant(user, :staff, fn fresh_user ->
+                 attrs = Map.put(staff_attrs, :email, fresh_user.email)
+                 Provider.create_self_staff_member(provider.id, fresh_user.id, attrs)
+               end) do
+          {:ok, updated_user, staff}
+        end
+
+      {:error, :not_found} ->
+        {:error, :not_a_provider}
+    end
   end
 
   @doc """
@@ -101,7 +143,37 @@ defmodule KlassHero.Accounts do
   """
   @spec remove_staff_member(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
   def remove_staff_member(staff_id) when is_binary(staff_id) do
-    RemoveStaffMember.execute(staff_id)
+    Repo.transaction(fn ->
+      with {:ok, staff} <- Provider.get_staff_member(staff_id),
+           :ok <- Provider.delete_staff_member(staff_id),
+           :ok <- maybe_revoke_staff_role(staff) do
+        staff
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  # Unlinked display-only row — no persona to tear down
+  defp maybe_revoke_staff_role(%StaffMember{user_id: nil}), do: :ok
+
+  defp maybe_revoke_staff_role(%StaffMember{user_id: user_id}) do
+    # Queried after the delete (same txn): :not_found means this was the last active employment
+    case Provider.get_active_staff_member_by_user(user_id) do
+      {:ok, _still_employed} -> :ok
+      {:error, :not_found} -> revoke_staff(user_id)
+    end
+  end
+
+  defp revoke_staff(user_id) do
+    case Repo.get(User, user_id) do
+      # Re-fetched inside the txn as a lost-update guard (mirrors PersonaGrant)
+      %User{} = user ->
+        with {:ok, _updated} <- user |> User.remove_role_changeset(:staff) |> Repo.update(), do: :ok
+
+      nil ->
+        :ok
+    end
   end
 
   @doc """
@@ -136,10 +208,60 @@ defmodule KlassHero.Accounts do
   Updates the user email using the given token.
 
   If the token matches, the user email is updated and the token is deleted.
+
+  Returns `{:ok, %User{}}`, `{:error, :invalid_token}`, or `{:error, %Ecto.Changeset{}}`.
   """
-  def update_user_email(user, token) do
-    ChangeEmail.execute(user, token)
+  def update_user_email(%User{} = user, token) when is_binary(token) do
+    previous_email = user.email
+
+    case apply_email_change(user, token) do
+      {:ok, updated_user} ->
+        UserEvents.user_email_changed(updated_user, %{previous_email: previous_email})
+        |> EventDispatchHelper.dispatch(__MODULE__)
+
+        {:ok, updated_user}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
+
+  # Applies a verified email-change token atomically: verify, fetch the address
+  # the token was sent to, swap it in, then invalidate the change tokens.
+  defp apply_email_change(%User{} = user, token) do
+    context = "change:#{user.email}"
+
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:verify_token, fn _repo, _ ->
+      # verify_change_email_token_query returns bare :error for bad base64; normalize to tagged tuple
+      case UserToken.verify_change_email_token_query(token, context) do
+        {:ok, query} -> {:ok, query}
+        :error -> {:error, :invalid_token}
+      end
+    end)
+    |> Ecto.Multi.run(:fetch_token, fn repo, %{verify_token: query} ->
+      case repo.one(query) do
+        %UserToken{sent_to: email} = token_record -> {:ok, {token_record, email}}
+        nil -> {:error, :token_not_found}
+      end
+    end)
+    |> Ecto.Multi.run(:update_email, fn repo, %{fetch_token: {_token_record, email}} ->
+      user
+      |> User.email_changeset(%{email: email})
+      |> repo.update()
+    end)
+    |> Ecto.Multi.delete_all(:delete_tokens, fn %{update_email: updated_user} ->
+      from(UserToken, where: [user_id: ^updated_user.id, context: ^context])
+    end)
+    |> Repo.transaction()
+    |> normalize_email_change_result()
+  end
+
+  defp normalize_email_change_result({:ok, %{update_email: updated_user}}), do: {:ok, updated_user}
+  defp normalize_email_change_result({:error, :verify_token, _reason, _}), do: {:error, :invalid_token}
+  defp normalize_email_change_result({:error, :fetch_token, _reason, _}), do: {:error, :invalid_token}
+  defp normalize_email_change_result({:error, :update_email, changeset, _}), do: {:error, changeset}
+  defp normalize_email_change_result({:error, _step, reason, _}), do: {:error, reason}
 
   @doc """
   Updates the user password.
@@ -149,7 +271,7 @@ defmodule KlassHero.Accounts do
   def update_user_password(user, attrs) do
     user
     |> User.password_changeset(attrs)
-    |> TokenCleanup.update_user_and_delete_all_tokens()
+    |> update_user_and_delete_all_tokens()
   end
 
   @doc """
@@ -200,9 +322,75 @@ defmodule KlassHero.Accounts do
      This cannot happen in the default implementation but may be the
      source of security pitfalls. See the "Mixing magic link and password registration" section of
      `mix help phx.gen.auth`.
+
+  Returns `{:ok, {%User{}, expired_tokens}}`, `{:error, :not_found}`,
+  `{:error, :invalid_token}`, or `{:error, :security_violation}`.
   """
-  def login_user_by_magic_link(token) do
-    LoginByMagicLink.execute(token)
+  def login_user_by_magic_link(token) when is_binary(token) do
+    case resolve_magic_link(token) do
+      {:ok, {:unconfirmed, user}} ->
+        confirm_magic_link_login(user)
+
+      {:ok, {:confirmed, user, token_record}} ->
+        delete_magic_link_token(token_record)
+        {:ok, {user, []}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp resolve_magic_link(token) do
+    # verify_magic_link_token_query returns bare :error for bad base64; normalize to tagged tuple
+    case UserToken.verify_magic_link_token_query(token) do
+      {:ok, query} -> resolve_magic_link_query(Repo.one(query))
+      :error -> {:error, :invalid_token}
+    end
+  end
+
+  # Unconfirmed user with a password set — reject to prevent session fixation via magic link
+  defp resolve_magic_link_query({%User{confirmed_at: nil, hashed_password: hash}, _token}) when not is_nil(hash) do
+    {:error, :security_violation}
+  end
+
+  # Unconfirmed user without password — first login; confirmation handled below
+  defp resolve_magic_link_query({%User{confirmed_at: nil} = user, _token}) do
+    {:ok, {:unconfirmed, user}}
+  end
+
+  defp resolve_magic_link_query({user, token}), do: {:ok, {:confirmed, user, token}}
+  defp resolve_magic_link_query(nil), do: {:error, :not_found}
+
+  # First login for unconfirmed user: confirm email, expire all tokens, dispatch event
+  defp confirm_magic_link_login(user) do
+    user
+    |> User.confirm_changeset()
+    |> update_user_and_delete_all_tokens()
+    |> case do
+      {:ok, {confirmed_user, tokens}} ->
+        UserEvents.user_confirmed(confirmed_user, %{confirmation_method: :magic_link})
+        |> EventDispatchHelper.dispatch(__MODULE__)
+
+        {:ok, {confirmed_user, tokens}}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp delete_magic_link_token(%UserToken{} = token) do
+    case Repo.delete(token) do
+      {:ok, _} ->
+        :ok
+
+      # Constraint failure: log for visibility but treat as success — token is invalidated either way
+      {:error, changeset} ->
+        Logger.warning("Token deletion failed: #{inspect(changeset)}")
+        :ok
+    end
+  rescue
+    # Concurrent delete: Repo.delete raises StaleEntryError when row is already gone
+    Ecto.StaleEntryError -> :ok
   end
 
   @doc """
@@ -252,10 +440,36 @@ defmodule KlassHero.Accounts do
   and publishes `user_anonymized` for downstream cascade.
   """
   def anonymize_user(%User{} = user) do
-    AnonymizeUser.execute(user)
+    previous_email = user.email
+
+    case anonymize(user) do
+      {:ok, anonymized_user} ->
+        UserEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
+        |> EventDispatchHelper.dispatch(__MODULE__)
+
+        {:ok, anonymized_user}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   def anonymize_user(nil), do: {:error, :user_not_found}
+
+  # Scrubs PII and invalidates every token in one transaction.
+  defp anonymize(%User{} = user) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:anonymize_user, User.anonymize_changeset(user))
+    |> Ecto.Multi.delete_all(:delete_tokens, fn %{anonymize_user: anonymized_user} ->
+      from(t in UserToken, where: t.user_id == ^anonymized_user.id)
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{anonymize_user: user}} -> {:ok, user}
+      {:error, :anonymize_user, changeset, _} -> {:error, changeset}
+      {:error, _step, reason, _} -> {:error, reason}
+    end
+  end
 
   @doc """
   Anonymizes user account after sudo-mode and password verification.
@@ -266,7 +480,7 @@ defmodule KlassHero.Accounts do
   def delete_account(%User{} = user, password) when is_binary(password) do
     with :ok <- check_delete_sudo(user),
          :ok <- check_delete_password(user, password) do
-      AnonymizeUser.execute(user)
+      anonymize_user(user)
     end
   end
 
@@ -345,7 +559,18 @@ defmodule KlassHero.Accounts do
   Returns a map containing all user data that can be serialized to JSON.
   """
   def export_user_data(%User{} = user) do
-    ExportUserData.execute(user)
+    %{
+      exported_at: DateTime.utc_now() |> DateTime.to_iso8601(),
+      user: %{
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        confirmed_at: user.confirmed_at && DateTime.to_iso8601(user.confirmed_at),
+        created_at: user.inserted_at && DateTime.to_iso8601(user.inserted_at),
+        updated_at: user.updated_at && DateTime.to_iso8601(user.updated_at)
+      }
+    }
   end
 
   @doc """
@@ -388,6 +613,26 @@ defmodule KlassHero.Accounts do
   """
   def change_user_locale(user, attrs \\ %{}) do
     User.locale_changeset(user, attrs)
+  end
+
+  # Updates a user via changeset and deletes all their tokens atomically.
+  # Returns `{:ok, {user, deleted_tokens}}` or `{:error, changeset}` — the
+  # deleted tokens are returned so callers can invalidate live sessions.
+  defp update_user_and_delete_all_tokens(changeset) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.update(:update_user, changeset)
+    |> Ecto.Multi.run(:fetch_tokens, fn repo, %{update_user: user} ->
+      {:ok, repo.all_by(UserToken, user_id: user.id)}
+    end)
+    |> Ecto.Multi.delete_all(:delete_tokens, fn %{fetch_tokens: tokens} ->
+      from(t in UserToken, where: t.id in ^Enum.map(tokens, & &1.id))
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{update_user: user, fetch_tokens: tokens}} -> {:ok, {user, tokens}}
+      {:error, :update_user, changeset, _} -> {:error, changeset}
+      {:error, _step, reason, _} -> {:error, reason}
+    end
   end
 
   defp check_delete_sudo(user) do

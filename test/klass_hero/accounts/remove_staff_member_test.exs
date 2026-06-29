@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Application.Commands.RemoveStaffMemberTest do
+defmodule KlassHero.Accounts.RemoveStaffMemberTest do
   @moduledoc """
   Durable `:staff` teardown when the last linked staff row is deleted (#972).
 

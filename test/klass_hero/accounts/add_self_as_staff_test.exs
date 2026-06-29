@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Application.Commands.AddSelfAsStaffTest do
+defmodule KlassHero.Accounts.AddSelfAsStaffTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures

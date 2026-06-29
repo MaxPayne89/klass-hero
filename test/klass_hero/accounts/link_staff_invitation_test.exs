@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Application.Commands.LinkStaffInvitationTest do
+defmodule KlassHero.Accounts.LinkStaffInvitationTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures

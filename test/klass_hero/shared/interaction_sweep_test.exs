@@ -15,7 +15,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   # interaction events would otherwise arrive at this test's handler.
   use KlassHero.DataCase, async: false
 
-  alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
@@ -41,16 +40,9 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   end
 
   describe "every DB context drives I/O through the Interaction envelope" do
-    test "accounts — UserRepository.exists?/1" do
-      assert UserRepository.exists?(Ecto.UUID.generate()) == false
-
-      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :exists, status: :ok}}
-    end
-
-    # Family has no probe: the conventional-Phoenix flatten inlined all of Family's
-    # I/O into the context with plain Repo calls (no Interaction envelope). The
-    # observability span is a deferred follow-up to reintroduce at the context seam.
+    # Accounts and Family have no probe: the conventional-Phoenix flatten inlined
+    # their I/O into the context with plain Repo calls (no Interaction envelope).
+    # The observability span is a deferred follow-up to reintroduce at the context seam.
 
     test "program_catalog — ProgramRepository.list_all_programs/0" do
       assert ProgramRepository.list_all_programs() == []

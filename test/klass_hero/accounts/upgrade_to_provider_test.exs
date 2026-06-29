@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Application.Commands.UpgradeToProviderTest do
+defmodule KlassHero.Accounts.UpgradeToProviderTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
