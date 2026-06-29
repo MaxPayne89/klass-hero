@@ -5,17 +5,6 @@ defmodule KlassHero.Participation do
   Covers session lifecycle, check-in/check-out, attendance, and behavioral notes.
   """
 
-  use Boundary,
-    top_level?: true,
-    deps: [
-      KlassHero,
-      KlassHero.Enrollment,
-      KlassHero.Family,
-      KlassHero.ProgramCatalog,
-      KlassHero.Shared
-    ],
-    exports: [Domain.Services.ParticipationCollection]
-
   alias KlassHero.Participation.Application.Commands.{
     AnonymizeBehavioralNotesForChild,
     BulkCheckIn,

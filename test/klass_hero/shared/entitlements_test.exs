@@ -2,7 +2,7 @@ defmodule KlassHero.Shared.EntitlementsTest do
   use ExUnit.Case, async: false
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Shared.Entitlements
 

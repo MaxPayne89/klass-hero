@@ -9,8 +9,6 @@ defmodule KlassHeroWeb.I18nHelpers do
   - Viewport dimension helpers for responsive testing
   """
 
-  use Boundary, top_level?: true, check: [in: false, out: false]
-
   import ExUnit.Assertions
   import Phoenix.LiveViewTest
 

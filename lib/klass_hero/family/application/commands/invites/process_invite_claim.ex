@@ -7,18 +7,11 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
   execution via a single-concurrency queue to prevent duplicate children.
   """
 
+  alias KlassHero.Family
   alias KlassHero.Family.Domain.Events.FamilyEvents
-  alias KlassHero.Family.Domain.Models.Child
-  alias KlassHero.Family.Domain.Models.ParentProfile
-  alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
-
-  @child_query Application.compile_env!(:klass_hero, [:family, :for_querying_children])
-  @child_repository Application.compile_env!(:klass_hero, [:family, :for_storing_children])
-  @parent_query Application.compile_env!(:klass_hero, [:family, :for_querying_parent_profiles])
-  @parent_repository Application.compile_env!(:klass_hero, [:family, :for_storing_parent_profiles])
 
   @doc """
   Processes an invite claim by setting up the family unit.
@@ -59,17 +52,10 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
 
   # Idempotent: creates parent profile if missing, fetches if already exists.
   defp ensure_parent_profile(user_id, _invite_id) do
-    attrs = %{id: Ecto.UUID.generate(), identity_id: user_id}
-
-    with {:ok, _validated} <- ParentProfile.new(attrs),
-         {:ok, parent} <- @parent_repository.create_parent_profile(attrs) do
-      {:ok, parent}
-    else
-      {:error, :duplicate_resource} ->
-        @parent_query.get_by_identity_id(user_id)
-
-      result ->
-        CommandResult.wrap_validation_errors(result)
+    case Family.create_parent_profile(%{identity_id: user_id}) do
+      {:ok, parent} -> {:ok, parent}
+      {:error, :duplicate_resource} -> Family.get_parent_by_identity(user_id)
+      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -99,8 +85,8 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
   end
 
   defp create_child(parent_id, attrs, _invite_id, _user_id, first_name, last_name, date_of_birth) do
-    child_attrs = %{
-      id: Ecto.UUID.generate(),
+    Family.create_child(%{
+      parent_id: parent_id,
       first_name: first_name,
       last_name: last_name,
       date_of_birth: date_of_birth,
@@ -108,14 +94,7 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
       school_name: Map.get(attrs, :school_name),
       support_needs: Map.get(attrs, :medical_conditions),
       allergies: map_nut_allergy(Map.get(attrs, :nut_allergy, false))
-    }
-
-    with {:ok, _validated} <- Child.new(child_attrs),
-         {:ok, persisted} <- @child_repository.create_with_guardian(child_attrs, parent_id) do
-      {:ok, persisted}
-    else
-      result -> CommandResult.wrap_validation_errors(result)
-    end
+    })
   end
 
   # nil == nil is true in Elixir, so nil fields would false-match unrelated children; skip dedup.
@@ -126,7 +105,7 @@ defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
   # Case-insensitive match aligns with the remediation script's lower() grouping.
   defp find_existing_child(parent_id, first_name, last_name, date_of_birth) do
     parent_id
-    |> @child_query.list_by_guardian()
+    |> Family.get_children()
     |> Enum.find(fn child ->
       String.downcase(child.first_name) == String.downcase(first_name) &&
         String.downcase(child.last_name) == String.downcase(last_name) &&

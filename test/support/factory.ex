@@ -25,19 +25,15 @@ defmodule KlassHero.Factory do
       programs = build_list(3, :program)
   """
 
-  use Boundary, top_level?: true, check: [in: false, out: false]
   use ExMachina.Ecto, repo: KlassHero.Repo
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Enrollment.Domain.Models.Enrollment
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
-  alias KlassHero.Family.Domain.Models.Child
-  alias KlassHero.Family.Domain.Models.Consent
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.Child
+  alias KlassHero.Family.ChildGuardian
+  alias KlassHero.Family.Consent
+  alias KlassHero.Family.ParentProfile
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
     ConversationSchema,
@@ -306,7 +302,7 @@ defmodule KlassHero.Factory do
     # Outcome: every parent profile is linked to a real user record
     user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:parent])
 
-    %ParentProfileSchema{
+    %ParentProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
       display_name: sequence(:parent_schema_display_name, &"Test Parent #{&1}"),
@@ -603,7 +599,7 @@ defmodule KlassHero.Factory do
       schema = insert(:child_schema)
   """
   def child_schema_factory do
-    %ChildSchema{
+    %Child{
       id: Ecto.UUID.generate(),
       first_name: sequence(:child_schema_first_name, &"Child#{&1}"),
       last_name: "Smith",
@@ -650,7 +646,7 @@ defmodule KlassHero.Factory do
       insert(:child_guardian_schema, child_id: child.id, guardian_id: parent.id)
   """
   def child_guardian_schema_factory do
-    %ChildGuardianSchema{
+    %ChildGuardian{
       id: Ecto.UUID.generate(),
       child_id: Ecto.UUID.generate(),
       guardian_id: Ecto.UUID.generate(),
@@ -712,7 +708,7 @@ defmodule KlassHero.Factory do
   def consent_schema_factory do
     {child_schema, parent_schema} = insert_child_with_guardian()
 
-    %ConsentSchema{
+    %Consent{
       id: Ecto.UUID.generate(),
       parent_id: parent_schema.id,
       child_id: child_schema.id,

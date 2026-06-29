@@ -6,7 +6,7 @@ defmodule KlassHeroWeb.DashboardLive do
 
   alias KlassHero.Enrollment
   alias KlassHero.Family
-  alias KlassHero.Family.Domain.Models.Child
+  alias KlassHero.Family.Child
   alias KlassHero.Messaging
   alias KlassHero.ProgramCatalog
   alias KlassHero.Shared.Entitlements

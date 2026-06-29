@@ -5,7 +5,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository

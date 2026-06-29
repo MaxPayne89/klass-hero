@@ -22,30 +22,6 @@ defmodule KlassHero.Provider do
       {:ok, members} = Provider.list_staff_members("provider-uuid")
   """
 
-  use Boundary,
-    top_level?: true,
-    deps: [KlassHero, KlassHero.Shared],
-    exports: [
-      Domain.Models.IncidentReport,
-      Domain.Models.ProviderProfile,
-      Domain.Models.StaffMember,
-      Domain.Models.PayRate,
-      Domain.Models.VerificationDocument,
-      Domain.Models.ProgramStaffAssignment,
-      Domain.ReadModels.IncidentReportSummary,
-      Domain.ReadModels.ProviderProgram,
-      Domain.ReadModels.SessionStats,
-      Domain.ReadModels.StaffMembership,
-      Adapters.Driven.Persistence.Repositories.IncidentReportRepository,
-      Adapters.Driven.Persistence.Repositories.ProviderProgramRepository,
-      Adapters.Driven.Persistence.Repositories.SessionStatsRepository,
-      Adapters.Driven.Persistence.ChangeProviderProfile,
-      Adapters.Driven.Persistence.ChangeStaffMember,
-      # Pragmatic export: Backpex admin operates directly on Ecto schemas
-      Adapters.Driven.Persistence.Schemas.ProviderProfileSchema,
-      Adapters.Driven.Persistence.Schemas.StaffMemberSchema
-    ]
-
   alias KlassHero.Provider.Adapters.Driven.Persistence.ChangeProviderProfile
   alias KlassHero.Provider.Adapters.Driven.Persistence.ChangeStaffMember
   alias KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport

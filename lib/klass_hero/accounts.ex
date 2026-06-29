@@ -3,11 +3,6 @@ defmodule KlassHero.Accounts do
   The Accounts context.
   """
 
-  use Boundary,
-    top_level?: true,
-    deps: [KlassHero, KlassHero.Family, KlassHero.Provider, KlassHero.Shared],
-    exports: [Scope, User, UserNotifier]
-
   import Ecto.Query, warn: false
 
   alias KlassHero.Accounts.Adapters.Driven.Persistence.TokenCleanup

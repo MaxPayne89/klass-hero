@@ -6,20 +6,6 @@ defmodule KlassHeroWeb do
       use KlassHeroWeb, :html
   """
 
-  use Boundary,
-    deps: [
-      KlassHero,
-      KlassHero.Accounts,
-      KlassHero.Family,
-      KlassHero.Provider,
-      KlassHero.ProgramCatalog,
-      KlassHero.Enrollment,
-      KlassHero.Messaging,
-      KlassHero.Participation,
-      KlassHero.Shared
-    ],
-    exports: :all
-
   def static_paths, do: ~w(assets downloads fonts images favicon.ico robots.txt)
 
   def router do

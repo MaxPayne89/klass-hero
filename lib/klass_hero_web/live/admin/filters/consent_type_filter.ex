@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Admin.Filters.ConsentTypeFilter do
   use Backpex.Filters.Select
 
   alias Backpex.Filters.Select
-  alias KlassHero.Family.Domain.Models.Consent
+  alias KlassHero.Family.Consent
   alias KlassHeroWeb.Admin.ConsentLive
 
   @impl Backpex.Filter

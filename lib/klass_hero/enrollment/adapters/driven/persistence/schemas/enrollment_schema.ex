@@ -8,8 +8,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSch
 
   import Ecto.Changeset
 
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
+  alias KlassHero.Family.Child
+  alias KlassHero.Family.ParentProfile
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -22,9 +22,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSch
     belongs_to :program,
                ProgramSchema
 
-    belongs_to :child, ChildSchema
+    belongs_to :child, Child
 
-    belongs_to :parent, ParentProfileSchema
+    belongs_to :parent, ParentProfile
 
     field :status, Ecto.Enum, values: [:pending, :confirmed, :completed, :cancelled]
     field :enrolled_at, :utc_datetime

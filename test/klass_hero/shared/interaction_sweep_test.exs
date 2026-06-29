@@ -17,7 +17,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
 
   alias KlassHero.Accounts.Adapters.Driven.Persistence.Repositories.UserRepository
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
-  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
   alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramRepository
@@ -49,12 +48,9 @@ defmodule KlassHero.Shared.InteractionSweepTest do
                       %{io_kind: :db, operation: :exists, status: :ok}}
     end
 
-    test "family — ChildRepository.list_by_guardian/1" do
-      assert ChildRepository.list_by_guardian(Ecto.UUID.generate()) == []
-
-      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :list_by_guardian, status: :ok}}
-    end
+    # Family has no probe: the conventional-Phoenix flatten inlined all of Family's
+    # I/O into the context with plain Repo calls (no Interaction envelope). The
+    # observability span is a deferred follow-up to reintroduce at the context seam.
 
     test "program_catalog — ProgramRepository.list_all_programs/0" do
       assert ProgramRepository.list_all_programs() == []

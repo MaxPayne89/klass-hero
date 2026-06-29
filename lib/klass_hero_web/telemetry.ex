@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Telemetry do
   import Telemetry.Metrics
 
   alias KlassHero.Shared.Interaction.TelemetryLogger
+  alias KlassHero.Shared.Tracing.EctoSpanBridge
 
   def start_link(arg) do
     Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
@@ -12,6 +13,7 @@ defmodule KlassHeroWeb.Telemetry do
   @impl true
   def init(_arg) do
     TelemetryLogger.attach()
+    EctoSpanBridge.attach()
 
     children = [
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}

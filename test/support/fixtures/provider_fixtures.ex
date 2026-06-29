@@ -3,8 +3,6 @@ defmodule KlassHero.ProviderFixtures do
   Test helpers for creating entities in the Provider bounded context.
   """
 
-  use Boundary, top_level?: true, check: [in: false, out: false]
-
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository

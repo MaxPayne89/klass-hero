@@ -24,11 +24,6 @@ alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPo
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentRepository
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.ParticipantPolicyRepository
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
-alias KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL
-alias KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACL
-alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildRepository
-alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ConsentRepository
-alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ParentProfileRepository
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
@@ -224,18 +219,9 @@ config :klass_hero, :event_publisher,
   module: PubSubEventPublisher,
   pubsub: KlassHero.PubSub
 
-# Configure Family bounded context
-config :klass_hero, :family,
-  repo: KlassHero.Repo,
-  for_storing_parent_profiles: ParentProfileRepository,
-  for_querying_parent_profiles: ParentProfileRepository,
-  for_storing_children: ChildRepository,
-  for_querying_children: ChildRepository,
-  for_storing_consents: ConsentRepository,
-  for_querying_consents: ConsentRepository,
-  for_managing_child_enrollments: ChildEnrollmentACL,
-  for_querying_child_enrollments: ChildEnrollmentACL,
-  for_managing_child_participation: ChildParticipationACL
+# Family context needs no port wiring: it is conventional Phoenix (context module
+# + Ecto schemas calling Repo directly). Its outbound cross-context ACLs are
+# called by KlassHero.Family directly, not via dependency injection.
 
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter

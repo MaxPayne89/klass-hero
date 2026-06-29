@@ -6,21 +6,6 @@ defmodule KlassHero.Enrollment do
   Follows Ports & Adapters: this module delegates to use cases in the application layer.
   """
 
-  use Boundary,
-    top_level?: true,
-    deps: [
-      KlassHero,
-      KlassHero.Accounts,
-      KlassHero.Family,
-      KlassHero.Shared
-    ],
-    exports: [
-      # Pragmatic export: Backpex admin operates directly on Ecto schemas
-      Adapters.Driven.Persistence.Schemas.EnrollmentSchema,
-      # Public result type for ClaimInvite — callers pattern-match on %ClaimResult{}
-      Application.ClaimResult
-    ]
-
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 

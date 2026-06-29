@@ -1,21 +1,6 @@
 defmodule KlassHero.Application do
   @moduledoc false
 
-  use Boundary,
-    top_level?: true,
-    deps: [
-      KlassHero,
-      KlassHeroWeb,
-      KlassHero.Accounts,
-      KlassHero.Family,
-      KlassHero.Provider,
-      KlassHero.ProgramCatalog,
-      KlassHero.Enrollment,
-      KlassHero.Messaging,
-      KlassHero.Participation,
-      KlassHero.Shared
-    ]
-
   use Application
 
   alias KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents

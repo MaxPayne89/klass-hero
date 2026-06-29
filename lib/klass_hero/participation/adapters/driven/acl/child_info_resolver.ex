@@ -33,9 +33,6 @@ defmodule KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver do
 
       {:error, :not_found} ->
         {:error, :child_not_found}
-
-      {:error, error} ->
-        {:error, error}
     end
   end
 

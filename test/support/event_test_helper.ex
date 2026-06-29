@@ -45,8 +45,6 @@ defmodule KlassHero.EventTestHelper do
       end
   """
 
-  use Boundary, top_level?: true, check: [in: false, out: false]
-
   import ExUnit.Assertions
 
   alias KlassHero.Shared.Adapters.Driven.Events.EventSubscriber

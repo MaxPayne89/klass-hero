@@ -8,10 +8,8 @@ defmodule KlassHero.FamilyTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Family
-  alias KlassHero.Family.Adapters.Driven.Persistence.Repositories.ChildRepository
-  alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
-  alias KlassHero.Family.Domain.Models.Child
-  alias KlassHero.Family.Domain.Models.ParentProfile
+  alias KlassHero.Family.Child
+  alias KlassHero.Family.ParentProfile
 
   # ============================================================================
   # Parent Profile Functions
@@ -31,11 +29,8 @@ defmodule KlassHero.FamilyTest do
       assert profile.display_name == "John Doe"
     end
 
-    test "returns validation error for invalid attrs" do
-      attrs = %{identity_id: ""}
-
-      assert {:error, {:validation_error, errors}} = Family.create_parent_profile(attrs)
-      assert "Identity ID cannot be empty" in errors
+    test "returns a changeset error for invalid attrs" do
+      assert {:error, %Ecto.Changeset{}} = Family.create_parent_profile(%{identity_id: ""})
     end
 
     test "returns duplicate error when profile exists" do
@@ -85,15 +80,7 @@ defmodule KlassHero.FamilyTest do
   end
 
   defp create_child_linked_to_parent(parent, child_attrs) do
-    {:ok, child} = ChildRepository.create(child_attrs)
-
-    Repo.insert!(%ChildGuardianSchema{
-      child_id: child.id,
-      guardian_id: parent.id,
-      relationship: "parent",
-      is_primary: true
-    })
-
+    {:ok, child} = Family.create_child(Map.put(child_attrs, :parent_id, parent.id))
     child
   end
 
