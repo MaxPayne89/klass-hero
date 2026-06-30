@@ -6,7 +6,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && [[ \"$FILE\" =~ \\.(ex|exs)$ ]] && mix format \"$FILE\" || true"
+            "command": ".claude/hooks/format.sh",
+            "asyncRewake": true
           }
         ]
       },
@@ -15,7 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && [[ \"$FILE\" =~ \\.(ex|exs)$ ]] && mix credo \"$FILE\" --strict --mute-exit-status || true"
+            "command": ".claude/hooks/credo.sh",
+            "asyncRewake": true
           }
         ]
       },
@@ -24,16 +26,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && [[ \"$FILE\" =~ \\.html\\.heex$ ]] && mix lint_typography || true"
+            "command": ".claude/hooks/tests.sh",
+            "asyncRewake": true
           }
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat) && CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -q 'git commit'; then git log -1 --pretty=%s | grep -qE '^(feat|fix|chore|docs|refactor|test|ci|perf)(\\(.+\\))?:' || (echo 'ERROR: Commit message must follow semantic conventions (feat:/fix:/chore:/docs:/refactor:/test:/ci:/perf:)' && exit 1); fi"
+            "command": ".claude/hooks/lint_typography.sh",
+            "asyncRewake": true
           }
         ]
       }
