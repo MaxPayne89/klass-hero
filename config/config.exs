@@ -47,8 +47,6 @@ alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
 alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.BehavioralNoteRepository
 alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.ParticipationRepository
 alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
-alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramListingsRepository
-alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramRepository
 alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
 alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentNotificationScheduler
 alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
@@ -267,11 +265,6 @@ config :klass_hero, :participation,
   for_querying_behavioral_notes: BehavioralNoteRepository,
   for_resolving_program_provider: ProgramProviderResolver,
   for_resolving_enrolled_children: EnrolledChildrenResolver
-
-# Configure Program Catalog bounded context
-config :klass_hero, :program_catalog,
-  repository: ProgramRepository,
-  for_listing_program_summaries: ProgramListingsRepository
 
 # Configure Provider bounded context
 config :klass_hero, :provider,

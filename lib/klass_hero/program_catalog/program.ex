@@ -1,6 +1,15 @@
-defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema do
+defmodule KlassHero.ProgramCatalog.Program do
   @moduledoc """
-  Ecto schema for the programs table. Use ProgramMapper to convert to/from domain entities.
+  A program (afterschool activity, camp, or class trip) in the Program Catalog.
+
+  Conventional Phoenix model: the Ecto schema *is* the domain struct. Validation
+  lives in the changesets (the single gatekeeper); pure, side-effect-free helpers
+  make up the functional core. All persistence happens in `KlassHero.ProgramCatalog`.
+
+  Instructor and registration window are denormalized into flat columns
+  (`instructor_*`, `registration_*`). They are exposed to consumers as the nested
+  value objects `instructor` (`%Instructor{}`) and `registration_period`
+  (`%RegistrationPeriod{}`), populated by `load_value_objects/1` after a read.
   """
 
   use Ecto.Schema
@@ -8,8 +17,13 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
   import Ecto.Changeset
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramCategories
+  alias KlassHero.ProgramCatalog.Instructor
+  alias KlassHero.ProgramCatalog.RegistrationPeriod
+
+  require Logger
 
   @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
   @timestamps_opts [type: :utc_datetime]
 
   schema "programs" do
@@ -30,12 +44,17 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     field :provider_id, :binary_id
     field :location, :string
     field :cover_image_url, :string
-    field :origin, :string, default: "self_posted"
+    field :origin, Ecto.Enum, values: [:self_posted, :business_assigned], default: :self_posted
     field :instructor_id, :binary_id
     field :instructor_name, :string
     field :instructor_headshot_url, :string
-    # Free-text label for academic season grouping (e.g. "School Name 24/25: Semester 2")
+    # Free-text label for academic season grouping (e.g. "School Name 24/25: Semester 2").
     field :season, :string
+
+    # Nested value objects assembled from the flat columns above by
+    # load_value_objects/1; never persisted directly.
+    field :instructor, :any, virtual: true
+    field :registration_period, :any, virtual: true
 
     timestamps()
   end
@@ -59,69 +78,25 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
           provider_id: Ecto.UUID.t() | nil,
           location: String.t() | nil,
           cover_image_url: String.t() | nil,
-          origin: String.t() | nil,
+          origin: :self_posted | :business_assigned | nil,
           instructor_id: Ecto.UUID.t() | nil,
           instructor_name: String.t() | nil,
           instructor_headshot_url: String.t() | nil,
           season: String.t() | nil,
+          instructor: Instructor.t() | nil,
+          registration_period: RegistrationPeriod.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
 
   @doc """
-  Creates a changeset for validation.
+  Changeset for creating a program. Schedule, age_range, and pricing_period are
+  optional; provider/instructor/origin fields are set server-side (bypassing
+  `cast`) to prevent form-param injection.
   """
-  @spec changeset(t(), map()) :: Ecto.Changeset.t()
-  def changeset(program_schema, attrs) do
-    program_schema
-    |> cast(attrs, [
-      :title,
-      :description,
-      :category,
-      :age_range,
-      :price,
-      :pricing_period,
-      :end_date,
-      :provider_id,
-      :location,
-      :cover_image_url,
-      :instructor_id,
-      :instructor_name,
-      :instructor_headshot_url,
-      :meeting_days,
-      :meeting_start_time,
-      :meeting_end_time,
-      :start_date,
-      :registration_start_date,
-      :registration_end_date,
-      :season
-    ])
-    |> validate_required([
-      :title,
-      :description,
-      :category,
-      :age_range,
-      :price,
-      :pricing_period
-    ])
-    |> validate_length(:title, min: 1, max: 100)
-    |> validate_length(:description, min: 1, max: 500)
-    |> validate_length(:age_range, min: 1, max: 100)
-    |> validate_length(:pricing_period, min: 1, max: 100)
-    |> validate_length(:season, max: 255)
-    |> validate_inclusion(:category, ProgramCategories.program_categories())
-    |> validate_number(:price, greater_than_or_equal_to: 0)
-    |> validate_meeting_days()
-    |> validate_time_pairing()
-    |> validate_date_range()
-    |> validate_registration_date_range()
-  end
-
-  @doc """
-  Creates a changeset for program creation. Schedule, age_range, and pricing_period are optional.
-  """
-  def create_changeset(program_schema, attrs) do
-    program_schema
+  @spec create_changeset(t(), map()) :: Ecto.Changeset.t()
+  def create_changeset(program, attrs) do
+    program
     |> cast(attrs, [
       :title,
       :description,
@@ -137,7 +112,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
       :registration_end_date,
       :season
     ])
-    # provider_id and instructor fields come from trusted server-side code; bypassing cast prevents form param injection.
     |> maybe_put_change(:provider_id, attrs)
     |> maybe_put_change(:cover_image_url, attrs)
     |> maybe_put_change(:instructor_id, attrs)
@@ -145,7 +119,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     |> maybe_put_change(:instructor_headshot_url, attrs)
     |> maybe_put_change(:origin, attrs)
     |> validate_required([:title, :description, :category, :price, :provider_id])
-    |> validate_inclusion(:origin, ["self_posted", "business_assigned"])
     |> validate_length(:title, min: 1, max: 100)
     |> validate_length(:description, min: 1, max: 500)
     |> validate_length(:location, max: 255)
@@ -163,10 +136,12 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
   end
 
   @doc """
-  Creates an update changeset with optimistic locking. Raises `Ecto.StaleEntryError` on concurrent modification.
+  Changeset for updating a program, with optimistic locking. Raises
+  `Ecto.StaleEntryError` on concurrent modification.
   """
-  def update_changeset(program_schema, attrs) do
-    program_schema
+  @spec update_changeset(t(), map()) :: Ecto.Changeset.t()
+  def update_changeset(program, attrs) do
+    program
     |> cast(attrs, [
       :title,
       :description,
@@ -188,12 +163,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
       :registration_end_date,
       :season
     ])
-    |> validate_required([
-      :title,
-      :description,
-      :category,
-      :price
-    ])
+    |> validate_required([:title, :description, :category, :price])
     |> validate_length(:title, min: 1, max: 100)
     |> validate_length(:description, min: 1, max: 500)
     |> validate_length(:age_range, max: 100)
@@ -206,6 +176,69 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     |> validate_date_range()
     |> validate_registration_date_range()
     |> optimistic_lock(:lock_version)
+  end
+
+  @doc """
+  Populates the nested `instructor` and `registration_period` value objects from
+  the flat columns of a freshly-loaded program. Pure — call after every read.
+  """
+  @spec load_value_objects(t()) :: t()
+  def load_value_objects(%__MODULE__{} = program) do
+    %{
+      program
+      | instructor: build_instructor(program),
+        registration_period: build_registration_period(program)
+    }
+  end
+
+  @doc "Whether the program is free (price is 0)."
+  @spec free?(t()) :: boolean()
+  def free?(%__MODULE__{price: price}), do: Decimal.equal?(price, Decimal.new(0))
+
+  @doc "Whether registration is currently open. Requires `load_value_objects/1` first."
+  @spec registration_open?(t()) :: boolean()
+  def registration_open?(%__MODULE__{registration_period: %RegistrationPeriod{} = rp}) do
+    RegistrationPeriod.open?(rp)
+  end
+
+  @doc "The current registration status. Requires `load_value_objects/1` first."
+  @spec registration_status(t()) :: RegistrationPeriod.status()
+  def registration_status(%__MODULE__{registration_period: %RegistrationPeriod{} = rp}) do
+    RegistrationPeriod.status(rp)
+  end
+
+  # RegistrationPeriod is always present (nil dates → :always_open).
+  defp build_registration_period(%__MODULE__{} = program) do
+    %RegistrationPeriod{
+      start_date: program.registration_start_date,
+      end_date: program.registration_end_date
+    }
+  end
+
+  defp build_instructor(%__MODULE__{instructor_id: nil}), do: nil
+
+  defp build_instructor(%__MODULE__{} = program) do
+    input = %{
+      id: program.instructor_id,
+      name: program.instructor_name,
+      headshot_url: program.instructor_headshot_url
+    }
+
+    # Denormalized instructor data should always be consistent; if it isn't, log
+    # and degrade to nil so one bad row doesn't crash a whole listing render.
+    case Instructor.from_persistence(input) do
+      {:ok, instructor} ->
+        instructor
+
+      {:error, reason} ->
+        Logger.error("[Program] Invalid instructor data, skipping",
+          instructor_id: program.instructor_id,
+          instructor_name: program.instructor_name,
+          reason: inspect(reason)
+        )
+
+        nil
+    end
   end
 
   @valid_weekdays ~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday)
@@ -272,12 +305,13 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSc
     end
   end
 
-  # Programmatic fields bypass cast; put_change only when present so absent keys don't overwrite existing values.
+  # Programmatic fields bypass cast; put_change only when present so absent keys
+  # don't overwrite existing values.
   defp maybe_put_change(changeset, key, attrs) when is_atom(key) do
-    if Map.has_key?(attrs, key) do
-      put_change(changeset, key, Map.get(attrs, key))
-    else
-      changeset
+    cond do
+      Map.has_key?(attrs, key) -> put_change(changeset, key, Map.get(attrs, key))
+      Map.has_key?(attrs, to_string(key)) -> put_change(changeset, key, Map.get(attrs, to_string(key)))
+      true -> changeset
     end
   end
 end

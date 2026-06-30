@@ -33,9 +33,9 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
 
   import Ecto.Query
 
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramListingSchema
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
+  alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
   alias KlassHero.Shared.Projection
 
@@ -94,7 +94,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   def handle_event(:provider_unverified, event), do: set_provider_verification(event.payload.provider_id, false)
 
   defp bootstrap_from_write_table do
-    programs = Repo.all(ProgramSchema)
+    programs = Repo.all(Program)
 
     if programs == [] do
       0
@@ -112,7 +112,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
         end)
 
       {count, _} =
-        Repo.insert_all(ProgramListingSchema, entries,
+        Repo.insert_all(ProgramListing, entries,
           on_conflict: {:replace_all_except, [:id, :inserted_at]},
           conflict_target: :id
         )
@@ -153,7 +153,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       provider_verified: false
     }
 
-    %ProgramListingSchema{}
+    %ProgramListing{}
     |> Ecto.Changeset.change(attrs)
     |> Repo.insert!(
       on_conflict: {:replace_all_except, [:id, :inserted_at]},
@@ -192,7 +192,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       season: nil
     }
 
-    %ProgramListingSchema{}
+    %ProgramListing{}
     |> Ecto.Changeset.change(attrs)
     |> Repo.insert!(
       on_conflict: {:replace, @update_fields},
@@ -201,7 +201,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   end
 
   defp set_provider_verification(provider_id, verified) do
-    from(pl in ProgramListingSchema, where: pl.provider_id == ^provider_id)
+    from(pl in ProgramListing, where: pl.provider_id == ^provider_id)
     |> Repo.update_all(
       set: [
         provider_verified: verified,

@@ -3,8 +3,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
 
   import KlassHero.Factory
 
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramListingSchema
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -55,7 +55,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       _ = :sys.get_state(bootstrap_pid)
 
       # Verify program_1 was projected
-      listing_1 = Repo.get(ProgramListingSchema, program_1.id)
+      listing_1 = Repo.get(ProgramListing, program_1.id)
       assert listing_1 != nil
       assert listing_1.title == "Soccer Camp"
       assert listing_1.category == "sports"
@@ -68,7 +68,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing_1.provider_verified == false
 
       # Verify program_2 was projected
-      listing_2 = Repo.get(ProgramListingSchema, program_2.id)
+      listing_2 = Repo.get(ProgramListing, program_2.id)
       assert listing_2 != nil
       assert listing_2.title == "Art Class"
       assert listing_2.category == "education"
@@ -91,12 +91,12 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
         )
 
       # The read table should not have this program yet (it was inserted after bootstrap)
-      assert Repo.get(ProgramListingSchema, program.id) == nil
+      assert Repo.get(ProgramListing, program.id) == nil
 
       # Rebuild should pick it up from the write table
       assert :ok = ProgramListings.rebuild(@test_server_name)
 
-      listing = Repo.get(ProgramListingSchema, program.id)
+      listing = Repo.get(ProgramListing, program.id)
       assert listing != nil
       assert listing.title == "Rebuild Test Program"
       assert listing.category == "sports"
@@ -137,7 +137,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       # Synchronize: ensure GenServer has processed the broadcast
       _ = :sys.get_state(@test_server_name)
 
-      listing = Repo.get(ProgramListingSchema, program_id)
+      listing = Repo.get(ProgramListing, program_id)
       assert listing != nil
       assert listing.title == "New Soccer Camp"
       assert listing.category == "sports"
@@ -177,7 +177,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       )
 
       _ = :sys.get_state(@test_server_name)
-      original = Repo.get!(ProgramListingSchema, program_id)
+      original = Repo.get!(ProgramListing, program_id)
 
       # Second broadcast of same event
       Phoenix.PubSub.broadcast(
@@ -189,7 +189,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       _ = :sys.get_state(@test_server_name)
 
       # Row still exists with preserved inserted_at
-      listing = Repo.get!(ProgramListingSchema, program_id)
+      listing = Repo.get!(ProgramListing, program_id)
       assert listing.title == "Soccer Camp"
       assert listing.inserted_at == original.inserted_at
     end
@@ -201,7 +201,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       provider_id = Ecto.UUID.generate()
 
       # Insert an existing listing with season pre-set (from bootstrap)
-      Repo.insert!(%ProgramListingSchema{
+      Repo.insert!(%ProgramListing{
         id: program_id,
         title: "Old Title",
         category: "sports",
@@ -251,7 +251,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       # Synchronize: ensure GenServer has processed the broadcast
       _ = :sys.get_state(@test_server_name)
 
-      listing = Repo.get(ProgramListingSchema, program_id)
+      listing = Repo.get(ProgramListing, program_id)
       assert listing.title == "Updated Soccer Camp"
       assert listing.description == "Now with more drills"
       assert listing.category == "sports"
@@ -302,7 +302,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
 
       _ = :sys.get_state(@test_server_name)
 
-      listing = Repo.get(ProgramListingSchema, program_id)
+      listing = Repo.get(ProgramListing, program_id)
       assert listing != nil
       assert listing.title == "Fresh Program"
       assert listing.description == "Created via update event"
@@ -319,7 +319,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
 
       # Insert listings with provider_verified = false
       listing_1 =
-        Repo.insert!(%ProgramListingSchema{
+        Repo.insert!(%ProgramListing{
           id: Ecto.UUID.generate(),
           title: "Program A",
           provider_id: provider_id,
@@ -327,7 +327,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
         })
 
       listing_2 =
-        Repo.insert!(%ProgramListingSchema{
+        Repo.insert!(%ProgramListing{
           id: Ecto.UUID.generate(),
           title: "Program B",
           provider_id: provider_id,
@@ -338,7 +338,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       other_provider_id = Ecto.UUID.generate()
 
       other_listing =
-        Repo.insert!(%ProgramListingSchema{
+        Repo.insert!(%ProgramListing{
           id: Ecto.UUID.generate(),
           title: "Other Program",
           provider_id: other_provider_id,
@@ -363,10 +363,10 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       # Synchronize: ensure GenServer has processed the broadcast
       _ = :sys.get_state(@test_server_name)
 
-      assert Repo.get(ProgramListingSchema, listing_1.id).provider_verified == true
-      assert Repo.get(ProgramListingSchema, listing_2.id).provider_verified == true
+      assert Repo.get(ProgramListing, listing_1.id).provider_verified == true
+      assert Repo.get(ProgramListing, listing_2.id).provider_verified == true
       # Other provider's listing should remain unchanged
-      assert Repo.get(ProgramListingSchema, other_listing.id).provider_verified == false
+      assert Repo.get(ProgramListing, other_listing.id).provider_verified == false
     end
   end
 
@@ -376,7 +376,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
 
       # Insert listings with provider_verified = true
       listing_1 =
-        Repo.insert!(%ProgramListingSchema{
+        Repo.insert!(%ProgramListing{
           id: Ecto.UUID.generate(),
           title: "Program A",
           provider_id: provider_id,
@@ -384,7 +384,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
         })
 
       listing_2 =
-        Repo.insert!(%ProgramListingSchema{
+        Repo.insert!(%ProgramListing{
           id: Ecto.UUID.generate(),
           title: "Program B",
           provider_id: provider_id,
@@ -395,7 +395,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       other_provider_id = Ecto.UUID.generate()
 
       other_listing =
-        Repo.insert!(%ProgramListingSchema{
+        Repo.insert!(%ProgramListing{
           id: Ecto.UUID.generate(),
           title: "Other Program",
           provider_id: other_provider_id,
@@ -420,10 +420,10 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       # Synchronize: ensure GenServer has processed the broadcast
       _ = :sys.get_state(@test_server_name)
 
-      assert Repo.get(ProgramListingSchema, listing_1.id).provider_verified == false
-      assert Repo.get(ProgramListingSchema, listing_2.id).provider_verified == false
+      assert Repo.get(ProgramListing, listing_1.id).provider_verified == false
+      assert Repo.get(ProgramListing, listing_2.id).provider_verified == false
       # Other provider's listing should remain unchanged
-      assert Repo.get(ProgramListingSchema, other_listing.id).provider_verified == true
+      assert Repo.get(ProgramListing, other_listing.id).provider_verified == true
     end
   end
 

@@ -19,9 +19,9 @@ alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
 alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
 alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
-alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
+alias KlassHero.ProgramCatalog.Program
 alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
 alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
 alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VerificationDocumentSchema
@@ -61,7 +61,7 @@ Repo.delete_all(ChildSchema)
 Repo.delete_all(ParentProfileSchema)
 
 # Programs + staff
-Repo.delete_all(ProgramSchema)
+Repo.delete_all(Program)
 Repo.delete_all(StaffMemberSchema)
 Repo.delete_all(VerificationDocumentSchema)
 Repo.delete_all(ProviderProfileSchema)
@@ -945,8 +945,8 @@ all_program_data =
 
 inserted_programs =
   Enum.map(all_program_data, fn program_attrs ->
-    %ProgramSchema{}
-    |> ProgramSchema.create_changeset(program_attrs)
+    %Program{}
+    |> Program.create_changeset(program_attrs)
     |> Repo.insert!()
   end)
 

@@ -1,9 +1,14 @@
-defmodule KlassHero.ProgramCatalog.Domain.Models.RegistrationPeriod do
+defmodule KlassHero.ProgramCatalog.RegistrationPeriod do
   @moduledoc """
   Value object representing a program's registration window.
 
-  Encapsulates the start and end dates during which parents may enroll.
-  Both dates are optional — when both are nil, registration is always open.
+  Encapsulates the start and end dates during which parents may enroll. Both
+  dates are optional — when both are nil, registration is always open. Assembled
+  from the `registration_start_date` / `registration_end_date` columns on the
+  `programs` table and exposed as `program.registration_period`.
+
+  Date ordering is validated by the `Program` changeset (the single gatekeeper);
+  this struct only interprets the window.
   """
 
   defstruct [:start_date, :end_date]
@@ -15,20 +20,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.RegistrationPeriod do
 
   @type status :: :always_open | :upcoming | :open | :closed
 
-  @spec new(map()) :: {:ok, t()} | {:error, [String.t()]}
-  def new(attrs) when is_map(attrs) do
-    start_date = attrs[:start_date]
-    end_date = attrs[:end_date]
-
-    errors = validate_date_ordering(start_date, end_date)
-
-    if errors == [] do
-      {:ok, %__MODULE__{start_date: start_date, end_date: end_date}}
-    else
-      {:error, errors}
-    end
-  end
-
+  @doc "The current status of the registration window relative to today."
   @spec status(t()) :: status()
   def status(%__MODULE__{start_date: nil, end_date: nil}), do: :always_open
 
@@ -50,17 +42,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Models.RegistrationPeriod do
     end
   end
 
+  @doc "Whether registration is currently open."
   @spec open?(t()) :: boolean()
   def open?(%__MODULE__{} = rp), do: status(rp) in [:always_open, :open]
-
-  defp validate_date_ordering(nil, _), do: []
-  defp validate_date_ordering(_, nil), do: []
-
-  defp validate_date_ordering(%Date{} = start_date, %Date{} = end_date) do
-    if Date.before?(start_date, end_date) do
-      []
-    else
-      ["registration_start_date must be before registration_end_date"]
-    end
-  end
 end

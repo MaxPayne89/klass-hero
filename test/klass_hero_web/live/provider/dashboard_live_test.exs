@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramListingSchema
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
@@ -20,7 +20,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
     program = KlassHero.Factory.insert(:program_schema, attrs)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    %ProgramListingSchema{}
+    %ProgramListing{}
     |> Ecto.Changeset.change(%{
       id: program.id,
       title: program.title,

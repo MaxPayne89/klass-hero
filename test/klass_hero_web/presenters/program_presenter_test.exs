@@ -3,8 +3,8 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
 
   import ExUnit.CaptureLog
 
-  alias KlassHero.ProgramCatalog.Domain.Models.Instructor
-  alias KlassHero.ProgramCatalog.Domain.Models.Program
+  alias KlassHero.ProgramCatalog.Instructor
+  alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Shared.Categories
   alias KlassHeroWeb.Presenters.ProgramPresenter
 

@@ -74,12 +74,6 @@ defmodule KlassHeroWeb.BookingLive do
          socket
          |> put_flash(:error, gettext("Registration is not currently open for this program."))
          |> redirect(to: ~p"/programs/#{program_for_redirect.id}")}
-
-      {:error, _error} ->
-        {:ok,
-         socket
-         |> put_flash(:error, gettext("Unable to load program. Please try again later."))
-         |> redirect(to: ~p"/programs")}
     end
   end
 

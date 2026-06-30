@@ -51,17 +51,18 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
     end
 
     test "rejects missing required fields" do
-      assert {:error, errors} = ProgramCatalog.create_program(%{title: "Incomplete"})
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               ProgramCatalog.create_program(%{title: "Incomplete"})
 
-      assert is_list(errors)
-      assert Enum.any?(errors, &String.contains?(&1, "description"))
-      assert Enum.any?(errors, &String.contains?(&1, "category"))
-      assert Enum.any?(errors, &String.contains?(&1, "price"))
-      assert Enum.any?(errors, &String.contains?(&1, "rovider"))
+      errors = errors_on(changeset)
+      assert errors[:description]
+      assert errors[:category]
+      assert errors[:price]
+      assert errors[:provider_id]
     end
 
     test "rejects negative price", %{provider: provider} do
-      assert {:error, errors} =
+      assert {:error, %Ecto.Changeset{} = changeset} =
                ProgramCatalog.create_program(%{
                  provider_id: provider.id,
                  title: "Bad Price Program",
@@ -70,12 +71,11 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
                  price: Decimal.new("-5.00")
                })
 
-      assert is_list(errors)
-      assert Enum.any?(errors, &String.contains?(&1, "rice"))
+      assert errors_on(changeset)[:price]
     end
 
     test "rejects invalid category", %{provider: provider} do
-      assert {:error, errors} =
+      assert {:error, %Ecto.Changeset{} = changeset} =
                ProgramCatalog.create_program(%{
                  provider_id: provider.id,
                  title: "Test",
@@ -84,8 +84,7 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
                  price: Decimal.new("10.00")
                })
 
-      assert is_list(errors)
-      assert Enum.any?(errors, &String.contains?(&1, "ategory"))
+      assert errors_on(changeset)[:category]
     end
 
     test "accepts all valid program categories", %{provider: provider} do

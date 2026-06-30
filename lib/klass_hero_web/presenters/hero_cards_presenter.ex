@@ -17,7 +17,7 @@ defmodule KlassHeroWeb.Presenters.HeroCardsPresenter do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
-  alias KlassHero.ProgramCatalog.Domain.Models.Instructor
+  alias KlassHero.ProgramCatalog.Instructor
   alias KlassHero.Provider.Domain.Models.StaffMember
   alias KlassHeroWeb.Presenters.InstructorPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter

@@ -49,9 +49,8 @@ defmodule KlassHero.Factory do
   alias KlassHero.Participation.Domain.Models.BehavioralNote
   alias KlassHero.Participation.Domain.Models.ParticipationRecord
   alias KlassHero.Participation.Domain.Models.ProgramSession
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramListingSchema
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
-  alias KlassHero.ProgramCatalog.Domain.Models.Program
+  alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
@@ -93,7 +92,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ProgramSchema Ecto schemas.
+  Factory for creating Program Ecto schemas.
 
   Used in repository and integration tests where we need database persistence.
 
@@ -103,7 +102,7 @@ defmodule KlassHero.Factory do
       schema = insert(:program_schema, title: "Art Class")
   """
   def program_schema_factory do
-    %ProgramSchema{
+    %Program{
       id: Ecto.UUID.generate(),
       title: sequence(:program_schema_title, &"Test Program #{&1}"),
       description: "A great program for kids to learn and have fun",
@@ -116,12 +115,12 @@ defmodule KlassHero.Factory do
       price: Decimal.new("100.00"),
       pricing_period: "per month",
       end_date: nil,
-      origin: "self_posted"
+      origin: :self_posted
     }
   end
 
   @doc """
-  Factory for creating ProgramListingSchema Ecto schemas (CQRS read model).
+  Factory for creating ProgramListing Ecto schemas (CQRS read model).
 
   Used in tests that interact with the denormalized program_listings read table.
   No FK constraints — provider_id is a plain UUID.
@@ -132,7 +131,7 @@ defmodule KlassHero.Factory do
       schema = insert(:program_listing_schema, title: "Soccer Camp", category: "sports")
   """
   def program_listing_schema_factory do
-    %ProgramListingSchema{
+    %ProgramListing{
       id: Ecto.UUID.generate(),
       title: sequence(:program_listing_title, &"Test Program #{&1}"),
       description: "A great program for kids to learn and have fun",

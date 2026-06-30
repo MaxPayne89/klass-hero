@@ -5,8 +5,8 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
-  alias KlassHero.ProgramCatalog.Domain.Models.Program
-  alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Shared.NameUtils
 
   require Logger

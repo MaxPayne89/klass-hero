@@ -18,7 +18,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 
@@ -40,17 +39,10 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   end
 
   describe "every DB context drives I/O through the Interaction envelope" do
-    # Accounts and Family have no probe here: the conventional-Phoenix flatten replaced
-    # the per-adapter Interaction envelope with the seam-level `context_span` macro, which
-    # emits OTel spans (not the `[:klass_hero, :interaction, :stop]` event this sweep watches).
-    # Their observability is covered by their own `*/observability_test.exs` instead.
-
-    test "program_catalog — ProgramRepository.list_all_programs/0" do
-      assert ProgramRepository.list_all_programs() == []
-
-      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :list_all_programs, status: :ok}}
-    end
+    # Accounts, Family, and Program Catalog have no probe here: the conventional-Phoenix
+    # flatten replaced the per-adapter Interaction envelope with the seam-level `context_span`
+    # macro, which emits OTel spans (not the `[:klass_hero, :interaction, :stop]` event this
+    # sweep watches). Their observability is covered by their own `*/observability_test.exs`.
 
     test "enrollment — EnrollmentPolicyRepository.count_active_enrollments/1" do
       assert EnrollmentPolicyRepository.count_active_enrollments(Ecto.UUID.generate()) == 0

@@ -17,7 +17,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Models.PayRate
   alias KlassHero.Provider.Domain.Models.ProviderProfile
@@ -116,7 +116,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
             single_invite_form: blank_single_invite_form()
           )
           |> assign(:sessions_modal, nil)
-          |> assign(program_form: to_form(ProgramCatalog.new_program_changeset()))
+          |> assign(program_form: to_form(ProgramCatalog.new_program_changeset(), as: :program_schema))
           |> assign(enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"))
           |> assign(
             participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
@@ -562,7 +562,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     {:noreply,
      socket
      |> assign(show_program_form: true, editing_program_id: nil)
-     |> assign(program_form: to_form(ProgramCatalog.new_program_changeset()))
+     |> assign(program_form: to_form(ProgramCatalog.new_program_changeset(), as: :program_schema))
      |> assign(enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"))
      |> assign(
        participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
@@ -582,7 +582,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
          |> assign(
            show_program_form: true,
            editing_program_id: program_id,
-           program_form: to_form(changeset),
+           program_form: to_form(changeset, as: :program_schema),
            enrollment_form: load_enrollment_policy_form(program_id),
            participant_policy_form: load_participant_policy_form(program_id),
            instructor_options: build_instructor_options(socket.assigns.current_scope.provider.id)
@@ -928,7 +928,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
     {:noreply,
      socket
-     |> assign(program_form: to_form(changeset))
+     |> assign(program_form: to_form(changeset, as: :program_schema))
      |> assign(enrollment_form: to_form(enrollment_changeset, as: "enrollment_policy"))
      |> assign(participant_policy_form: to_form(participant_policy_changeset, as: "participant_policy"))}
   end
@@ -1026,7 +1026,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       {:error, changeset} ->
         {:noreply,
          socket
-         |> assign(program_form: to_form(Map.put(changeset, :action, :validate)))
+         |> assign(program_form: to_form(Map.put(changeset, :action, :validate), as: :program_schema))
          |> put_flash(:error, gettext("Please fix the errors below."))}
     end
   end
@@ -1084,7 +1084,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       {:error, changeset} ->
         {:noreply,
          socket
-         |> assign(program_form: to_form(Map.put(changeset, :action, :validate)))
+         |> assign(program_form: to_form(Map.put(changeset, :action, :validate), as: :program_schema))
          |> put_flash(:error, gettext("Please fix the errors below."))}
     end
   end

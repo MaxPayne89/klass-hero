@@ -2,9 +2,9 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
   use KlassHero.DataCase
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Repositories.ProgramRepository
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
+  alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProviderFixtures
+  alias KlassHero.Repo
   alias KlassHero.Shared.DomainEventBus
 
   describe "update_program/2" do
@@ -128,19 +128,23 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       refute_receive {:schedule_event, _}, 100
     end
 
-    test "repository returns stale_data on lock version conflict", %{program: program} do
-      alias KlassHero.Repo
+    test "optimistic lock raises StaleEntryError on a stale version", %{program: program} do
+      # Load the row, then bump its version behind the loaded struct's back.
+      stale = Repo.get!(Program, program.id)
 
-      # Simulate concurrent edit: bump lock_version in DB directly
-      Repo.get!(ProgramSchema, program.id)
+      Repo.get!(Program, program.id)
       |> Ecto.Changeset.change(%{})
       |> Ecto.Changeset.force_change(:lock_version, 99)
       |> Repo.update!()
 
-      # The program struct still holds lock_version from creation (1).
-      # Repository.update/1 sets lock_version=1 on the schema, but DB has 99.
-      stale_program = %{program | title: "Stale Edit"}
-      assert {:error, :stale_data} = ProgramRepository.update(stale_program)
+      # update_changeset carries the stale lock_version (1); the DB row is at 99,
+      # so the guarded UPDATE matches no rows and Ecto raises. update_program/2
+      # rescues this into {:error, :stale_data}.
+      assert_raise Ecto.StaleEntryError, fn ->
+        stale
+        |> Program.update_changeset(%{title: "Stale Edit"})
+        |> Repo.update!()
+      end
     end
   end
 end

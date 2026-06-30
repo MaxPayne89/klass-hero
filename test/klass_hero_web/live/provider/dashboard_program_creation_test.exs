@@ -3,8 +3,8 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
 
   import Phoenix.LiveViewTest
 
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramListingSchema
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
+  alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
 
@@ -159,8 +159,8 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       # Why: Program.create/1 validates invariants, returns error string list
       # Outcome: errors shown as flash message
       html = render(view)
-      assert html =~ "title is required"
-      assert html =~ "description is required"
+      assert html =~ "can&#39;t be blank"
+      assert html =~ "can&#39;t be blank"
     end
 
     test "rejects negative price with validation error", %{conn: conn} do
@@ -200,7 +200,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       })
       |> render_submit()
 
-      assert render(view) =~ "title is required"
+      assert render(view) =~ "can&#39;t be blank"
 
       # Submit valid data
       view
@@ -216,7 +216,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
 
       html = render(view)
       assert html =~ "Program created successfully."
-      refute html =~ "title is required"
+      refute html =~ "can&#39;t be blank"
     end
   end
 
@@ -423,17 +423,17 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       for i <- 1..count do
         id = Ecto.UUID.generate()
 
-        Repo.insert!(%ProgramSchema{
+        Repo.insert!(%Program{
           id: id,
           title: "Program #{i}",
           description: "Description for program #{i}",
           category: "arts",
           price: Decimal.new("50.00"),
           provider_id: provider_id,
-          origin: "self_posted"
+          origin: :self_posted
         })
 
-        Repo.insert!(%ProgramListingSchema{
+        Repo.insert!(%ProgramListing{
           id: id,
           title: "Program #{i}",
           description: "Description for program #{i}",
