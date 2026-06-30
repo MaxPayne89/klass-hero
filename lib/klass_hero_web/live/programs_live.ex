@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.ProgramsLive do
   import KlassHeroWeb.ProgramComponents
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Shared.ErrorIds
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme

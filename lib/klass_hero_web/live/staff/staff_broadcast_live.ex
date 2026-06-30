@@ -77,17 +77,6 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
          socket
          |> put_flash(:error, gettext("Program not found"))
          |> push_navigate(to: ~p"/staff/dashboard")}
-
-      {:error, reason} ->
-        Logger.error("Failed to load program for staff broadcast",
-          reason: inspect(reason),
-          program_id: program_id
-        )
-
-        {:ok,
-         socket
-         |> put_flash(:error, gettext("Something went wrong. Please try again."))
-         |> push_navigate(to: ~p"/staff/dashboard")}
     end
   end
 

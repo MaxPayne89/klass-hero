@@ -28,7 +28,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
 
   import Ecto.Query
 
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
+  alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -46,7 +46,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
 
   defp bootstrap_from_write_table do
     programs =
-      ProgramSchema
+      Program
       |> select([p], %{program_id: p.id, provider_id: p.provider_id, name: p.title})
       |> Repo.all()
 

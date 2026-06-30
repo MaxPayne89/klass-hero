@@ -3,7 +3,7 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramListingSchema
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
 
   describe "ProgramsLive - Integration with Database (User Story 1)" do
@@ -125,7 +125,7 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       # With pagination, only first 20 programs are loaded (Programs 100 down to 81, DESC order)
       # Look up the actual program records to verify presence by ID
-      programs = Repo.all(ProgramListingSchema)
+      programs = Repo.all(ProgramListing)
       program_100 = Enum.find(programs, &(&1.title == "Program 100"))
       program_81 = Enum.find(programs, &(&1.title == "Program 81"))
       program_1 = Enum.find(programs, &(&1.title == "Program 1"))
@@ -540,10 +540,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/programs")
 
       # Look up programs by title to verify pagination
-      program_30 = Repo.get_by!(ProgramListingSchema, title: "Program 30")
-      program_11 = Repo.get_by!(ProgramListingSchema, title: "Program 11")
-      program_10 = Repo.get_by!(ProgramListingSchema, title: "Program 10")
-      program_1 = Repo.get_by!(ProgramListingSchema, title: "Program 1")
+      program_30 = Repo.get_by!(ProgramListing, title: "Program 30")
+      program_11 = Repo.get_by!(ProgramListing, title: "Program 11")
+      program_10 = Repo.get_by!(ProgramListing, title: "Program 10")
+      program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
 
       # Then: First 20 programs are shown (Programs 30 down to 11, DESC order)
       # Most recent (first in list)
@@ -616,10 +616,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/programs")
 
       # Look up programs by title
-      program_30 = Repo.get_by!(ProgramListingSchema, title: "Program 30")
-      program_11 = Repo.get_by!(ProgramListingSchema, title: "Program 11")
-      program_10 = Repo.get_by!(ProgramListingSchema, title: "Program 10")
-      program_1 = Repo.get_by!(ProgramListingSchema, title: "Program 1")
+      program_30 = Repo.get_by!(ProgramListing, title: "Program 30")
+      program_11 = Repo.get_by!(ProgramListing, title: "Program 11")
+      program_10 = Repo.get_by!(ProgramListing, title: "Program 10")
+      program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
 
       # Then: First 20 programs are visible (Programs 30 down to 11, DESC order)
       assert_program_visible(view, program_30)
@@ -659,9 +659,9 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       end
 
       # Look up programs by title (before any LiveView operations)
-      soccer_15 = Repo.get_by!(ProgramListingSchema, title: "Soccer Program 15")
-      soccer_11 = Repo.get_by!(ProgramListingSchema, title: "Soccer Program 11")
-      art_30 = Repo.get_by!(ProgramListingSchema, title: "Art Program 30")
+      soccer_15 = Repo.get_by!(ProgramListing, title: "Soccer Program 15")
+      soccer_11 = Repo.get_by!(ProgramListing, title: "Soccer Program 11")
+      art_30 = Repo.get_by!(ProgramListing, title: "Art Program 30")
 
       # When: User loads page and clicks Load More
       {:ok, view, _html} = live(conn, ~p"/programs")
@@ -734,8 +734,8 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       # The loading state is transient and only visible during actual async operations
 
       # Look up programs by title
-      program_5 = Repo.get_by!(ProgramListingSchema, title: "Program 5")
-      program_1 = Repo.get_by!(ProgramListingSchema, title: "Program 1")
+      program_5 = Repo.get_by!(ProgramListing, title: "Program 5")
+      program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
 
       # Then: After load completes, programs 21-25 are visible (Programs 5 down to 1, DESC order)
       assert_program_visible(view, program_5)
@@ -758,8 +758,8 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/programs")
 
       # Look up programs by title
-      program_25 = Repo.get_by!(ProgramListingSchema, title: "Program 25")
-      program_6 = Repo.get_by!(ProgramListingSchema, title: "Program 6")
+      program_25 = Repo.get_by!(ProgramListing, title: "Program 25")
+      program_6 = Repo.get_by!(ProgramListing, title: "Program 6")
 
       # Then: First 20 programs are visible (Programs 25 down to 6, DESC order)
       assert_program_visible(view, program_25)
@@ -804,7 +804,7 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       |> Map.update(:inserted_at, now, &DateTime.truncate(&1, :second))
       |> Map.update(:updated_at, now, &DateTime.truncate(&1, :second))
 
-    %ProgramListingSchema{}
+    %ProgramListing{}
     |> Ecto.Changeset.change(merged)
     |> Repo.insert!()
   end
@@ -911,8 +911,8 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      first_page_program = Repo.get_by!(ProgramListingSchema, title: "Pagination Program 25")
-      second_page_program = Repo.get_by!(ProgramListingSchema, title: "Pagination Program 1")
+      first_page_program = Repo.get_by!(ProgramListing, title: "Pagination Program 25")
+      second_page_program = Repo.get_by!(ProgramListing, title: "Pagination Program 1")
 
       {:ok, view, _html} = live(conn, ~p"/programs")
       assert_program_visible(view, first_page_program)

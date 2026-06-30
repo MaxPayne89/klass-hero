@@ -72,12 +72,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
            gettext("Program not found. It may have been removed or is no longer available.")
          )
          |> redirect(to: ~p"/programs")}
-
-      {:error, _error} ->
-        {:ok,
-         socket
-         |> put_flash(:error, gettext("Unable to load program. Please try again later."))
-         |> redirect(to: ~p"/programs")}
     end
   end
 

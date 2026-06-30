@@ -8,7 +8,7 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpers do
   """
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Models.StaffMember
 

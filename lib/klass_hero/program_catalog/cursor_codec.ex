@@ -1,9 +1,9 @@
-defmodule KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Queries.CursorCodec do
+defmodule KlassHero.ProgramCatalog.CursorCodec do
   @moduledoc """
-  Seek-pagination cursor encode/decode for program records.
+  Seek-pagination cursor encode/decode for program listings.
 
-  A cursor encodes `(inserted_at, id)` as a URL-safe base64 JSON blob, shared by
-  the write-side ProgramRepository and the read-side ProgramListingsRepository.
+  A cursor encodes `(inserted_at, id)` as a URL-safe base64 JSON blob, used by
+  the paginated read-model listing query.
   """
 
   @type cursor_data :: {DateTime.t(), binary()}

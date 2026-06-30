@@ -8,8 +8,8 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramFilter do
   This is a pure domain service with no repository interaction.
   """
 
-  alias KlassHero.ProgramCatalog.Domain.Models.Program
-  alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.ProgramCatalog.ProgramListing
 
   @max_query_length 100
 

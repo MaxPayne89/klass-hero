@@ -2,54 +2,31 @@ defmodule KlassHero.ProgramCatalog do
   @moduledoc """
   Public API for the Program Catalog bounded context.
 
-  This facade provides a clean interface to the Program Catalog domain,
-  hiding internal architecture details (use cases, services, repositories)
-  from external consumers like LiveViews and controllers.
+  Conventional Phoenix context: persistence and orchestration live here directly,
+  calling `Repo`. Writes go to the `programs` table (`Program`); reads are served
+  from the denormalised `program_listings` read model (`ProgramListing`),
+  maintained by the `ProgramListings` projection. Pure display/formatting and
+  category logic live in the `Domain.Services` modules.
 
   ## Usage
 
-      # List all programs
+      # List all programs (read model)
       programs = ProgramCatalog.list_all_programs()
 
-      # Get a specific program
+      # Get a specific program (write model, with nested value objects)
       {:ok, program} = ProgramCatalog.get_program_by_id("uuid")
-
-      # List featured programs for homepage
-      featured = ProgramCatalog.list_featured_programs()
 
       # Paginated listing with category filter
       {:ok, page} = ProgramCatalog.list_programs_paginated(20, nil, "sports")
-
-      # Filter programs by search query
-      filtered = ProgramCatalog.filter_programs(programs, "art")
-
-      # Validate and format categories
-      category = ProgramCatalog.validate_category_filter("sports")
-      true = ProgramCatalog.valid_program_category?("sports")
-
-      # Format prices
-      "€45.00" = ProgramCatalog.format_price(Decimal.new("45.00"))
-
   """
 
+  use KlassHero.Shared.Tracing
+
+  import Ecto.Query
+
   alias KlassHero.ProgramCatalog.Adapters.Driven.ACL.EnrollmentCapacityACL
-
-  alias KlassHero.ProgramCatalog.Application.Commands.{
-    CreateProgram,
-    UpdateProgram
-  }
-
-  alias KlassHero.ProgramCatalog.Application.Queries.{
-    GetProgramById,
-    ListAllPrograms,
-    ListFeaturedPrograms,
-    ListProgramsPaginated,
-    ListProviderPrograms,
-    ProgramCatalogQueries
-  }
-
-  alias KlassHero.ProgramCatalog.Domain.Models.Program
-  alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.ProgramCatalog.CursorCodec
+  alias KlassHero.ProgramCatalog.Domain.Events.ProgramEvents
 
   alias KlassHero.ProgramCatalog.Domain.Services.{
     ProgramCategories,
@@ -58,82 +35,184 @@ defmodule KlassHero.ProgramCatalog do
     TrendingSearches
   }
 
+  alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
+  alias KlassHero.Shared.Domain.Types.Pagination.PageResult
+  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.ErrorIds
+
+  require Logger
+
+  @scheduling_fields ~w(meeting_days meeting_start_time meeting_end_time start_date end_date)a
+
+  ## Writes
+
   @doc """
   Creates a new program.
 
-  ## Parameters
-
-  - `attrs` - Map with: title, description, category, price, provider_id.
-    Optional: location, cover_image_url, instructor_id, instructor_name, instructor_headshot_url.
-
   ## Returns
 
   - `{:ok, Program.t()}` on success
-  - `{:error, changeset}` on validation failure
+  - `{:error, Ecto.Changeset.t()}` on validation failure
   """
-  @spec create_program(map()) :: {:ok, Program.t()} | {:error, term()}
+  @spec create_program(map()) :: {:ok, Program.t()} | {:error, Ecto.Changeset.t()}
   def create_program(attrs) when is_map(attrs) do
-    CreateProgram.execute(attrs)
+    context_span entity: "program" do
+      attrs = flatten_instructor_attrs(attrs)
+
+      %Program{}
+      |> Program.create_changeset(attrs)
+      |> Repo.insert()
+      |> case do
+        {:ok, program} ->
+          program = Program.load_value_objects(program)
+          dispatch_program_created(program)
+          {:ok, program}
+
+        {:error, changeset} ->
+          RepositoryHelpers.log_validation_error(changeset, ErrorIds.program_create_failed())
+          {:error, changeset}
+      end
+    end
   end
 
   @doc """
-  Updates an existing program.
-
-  Loads the current program, applies changes through the domain model,
-  and persists with optimistic locking.
-
-  ## Parameters
-
-  - `id` - Program UUID
-  - `changes` - Map of fields to update
+  Updates an existing program with optimistic locking.
 
   ## Returns
 
   - `{:ok, Program.t()}` on success
-  - `{:error, :not_found}` if program doesn't exist
-  - `{:error, :stale_data}` if concurrent modification detected
-  - `{:error, errors}` on validation failure
+  - `{:error, :not_found}` if the program doesn't exist
+  - `{:error, :stale_data}` if a concurrent modification was detected
+  - `{:error, Ecto.Changeset.t()}` on validation failure
   """
-  @spec update_program(String.t(), map()) :: {:ok, Program.t()} | {:error, term()}
+  @spec update_program(String.t(), map()) ::
+          {:ok, Program.t()} | {:error, :not_found | :stale_data | Ecto.Changeset.t()}
   def update_program(id, changes) when is_binary(id) and is_map(changes) do
-    UpdateProgram.execute(id, changes)
+    context_span entity: "program" do
+      attrs = flatten_instructor_attrs(changes)
+
+      case fetch_program(id) do
+        nil -> {:error, :not_found}
+        current -> do_update_program(current, attrs, Program.load_value_objects(current))
+      end
+    end
   end
+
+  defp do_update_program(current, attrs, original) do
+    current
+    |> Program.update_changeset(attrs)
+    |> Repo.update()
+    |> case do
+      {:ok, schema} ->
+        updated = Program.load_value_objects(schema)
+        dispatch_program_updated(updated)
+        maybe_dispatch_schedule_updated(original, updated)
+        {:ok, updated}
+
+      {:error, changeset} ->
+        RepositoryHelpers.log_validation_error(changeset, ErrorIds.program_update_failed())
+        {:error, changeset}
+    end
+  rescue
+    Ecto.StaleEntryError ->
+      Logger.warning("[ProgramCatalog] Optimistic lock conflict updating program",
+        error_id: ErrorIds.program_update_stale_entry_error(),
+        program_id: current.id
+      )
+
+      {:error, :stale_data}
+  end
+
+  ## Write-model reads
+
+  @doc "Gets a program by ID. Returns `{:error, :not_found}` if absent or the ID is not a valid UUID."
+  @spec get_program_by_id(String.t()) :: {:ok, Program.t()} | {:error, :not_found}
+  def get_program_by_id(id) do
+    case fetch_program(id) do
+      nil -> {:error, :not_found}
+      program -> {:ok, Program.load_value_objects(program)}
+    end
+  end
+
+  @doc "Fetches multiple programs by ID in one query. Missing IDs are silently omitted."
+  @spec get_programs_by_ids([String.t()]) :: [Program.t()]
+  def get_programs_by_ids(ids) when is_list(ids) do
+    Program
+    |> where([p], p.id in ^ids)
+    |> Repo.all()
+    |> Enum.map(&Program.load_value_objects/1)
+  end
+
+  @doc "Returns IDs of programs with end_date before cutoff. Used by Messaging retention policy."
+  @spec list_ended_program_ids(Date.t()) :: [String.t()]
+  def list_ended_program_ids(cutoff_date) do
+    Program
+    |> where([p], not is_nil(p.end_date) and p.end_date < ^cutoff_date)
+    |> select([p], p.id)
+    |> Repo.all()
+  end
+
+  @doc "Returns an empty changeset for the program creation form."
+  @spec new_program_changeset(map()) :: Ecto.Changeset.t()
+  def new_program_changeset(attrs \\ %{}) do
+    Program.create_changeset(%Program{}, attrs)
+  end
+
+  ## Read-model reads (program_listings)
 
   @doc "Lists all available programs ordered by title."
   @spec list_all_programs() :: [ProgramListing.t()]
-  defdelegate list_all_programs, to: ListAllPrograms, as: :execute
+  def list_all_programs do
+    ProgramListing
+    |> order_by(asc: :title)
+    |> Repo.all()
+  end
 
-  @doc "Gets a program by its unique ID. Returns `{:error, :not_found}` if absent."
-  @spec get_program_by_id(String.t()) :: {:ok, Program.t()} | {:error, atom()}
-  defdelegate get_program_by_id(id), to: GetProgramById, as: :execute
-
-  @doc "Lists featured programs for homepage display (first 2 ordered by title)."
+  @doc "Lists featured programs for homepage display (first 2 active, ordered by title)."
   @spec list_featured_programs() :: [ProgramListing.t()]
-  defdelegate list_featured_programs, to: ListFeaturedPrograms, as: :execute
+  def list_featured_programs do
+    active_listings()
+    |> Enum.take(2)
+  end
+
+  @doc "Lists all programs for a provider, ordered by title (includes expired — #610)."
+  @spec list_programs_for_provider(String.t()) :: [ProgramListing.t()]
+  def list_programs_for_provider(provider_id) when is_binary(provider_id) do
+    ProgramListing
+    |> where([l], l.provider_id == ^provider_id)
+    |> order_by([l], asc: l.title)
+    |> Repo.all()
+  end
 
   @doc """
   Lists programs with cursor-based pagination.
 
-  ## Parameters
-
-    * `limit` - Maximum number of programs to return (1-100)
-    * `cursor` - Optional cursor from previous page (nil for first page)
-    * `category` - Optional category filter (nil or "all" for all programs)
-
-  ## Examples
-
-      {:ok, page} = ProgramCatalog.list_programs_paginated(20, nil)
-      {:ok, next_page} = ProgramCatalog.list_programs_paginated(20, page.next_cursor, "sports")
+  - `limit` - maximum programs to return
+  - `cursor` - cursor from a previous page (nil for the first page)
+  - `category` - optional category filter (nil or "all" for all programs)
   """
   @spec list_programs_paginated(pos_integer(), String.t() | nil, String.t() | nil) ::
-          {:ok, map()} | {:error, :invalid_cursor}
+          {:ok, PageResult.t()} | {:error, :invalid_cursor}
   def list_programs_paginated(limit, cursor, category \\ nil) do
-    ListProgramsPaginated.execute(limit, cursor, category)
+    category = ProgramCategories.validate_filter(category)
+
+    with {:ok, cursor_data} <- CursorCodec.decode(cursor) do
+      # Fetch limit+1 rows to detect has_more without a separate COUNT query.
+      rows = listing_page(limit, cursor_data, category)
+
+      {items, has_more} =
+        if length(rows) > limit, do: {Enum.take(rows, limit), true}, else: {rows, false}
+
+      next_cursor = if has_more, do: items |> List.last() |> CursorCodec.encode()
+
+      {:ok, PageResult.new(items, next_cursor, has_more)}
+    end
   end
 
-  @doc "Lists all programs for a provider, ordered by title."
-  @spec list_programs_for_provider(String.t()) :: [ProgramListing.t()]
-  defdelegate list_programs_for_provider(provider_id), to: ListProviderPrograms, as: :execute
+  ## Pure delegations (functional core — display, filtering, categories)
 
   @doc "Filters programs by search query using word-boundary matching. Returns all if query is empty."
   @spec filter_programs([Program.t() | ProgramListing.t()], String.t()) :: [
@@ -165,15 +244,11 @@ defmodule KlassHero.ProgramCatalog do
   @spec format_price(Decimal.t() | number() | nil) :: String.t()
   defdelegate format_price(price), to: ProgramPricing
 
-  @doc """
-  Checks if the program's registration is currently open.
-  """
+  @doc "Checks if the program's registration is currently open."
   @spec registration_open?(Program.t()) :: boolean()
   defdelegate registration_open?(program), to: Program
 
-  @doc """
-  Returns the current registration status of the program.
-  """
+  @doc "Returns the current registration status of the program."
   @spec registration_status(Program.t()) :: atom()
   defdelegate registration_status(program), to: Program
 
@@ -183,28 +258,163 @@ defmodule KlassHero.ProgramCatalog do
   def trending_searches(nil), do: TrendingSearches.list()
   def trending_searches(limit), do: TrendingSearches.list(limit)
 
-  @doc "Returns IDs of programs with end_date before cutoff. Used by Messaging retention policy."
-  @spec list_ended_program_ids(Date.t()) :: [String.t()]
-  def list_ended_program_ids(cutoff_date) do
-    ProgramCatalogQueries.list_ended_program_ids(cutoff_date)
-  end
-
-  @doc "Fetches multiple programs by ID in one query. Missing IDs are silently omitted. Prefer over `get_program_by_id/1` in a loop."
-  @spec get_programs_by_ids([String.t()]) :: [Program.t()]
-  def get_programs_by_ids(ids) when is_list(ids) do
-    ProgramCatalogQueries.get_programs_by_ids(ids)
-  end
-
   @doc "Returns remaining enrollment capacity for a program via Enrollment ACL."
-  defdelegate remaining_capacity(program_id),
-    to: EnrollmentCapacityACL
+  defdelegate remaining_capacity(program_id), to: EnrollmentCapacityACL
 
   @doc "Returns a map of `program_id => remaining_count | :unlimited` for multiple programs."
-  defdelegate remaining_capacities(program_ids),
-    to: EnrollmentCapacityACL
+  defdelegate remaining_capacities(program_ids), to: EnrollmentCapacityACL
 
-  @doc "Returns an empty changeset for the program creation form."
-  def new_program_changeset(attrs \\ %{}) do
-    ProgramCatalogQueries.new_program_changeset(attrs)
+  ## Internals
+
+  defp fetch_program(id) when is_binary(id) do
+    # dump/1 validates UUID format; cast/1 wrongly accepts any 16-byte binary.
+    case Ecto.UUID.dump(id) do
+      {:ok, _binary} -> Repo.get(Program, id)
+      :error -> nil
+    end
+  end
+
+  defp fetch_program(_), do: nil
+
+  defp active_listings do
+    today = Date.utc_today()
+
+    ProgramListing
+    |> where([l], is_nil(l.end_date) or l.end_date >= ^today)
+    |> order_by([l], asc: l.title)
+    |> Repo.all()
+  end
+
+  defp listing_page(limit, cursor_data, category) do
+    ProgramListing
+    |> filter_listing_category(category)
+    |> where([l], is_nil(l.end_date) or l.end_date >= ^Date.utc_today())
+    |> filter_listing_cursor(cursor_data)
+    |> order_by([l], desc: l.inserted_at, desc: l.id)
+    |> limit(^(limit + 1))
+    |> Repo.all()
+  end
+
+  defp filter_listing_category(query, nil), do: query
+  defp filter_listing_category(query, "all"), do: query
+
+  defp filter_listing_category(query, category) when is_binary(category) do
+    where(query, [l], l.category == ^category)
+  end
+
+  defp filter_listing_cursor(query, nil), do: query
+
+  defp filter_listing_cursor(query, {cursor_ts, cursor_id}) do
+    # Seek pagination: skip rows at or before the cursor in (inserted_at DESC, id DESC) order.
+    where(
+      query,
+      [l],
+      l.inserted_at < ^cursor_ts or
+        (l.inserted_at == ^cursor_ts and l.id < ^cursor_id)
+    )
+  end
+
+  # Nested instructor map (from the web form / staff lookup) → flat columns the
+  # changeset persists. Accepts atom- or string-keyed attrs.
+  defp flatten_instructor_attrs(%{instructor: %{} = instructor} = attrs) do
+    attrs
+    |> Map.delete(:instructor)
+    |> Map.put(:instructor_id, instructor_field(instructor, :id))
+    |> Map.put(:instructor_name, instructor_field(instructor, :name))
+    |> Map.put(:instructor_headshot_url, instructor_field(instructor, :headshot_url))
+  end
+
+  defp flatten_instructor_attrs(%{"instructor" => %{} = instructor} = attrs) do
+    attrs
+    |> Map.delete("instructor")
+    |> Map.put("instructor_id", instructor_field(instructor, :id))
+    |> Map.put("instructor_name", instructor_field(instructor, :name))
+    |> Map.put("instructor_headshot_url", instructor_field(instructor, :headshot_url))
+  end
+
+  defp flatten_instructor_attrs(attrs), do: attrs
+
+  defp instructor_field(instructor, key) do
+    Map.get(instructor, key) || Map.get(instructor, to_string(key))
+  end
+
+  defp dispatch_program_created(program) do
+    program.id
+    |> ProgramEvents.program_created(%{
+      provider_id: program.provider_id,
+      title: program.title,
+      category: program.category,
+      instructor_id: program.instructor_id,
+      meeting_days: program.meeting_days,
+      meeting_start_time: program.meeting_start_time,
+      meeting_end_time: program.meeting_end_time,
+      start_date: program.start_date,
+      end_date: program.end_date
+    })
+    |> dispatch("program_created", program.id)
+  end
+
+  defp dispatch_program_updated(program) do
+    program.id
+    |> ProgramEvents.program_updated(%{
+      provider_id: program.provider_id,
+      title: program.title,
+      description: program.description,
+      category: program.category,
+      age_range: program.age_range,
+      price: program.price,
+      pricing_period: program.pricing_period,
+      location: program.location,
+      cover_image_url: program.cover_image_url,
+      start_date: program.start_date,
+      end_date: program.end_date,
+      meeting_days: program.meeting_days,
+      meeting_start_time: program.meeting_start_time,
+      meeting_end_time: program.meeting_end_time,
+      registration_start_date: program.registration_start_date,
+      registration_end_date: program.registration_end_date,
+      instructor: instructor_payload(program)
+    })
+    |> dispatch("program_updated", program.id)
+  end
+
+  defp maybe_dispatch_schedule_updated(original, updated) do
+    changed? =
+      Enum.any?(@scheduling_fields, fn field ->
+        Map.get(original, field) != Map.get(updated, field)
+      end)
+
+    if changed? do
+      updated.id
+      |> ProgramEvents.program_schedule_updated(%{
+        provider_id: updated.provider_id,
+        meeting_days: updated.meeting_days,
+        meeting_start_time: updated.meeting_start_time,
+        meeting_end_time: updated.meeting_end_time,
+        start_date: updated.start_date,
+        end_date: updated.end_date
+      })
+      |> dispatch("program_schedule_updated", updated.id)
+    end
+  end
+
+  defp instructor_payload(%{instructor_id: nil}), do: nil
+
+  defp instructor_payload(program) do
+    %{name: program.instructor_name, headshot_url: program.instructor_headshot_url}
+  end
+
+  # Fire-and-forget: dispatch failures are logged but never roll back the write.
+  defp dispatch(event, name, program_id) do
+    case DomainEventBus.dispatch(KlassHero.ProgramCatalog, event) do
+      :ok ->
+        :ok
+
+      {:error, failures} ->
+        Logger.error("[ProgramCatalog] #{name} event dispatch had failures",
+          program_id: program_id,
+          errors: inspect(failures)
+        )
+    end
   end
 end

@@ -8,7 +8,7 @@ defmodule KlassHeroWeb.Presenters.InstructorPresenter do
   caller of this module.
   """
 
-  alias KlassHero.ProgramCatalog.Domain.Models.Instructor
+  alias KlassHero.ProgramCatalog.Instructor
 
   @spec to_hero_card(Instructor.t() | nil) :: map() | nil
   def to_hero_card(nil), do: nil

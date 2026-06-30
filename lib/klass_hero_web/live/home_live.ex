@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.HomeLive do
   import KlassHeroWeb.MarketingComponents
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.Domain.ReadModels.ProgramListing
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
 

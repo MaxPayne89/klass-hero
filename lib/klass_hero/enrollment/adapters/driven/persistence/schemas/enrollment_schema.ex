@@ -10,7 +10,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSch
 
   alias KlassHero.Family.Child
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Persistence.Schemas.ProgramSchema
+  alias KlassHero.ProgramCatalog.Program
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -20,7 +20,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSch
 
   schema "enrollments" do
     belongs_to :program,
-               ProgramSchema
+               Program
 
     belongs_to :child, Child
 

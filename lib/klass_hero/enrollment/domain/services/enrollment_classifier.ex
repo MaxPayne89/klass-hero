@@ -20,7 +20,7 @@ defmodule KlassHero.Enrollment.Domain.Services.EnrollmentClassifier do
   """
 
   alias KlassHero.Enrollment.Domain.Models.Enrollment
-  alias KlassHero.ProgramCatalog.Domain.Models.Program
+  alias KlassHero.ProgramCatalog.Program
 
   @type enrollment_program :: {Enrollment.t(), Program.t()}
 
