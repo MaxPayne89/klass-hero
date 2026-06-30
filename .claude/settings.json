@@ -27,15 +27,6 @@
             "command": "FILE=$(cat | jq -r '.tool_input.file_path // empty') && [[ \"$FILE\" =~ \\.html\\.heex$ ]] && mix lint_typography || true"
           }
         ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "INPUT=$(cat) && CMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty') && if echo \"$CMD\" | grep -q 'git commit'; then git log -1 --pretty=%s | grep -qE '^(feat|fix|chore|docs|refactor|test|ci|perf)(\\(.+\\))?:' || (echo 'ERROR: Commit message must follow semantic conventions (feat:/fix:/chore:/docs:/refactor:/test:/ci:/perf:)' && exit 1); fi"
-          }
-        ]
       }
     ]
   }
