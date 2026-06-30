@@ -7,13 +7,11 @@ defmodule KlassHero.Participation.Application.Queries.ListPendingBehavioralNotes
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Queries.ListPendingBehavioralNotes
-
   describe "execute/1" do
     test "returns pending notes for a parent" do
       note = insert(:behavioral_note_schema, status: :pending_approval)
 
-      assert {:ok, notes} = ListPendingBehavioralNotes.execute(note.parent_id)
+      assert {:ok, notes} = KlassHero.Participation.list_pending_behavioral_notes(note.parent_id)
       assert length(notes) == 1
       assert hd(notes).id == note.id
       assert hd(notes).status == :pending_approval
@@ -41,13 +39,13 @@ defmodule KlassHero.Participation.Application.Queries.ListPendingBehavioralNotes
         reviewed_at: DateTime.utc_now()
       )
 
-      assert {:ok, notes} = ListPendingBehavioralNotes.execute(parent_id)
+      assert {:ok, notes} = KlassHero.Participation.list_pending_behavioral_notes(parent_id)
       assert length(notes) == 1
       assert hd(notes).status == :pending_approval
     end
 
     test "returns {:ok, []} for nonexistent parent" do
-      assert {:ok, []} = ListPendingBehavioralNotes.execute(Ecto.UUID.generate())
+      assert {:ok, []} = KlassHero.Participation.list_pending_behavioral_notes(Ecto.UUID.generate())
     end
   end
 end

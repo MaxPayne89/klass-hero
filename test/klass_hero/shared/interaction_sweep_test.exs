@@ -17,7 +17,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 
@@ -65,8 +64,8 @@ defmodule KlassHero.Shared.InteractionSweepTest do
                       %{io_kind: :db, operation: :get_total_unread_count, status: :ok}}
     end
 
-    test "participation (greenfield) — SessionRepository.list_by_program/1" do
-      assert SessionRepository.list_by_program(Ecto.UUID.generate()) == []
+    test "participation — Participation.list_sessions/1 (program filter)" do
+      assert KlassHero.Participation.list_sessions(%{program_id: Ecto.UUID.generate()}) == []
 
       assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
                       %{io_kind: :db, operation: :list_by_program, status: :ok}}

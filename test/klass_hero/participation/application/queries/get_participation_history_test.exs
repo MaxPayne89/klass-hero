@@ -9,7 +9,6 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Queries.GetParticipationHistory
   alias KlassHero.Participation.ParticipationRecord
 
   describe "execute/1 with single child" do
@@ -32,7 +31,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
       insert(:participation_record_schema, session_id: session1.id, child_id: child.id)
       insert(:participation_record_schema, session_id: session2.id, child_id: child.id)
 
-      assert {:ok, records} = GetParticipationHistory.execute(%{child_id: child.id})
+      assert {:ok, records} = KlassHero.Participation.get_participation_history(%{child_id: child.id})
       assert length(records) == 2
       assert Enum.all?(records, &match?(%ParticipationRecord{}, &1))
       assert Enum.all?(records, &(&1.child_id == child.id))
@@ -41,7 +40,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
     test "returns empty list when child has no records" do
       child = insert(:child_schema)
 
-      assert {:ok, records} = GetParticipationHistory.execute(%{child_id: child.id})
+      assert {:ok, records} = KlassHero.Participation.get_participation_history(%{child_id: child.id})
       assert records == []
     end
 
@@ -53,7 +52,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
       insert(:participation_record_schema, session_id: session.id, child_id: child1.id)
       insert(:participation_record_schema, session_id: session.id, child_id: child2.id)
 
-      assert {:ok, records} = GetParticipationHistory.execute(%{child_id: child1.id})
+      assert {:ok, records} = KlassHero.Participation.get_participation_history(%{child_id: child1.id})
       assert length(records) == 1
       assert hd(records).child_id == child1.id
     end
@@ -85,7 +84,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
       )
 
       assert {:ok, records} =
-               GetParticipationHistory.execute(%{
+               KlassHero.Participation.get_participation_history(%{
                  child_id: child.id,
                  start_date: ~D[2025-02-01],
                  end_date: ~D[2025-02-28]
@@ -106,7 +105,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
       insert(:participation_record_schema, session_id: session.id, child_id: child2.id)
 
       assert {:ok, records} =
-               GetParticipationHistory.execute(%{child_ids: [child1.id, child2.id]})
+               KlassHero.Participation.get_participation_history(%{child_ids: [child1.id, child2.id]})
 
       assert length(records) == 2
       child_ids = Enum.map(records, & &1.child_id)
@@ -115,7 +114,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
     end
 
     test "returns empty list for empty child_ids list" do
-      assert {:ok, records} = GetParticipationHistory.execute(%{child_ids: []})
+      assert {:ok, records} = KlassHero.Participation.get_participation_history(%{child_ids: []})
       assert records == []
     end
 
@@ -147,7 +146,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
       )
 
       assert {:ok, records} =
-               GetParticipationHistory.execute(%{
+               KlassHero.Participation.get_participation_history(%{
                  child_ids: [child1.id, child2.id],
                  start_date: ~D[2025-02-01],
                  end_date: ~D[2025-02-28]

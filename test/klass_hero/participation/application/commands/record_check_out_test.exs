@@ -11,8 +11,6 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckOutTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Participation.ParticipationRecord
-  alias KlassHero.Participation.Application.Commands.RecordCheckOut
-  alias KlassHero.Participation.ParticipationRecord
 
   describe "execute/1" do
     test "successfully checks out a checked-in record" do
@@ -31,7 +29,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckOutTest do
         )
 
       assert {:ok, record} =
-               RecordCheckOut.execute(%{
+               KlassHero.Participation.record_check_out(%{
                  record_id: record_schema.id,
                  checked_out_by: staff_id,
                  notes: "Picked up by parent"
@@ -61,7 +59,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckOutTest do
         )
 
       assert {:ok, record} =
-               RecordCheckOut.execute(%{
+               KlassHero.Participation.record_check_out(%{
                  record_id: record_schema.id,
                  checked_out_by: staff_id
                })
@@ -75,7 +73,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckOutTest do
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       assert {:error, :not_found} =
-               RecordCheckOut.execute(%{
+               KlassHero.Participation.record_check_out(%{
                  record_id: non_existent_id,
                  checked_out_by: staff_id
                })
@@ -94,7 +92,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckOutTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               RecordCheckOut.execute(%{
+               KlassHero.Participation.record_check_out(%{
                  record_id: record_schema.id,
                  checked_out_by: staff_id
                })
@@ -118,7 +116,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckOutTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               RecordCheckOut.execute(%{
+               KlassHero.Participation.record_check_out(%{
                  record_id: record_schema.id,
                  checked_out_by: staff_id
                })
@@ -140,7 +138,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckOutTest do
         )
 
       {:ok, record} =
-        RecordCheckOut.execute(%{
+        KlassHero.Participation.record_check_out(%{
           record_id: record_schema.id,
           checked_out_by: staff_id
         })

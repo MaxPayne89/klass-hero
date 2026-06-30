@@ -18,18 +18,14 @@ defmodule KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver do
   - Empty result from `get_programs_by_ids/1` → `:program_not_found`
   """
 
-  @behaviour KlassHero.Participation.Domain.Ports.ForResolvingProgramProvider
-
   alias KlassHero.ProgramCatalog
 
   require Logger
 
-  @impl true
   def resolve_provider_id(program_id) when is_binary(program_id) do
     with {:ok, program} <- fetch_program(program_id), do: {:ok, program.provider_id}
   end
 
-  @impl true
   def resolve_provider_details(program_id) when is_binary(program_id) do
     with {:ok, program} <- fetch_program(program_id) do
       {:ok, %{provider_id: program.provider_id, program_title: program.title}}

@@ -1,12 +1,13 @@
-defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository do
+defmodule KlassHero.Participation.Adapters.Driven.ACL.SessionProgramAcl do
   @moduledoc """
-  Ecto-based implementation of the session repository.
+  Anti-corruption layer for session reads that reach across context boundaries
+  into the `programs` and `providers` tables by name.
 
-  Implements the ForManagingSessions port using PostgreSQL via Ecto.
+  These queries join Program Catalog / Provider tables directly rather than going
+  through their public APIs — an isolated, known boundary compromise kept out of
+  the context root. A follow-up issue tracks routing them through the owning
+  contexts' public APIs.
   """
-
-  @behaviour KlassHero.Participation.Domain.Ports.ForManagingSessions
-  @behaviour KlassHero.Participation.Domain.Ports.ForQueryingSessions
 
   use KlassHero.Shared.Interaction
 
@@ -15,72 +16,11 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Repo
-  alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
-  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
-  alias KlassHero.Shared.ErrorIds
 
   # Statuses that count as "checked in" for attendance tallies
   @checked_in_statuses ~w(checked_in checked_out)
 
-  @impl true
-  def create(%ProgramSession{} = session) do
-    db_interaction operation: :create, entity: "session" do
-      session
-      |> Map.from_struct()
-      |> ProgramSession.create_changeset()
-      |> Repo.insert()
-      |> handle_insert_result()
-    end
-  end
-
-  @impl true
-  def get_by_id(id) when is_binary(id) do
-    db_interaction operation: :get_by_id, entity: "session" do
-      case Repo.get(ProgramSession, id) do
-        nil -> {:error, :not_found}
-        session -> {:ok, session}
-      end
-    end
-  end
-
-  @impl true
-  def list_by_program(program_id) when is_binary(program_id) do
-    db_interaction operation: :list_by_program, entity: "session" do
-      from(s in ProgramSession,
-        where: s.program_id == ^program_id,
-        order_by: [asc: s.session_date, asc: s.start_time]
-      )
-      |> Repo.all()
-    end
-  end
-
-  @impl true
-  def list_today_sessions(date) do
-    db_interaction operation: :list_today_sessions, entity: "session" do
-      from(s in ProgramSession,
-        where: s.session_date == ^date,
-        order_by: [asc: s.start_time]
-      )
-      |> Repo.all()
-    end
-  end
-
-  @impl true
-  def update(%ProgramSession{} = session) do
-    db_interaction operation: :update, entity: "session" do
-      with {:ok, schema} <-
-             RepositoryHelpers.get_schema_by_uuid(ProgramSession, session.id) do
-        attrs = Map.take(session, [:status, :location, :notes, :max_capacity, :lock_version])
-
-        schema
-        |> ProgramSession.update_changeset(attrs)
-        |> Repo.update()
-        |> handle_update_result()
-      end
-    end
-  end
-
-  @impl true
+  @doc "Lists a provider's sessions on a date, joining the `programs` table for ownership."
   def list_by_provider_and_date(provider_id, date) when is_binary(provider_id) do
     db_interaction operation: :list_by_provider_and_date, entity: "session" do
       from(s in ProgramSession,
@@ -93,17 +33,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
     end
   end
 
-  @impl true
-  def get_many_by_ids(ids) when is_list(ids) do
-    db_interaction operation: :get_many_by_ids, entity: "session" do
-      from(s in ProgramSession,
-        where: s.id in ^ids
-      )
-      |> Repo.all()
-    end
-  end
-
-  @impl true
+  @doc "Resolves a program's title from the `programs` table."
   def get_program_name(program_id) when is_binary(program_id) do
     db_interaction operation: :get_program_name, entity: "session" do
       from(p in "programs",
@@ -114,7 +44,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
     end
   end
 
-  @impl true
+  @doc "Admin session listing with per-session attendance tallies, joining `programs` and `providers`."
   def list_admin_sessions(filters) when is_map(filters) do
     db_interaction operation: :list_admin_sessions, entity: "session" do
       ProgramSession
@@ -158,7 +88,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   end
 
   defp maybe_filter_date(query, %{date: date}), do: where(query, [s, _p, _pr, _prov], s.session_date == ^date)
-
   defp maybe_filter_date(query, _), do: query
 
   defp maybe_filter_date_range(query, %{date_from: from, date_to: to}),
@@ -185,24 +114,4 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
     do: %{map | status: String.to_existing_atom(status)}
 
   defp atomize_status(map), do: map
-
-  defp handle_insert_result({:ok, schema}), do: {:ok, schema}
-
-  defp handle_insert_result({:error, %Ecto.Changeset{errors: errors} = changeset}) do
-    if EctoErrorHelpers.any_unique_constraint_violation?(errors) do
-      {:error, :duplicate_session}
-    else
-      {:error, ErrorIds.session_create_failed(changeset)}
-    end
-  end
-
-  defp handle_update_result({:ok, schema}), do: {:ok, schema}
-
-  defp handle_update_result({:error, %Ecto.Changeset{} = changeset}) do
-    if changeset.errors[:lock_version] do
-      {:error, :stale_data}
-    else
-      {:error, ErrorIds.session_update_failed(changeset)}
-    end
-  end
 end

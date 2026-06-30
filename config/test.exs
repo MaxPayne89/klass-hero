@@ -1,12 +1,6 @@
 import Config
 
 alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
-alias KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver
-alias KlassHero.Participation.Adapters.Driven.ACL.EnrolledChildrenResolver
-alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
-alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.BehavioralNoteRepository
-alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.ParticipationRepository
-alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
 alias KlassHero.Provider.Adapters.Driven.Notifications.StubIncidentNotificationScheduler
 alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
@@ -49,17 +43,6 @@ config :klass_hero, :feature_flags, adapter: StubFeatureFlagsAdapter
 config :klass_hero, :integration_event_publisher,
   module: TestIntegrationEventPublisher,
   pubsub: KlassHero.PubSub
-
-config :klass_hero, :participation,
-  for_storing_sessions: SessionRepository,
-  for_querying_sessions: SessionRepository,
-  for_storing_participation_records: ParticipationRepository,
-  for_querying_participation_records: ParticipationRepository,
-  for_resolving_child_info: ChildInfoResolver,
-  for_storing_behavioral_notes: BehavioralNoteRepository,
-  for_querying_behavioral_notes: BehavioralNoteRepository,
-  for_resolving_program_provider: ProgramProviderResolver,
-  for_resolving_enrolled_children: EnrolledChildrenResolver
 
 # Provider context overrides (test-only)
 # Why: stub the incident-notification enqueue port so individual tests can

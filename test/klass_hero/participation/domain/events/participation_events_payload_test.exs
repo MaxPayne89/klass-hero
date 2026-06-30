@@ -1,8 +1,8 @@
 defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
 

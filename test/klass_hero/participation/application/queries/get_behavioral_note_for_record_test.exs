@@ -10,7 +10,6 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
   alias KlassHero.Participation.BehavioralNote
 
   describe "execute/2 - single note retrieval" do
@@ -18,7 +17,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
       note_schema = insert(:behavioral_note_schema)
 
       assert {:ok, note} =
-               GetBehavioralNoteForRecord.execute(
+               KlassHero.Participation.get_behavioral_note_by_record_and_provider(
                  note_schema.participation_record_id,
                  note_schema.provider_id
                )
@@ -34,7 +33,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
       non_existent_record_id = Ecto.UUID.generate()
 
       assert {:error, :not_found} =
-               GetBehavioralNoteForRecord.execute(non_existent_record_id, provider.id)
+               KlassHero.Participation.get_behavioral_note_by_record_and_provider(non_existent_record_id, provider.id)
     end
 
     test "returns error when note belongs to a different provider" do
@@ -42,7 +41,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
       other_provider = insert(:provider_profile_schema)
 
       assert {:error, :not_found} =
-               GetBehavioralNoteForRecord.execute(
+               KlassHero.Participation.get_behavioral_note_by_record_and_provider(
                  note_schema.participation_record_id,
                  other_provider.id
                )
@@ -52,7 +51,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
       note_schema = insert(:behavioral_note_schema, content: "Excellent focus today")
 
       assert {:ok, note} =
-               GetBehavioralNoteForRecord.execute(
+               KlassHero.Participation.get_behavioral_note_by_record_and_provider(
                  note_schema.participation_record_id,
                  note_schema.provider_id
                )
@@ -88,7 +87,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
 
       record_ids = [note1.participation_record_id, note2.participation_record_id]
 
-      notes = GetBehavioralNoteForRecord.execute_batch(record_ids, note1.provider_id)
+      notes = KlassHero.Participation.list_behavioral_notes_by_records_and_provider(record_ids, note1.provider_id)
 
       assert length(notes) == 2
       returned_ids = Enum.map(notes, & &1.id) |> MapSet.new()
@@ -101,7 +100,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
       record = insert(:participation_record_schema, check_in_by: user.id)
       provider = insert(:provider_profile_schema)
 
-      notes = GetBehavioralNoteForRecord.execute_batch([record.id], provider.id)
+      notes = KlassHero.Participation.list_behavioral_notes_by_records_and_provider([record.id], provider.id)
 
       assert notes == []
     end
@@ -109,7 +108,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
     test "returns empty list for empty record id list" do
       provider = insert(:provider_profile_schema)
 
-      notes = GetBehavioralNoteForRecord.execute_batch([], provider.id)
+      notes = KlassHero.Participation.list_behavioral_notes_by_records_and_provider([], provider.id)
 
       assert notes == []
     end
@@ -119,7 +118,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
       other_provider = insert(:provider_profile_schema)
 
       notes =
-        GetBehavioralNoteForRecord.execute_batch(
+        KlassHero.Participation.list_behavioral_notes_by_records_and_provider(
           [note_schema.participation_record_id],
           other_provider.id
         )
@@ -133,7 +132,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
 
       # Only pass note1's record id
       notes =
-        GetBehavioralNoteForRecord.execute_batch(
+        KlassHero.Participation.list_behavioral_notes_by_records_and_provider(
           [note1.participation_record_id],
           note1.provider_id
         )
@@ -146,7 +145,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
       note_schema = insert(:behavioral_note_schema)
 
       [note] =
-        GetBehavioralNoteForRecord.execute_batch(
+        KlassHero.Participation.list_behavioral_notes_by_records_and_provider(
           [note_schema.participation_record_id],
           note_schema.provider_id
         )

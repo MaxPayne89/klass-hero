@@ -21,7 +21,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
-  alias KlassHero.Participation.Application.Commands.SeedSessionRoster
+  alias KlassHero.Participation
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @impl true
@@ -29,7 +29,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
 
   @impl true
   def handle_event(%IntegrationEvent{event_type: :session_created, payload: payload}) do
-    SeedSessionRoster.execute(payload.session_id, payload.program_id)
+    Participation.seed_session_roster(payload.session_id, payload.program_id)
   end
 
   def handle_event(_event), do: :ignore

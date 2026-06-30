@@ -7,8 +7,8 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
+  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   describe "handle_event/1 for :child_data_anonymized" do

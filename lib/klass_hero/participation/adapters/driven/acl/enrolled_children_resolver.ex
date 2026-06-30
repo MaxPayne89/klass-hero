@@ -5,13 +5,10 @@ defmodule KlassHero.Participation.Adapters.Driven.ACL.EnrolledChildrenResolver d
   Extracts only `child_id` values; all other enrollment data is discarded at the ACL boundary.
   """
 
-  @behaviour KlassHero.Participation.Domain.Ports.ForResolvingEnrolledChildren
-
   alias KlassHero.Enrollment
 
   # Uses the enriched roster endpoint (slight over-fetch) to avoid adding a new function
   # to the Enrollment context. Acceptable for class-sized lists.
-  @impl true
   def list_enrolled_child_ids(program_id) when is_binary(program_id) do
     program_id
     |> Enrollment.list_program_enrollments()

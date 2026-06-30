@@ -15,17 +15,14 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
   only via the generic topic.
   """
 
+  alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
+
   alias KlassHero.Shared.Adapters.Driven.Events.EventHandlers.NotifyLiveViews,
     as: SharedNotifyLiveViews
 
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
   require Logger
-
-  @program_provider_resolver Application.compile_env!(
-                               :klass_hero,
-                               [:participation, :for_resolving_program_provider]
-                             )
 
   @doc "Handles a domain event by publishing to generic and provider-specific topics."
   @spec handle(DomainEvent.t()) :: :ok
@@ -60,7 +57,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
   end
 
   defp resolve_and_publish(event, program_id) do
-    case @program_provider_resolver.resolve_provider_id(program_id) do
+    case ProgramProviderResolver.resolve_provider_id(program_id) do
       {:ok, provider_id} ->
         provider_topic = "participation:provider:#{provider_id}"
         SharedNotifyLiveViews.safe_publish(event, provider_topic)

@@ -46,9 +46,6 @@ defmodule KlassHero.Factory do
   alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
-  alias KlassHero.Participation.BehavioralNote
-  alias KlassHero.Participation.ParticipationRecord
-  alias KlassHero.Participation.ProgramSession
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema

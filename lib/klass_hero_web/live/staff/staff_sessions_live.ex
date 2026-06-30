@@ -151,25 +151,16 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     assigned_program_ids = socket.assigns.assigned_program_ids
     filter_program_id = socket.assigns.filter_program_id
 
-    case Participation.list_provider_sessions(provider_id, selected_date) do
-      {:ok, sessions} ->
-        filtered =
-          sessions
-          |> Enum.filter(&MapSet.member?(assigned_program_ids, &1.program_id))
-          |> maybe_filter_by_program(filter_program_id, assigned_program_ids)
+    {:ok, sessions} = Participation.list_provider_sessions(provider_id, selected_date)
 
-        socket
-        |> stream(:sessions, filtered, reset: true)
-        |> assign(:sessions_error, nil)
+    filtered =
+      sessions
+      |> Enum.filter(&MapSet.member?(assigned_program_ids, &1.program_id))
+      |> maybe_filter_by_program(filter_program_id, assigned_program_ids)
 
-      {:error, reason} ->
-        Logger.error("[StaffSessionsLive] Failed to load sessions for date #{selected_date}",
-          provider_id: provider_id,
-          reason: inspect(reason)
-        )
-
-        assign(socket, :sessions_error, reason)
-    end
+    socket
+    |> stream(:sessions, filtered, reset: true)
+    |> assign(:sessions_error, nil)
   end
 
   defp maybe_filter_by_program(sessions, nil, _assigned_ids), do: sessions

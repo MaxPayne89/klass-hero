@@ -15,8 +15,6 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Participation.Application.Commands.RecordCheckIn
-  alias KlassHero.Participation.Application.Commands.RecordCheckOut
   alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
 
   setup do
@@ -30,7 +28,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       {:ok, record} =
-        RecordCheckIn.execute(%{
+        KlassHero.Participation.record_check_in(%{
           record_id: record_schema.id,
           checked_in_by: staff_id,
           notes: "Arrived on time"
@@ -59,7 +57,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       {:ok, record} =
-        RecordCheckIn.execute(%{
+        KlassHero.Participation.record_check_in(%{
           record_id: record_schema.id,
           checked_in_by: staff_id
         })
@@ -76,7 +74,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       fake_id = Ecto.UUID.generate()
 
       result =
-        RecordCheckIn.execute(%{
+        KlassHero.Participation.record_check_in(%{
           record_id: fake_id,
           checked_in_by: AccountsFixtures.unconfirmed_user_fixture().id
         })
@@ -96,7 +94,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       result =
-        RecordCheckIn.execute(%{
+        KlassHero.Participation.record_check_in(%{
           record_id: record_schema.id,
           checked_in_by: staff_id
         })
@@ -118,7 +116,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       {:ok, record} =
-        RecordCheckOut.execute(%{
+        KlassHero.Participation.record_check_out(%{
           record_id: record_schema.id,
           checked_out_by: staff_id,
           notes: "Picked up by parent"
@@ -153,7 +151,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       {:ok, record} =
-        RecordCheckOut.execute(%{
+        KlassHero.Participation.record_check_out(%{
           record_id: record_schema.id,
           checked_out_by: staff_id
         })
@@ -170,7 +168,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       fake_id = Ecto.UUID.generate()
 
       result =
-        RecordCheckOut.execute(%{
+        KlassHero.Participation.record_check_out(%{
           record_id: fake_id,
           checked_out_by: AccountsFixtures.unconfirmed_user_fixture().id
         })
@@ -184,7 +182,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       result =
-        RecordCheckOut.execute(%{
+        KlassHero.Participation.record_check_out(%{
           record_id: record_schema.id,
           checked_out_by: staff_id
         })
@@ -201,7 +199,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
 
       # Check in
       {:ok, check_in_record} =
-        RecordCheckIn.execute(%{
+        KlassHero.Participation.record_check_in(%{
           record_id: record_schema.id,
           checked_in_by: staff_id,
           notes: "Morning arrival"
@@ -211,7 +209,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationT
 
       # Check out
       {:ok, check_out_record} =
-        RecordCheckOut.execute(%{
+        KlassHero.Participation.record_check_out(%{
           record_id: record_schema.id,
           checked_out_by: staff_id,
           notes: "Evening pickup"

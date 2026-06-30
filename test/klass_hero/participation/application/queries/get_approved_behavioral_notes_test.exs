@@ -7,13 +7,11 @@ defmodule KlassHero.Participation.Application.Queries.GetApprovedBehavioralNotes
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Queries.GetApprovedBehavioralNotes
-
   describe "execute/1" do
     test "returns approved notes for a child" do
       note = insert(:behavioral_note_schema, status: :approved, reviewed_at: DateTime.utc_now())
 
-      assert {:ok, notes} = GetApprovedBehavioralNotes.execute(note.child_id)
+      assert {:ok, notes} = KlassHero.Participation.get_approved_behavioral_notes(note.child_id)
       assert length(notes) == 1
       assert hd(notes).id == note.id
       assert hd(notes).status == :approved
@@ -75,13 +73,13 @@ defmodule KlassHero.Participation.Application.Queries.GetApprovedBehavioralNotes
         reviewed_at: DateTime.utc_now()
       )
 
-      assert {:ok, notes} = GetApprovedBehavioralNotes.execute(child_id)
+      assert {:ok, notes} = KlassHero.Participation.get_approved_behavioral_notes(child_id)
       assert length(notes) == 1
       assert hd(notes).status == :approved
     end
 
     test "returns {:ok, []} for nonexistent child" do
-      assert {:ok, []} = GetApprovedBehavioralNotes.execute(Ecto.UUID.generate())
+      assert {:ok, []} = KlassHero.Participation.get_approved_behavioral_notes(Ecto.UUID.generate())
     end
   end
 end

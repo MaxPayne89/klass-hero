@@ -156,10 +156,8 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
       children = Family.get_children(parent_id)
       child_ids = Enum.map(children, & &1.id)
 
-      case Participation.get_participation_history(%{child_ids: child_ids}) do
-        {:ok, records} -> apply_history(socket, children, records)
-        {:error, reason} -> handle_history_error(socket, parent_id, reason)
-      end
+      {:ok, records} = Participation.get_participation_history(%{child_ids: child_ids})
+      apply_history(socket, children, records)
     else
       Logger.warning("[ParticipationHistoryLive.load_participation_history] No parent_id available")
 
@@ -188,33 +186,9 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
     |> load_pending_notes()
   end
 
-  defp handle_history_error(socket, parent_id, reason) do
-    Logger.error(
-      "[ParticipationHistoryLive.load_participation_history] Failed to load history",
-      parent_id: parent_id,
-      reason: inspect(reason)
-    )
-
-    socket
-    |> stream(:participation_records, [], reset: true)
-    |> assign(:participation_error, gettext("Failed to load participation history"))
-  end
-
   defp load_pending_notes(socket) do
-    parent_id = socket.assigns.parent_id
-
-    case Participation.list_pending_behavioral_notes(parent_id) do
-      {:ok, notes} ->
-        assign(socket, :pending_notes, notes)
-
-      {:error, reason} ->
-        Logger.error("[ParticipationHistoryLive.load_pending_notes] Failed to load notes",
-          parent_id: parent_id,
-          reason: inspect(reason)
-        )
-
-        put_flash(socket, :error, gettext("Failed to load pending notes"))
-    end
+    {:ok, notes} = Participation.list_pending_behavioral_notes(socket.assigns.parent_id)
+    assign(socket, :pending_notes, notes)
   end
 
   defp load_and_stream_record(socket, record_id, opts) do
