@@ -7,9 +7,12 @@ defmodule KlassHero.Participation do
   state machines live on the schema structs (`ProgramSession`,
   `ParticipationRecord`, `BehavioralNote`). Cross-context reads route through ACL
   adapters (`SessionProgramAcl`, the `*Resolver`s).
+
+  State-changing operations open a `context_span`; the Ecto telemetry bridge
+  nests per-query spans beneath it. Reads stay bare.
   """
 
-  use KlassHero.Shared.Interaction
+  use KlassHero.Shared.Tracing
 
   import Ecto.Query
 
@@ -57,15 +60,17 @@ defmodule KlassHero.Participation do
   Returns `{:ok, session}`, `{:error, :invalid_time_range}`, or `{:error, :duplicate_session}`.
   """
   def create_session(params) when is_map(params) do
-    session_attrs =
-      params
-      |> Map.put(:id, Ecto.UUID.generate())
-      |> Map.put(:status, :scheduled)
+    context_span entity: "session" do
+      session_attrs =
+        params
+        |> Map.put(:id, Ecto.UUID.generate())
+        |> Map.put(:status, :scheduled)
 
-    with {:ok, session} <- ProgramSession.new(session_attrs),
-         {:ok, persisted} <- insert_session(session) do
-      DomainEventBus.dispatch(@context, ParticipationEvents.session_created(persisted))
-      {:ok, persisted}
+      with {:ok, session} <- ProgramSession.new(session_attrs),
+           {:ok, persisted} <- insert_session(session) do
+        DomainEventBus.dispatch(@context, ParticipationEvents.session_created(persisted))
+        {:ok, persisted}
+      end
     end
   end
 
@@ -75,11 +80,13 @@ defmodule KlassHero.Participation do
   Returns `{:ok, session}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
   """
   def start_session(session_id) when is_binary(session_id) do
-    with {:ok, session} <- fetch_session(session_id),
-         {:ok, started} <- ProgramSession.start(session),
-         {:ok, persisted} <- update_session(started) do
-      DomainEventBus.dispatch(@context, ParticipationEvents.session_started(persisted))
-      {:ok, persisted}
+    context_span entity: "session" do
+      with {:ok, session} <- fetch_session(session_id),
+           {:ok, started} <- ProgramSession.start(session),
+           {:ok, persisted} <- update_session(started) do
+        DomainEventBus.dispatch(@context, ParticipationEvents.session_started(persisted))
+        {:ok, persisted}
+      end
     end
   end
 
@@ -89,12 +96,14 @@ defmodule KlassHero.Participation do
   Returns `{:ok, session}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
   """
   def complete_session(session_id) when is_binary(session_id) do
-    with {:ok, session} <- fetch_session(session_id),
-         {:ok, completed} <- ProgramSession.complete(session),
-         {:ok, persisted} <- update_session(completed),
-         :ok <- mark_remaining_as_absent(persisted) do
-      publish_session_completed(persisted)
-      {:ok, persisted}
+    context_span entity: "session" do
+      with {:ok, session} <- fetch_session(session_id),
+           {:ok, completed} <- ProgramSession.complete(session),
+           {:ok, persisted} <- update_session(completed),
+           :ok <- mark_remaining_as_absent(persisted) do
+        publish_session_completed(persisted)
+        {:ok, persisted}
+      end
     end
   end
 
@@ -189,20 +198,22 @@ defmodule KlassHero.Participation do
   """
   @spec seed_session_roster(String.t(), String.t()) :: :ok
   def seed_session_roster(session_id, program_id) when is_binary(session_id) and is_binary(program_id) do
-    child_ids = EnrolledChildrenResolver.list_enrolled_child_ids(program_id)
+    context_span entity: "participation_record" do
+      child_ids = EnrolledChildrenResolver.list_enrolled_child_ids(program_id)
 
-    # max_capacity is not checked: capacity is an enrollment-time concern, not a roster gate.
-    {:ok, count} = seed_records(session_id, child_ids)
+      # max_capacity is not checked: capacity is an enrollment-time concern, not a roster gate.
+      {:ok, count} = seed_records(session_id, child_ids)
 
-    Logger.info(
-      "[Participation] Seeded roster — enrolled=#{length(child_ids)} inserted=#{count} skipped=#{length(child_ids) - count}",
-      session_id: session_id,
-      program_id: program_id
-    )
+      Logger.info(
+        "[Participation] Seeded roster — enrolled=#{length(child_ids)} inserted=#{count} skipped=#{length(child_ids) - count}",
+        session_id: session_id,
+        program_id: program_id
+      )
 
-    safe_publish_roster_seeded(session_id, program_id, count)
+      safe_publish_roster_seeded(session_id, program_id, count)
 
-    :ok
+      :ok
+    end
   rescue
     error ->
       Logger.error(
@@ -228,13 +239,15 @@ defmodule KlassHero.Participation do
   Returns `{:ok, record}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
   """
   def record_check_in(%{record_id: record_id, checked_in_by: checked_in_by} = params) do
-    run_attendance_action(
-      record_id,
-      checked_in_by,
-      Map.get(params, :notes),
-      &ParticipationRecord.check_in/3,
-      &ParticipationEvents.child_checked_in/2
-    )
+    context_span entity: "participation_record" do
+      run_attendance_action(
+        record_id,
+        checked_in_by,
+        Map.get(params, :notes),
+        &ParticipationRecord.check_in/3,
+        &ParticipationEvents.child_checked_in/2
+      )
+    end
   end
 
   @doc """
@@ -245,13 +258,15 @@ defmodule KlassHero.Participation do
   Returns `{:ok, record}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
   """
   def record_check_out(%{record_id: record_id, checked_out_by: checked_out_by} = params) do
-    run_attendance_action(
-      record_id,
-      checked_out_by,
-      Map.get(params, :notes),
-      &ParticipationRecord.check_out/3,
-      &ParticipationEvents.child_checked_out/2
-    )
+    context_span entity: "participation_record" do
+      run_attendance_action(
+        record_id,
+        checked_out_by,
+        Map.get(params, :notes),
+        &ParticipationRecord.check_out/3,
+        &ParticipationEvents.child_checked_out/2
+      )
+    end
   end
 
   @doc """
@@ -262,33 +277,37 @@ defmodule KlassHero.Participation do
   Returns a map with `successful` (records) and `failed` (`{record_id, reason}` tuples).
   """
   def bulk_check_in(%{record_ids: record_ids, checked_in_by: checked_in_by} = params) do
-    notes = Map.get(params, :notes)
+    context_span entity: "participation_record" do
+      notes = Map.get(params, :notes)
 
-    # Session resolved lazily from first successful record and reused — all records share the same session_id.
-    {results, _session} =
-      Enum.map_reduce(record_ids, nil, fn record_id, session ->
-        case bulk_check_in_record(record_id, checked_in_by, notes, session) do
-          {:ok, persisted, resolved_session} -> {{:ok, persisted}, resolved_session}
-          {:error, _, _} = error -> {error, session}
-        end
+      # Session resolved lazily from first successful record and reused — all records share the same session_id.
+      {results, _session} =
+        Enum.map_reduce(record_ids, nil, fn record_id, session ->
+          case bulk_check_in_record(record_id, checked_in_by, notes, session) do
+            {:ok, persisted, resolved_session} -> {{:ok, persisted}, resolved_session}
+            {:error, _, _} = error -> {error, session}
+          end
+        end)
+
+      results
+      |> Enum.reduce(%{successful: [], failed: []}, &categorize_bulk_result/2)
+      |> then(fn result ->
+        %{successful: Enum.reverse(result.successful), failed: Enum.reverse(result.failed)}
       end)
-
-    results
-    |> Enum.reduce(%{successful: [], failed: []}, &categorize_bulk_result/2)
-    |> then(fn result ->
-      %{successful: Enum.reverse(result.successful), failed: Enum.reverse(result.failed)}
-    end)
+    end
   end
 
   @doc "Admin-corrects a participation record's attendance data."
   def correct_attendance(%{record_id: record_id} = params) do
-    actor_role = Map.get(params, :actor_role, :admin)
+    context_span entity: "participation_record" do
+      actor_role = Map.get(params, :actor_role, :admin)
 
-    with :ok <- validate_correction_reason(actor_role, params),
-         {:ok, record} <- fetch_record(record_id),
-         correction_attrs = build_correction_attrs(actor_role, record, params),
-         {:ok, corrected} <- ParticipationRecord.admin_correct(record, correction_attrs) do
-      update_record(corrected)
+      with :ok <- validate_correction_reason(actor_role, params),
+           {:ok, record} <- fetch_record(record_id),
+           correction_attrs = build_correction_attrs(actor_role, record, params),
+           {:ok, corrected} <- ParticipationRecord.admin_correct(record, correction_attrs) do
+        update_record(corrected)
+      end
     end
   end
 
@@ -344,23 +363,25 @@ defmodule KlassHero.Participation do
   Required params: `participation_record_id`, `provider_id`, `content` (max 1000 chars).
   """
   def submit_behavioral_note(%{participation_record_id: record_id, provider_id: provider_id, content: content}) do
-    normalized_content = normalize_notes(content)
+    context_span entity: "behavioral_note" do
+      normalized_content = normalize_notes(content)
 
-    with {:content, content} when content != nil <- {:content, normalized_content},
-         {:ok, record} <- fetch_record(record_id),
-         true <- ParticipationRecord.allows_behavioral_note?(record),
-         {:ok, note} <- build_note(record, provider_id, content),
-         {:ok, persisted} <- insert_note(note) do
-      log_publish_result(
-        DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_submitted(persisted)),
-        persisted.id
-      )
+      with {:content, content} when content != nil <- {:content, normalized_content},
+           {:ok, record} <- fetch_record(record_id),
+           true <- ParticipationRecord.allows_behavioral_note?(record),
+           {:ok, note} <- build_note(record, provider_id, content),
+           {:ok, persisted} <- insert_note(note) do
+        log_publish_result(
+          DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_submitted(persisted)),
+          persisted.id
+        )
 
-      {:ok, persisted}
-    else
-      {:content, nil} -> {:error, :blank_content}
-      false -> {:error, :invalid_record_status}
-      error -> error
+        {:ok, persisted}
+      else
+        {:content, nil} -> {:error, :blank_content}
+        false -> {:error, :invalid_record_status}
+        error -> error
+      end
     end
   end
 
@@ -371,14 +392,16 @@ defmodule KlassHero.Participation do
   `decision` (`:approve` or `:reject`). Optional: `reason`.
   """
   def review_behavioral_note(%{note_id: note_id, parent_id: parent_id, decision: decision} = params) do
-    reason = Map.get(params, :reason)
+    context_span entity: "behavioral_note" do
+      reason = Map.get(params, :reason)
 
-    # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to parent.
-    with {:ok, note} <- fetch_note_by_parent(note_id, parent_id),
-         {:ok, reviewed} <- apply_review_decision(note, decision, reason),
-         {:ok, persisted} <- update_note(reviewed) do
-      log_publish_result(publish_review_event(persisted, decision), persisted.id)
-      {:ok, persisted}
+      # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to parent.
+      with {:ok, note} <- fetch_note_by_parent(note_id, parent_id),
+           {:ok, reviewed} <- apply_review_decision(note, decision, reason),
+           {:ok, persisted} <- update_note(reviewed) do
+        log_publish_result(publish_review_event(persisted, decision), persisted.id)
+        {:ok, persisted}
+      end
     end
   end
 
@@ -388,22 +411,24 @@ defmodule KlassHero.Participation do
   Required params: `note_id`, `provider_id` (ownership enforced at DB level), `content`.
   """
   def revise_behavioral_note(%{note_id: note_id, provider_id: provider_id, content: content}) do
-    normalized_content = normalize_notes(content)
+    context_span entity: "behavioral_note" do
+      normalized_content = normalize_notes(content)
 
-    # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to provider.
-    with {:content, content} when content != nil <- {:content, normalized_content},
-         {:ok, note} <- fetch_note_by_provider(note_id, provider_id),
-         {:ok, revised} <- BehavioralNote.revise(note, content),
-         {:ok, persisted} <- update_note(revised) do
-      log_publish_result(
-        DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_submitted(persisted)),
-        persisted.id
-      )
+      # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to provider.
+      with {:content, content} when content != nil <- {:content, normalized_content},
+           {:ok, note} <- fetch_note_by_provider(note_id, provider_id),
+           {:ok, revised} <- BehavioralNote.revise(note, content),
+           {:ok, persisted} <- update_note(revised) do
+        log_publish_result(
+          DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_submitted(persisted)),
+          persisted.id
+        )
 
-      {:ok, persisted}
-    else
-      {:content, nil} -> {:error, :blank_content}
-      error -> error
+        {:ok, persisted}
+      else
+        {:content, nil} -> {:error, :blank_content}
+        error -> error
+      end
     end
   end
 
@@ -416,7 +441,9 @@ defmodule KlassHero.Participation do
   Returns `{:ok, count}` with the number of notes anonymized.
   """
   def anonymize_behavioral_notes_for_child(child_id) when is_binary(child_id) do
-    anonymize_notes_for_child(child_id, BehavioralNote.anonymized_attrs())
+    context_span entity: "behavioral_note" do
+      anonymize_notes_for_child(child_id, BehavioralNote.anonymized_attrs())
+    end
   end
 
   @doc "Lists pending behavioral notes for a parent awaiting review."
@@ -733,52 +760,42 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   defp insert_session(%ProgramSession{} = session) do
-    db_interaction operation: :create, entity: "session" do
-      session
-      |> Map.from_struct()
-      |> ProgramSession.create_changeset()
-      |> Repo.insert()
-      |> handle_session_insert()
-    end
+    session
+    |> Map.from_struct()
+    |> ProgramSession.create_changeset()
+    |> Repo.insert()
+    |> handle_session_insert()
   end
 
   defp fetch_session(id) when is_binary(id) do
-    db_interaction operation: :get_by_id, entity: "session" do
-      case Repo.get(ProgramSession, id) do
-        nil -> {:error, :not_found}
-        session -> {:ok, session}
-      end
+    case Repo.get(ProgramSession, id) do
+      nil -> {:error, :not_found}
+      session -> {:ok, session}
     end
   end
 
   defp update_session(%ProgramSession{} = session) do
-    db_interaction operation: :update, entity: "session" do
-      with {:ok, schema} <- RepositoryHelpers.get_schema_by_uuid(ProgramSession, session.id) do
-        attrs = Map.take(session, [:status, :location, :notes, :max_capacity, :lock_version])
+    with {:ok, schema} <- RepositoryHelpers.get_schema_by_uuid(ProgramSession, session.id) do
+      attrs = Map.take(session, [:status, :location, :notes, :max_capacity, :lock_version])
 
-        schema
-        |> ProgramSession.update_changeset(attrs)
-        |> Repo.update()
-        |> handle_session_update()
-      end
+      schema
+      |> ProgramSession.update_changeset(attrs)
+      |> Repo.update()
+      |> handle_session_update()
     end
   end
 
   defp list_sessions_by_program(program_id) do
-    db_interaction operation: :list_by_program, entity: "session" do
-      from(s in ProgramSession,
-        where: s.program_id == ^program_id,
-        order_by: [asc: s.session_date, asc: s.start_time]
-      )
-      |> Repo.all()
-    end
+    from(s in ProgramSession,
+      where: s.program_id == ^program_id,
+      order_by: [asc: s.session_date, asc: s.start_time]
+    )
+    |> Repo.all()
   end
 
   defp list_sessions_today(date) do
-    db_interaction operation: :list_today_sessions, entity: "session" do
-      from(s in ProgramSession, where: s.session_date == ^date, order_by: [asc: s.start_time])
-      |> Repo.all()
-    end
+    from(s in ProgramSession, where: s.session_date == ^date, order_by: [asc: s.start_time])
+    |> Repo.all()
   end
 
   defp handle_session_insert({:ok, schema}), do: {:ok, schema}
@@ -806,119 +823,101 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   defp fetch_record(id) when is_binary(id) do
-    db_interaction operation: :get_by_id, entity: "participation" do
-      case Repo.get(ParticipationRecord, id) do
-        nil -> {:error, :not_found}
-        record -> {:ok, record}
-      end
+    case Repo.get(ParticipationRecord, id) do
+      nil -> {:error, :not_found}
+      record -> {:ok, record}
     end
   end
 
   defp update_record(%ParticipationRecord{} = record) do
-    db_interaction operation: :update, entity: "participation" do
-      with {:ok, schema} <- RepositoryHelpers.get_schema_by_uuid(ParticipationRecord, record.id) do
-        attrs = Map.take(record, @record_update_fields)
+    with {:ok, schema} <- RepositoryHelpers.get_schema_by_uuid(ParticipationRecord, record.id) do
+      attrs = Map.take(record, @record_update_fields)
 
-        schema
-        |> ParticipationRecord.update_changeset(attrs)
-        |> Repo.update()
-        |> handle_record_update()
-      end
+      schema
+      |> ParticipationRecord.update_changeset(attrs)
+      |> Repo.update()
+      |> handle_record_update()
     end
   rescue
     Ecto.StaleEntryError -> {:error, :stale_data}
   end
 
   defp list_records_by_session(session_id) do
-    db_interaction operation: :list_by_session, entity: "participation" do
-      ParticipationQueries.base()
-      |> ParticipationQueries.by_session(session_id)
-      |> ParticipationQueries.order_by_inserted_desc()
-      |> Repo.all()
-    end
+    ParticipationQueries.base()
+    |> ParticipationQueries.by_session(session_id)
+    |> ParticipationQueries.order_by_inserted_desc()
+    |> Repo.all()
   end
 
   defp list_records_by_child(child_id) do
-    db_interaction operation: :list_by_child, entity: "participation" do
-      ParticipationQueries.base()
-      |> ParticipationQueries.by_child(child_id)
-      |> ParticipationQueries.preload_session()
-      |> ParticipationQueries.order_by_inserted_desc()
-      |> Repo.all()
-    end
+    ParticipationQueries.base()
+    |> ParticipationQueries.by_child(child_id)
+    |> ParticipationQueries.preload_session()
+    |> ParticipationQueries.order_by_inserted_desc()
+    |> Repo.all()
   end
 
   defp list_records_by_child_and_date_range(child_id, start_date, end_date) do
-    db_interaction operation: :list_by_child_and_date_range, entity: "participation" do
-      ParticipationQueries.base()
-      |> ParticipationQueries.by_child(child_id)
-      |> ParticipationQueries.by_date_range(start_date, end_date)
-      |> ParticipationQueries.order_by_session_date_desc()
-      |> Repo.all()
-    end
+    ParticipationQueries.base()
+    |> ParticipationQueries.by_child(child_id)
+    |> ParticipationQueries.by_date_range(start_date, end_date)
+    |> ParticipationQueries.order_by_session_date_desc()
+    |> Repo.all()
   end
 
   defp list_records_by_children(child_ids) do
-    db_interaction operation: :list_by_children, entity: "participation" do
-      ParticipationQueries.base()
-      |> ParticipationQueries.by_children(child_ids)
-      |> ParticipationQueries.preload_session()
-      |> ParticipationQueries.order_by_inserted_desc()
-      |> Repo.all()
-    end
+    ParticipationQueries.base()
+    |> ParticipationQueries.by_children(child_ids)
+    |> ParticipationQueries.preload_session()
+    |> ParticipationQueries.order_by_inserted_desc()
+    |> Repo.all()
   end
 
   defp list_records_by_children_and_date_range(child_ids, start_date, end_date) do
-    db_interaction operation: :list_by_children_and_date_range, entity: "participation" do
-      ParticipationQueries.base()
-      |> ParticipationQueries.by_children(child_ids)
-      |> ParticipationQueries.by_date_range(start_date, end_date)
-      |> ParticipationQueries.order_by_session_date_desc()
-      |> Repo.all()
-    end
+    ParticipationQueries.base()
+    |> ParticipationQueries.by_children(child_ids)
+    |> ParticipationQueries.by_date_range(start_date, end_date)
+    |> ParticipationQueries.order_by_session_date_desc()
+    |> Repo.all()
   end
 
   defp mark_records_absent([]), do: {:ok, 0}
 
   defp mark_records_absent(record_ids) when is_list(record_ids) do
-    db_interaction operation: :mark_absent_batch, entity: "participation" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      {count, _} =
-        from(r in ParticipationRecord, where: r.id in ^record_ids and r.status == :registered)
-        |> Repo.update_all(inc: [lock_version: 1], set: [status: :absent, updated_at: now])
+    {count, _} =
+      from(r in ParticipationRecord, where: r.id in ^record_ids and r.status == :registered)
+      |> Repo.update_all(inc: [lock_version: 1], set: [status: :absent, updated_at: now])
 
-      {:ok, count}
-    end
+    {:ok, count}
   end
 
   defp seed_records(_session_id, []), do: {:ok, 0}
 
   defp seed_records(session_id, child_ids) when is_binary(session_id) and is_list(child_ids) do
-    db_interaction operation: :seed_batch, entity: "participation" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      rows =
-        Enum.map(child_ids, fn child_id ->
-          %{
-            id: Ecto.UUID.generate(),
-            session_id: session_id,
-            child_id: child_id,
-            status: :registered,
-            lock_version: 1,
-            inserted_at: now,
-            updated_at: now
-          }
-        end)
+    rows =
+      Enum.map(child_ids, fn child_id ->
+        %{
+          id: Ecto.UUID.generate(),
+          session_id: session_id,
+          child_id: child_id,
+          status: :registered,
+          lock_version: 1,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
 
-      {count, _} =
-        Repo.insert_all(ParticipationRecord, rows,
-          on_conflict: :nothing,
-          conflict_target: [:session_id, :child_id]
-        )
+    {count, _} =
+      Repo.insert_all(ParticipationRecord, rows,
+        on_conflict: :nothing,
+        conflict_target: [:session_id, :child_id]
+      )
 
-      {:ok, count}
-    end
+    {:ok, count}
   end
 
   defp handle_record_update({:ok, schema}), do: {:ok, schema}
@@ -936,130 +935,110 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   defp insert_note(%BehavioralNote{} = note) do
-    db_interaction operation: :create, entity: "behavioral_note" do
-      note
-      |> Map.from_struct()
-      |> BehavioralNote.create_changeset()
-      |> Repo.insert()
-      |> handle_note_insert()
-    end
+    note
+    |> Map.from_struct()
+    |> BehavioralNote.create_changeset()
+    |> Repo.insert()
+    |> handle_note_insert()
   end
 
   defp update_note(%BehavioralNote{} = note) do
-    db_interaction operation: :update, entity: "behavioral_note" do
-      case Repo.get(BehavioralNote, note.id) do
-        nil ->
-          {:error, :not_found}
+    case Repo.get(BehavioralNote, note.id) do
+      nil ->
+        {:error, :not_found}
 
-        schema ->
-          attrs = Map.take(note, @note_update_fields)
+      schema ->
+        attrs = Map.take(note, @note_update_fields)
 
-          schema
-          |> BehavioralNote.update_changeset(attrs)
-          |> Repo.update()
-          |> handle_note_update()
-      end
+        schema
+        |> BehavioralNote.update_changeset(attrs)
+        |> Repo.update()
+        |> handle_note_update()
     end
   end
 
   defp list_notes_pending_by_parent(parent_id) do
-    db_interaction operation: :list_pending_by_parent, entity: "behavioral_note" do
-      BehavioralNoteQueries.base()
-      |> BehavioralNoteQueries.by_parent(parent_id)
-      |> BehavioralNoteQueries.pending()
-      |> BehavioralNoteQueries.order_by_submitted_desc()
-      |> Repo.all()
-    end
+    BehavioralNoteQueries.base()
+    |> BehavioralNoteQueries.by_parent(parent_id)
+    |> BehavioralNoteQueries.pending()
+    |> BehavioralNoteQueries.order_by_submitted_desc()
+    |> Repo.all()
   end
 
   defp list_notes_approved_by_child(child_id) do
-    db_interaction operation: :list_approved_by_child, entity: "behavioral_note" do
-      BehavioralNoteQueries.base()
-      |> BehavioralNoteQueries.by_child(child_id)
-      |> BehavioralNoteQueries.approved()
-      |> BehavioralNoteQueries.order_by_submitted_desc()
-      |> Repo.all()
-    end
+    BehavioralNoteQueries.base()
+    |> BehavioralNoteQueries.by_child(child_id)
+    |> BehavioralNoteQueries.approved()
+    |> BehavioralNoteQueries.order_by_submitted_desc()
+    |> Repo.all()
   end
 
   defp list_notes_approved_by_children(child_ids) do
-    db_interaction operation: :list_approved_by_children, entity: "behavioral_note" do
-      BehavioralNoteQueries.base()
-      |> BehavioralNoteQueries.approved()
-      |> where([note: n], n.child_id in ^child_ids)
-      |> BehavioralNoteQueries.order_by_submitted_desc()
-      |> Repo.all()
-      |> Enum.group_by(& &1.child_id)
-    end
+    BehavioralNoteQueries.base()
+    |> BehavioralNoteQueries.approved()
+    |> where([note: n], n.child_id in ^child_ids)
+    |> BehavioralNoteQueries.order_by_submitted_desc()
+    |> Repo.all()
+    |> Enum.group_by(& &1.child_id)
   end
 
   defp list_notes_by_records_and_provider(record_ids, provider_id) do
-    db_interaction operation: :list_by_records_and_provider, entity: "behavioral_note" do
-      BehavioralNoteQueries.base()
-      |> BehavioralNoteQueries.by_participation_records(record_ids)
-      |> BehavioralNoteQueries.by_provider(provider_id)
-      |> Repo.all()
-    end
+    BehavioralNoteQueries.base()
+    |> BehavioralNoteQueries.by_participation_records(record_ids)
+    |> BehavioralNoteQueries.by_provider(provider_id)
+    |> Repo.all()
   end
 
   defp fetch_note_by_parent(id, parent_id) do
-    db_interaction operation: :get_by_id_and_parent, entity: "behavioral_note" do
-      BehavioralNoteQueries.base()
-      |> BehavioralNoteQueries.by_parent(parent_id)
-      |> where([note: n], n.id == ^id)
-      |> Repo.one()
-      |> case do
-        nil -> {:error, :not_found}
-        schema -> {:ok, schema}
-      end
+    BehavioralNoteQueries.base()
+    |> BehavioralNoteQueries.by_parent(parent_id)
+    |> where([note: n], n.id == ^id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      schema -> {:ok, schema}
     end
   end
 
   defp fetch_note_by_provider(id, provider_id) do
-    db_interaction operation: :get_by_id_and_provider, entity: "behavioral_note" do
-      BehavioralNoteQueries.base()
-      |> BehavioralNoteQueries.by_provider(provider_id)
-      |> where([note: n], n.id == ^id)
-      |> Repo.one()
-      |> case do
-        nil -> {:error, :not_found}
-        schema -> {:ok, schema}
-      end
+    BehavioralNoteQueries.base()
+    |> BehavioralNoteQueries.by_provider(provider_id)
+    |> where([note: n], n.id == ^id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      schema -> {:ok, schema}
     end
   end
 
   defp fetch_note_by_record_and_provider(record_id, provider_id) do
-    db_interaction operation: :get_by_participation_record_and_provider, entity: "behavioral_note" do
-      BehavioralNoteQueries.base()
-      |> BehavioralNoteQueries.by_participation_record(record_id)
-      |> BehavioralNoteQueries.by_provider(provider_id)
-      |> Repo.one()
-      |> case do
-        nil -> {:error, :not_found}
-        schema -> {:ok, schema}
-      end
+    BehavioralNoteQueries.base()
+    |> BehavioralNoteQueries.by_participation_record(record_id)
+    |> BehavioralNoteQueries.by_provider(provider_id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      schema -> {:ok, schema}
     end
   end
 
   defp anonymize_notes_for_child(child_id, anonymized_attrs) when is_binary(child_id) and is_map(anonymized_attrs) do
-    db_interaction operation: :anonymize_all_for_child, entity: "behavioral_note" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      # update_all bypasses Ecto.Enum casting — convert :status atom to string manually.
-      set_fields =
-        anonymized_attrs
-        |> convert_note_enum_fields()
-        |> Enum.to_list()
-        |> Keyword.new()
-        |> Keyword.put(:updated_at, now)
+    # update_all bypasses Ecto.Enum casting — convert :status atom to string manually.
+    set_fields =
+      anonymized_attrs
+      |> convert_note_enum_fields()
+      |> Enum.to_list()
+      |> Keyword.new()
+      |> Keyword.put(:updated_at, now)
 
-      {count, _} =
-        BehavioralNote
-        |> where([n], n.child_id == ^child_id)
-        |> Repo.update_all(set: set_fields)
+    {count, _} =
+      BehavioralNote
+      |> where([n], n.child_id == ^child_id)
+      |> Repo.update_all(set: set_fields)
 
-      {:ok, count}
-    end
+    {:ok, count}
   end
 
   defp handle_note_insert({:ok, schema}), do: {:ok, schema}

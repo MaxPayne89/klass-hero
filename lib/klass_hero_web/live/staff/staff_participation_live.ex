@@ -228,17 +228,6 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
         socket
         |> put_flash(:error, gettext("Session not found"))
         |> push_navigate(to: ~p"/staff/sessions")
-
-      {:error, reason} ->
-        Logger.error(
-          "[StaffParticipationLive.load_session_data] Failed to load session data",
-          session_id: session_id,
-          reason: inspect(reason)
-        )
-
-        socket
-        |> assign(:session_error, gettext("Failed to load session data"))
-        |> put_flash(:error, gettext("Failed to load session data"))
     end
   end
 
