@@ -9,14 +9,14 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
+  alias KlassHero.Participation.ParticipationRecord
 
   describe "base/0" do
-    test "returns base query for ParticipationRecordSchema" do
+    test "returns base query for ParticipationRecord" do
       query = ParticipationQueries.base()
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"participation_records", ParticipationRecordSchema}
+      assert query.from.source == {"participation_records", ParticipationRecord}
     end
   end
 

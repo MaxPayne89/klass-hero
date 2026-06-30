@@ -9,8 +9,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Queries.ListSessions
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1 with program_id filter" do
     test "returns sessions for a program ordered by date and time" do
@@ -41,7 +40,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
         start_time: ~T[09:00:00]
       )
 
-      sessions = ListSessions.execute(%{program_id: program.id})
+      sessions = KlassHero.Participation.list_sessions(%{program_id: program.id})
       assert length(sessions) == 4
       assert Enum.all?(sessions, &match?(%ProgramSession{}, &1))
 
@@ -56,7 +55,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
     test "returns empty list when program has no sessions" do
       program = insert(:program_schema)
 
-      sessions = ListSessions.execute(%{program_id: program.id})
+      sessions = KlassHero.Participation.list_sessions(%{program_id: program.id})
       assert sessions == []
     end
 
@@ -67,7 +66,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
       insert(:program_session_schema, program_id: program1.id)
       insert(:program_session_schema, program_id: program2.id)
 
-      sessions = ListSessions.execute(%{program_id: program1.id})
+      sessions = KlassHero.Participation.list_sessions(%{program_id: program1.id})
       assert length(sessions) == 1
       assert Enum.all?(sessions, &(&1.program_id == program1.id))
     end
@@ -97,7 +96,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
         start_time: ~T[09:00:00]
       )
 
-      sessions = ListSessions.execute(%{date: target_date})
+      sessions = KlassHero.Participation.list_sessions(%{date: target_date})
       assert length(sessions) == 2
       assert Enum.all?(sessions, &(&1.session_date == target_date))
 
@@ -108,7 +107,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
     test "returns empty list when no sessions for date" do
       target_date = ~D[2025-02-15]
 
-      sessions = ListSessions.execute(%{date: target_date})
+      sessions = KlassHero.Participation.list_sessions(%{date: target_date})
       assert sessions == []
     end
   end
@@ -116,7 +115,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
   describe "execute/1 with empty map" do
     test "returns today's sessions by default" do
       # When no filter is specified, it defaults to today's date
-      sessions = ListSessions.execute(%{})
+      sessions = KlassHero.Participation.list_sessions(%{})
       assert is_list(sessions)
     end
   end
@@ -136,20 +135,20 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
     end
 
     test "defaults to today when no date filter provided" do
-      results = ListSessions.execute_admin(%{})
+      results = KlassHero.Participation.list_admin_sessions(%{})
       assert length(results) == 1
       assert hd(results).program_name == "Test Program"
     end
 
     test "uses provided date filter instead of default" do
       yesterday = Date.add(Date.utc_today(), -1)
-      results = ListSessions.execute_admin(%{date: yesterday})
+      results = KlassHero.Participation.list_admin_sessions(%{date: yesterday})
       assert results == []
     end
 
     test "passes through provider_id filter" do
       other_provider = insert(:provider_profile_schema)
-      results = ListSessions.execute_admin(%{provider_id: other_provider.id})
+      results = KlassHero.Participation.list_admin_sessions(%{provider_id: other_provider.id})
       assert results == []
     end
   end

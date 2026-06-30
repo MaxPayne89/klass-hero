@@ -7,14 +7,12 @@ defmodule KlassHero.Participation.Application.Commands.ReviewBehavioralNoteTest 
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Commands.ReviewBehavioralNote
-
   describe "execute/1 - approve" do
     test "approves a pending behavioral note" do
       schema = insert(:behavioral_note_schema, status: :pending_approval)
 
       assert {:ok, note} =
-               ReviewBehavioralNote.execute(%{
+               KlassHero.Participation.review_behavioral_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :approve
@@ -26,7 +24,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviewBehavioralNoteTest 
 
     test "returns error for non-existent note" do
       assert {:error, :not_found} =
-               ReviewBehavioralNote.execute(%{
+               KlassHero.Participation.review_behavioral_note(%{
                  note_id: Ecto.UUID.generate(),
                  parent_id: Ecto.UUID.generate(),
                  decision: :approve
@@ -41,7 +39,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviewBehavioralNoteTest 
         )
 
       assert {:error, :invalid_status_transition} =
-               ReviewBehavioralNote.execute(%{
+               KlassHero.Participation.review_behavioral_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :approve
@@ -53,7 +51,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviewBehavioralNoteTest 
       wrong_parent_id = Ecto.UUID.generate()
 
       assert {:error, :not_found} =
-               ReviewBehavioralNote.execute(%{
+               KlassHero.Participation.review_behavioral_note(%{
                  note_id: schema.id,
                  parent_id: wrong_parent_id,
                  decision: :approve
@@ -66,7 +64,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviewBehavioralNoteTest 
       schema = insert(:behavioral_note_schema, status: :pending_approval)
 
       assert {:ok, note} =
-               ReviewBehavioralNote.execute(%{
+               KlassHero.Participation.review_behavioral_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :reject,
@@ -82,7 +80,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviewBehavioralNoteTest 
       schema = insert(:behavioral_note_schema, status: :pending_approval)
 
       assert {:ok, note} =
-               ReviewBehavioralNote.execute(%{
+               KlassHero.Participation.review_behavioral_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :reject

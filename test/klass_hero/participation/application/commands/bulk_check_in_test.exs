@@ -15,8 +15,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.EventTestHelper
-  alias KlassHero.Participation.Application.Commands.BulkCheckIn
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   setup do
     EventTestHelper.setup_test_events()
@@ -27,7 +26,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
     test "returns empty result for empty record_ids list" do
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
-      result = BulkCheckIn.execute(%{record_ids: [], checked_in_by: staff_id})
+      result = KlassHero.Participation.bulk_check_in(%{record_ids: [], checked_in_by: staff_id})
 
       assert result == %{successful: [], failed: []}
     end
@@ -53,7 +52,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
         )
 
       result =
-        BulkCheckIn.execute(%{
+        KlassHero.Participation.bulk_check_in(%{
           record_ids: [record_a.id, record_b.id],
           checked_in_by: staff_id
         })
@@ -86,7 +85,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
         )
 
       result =
-        BulkCheckIn.execute(%{
+        KlassHero.Participation.bulk_check_in(%{
           record_ids: [record.id],
           checked_in_by: staff_id,
           notes: "Arrived with parent"
@@ -119,7 +118,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
         )
 
       result =
-        BulkCheckIn.execute(%{
+        KlassHero.Participation.bulk_check_in(%{
           record_ids: [already_checked_in.id, registered.id],
           checked_in_by: staff_id
         })
@@ -137,7 +136,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       result =
-        BulkCheckIn.execute(%{
+        KlassHero.Participation.bulk_check_in(%{
           record_ids: [non_existent_id],
           checked_in_by: staff_id
         })
@@ -161,7 +160,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
 
       ids = Enum.map(records, & &1.id)
 
-      result = BulkCheckIn.execute(%{record_ids: ids, checked_in_by: staff_id})
+      result = KlassHero.Participation.bulk_check_in(%{record_ids: ids, checked_in_by: staff_id})
 
       assert length(result.successful) == 3
       assert Enum.map(result.successful, & &1.id) == ids
@@ -187,7 +186,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
           status: :registered
         )
 
-      BulkCheckIn.execute(%{
+      KlassHero.Participation.bulk_check_in(%{
         record_ids: [record_a.id, record_b.id],
         checked_in_by: staff_id
       })
@@ -217,7 +216,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
           check_in_by: AccountsFixtures.unconfirmed_user_fixture().id
         )
 
-      BulkCheckIn.execute(%{
+      KlassHero.Participation.bulk_check_in(%{
         record_ids: [already_checked_in.id],
         checked_in_by: staff_id
       })

@@ -9,9 +9,8 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Queries.GetSessionWithRoster
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "returns session with roster entries" do
@@ -33,7 +32,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
       )
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session_schema.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert %ProgramSession{} = result.session
       assert result.session.id == session_schema.id
       assert is_list(result.roster)
@@ -45,7 +44,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
     test "returns session with empty roster when no participation records" do
       session_schema = insert(:program_session_schema)
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session_schema.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert %ProgramSession{} = result.session
       assert result.roster == []
     end
@@ -53,7 +52,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
     test "returns error when session not found" do
       non_existent_id = Ecto.UUID.generate()
 
-      assert {:error, :not_found} = GetSessionWithRoster.execute(non_existent_id)
+      assert {:error, :not_found} = KlassHero.Participation.get_session_with_roster(non_existent_id)
     end
 
     test "includes child name in roster entries" do
@@ -70,7 +69,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         check_in_notes: "Arrived on time"
       )
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session_schema.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert [entry] = result.roster
       assert entry.record.child_id == child.id
       assert entry.record.status == :checked_in
@@ -97,7 +96,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
       )
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session1.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session1.id)
       assert length(result.roster) == 1
       assert hd(result.roster).record.session_id == session1.id
     end
@@ -114,7 +113,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         status: :registered
       )
 
-      assert {:ok, session} = GetSessionWithRoster.execute_enriched(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert is_map(session)
       assert session.id == session_schema.id
       assert is_list(session.participation_records)
@@ -124,7 +123,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
     test "returns error when session not found" do
       non_existent_id = Ecto.UUID.generate()
 
-      assert {:error, :not_found} = GetSessionWithRoster.execute_enriched(non_existent_id)
+      assert {:error, :not_found} = KlassHero.Participation.get_session_with_roster_enriched(non_existent_id)
     end
 
     test "enriched records include safety info when child has active consent" do
@@ -153,7 +152,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         status: :registered
       )
 
-      assert {:ok, session} = GetSessionWithRoster.execute_enriched(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [record] = session.participation_records
       assert record.allergies == "Peanuts"
       assert record.support_needs == "Wheelchair access"
@@ -170,7 +169,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         status: :registered
       )
 
-      assert {:ok, session} = GetSessionWithRoster.execute_enriched(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [record] = session.participation_records
       assert record.allergies == nil
       assert record.support_needs == nil
@@ -211,7 +210,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         status: :registered
       )
 
-      assert {:ok, session} = GetSessionWithRoster.execute_enriched(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert length(session.participation_records) == 2
 
       consented_record =
@@ -251,7 +250,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         status: :registered
       )
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session_schema.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert [entry] = result.roster
       assert entry.allergies == "Nuts"
       assert entry.emergency_contact == "Mom: +49 111"
@@ -268,7 +267,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         status: :registered
       )
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session_schema.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert [entry] = result.roster
       assert entry.allergies == nil
       assert entry.support_needs == nil
@@ -312,7 +311,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:second)
       )
 
-      assert {:ok, session} = GetSessionWithRoster.execute_enriched(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [enriched] = session.participation_records
       assert length(enriched.behavioral_notes) == 1
       assert hd(enriched.behavioral_notes).status == :approved
@@ -338,7 +337,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:second)
       )
 
-      assert {:ok, session} = GetSessionWithRoster.execute_enriched(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [enriched] = session.participation_records
       assert enriched.behavioral_notes == []
     end
@@ -376,7 +375,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:second)
       )
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session_schema.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert [entry] = result.roster
       assert length(entry.behavioral_notes) == 1
     end
@@ -399,7 +398,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:second)
       )
 
-      assert {:ok, result} = GetSessionWithRoster.execute(session_schema.id)
+      assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert [entry] = result.roster
       assert entry.behavioral_notes == []
     end
@@ -445,7 +444,7 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
         status: :pending_approval
       )
 
-      assert {:ok, session} = GetSessionWithRoster.execute_enriched(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [enriched] = session.participation_records
       assert length(enriched.behavioral_notes) == 1
       assert hd(enriched.behavioral_notes).status == :approved

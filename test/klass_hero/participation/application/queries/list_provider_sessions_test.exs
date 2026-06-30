@@ -9,8 +9,7 @@ defmodule KlassHero.Participation.Application.Queries.ListProviderSessionsTest d
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Queries.ListProviderSessions
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "returns sessions for a date ordered by start time" do
@@ -38,7 +37,7 @@ defmodule KlassHero.Participation.Application.Queries.ListProviderSessionsTest d
       )
 
       assert {:ok, sessions} =
-               ListProviderSessions.execute(%{provider_id: provider.id, date: target_date})
+               KlassHero.Participation.list_provider_sessions(provider.id, target_date)
 
       assert length(sessions) == 2
       assert Enum.all?(sessions, &match?(%ProgramSession{}, &1))
@@ -53,7 +52,7 @@ defmodule KlassHero.Participation.Application.Queries.ListProviderSessionsTest d
       target_date = ~D[2025-02-15]
 
       assert {:ok, sessions} =
-               ListProviderSessions.execute(%{provider_id: provider.id, date: target_date})
+               KlassHero.Participation.list_provider_sessions(provider.id, target_date)
 
       assert sessions == []
     end
@@ -78,7 +77,7 @@ defmodule KlassHero.Participation.Application.Queries.ListProviderSessionsTest d
       )
 
       assert {:ok, sessions} =
-               ListProviderSessions.execute(%{provider_id: provider.id, date: target_date})
+               KlassHero.Participation.list_provider_sessions(provider.id, target_date)
 
       assert length(sessions) == 2
     end
@@ -86,7 +85,7 @@ defmodule KlassHero.Participation.Application.Queries.ListProviderSessionsTest d
     test "defaults to today when date not provided" do
       provider = insert(:provider_profile_schema)
 
-      assert {:ok, sessions} = ListProviderSessions.execute(%{provider_id: provider.id})
+      assert {:ok, sessions} = KlassHero.Participation.list_provider_sessions(provider.id)
       assert is_list(sessions)
     end
   end

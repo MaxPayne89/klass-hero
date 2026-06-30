@@ -9,14 +9,14 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.BehavioralNoteQueries
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
+  alias KlassHero.Participation.BehavioralNote
 
   describe "base/0" do
-    test "returns base query for BehavioralNoteSchema" do
+    test "returns base query for BehavioralNote" do
       query = BehavioralNoteQueries.base()
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"behavioral_notes", BehavioralNoteSchema}
+      assert query.from.source == {"behavioral_notes", BehavioralNote}
     end
   end
 

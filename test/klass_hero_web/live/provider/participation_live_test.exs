@@ -4,8 +4,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
 
   setup :register_and_log_in_provider
 
@@ -451,7 +451,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       assert_flash(view, :error, "Record not found")
 
-      refute KlassHero.Repo.get_by(BehavioralNoteSchema,
+      refute KlassHero.Repo.get_by(BehavioralNote,
                participation_record_id: foreign_record.id
              )
     end
@@ -502,7 +502,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       assert_flash(view, :info, "Child checked in successfully")
 
       # Verify the DB record points to the logged-in user, not the provider profile
-      db_record = KlassHero.Repo.get!(ParticipationRecordSchema, record.id)
+      db_record = KlassHero.Repo.get!(ParticipationRecord, record.id)
       assert db_record.check_in_by == user.id
     end
   end
@@ -659,7 +659,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       |> form("#edit-record-form-#{record.id}", edit: %{notes: "Was a bit shy today"})
       |> render_submit()
 
-      assert KlassHero.Repo.get!(ParticipationRecordSchema, record.id).check_in_notes ==
+      assert KlassHero.Repo.get!(ParticipationRecord, record.id).check_in_notes ==
                "Was a bit shy today"
 
       # Form collapsed after successful submit.
@@ -693,7 +693,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       )
       |> render_submit()
 
-      reloaded = KlassHero.Repo.get!(ParticipationRecordSchema, record.id)
+      reloaded = KlassHero.Repo.get!(ParticipationRecord, record.id)
       assert reloaded.status == :checked_out
       assert reloaded.check_out_at == expected_check_out
       assert reloaded.check_out_notes == "Picked up by dad"

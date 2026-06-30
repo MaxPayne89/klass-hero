@@ -9,16 +9,14 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
-  alias KlassHero.Participation.Application.Commands.CompleteSession
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "successfully completes an in_progress session" do
       session_schema = insert(:program_session_schema, status: :in_progress)
 
-      assert {:ok, session} = CompleteSession.execute(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.complete_session(session_schema.id)
       assert %ProgramSession{} = session
       assert session.id == session_schema.id
       assert session.status == :completed
@@ -27,35 +25,35 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
     test "returns error when session not found" do
       non_existent_id = Ecto.UUID.generate()
 
-      assert {:error, :not_found} = CompleteSession.execute(non_existent_id)
+      assert {:error, :not_found} = KlassHero.Participation.complete_session(non_existent_id)
     end
 
     test "returns error when completing a scheduled session" do
       session_schema = insert(:program_session_schema, status: :scheduled)
 
-      assert {:error, :invalid_status_transition} = CompleteSession.execute(session_schema.id)
+      assert {:error, :invalid_status_transition} = KlassHero.Participation.complete_session(session_schema.id)
     end
 
     test "returns error when completing a completed session" do
       session_schema = insert(:program_session_schema, status: :completed)
 
-      assert {:error, :invalid_status_transition} = CompleteSession.execute(session_schema.id)
+      assert {:error, :invalid_status_transition} = KlassHero.Participation.complete_session(session_schema.id)
     end
 
     test "returns error when completing a cancelled session" do
       session_schema = insert(:program_session_schema, status: :cancelled)
 
-      assert {:error, :invalid_status_transition} = CompleteSession.execute(session_schema.id)
+      assert {:error, :invalid_status_transition} = KlassHero.Participation.complete_session(session_schema.id)
     end
 
     test "persists status change to database" do
       session_schema = insert(:program_session_schema, status: :in_progress)
 
-      {:ok, completed_session} = CompleteSession.execute(session_schema.id)
+      {:ok, completed_session} = KlassHero.Participation.complete_session(session_schema.id)
 
       reloaded =
         KlassHero.Repo.get(
-          ProgramSessionSchema,
+          ProgramSession,
           session_schema.id
         )
 
@@ -74,9 +72,9 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
           status: :registered
         )
 
-      assert {:ok, _session} = CompleteSession.execute(session_schema.id)
+      assert {:ok, _session} = KlassHero.Participation.complete_session(session_schema.id)
 
-      reloaded = KlassHero.Repo.get(ParticipationRecordSchema, record.id)
+      reloaded = KlassHero.Repo.get(ParticipationRecord, record.id)
       assert reloaded.status == :absent
     end
 
@@ -107,10 +105,10 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
           check_out_by: staff_user.id
         )
 
-      assert {:ok, _session} = CompleteSession.execute(session_schema.id)
+      assert {:ok, _session} = KlassHero.Participation.complete_session(session_schema.id)
 
-      assert KlassHero.Repo.get(ParticipationRecordSchema, checked_in.id).status == :checked_in
-      assert KlassHero.Repo.get(ParticipationRecordSchema, checked_out.id).status == :checked_out
+      assert KlassHero.Repo.get(ParticipationRecord, checked_in.id).status == :checked_in
+      assert KlassHero.Repo.get(ParticipationRecord, checked_out.id).status == :checked_out
     end
 
     test "marks registered participants as absent when completing" do
@@ -145,7 +143,7 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
         status: :registered
       )
 
-      assert {:ok, session} = CompleteSession.execute(session_schema.id)
+      assert {:ok, session} = KlassHero.Participation.complete_session(session_schema.id)
       assert session.status == :completed
     end
   end

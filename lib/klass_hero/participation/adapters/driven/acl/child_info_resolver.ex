@@ -8,13 +8,10 @@ defmodule KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver do
   Maps Family's `:not_found` → `:child_not_found` for Participation semantics.
   """
 
-  @behaviour KlassHero.Participation.Domain.Ports.ForResolvingChildInfo
-
   alias KlassHero.Family
 
   @consent_type "provider_data_sharing"
 
-  @impl true
   def resolve_child_info(child_id) when is_binary(child_id) do
     case Family.get_child_by_id(child_id) do
       {:ok, child} ->
@@ -36,7 +33,6 @@ defmodule KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver do
     end
   end
 
-  @impl true
   def resolve_children_info(child_ids) when is_list(child_ids) do
     children = Family.get_children_by_ids(child_ids)
     consented_ids = Family.children_with_active_consents(child_ids, @consent_type)

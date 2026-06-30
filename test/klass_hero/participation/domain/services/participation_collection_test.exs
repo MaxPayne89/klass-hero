@@ -7,8 +7,8 @@ defmodule KlassHero.Participation.Domain.Services.ParticipationCollectionTest do
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
   alias KlassHero.Participation.Domain.Services.ParticipationCollection
+  alias KlassHero.Participation.ParticipationRecord
 
   defp record(status) do
     %ParticipationRecord{

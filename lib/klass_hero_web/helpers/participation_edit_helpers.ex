@@ -10,7 +10,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpers do
 
   import Phoenix.Component, only: [assign: 3, to_form: 2]
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
   alias Phoenix.LiveView.Socket
 
   @type role :: :provider | :staff

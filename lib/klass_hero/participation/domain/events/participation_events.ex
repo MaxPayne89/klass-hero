@@ -18,9 +18,9 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   All events are returned as `DomainEvent` structs.
   """
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
   @type behavioral_note_payload :: %{

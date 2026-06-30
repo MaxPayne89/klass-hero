@@ -8,12 +8,12 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
 
   import Ecto.Query
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
+  alias KlassHero.Participation.BehavioralNote
 
   @doc "Base query for behavioral notes."
   @spec base() :: Ecto.Query.t()
   def base do
-    from(n in BehavioralNoteSchema, as: :note)
+    from(n in BehavioralNote, as: :note)
   end
 
   @doc "Filters by participation record ID."

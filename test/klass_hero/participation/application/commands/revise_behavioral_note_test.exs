@@ -7,8 +7,6 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNoteTest 
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Commands.ReviseBehavioralNote
-
   describe "execute/1" do
     test "revises a rejected behavioral note" do
       schema =
@@ -19,7 +17,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNoteTest 
         )
 
       assert {:ok, note} =
-               ReviseBehavioralNote.execute(%{
+               KlassHero.Participation.revise_behavioral_note(%{
                  note_id: schema.id,
                  provider_id: schema.provider_id,
                  content: "Updated observation about the child"
@@ -32,7 +30,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNoteTest 
 
     test "returns error for non-existent note" do
       assert {:error, :not_found} =
-               ReviseBehavioralNote.execute(%{
+               KlassHero.Participation.revise_behavioral_note(%{
                  note_id: Ecto.UUID.generate(),
                  provider_id: Ecto.UUID.generate(),
                  content: "Some content"
@@ -43,7 +41,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNoteTest 
       schema = insert(:behavioral_note_schema, status: :pending_approval)
 
       assert {:error, :invalid_status_transition} =
-               ReviseBehavioralNote.execute(%{
+               KlassHero.Participation.revise_behavioral_note(%{
                  note_id: schema.id,
                  provider_id: schema.provider_id,
                  content: "Updated"
@@ -58,7 +56,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNoteTest 
         )
 
       assert {:error, :invalid_status_transition} =
-               ReviseBehavioralNote.execute(%{
+               KlassHero.Participation.revise_behavioral_note(%{
                  note_id: schema.id,
                  provider_id: schema.provider_id,
                  content: "Updated"
@@ -74,7 +72,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNoteTest 
         )
 
       assert {:error, :blank_content} =
-               ReviseBehavioralNote.execute(%{
+               KlassHero.Participation.revise_behavioral_note(%{
                  note_id: schema.id,
                  provider_id: schema.provider_id,
                  content: "  "
@@ -92,7 +90,7 @@ defmodule KlassHero.Participation.Application.Commands.ReviseBehavioralNoteTest 
       wrong_provider_id = Ecto.UUID.generate()
 
       assert {:error, :not_found} =
-               ReviseBehavioralNote.execute(%{
+               KlassHero.Participation.revise_behavioral_note(%{
                  note_id: schema.id,
                  provider_id: wrong_provider_id,
                  content: "Updated observation"

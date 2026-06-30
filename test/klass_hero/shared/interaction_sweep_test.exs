@@ -17,7 +17,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 
@@ -39,10 +38,10 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   end
 
   describe "every DB context drives I/O through the Interaction envelope" do
-    # Accounts, Family, and Program Catalog have no probe here: the conventional-Phoenix
-    # flatten replaced the per-adapter Interaction envelope with the seam-level `context_span`
-    # macro, which emits OTel spans (not the `[:klass_hero, :interaction, :stop]` event this
-    # sweep watches). Their observability is covered by their own `*/observability_test.exs`.
+    # Accounts, Family, Program Catalog, and Participation have no probe here: the
+    # conventional-Phoenix flatten replaced the per-adapter Interaction envelope with the
+    # seam-level `context_span` macro, which emits OTel spans (not the
+    # `[:klass_hero, :interaction, :stop]` event this sweep watches).
 
     test "enrollment — EnrollmentPolicyRepository.count_active_enrollments/1" do
       assert EnrollmentPolicyRepository.count_active_enrollments(Ecto.UUID.generate()) == 0
@@ -63,13 +62,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
 
       assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
                       %{io_kind: :db, operation: :get_total_unread_count, status: :ok}}
-    end
-
-    test "participation (greenfield) — SessionRepository.list_by_program/1" do
-      assert SessionRepository.list_by_program(Ecto.UUID.generate()) == []
-
-      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :list_by_program, status: :ok}}
     end
 
     test "shared (greenfield) — ProcessedEventRepository.mark_processed/2" do

@@ -10,9 +10,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Application.Commands.RecordCheckIn
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   describe "execute/1" do
     test "successfully checks in a registered record" do
@@ -28,7 +26,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
         )
 
       assert {:ok, record} =
-               RecordCheckIn.execute(%{
+               KlassHero.Participation.record_check_in(%{
                  record_id: record_schema.id,
                  checked_in_by: staff_id,
                  notes: "Child arrived happy"
@@ -55,7 +53,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
         )
 
       assert {:ok, record} =
-               RecordCheckIn.execute(%{
+               KlassHero.Participation.record_check_in(%{
                  record_id: record_schema.id,
                  checked_in_by: staff_id
                })
@@ -69,7 +67,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
       staff_id = AccountsFixtures.unconfirmed_user_fixture().id
 
       assert {:error, :not_found} =
-               RecordCheckIn.execute(%{
+               KlassHero.Participation.record_check_in(%{
                  record_id: non_existent_id,
                  checked_in_by: staff_id
                })
@@ -90,7 +88,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               RecordCheckIn.execute(%{
+               KlassHero.Participation.record_check_in(%{
                  record_id: record_schema.id,
                  checked_in_by: staff_id
                })
@@ -114,7 +112,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               RecordCheckIn.execute(%{
+               KlassHero.Participation.record_check_in(%{
                  record_id: record_schema.id,
                  checked_in_by: staff_id
                })
@@ -133,14 +131,14 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
         )
 
       {:ok, record} =
-        RecordCheckIn.execute(%{
+        KlassHero.Participation.record_check_in(%{
           record_id: record_schema.id,
           checked_in_by: staff_id
         })
 
       reloaded =
         KlassHero.Repo.get(
-          ParticipationRecordSchema,
+          ParticipationRecord,
           record.id
         )
 

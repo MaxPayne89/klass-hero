@@ -8,13 +8,13 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
 
   import Ecto.Query
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
 
   @doc "Base query for participation records."
   @spec base() :: Ecto.Query.t()
   def base do
-    from(r in ParticipationRecordSchema, as: :record)
+    from(r in ParticipationRecord, as: :record)
   end
 
   @doc "Filters by session ID."
@@ -49,7 +49,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
   @spec by_date_range(Ecto.Query.t(), Date.t(), Date.t()) :: Ecto.Query.t()
   def by_date_range(query, start_date, end_date) do
     query
-    |> join(:inner, [record: r], s in ProgramSessionSchema,
+    |> join(:inner, [record: r], s in ProgramSession,
       on: r.session_id == s.id,
       as: :session
     )

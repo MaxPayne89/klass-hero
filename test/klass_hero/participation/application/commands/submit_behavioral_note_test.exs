@@ -7,8 +7,6 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Commands.SubmitBehavioralNote
-
   describe "execute/1" do
     test "submits a behavioral note for a checked-in record" do
       staff_user = KlassHero.AccountsFixtures.unconfirmed_user_fixture()
@@ -23,7 +21,7 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
       provider_id = insert(:provider_profile_schema).id
 
       assert {:ok, note} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: record.id,
                  provider_id: provider_id,
                  content: "Child was very engaged today"
@@ -49,7 +47,7 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
         )
 
       assert {:ok, note} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: record.id,
                  provider_id: insert(:provider_profile_schema).id,
                  content: "Well behaved"
@@ -62,7 +60,7 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
       record = insert(:participation_record_schema, status: :registered)
 
       assert {:error, :invalid_record_status} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: record.id,
                  provider_id: Ecto.UUID.generate(),
                  content: "Some note"
@@ -73,7 +71,7 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
       record = insert(:participation_record_schema, status: :absent)
 
       assert {:error, :invalid_record_status} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: record.id,
                  provider_id: Ecto.UUID.generate(),
                  content: "Some note"
@@ -82,7 +80,7 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
 
     test "returns error for non-existent record" do
       assert {:error, :not_found} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: Ecto.UUID.generate(),
                  provider_id: Ecto.UUID.generate(),
                  content: "Some note"
@@ -98,7 +96,7 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
         )
 
       assert {:error, :blank_content} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: record.id,
                  provider_id: Ecto.UUID.generate(),
                  content: "   "
@@ -116,14 +114,14 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest 
       provider_id = insert(:provider_profile_schema).id
 
       assert {:ok, _} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: record.id,
                  provider_id: provider_id,
                  content: "First note"
                })
 
       assert {:error, :duplicate_note} =
-               SubmitBehavioralNote.execute(%{
+               KlassHero.Participation.submit_behavioral_note(%{
                  participation_record_id: record.id,
                  provider_id: provider_id,
                  content: "Second note"

@@ -11,8 +11,8 @@ defmodule KlassHero.Family.DeleteChildTest do
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Family
   alias KlassHero.Family.Consent
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Repo
 
   describe "delete_child/1" do
@@ -71,7 +71,7 @@ defmodule KlassHero.Family.DeleteChildTest do
 
       assert :ok = Family.delete_child(child.id)
 
-      assert [] = Repo.all(from(r in ParticipationRecordSchema, where: r.child_id == ^child.id))
+      assert [] = Repo.all(from(r in ParticipationRecord, where: r.child_id == ^child.id))
     end
 
     test "deletes child with behavioral notes and participation records" do
@@ -86,8 +86,8 @@ defmodule KlassHero.Family.DeleteChildTest do
 
       assert :ok = Family.delete_child(child.id)
 
-      assert [] = Repo.all(from(n in BehavioralNoteSchema, where: n.child_id == ^child.id))
-      assert [] = Repo.all(from(r in ParticipationRecordSchema, where: r.child_id == ^child.id))
+      assert [] = Repo.all(from(n in BehavioralNote, where: n.child_id == ^child.id))
+      assert [] = Repo.all(from(r in ParticipationRecord, where: r.child_id == ^child.id))
     end
 
     test "deletes child with enrollments, participation records, and consents" do

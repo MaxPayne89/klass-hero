@@ -9,15 +9,14 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Application.Commands.CreateSession
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "successfully creates a session with valid attributes" do
       program = insert(:program_schema)
 
       assert {:ok, session} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-15],
                  start_time: ~T[09:00:00],
@@ -40,7 +39,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
       program = insert(:program_schema)
 
       assert {:ok, session} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-15],
                  start_time: ~T[09:00:00],
@@ -55,7 +54,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
       program = insert(:program_schema)
 
       assert {:ok, session} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-15],
                  start_time: ~T[09:00:00],
@@ -71,7 +70,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
       program = insert(:program_schema)
 
       assert {:error, reason} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-15],
                  start_time: ~T[14:00:00],
@@ -86,7 +85,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
       program = insert(:program_schema)
 
       assert {:ok, _session1} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-15],
                  start_time: ~T[09:00:00],
@@ -95,7 +94,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
                })
 
       assert {:ok, session2} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-16],
                  start_time: ~T[09:00:00],
@@ -110,7 +109,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
       program = insert(:program_schema)
 
       assert {:ok, _session1} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-15],
                  start_time: ~T[09:00:00],
@@ -119,7 +118,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
                })
 
       assert {:ok, session2} =
-               CreateSession.execute(%{
+               KlassHero.Participation.create_session(%{
                  program_id: program.id,
                  session_date: ~D[2025-02-15],
                  start_time: ~T[14:00:00],
