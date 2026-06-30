@@ -30,8 +30,8 @@ defmodule KlassHero.Participation do
     ListSessions
   }
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
 
   @doc """
   Creates a new program session.

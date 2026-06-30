@@ -11,7 +11,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
   import KlassHero.Factory
 
   alias KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
 
   describe "execute/2 - single note retrieval" do
     test "returns note when it exists for the given record and provider" do

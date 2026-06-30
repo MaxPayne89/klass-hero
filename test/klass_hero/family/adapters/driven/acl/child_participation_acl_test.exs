@@ -5,8 +5,8 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACLTest do
   import KlassHero.Factory
 
   alias KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACL
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Repo
 
   describe "delete_all_for_child/1" do
@@ -17,7 +17,7 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACLTest do
                ChildParticipationACL.delete_all_for_child(record.child_id)
 
       assert [] =
-               Repo.all(from(r in ParticipationRecordSchema, where: r.child_id == ^record.child_id))
+               Repo.all(from(r in ParticipationRecord, where: r.child_id == ^record.child_id))
     end
 
     test "deletes behavioral notes for a child before participation records" do
@@ -33,10 +33,10 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACLTest do
                ChildParticipationACL.delete_all_for_child(record.child_id)
 
       assert [] =
-               Repo.all(from(n in BehavioralNoteSchema, where: n.child_id == ^record.child_id))
+               Repo.all(from(n in BehavioralNote, where: n.child_id == ^record.child_id))
 
       assert [] =
-               Repo.all(from(r in ParticipationRecordSchema, where: r.child_id == ^record.child_id))
+               Repo.all(from(r in ParticipationRecord, where: r.child_id == ^record.child_id))
     end
 
     test "returns zero count when no records exist" do
@@ -54,7 +54,7 @@ defmodule KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACLTest do
                ChildParticipationACL.delete_all_for_child(record1.child_id)
 
       # Other child's record should still exist
-      assert %ParticipationRecordSchema{} = Repo.get!(ParticipationRecordSchema, record2.id)
+      assert %ParticipationRecord{} = Repo.get!(ParticipationRecord, record2.id)
     end
   end
 end

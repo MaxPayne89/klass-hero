@@ -6,9 +6,9 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRoster do
   participation status. Child info is resolved via the Family context.
   """
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
 
   @session_repository Application.compile_env!(:klass_hero, [:participation, :for_querying_sessions])
   @participation_repository Application.compile_env!(:klass_hero, [

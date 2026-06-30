@@ -16,7 +16,7 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.EventTestHelper
   alias KlassHero.Participation.Application.Commands.BulkCheckIn
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   setup do
     EventTestHelper.setup_test_events()

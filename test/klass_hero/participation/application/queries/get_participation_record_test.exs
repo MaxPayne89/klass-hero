@@ -10,7 +10,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationRecordTest
   import KlassHero.Factory
 
   alias KlassHero.Participation.Application.Queries.GetParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   describe "execute/1" do
     test "returns participation record when found" do

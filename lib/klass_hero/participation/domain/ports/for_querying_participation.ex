@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Domain.Ports.ForQueryingParticipation do
   Write operations remain in `ForManagingParticipation`.
   """
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   @doc "Retrieves participation record by ID. Returns `{:error, :not_found}` if not found."
   @callback get_by_id(binary()) :: {:ok, ParticipationRecord.t()} | {:error, :not_found}

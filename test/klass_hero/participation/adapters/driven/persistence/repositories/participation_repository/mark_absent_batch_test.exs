@@ -5,7 +5,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
   import KlassHero.Factory
 
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.ParticipationRepository
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Repo
 
   describe "mark_absent_batch/1" do
@@ -24,7 +24,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
 
       reloaded_statuses =
         Repo.all(
-          from(r in ParticipationRecordSchema,
+          from(r in ParticipationRecord,
             where: r.session_id == ^session.id,
             select: r.status
           )
@@ -50,8 +50,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       assert {:ok, 1} =
                ParticipationRepository.mark_absent_batch([registered.id, checked_in.id])
 
-      assert Repo.get(ParticipationRecordSchema, registered.id).status == :absent
-      assert Repo.get(ParticipationRecordSchema, checked_in.id).status == :checked_in
+      assert Repo.get(ParticipationRecord, registered.id).status == :absent
+      assert Repo.get(ParticipationRecord, checked_in.id).status == :checked_in
     end
 
     test "increments lock_version on updated records" do
@@ -61,7 +61,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
 
       assert {:ok, 1} = ParticipationRepository.mark_absent_batch([record.id])
 
-      reloaded = Repo.get(ParticipationRecordSchema, record.id)
+      reloaded = Repo.get(ParticipationRecord, record.id)
       assert reloaded.lock_version == original_version + 1
     end
   end

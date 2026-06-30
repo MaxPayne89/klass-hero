@@ -43,12 +43,12 @@ defmodule KlassHero.Factory do
   }
 
   alias KlassHero.Messaging.Domain.Models.{Conversation, Message, Participant}
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
@@ -816,7 +816,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ProgramSessionSchema Ecto schemas.
+  Factory for creating ProgramSession Ecto schemas.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a program when inserted to avoid foreign key violations.
@@ -829,7 +829,7 @@ defmodule KlassHero.Factory do
   def program_session_schema_factory do
     program_schema = insert(:program_schema)
 
-    %ProgramSessionSchema{
+    %ProgramSession{
       id: Ecto.UUID.generate(),
       program_id: program_schema.id,
       session_date: Date.utc_today(),
@@ -883,7 +883,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ParticipationRecordSchema Ecto schemas.
+  Factory for creating ParticipationRecord Ecto schemas.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a program session and child when inserted to avoid foreign key violations.
@@ -897,7 +897,7 @@ defmodule KlassHero.Factory do
     session_schema = insert(:program_session_schema)
     {child_schema, parent_schema} = insert_child_with_guardian()
 
-    %ParticipationRecordSchema{
+    %ParticipationRecord{
       id: Ecto.UUID.generate(),
       session_id: session_schema.id,
       child_id: child_schema.id,
@@ -961,7 +961,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating BehavioralNoteSchema Ecto schemas.
+  Factory for creating BehavioralNote Ecto schemas.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a participation record when inserted.
@@ -985,7 +985,7 @@ defmodule KlassHero.Factory do
         check_in_by: user.id
       )
 
-    %BehavioralNoteSchema{
+    %BehavioralNote{
       id: Ecto.UUID.generate(),
       participation_record_id: record.id,
       child_id: record.child_id,

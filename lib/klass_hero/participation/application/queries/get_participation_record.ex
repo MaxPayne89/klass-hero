@@ -3,7 +3,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationRecord do
   Use case for retrieving a single participation record by ID.
   """
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   @participation_repository Application.compile_env!(:klass_hero, [
                               :participation,

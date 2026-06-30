@@ -9,10 +9,10 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.Application.Commands.CompleteSession
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "successfully completes an in_progress session" do
@@ -55,7 +55,7 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
 
       reloaded =
         KlassHero.Repo.get(
-          ProgramSessionSchema,
+          ProgramSession,
           session_schema.id
         )
 
@@ -76,7 +76,7 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
 
       assert {:ok, _session} = CompleteSession.execute(session_schema.id)
 
-      reloaded = KlassHero.Repo.get(ParticipationRecordSchema, record.id)
+      reloaded = KlassHero.Repo.get(ParticipationRecord, record.id)
       assert reloaded.status == :absent
     end
 
@@ -109,8 +109,8 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
 
       assert {:ok, _session} = CompleteSession.execute(session_schema.id)
 
-      assert KlassHero.Repo.get(ParticipationRecordSchema, checked_in.id).status == :checked_in
-      assert KlassHero.Repo.get(ParticipationRecordSchema, checked_out.id).status == :checked_out
+      assert KlassHero.Repo.get(ParticipationRecord, checked_in.id).status == :checked_in
+      assert KlassHero.Repo.get(ParticipationRecord, checked_out.id).status == :checked_out
     end
 
     test "marks registered participants as absent when completing" do

@@ -10,9 +10,9 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.Application.Commands.RecordCheckIn
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   describe "execute/1" do
     test "successfully checks in a registered record" do
@@ -140,7 +140,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckInTest do
 
       reloaded =
         KlassHero.Repo.get(
-          ParticipationRecordSchema,
+          ParticipationRecord,
           record.id
         )
 

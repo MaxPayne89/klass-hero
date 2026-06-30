@@ -5,7 +5,7 @@ defmodule KlassHero.Participation.Application.Queries.ListPendingBehavioralNotes
   Returns all notes awaiting the parent's review, ordered by submission date descending.
   """
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
 
   @behavioral_note_repository Application.compile_env!(:klass_hero, [
                                 :participation,

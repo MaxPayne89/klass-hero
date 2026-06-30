@@ -5,7 +5,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessions do
   Supports filtering by program or by date.
   """
 
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   @session_repository Application.compile_env!(:klass_hero, [:participation, :for_querying_sessions])
 

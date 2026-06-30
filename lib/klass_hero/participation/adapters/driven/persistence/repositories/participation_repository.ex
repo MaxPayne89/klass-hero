@@ -13,22 +13,30 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
   import Ecto.Query
 
   alias Ecto.Multi
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Mappers.ParticipationRecordMapper
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.ErrorIds
 
+  @update_fields [
+    :status,
+    :check_in_at,
+    :check_in_notes,
+    :check_in_by,
+    :check_out_at,
+    :check_out_notes,
+    :check_out_by,
+    :lock_version
+  ]
+
   @impl true
   def create(%ParticipationRecord{} = record) do
     db_interaction operation: :create, entity: "participation" do
-      attrs = ParticipationRecordMapper.to_persistence(record)
-
-      attrs
-      |> ParticipationRecordSchema.create_changeset()
+      record
+      |> Map.from_struct()
+      |> ParticipationRecord.create_changeset()
       |> Repo.insert()
       |> handle_insert_result()
     end
@@ -37,7 +45,10 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
   @impl true
   def get_by_id(id) when is_binary(id) do
     db_interaction operation: :get_by_id, entity: "participation" do
-      RepositoryHelpers.get_by_id(ParticipationRecordSchema, id, ParticipationRecordMapper)
+      case Repo.get(ParticipationRecord, id) do
+        nil -> {:error, :not_found}
+        record -> {:ok, record}
+      end
     end
   end
 
@@ -48,7 +59,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       |> ParticipationQueries.by_session(session_id)
       |> ParticipationQueries.order_by_inserted_desc()
       |> Repo.all()
-      |> Enum.map(&ParticipationRecordMapper.to_domain/1)
     end
   end
 
@@ -60,7 +70,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       |> ParticipationQueries.preload_session()
       |> ParticipationQueries.order_by_inserted_desc()
       |> Repo.all()
-      |> Enum.map(&ParticipationRecordMapper.to_domain/1)
     end
   end
 
@@ -72,7 +81,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       |> ParticipationQueries.by_date_range(start_date, end_date)
       |> ParticipationQueries.order_by_session_date_desc()
       |> Repo.all()
-      |> Enum.map(&ParticipationRecordMapper.to_domain/1)
     end
   end
 
@@ -84,7 +92,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       |> ParticipationQueries.preload_session()
       |> ParticipationQueries.order_by_inserted_desc()
       |> Repo.all()
-      |> Enum.map(&ParticipationRecordMapper.to_domain/1)
     end
   end
 
@@ -96,7 +103,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       |> ParticipationQueries.by_date_range(start_date, end_date)
       |> ParticipationQueries.order_by_session_date_desc()
       |> Repo.all()
-      |> Enum.map(&ParticipationRecordMapper.to_domain/1)
     end
   end
 
@@ -104,11 +110,11 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
   def update(%ParticipationRecord{} = record) do
     db_interaction operation: :update, entity: "participation" do
       with {:ok, schema} <-
-             RepositoryHelpers.get_schema_by_uuid(ParticipationRecordSchema, record.id) do
-        attrs = ParticipationRecordMapper.update_schema(schema, record)
+             RepositoryHelpers.get_schema_by_uuid(ParticipationRecord, record.id) do
+        attrs = Map.take(record, @update_fields)
 
         schema
-        |> ParticipationRecordSchema.update_changeset(attrs)
+        |> ParticipationRecord.update_changeset(attrs)
         |> do_update()
       end
     end
@@ -129,8 +135,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
         records
         |> Enum.with_index()
         |> Enum.reduce(Multi.new(), fn {record, index}, multi ->
-          attrs = ParticipationRecordMapper.to_persistence(record)
-          changeset = ParticipationRecordSchema.create_changeset(attrs)
+          changeset = ParticipationRecord.create_changeset(Map.from_struct(record))
           Multi.insert(multi, {:record, index}, changeset)
         end)
 
@@ -139,7 +144,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
           records =
             results
             |> Enum.sort_by(fn {{:record, index}, _} -> index end)
-            |> Enum.map(fn {_, schema} -> ParticipationRecordMapper.to_domain(schema) end)
+            |> Enum.map(fn {_, schema} -> schema end)
 
           {:ok, records}
 
@@ -157,7 +162,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       {count, _} =
-        from(r in ParticipationRecordSchema,
+        from(r in ParticipationRecord,
           where: r.id in ^record_ids and r.status == :registered
         )
         |> Repo.update_all(inc: [lock_version: 1], set: [status: :absent, updated_at: now])
@@ -188,7 +193,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
 
       {count, _} =
         Repo.insert_all(
-          ParticipationRecordSchema,
+          ParticipationRecord,
           rows,
           on_conflict: :nothing,
           conflict_target: [:session_id, :child_id]
@@ -199,32 +204,27 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
   end
 
   @doc """
-  Lists participation records for a session with child names resolved.
+  Lists participation records for a session, paired with the session record.
 
   This is a convenience function that joins session data for roster display.
   """
   @spec list_by_session_with_session(String.t()) :: [
-          {ParticipationRecord.t(), ProgramSessionSchema.t()}
+          {ParticipationRecord.t(), ProgramSession.t()}
         ]
   def list_by_session_with_session(session_id) when is_binary(session_id) do
     db_interaction operation: :list_by_session_with_session, entity: "participation" do
-      from(r in ParticipationRecordSchema,
-        join: s in ProgramSessionSchema,
+      from(r in ParticipationRecord,
+        join: s in ProgramSession,
         on: r.session_id == s.id,
         where: r.session_id == ^session_id,
         order_by: [asc: r.inserted_at],
         select: {r, s}
       )
       |> Repo.all()
-      |> Enum.map(fn {record_schema, session_schema} ->
-        {ParticipationRecordMapper.to_domain(record_schema), session_schema}
-      end)
     end
   end
 
-  defp handle_insert_result({:ok, schema}) do
-    {:ok, ParticipationRecordMapper.to_domain(schema)}
-  end
+  defp handle_insert_result({:ok, schema}), do: {:ok, schema}
 
   defp handle_insert_result({:error, %Ecto.Changeset{errors: errors} = changeset}) do
     if Keyword.has_key?(errors, :session_id) &&
@@ -235,9 +235,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
     end
   end
 
-  defp handle_update_result({:ok, schema}) do
-    {:ok, ParticipationRecordMapper.to_domain(schema)}
-  end
+  defp handle_update_result({:ok, schema}), do: {:ok, schema}
 
   defp handle_update_result({:error, %Ecto.Changeset{} = changeset}) do
     if changeset.errors[:lock_version] do

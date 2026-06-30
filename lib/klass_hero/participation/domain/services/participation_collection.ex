@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Domain.Services.ParticipationCollection do
   participation records without database dependencies.
   """
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   @doc """
   Counts records with checked-in status.

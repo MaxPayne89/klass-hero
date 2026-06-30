@@ -17,8 +17,8 @@ defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNote do
 
   alias KlassHero.Participation.Application.Shared
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Shared.DomainEventBus
 
   @context KlassHero.Participation

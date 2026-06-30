@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Domain.Ports.ForManagingParticipation do
   Read operations have been moved to `ForQueryingParticipation`.
   """
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   @doc "Creates participation record. Returns `{:error, :duplicate_record}` on unique violation."
   @callback create(ParticipationRecord.t()) ::

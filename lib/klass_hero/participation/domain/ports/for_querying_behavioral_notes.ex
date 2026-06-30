@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Domain.Ports.ForQueryingBehavioralNotes do
   Write operations remain in `ForManagingBehavioralNotes`.
   """
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
 
   @doc "Retrieves behavioral note by ID. Returns `{:error, :not_found}` if not found."
   @callback get_by_id(binary()) :: {:ok, BehavioralNote.t()} | {:error, :not_found}

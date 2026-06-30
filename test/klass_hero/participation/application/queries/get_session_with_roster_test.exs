@@ -10,8 +10,8 @@ defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest d
   import KlassHero.Factory
 
   alias KlassHero.Participation.Application.Queries.GetSessionWithRoster
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "returns session with roster entries" do

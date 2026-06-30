@@ -1,7 +1,7 @@
 defmodule KlassHeroWeb.Helpers.ParticipationEditHelpersTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
 
   @base_attrs %{id: "rec-001", session_id: "ses-001", child_id: "chi-001", status: :checked_in}

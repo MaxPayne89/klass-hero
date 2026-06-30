@@ -6,7 +6,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
   alias KlassHero.Participation
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do

@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Domain.Models.ProgramSessionTest do
+defmodule KlassHero.Participation.ProgramSessionTest do
   @moduledoc """
   Tests for ProgramSession domain entity.
 
@@ -9,7 +9,7 @@ defmodule KlassHero.Participation.Domain.Models.ProgramSessionTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "new/1" do
     test "creates a valid session with all required fields" do

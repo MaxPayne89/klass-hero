@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Domain.Models.ParticipationRecordTest do
+defmodule KlassHero.Participation.ParticipationRecordTest do
   @moduledoc """
   Tests for ParticipationRecord domain entity.
 
@@ -9,7 +9,7 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecordTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   describe "new/1" do
     test "creates a valid participation record with required fields" do
@@ -69,37 +69,6 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecordTest do
       }
 
       assert {:error, :missing_required_fields} = ParticipationRecord.new(attrs)
-    end
-  end
-
-  describe "from_persistence/1" do
-    test "reconstructs record from valid persistence data" do
-      attrs = %{
-        id: Ecto.UUID.generate(),
-        session_id: Ecto.UUID.generate(),
-        child_id: Ecto.UUID.generate(),
-        status: :checked_in,
-        parent_id: Ecto.UUID.generate(),
-        provider_id: Ecto.UUID.generate(),
-        check_in_at: DateTime.utc_now(),
-        check_in_by: Ecto.UUID.generate(),
-        lock_version: 2
-      }
-
-      assert {:ok, record} = ParticipationRecord.from_persistence(attrs)
-      assert record.id == attrs.id
-      assert record.status == :checked_in
-      assert record.lock_version == 2
-    end
-
-    test "returns error when required key is missing" do
-      attrs = %{
-        id: Ecto.UUID.generate(),
-        session_id: Ecto.UUID.generate()
-        # Missing child_id and status which are in @enforce_keys
-      }
-
-      assert {:error, :invalid_persistence_data} = ParticipationRecord.from_persistence(attrs)
     end
   end
 
@@ -430,35 +399,29 @@ defmodule KlassHero.Participation.Domain.Models.ParticipationRecordTest do
     # -- helpers --
 
     defp build_checked_in_record do
-      {:ok, record} =
-        ParticipationRecord.from_persistence(%{
-          id: "r-ci",
-          session_id: "s-1",
-          child_id: "c-1",
-          status: :checked_in,
-          check_in_at: ~U[2026-03-13 09:00:00Z],
-          check_in_by: "provider-1",
-          check_in_notes: "On time"
-        })
-
-      record
+      struct!(ParticipationRecord, %{
+        id: "r-ci",
+        session_id: "s-1",
+        child_id: "c-1",
+        status: :checked_in,
+        check_in_at: ~U[2026-03-13 09:00:00Z],
+        check_in_by: "provider-1",
+        check_in_notes: "On time"
+      })
     end
 
     defp build_checked_out_record do
-      {:ok, record} =
-        ParticipationRecord.from_persistence(%{
-          id: "r-co",
-          session_id: "s-1",
-          child_id: "c-1",
-          status: :checked_out,
-          check_in_at: ~U[2026-03-13 09:00:00Z],
-          check_in_by: "provider-1",
-          check_in_notes: "On time",
-          check_out_at: ~U[2026-03-13 10:00:00Z],
-          check_out_by: "provider-1"
-        })
-
-      record
+      struct!(ParticipationRecord, %{
+        id: "r-co",
+        session_id: "s-1",
+        child_id: "c-1",
+        status: :checked_out,
+        check_in_at: ~U[2026-03-13 09:00:00Z],
+        check_in_by: "provider-1",
+        check_in_notes: "On time",
+        check_out_at: ~U[2026-03-13 10:00:00Z],
+        check_out_by: "provider-1"
+      })
     end
   end
 end

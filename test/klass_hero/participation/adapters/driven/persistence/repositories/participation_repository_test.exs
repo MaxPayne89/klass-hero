@@ -10,10 +10,9 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Mappers.ParticipationRecordMapper
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.ParticipationRepository
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Repo
 
   describe "create/1" do
@@ -66,7 +65,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
   describe "update/1" do
     test "successfully updates record status" do
       record_schema = insert(:participation_record_schema, status: :registered)
-      domain_record = ParticipationRecordMapper.to_domain(record_schema)
+      domain_record = record_schema
       user = KlassHero.AccountsFixtures.unconfirmed_user_fixture()
 
       {:ok, checked_in} = ParticipationRecord.check_in(domain_record, user.id)
@@ -83,7 +82,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
 
     test "updates check-in information" do
       record_schema = insert(:participation_record_schema, status: :registered)
-      domain_record = ParticipationRecordMapper.to_domain(record_schema)
+      domain_record = record_schema
       user = KlassHero.AccountsFixtures.unconfirmed_user_fixture()
 
       {:ok, checked_in} =
@@ -105,7 +104,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
           check_in_by: check_in_user.id
         )
 
-      domain_record = ParticipationRecordMapper.to_domain(record_schema)
+      domain_record = record_schema
       check_out_user = KlassHero.AccountsFixtures.unconfirmed_user_fixture()
 
       {:ok, checked_out} =
@@ -121,8 +120,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       record_schema = insert(:participation_record_schema)
 
       # Simulate two processes fetching the same record
-      domain_v1_a = ParticipationRecordMapper.to_domain(record_schema)
-      domain_v1_b = ParticipationRecordMapper.to_domain(record_schema)
+      domain_v1_a = record_schema
+      domain_v1_b = record_schema
 
       # First update succeeds
       user = KlassHero.AccountsFixtures.unconfirmed_user_fixture()
@@ -134,7 +133,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       assert {:error, :stale_data} = ParticipationRepository.update(updated_b)
 
       # Verify first update persisted
-      final_schema = Repo.get(ParticipationRecordSchema, record_schema.id)
+      final_schema = Repo.get(ParticipationRecord, record_schema.id)
       assert final_schema.status == :checked_in
     end
 
@@ -143,7 +142,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Parti
       user = KlassHero.AccountsFixtures.unconfirmed_user_fixture()
 
       # First update
-      domain_v1 = ParticipationRecordMapper.to_domain(record_schema)
+      domain_v1 = record_schema
       {:ok, checked_in} = ParticipationRecord.check_in(domain_v1, user.id)
       assert {:ok, result_v2} = ParticipationRepository.update(checked_in)
 

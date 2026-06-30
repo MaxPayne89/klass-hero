@@ -9,9 +9,9 @@ defmodule KlassHero.Participation.Application.Commands.StartSessionTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.Application.Commands.StartSession
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "successfully starts a scheduled session" do
@@ -54,7 +54,7 @@ defmodule KlassHero.Participation.Application.Commands.StartSessionTest do
 
       reloaded =
         KlassHero.Repo.get(
-          ProgramSessionSchema,
+          ProgramSession,
           session_schema.id
         )
 

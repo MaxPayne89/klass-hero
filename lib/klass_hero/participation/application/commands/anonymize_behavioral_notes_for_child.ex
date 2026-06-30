@@ -7,7 +7,7 @@ defmodule KlassHero.Participation.Application.Commands.AnonymizeBehavioralNotesF
   :rejected. Delegates the definition of "anonymized" to the domain model.
   """
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
 
   @behavioral_note_repository Application.compile_env!(:klass_hero, [
                                 :participation,

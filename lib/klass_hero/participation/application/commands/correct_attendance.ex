@@ -13,7 +13,7 @@ defmodule KlassHero.Participation.Application.Commands.CorrectAttendance do
     on the record (the edit *is* the audit trail; `updated_at` records when).
   """
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   @participation_reader Application.compile_env!(
                           :klass_hero,

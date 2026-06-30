@@ -10,7 +10,7 @@ defmodule KlassHero.Participation.Application.Queries.ListProviderSessionsTest d
   import KlassHero.Factory
 
   alias KlassHero.Participation.Application.Queries.ListProviderSessions
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "returns sessions for a date ordered by start time" do

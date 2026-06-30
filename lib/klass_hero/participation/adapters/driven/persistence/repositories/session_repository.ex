@@ -12,10 +12,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
 
   import Ecto.Query
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Mappers.ProgramSessionMapper
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
@@ -27,10 +25,9 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   @impl true
   def create(%ProgramSession{} = session) do
     db_interaction operation: :create, entity: "session" do
-      attrs = ProgramSessionMapper.to_persistence(session)
-
-      attrs
-      |> ProgramSessionSchema.create_changeset()
+      session
+      |> Map.from_struct()
+      |> ProgramSession.create_changeset()
       |> Repo.insert()
       |> handle_insert_result()
     end
@@ -39,31 +36,32 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   @impl true
   def get_by_id(id) when is_binary(id) do
     db_interaction operation: :get_by_id, entity: "session" do
-      RepositoryHelpers.get_by_id(ProgramSessionSchema, id, ProgramSessionMapper)
+      case Repo.get(ProgramSession, id) do
+        nil -> {:error, :not_found}
+        session -> {:ok, session}
+      end
     end
   end
 
   @impl true
   def list_by_program(program_id) when is_binary(program_id) do
     db_interaction operation: :list_by_program, entity: "session" do
-      from(s in ProgramSessionSchema,
+      from(s in ProgramSession,
         where: s.program_id == ^program_id,
         order_by: [asc: s.session_date, asc: s.start_time]
       )
       |> Repo.all()
-      |> Enum.map(&ProgramSessionMapper.to_domain/1)
     end
   end
 
   @impl true
   def list_today_sessions(date) do
     db_interaction operation: :list_today_sessions, entity: "session" do
-      from(s in ProgramSessionSchema,
+      from(s in ProgramSession,
         where: s.session_date == ^date,
         order_by: [asc: s.start_time]
       )
       |> Repo.all()
-      |> Enum.map(&ProgramSessionMapper.to_domain/1)
     end
   end
 
@@ -71,11 +69,11 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   def update(%ProgramSession{} = session) do
     db_interaction operation: :update, entity: "session" do
       with {:ok, schema} <-
-             RepositoryHelpers.get_schema_by_uuid(ProgramSessionSchema, session.id) do
-        attrs = ProgramSessionMapper.update_schema(schema, session)
+             RepositoryHelpers.get_schema_by_uuid(ProgramSession, session.id) do
+        attrs = Map.take(session, [:status, :location, :notes, :max_capacity, :lock_version])
 
         schema
-        |> ProgramSessionSchema.update_changeset(attrs)
+        |> ProgramSession.update_changeset(attrs)
         |> Repo.update()
         |> handle_update_result()
       end
@@ -85,25 +83,23 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   @impl true
   def list_by_provider_and_date(provider_id, date) when is_binary(provider_id) do
     db_interaction operation: :list_by_provider_and_date, entity: "session" do
-      from(s in ProgramSessionSchema,
+      from(s in ProgramSession,
         join: p in "programs",
         on: p.id == s.program_id,
         where: p.provider_id == type(^provider_id, Ecto.UUID) and s.session_date == ^date,
         order_by: [asc: s.start_time]
       )
       |> Repo.all()
-      |> Enum.map(&ProgramSessionMapper.to_domain/1)
     end
   end
 
   @impl true
   def get_many_by_ids(ids) when is_list(ids) do
     db_interaction operation: :get_many_by_ids, entity: "session" do
-      from(s in ProgramSessionSchema,
+      from(s in ProgramSession,
         where: s.id in ^ids
       )
       |> Repo.all()
-      |> Enum.map(&ProgramSessionMapper.to_domain/1)
     end
   end
 
@@ -121,9 +117,9 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   @impl true
   def list_admin_sessions(filters) when is_map(filters) do
     db_interaction operation: :list_admin_sessions, entity: "session" do
-      ProgramSessionSchema
+      ProgramSession
       |> join(:inner, [s], p in "programs", on: p.id == s.program_id)
-      |> join(:left, [s, _p], pr in ParticipationRecordSchema, on: pr.session_id == s.id)
+      |> join(:left, [s, _p], pr in ParticipationRecord, on: pr.session_id == s.id)
       |> join(:inner, [_s, p, _pr], prov in "providers", on: prov.id == p.provider_id)
       |> apply_admin_filters(filters)
       |> group_by([s, p, _pr, prov], [s.id, p.title, prov.business_name])
@@ -190,9 +186,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
 
   defp atomize_status(map), do: map
 
-  defp handle_insert_result({:ok, schema}) do
-    {:ok, ProgramSessionMapper.to_domain(schema)}
-  end
+  defp handle_insert_result({:ok, schema}), do: {:ok, schema}
 
   defp handle_insert_result({:error, %Ecto.Changeset{errors: errors} = changeset}) do
     if EctoErrorHelpers.any_unique_constraint_violation?(errors) do
@@ -202,9 +196,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
     end
   end
 
-  defp handle_update_result({:ok, schema}) do
-    {:ok, ProgramSessionMapper.to_domain(schema)}
-  end
+  defp handle_update_result({:ok, schema}), do: {:ok, schema}
 
   defp handle_update_result({:error, %Ecto.Changeset{} = changeset}) do
     if changeset.errors[:lock_version] do

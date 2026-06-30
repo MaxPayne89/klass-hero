@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Domain.Ports.ForQueryingSessions do
   Write operations remain in `ForManagingSessions`.
   """
 
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   @doc "Retrieves session by ID. Returns `{:error, :not_found}` if not found."
   @callback get_by_id(binary()) :: {:ok, ProgramSession.t()} | {:error, :not_found}

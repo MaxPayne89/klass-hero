@@ -10,10 +10,9 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Mappers.ProgramSessionMapper
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.SessionRepository
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Repo
 
   describe "create/1" do
@@ -120,7 +119,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
   describe "update/1" do
     test "successfully updates session status" do
       session_schema = insert(:program_session_schema)
-      domain_session = ProgramSessionMapper.to_domain(session_schema)
+      domain_session = session_schema
 
       # Start session (transition from :scheduled to :in_progress)
       {:ok, started} = ProgramSession.start(domain_session)
@@ -137,7 +136,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
 
     test "updates session notes" do
       session_schema = insert(:program_session_schema, notes: nil)
-      domain_session = ProgramSessionMapper.to_domain(session_schema)
+      domain_session = session_schema
 
       updated_session = %{domain_session | notes: "Special equipment required"}
 
@@ -147,7 +146,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
 
     test "persists max_capacity changes" do
       session_schema = insert(:program_session_schema, max_capacity: 20)
-      domain_session = ProgramSessionMapper.to_domain(session_schema)
+      domain_session = session_schema
 
       updated_session = %{domain_session | max_capacity: 25}
 
@@ -155,7 +154,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Sessi
       assert result.max_capacity == 25
 
       # Verify in database
-      reloaded = Repo.get(ProgramSessionSchema, session_schema.id)
+      reloaded = Repo.get(ProgramSession, session_schema.id)
       assert reloaded.max_capacity == 25
     end
   end

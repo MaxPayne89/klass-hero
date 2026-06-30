@@ -7,7 +7,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
+  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -31,7 +31,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
       assert :ok == ParticipationEventHandler.handle_event(event)
 
-      reloaded = Repo.get!(BehavioralNoteSchema, note.id)
+      reloaded = Repo.get!(BehavioralNote, note.id)
       assert reloaded.content == "[Removed - account deleted]"
       assert reloaded.status == :rejected
       assert is_nil(reloaded.rejection_reason)

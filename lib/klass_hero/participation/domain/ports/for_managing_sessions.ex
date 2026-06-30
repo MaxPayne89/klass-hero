@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Domain.Ports.ForManagingSessions do
   Read operations have been moved to `ForQueryingSessions`.
   """
 
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   @doc "Creates session. Returns `{:error, :duplicate_session}` on unique violation."
   @callback create(ProgramSession.t()) ::

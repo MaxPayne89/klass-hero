@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Domain.Ports.ForManagingBehavioralNotes do
   Read operations have been moved to `ForQueryingBehavioralNotes`.
   """
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
 
   @doc "Creates behavioral note. Returns `{:error, :duplicate_note}` on unique violation."
   @callback create(BehavioralNote.t()) ::

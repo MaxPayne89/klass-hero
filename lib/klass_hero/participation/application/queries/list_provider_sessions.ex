@@ -5,7 +5,7 @@ defmodule KlassHero.Participation.Application.Queries.ListProviderSessions do
   Used by provider dashboard to show their assigned sessions.
   """
 
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   @session_repository Application.compile_env!(:klass_hero, [:participation, :for_querying_sessions])
 

@@ -10,7 +10,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistoryTes
   import KlassHero.Factory
 
   alias KlassHero.Participation.Application.Queries.GetParticipationHistory
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   describe "execute/1 with single child" do
     test "returns all participation records for a child" do

@@ -3,8 +3,8 @@ defmodule KlassHero.Participation.Application.Shared do
   Shared utilities for Participation use cases.
   """
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.DomainEventBus
 

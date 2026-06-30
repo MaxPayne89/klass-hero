@@ -10,7 +10,7 @@ defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
   import KlassHero.Factory
 
   alias KlassHero.Participation.Application.Commands.CreateSession
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1" do
     test "successfully creates a session with valid attributes" do

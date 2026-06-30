@@ -8,8 +8,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
   import KlassHero.Factory
 
   alias KlassHero.Participation.Adapters.Driven.Persistence.Repositories.BehavioralNoteRepository
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Repo
 
   describe "create/1" do
@@ -260,7 +260,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
                BehavioralNoteRepository.anonymize_all_for_child(schema.child_id, anonymized_attrs)
 
       # Query raw schema to confirm PostgreSQL accepted the enum string value
-      updated = Repo.get!(BehavioralNoteSchema, schema.id)
+      updated = Repo.get!(BehavioralNote, schema.id)
       assert updated.status == :rejected
       assert updated.content == "[Removed - account deleted]"
       assert is_nil(updated.rejection_reason)

@@ -15,7 +15,7 @@ defmodule KlassHero.Participation.Application.Commands.CompleteSession do
   """
 
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Shared.DomainEventBus
 
   require Logger

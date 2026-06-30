@@ -12,23 +12,21 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
 
   import Ecto.Query
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Mappers.BehavioralNoteMapper
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.BehavioralNoteQueries
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
-  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
 
   require Logger
+
+  @update_fields [:content, :status, :rejection_reason, :submitted_at, :reviewed_at]
 
   @impl true
   def create(%BehavioralNote{} = note) do
     db_interaction operation: :create, entity: "behavioral_note" do
-      attrs = BehavioralNoteMapper.to_persistence(note)
-
-      attrs
-      |> BehavioralNoteSchema.create_changeset()
+      note
+      |> Map.from_struct()
+      |> BehavioralNote.create_changeset()
       |> Repo.insert()
       |> handle_insert_result()
     end
@@ -37,22 +35,25 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
   @impl true
   def get_by_id(id) when is_binary(id) do
     db_interaction operation: :get_by_id, entity: "behavioral_note" do
-      RepositoryHelpers.get_by_id(BehavioralNoteSchema, id, BehavioralNoteMapper)
+      case Repo.get(BehavioralNote, id) do
+        nil -> {:error, :not_found}
+        note -> {:ok, note}
+      end
     end
   end
 
   @impl true
   def update(%BehavioralNote{} = note) do
     db_interaction operation: :update, entity: "behavioral_note" do
-      case Repo.get(BehavioralNoteSchema, note.id) do
+      case Repo.get(BehavioralNote, note.id) do
         nil ->
           {:error, :not_found}
 
         schema ->
-          attrs = BehavioralNoteMapper.update_schema(schema, note)
+          attrs = Map.take(note, @update_fields)
 
           schema
-          |> BehavioralNoteSchema.update_changeset(attrs)
+          |> BehavioralNote.update_changeset(attrs)
           |> Repo.update()
           |> handle_update_result()
       end
@@ -67,7 +68,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
       |> BehavioralNoteQueries.pending()
       |> BehavioralNoteQueries.order_by_submitted_desc()
       |> Repo.all()
-      |> Enum.map(&BehavioralNoteMapper.to_domain/1)
     end
   end
 
@@ -79,7 +79,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
       |> BehavioralNoteQueries.approved()
       |> BehavioralNoteQueries.order_by_submitted_desc()
       |> Repo.all()
-      |> Enum.map(&BehavioralNoteMapper.to_domain/1)
     end
   end
 
@@ -91,7 +90,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
       |> where([note: n], n.child_id in ^child_ids)
       |> BehavioralNoteQueries.order_by_submitted_desc()
       |> Repo.all()
-      |> Enum.map(&BehavioralNoteMapper.to_domain/1)
       |> Enum.group_by(& &1.child_id)
     end
   end
@@ -103,7 +101,6 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
       |> BehavioralNoteQueries.by_participation_records(record_ids)
       |> BehavioralNoteQueries.by_provider(provider_id)
       |> Repo.all()
-      |> Enum.map(&BehavioralNoteMapper.to_domain/1)
     end
   end
 
@@ -116,7 +113,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
       |> Repo.one()
       |> case do
         nil -> {:error, :not_found}
-        schema -> {:ok, BehavioralNoteMapper.to_domain(schema)}
+        schema -> {:ok, schema}
       end
     end
   end
@@ -130,7 +127,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
       |> Repo.one()
       |> case do
         nil -> {:error, :not_found}
-        schema -> {:ok, BehavioralNoteMapper.to_domain(schema)}
+        schema -> {:ok, schema}
       end
     end
   end
@@ -147,7 +144,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
 
       case result do
         nil -> {:error, :not_found}
-        schema -> {:ok, BehavioralNoteMapper.to_domain(schema)}
+        schema -> {:ok, schema}
       end
     end
   end
@@ -166,7 +163,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
         |> Keyword.put(:updated_at, now)
 
       {count, _} =
-        BehavioralNoteSchema
+        BehavioralNote
         |> where([n], n.child_id == ^child_id)
         |> Repo.update_all(set: set_fields)
 
@@ -174,9 +171,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
     end
   end
 
-  defp handle_insert_result({:ok, schema}) do
-    {:ok, BehavioralNoteMapper.to_domain(schema)}
-  end
+  defp handle_insert_result({:ok, schema}), do: {:ok, schema}
 
   defp handle_insert_result({:error, %Ecto.Changeset{errors: errors} = changeset}) do
     # Unique constraint on [participation_record_id, provider_id] → :duplicate_note
@@ -191,9 +186,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Repositories.Behav
     end
   end
 
-  defp handle_update_result({:ok, schema}) do
-    {:ok, BehavioralNoteMapper.to_domain(schema)}
-  end
+  defp handle_update_result({:ok, schema}), do: {:ok, schema}
 
   defp handle_update_result({:error, %Ecto.Changeset{} = changeset}) do
     Logger.warning("[BehavioralNoteRepository] Validation failed on update",

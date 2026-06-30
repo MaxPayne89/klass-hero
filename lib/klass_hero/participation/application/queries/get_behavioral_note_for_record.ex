@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecord
   operations go through use cases.
   """
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
 
   @behavioral_note_repository Application.compile_env!(:klass_hero, [
                                 :participation,

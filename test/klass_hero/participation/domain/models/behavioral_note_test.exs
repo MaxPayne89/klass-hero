@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Domain.Models.BehavioralNoteTest do
+defmodule KlassHero.Participation.BehavioralNoteTest do
   @moduledoc """
   Tests for BehavioralNote domain entity.
 
@@ -7,7 +7,7 @@ defmodule KlassHero.Participation.Domain.Models.BehavioralNoteTest do
 
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Participation.Domain.Models.BehavioralNote
+  alias KlassHero.Participation.BehavioralNote
 
   defp valid_attrs do
     %{
@@ -181,38 +181,6 @@ defmodule KlassHero.Participation.Domain.Models.BehavioralNoteTest do
 
       long_content = String.duplicate("a", 1001)
       assert {:error, :content_too_long} = BehavioralNote.revise(rejected, long_content)
-    end
-  end
-
-  describe "from_persistence/1" do
-    test "reconstructs note from valid persistence data" do
-      attrs = %{
-        id: Ecto.UUID.generate(),
-        participation_record_id: Ecto.UUID.generate(),
-        child_id: Ecto.UUID.generate(),
-        provider_id: Ecto.UUID.generate(),
-        content: "Child was engaged",
-        status: :approved,
-        rejection_reason: nil,
-        submitted_at: DateTime.utc_now(),
-        reviewed_at: DateTime.utc_now(),
-        inserted_at: DateTime.utc_now(),
-        updated_at: DateTime.utc_now()
-      }
-
-      assert {:ok, note} = BehavioralNote.from_persistence(attrs)
-      assert note.id == attrs.id
-      assert note.status == :approved
-    end
-
-    test "returns error when required key is missing" do
-      attrs = %{
-        id: Ecto.UUID.generate(),
-        participation_record_id: Ecto.UUID.generate()
-        # Missing child_id, provider_id, content, status
-      }
-
-      assert {:error, :invalid_persistence_data} = BehavioralNote.from_persistence(attrs)
     end
   end
 

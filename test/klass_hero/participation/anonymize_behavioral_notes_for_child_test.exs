@@ -11,7 +11,7 @@ defmodule KlassHero.Participation.AnonymizeBehavioralNotesForChildTest do
   import KlassHero.Factory
 
   alias KlassHero.Participation
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
+  alias KlassHero.Participation.BehavioralNote
 
   describe "anonymize_behavioral_notes_for_child/1" do
     test "anonymizes all notes for a child" do
@@ -34,8 +34,8 @@ defmodule KlassHero.Participation.AnonymizeBehavioralNotesForChildTest do
 
       assert count == 2
 
-      reloaded_a = Repo.get!(BehavioralNoteSchema, note_a.id)
-      reloaded_b = Repo.get!(BehavioralNoteSchema, note_b.id)
+      reloaded_a = Repo.get!(BehavioralNote, note_a.id)
+      reloaded_b = Repo.get!(BehavioralNote, note_b.id)
 
       assert reloaded_a.content == "[Removed - account deleted]"
       assert reloaded_a.status == :rejected

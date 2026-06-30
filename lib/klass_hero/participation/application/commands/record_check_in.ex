@@ -15,7 +15,7 @@ defmodule KlassHero.Participation.Application.Commands.RecordCheckIn do
 
   alias KlassHero.Participation.Application.Shared
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   @type params :: %{
           required(:record_id) => String.t(),

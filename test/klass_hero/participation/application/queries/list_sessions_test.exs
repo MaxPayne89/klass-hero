@@ -10,7 +10,7 @@ defmodule KlassHero.Participation.Application.Queries.ListSessionsTest do
   import KlassHero.Factory
 
   alias KlassHero.Participation.Application.Queries.ListSessions
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ProgramSession
 
   describe "execute/1 with program_id filter" do
     test "returns sessions for a program ordered by date and time" do

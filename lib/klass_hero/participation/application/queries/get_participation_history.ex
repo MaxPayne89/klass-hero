@@ -6,7 +6,7 @@ defmodule KlassHero.Participation.Application.Queries.GetParticipationHistory do
   optionally filtered by date range.
   """
 
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
+  alias KlassHero.Participation.ParticipationRecord
 
   @participation_repository Application.compile_env!(:klass_hero, [
                               :participation,

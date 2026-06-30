@@ -14,8 +14,8 @@ defmodule KlassHero.Participation.Application.Commands.BulkCheckIn do
   """
 
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
-  alias KlassHero.Participation.Domain.Models.ParticipationRecord
-  alias KlassHero.Participation.Domain.Models.ProgramSession
+  alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Shared.DomainEventBus
 
   require Logger
