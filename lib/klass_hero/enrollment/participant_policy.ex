@@ -1,9 +1,13 @@
-defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
+defmodule KlassHero.Enrollment.ParticipantPolicy do
   @moduledoc """
-  Domain model representing participant eligibility restrictions for a program.
+  Participant eligibility restrictions for a program (`participant_policies` table).
 
   Owned by the Enrollment context. Providers configure age, gender, and grade
-  restrictions; the enrollment context enforces these during enrollment.
+  restrictions; the context enforces them during enrollment.
+
+  This module is both the Ecto schema and the struct consumers pattern-match.
+  The changeset is the single validation gatekeeper; `eligible?/2` and
+  `age_in_months/2` are the functional core for eligibility checks.
 
   ## Restriction Semantics
 
@@ -13,33 +17,27 @@ defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
   - `eligibility_at` — when to evaluate: "registration" (today) or "program_start".
   """
 
-  @enforce_keys [:program_id]
+  use Ecto.Schema
 
-  defstruct [
-    :id,
-    :program_id,
-    :min_age_months,
-    :max_age_months,
-    :min_grade,
-    :max_grade,
-    :inserted_at,
-    :updated_at,
-    eligibility_at: "registration",
-    allowed_genders: []
-  ]
+  import Ecto.Changeset
 
-  @type t :: %__MODULE__{
-          id: String.t() | nil,
-          program_id: String.t(),
-          min_age_months: non_neg_integer() | nil,
-          max_age_months: non_neg_integer() | nil,
-          allowed_genders: [String.t()],
-          min_grade: pos_integer() | nil,
-          max_grade: pos_integer() | nil,
-          eligibility_at: String.t(),
-          inserted_at: DateTime.t() | nil,
-          updated_at: DateTime.t() | nil
-        }
+  @primary_key {:id, :binary_id, autogenerate: true}
+  @foreign_key_type :binary_id
+  @timestamps_opts [type: :utc_datetime]
+
+  schema "participant_policies" do
+    field :program_id, :binary_id
+    field :eligibility_at, :string, default: "registration"
+    field :min_age_months, :integer
+    field :max_age_months, :integer
+    field :allowed_genders, {:array, :string}, default: []
+    field :min_grade, :integer
+    field :max_grade, :integer
+
+    timestamps()
+  end
+
+  @type t :: %__MODULE__{}
 
   @valid_genders ~w(male female diverse not_specified)
   @valid_eligibility ~w(registration program_start)
@@ -47,43 +45,73 @@ defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
   def valid_genders, do: @valid_genders
   def valid_eligibility_options, do: @valid_eligibility
 
+  @required_fields ~w(program_id)a
+  @optional_fields ~w(eligibility_at min_age_months max_age_months allowed_genders min_grade max_grade)a
+
   @doc """
-  Creates a new ParticipantPolicy from the given attributes.
+  Changeset for participant policy creation or update.
 
-  Returns `{:ok, policy}` on success or `{:error, errors}` with a list
-  of human-readable validation messages.
-
-  Normalizes nil `allowed_genders` to `[]` and nil `eligibility_at` to `"registration"`.
+  All restriction fields are optional; DB constraints enforce range validity
+  and uniqueness per program.
   """
-  @spec new(map()) :: {:ok, t()} | {:error, [String.t()]}
-  def new(attrs) when is_map(attrs) do
-    allowed_genders = attrs[:allowed_genders] || []
-    eligibility_at = attrs[:eligibility_at] || "registration"
+  def changeset(schema \\ %__MODULE__{}, attrs) do
+    schema
+    |> cast(attrs, @required_fields ++ @optional_fields)
+    |> validate_required(@required_fields)
+    |> validate_inclusion(:eligibility_at, @valid_eligibility)
+    |> validate_number(:min_age_months, greater_than_or_equal_to: 0)
+    |> validate_number(:max_age_months, greater_than_or_equal_to: 0)
+    |> validate_number(:min_grade, greater_than_or_equal_to: 1, less_than_or_equal_to: 13)
+    |> validate_number(:max_grade, greater_than_or_equal_to: 1, less_than_or_equal_to: 13)
+    |> validate_allowed_genders()
+    |> validate_age_range()
+    |> validate_grade_range()
+    |> unique_constraint(:program_id)
+    |> check_constraint(:eligibility_at, name: :valid_eligibility_at)
+    |> check_constraint(:min_age_months, name: :valid_age_range)
+    |> check_constraint(:min_grade, name: :valid_grade_range)
+    |> check_constraint(:min_age_months, name: :valid_age_months)
+    |> check_constraint(:min_grade, name: :valid_grade_bounds)
+  end
 
-    errors =
-      []
-      |> validate_program_id(attrs[:program_id])
-      |> validate_age_range(attrs[:min_age_months], attrs[:max_age_months])
-      |> validate_grade_range(attrs[:min_grade], attrs[:max_grade])
-      |> validate_genders(allowed_genders)
-      |> validate_eligibility_at(eligibility_at)
+  defp validate_allowed_genders(changeset) do
+    case get_field(changeset, :allowed_genders) do
+      nil ->
+        changeset
 
-    if errors == [] do
-      {:ok,
-       %__MODULE__{
-         id: attrs[:id],
-         program_id: attrs[:program_id],
-         min_age_months: attrs[:min_age_months],
-         max_age_months: attrs[:max_age_months],
-         allowed_genders: allowed_genders,
-         min_grade: attrs[:min_grade],
-         max_grade: attrs[:max_grade],
-         eligibility_at: eligibility_at,
-         inserted_at: attrs[:inserted_at],
-         updated_at: attrs[:updated_at]
-       }}
+      genders when is_list(genders) ->
+        invalid = Enum.reject(genders, &(&1 in @valid_genders))
+
+        if invalid == [] do
+          changeset
+        else
+          add_error(changeset, :allowed_genders, "contains invalid values: #{Enum.join(invalid, ", ")}")
+        end
+
+      _ ->
+        add_error(changeset, :allowed_genders, "must be a list")
+    end
+  end
+
+  defp validate_age_range(changeset) do
+    min = get_field(changeset, :min_age_months)
+    max = get_field(changeset, :max_age_months)
+
+    if is_integer(min) and is_integer(max) and min > max do
+      add_error(changeset, :min_age_months, "must not exceed maximum age")
     else
-      {:error, errors}
+      changeset
+    end
+  end
+
+  defp validate_grade_range(changeset) do
+    min = get_field(changeset, :min_grade)
+    max = get_field(changeset, :max_grade)
+
+    if is_integer(min) and is_integer(max) and min > max do
+      add_error(changeset, :min_grade, "must not exceed maximum grade")
+    else
+      changeset
     end
   end
 
@@ -106,45 +134,6 @@ defmodule KlassHero.Enrollment.Domain.Models.ParticipantPolicy do
     else
       {:error, reasons}
     end
-  end
-
-  defp validate_program_id(errors, id) when is_binary(id) and byte_size(id) > 0, do: errors
-  defp validate_program_id(errors, _), do: ["program ID is required" | errors]
-
-  defp validate_age_range(errors, min, max) when is_integer(min) and is_integer(max) and min > max do
-    ["minimum age must not exceed maximum age" | errors]
-  end
-
-  defp validate_age_range(errors, _min, _max), do: errors
-
-  defp validate_grade_range(errors, min, max) when is_integer(min) and is_integer(max) and min > max do
-    ["minimum grade must not exceed maximum grade" | errors]
-  end
-
-  defp validate_grade_range(errors, _min, _max), do: errors
-
-  defp validate_genders(errors, genders) when is_list(genders) do
-    invalid = Enum.reject(genders, &(&1 in @valid_genders))
-
-    if invalid == [] do
-      errors
-    else
-      [
-        "invalid gender values: #{Enum.join(invalid, ", ")}; allowed: #{Enum.join(@valid_genders, ", ")}"
-        | errors
-      ]
-    end
-  end
-
-  defp validate_genders(errors, _), do: errors
-
-  defp validate_eligibility_at(errors, value) when value in @valid_eligibility, do: errors
-
-  defp validate_eligibility_at(errors, value) do
-    [
-      "invalid eligibility_at value: #{inspect(value)}; allowed: #{Enum.join(@valid_eligibility, ", ")}"
-      | errors
-    ]
   end
 
   @doc """

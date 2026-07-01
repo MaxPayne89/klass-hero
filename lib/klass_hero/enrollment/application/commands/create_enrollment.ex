@@ -33,7 +33,6 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollment do
   """
 
   alias KlassHero.Enrollment
-  alias KlassHero.Enrollment.Application.Queries.CheckParticipantEligibility
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Enrollment.Domain.Models.Enrollment, as: EnrollmentModel
   alias KlassHero.Family
@@ -93,7 +92,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollment do
   # 3-tuple {:error, :ineligible, reasons} bubbles verbatim; 2-tuple lookup failures map to
   # :processing_failed (fail-closed when eligibility cannot be verified).
   defp ensure_eligible(program_id, child_id) do
-    case CheckParticipantEligibility.execute(program_id, child_id) do
+    case Enrollment.check_participant_eligibility(program_id, child_id) do
       {:ok, :eligible} ->
         {:ok, :eligible}
 

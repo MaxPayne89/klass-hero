@@ -10,7 +10,7 @@ defmodule KlassHero.Enrollment.Application.ParticipantPolicyForm do
 
   import Ecto.Changeset
 
-  alias KlassHero.Enrollment.Domain.Models.ParticipantPolicy
+  alias KlassHero.Enrollment.ParticipantPolicy
 
   @primary_key false
   embedded_schema do

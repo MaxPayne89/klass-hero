@@ -10,6 +10,8 @@ defmodule KlassHero.Enrollment do
 
   import Ecto.Query, warn: false
 
+  alias KlassHero.Enrollment.Adapters.Driven.ACL.ParticipantDetailsACL
+  alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
@@ -21,20 +23,17 @@ defmodule KlassHero.Enrollment do
     DeleteInvite,
     ImportEnrollmentCsv,
     InviteSingleParticipant,
-    ResendInvite,
-    SetParticipantPolicy
+    ResendInvite
   }
 
   alias KlassHero.Enrollment.Application.ParticipantPolicyForm
 
   alias KlassHero.Enrollment.Application.Queries.{
     CheckEnrollment,
-    CheckParticipantEligibility,
     CountMonthlyBookings,
     CountProgramInvites,
     GetBookingUsageInfo,
     GetEnrollment,
-    GetParticipantPolicy,
     ListEnrolledIdentityIds,
     ListParentEnrollments,
     ListPendingEnrollmentsForProvider,
@@ -43,9 +42,12 @@ defmodule KlassHero.Enrollment do
   }
 
   alias KlassHero.Enrollment.Application.SingleInviteForm
+  alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
   alias KlassHero.Enrollment.EnrollmentPolicy
+  alias KlassHero.Enrollment.ParticipantPolicy
   alias KlassHero.Repo
+  alias KlassHero.Shared.EventDispatchHelper
 
   @active_statuses ~w(pending confirmed)
 
@@ -102,7 +104,35 @@ defmodule KlassHero.Enrollment do
   Creates or updates the participant eligibility policy for a program (upsert).
   """
   def set_participant_policy(attrs) when is_map(attrs) do
-    SetParticipantPolicy.execute(attrs)
+    context_span entity: "participant_policy" do
+      with {:ok, policy} <- upsert_participant_policy(attrs) do
+        policy.program_id
+        |> EnrollmentEvents.participant_policy_set()
+        |> EventDispatchHelper.dispatch(__MODULE__)
+
+        {:ok, policy}
+      end
+    end
+  end
+
+  defp upsert_participant_policy(attrs) do
+    %ParticipantPolicy{}
+    |> ParticipantPolicy.changeset(attrs)
+    |> Repo.insert(
+      on_conflict:
+        {:replace,
+         [
+           :eligibility_at,
+           :min_age_months,
+           :max_age_months,
+           :allowed_genders,
+           :min_grade,
+           :max_grade,
+           :updated_at
+         ]},
+      conflict_target: :program_id,
+      returning: true
+    )
   end
 
   @doc """
@@ -406,14 +436,53 @@ defmodule KlassHero.Enrollment do
   Returns `{:error, :not_found}` when the child does not exist.
   """
   def check_participant_eligibility(program_id, child_id) when is_binary(program_id) and is_binary(child_id) do
-    CheckParticipantEligibility.execute(program_id, child_id)
+    case get_participant_policy(program_id) do
+      {:error, :not_found} ->
+        {:ok, :eligible}
+
+      {:ok, %ParticipantPolicy{} = policy} ->
+        check_eligibility(policy, program_id, child_id)
+    end
+  end
+
+  defp check_eligibility(policy, program_id, child_id) do
+    with {:ok, details} <- ParticipantDetailsACL.get_participant_details(child_id),
+         {:ok, reference_date} <- resolve_reference_date(policy, program_id) do
+      participant = %{
+        age_months: ParticipantPolicy.age_in_months(details.date_of_birth, reference_date),
+        gender: details.gender,
+        grade: details.school_grade
+      }
+
+      # Map domain {:error, reasons} → public 3-tuple {:error, :ineligible, reasons}.
+      case ParticipantPolicy.eligible?(policy, participant) do
+        {:ok, :eligible} -> {:ok, :eligible}
+        {:error, reasons} -> {:error, :ineligible, reasons}
+      end
+    end
+  end
+
+  # Some programs (e.g. summer camps) evaluate age at program start, not at registration.
+  defp resolve_reference_date(%ParticipantPolicy{eligibility_at: "program_start"}, program_id) do
+    case ProgramScheduleACL.get_program_start_date(program_id) do
+      {:ok, nil} -> {:ok, Date.utc_today()}
+      {:ok, date} -> {:ok, date}
+      {:error, _} -> {:ok, Date.utc_today()}
+    end
+  end
+
+  defp resolve_reference_date(%ParticipantPolicy{}, _program_id) do
+    {:ok, Date.utc_today()}
   end
 
   @doc """
   Returns the participant policy for a program.
   """
   def get_participant_policy(program_id) when is_binary(program_id) do
-    GetParticipantPolicy.execute(program_id)
+    case Repo.get_by(ParticipantPolicy, program_id: program_id) do
+      nil -> {:error, :not_found}
+      policy -> {:ok, policy}
+    end
   end
 
   @doc """

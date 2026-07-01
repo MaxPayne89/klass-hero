@@ -6,8 +6,8 @@
 
 alias KlassHero.Accounts.User
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPolicySchema
 alias KlassHero.Enrollment.EnrollmentPolicy
+alias KlassHero.Enrollment.ParticipantPolicy
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
@@ -52,7 +52,7 @@ Repo.delete_all(ProgramSessionSchema)
 # Enrollment + policies
 Repo.delete_all(EnrollmentSchema)
 Repo.delete_all(EnrollmentPolicy)
-Repo.delete_all(ParticipantPolicySchema)
+Repo.delete_all(ParticipantPolicy)
 
 # Family
 Repo.delete_all(ConsentSchema)
@@ -1011,7 +1011,7 @@ Enum.each(participant_policy_data, fn data ->
     %{program_id: program.id}
     |> Map.merge(Map.delete(data, :title))
 
-  ParticipantPolicySchema.changeset(attrs)
+  ParticipantPolicy.changeset(attrs)
   |> Repo.insert!()
 end)
 

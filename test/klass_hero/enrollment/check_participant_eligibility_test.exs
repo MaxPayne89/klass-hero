@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.Queries.CheckParticipantEligibilityTest do
+defmodule KlassHero.Enrollment.CheckParticipantEligibilityTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
