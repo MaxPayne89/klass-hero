@@ -13,15 +13,12 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL do
   the adapter layer since it's infrastructure, not domain logic.
   """
 
-  @behaviour KlassHero.Enrollment.Domain.Ports.ForResolvingProgramSchedule
-
   use KlassHero.Shared.Tracing
 
   import Ecto.Query, only: [from: 2]
 
   alias KlassHero.Repo
 
-  @impl true
   def get_program_start_date(program_id) do
     acl_span source: "enrollment", target: "program_catalog" do
       # Schemaless query: explicit :binary_id cast required (Ecto can't infer types without a schema).

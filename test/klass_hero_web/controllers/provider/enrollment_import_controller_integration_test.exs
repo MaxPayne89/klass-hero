@@ -3,7 +3,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerIntegrationTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
 
   @moduletag :integration
 
@@ -115,7 +115,7 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerIntegrationTest do
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
       assert json_response(conn, 201) == %{"created" => 5_000, "failed" => []}
-      assert KlassHero.Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 5_000
+      assert KlassHero.Repo.aggregate(BulkEnrollmentInvite, :count) == 5_000
     end
   end
 end

@@ -7,24 +7,16 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
   Idempotent: skips if invite is already registered or beyond.
   """
 
+  alias KlassHero.Enrollment
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
   require Logger
-
-  @invite_reader Application.compile_env!(
-                   :klass_hero,
-                   [:enrollment, :for_querying_bulk_enrollment_invites]
-                 )
-  @invite_repository Application.compile_env!(
-                       :klass_hero,
-                       [:enrollment, :for_storing_bulk_enrollment_invites]
-                     )
 
   @spec handle(DomainEvent.t()) :: :ok | {:error, term()}
   def handle(%DomainEvent{event_type: :invite_claimed} = event) do
     %{invite_id: invite_id} = event.payload
 
-    case @invite_reader.get_by_id(invite_id) do
+    case Enrollment.get_invite(invite_id) do
       {:error, :not_found} ->
         Logger.warning("[MarkInviteRegistered] Invite not found", invite_id: invite_id)
         :ok
@@ -40,7 +32,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
   end
 
   defp maybe_transition(%{status: :invite_sent} = invite) do
-    case @invite_repository.transition_status(invite, %{
+    case Enrollment.transition_invite(invite, %{
            status: :registered,
            registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
          }) do

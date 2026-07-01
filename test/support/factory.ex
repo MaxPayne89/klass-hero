@@ -28,8 +28,7 @@ defmodule KlassHero.Factory do
   use ExMachina.Ecto, repo: KlassHero.Repo
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
-  alias KlassHero.Enrollment.Domain.Models.Enrollment
+  alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildGuardian
   alias KlassHero.Family.Consent
@@ -1121,7 +1120,7 @@ defmodule KlassHero.Factory do
     program_schema = insert(:program_schema)
     {child_schema, parent_schema} = insert_child_with_guardian()
 
-    %EnrollmentSchema{
+    %Enrollment{
       id: Ecto.UUID.generate(),
       program_id: program_schema.id,
       child_id: child_schema.id,

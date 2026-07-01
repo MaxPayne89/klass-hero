@@ -5,9 +5,9 @@
 # Seeds every table so all features are testable out of the box.
 
 alias KlassHero.Accounts.User
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPolicySchema
+alias KlassHero.Enrollment.Enrollment
+alias KlassHero.Enrollment.EnrollmentPolicy
+alias KlassHero.Enrollment.ParticipantPolicy
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
@@ -50,9 +50,9 @@ Repo.delete_all(ParticipationRecordSchema)
 Repo.delete_all(ProgramSessionSchema)
 
 # Enrollment + policies
-Repo.delete_all(EnrollmentSchema)
-Repo.delete_all(EnrollmentPolicySchema)
-Repo.delete_all(ParticipantPolicySchema)
+Repo.delete_all(Enrollment)
+Repo.delete_all(EnrollmentPolicy)
+Repo.delete_all(ParticipantPolicy)
 
 # Family
 Repo.delete_all(ConsentSchema)
@@ -974,7 +974,7 @@ enrollment_policy_programs = [
 Enum.each(enrollment_policy_programs, fn {title, min, max} ->
   program = Map.fetch!(program_by_title, title)
 
-  EnrollmentPolicySchema.changeset(%{
+  EnrollmentPolicy.changeset(%{
     program_id: program.id,
     min_enrollment: min,
     max_enrollment: max
@@ -1011,7 +1011,7 @@ Enum.each(participant_policy_data, fn data ->
     %{program_id: program.id}
     |> Map.merge(Map.delete(data, :title))
 
-  ParticipantPolicySchema.changeset(attrs)
+  ParticipantPolicy.changeset(attrs)
   |> Repo.insert!()
 end)
 
@@ -1098,8 +1098,8 @@ enrollment_records =
 
     attrs = Map.merge(base_attrs, extra)
 
-    %EnrollmentSchema{}
-    |> EnrollmentSchema.create_changeset(attrs)
+    %Enrollment{}
+    |> Enrollment.create_changeset(attrs)
     |> Repo.insert!()
   end)
 

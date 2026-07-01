@@ -6,8 +6,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
   The guardian receives a link to complete enrollment for their child.
   """
 
-  @behaviour KlassHero.Enrollment.Domain.Ports.ForSendingInviteEmails
-
   use KlassHero.Shared.Interaction
 
   import Swoosh.Email
@@ -17,7 +15,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
 
   @from Application.compile_env!(:klass_hero, [:mailer_defaults, :from])
 
-  @impl true
   def send_invite(invite, program_name, invite_url) do
     email_interaction operation: :send_invite do
       # guardian_first_name is nil for imports without names; fall back to email for a valid recipient tuple.

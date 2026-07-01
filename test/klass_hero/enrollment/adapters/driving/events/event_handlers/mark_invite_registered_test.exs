@@ -3,9 +3,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteRegistered
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Repo
 
@@ -14,7 +13,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
     program = insert(:program_schema, provider_id: provider.id)
 
     {:ok, _} =
-      BulkEnrollmentInviteRepository.create_one(%{
+      KlassHero.Enrollment.create_invite(%{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Emma",
@@ -23,7 +22,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
         guardian_email: "parent@example.com"
       })
 
-    invite = Repo.one!(BulkEnrollmentInviteSchema)
+    invite = Repo.one!(BulkEnrollmentInvite)
 
     # Trigger: invite starts as "pending", must be "invite_sent" for this test
     # Why: MarkInviteRegistered expects the invite_sent -> registered transition
@@ -32,7 +31,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
     |> Ecto.Changeset.change(%{invite_token: "test-token", status: :invite_sent})
     |> Repo.update!()
 
-    %{invite: Repo.one!(BulkEnrollmentInviteSchema), provider: provider, program: program}
+    %{invite: Repo.one!(BulkEnrollmentInvite), provider: provider, program: program}
   end
 
   describe "handle/1" do
@@ -47,7 +46,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
 
       assert :ok = MarkInviteRegistered.handle(event)
 
-      updated = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :registered
       assert updated.registered_at != nil
     end
@@ -69,7 +68,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
       assert :ok = MarkInviteRegistered.handle(event)
 
       # Status remains registered (not changed)
-      updated = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :registered
     end
 
@@ -82,7 +81,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
       |> Repo.update!()
 
       # Move to enrolled
-      invite_refreshed = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      invite_refreshed = Repo.get!(BulkEnrollmentInvite, invite.id)
 
       invite_refreshed
       |> Ecto.Changeset.change(%{
@@ -100,7 +99,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
       assert :ok = MarkInviteRegistered.handle(event)
 
       # Status remains enrolled (not regressed)
-      updated = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :enrolled
     end
 

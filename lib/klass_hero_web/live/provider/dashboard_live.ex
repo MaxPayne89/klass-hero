@@ -752,14 +752,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
       {:error, :delete_failed} ->
         {:noreply, put_flash(socket, :error, gettext("Could not remove invite."))}
-
-      {:error, reason} ->
-        Logger.warning("[DashboardLive] Delete invite failed unexpectedly",
-          invite_id: invite_id,
-          reason: inspect(reason)
-        )
-
-        {:noreply, put_flash(socket, :error, gettext("Could not remove invite."))}
     end
   end
 
@@ -1873,10 +1865,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   defp safe_list_invites(program_id) do
-    case Enrollment.list_program_invites(program_id) do
-      {:ok, invites} -> Enum.filter(invites, &(&1.status == :pending))
-      _ -> []
-    end
+    {:ok, invites} = Enrollment.list_program_invites(program_id)
+    Enum.filter(invites, &(&1.status == :pending))
   end
 
   # Top 5 provider programs sorted by active-enrollment count desc.

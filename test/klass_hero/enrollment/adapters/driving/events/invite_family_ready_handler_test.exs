@@ -3,9 +3,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -14,7 +13,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
     program = insert(:program_schema, provider_id: provider.id)
 
     {:ok, _} =
-      BulkEnrollmentInviteRepository.create_one(%{
+      KlassHero.Enrollment.create_invite(%{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Emma",
@@ -23,7 +22,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
         guardian_email: "parent@example.com"
       })
 
-    invite = Repo.one!(BulkEnrollmentInviteSchema)
+    invite = Repo.one!(BulkEnrollmentInvite)
 
     # Trigger: invite starts as "pending", must be "registered" for this handler
     # Why: InviteFamilyReadyHandler expects registered -> enrolled transition
@@ -32,7 +31,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
     |> Ecto.Changeset.change(%{invite_token: "test-token", status: :registered})
     |> Repo.update!()
 
-    invite = Repo.one!(BulkEnrollmentInviteSchema)
+    invite = Repo.one!(BulkEnrollmentInvite)
 
     # Create parent + child for enrollment (must exist in DB for FK constraints)
     parent = insert(:parent_profile_schema)
@@ -73,7 +72,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
 
       assert :ok = InviteFamilyReadyHandler.handle_event(event)
 
-      updated = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :enrolled
       assert updated.enrolled_at != nil
       assert updated.enrollment_id != nil

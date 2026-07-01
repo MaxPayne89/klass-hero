@@ -11,7 +11,7 @@ defmodule KlassHeroWeb.InviteClaimController do
 
   alias KlassHero.Accounts
   alias KlassHero.Enrollment
-  alias KlassHero.Enrollment.Application.ClaimResult
+  alias KlassHero.Enrollment.ClaimResult
 
   require Logger
 

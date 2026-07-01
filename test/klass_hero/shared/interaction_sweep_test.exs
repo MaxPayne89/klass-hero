@@ -15,7 +15,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   # interaction events would otherwise arrive at this test's handler.
   use KlassHero.DataCase, async: false
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
@@ -38,17 +37,10 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   end
 
   describe "every DB context drives I/O through the Interaction envelope" do
-    # Accounts, Family, Program Catalog, and Participation have no probe here: the
-    # conventional-Phoenix flatten replaced the per-adapter Interaction envelope with the
+    # Accounts, Family, Program Catalog, Participation, and Enrollment have no probe here:
+    # the conventional-Phoenix flatten replaced the per-adapter Interaction envelope with the
     # seam-level `context_span` macro, which emits OTel spans (not the
     # `[:klass_hero, :interaction, :stop]` event this sweep watches).
-
-    test "enrollment — EnrollmentPolicyRepository.count_active_enrollments/1" do
-      assert EnrollmentPolicyRepository.count_active_enrollments(Ecto.UUID.generate()) == 0
-
-      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :count_active_enrollments, status: :ok}}
-    end
 
     test "provider (greenfield read model) — SessionStatsRepository.list_for_provider/1" do
       assert SessionStatsRepository.list_for_provider(Ecto.UUID.generate()) == []

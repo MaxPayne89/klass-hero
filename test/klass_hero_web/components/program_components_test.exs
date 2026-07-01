@@ -3,7 +3,7 @@ defmodule KlassHeroWeb.ProgramComponentsTest do
 
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Enrollment.Domain.Models.ParticipantPolicy
+  alias KlassHero.Enrollment.ParticipantPolicy
   alias KlassHeroWeb.ProgramComponents
 
   describe "restriction_info/1" do

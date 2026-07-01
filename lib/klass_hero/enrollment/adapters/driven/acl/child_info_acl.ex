@@ -8,13 +8,10 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ChildInfoACL do
   needed for roster display into plain maps.
   """
 
-  @behaviour KlassHero.Enrollment.Domain.Ports.ForResolvingChildInfo
-
   use KlassHero.Shared.Tracing
 
   alias KlassHero.Family
 
-  @impl true
   def get_children_by_ids([]), do: []
 
   def get_children_by_ids(child_ids) when is_list(child_ids) do

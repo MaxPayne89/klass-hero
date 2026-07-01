@@ -8,26 +8,15 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
 
   use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
 
-  alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
+  alias KlassHero.Enrollment
+  alias KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
 
   require Logger
 
-  @invite_reader Application.compile_env!(:klass_hero, [
-                   :enrollment,
-                   :for_querying_bulk_enrollment_invites
-                 ])
-  @invite_repository Application.compile_env!(:klass_hero, [
-                       :enrollment,
-                       :for_storing_bulk_enrollment_invites
-                     ])
-  @invite_notifier Application.compile_env!(:klass_hero, [
-                     :enrollment,
-                     :for_sending_invite_emails
-                   ])
-
   @impl true
   def execute(%Oban.Job{args: %{"invite_id" => invite_id, "program_name" => program_name}}) do
-    case @invite_reader.get_by_id(invite_id) do
+    case Enrollment.get_invite(invite_id) do
       {:error, :not_found} ->
         Logger.warning("[SendInviteEmailWorker] Invite not found", invite_id: invite_id)
         :ok
@@ -53,12 +42,12 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
   defp send_and_transition(invite, program_name) do
     invite_url = "#{base_url()}/invites/#{invite.invite_token}"
 
-    case @invite_notifier.send_invite(invite, program_name, invite_url) do
+    case InviteEmailNotifier.send_invite(invite, program_name, invite_url) do
       {:ok, _email} ->
         now = DateTime.utc_now() |> DateTime.truncate(:second)
 
         # Email already delivered — return :ok even if status transition fails to prevent Oban retry/duplicate send.
-        case @invite_repository.transition_status(invite, %{
+        case Enrollment.transition_invite(invite, %{
                status: :invite_sent,
                invite_sent_at: now
              }) do
@@ -81,7 +70,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
           reason: inspect(reason)
         )
 
-        @invite_repository.transition_status(invite, %{
+        Enrollment.transition_invite(invite, %{
           status: :failed,
           error_details: "Email delivery failed: #{inspect(reason)}"
         })
