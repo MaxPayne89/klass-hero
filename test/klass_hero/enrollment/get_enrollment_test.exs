@@ -1,16 +1,15 @@
-defmodule KlassHero.Enrollment.Application.Queries.GetEnrollmentTest do
+defmodule KlassHero.Enrollment.GetEnrollmentTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Application.Queries.GetEnrollment
-  alias KlassHero.Enrollment.Domain.Models.Enrollment
+  alias KlassHero.Enrollment.Enrollment
 
   describe "execute/1" do
     test "returns enrollment when found" do
       enrollment_schema = insert(:enrollment_schema)
 
-      assert {:ok, enrollment} = GetEnrollment.execute(enrollment_schema.id)
+      assert {:ok, enrollment} = KlassHero.Enrollment.get_enrollment(enrollment_schema.id)
       assert %Enrollment{} = enrollment
       assert enrollment.id == to_string(enrollment_schema.id)
     end
@@ -25,7 +24,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetEnrollmentTest do
           special_requirements: "Needs wheelchair access"
         )
 
-      {:ok, enrollment} = GetEnrollment.execute(enrollment_schema.id)
+      {:ok, enrollment} = KlassHero.Enrollment.get_enrollment(enrollment_schema.id)
 
       assert enrollment.status == :confirmed
       assert enrollment.subtotal == Decimal.new("150.00")
@@ -37,14 +36,14 @@ defmodule KlassHero.Enrollment.Application.Queries.GetEnrollmentTest do
     test "returns not_found when enrollment does not exist" do
       non_existent_id = Ecto.UUID.generate()
 
-      assert {:error, :not_found} = GetEnrollment.execute(non_existent_id)
+      assert {:error, :not_found} = KlassHero.Enrollment.get_enrollment(non_existent_id)
     end
 
     test "converts status from string to atom" do
       for status <- ["pending", "confirmed", "completed", "cancelled"] do
         enrollment_schema = insert(:enrollment_schema, status: status)
 
-        {:ok, enrollment} = GetEnrollment.execute(enrollment_schema.id)
+        {:ok, enrollment} = KlassHero.Enrollment.get_enrollment(enrollment_schema.id)
 
         assert enrollment.status == String.to_atom(status)
       end
@@ -53,7 +52,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetEnrollmentTest do
     test "returns string IDs" do
       enrollment_schema = insert(:enrollment_schema)
 
-      {:ok, enrollment} = GetEnrollment.execute(enrollment_schema.id)
+      {:ok, enrollment} = KlassHero.Enrollment.get_enrollment(enrollment_schema.id)
 
       assert is_binary(enrollment.id)
       assert is_binary(enrollment.program_id)

@@ -1,9 +1,7 @@
-defmodule KlassHero.Enrollment.Application.Queries.CheckEnrollmentTest do
+defmodule KlassHero.Enrollment.CheckEnrollmentTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
-
-  alias KlassHero.Enrollment.Application.Queries.CheckEnrollment
 
   describe "execute/2" do
     test "returns true for a pending enrollment" do
@@ -17,7 +15,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckEnrollmentTest do
         status: "pending"
       )
 
-      assert CheckEnrollment.execute(program.id, parent.identity_id) == true
+      assert KlassHero.Enrollment.enrolled?(program.id, parent.identity_id) == true
     end
 
     test "returns true for a confirmed enrollment" do
@@ -31,7 +29,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckEnrollmentTest do
         status: "confirmed"
       )
 
-      assert CheckEnrollment.execute(program.id, parent.identity_id) == true
+      assert KlassHero.Enrollment.enrolled?(program.id, parent.identity_id) == true
     end
 
     test "returns false for a cancelled enrollment" do
@@ -45,7 +43,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckEnrollmentTest do
         status: "cancelled"
       )
 
-      assert CheckEnrollment.execute(program.id, parent.identity_id) == false
+      assert KlassHero.Enrollment.enrolled?(program.id, parent.identity_id) == false
     end
 
     test "returns false for a completed enrollment" do
@@ -59,14 +57,14 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckEnrollmentTest do
         status: "completed"
       )
 
-      assert CheckEnrollment.execute(program.id, parent.identity_id) == false
+      assert KlassHero.Enrollment.enrolled?(program.id, parent.identity_id) == false
     end
 
     test "returns false when no enrollment exists for the identity" do
       program = insert(:program_schema)
       unknown_identity_id = Ecto.UUID.generate()
 
-      assert CheckEnrollment.execute(program.id, unknown_identity_id) == false
+      assert KlassHero.Enrollment.enrolled?(program.id, unknown_identity_id) == false
     end
 
     test "returns false when enrollment exists for a different program" do
@@ -81,7 +79,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CheckEnrollmentTest do
         status: "confirmed"
       )
 
-      assert CheckEnrollment.execute(program_b.id, parent.identity_id) == false
+      assert KlassHero.Enrollment.enrolled?(program_b.id, parent.identity_id) == false
     end
   end
 end

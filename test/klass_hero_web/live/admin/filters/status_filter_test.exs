@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Admin.Filters.StatusFilterTest do
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
+  alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Repo
   alias KlassHeroWeb.Admin.Filters.StatusFilter
 
@@ -27,7 +27,7 @@ defmodule KlassHeroWeb.Admin.Filters.StatusFilterTest do
     ]
 
     test "returns the union of selected status partitions" do
-      base = from(e in EnrollmentSchema)
+      base = from(e in Enrollment)
 
       for {keys, expected_statuses} <- @partitions do
         statuses =

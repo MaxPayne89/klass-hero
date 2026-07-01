@@ -1,9 +1,7 @@
-defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest do
+defmodule KlassHero.Enrollment.ListEnrolledIdentityIdsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
-
-  alias KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIds
 
   describe "execute/1" do
     test "returns identity_ids of actively enrolled parents" do
@@ -17,7 +15,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest d
         status: "confirmed"
       )
 
-      ids = ListEnrolledIdentityIds.execute(program.id)
+      ids = KlassHero.Enrollment.list_enrolled_identity_ids(program.id)
 
       assert parent.identity_id in ids
       assert length(ids) == 1
@@ -34,7 +32,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest d
         status: "pending"
       )
 
-      ids = ListEnrolledIdentityIds.execute(program.id)
+      ids = KlassHero.Enrollment.list_enrolled_identity_ids(program.id)
 
       assert parent.identity_id in ids
       assert length(ids) == 1
@@ -43,7 +41,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest d
     test "returns empty list when no active enrollments exist" do
       program = insert(:program_schema)
 
-      assert ListEnrolledIdentityIds.execute(program.id) == []
+      assert KlassHero.Enrollment.list_enrolled_identity_ids(program.id) == []
     end
 
     test "excludes cancelled enrollments" do
@@ -57,7 +55,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest d
         status: "cancelled"
       )
 
-      ids = ListEnrolledIdentityIds.execute(program.id)
+      ids = KlassHero.Enrollment.list_enrolled_identity_ids(program.id)
 
       refute parent.identity_id in ids
     end
@@ -73,7 +71,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest d
         status: "completed"
       )
 
-      ids = ListEnrolledIdentityIds.execute(program.id)
+      ids = KlassHero.Enrollment.list_enrolled_identity_ids(program.id)
 
       refute parent.identity_id in ids
     end
@@ -97,7 +95,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest d
         status: "confirmed"
       )
 
-      ids = ListEnrolledIdentityIds.execute(program.id)
+      ids = KlassHero.Enrollment.list_enrolled_identity_ids(program.id)
 
       assert parent.identity_id in ids
       assert length(ids) == 1
@@ -115,7 +113,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListEnrolledIdentityIdsTest d
         status: "confirmed"
       )
 
-      ids = ListEnrolledIdentityIds.execute(program_b.id)
+      ids = KlassHero.Enrollment.list_enrolled_identity_ids(program_b.id)
 
       refute parent.identity_id in ids
     end

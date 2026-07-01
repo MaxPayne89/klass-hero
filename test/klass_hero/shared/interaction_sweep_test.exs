@@ -15,7 +15,7 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   # interaction events would otherwise arrive at this test's handler.
   use KlassHero.DataCase, async: false
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentRepository
+  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
@@ -43,11 +43,12 @@ defmodule KlassHero.Shared.InteractionSweepTest do
     # seam-level `context_span` macro, which emits OTel spans (not the
     # `[:klass_hero, :interaction, :stop]` event this sweep watches).
 
-    test "enrollment — EnrollmentRepository.list_by_parent/1" do
-      assert EnrollmentRepository.list_by_parent(Ecto.UUID.generate()) == []
+    test "enrollment — BulkEnrollmentInviteRepository.list_existing_keys_for_programs/1" do
+      assert BulkEnrollmentInviteRepository.list_existing_keys_for_programs([Ecto.UUID.generate()]) ==
+               MapSet.new()
 
       assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :list_by_parent, status: :ok}}
+                      %{io_kind: :db, operation: :list_existing_keys_for_programs, status: :ok}}
     end
 
     test "provider (greenfield read model) — SessionStatsRepository.list_for_provider/1" do

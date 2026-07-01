@@ -8,7 +8,7 @@ defmodule KlassHero.Family.DeleteChildTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
+  alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Family
   alias KlassHero.Family.Consent
   alias KlassHero.Participation.BehavioralNote
@@ -54,7 +54,7 @@ defmodule KlassHero.Family.DeleteChildTest do
       assert :ok = Family.delete_child(child.id)
 
       # Enrollment should be cancelled, not deleted; child_id nullified by FK nilify_all
-      updated = Repo.get(EnrollmentSchema, enrollment.id)
+      updated = Repo.get(Enrollment, enrollment.id)
       assert updated.status == :cancelled
       assert is_nil(updated.child_id)
     end

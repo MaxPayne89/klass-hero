@@ -15,10 +15,10 @@ defmodule KlassHeroWeb.Admin.BookingLive do
   # credo:disable-for-lines:10 Credo.Check.Design.AliasUsage
   use Backpex.LiveResource,
     adapter_config: [
-      schema: KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema,
+      schema: KlassHero.Enrollment.Enrollment,
       repo: KlassHero.Repo,
-      update_changeset: &KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema.admin_changeset/3,
-      create_changeset: &KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema.admin_changeset/3
+      update_changeset: &KlassHero.Enrollment.Enrollment.admin_changeset/3,
+      create_changeset: &KlassHero.Enrollment.Enrollment.admin_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
     init_order: %{by: :enrolled_at, direction: :desc}

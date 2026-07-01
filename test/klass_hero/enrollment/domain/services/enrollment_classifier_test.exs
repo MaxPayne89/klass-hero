@@ -1,8 +1,8 @@
 defmodule KlassHero.Enrollment.Domain.Services.EnrollmentClassifierTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Enrollment.Domain.Models.Enrollment
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
+  alias KlassHero.Enrollment.Enrollment
   alias KlassHero.ProgramCatalog.Program
 
   @today ~D[2026-03-15]

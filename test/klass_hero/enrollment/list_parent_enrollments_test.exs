@@ -1,10 +1,9 @@
-defmodule KlassHero.Enrollment.Application.Queries.ListParentEnrollmentsTest do
+defmodule KlassHero.Enrollment.ListParentEnrollmentsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Application.Queries.ListParentEnrollments
-  alias KlassHero.Enrollment.Domain.Models.Enrollment
+  alias KlassHero.Enrollment.Enrollment
 
   describe "execute/1" do
     test "returns all enrollments for parent" do
@@ -19,7 +18,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListParentEnrollmentsTest do
 
       _other = insert(:enrollment_schema)
 
-      enrollments = ListParentEnrollments.execute(parent.id)
+      enrollments = KlassHero.Enrollment.list_parent_enrollments(parent.id)
 
       assert length(enrollments) == 2
       ids = Enum.map(enrollments, & &1.id)
@@ -30,7 +29,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListParentEnrollmentsTest do
     test "returns domain entities" do
       enrollment_schema = insert(:enrollment_schema)
 
-      [enrollment] = ListParentEnrollments.execute(enrollment_schema.parent_id)
+      [enrollment] = KlassHero.Enrollment.list_parent_enrollments(enrollment_schema.parent_id)
 
       assert %Enrollment{} = enrollment
       assert is_atom(enrollment.status)
@@ -64,7 +63,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListParentEnrollmentsTest do
           status: "completed"
         )
 
-      enrollments = ListParentEnrollments.execute(parent.id)
+      enrollments = KlassHero.Enrollment.list_parent_enrollments(parent.id)
 
       ids = Enum.map(enrollments, & &1.id)
       assert ids == [to_string(recent.id), to_string(middle.id), to_string(old.id)]
@@ -73,11 +72,11 @@ defmodule KlassHero.Enrollment.Application.Queries.ListParentEnrollmentsTest do
     test "returns empty list when no enrollments" do
       parent = insert(:parent_profile_schema)
 
-      assert ListParentEnrollments.execute(parent.id) == []
+      assert KlassHero.Enrollment.list_parent_enrollments(parent.id) == []
     end
 
     test "returns empty list for non-existent parent" do
-      assert ListParentEnrollments.execute(Ecto.UUID.generate()) == []
+      assert KlassHero.Enrollment.list_parent_enrollments(Ecto.UUID.generate()) == []
     end
 
     test "includes all enrollment statuses" do
@@ -89,7 +88,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListParentEnrollmentsTest do
       insert(:enrollment_schema, parent_id: parent.id, child_id: child.id, status: "completed")
       insert(:enrollment_schema, parent_id: parent.id, child_id: child.id, status: "cancelled")
 
-      enrollments = ListParentEnrollments.execute(parent.id)
+      enrollments = KlassHero.Enrollment.list_parent_enrollments(parent.id)
 
       assert length(enrollments) == 4
       statuses = Enum.map(enrollments, & &1.status)

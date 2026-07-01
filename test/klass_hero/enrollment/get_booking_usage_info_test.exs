@@ -1,15 +1,13 @@
-defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
+defmodule KlassHero.Enrollment.GetBookingUsageInfoTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
-
-  alias KlassHero.Enrollment.Application.Queries.GetBookingUsageInfo
 
   describe "execute/1" do
     test "returns booking info for explorer tier parent with no bookings" do
       parent = insert(:parent_profile_schema, subscription_tier: "explorer")
 
-      assert {:ok, info} = GetBookingUsageInfo.execute(parent.identity_id)
+      assert {:ok, info} = KlassHero.Enrollment.get_booking_usage_info(parent.identity_id)
 
       assert info.parent_id == parent.id
       assert info.tier == :explorer
@@ -21,7 +19,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
     test "returns booking info for active tier parent (unlimited)" do
       parent = insert(:parent_profile_schema, subscription_tier: "active")
 
-      assert {:ok, info} = GetBookingUsageInfo.execute(parent.identity_id)
+      assert {:ok, info} = KlassHero.Enrollment.get_booking_usage_info(parent.identity_id)
 
       assert info.parent_id == parent.id
       assert info.tier == :active
@@ -33,7 +31,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
     test "returns :no_parent_profile when parent doesn't exist" do
       non_existent_identity_id = Ecto.UUID.generate()
 
-      assert {:error, :no_parent_profile} = GetBookingUsageInfo.execute(non_existent_identity_id)
+      assert {:error, :no_parent_profile} = KlassHero.Enrollment.get_booking_usage_info(non_existent_identity_id)
     end
 
     test "correctly calculates remaining bookings for explorer tier" do
@@ -49,7 +47,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
         enrolled_at: DateTime.utc_now()
       )
 
-      assert {:ok, info} = GetBookingUsageInfo.execute(parent.identity_id)
+      assert {:ok, info} = KlassHero.Enrollment.get_booking_usage_info(parent.identity_id)
 
       assert info.cap == 2
       assert info.used == 1
@@ -78,7 +76,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
         enrolled_at: DateTime.utc_now()
       )
 
-      assert {:ok, info} = GetBookingUsageInfo.execute(parent.identity_id)
+      assert {:ok, info} = KlassHero.Enrollment.get_booking_usage_info(parent.identity_id)
 
       assert info.cap == 2
       assert info.used == 2
@@ -101,7 +99,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
         )
       end
 
-      assert {:ok, info} = GetBookingUsageInfo.execute(parent.identity_id)
+      assert {:ok, info} = KlassHero.Enrollment.get_booking_usage_info(parent.identity_id)
 
       assert info.tier == :active
       assert info.cap == :unlimited
@@ -131,7 +129,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
         enrolled_at: DateTime.utc_now()
       )
 
-      assert {:ok, info} = GetBookingUsageInfo.execute(parent.identity_id)
+      assert {:ok, info} = KlassHero.Enrollment.get_booking_usage_info(parent.identity_id)
 
       assert info.used == 1
       assert info.remaining == 1
@@ -141,7 +139,7 @@ defmodule KlassHero.Enrollment.Application.Queries.GetBookingUsageInfoTest do
       # The schema defaults subscription_tier to "explorer", so we use the factory default
       parent = insert(:parent_profile_schema)
 
-      assert {:ok, info} = GetBookingUsageInfo.execute(parent.identity_id)
+      assert {:ok, info} = KlassHero.Enrollment.get_booking_usage_info(parent.identity_id)
 
       assert info.tier == :explorer
       assert info.cap == 2

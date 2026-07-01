@@ -5,7 +5,7 @@
 # Seeds every table so all features are testable out of the box.
 
 alias KlassHero.Accounts.User
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
+alias KlassHero.Enrollment.Enrollment
 alias KlassHero.Enrollment.EnrollmentPolicy
 alias KlassHero.Enrollment.ParticipantPolicy
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
@@ -50,7 +50,7 @@ Repo.delete_all(ParticipationRecordSchema)
 Repo.delete_all(ProgramSessionSchema)
 
 # Enrollment + policies
-Repo.delete_all(EnrollmentSchema)
+Repo.delete_all(Enrollment)
 Repo.delete_all(EnrollmentPolicy)
 Repo.delete_all(ParticipantPolicy)
 
@@ -1098,8 +1098,8 @@ enrollment_records =
 
     attrs = Map.merge(base_attrs, extra)
 
-    %EnrollmentSchema{}
-    |> EnrollmentSchema.create_changeset(attrs)
+    %Enrollment{}
+    |> Enrollment.create_changeset(attrs)
     |> Repo.insert!()
   end)
 

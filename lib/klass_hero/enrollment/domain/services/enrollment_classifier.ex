@@ -19,7 +19,7 @@ defmodule KlassHero.Enrollment.Domain.Services.EnrollmentClassifier do
   - Expired: descending by program `end_date` (nil pushed to end)
   """
 
-  alias KlassHero.Enrollment.Domain.Models.Enrollment
+  alias KlassHero.Enrollment.Enrollment
   alias KlassHero.ProgramCatalog.Program
 
   @type enrollment_program :: {Enrollment.t(), Program.t()}

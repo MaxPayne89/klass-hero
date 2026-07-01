@@ -1,9 +1,7 @@
-defmodule KlassHero.Enrollment.Application.Queries.CountMonthlyBookingsTest do
+defmodule KlassHero.Enrollment.CountMonthlyBookingsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
-
-  alias KlassHero.Enrollment.Application.Queries.CountMonthlyBookings
 
   describe "execute/2" do
     test "returns count for current month by default" do
@@ -19,13 +17,13 @@ defmodule KlassHero.Enrollment.Application.Queries.CountMonthlyBookingsTest do
         enrolled_at: DateTime.utc_now()
       )
 
-      assert CountMonthlyBookings.execute(parent.id) == 1
+      assert KlassHero.Enrollment.count_monthly_bookings(parent.id) == 1
     end
 
     test "returns 0 for parent with no bookings" do
       parent = insert(:parent_profile_schema)
 
-      assert CountMonthlyBookings.execute(parent.id) == 0
+      assert KlassHero.Enrollment.count_monthly_bookings(parent.id) == 0
     end
 
     test "accepts optional month parameter" do
@@ -45,10 +43,10 @@ defmodule KlassHero.Enrollment.Application.Queries.CountMonthlyBookingsTest do
       )
 
       # Current month should show 0
-      assert CountMonthlyBookings.execute(parent.id) == 0
+      assert KlassHero.Enrollment.count_monthly_bookings(parent.id) == 0
 
       # Last month should show 1
-      assert CountMonthlyBookings.execute(parent.id, last_month) == 1
+      assert KlassHero.Enrollment.count_monthly_bookings(parent.id, last_month) == 1
     end
 
     test "only counts active enrollments (pending, confirmed)" do
@@ -93,7 +91,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CountMonthlyBookingsTest do
       )
 
       # Only pending and confirmed should count
-      assert CountMonthlyBookings.execute(parent.id) == 2
+      assert KlassHero.Enrollment.count_monthly_bookings(parent.id) == 2
     end
 
     test "counts multiple children's enrollments for same parent" do
@@ -120,7 +118,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CountMonthlyBookingsTest do
         enrolled_at: DateTime.utc_now()
       )
 
-      assert CountMonthlyBookings.execute(parent.id) == 2
+      assert KlassHero.Enrollment.count_monthly_bookings(parent.id) == 2
     end
 
     test "does not count enrollments from other parents" do
@@ -148,8 +146,8 @@ defmodule KlassHero.Enrollment.Application.Queries.CountMonthlyBookingsTest do
         enrolled_at: DateTime.utc_now()
       )
 
-      assert CountMonthlyBookings.execute(parent1.id) == 1
-      assert CountMonthlyBookings.execute(parent2.id) == 1
+      assert KlassHero.Enrollment.count_monthly_bookings(parent1.id) == 1
+      assert KlassHero.Enrollment.count_monthly_bookings(parent2.id) == 1
     end
 
     test "correctly handles month boundaries" do
@@ -179,7 +177,7 @@ defmodule KlassHero.Enrollment.Application.Queries.CountMonthlyBookingsTest do
         enrolled_at: DateTime.new!(last_of_month, ~T[23:59:59], "Etc/UTC")
       )
 
-      assert CountMonthlyBookings.execute(parent.id) == 2
+      assert KlassHero.Enrollment.count_monthly_bookings(parent.id) == 2
     end
   end
 end

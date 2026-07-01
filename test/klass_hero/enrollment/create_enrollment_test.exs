@@ -1,10 +1,9 @@
-defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
+defmodule KlassHero.Enrollment.CreateEnrollmentTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Application.Commands.CreateEnrollment
-  alias KlassHero.Enrollment.Domain.Models.Enrollment
+  alias KlassHero.Enrollment.Enrollment
 
   describe "execute/1" do
     test "creates enrollment with valid params" do
@@ -17,7 +16,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         parent_id: parent.id
       }
 
-      assert {:ok, enrollment} = CreateEnrollment.execute(params)
+      assert {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
       assert %Enrollment{} = enrollment
       assert enrollment.program_id == program.id
       assert enrollment.child_id == child.id
@@ -35,7 +34,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         parent_id: parent.id
       }
 
-      {:ok, enrollment} = CreateEnrollment.execute(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
 
       assert enrollment.status == :pending
     end
@@ -51,7 +50,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
       }
 
       before = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, enrollment} = CreateEnrollment.execute(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
       after_time = DateTime.utc_now() |> DateTime.add(1, :second)
 
       assert DateTime.compare(enrollment.enrolled_at, before) in [:gt, :eq]
@@ -72,7 +71,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         total_amount: Decimal.new("121.00")
       }
 
-      {:ok, enrollment} = CreateEnrollment.execute(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
 
       assert enrollment.subtotal == Decimal.new("100.00")
       assert enrollment.vat_amount == Decimal.new("19.00")
@@ -91,7 +90,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         payment_method: "transfer"
       }
 
-      {:ok, enrollment} = CreateEnrollment.execute(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
 
       assert enrollment.payment_method == "transfer"
     end
@@ -107,7 +106,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         special_requirements: "Allergic to peanuts"
       }
 
-      {:ok, enrollment} = CreateEnrollment.execute(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
 
       assert enrollment.special_requirements == "Allergic to peanuts"
     end
@@ -121,7 +120,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         parent_id: existing.parent_id
       }
 
-      assert {:error, :duplicate_resource} = CreateEnrollment.execute(params)
+      assert {:error, :duplicate_resource} = KlassHero.Enrollment.create_enrollment(params)
     end
 
     test "allows new enrollment after previous one cancelled" do
@@ -133,14 +132,14 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         parent_id: cancelled.parent_id
       }
 
-      assert {:ok, enrollment} = CreateEnrollment.execute(params)
+      assert {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
       assert enrollment.status == :pending
     end
 
     test "returns changeset error for missing required fields" do
       params = %{}
 
-      assert {:error, %Ecto.Changeset{}} = CreateEnrollment.execute(params)
+      assert {:error, %Ecto.Changeset{}} = KlassHero.Enrollment.create_enrollment(params)
     end
 
     test "accepts custom enrolled_at" do
@@ -155,7 +154,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         enrolled_at: enrolled_at
       }
 
-      {:ok, enrollment} = CreateEnrollment.execute(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
 
       assert enrollment.enrolled_at == enrolled_at
     end
@@ -171,7 +170,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         status: "confirmed"
       }
 
-      {:ok, enrollment} = CreateEnrollment.execute(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
 
       assert enrollment.status == :confirmed
     end
@@ -198,7 +197,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         })
 
       result =
-        CreateEnrollment.execute(%{
+        KlassHero.Enrollment.create_enrollment(%{
           identity_id: parent.identity_id,
           program_id: program.id,
           child_id: child.id,
@@ -231,7 +230,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         })
 
       assert {:ok, enrollment} =
-               CreateEnrollment.execute(%{
+               KlassHero.Enrollment.create_enrollment(%{
                  identity_id: parent.identity_id,
                  program_id: program.id,
                  child_id: child.id,
@@ -248,7 +247,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
       {child, _parent} = insert_child_with_guardian(parent: parent)
 
       assert {:ok, _enrollment} =
-               CreateEnrollment.execute(%{
+               KlassHero.Enrollment.create_enrollment(%{
                  identity_id: parent.identity_id,
                  program_id: program.id,
                  child_id: child.id,
@@ -268,7 +267,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
         })
 
       result =
-        CreateEnrollment.execute(%{
+        KlassHero.Enrollment.create_enrollment(%{
           identity_id: parent.identity_id,
           program_id: program.id,
           child_id: Ecto.UUID.generate(),
@@ -288,14 +287,14 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
       KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 1})
 
       {:ok, _} =
-        CreateEnrollment.execute(%{
+        KlassHero.Enrollment.create_enrollment(%{
           program_id: program.id,
           child_id: child1.id,
           parent_id: parent1.id
         })
 
       assert {:error, :program_full} =
-               CreateEnrollment.execute(%{
+               KlassHero.Enrollment.create_enrollment(%{
                  program_id: program.id,
                  child_id: child2.id,
                  parent_id: parent2.id
@@ -307,7 +306,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
       {child, parent} = insert_child_with_guardian()
 
       assert {:ok, _} =
-               CreateEnrollment.execute(%{
+               KlassHero.Enrollment.create_enrollment(%{
                  program_id: program.id,
                  child_id: child.id,
                  parent_id: parent.id
@@ -321,7 +320,7 @@ defmodule KlassHero.Enrollment.Application.Commands.CreateEnrollmentTest do
       KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 10})
 
       assert {:ok, _} =
-               CreateEnrollment.execute(%{
+               KlassHero.Enrollment.create_enrollment(%{
                  program_id: program.id,
                  child_id: child.id,
                  parent_id: parent.id

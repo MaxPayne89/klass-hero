@@ -1,13 +1,11 @@
-defmodule KlassHero.Enrollment.Application.Queries.ListPendingEnrollmentsForProviderTest do
+defmodule KlassHero.Enrollment.ListPendingEnrollmentsForProviderTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Application.Queries.ListPendingEnrollmentsForProvider
-
   describe "execute/1" do
     test "returns [] for empty program_ids" do
-      assert ListPendingEnrollmentsForProvider.execute([]) == []
+      assert KlassHero.Enrollment.list_pending_enrollments_for_provider([]) == []
     end
 
     test "returns enriched entries for pending enrollments in the given programs" do
@@ -23,7 +21,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListPendingEnrollmentsForProv
           status: :pending
         )
 
-      [entry] = ListPendingEnrollmentsForProvider.execute([program.id])
+      [entry] = KlassHero.Enrollment.list_pending_enrollments_for_provider([program.id])
 
       assert entry.enrollment_id == enrollment.id
       assert entry.program_id == program.id
@@ -46,7 +44,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListPendingEnrollmentsForProv
       insert(:enrollment_schema, program_id: program.id, child_id: child2.id, parent_id: parent2.id, status: :cancelled)
       insert(:enrollment_schema, program_id: program.id, child_id: child3.id, parent_id: parent3.id, status: :completed)
 
-      assert ListPendingEnrollmentsForProvider.execute([program.id]) == []
+      assert KlassHero.Enrollment.list_pending_enrollments_for_provider([program.id]) == []
     end
 
     test "gracefully handles missing child and program metadata" do
@@ -76,7 +74,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListPendingEnrollmentsForProv
       KlassHero.Repo.query!("DELETE FROM programs WHERE id = $1", [program_id_bin])
       KlassHero.Repo.query!("SET session_replication_role = 'origin'")
 
-      [entry] = ListPendingEnrollmentsForProvider.execute([program_id])
+      [entry] = KlassHero.Enrollment.list_pending_enrollments_for_provider([program_id])
 
       assert entry.enrollment_id == enrollment.id
       assert entry.child_name == "Unknown"

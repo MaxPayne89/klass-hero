@@ -1,11 +1,10 @@
-defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
+defmodule KlassHero.Enrollment.ConfirmEnrollmentTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.EventTestHelper
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Application.Commands.ConfirmEnrollment
-  alias KlassHero.Enrollment.Domain.Models.Enrollment
+  alias KlassHero.Enrollment.Enrollment
 
   describe "execute/1" do
     test "confirms a pending enrollment owned by the provider" do
@@ -14,7 +13,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       schema = insert(:enrollment_schema, program_id: program.id, status: :pending)
 
       assert {:ok, enrollment} =
-               ConfirmEnrollment.execute(%{enrollment_id: schema.id, provider_id: provider.id})
+               KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: provider.id})
 
       assert %Enrollment{status: :confirmed} = enrollment
       assert enrollment.confirmed_at != nil
@@ -27,7 +26,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       schema = insert(:enrollment_schema, program_id: program.id, status: :pending)
 
       assert {:error, :unauthorized} =
-               ConfirmEnrollment.execute(%{enrollment_id: schema.id, provider_id: other.id})
+               KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: other.id})
 
       assert Enrollment.pending?(reload_enrollment(schema.id))
     end
@@ -36,7 +35,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       provider = insert(:provider_profile_schema)
 
       assert {:error, :not_found} =
-               ConfirmEnrollment.execute(%{
+               KlassHero.Enrollment.confirm_enrollment(%{
                  enrollment_id: Ecto.UUID.generate(),
                  provider_id: provider.id
                })
@@ -46,7 +45,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       provider = insert(:provider_profile_schema)
 
       assert {:error, :not_found} =
-               ConfirmEnrollment.execute(%{enrollment_id: "not-a-uuid", provider_id: provider.id})
+               KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: "not-a-uuid", provider_id: provider.id})
     end
 
     test "returns :invalid_status_transition when already confirmed" do
@@ -55,7 +54,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       schema = insert(:enrollment_schema, program_id: program.id, status: :confirmed)
 
       assert {:error, :invalid_status_transition} =
-               ConfirmEnrollment.execute(%{enrollment_id: schema.id, provider_id: provider.id})
+               KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: provider.id})
     end
 
     test "returns :invalid_status_transition when cancelled" do
@@ -64,7 +63,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       schema = insert(:enrollment_schema, program_id: program.id, status: :cancelled)
 
       assert {:error, :invalid_status_transition} =
-               ConfirmEnrollment.execute(%{enrollment_id: schema.id, provider_id: provider.id})
+               KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: provider.id})
     end
 
     test "publishes an :enrollment_confirmed event on success with provider-scoped payload" do
@@ -75,7 +74,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ConfirmEnrollmentTest do
       schema = insert(:enrollment_schema, program_id: program.id, status: :pending)
 
       assert {:ok, _} =
-               ConfirmEnrollment.execute(%{enrollment_id: schema.id, provider_id: provider.id})
+               KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: provider.id})
 
       event =
         assert_event_published(:enrollment_confirmed, %{

@@ -1,9 +1,7 @@
-defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollmentsTest do
+defmodule KlassHero.Enrollment.ListProgramEnrollmentsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
-
-  alias KlassHero.Enrollment.Application.Queries.ListProgramEnrollments
 
   describe "execute/1" do
     test "returns enriched roster entries with child names" do
@@ -18,7 +16,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollmentsTest do
         enrolled_at: ~U[2025-06-15 10:00:00Z]
       )
 
-      result = ListProgramEnrollments.execute(program.id)
+      result = KlassHero.Enrollment.list_program_enrollments(program.id)
 
       assert length(result) == 1
       entry = hd(result)
@@ -48,7 +46,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollmentsTest do
         status: "confirmed"
       )
 
-      result = ListProgramEnrollments.execute(program.id)
+      result = KlassHero.Enrollment.list_program_enrollments(program.id)
 
       assert length(result) == 2
       names = Enum.map(result, & &1.child_name) |> Enum.sort()
@@ -66,16 +64,16 @@ defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollmentsTest do
         status: "cancelled"
       )
 
-      assert ListProgramEnrollments.execute(program.id) == []
+      assert KlassHero.Enrollment.list_program_enrollments(program.id) == []
     end
 
     test "returns empty list for non-existent program" do
-      assert ListProgramEnrollments.execute(Ecto.UUID.generate()) == []
+      assert KlassHero.Enrollment.list_program_enrollments(Ecto.UUID.generate()) == []
     end
 
     test "returns empty list when program has no enrollments" do
       program = insert(:program_schema)
-      assert ListProgramEnrollments.execute(program.id) == []
+      assert KlassHero.Enrollment.list_program_enrollments(program.id) == []
     end
 
     test "includes parent_id and parent_user_id in roster entries" do
@@ -89,7 +87,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollmentsTest do
         status: "confirmed"
       )
 
-      [entry] = ListProgramEnrollments.execute(program.id)
+      [entry] = KlassHero.Enrollment.list_program_enrollments(program.id)
 
       assert entry.parent_id == to_string(parent.id)
       assert entry.parent_user_id == to_string(parent.identity_id)
@@ -123,7 +121,7 @@ defmodule KlassHero.Enrollment.Application.Queries.ListProgramEnrollmentsTest do
       # Re-enable FK trigger checks to avoid leaking session state
       KlassHero.Repo.query!("SET session_replication_role = 'origin'")
 
-      [entry] = ListProgramEnrollments.execute(program.id)
+      [entry] = KlassHero.Enrollment.list_program_enrollments(program.id)
 
       assert entry.parent_id == to_string(parent.id)
       assert entry.parent_user_id == nil

@@ -3,7 +3,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
+  alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Family
 
   describe "page access" do
@@ -265,7 +265,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
       # Enrollment should be cancelled
       updated =
         KlassHero.Repo.get(
-          EnrollmentSchema,
+          Enrollment,
           enrollment.id
         )
 

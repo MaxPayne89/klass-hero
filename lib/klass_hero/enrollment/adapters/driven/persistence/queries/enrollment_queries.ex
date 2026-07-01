@@ -8,7 +8,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Queries.EnrollmentQue
 
   import Ecto.Query
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
+  alias KlassHero.Enrollment.Enrollment
 
   @active_statuses ~w(pending confirmed)
 
@@ -17,7 +17,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Queries.EnrollmentQue
   """
   @spec base() :: Ecto.Query.t()
   def base do
-    from(e in EnrollmentSchema)
+    from(e in Enrollment)
   end
 
   @doc """

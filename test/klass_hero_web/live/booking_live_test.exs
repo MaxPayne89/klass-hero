@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.BookingLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
+  alias KlassHero.Enrollment.Enrollment
 
   describe "BookingLive authentication" do
     test "redirects to login when not authenticated", %{conn: conn} do
@@ -164,7 +164,7 @@ defmodule KlassHeroWeb.BookingLiveTest do
       # Verify persisted enrollment has correct amounts
       enrollment =
         KlassHero.Repo.one!(
-          from e in EnrollmentSchema,
+          from e in Enrollment,
             where: e.program_id == ^program.id,
             select: %{
               subtotal: e.subtotal,
