@@ -27,7 +27,6 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
                          :messaging,
                          :for_querying_conversations
                        ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
 
   @spec execute(Scope.t(), String.t(), String.t()) ::
@@ -95,9 +94,9 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
 
   defp add_participants(conversation_id, user_id_1, user_id_2) do
     with {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_1}),
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_1}),
          {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_2}) do
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_2}) do
       :ok
     end
   end

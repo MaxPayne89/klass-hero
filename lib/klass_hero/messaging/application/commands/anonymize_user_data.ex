@@ -19,7 +19,6 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserData do
 
   @context KlassHero.Messaging
   @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
 
   @doc """
   Anonymizes all messaging data for a user.
@@ -50,7 +49,7 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserData do
       with {:ok, msg_count} <-
              tag_step(:anonymize_messages, @message_repo.anonymize_for_sender(user_id)),
            {:ok, part_count} <-
-             tag_step(:mark_as_left, @participant_repo.mark_all_as_left(user_id)) do
+             tag_step(:mark_as_left, KlassHero.Messaging.mark_all_participations_left(user_id)) do
         %{messages_anonymized: msg_count, participants_updated: part_count}
       else
         {:error, reason} -> Repo.rollback(reason)

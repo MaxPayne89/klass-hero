@@ -1,7 +1,7 @@
 defmodule KlassHero.Messaging.Domain.Models.MessageTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Messaging.Domain.Models.Attachment
+  alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Models.Message
 
   describe "new/1" do

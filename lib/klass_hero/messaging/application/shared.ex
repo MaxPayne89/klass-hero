@@ -17,9 +17,9 @@ defmodule KlassHero.Messaging.Application.Shared do
 
   Returns `:ok` if the user is a participant, or `{:error, :not_participant}` otherwise.
   """
-  @spec verify_participant(String.t(), String.t(), module()) :: :ok | {:error, :not_participant}
-  def verify_participant(conversation_id, user_id, participant_repo) do
-    if participant_repo.is_participant?(conversation_id, user_id) do
+  @spec verify_participant(String.t(), String.t()) :: :ok | {:error, :not_participant}
+  def verify_participant(conversation_id, user_id) do
+    if KlassHero.Messaging.participant?(conversation_id, user_id) do
       :ok
     else
       Logger.debug("User not participant in conversation",

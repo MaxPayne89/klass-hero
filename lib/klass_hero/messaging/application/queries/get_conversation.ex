@@ -19,7 +19,6 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversation do
                          :messaging,
                          :for_querying_conversations
                        ])
-  @participant_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_participants])
   @message_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_messages])
 
   @doc """
@@ -50,7 +49,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversation do
 
     with {:ok, conversation} <-
            @conversation_reader.get_by_id(conversation_id, preload: [:participants]),
-         :ok <- Shared.verify_participant(conversation_id, user_id, @participant_reader),
+         :ok <- Shared.verify_participant(conversation_id, user_id),
          {:ok, messages, sender_names, has_more} <-
            @message_reader.list_with_senders(conversation_id, opts) do
       maybe_mark_as_read(mark_as_read?, conversation_id, user_id)

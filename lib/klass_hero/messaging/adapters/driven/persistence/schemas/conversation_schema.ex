@@ -9,7 +9,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSc
 
   import Ecto.Changeset
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{MessageSchema, ParticipantSchema}
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Participant
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -29,7 +30,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSc
     # Virtual fields for query results
     field :unread_count, :integer, virtual: true, default: 0
 
-    has_many :participants, ParticipantSchema,
+    has_many :participants, Participant,
       foreign_key: :conversation_id,
       preload_order: [asc: :joined_at]
 

@@ -24,8 +24,13 @@ defmodule KlassHero.Messaging do
   - `"user:{id}:messages"` - User notification updates
   """
 
+  use KlassHero.Shared.Tracing
+
+  import Ecto.Query
+
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
   alias KlassHero.Messaging.Application.Commands.{
@@ -54,7 +59,12 @@ defmodule KlassHero.Messaging do
     ResolverQueries
   }
 
-  alias KlassHero.Messaging.Domain.Models.{Conversation, EmailReply, Message, Participant}
+  alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.Domain.Models.{Conversation, EmailReply, Message}
+  alias KlassHero.Messaging.Participant
+  alias KlassHero.Repo
+
+  require Logger
 
   @doc """
   Creates or retrieves a direct conversation between provider and user.
@@ -561,4 +571,350 @@ defmodule KlassHero.Messaging do
   """
   @spec user_messages_topic(String.t()) :: String.t()
   defdelegate user_messages_topic(user_id), to: NotifyLiveViews
+
+  # === Persistence — participants ===
+
+  @doc "Adds a participant to a conversation. Defaults `joined_at` to now."
+  @spec add_participant(map()) ::
+          {:ok, Participant.t()} | {:error, :already_participant | Ecto.Changeset.t()}
+  def add_participant(attrs) do
+    context_span entity: "participant" do
+      attrs = Map.put_new(attrs, :joined_at, DateTime.utc_now())
+
+      %Participant{}
+      |> Participant.create_changeset(attrs)
+      |> Repo.insert()
+      |> case do
+        {:ok, participant} ->
+          Logger.debug("Added participant",
+            participant_id: participant.id,
+            conversation_id: participant.conversation_id,
+            user_id: participant.user_id
+          )
+
+          {:ok, participant}
+
+        {:error, %Ecto.Changeset{} = changeset} = result ->
+          case changeset.errors[:conversation_id] do
+            {"has already been taken", _} -> {:error, :already_participant}
+            _ -> result
+          end
+      end
+    end
+  end
+
+  @doc "Adds a participant, or returns the existing one on conflict (transaction-safe)."
+  @spec add_or_get_participant(map()) :: {:ok, Participant.t()} | {:error, :not_found}
+  def add_or_get_participant(attrs) do
+    context_span entity: "participant" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      entry =
+        attrs
+        |> Map.take([:conversation_id, :user_id, :last_read_at])
+        |> Map.merge(%{
+          id: Ecto.UUID.generate(),
+          joined_at: now,
+          inserted_at: now,
+          updated_at: now
+        })
+
+      case Repo.insert_all(Participant, [entry],
+             returning: true,
+             on_conflict: :nothing,
+             conflict_target: [:conversation_id, :user_id]
+           ) do
+        {1, [participant]} ->
+          {:ok, participant}
+
+        # on_conflict: :nothing skipped the insert; fetch existing row to avoid
+        # poisoning the caller's transaction with a unique-constraint failure.
+        {0, _} ->
+          get_participant(attrs.conversation_id, attrs.user_id)
+      end
+    end
+  end
+
+  @doc "Marks a participant's messages as read up to `read_at`."
+  @spec mark_participant_read(String.t(), String.t(), DateTime.t()) ::
+          {:ok, Participant.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def mark_participant_read(conversation_id, user_id, read_at) do
+    context_span entity: "participant" do
+      from(p in Participant,
+        where: p.conversation_id == ^conversation_id and p.user_id == ^user_id
+      )
+      |> Repo.one()
+      |> case do
+        nil ->
+          {:error, :not_found}
+
+        participant ->
+          participant
+          |> Participant.mark_read_changeset(%{last_read_at: read_at})
+          |> Repo.update()
+          |> case do
+            {:ok, updated} ->
+              Logger.debug("Marked as read",
+                conversation_id: conversation_id,
+                user_id: user_id,
+                read_at: read_at
+              )
+
+              {:ok, updated}
+
+            error ->
+              error
+          end
+      end
+    end
+  end
+
+  @doc "Removes a participant from a conversation by setting `left_at`."
+  @spec leave_conversation(String.t(), String.t()) ::
+          {:ok, Participant.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def leave_conversation(conversation_id, user_id) do
+    context_span entity: "participant" do
+      now = DateTime.utc_now()
+
+      from(p in Participant,
+        where: p.conversation_id == ^conversation_id and p.user_id == ^user_id
+      )
+      |> Repo.one()
+      |> case do
+        nil ->
+          {:error, :not_found}
+
+        participant ->
+          participant
+          |> Participant.leave_changeset(%{left_at: now})
+          |> Repo.update()
+          |> case do
+            {:ok, updated} ->
+              Logger.info("Participant left conversation",
+                conversation_id: conversation_id,
+                user_id: user_id
+              )
+
+              {:ok, updated}
+
+            error ->
+              error
+          end
+      end
+    end
+  end
+
+  @doc "Marks all active participations for a user as left (GDPR path)."
+  @spec mark_all_participations_left(String.t()) ::
+          {:ok, non_neg_integer()}
+          | {:error, :database_connection_error | :database_query_error}
+  def mark_all_participations_left(user_id) do
+    context_span entity: "participant" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      {count, _} =
+        from(p in Participant, where: p.user_id == ^user_id and is_nil(p.left_at))
+        |> Repo.update_all(set: [left_at: now])
+
+      Logger.debug("Marked all participations as left for user", user_id: user_id, count: count)
+
+      {:ok, count}
+    end
+  rescue
+    e in DBConnection.ConnectionError ->
+      Logger.error("Database connection error marking participations as left",
+        user_id: user_id,
+        error: Exception.message(e)
+      )
+
+      {:error, :database_connection_error}
+
+    e in Postgrex.Error ->
+      Logger.error("Database query error marking participations as left",
+        user_id: user_id,
+        error: Exception.message(e)
+      )
+
+      {:error, :database_query_error}
+  end
+
+  @doc "Adds a batch of users as participants of a conversation (skips existing)."
+  @spec add_participants(String.t(), [String.t()]) :: {:ok, [Participant.t()]}
+  def add_participants(conversation_id, user_ids) do
+    context_span entity: "participant" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      entries =
+        Enum.map(user_ids, fn user_id ->
+          %{
+            id: Ecto.UUID.generate(),
+            conversation_id: conversation_id,
+            user_id: user_id,
+            joined_at: now,
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+
+      {_count, participants} =
+        Repo.insert_all(Participant, entries,
+          returning: true,
+          on_conflict: :nothing,
+          conflict_target: [:conversation_id, :user_id]
+        )
+
+      Logger.debug("Added batch of participants",
+        conversation_id: conversation_id,
+        count: length(participants)
+      )
+
+      {:ok, participants}
+    end
+  end
+
+  @doc "Adds a user to a batch of conversations, re-activating any they had left."
+  @spec add_user_to_conversations(String.t(), [String.t()]) :: {:ok, non_neg_integer()}
+  def add_user_to_conversations(_user_id, []), do: {:ok, 0}
+
+  def add_user_to_conversations(user_id, conversation_ids) do
+    context_span entity: "participant" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      entries =
+        Enum.map(conversation_ids, fn conversation_id ->
+          %{
+            id: Ecto.UUID.generate(),
+            conversation_id: conversation_id,
+            user_id: user_id,
+            joined_at: now,
+            inserted_at: now,
+            updated_at: now
+          }
+        end)
+
+      {count, _} =
+        Repo.insert_all(Participant, entries,
+          # Re-activation: clear left_at, bump updated_at; preserve original joined_at (audit trail).
+          on_conflict:
+            from(p in Participant,
+              update: [set: [left_at: nil, updated_at: fragment("EXCLUDED.updated_at")]]
+            ),
+          conflict_target: [:conversation_id, :user_id]
+        )
+
+      Logger.debug("Added staff user to conversations in batch",
+        user_id: user_id,
+        conversation_count: length(conversation_ids),
+        added_count: count
+      )
+
+      {:ok, count}
+    end
+  end
+
+  @doc "Fetches a participant by conversation and user."
+  @spec get_participant(String.t(), String.t()) :: {:ok, Participant.t()} | {:error, :not_found}
+  def get_participant(conversation_id, user_id) do
+    from(p in Participant, where: p.conversation_id == ^conversation_id and p.user_id == ^user_id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      participant -> {:ok, participant}
+    end
+  end
+
+  @doc "Lists active participants of a conversation, oldest join first."
+  @spec list_participants(String.t()) :: [Participant.t()]
+  def list_participants(conversation_id) do
+    from(p in Participant,
+      where: p.conversation_id == ^conversation_id and is_nil(p.left_at),
+      order_by: [asc: p.joined_at]
+    )
+    |> Repo.all()
+  end
+
+  @doc "True if the user is an active participant of the conversation."
+  @spec participant?(String.t(), String.t()) :: boolean()
+  def participant?(conversation_id, user_id) do
+    from(p in Participant,
+      where: p.conversation_id == ^conversation_id and p.user_id == ^user_id and is_nil(p.left_at)
+    )
+    |> Repo.exists?()
+  end
+
+  # === Persistence — attachments ===
+
+  @doc "Bulk-inserts message attachments."
+  @spec create_attachments([map()]) ::
+          {:ok, [Attachment.t()]} | {:error, :attachment_insert_failed}
+  def create_attachments([]), do: {:ok, []}
+
+  def create_attachments(attrs_list) do
+    context_span entity: "attachment" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+      entries =
+        Enum.map(attrs_list, fn attrs ->
+          attrs
+          |> Map.take([
+            :message_id,
+            :file_url,
+            :storage_path,
+            :original_filename,
+            :content_type,
+            :file_size_bytes
+          ])
+          |> Map.merge(%{id: Ecto.UUID.generate(), inserted_at: now, updated_at: now})
+        end)
+
+      {count, attachments} = Repo.insert_all(Attachment, entries, returning: true)
+
+      Logger.debug("Bulk-inserted attachments", count: count)
+
+      {:ok, attachments}
+    end
+  rescue
+    e in [Ecto.ConstraintError, Postgrex.Error] ->
+      Logger.error("Failed to bulk-insert attachments",
+        count: length(attrs_list),
+        error: Exception.message(e)
+      )
+
+      {:error, :attachment_insert_failed}
+  end
+
+  @doc "Lists attachments for a message, oldest first."
+  @spec list_attachments_for_message(String.t()) :: [Attachment.t()]
+  def list_attachments_for_message(message_id) do
+    from(a in Attachment, where: a.message_id == ^message_id, order_by: [asc: a.inserted_at])
+    |> Repo.all()
+  end
+
+  @doc "Lists attachments for many messages, grouped by `message_id`."
+  @spec list_attachments_for_messages([String.t()]) ::
+          %{optional(String.t()) => [Attachment.t()]}
+  def list_attachments_for_messages([]), do: %{}
+
+  def list_attachments_for_messages(message_ids) do
+    from(a in Attachment, where: a.message_id in ^message_ids, order_by: [asc: a.inserted_at])
+    |> Repo.all()
+    |> Enum.group_by(& &1.message_id)
+  end
+
+  @doc "Returns storage paths for all attachments in the given conversations."
+  @spec attachment_storage_paths_for_conversations([String.t()]) :: {:ok, [String.t()]}
+  def attachment_storage_paths_for_conversations([]), do: {:ok, []}
+
+  def attachment_storage_paths_for_conversations(conversation_ids) do
+    paths =
+      from(a in Attachment,
+        join: m in MessageSchema,
+        on: a.message_id == m.id,
+        where: m.conversation_id in ^conversation_ids,
+        select: a.storage_path
+      )
+      |> Repo.all()
+
+    {:ok, paths}
+  end
 end

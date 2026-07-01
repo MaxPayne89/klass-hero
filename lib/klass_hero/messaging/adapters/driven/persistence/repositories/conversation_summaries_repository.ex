@@ -17,8 +17,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationSummaryQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ParticipantSchema
   alias KlassHero.Messaging.Domain.ReadModels.ConversationSummary
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
 
   require Logger
@@ -138,7 +138,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
       |> Repo.one()
 
     participant_user_ids =
-      from(p in ParticipantSchema,
+      from(p in Participant,
         where: p.conversation_id == ^conversation_id and is_nil(p.left_at),
         select: p.user_id
       )

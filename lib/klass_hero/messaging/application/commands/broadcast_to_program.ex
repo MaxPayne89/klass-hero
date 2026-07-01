@@ -37,7 +37,6 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
                          :messaging,
                          :for_querying_enrollments
                        ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
 
   @doc """
   Sends a broadcast message to all enrolled parents of a program.
@@ -141,7 +140,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
     candidate_ids = Enum.uniq([scope.user.id | parent_user_ids])
 
     Repo.transaction(fn ->
-      with {:ok, inserted} <- @participant_repo.add_batch(conversation.id, candidate_ids),
+      with {:ok, inserted} <- KlassHero.Messaging.add_participants(conversation.id, candidate_ids),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, conversation.program_id, scope.user.id) do
         build_broadcast_event(conversation.id, inserted) ++ staff_events

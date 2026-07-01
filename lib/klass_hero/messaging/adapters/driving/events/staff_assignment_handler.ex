@@ -33,7 +33,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
                          :messaging,
                          :for_querying_conversations
                        ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
   @staff_projection Application.compile_env!(:klass_hero, [
                       :messaging,
                       :for_resolving_program_staff
@@ -126,7 +125,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   end
 
   defp backfill_participants(staff_user_id, ids) do
-    case @participant_repo.add_to_conversations_batch(staff_user_id, ids) do
+    case KlassHero.Messaging.add_user_to_conversations(staff_user_id, ids) do
       {:ok, _count} ->
         Enum.map(ids, fn conversation_id ->
           MessagingEvents.participant_added(

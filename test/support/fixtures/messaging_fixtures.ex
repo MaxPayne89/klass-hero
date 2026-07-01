@@ -5,7 +5,7 @@ defmodule KlassHero.MessagingFixtures do
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.AttachmentSchema
+  alias KlassHero.Messaging.Attachment
 
   def attachment_fixture(message_id, attrs \\ %{}) do
     path = "messaging/attachments/#{Ecto.UUID.generate()}/photo.jpg"
@@ -22,7 +22,7 @@ defmodule KlassHero.MessagingFixtures do
     {:ok, attachment} =
       defaults
       |> Map.merge(attrs)
-      |> then(&AttachmentSchema.create_changeset(%AttachmentSchema{}, &1))
+      |> then(&Attachment.create_changeset(%Attachment{}, &1))
       |> KlassHero.Repo.insert()
 
     attachment

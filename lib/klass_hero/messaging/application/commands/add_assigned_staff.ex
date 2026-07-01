@@ -26,7 +26,6 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaff do
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
   @staff_resolver Application.compile_env!(:klass_hero, [
                     :messaging,
                     :for_resolving_program_staff
@@ -46,7 +45,7 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaff do
   defp add([], _conversation_id), do: {:ok, {[], []}}
 
   defp add(ids, conversation_id) do
-    with {:ok, _} <- @participant_repo.add_batch(conversation_id, ids) do
+    with {:ok, _} <- KlassHero.Messaging.add_participants(conversation_id, ids) do
       event = MessagingEvents.participant_added(conversation_id, ids, :initial_staff)
       {:ok, {ids, [event]}}
     end

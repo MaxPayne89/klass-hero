@@ -3,7 +3,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMa
   Maps between ConversationSchema (Ecto) and Conversation (domain model).
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.{MessageMapper, ParticipantMapper}
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.MessageMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Domain.Models.Conversation
 
@@ -12,10 +12,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMa
   """
   @spec to_domain(ConversationSchema.t()) :: Conversation.t()
   def to_domain(%ConversationSchema{} = schema) do
+    # schema.participants is already loaded as [%Participant{}] (the schema-as-struct
+    # module is the domain struct), so no per-element mapping is needed.
     participants =
       case schema.participants do
         %Ecto.Association.NotLoaded{} -> []
-        participants -> Enum.map(participants, &ParticipantMapper.to_domain/1)
+        participants -> participants
       end
 
     messages =

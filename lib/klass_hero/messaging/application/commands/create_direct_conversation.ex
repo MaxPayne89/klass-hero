@@ -35,7 +35,6 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
                          :messaging,
                          :for_querying_conversations
                        ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
 
   @doc """
   Creates or retrieves a direct conversation between provider and user.
@@ -122,9 +121,9 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
 
   defp add_participants(conversation_id, user_id_1, user_id_2) do
     with {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_1}),
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_1}),
          {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_2}) do
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_2}) do
       :ok
     end
   end

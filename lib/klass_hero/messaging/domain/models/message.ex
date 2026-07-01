@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.Domain.Models.Message do
   Content is optional when attachments are present.
   """
 
-  alias KlassHero.Messaging.Domain.Models.Attachment
+  alias KlassHero.Messaging.Attachment
   alias KlassHero.Shared.Domain.Validation
 
   @enforce_keys [:id, :conversation_id, :sender_id]

@@ -8,7 +8,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast
 
@@ -226,7 +225,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
       assert {:ok, direct_conversation_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
 
-      assert ParticipantRepository.is_participant?(direct_conversation_id, staff_user.id)
+      assert KlassHero.Messaging.participant?(direct_conversation_id, staff_user.id)
     end
 
     test "sets program_id on the new direct conversation", ctx do
@@ -248,7 +247,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
       assert {:ok, direct_conversation_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
 
-      assert ParticipantRepository.is_participant?(direct_conversation_id, ctx.provider_user.id)
+      assert KlassHero.Messaging.participant?(direct_conversation_id, ctx.provider_user.id)
     end
 
     test "does not retroactively add staff to a reused direct conversation", ctx do
@@ -267,7 +266,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
       assert {:ok, ^first_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
 
-      refute ParticipantRepository.is_participant?(first_id, staff_user.id)
+      refute KlassHero.Messaging.participant?(first_id, staff_user.id)
     end
   end
 end

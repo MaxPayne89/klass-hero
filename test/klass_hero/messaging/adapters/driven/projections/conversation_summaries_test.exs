@@ -8,8 +8,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ParticipantSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -45,7 +45,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       five_min_ago = DateTime.add(now, -300, :second)
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_1.id,
@@ -53,7 +53,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         last_read_at: five_min_ago
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_2.id,
@@ -142,14 +142,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_1.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_2.id,
@@ -233,14 +233,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         program_id: program.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider_user.id,
@@ -308,14 +308,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         program_id: program.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider_user.id,
@@ -359,14 +359,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_1.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_2.id,
@@ -1274,21 +1274,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       })
 
       # Insert participants: owner first, then parent, then staff
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider.identity_id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff_user.id,
@@ -1342,21 +1342,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       })
 
       # Use distinct joined_at timestamps to guarantee ordering via preload_order
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider.identity_id,
         joined_at: DateTime.add(now, 1, :second)
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff_user.id,
@@ -1397,7 +1397,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       })
 
       for {uid, ts} <- [{parent.id, now}, {provider_user.id, DateTime.add(now, 1, :second)}] do
-        Repo.insert!(%ParticipantSchema{
+        Repo.insert!(%Participant{
           id: Ecto.UUID.generate(),
           conversation_id: conversation_id,
           user_id: uid,
@@ -1418,7 +1418,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       })
 
       # Add staff participant in write model — projection event follows
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff.id,
@@ -1479,14 +1479,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff.id,
@@ -1570,7 +1570,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             {staff_a.id, DateTime.add(now, 1, :second)},
             {staff_b.id, DateTime.add(now, 2, :second)}
           ] do
-        Repo.insert!(%ParticipantSchema{
+        Repo.insert!(%Participant{
           id: Ecto.UUID.generate(),
           conversation_id: conversation_id,
           user_id: uid,
@@ -1629,7 +1629,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff.id,

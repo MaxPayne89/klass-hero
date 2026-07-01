@@ -15,7 +15,7 @@ defmodule KlassHero.Messaging.Domain.Models.Conversation do
   """
 
   alias KlassHero.Messaging.Domain.Models.Message
-  alias KlassHero.Messaging.Domain.Models.Participant
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Shared.Domain.Validation
 
   @enforce_keys [:id, :type, :provider_id]

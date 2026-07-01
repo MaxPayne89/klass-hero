@@ -4,7 +4,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   import KlassHero.EventTestHelper
   import KlassHero.Factory
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -53,7 +52,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
       assert :ok = StaffAssignmentHandler.handle_event(event)
 
       # Staff should now be a participant
-      assert ParticipantRepository.is_participant?(conversation.id, staff_user_id)
+      assert KlassHero.Messaging.participant?(conversation.id, staff_user_id)
     end
 
     test "emits :participant_added per back-filled conversation with source :later_assignment" do
@@ -174,8 +173,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
       event = build_unassignment_event(provider.id, program.id, staff_user.id)
       assert :ok = StaffAssignmentHandler.handle_event(event)
 
-      refute ParticipantRepository.is_participant?(conv_a.id, staff_user.id)
-      refute ParticipantRepository.is_participant?(conv_b.id, staff_user.id)
+      refute KlassHero.Messaging.participant?(conv_a.id, staff_user.id)
+      refute KlassHero.Messaging.participant?(conv_b.id, staff_user.id)
 
       events =
         Enum.filter(

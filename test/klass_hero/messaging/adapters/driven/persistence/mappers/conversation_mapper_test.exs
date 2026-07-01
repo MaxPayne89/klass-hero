@@ -10,8 +10,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMa
   use ExUnit.Case, async: true
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMapper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{ConversationSchema, ParticipantSchema}
-  alias KlassHero.Messaging.Domain.Models.{Conversation, Participant}
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
+  alias KlassHero.Messaging.Domain.Models.Conversation
+  alias KlassHero.Messaging.Participant
 
   @provider_id Ecto.UUID.generate()
   @program_id Ecto.UUID.generate()
@@ -50,7 +51,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMa
       updated_at: ~U[2025-03-01 10:00:00Z]
     }
 
-    struct!(ParticipantSchema, Map.merge(defaults, overrides))
+    struct!(Participant, Map.merge(defaults, overrides))
   end
 
   describe "to_domain/1" do

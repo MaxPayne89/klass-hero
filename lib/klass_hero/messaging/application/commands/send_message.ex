@@ -8,8 +8,8 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   """
 
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Attachment
   alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Repo
   alias KlassHero.Shared.DomainEventBus
@@ -23,9 +23,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
                          :for_querying_conversations
                        ])
   @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @participant_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_participants])
-  @attachment_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_attachments])
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
   @staff_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_program_staff])
   @provider_staff_resolver Application.compile_env!(:klass_hero, [
@@ -65,7 +62,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
 
     with :ok <- validate_message_content(trimmed_content, attachment_files),
          :ok <- validate_attachment_files(attachment_files),
-         :ok <- Shared.verify_participant(conversation_id, sender_id, @participant_reader),
+         :ok <- Shared.verify_participant(conversation_id, sender_id),
          :ok <- verify_broadcast_send_permission(conversation_id, sender_id, conversation),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),
          {:ok, message_with_attachments} <-
@@ -208,7 +205,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
         Map.put(file, :message_id, message_id)
       end)
 
-    @attachment_repo.create_many(attrs_list)
+    KlassHero.Messaging.create_attachments(attrs_list)
   end
 
   defp cleanup_uploaded_files([]), do: :ok
@@ -290,7 +287,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   defp update_sender_read_status(conversation_id, sender_id) do
     now = DateTime.utc_now()
 
-    case @participant_repo.mark_as_read(conversation_id, sender_id, now) do
+    case KlassHero.Messaging.mark_participant_read(conversation_id, sender_id, now) do
       {:ok, _} ->
         :ok
 

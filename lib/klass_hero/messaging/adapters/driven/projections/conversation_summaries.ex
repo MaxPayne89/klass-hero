@@ -51,11 +51,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.AttachmentSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Attachment
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
@@ -727,7 +727,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   defp fetch_attachment_message_ids(latest_messages) when map_size(latest_messages) > 0 do
     message_ids = latest_messages |> Map.values() |> Enum.map(& &1.id)
 
-    from(a in AttachmentSchema,
+    from(a in Attachment,
       where: a.message_id in ^message_ids,
       distinct: a.message_id,
       select: a.message_id

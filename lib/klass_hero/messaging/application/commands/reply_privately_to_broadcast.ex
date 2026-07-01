@@ -26,8 +26,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
                          :messaging,
                          :for_querying_conversations
                        ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @participant_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_participants])
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
   @conversation_summaries_repo Application.compile_env!(:klass_hero, [
                                  :messaging,
@@ -52,7 +50,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
     # pattern match on :program_broadcast + participation check ensures only
     # broadcast participants can initiate private replies.
     with {:ok, broadcast} <- fetch_broadcast(broadcast_conversation_id),
-         :ok <- Shared.verify_participant(broadcast.id, scope.user.id, @participant_reader),
+         :ok <- Shared.verify_participant(broadcast.id, scope.user.id),
          {:ok, provider_user_id} <- @user_resolver.get_user_id_for_provider(broadcast.provider_id),
          {:ok, direct_conversation} <-
            find_or_create_direct_conversation(
@@ -105,12 +103,12 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
 
       with {:ok, conversation} <- @conversation_repo.create(attrs),
            {:ok, _} <-
-             @participant_repo.add(%{
+             KlassHero.Messaging.add_participant(%{
                conversation_id: conversation.id,
                user_id: scope.user.id
              }),
            {:ok, _} <-
-             @participant_repo.add(%{
+             KlassHero.Messaging.add_participant(%{
                conversation_id: conversation.id,
                user_id: provider_user_id
              }),

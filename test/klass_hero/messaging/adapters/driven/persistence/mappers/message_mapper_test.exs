@@ -10,8 +10,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.MessageMapperT
   use ExUnit.Case, async: true
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.MessageMapper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{AttachmentSchema, MessageSchema}
-  alias KlassHero.Messaging.Domain.Models.{Attachment, Message}
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.Domain.Models.Message
 
   @conversation_id Ecto.UUID.generate()
   @sender_id Ecto.UUID.generate()
@@ -45,7 +46,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.MessageMapperT
       updated_at: ~U[2025-03-01 10:00:00Z]
     }
 
-    struct!(AttachmentSchema, Map.merge(defaults, overrides))
+    struct!(Attachment, Map.merge(defaults, overrides))
   end
 
   describe "to_domain/1" do

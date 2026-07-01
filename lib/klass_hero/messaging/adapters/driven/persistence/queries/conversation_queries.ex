@@ -7,9 +7,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
     ConversationSchema,
-    MessageSchema,
-    ParticipantSchema
+    MessageSchema
   }
+
+  alias KlassHero.Messaging.Participant
 
   @doc """
   Base query for conversations.
@@ -69,7 +70,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   """
   def where_user_is_participant(query, user_id) do
     query
-    |> join(:inner, [conversation: c], p in ParticipantSchema,
+    |> join(:inner, [conversation: c], p in Participant,
       on: p.conversation_id == c.id and p.user_id == ^user_id and is_nil(p.left_at),
       as: :participant
     )
@@ -87,7 +88,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   """
   def where_user_is_not_participant(query, user_id) do
     query
-    |> join(:left, [conversation: c], p in ParticipantSchema,
+    |> join(:left, [conversation: c], p in Participant,
       on:
         p.conversation_id == c.id and
           p.user_id == ^user_id and
@@ -150,7 +151,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   """
   def with_unread_count(query, user_id) do
     query
-    |> join(:left, [conversation: c], p in ParticipantSchema,
+    |> join(:left, [conversation: c], p in Participant,
       on: p.conversation_id == c.id and p.user_id == ^user_id,
       as: :user_participant
     )
@@ -193,7 +194,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   Query to get total unread message count across all conversations for a user.
   """
   def total_unread_count(user_id) do
-    from(p in ParticipantSchema,
+    from(p in Participant,
       join: c in ConversationSchema,
       on: c.id == p.conversation_id,
       join: m in MessageSchema,

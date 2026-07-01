@@ -37,11 +37,11 @@ defmodule KlassHero.Factory do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
     ConversationSchema,
     ConversationSummarySchema,
-    MessageSchema,
-    ParticipantSchema
+    MessageSchema
   }
 
-  alias KlassHero.Messaging.Domain.Models.{Conversation, Message, Participant}
+  alias KlassHero.Messaging.Domain.Models.{Conversation, Message}
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
@@ -1402,9 +1402,11 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ParticipantSchema Ecto schemas.
+  Factory for a persisted-shape Participant with real conversation/user FKs.
 
   Used in repository and integration tests where we need database persistence.
+  Since the Ecto schema is the struct, this builds the same `%Participant{}` as
+  `participant_factory/0`, but wired to insertable foreign keys.
 
   ## Examples
 
@@ -1415,7 +1417,7 @@ defmodule KlassHero.Factory do
     conversation = insert(:conversation_schema)
     user = AccountsFixtures.user_fixture()
 
-    %ParticipantSchema{
+    %Participant{
       id: Ecto.UUID.generate(),
       conversation_id: conversation.id,
       user_id: user.id,

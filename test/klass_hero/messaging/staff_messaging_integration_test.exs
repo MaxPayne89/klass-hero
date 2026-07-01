@@ -17,7 +17,6 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   alias KlassHero.Accounts.User
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Provider
@@ -77,7 +76,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
       {:ok, conversation} =
         Messaging.create_direct_conversation(scope, ctx.provider.id, ctx.parent_user.id, program_id: ctx.program.id)
 
-      assert ParticipantRepository.is_participant?(conversation.id, ctx.staff_user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, ctx.staff_user.id)
 
       # 4. Staff can send a message
       assert {:ok, message} =
@@ -105,7 +104,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
       #    row is preserved so re-assignment can re-activate it) and emits
       #    :participant_removed so the projection archives the staff's
       #    summary row.
-      refute ParticipantRepository.is_participant?(conversation.id, ctx.staff_user.id)
+      refute KlassHero.Messaging.participant?(conversation.id, ctx.staff_user.id)
 
       # 7. And projection is deactivated
       assert [] = ProgramStaffParticipantRepository.get_active_staff_user_ids(ctx.program.id)

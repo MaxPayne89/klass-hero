@@ -3,7 +3,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.MessageMapper 
   Maps between MessageSchema (Ecto) and Message (domain model).
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.AttachmentMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Domain.Models.Message
 
@@ -25,9 +24,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.MessageMapper 
     }
   end
 
+  # schema.attachments is already loaded as [%Attachment{}] (the schema-as-struct module
+  # is the domain struct), so no per-element mapping is needed.
   defp map_attachments(%Ecto.Association.NotLoaded{}), do: []
   defp map_attachments(nil), do: []
-  defp map_attachments(attachments), do: Enum.map(attachments, &AttachmentMapper.to_domain/1)
+  defp map_attachments(attachments), do: attachments
 
   @doc """
   Converts a domain Message to attributes for schema creation.

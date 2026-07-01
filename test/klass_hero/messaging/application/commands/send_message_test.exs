@@ -5,8 +5,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMapper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.AttachmentRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Domain.Models.Conversation
@@ -61,7 +59,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
       before = DateTime.utc_now() |> DateTime.truncate(:second)
       {:ok, _message} = SendMessage.execute(conversation.id, user.id, "Hello!")
 
-      {:ok, participant} = ParticipantRepository.get(conversation.id, user.id)
+      {:ok, participant} = KlassHero.Messaging.get_participant(conversation.id, user.id)
       assert participant.last_read_at != nil
       assert DateTime.compare(participant.last_read_at, before) in [:gt, :eq]
     end
@@ -455,7 +453,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
       assert length(message.attachments) == 1
 
       # Verify attachment is actually in the DB
-      attachments = AttachmentRepository.list_for_message(message.id)
+      attachments = KlassHero.Messaging.list_attachments_for_message(message.id)
       assert length(attachments) == 1
       assert hd(attachments).original_filename == "photo.jpg"
     end

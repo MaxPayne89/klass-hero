@@ -10,8 +10,8 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserDataTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ParticipantSchema
   alias KlassHero.Messaging.Application.Commands.AnonymizeUserData
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "execute/1" do
@@ -67,7 +67,7 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserDataTest do
 
       # Verify all participants marked as left
       participants =
-        Repo.all(from(p in ParticipantSchema, where: p.user_id == ^user.id))
+        Repo.all(from(p in Participant, where: p.user_id == ^user.id))
 
       assert Enum.all?(participants, &(not is_nil(&1.left_at)))
     end
@@ -147,7 +147,7 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserDataTest do
       assert message.content == "[deleted]"
 
       participant =
-        Repo.one!(from(p in ParticipantSchema, where: p.user_id == ^user.id))
+        Repo.one!(from(p in Participant, where: p.user_id == ^user.id))
 
       refute is_nil(participant.left_at)
 

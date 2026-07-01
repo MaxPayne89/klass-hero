@@ -6,7 +6,6 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversationTest 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.StartProgramConversation
   alias KlassHero.Messaging.Domain.Models.Conversation
@@ -32,9 +31,9 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversationTest 
       assert %Conversation{type: :direct} = conversation
       assert conversation.provider_id == provider.id
       assert conversation.program_id == program.id
-      assert ParticipantRepository.is_participant?(conversation.id, parent_scope.user.id)
-      assert ParticipantRepository.is_participant?(conversation.id, owner.id)
-      assert ParticipantRepository.is_participant?(conversation.id, staff_user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, parent_scope.user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, owner.id)
+      assert KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
     test "returns existing conversation on repeat call" do
@@ -90,11 +89,11 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversationTest 
 
       assert conv_a.id != conv_b.id
 
-      assert ParticipantRepository.is_participant?(conv_a.id, parent_a_scope.user.id)
-      refute ParticipantRepository.is_participant?(conv_a.id, parent_b_scope.user.id)
+      assert KlassHero.Messaging.participant?(conv_a.id, parent_a_scope.user.id)
+      refute KlassHero.Messaging.participant?(conv_a.id, parent_b_scope.user.id)
 
-      assert ParticipantRepository.is_participant?(conv_b.id, parent_b_scope.user.id)
-      refute ParticipantRepository.is_participant?(conv_b.id, parent_a_scope.user.id)
+      assert KlassHero.Messaging.participant?(conv_b.id, parent_b_scope.user.id)
+      refute KlassHero.Messaging.participant?(conv_b.id, parent_a_scope.user.id)
     end
   end
 
