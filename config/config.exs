@@ -19,7 +19,6 @@ alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL
 alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL
 alias KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentPolicyRepository
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentRepository
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.ParticipantPolicyRepository
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
@@ -188,8 +187,6 @@ config :klass_hero, :default_tz, "Europe/Berlin"
 config :klass_hero, :enrollment,
   for_managing_enrollments: EnrollmentRepository,
   for_querying_enrollments: EnrollmentRepository,
-  for_managing_enrollment_policies: EnrollmentPolicyRepository,
-  for_querying_enrollment_policies: EnrollmentPolicyRepository,
   for_managing_participant_policies: ParticipantPolicyRepository,
   for_querying_participant_policies: ParticipantPolicyRepository,
   for_resolving_participant_details: ParticipantDetailsACL,

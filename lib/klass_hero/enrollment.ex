@@ -6,7 +6,11 @@ defmodule KlassHero.Enrollment do
   Follows Ports & Adapters: this module delegates to use cases in the application layer.
   """
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema
+  use KlassHero.Shared.Tracing
+
+  import Ecto.Query, warn: false
+
+  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
   alias KlassHero.Enrollment.Application.Commands.{
@@ -18,8 +22,7 @@ defmodule KlassHero.Enrollment do
     ImportEnrollmentCsv,
     InviteSingleParticipant,
     ResendInvite,
-    SetParticipantPolicy,
-    UpsertEnrollmentPolicy
+    SetParticipantPolicy
   }
 
   alias KlassHero.Enrollment.Application.ParticipantPolicyForm
@@ -29,7 +32,6 @@ defmodule KlassHero.Enrollment do
     CheckParticipantEligibility,
     CountMonthlyBookings,
     CountProgramInvites,
-    EnrollmentPolicyQueries,
     GetBookingUsageInfo,
     GetEnrollment,
     GetParticipantPolicy,
@@ -42,6 +44,10 @@ defmodule KlassHero.Enrollment do
 
   alias KlassHero.Enrollment.Application.SingleInviteForm
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
+  alias KlassHero.Enrollment.EnrollmentPolicy
+  alias KlassHero.Repo
+
+  @active_statuses ~w(pending confirmed)
 
   @doc """
   Creates a new enrollment.
@@ -81,7 +87,15 @@ defmodule KlassHero.Enrollment do
   Creates or updates the enrollment capacity policy for a program (upsert).
   """
   def set_enrollment_policy(attrs) when is_map(attrs) do
-    UpsertEnrollmentPolicy.execute(attrs)
+    context_span entity: "enrollment_policy" do
+      %EnrollmentPolicy{}
+      |> EnrollmentPolicy.changeset(attrs)
+      |> Repo.insert(
+        on_conflict: {:replace, [:min_enrollment, :max_enrollment, :updated_at]},
+        conflict_target: :program_id,
+        returning: true
+      )
+    end
   end
 
   @doc """
@@ -277,20 +291,29 @@ defmodule KlassHero.Enrollment do
   Returns the enrollment policy for a program.
   """
   def get_enrollment_policy(program_id) when is_binary(program_id) do
-    EnrollmentPolicyQueries.get_enrollment_policy(program_id)
+    case Repo.get_by(EnrollmentPolicy, program_id: program_id) do
+      nil -> {:error, :not_found}
+      policy -> {:ok, policy}
+    end
   end
 
   @doc """
   Returns remaining enrollment capacity for a program.
 
-  Fetches the policy and active count, then delegates calculation to the
-  domain model (`EnrollmentPolicy.remaining_capacity/2`).
+  Fetches the policy and active count, then delegates calculation to
+  `EnrollmentPolicy.remaining_capacity/2`.
 
   - `{:ok, non_neg_integer()}` — remaining spots
   - `{:ok, :unlimited}` — no maximum configured
   """
   def remaining_capacity(program_id) when is_binary(program_id) do
-    EnrollmentPolicyQueries.remaining_capacity(program_id)
+    case get_enrollment_policy(program_id) do
+      {:error, :not_found} ->
+        {:ok, :unlimited}
+
+      {:ok, policy} ->
+        {:ok, EnrollmentPolicy.remaining_capacity(policy, count_active_enrollments(program_id))}
+    end
   end
 
   @doc """
@@ -298,22 +321,45 @@ defmodule KlassHero.Enrollment do
   Returns a map of `program_id => remaining_count | :unlimited`.
   """
   def get_remaining_capacities(program_ids) when is_list(program_ids) do
-    EnrollmentPolicyQueries.get_remaining_capacities(program_ids)
+    {policies, active_counts} = fetch_policies_and_active_counts(program_ids)
+
+    Map.new(program_ids, fn id ->
+      case Map.get(policies, id) do
+        nil -> {id, :unlimited}
+        policy -> {id, EnrollmentPolicy.remaining_capacity(policy, Map.get(active_counts, id, 0))}
+      end
+    end)
   end
 
   @doc """
   Returns the count of active (pending/confirmed) enrollments for a program.
   """
   def count_active_enrollments(program_id) when is_binary(program_id) do
-    EnrollmentPolicyQueries.count_active_enrollments(program_id)
+    from(e in EnrollmentSchema,
+      where: e.program_id == ^program_id and e.status in ^@active_statuses,
+      select: count(e.id)
+    )
+    |> Repo.one()
   end
 
   @doc """
   Returns counts of active enrollments for multiple programs in a single batch query.
   Returns a map of `program_id => count`.
   """
+  def count_active_enrollments_batch([]), do: %{}
+
   def count_active_enrollments_batch(program_ids) when is_list(program_ids) do
-    EnrollmentPolicyQueries.count_active_enrollments_batch(program_ids)
+    counts =
+      from(e in EnrollmentSchema,
+        where: e.program_id in ^program_ids and e.status in ^@active_statuses,
+        group_by: e.program_id,
+        select: {e.program_id, count(e.id)}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    # Programs with no enrollments are absent from the GROUP BY result; default to 0.
+    Map.new(program_ids, fn id -> {id, Map.get(counts, id, 0)} end)
   end
 
   @doc """
@@ -324,7 +370,32 @@ defmodule KlassHero.Enrollment do
   separately — doing so would issue 3 DB queries for the same data.
   """
   def get_enrollment_summary_batch(program_ids) when is_list(program_ids) do
-    EnrollmentPolicyQueries.get_enrollment_summary_batch(program_ids)
+    {policies, active_counts} = fetch_policies_and_active_counts(program_ids)
+
+    Map.new(program_ids, fn id ->
+      active = Map.get(active_counts, id, 0)
+      capacity = calculate_capacity(Map.get(policies, id), active)
+      {id, %{enrolled: active, capacity: capacity}}
+    end)
+  end
+
+  defp calculate_capacity(nil, _active), do: nil
+
+  defp calculate_capacity(policy, active) do
+    case EnrollmentPolicy.remaining_capacity(policy, active) do
+      :unlimited -> nil
+      remaining -> active + remaining
+    end
+  end
+
+  # Shared by get_remaining_capacities/1 and get_enrollment_summary_batch/1 to prevent query drift.
+  defp fetch_policies_and_active_counts(program_ids) do
+    policies =
+      from(p in EnrollmentPolicy, where: p.program_id in ^program_ids)
+      |> Repo.all()
+      |> Map.new(fn policy -> {to_string(policy.program_id), policy} end)
+
+    {policies, count_active_enrollments_batch(program_ids)}
   end
 
   @doc """
@@ -365,7 +436,7 @@ defmodule KlassHero.Enrollment do
   Returns a changeset for enrollment policy form validation.
   """
   def new_policy_changeset(attrs \\ %{}) do
-    EnrollmentPolicySchema.changeset(%EnrollmentPolicySchema{}, attrs)
+    EnrollmentPolicy.changeset(%EnrollmentPolicy{}, attrs)
   end
 
   @doc """

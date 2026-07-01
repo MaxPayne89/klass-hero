@@ -5,9 +5,9 @@
 # Seeds every table so all features are testable out of the box.
 
 alias KlassHero.Accounts.User
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
 alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.ParticipantPolicySchema
+alias KlassHero.Enrollment.EnrollmentPolicy
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
 alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
@@ -51,7 +51,7 @@ Repo.delete_all(ProgramSessionSchema)
 
 # Enrollment + policies
 Repo.delete_all(EnrollmentSchema)
-Repo.delete_all(EnrollmentPolicySchema)
+Repo.delete_all(EnrollmentPolicy)
 Repo.delete_all(ParticipantPolicySchema)
 
 # Family
@@ -974,7 +974,7 @@ enrollment_policy_programs = [
 Enum.each(enrollment_policy_programs, fn {title, min, max} ->
   program = Map.fetch!(program_by_title, title)
 
-  EnrollmentPolicySchema.changeset(%{
+  EnrollmentPolicy.changeset(%{
     program_id: program.id,
     min_enrollment: min,
     max_enrollment: max

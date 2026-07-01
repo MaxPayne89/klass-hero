@@ -14,11 +14,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
   import Ecto.Query
 
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.EnrollmentMapper
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Mappers.EnrollmentPolicyMapper
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Queries.EnrollmentQueries
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentPolicySchema
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema
-  alias KlassHero.Enrollment.Domain.Models.EnrollmentPolicy
+  alias KlassHero.Enrollment.EnrollmentPolicy
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
@@ -82,7 +80,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
       Ecto.Multi.new()
       |> Ecto.Multi.run(:lock_and_check, fn repo, _changes ->
         query =
-          from(p in EnrollmentPolicySchema,
+          from(p in EnrollmentPolicy,
             where: p.program_id == ^program_id,
             lock: "FOR UPDATE"
           )
@@ -91,8 +89,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.Enrollme
           nil ->
             {:ok, :unlimited}
 
-          %EnrollmentPolicySchema{} = schema ->
-            policy = EnrollmentPolicyMapper.to_domain(schema)
+          %EnrollmentPolicy{} = policy ->
             active = count_active_enrollments_in_tx(repo, program_id)
             check_capacity(policy, active)
         end
