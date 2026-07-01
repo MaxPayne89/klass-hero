@@ -12,15 +12,12 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL do
   the adapter layer since it's infrastructure, not domain logic.
   """
 
-  @behaviour KlassHero.Enrollment.Domain.Ports.ForResolvingProgramCatalog
-
   use KlassHero.Shared.Tracing
 
   import Ecto.Query, only: [from: 2]
 
   alias KlassHero.Repo
 
-  @impl true
   def list_program_titles_for_provider(provider_id) when is_binary(provider_id) do
     acl_span source: "enrollment", target: "program_catalog" do
       # Guard: type(^provider_id, :binary_id) raises Ecto.Query.CastError on invalid format;
@@ -40,7 +37,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL do
     end
   end
 
-  @impl true
   def program_owned_by?(program_id, provider_id) when is_binary(program_id) and is_binary(provider_id) do
     acl_span source: "enrollment", target: "program_catalog" do
       with {:ok, _} <- Ecto.UUID.cast(program_id),

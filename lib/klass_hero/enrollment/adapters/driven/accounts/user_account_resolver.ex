@@ -6,11 +6,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Accounts.UserAccountResolver do
   never depends on Accounts domain types.
   """
 
-  @behaviour KlassHero.Enrollment.Domain.Ports.ForResolvingUserAccounts
-
   alias KlassHero.Accounts
 
-  @impl true
   def get_user_by_email(email) do
     case Accounts.get_user_by_email(email) do
       %{} = user -> to_user_result(user)
@@ -18,7 +15,6 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Accounts.UserAccountResolver do
     end
   end
 
-  @impl true
   def register_user(attrs) do
     case Accounts.register_user(attrs) do
       {:ok, user} -> {:ok, to_user_result(user)}

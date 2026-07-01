@@ -8,13 +8,10 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ParticipantDetailsACL do
   needed for eligibility checks into a plain map.
   """
 
-  @behaviour KlassHero.Enrollment.Domain.Ports.ForResolvingParticipantDetails
-
   use KlassHero.Shared.Tracing
 
   alias KlassHero.Family
 
-  @impl true
   def get_participant_details(child_id) do
     acl_span source: "enrollment", target: "family" do
       case Family.get_child_by_id(child_id) do

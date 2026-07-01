@@ -8,13 +8,10 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ParentInfoACL do
   needed for roster messaging into plain maps.
   """
 
-  @behaviour KlassHero.Enrollment.Domain.Ports.ForResolvingParentInfo
-
   use KlassHero.Shared.Tracing
 
   alias KlassHero.Family
 
-  @impl true
   def get_parents_by_ids([]), do: []
 
   def get_parents_by_ids(parent_ids) when is_list(parent_ids) do
