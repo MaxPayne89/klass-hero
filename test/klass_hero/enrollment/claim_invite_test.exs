@@ -1,13 +1,12 @@
-defmodule KlassHero.Enrollment.Application.Commands.ClaimInviteTest do
+defmodule KlassHero.Enrollment.ClaimInviteTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
-  alias KlassHero.Enrollment.Application.ClaimResult
-  alias KlassHero.Enrollment.Application.Commands.ClaimInvite
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.ClaimInvite
+  alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Repo
 
   defp create_invite_with_token(_context) do
@@ -18,7 +17,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInviteTest do
     email = "claim-test-#{unique}@example.com"
 
     {:ok, _} =
-      BulkEnrollmentInviteRepository.create_one(%{
+      KlassHero.Enrollment.create_invite(%{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Emma",
@@ -31,13 +30,13 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInviteTest do
 
     # Fetch the created invite and manually assign the token + status
     invite =
-      BulkEnrollmentInviteSchema
+      BulkEnrollmentInvite
       |> Repo.one!()
       |> Ecto.Changeset.change(%{invite_token: token, status: :invite_sent})
       |> Repo.update!()
 
     # Re-fetch to get clean state
-    invite = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+    invite = Repo.get!(BulkEnrollmentInvite, invite.id)
 
     %{invite: invite, token: token, program: program, provider: provider}
   end

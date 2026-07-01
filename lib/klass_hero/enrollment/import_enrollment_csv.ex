@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
+defmodule KlassHero.Enrollment.ImportEnrollmentCsv do
   @moduledoc """
   Use case for importing enrollment invites from a CSV file.
 
@@ -24,12 +24,13 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
       {:error, %{parse_errors: [{0, String.t()}]}}  # whole-file fatal
   """
 
-  alias KlassHero.Enrollment.Application.ChangesetErrors
-  alias KlassHero.Enrollment.Application.ProviderProgramContext
+  alias KlassHero.Enrollment
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.ChangesetErrors
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
-  alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
   alias KlassHero.Enrollment.Domain.Services.CsvParser
   alias KlassHero.Enrollment.Domain.Services.ImportRowValidator
+  alias KlassHero.Enrollment.ProviderProgramContext
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
@@ -54,8 +55,6 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
     Logger.info("[ImportEnrollmentCsv] Starting CSV import for provider #{provider_id}")
 
     chunk_size = fetch_chunk_size(opts)
-    invite_reader = invite_reader()
-    invite_repository = invite_repository()
 
     with {:ok, prepared} <- prepare_csv(csv_binary),
          {:ok, context} <- build_context(provider_id) do
@@ -65,9 +64,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
         seen: MapSet.new(),
         existing_keys_by_program: %{},
         success_program_ids: MapSet.new(),
-        context: context,
-        invite_reader: invite_reader,
-        invite_repository: invite_repository
+        context: context
       }
 
       final =
@@ -89,19 +86,6 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
         {:ok, %{created: final.created, failed: Enum.reverse(final.failed)}}
       end
     end
-  end
-
-  # -- runtime port resolution --
-
-  # compile_env! ignores Application.put_env — resolve at runtime so test port swaps work.
-  defp invite_reader do
-    Application.fetch_env!(:klass_hero, :enrollment)
-    |> Keyword.fetch!(:for_querying_bulk_enrollment_invites)
-  end
-
-  defp invite_repository do
-    Application.fetch_env!(:klass_hero, :enrollment)
-    |> Keyword.fetch!(:for_storing_bulk_enrollment_invites)
   end
 
   # -- whole-file fatals --
@@ -229,7 +213,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
   end
 
   defp insert_row(acc, row, row_num, key) do
-    case acc.invite_repository.create_one(row) do
+    case Enrollment.create_invite(row) do
       {:ok, _invite} ->
         %{
           acc
@@ -258,7 +242,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv do
         {MapSet.member?(keys, key), acc}
 
       :error ->
-        keys = acc.invite_reader.list_existing_keys_for_programs([program_id])
+        keys = Enrollment.list_existing_invite_keys([program_id])
         acc = put_in(acc.existing_keys_by_program[program_id], keys)
         {MapSet.member?(keys, key), acc}
     end

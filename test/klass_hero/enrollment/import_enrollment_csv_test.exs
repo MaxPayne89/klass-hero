@@ -1,10 +1,10 @@
-defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
+defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
-  alias KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsv
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.ImportEnrollmentCsv
   alias KlassHero.Repo
   # -- setup helpers ---------------------------------------------------------
   alias KlassHero.Shared.Domain.Events.DomainEvent
@@ -111,7 +111,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
 
       assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
+      assert Repo.aggregate(BulkEnrollmentInvite, :count) == 2
     end
 
     test "assigns invite tokens after successful import", %{provider: provider} do
@@ -132,7 +132,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       # Why: the bulk_invites_imported event should fire after persist,
       #      causing the handler to assign tokens synchronously
       # Outcome: every invite has a non-nil invite_token
-      invites = Repo.all(BulkEnrollmentInviteSchema)
+      invites = Repo.all(BulkEnrollmentInvite)
       assert Enum.all?(invites, fn inv -> inv.invite_token != nil end)
     end
 
@@ -169,7 +169,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
 
       assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
-      invites = Repo.all(BulkEnrollmentInviteSchema)
+      invites = Repo.all(BulkEnrollmentInvite)
       alice_invite = Enum.find(invites, &(&1.child_first_name == "Alice"))
       bob_invite = Enum.find(invites, &(&1.child_first_name == "Bob"))
 
@@ -284,7 +284,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       assert {:ok, %{created: 2, failed: []}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
+      assert Repo.aggregate(BulkEnrollmentInvite, :count) == 2
     end
 
     test "persists valid rows and reports invalid ones when mixed", %{provider: provider} do
@@ -298,7 +298,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       assert {:ok, %{created: 2, failed: failed}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
+      assert Repo.aggregate(BulkEnrollmentInvite, :count) == 2
 
       assert [%{row: 3, category: :validation, errors: errors}] = failed
       assert {:child_first_name, "is required"} in errors
@@ -312,7 +312,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
 
       assert length(failed) == 2
       assert Enum.all?(failed, &(&1.category == :validation))
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 0
+      assert Repo.aggregate(BulkEnrollmentInvite, :count) == 0
     end
 
     test "in-batch duplicate is reported per-row, first row still imported", %{provider: provider} do
@@ -337,7 +337,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       #      use case's persistence API
       # Outcome: direct struct insert bypasses changeset validation — we
       #          control the data, so the FK-satisfying fields are enough
-      %BulkEnrollmentInviteSchema{
+      %BulkEnrollmentInvite{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Alice",
@@ -549,7 +549,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ImportEnrollmentCsvTest do
       assert {:ok, %{created: 2, failed: failed}} =
                ImportEnrollmentCsv.execute(provider.id, csv, chunk_size: 2)
 
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 2
+      assert Repo.aggregate(BulkEnrollmentInvite, :count) == 2
 
       halt_entry =
         Enum.find(failed, fn f -> f.category == :parse and f.errors =~ "Stream halted" end)

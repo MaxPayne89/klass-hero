@@ -1,11 +1,8 @@
-defmodule KlassHero.Enrollment.Application.Commands.DeleteInviteTest do
+defmodule KlassHero.Enrollment.DeleteInviteTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.EventTestHelper
   import KlassHero.Factory
-
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Application.Commands.DeleteInvite
 
   setup do
     setup_test_events()
@@ -18,7 +15,7 @@ defmodule KlassHero.Enrollment.Application.Commands.DeleteInviteTest do
       program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Jane",
@@ -27,10 +24,10 @@ defmodule KlassHero.Enrollment.Application.Commands.DeleteInviteTest do
           guardian_email: "jane@test.com"
         })
 
-      [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
+      {:ok, [invite]} = KlassHero.Enrollment.list_program_invites(program.id)
 
-      assert :ok = DeleteInvite.execute(invite.id, provider.id)
-      assert BulkEnrollmentInviteRepository.list_by_program(program.id) == []
+      assert :ok = KlassHero.Enrollment.delete_invite(invite.id, provider.id)
+      assert KlassHero.Enrollment.list_program_invites(program.id) == {:ok, []}
 
       assert_event_published(:invite_deleted, %{
         invite_id: invite.id,
@@ -41,7 +38,7 @@ defmodule KlassHero.Enrollment.Application.Commands.DeleteInviteTest do
 
     test "returns error for non-existent invite and publishes nothing" do
       assert {:error, :not_found} =
-               DeleteInvite.execute(Ecto.UUID.generate(), Ecto.UUID.generate())
+               KlassHero.Enrollment.delete_invite(Ecto.UUID.generate(), Ecto.UUID.generate())
 
       assert_no_events_published()
     end
@@ -52,7 +49,7 @@ defmodule KlassHero.Enrollment.Application.Commands.DeleteInviteTest do
       program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Jane",
@@ -61,10 +58,10 @@ defmodule KlassHero.Enrollment.Application.Commands.DeleteInviteTest do
           guardian_email: "jane@test.com"
         })
 
-      [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
+      {:ok, [invite]} = KlassHero.Enrollment.list_program_invites(program.id)
 
-      assert {:error, :not_found} = DeleteInvite.execute(invite.id, other_provider.id)
-      assert BulkEnrollmentInviteRepository.list_by_program(program.id) != []
+      assert {:error, :not_found} = KlassHero.Enrollment.delete_invite(invite.id, other_provider.id)
+      assert KlassHero.Enrollment.list_program_invites(program.id) != {:ok, []}
 
       assert_no_events_published()
     end

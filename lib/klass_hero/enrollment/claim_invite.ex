@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
+defmodule KlassHero.Enrollment.ClaimInvite do
   @moduledoc """
   Use case for claiming a bulk enrollment invite by token.
 
@@ -7,21 +7,14 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
   enrollment).
   """
 
-  alias KlassHero.Enrollment.Application.ClaimResult
+  alias KlassHero.Enrollment
+  alias KlassHero.Enrollment.Adapters.Driven.Accounts.UserAccountResolver
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
-  alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
-
-  @invite_reader Application.compile_env!(
-                   :klass_hero,
-                   [:enrollment, :for_querying_bulk_enrollment_invites]
-                 )
-  @user_accounts Application.compile_env!(
-                   :klass_hero,
-                   [:enrollment, :for_resolving_user_accounts]
-                 )
 
   @doc """
   Claims an invite by its token.
@@ -36,7 +29,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
           {:ok, ClaimResult.t()}
           | {:error, :not_found | :already_claimed | term()}
   def execute(token) when is_binary(token) do
-    with {:ok, invite} <- @invite_reader.get_by_token(token),
+    with {:ok, invite} <- Enrollment.get_invite_by_token(token),
          {:ok, invite} <- BulkEnrollmentInvite.ensure_claimable(invite),
          {:ok, user_type, user} <- resolve_user(invite),
          {:ok, result} <- build_and_publish(invite, user_type, user) do
@@ -52,7 +45,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
 
   # Returning parents must not get a duplicate account — link invite to existing user and skip onboarding.
   defp resolve_user(invite) do
-    case @user_accounts.get_user_by_email(invite.guardian_email) do
+    case UserAccountResolver.get_user_by_email(invite.guardian_email) do
       %{} = user ->
         {:ok, :existing_user, user}
 
@@ -68,7 +61,7 @@ defmodule KlassHero.Enrollment.Application.Commands.ClaimInvite do
       intended_roles: [:parent]
     }
 
-    case @user_accounts.register_user(attrs) do
+    case UserAccountResolver.register_user(attrs) do
       {:ok, user} -> {:ok, :new_user, user}
       {:error, reason} -> {:error, reason}
     end

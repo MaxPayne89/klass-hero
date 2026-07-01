@@ -11,15 +11,6 @@ alias ExAws.Request.Req
 alias FunWithFlags.Notifications.PhoenixPubSub
 alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
-alias KlassHero.Enrollment.Adapters.Driven.Accounts.UserAccountResolver
-alias KlassHero.Enrollment.Adapters.Driven.ACL.ChildInfoACL
-alias KlassHero.Enrollment.Adapters.Driven.ACL.ParentInfoACL
-alias KlassHero.Enrollment.Adapters.Driven.ACL.ParticipantDetailsACL
-alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL
-alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL
-alias KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentRepository
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
@@ -183,18 +174,10 @@ config :klass_hero, :critical_event_handlers, %{
 # Configure Enrollment bounded context
 config :klass_hero, :default_tz, "Europe/Berlin"
 
-config :klass_hero, :enrollment,
-  for_managing_enrollments: EnrollmentRepository,
-  for_querying_enrollments: EnrollmentRepository,
-  for_resolving_participant_details: ParticipantDetailsACL,
-  for_resolving_program_schedule: ProgramScheduleACL,
-  for_resolving_child_info: ChildInfoACL,
-  for_resolving_parent_info: ParentInfoACL,
-  for_storing_bulk_enrollment_invites: BulkEnrollmentInviteRepository,
-  for_querying_bulk_enrollment_invites: BulkEnrollmentInviteRepository,
-  for_resolving_program_catalog: ProgramCatalogACL,
-  for_resolving_user_accounts: UserAccountResolver,
-  for_sending_invite_emails: InviteEmailNotifier
+# Enrollment context needs no port wiring: it is conventional Phoenix (context module
+# + Ecto schemas calling Repo directly). Its outbound cross-context ACLs, the invite
+# email notifier, and the user-account resolver are called by KlassHero.Enrollment and
+# its internal orchestrators directly, not via dependency injection.
 
 # Configure Event Publisher (domain events — internal context communication)
 config :klass_hero, :event_publisher,

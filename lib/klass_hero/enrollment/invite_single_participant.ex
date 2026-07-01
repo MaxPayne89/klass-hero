@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipant do
+defmodule KlassHero.Enrollment.InviteSingleParticipant do
   @moduledoc """
   Creates one enrollment invite from a manual single-invite form submission.
 
@@ -9,22 +9,14 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipant do
   next dispatch — no handler changes needed.
   """
 
-  alias KlassHero.Enrollment.Application.ChangesetErrors
-  alias KlassHero.Enrollment.Application.ProviderProgramContext
-  alias KlassHero.Enrollment.Application.SingleInviteForm
+  alias KlassHero.Enrollment
+  alias KlassHero.Enrollment.ChangesetErrors
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
+  alias KlassHero.Enrollment.ProviderProgramContext
+  alias KlassHero.Enrollment.SingleInviteForm
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
-
-  @invite_reader Application.compile_env!(
-                   :klass_hero,
-                   [:enrollment, :for_querying_bulk_enrollment_invites]
-                 )
-  @invite_repository Application.compile_env!(
-                       :klass_hero,
-                       [:enrollment, :for_storing_bulk_enrollment_invites]
-                     )
 
   @type result ::
           {:ok, %{invite_id: binary()}}
@@ -87,7 +79,7 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipant do
   end
 
   defp check_duplicate(row) do
-    if @invite_reader.invite_exists?(
+    if Enrollment.invite_exists?(
          row.program_id,
          row.guardian_email,
          row.child_first_name,
@@ -100,7 +92,7 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipant do
   end
 
   defp persist(row, provider_id) do
-    case @invite_repository.create_one(Map.put(row, :provider_id, provider_id)) do
+    case Enrollment.create_invite(Map.put(row, :provider_id, provider_id)) do
       {:ok, invite} ->
         {:ok, invite}
 

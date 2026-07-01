@@ -1,7 +1,7 @@
-defmodule KlassHero.Enrollment.Application.SingleInviteFormTest do
+defmodule KlassHero.Enrollment.SingleInviteFormTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Enrollment.Application.SingleInviteForm
+  alias KlassHero.Enrollment.SingleInviteForm
 
   @valid_attrs %{
     "program_id" => "11111111-1111-1111-1111-111111111111",

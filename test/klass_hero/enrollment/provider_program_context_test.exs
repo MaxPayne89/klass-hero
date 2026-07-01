@@ -1,9 +1,9 @@
-defmodule KlassHero.Enrollment.Application.ProviderProgramContextTest do
+defmodule KlassHero.Enrollment.ProviderProgramContextTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Application.ProviderProgramContext
+  alias KlassHero.Enrollment.ProviderProgramContext
 
   describe "for_provider/1" do
     test "returns downcased programs_by_title for a provider with catalog entries" do

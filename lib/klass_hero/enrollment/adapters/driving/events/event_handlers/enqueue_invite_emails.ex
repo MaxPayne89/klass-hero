@@ -7,7 +7,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
   """
 
   alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
-  alias KlassHero.Enrollment.Application.Commands.EnqueueInviteEmails, as: UseCase
+  alias KlassHero.Enrollment.EnqueueInviteEmails, as: UseCase
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Tracing.Context
 

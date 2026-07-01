@@ -4,8 +4,7 @@ defmodule KlassHeroWeb.InviteClaimControllerTest do
   import KlassHero.AccountsFixtures
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Repo
 
   defp create_invite_with_token(_context) do
@@ -15,7 +14,7 @@ defmodule KlassHeroWeb.InviteClaimControllerTest do
     email = "controller-test-#{System.unique_integer([:positive])}@example.com"
 
     {:ok, _} =
-      BulkEnrollmentInviteRepository.create_one(%{
+      KlassHero.Enrollment.create_invite(%{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Emma",
@@ -26,13 +25,13 @@ defmodule KlassHeroWeb.InviteClaimControllerTest do
         guardian_last_name: "Schmidt"
       })
 
-    invite = Repo.one!(BulkEnrollmentInviteSchema)
+    invite = Repo.one!(BulkEnrollmentInvite)
 
     invite
     |> Ecto.Changeset.change(%{invite_token: token, status: :invite_sent})
     |> Repo.update!()
 
-    %{invite: Repo.one!(BulkEnrollmentInviteSchema), token: token, email: email}
+    %{invite: Repo.one!(BulkEnrollmentInvite), token: token, email: email}
   end
 
   describe "GET /invites/:token" do

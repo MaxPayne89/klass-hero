@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.ClaimResult do
+defmodule KlassHero.Enrollment.ClaimResult do
   @moduledoc """
   Result of `ClaimInvite.execute/1`.
 
@@ -7,7 +7,7 @@ defmodule KlassHero.Enrollment.Application.ClaimResult do
   downstream UI flows.
   """
 
-  alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
 
   @enforce_keys [:user_type, :user, :invite]
   defstruct [:user_type, :user, :invite]

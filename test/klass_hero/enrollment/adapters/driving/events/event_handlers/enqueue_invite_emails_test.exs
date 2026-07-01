@@ -4,10 +4,9 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInviteEmails
   alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Repo
 
@@ -37,7 +36,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
     ]
 
     Enum.each(rows, fn attrs ->
-      {:ok, _} = BulkEnrollmentInviteRepository.create_one(attrs)
+      {:ok, _} = KlassHero.Enrollment.create_invite(attrs)
     end)
 
     %{provider: provider, program: program}
@@ -54,7 +53,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
         event = EnrollmentEvents.bulk_invites_imported(provider.id, [program.id], 2)
         assert :ok = EnqueueInviteEmails.handle(event)
 
-        invites = Repo.all(BulkEnrollmentInviteSchema)
+        invites = Repo.all(BulkEnrollmentInvite)
 
         Enum.each(invites, fn inv ->
           assert_enqueued(
@@ -70,7 +69,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
         event = EnrollmentEvents.bulk_invites_imported(provider.id, [program.id], 2)
         assert :ok = EnqueueInviteEmails.handle(event)
 
-        invites = Repo.all(BulkEnrollmentInviteSchema)
+        invites = Repo.all(BulkEnrollmentInvite)
         assert Enum.all?(invites, fn inv -> inv.invite_token != nil end)
         assert length(Enum.uniq_by(invites, & &1.invite_token)) == 2
       end)
@@ -80,7 +79,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
       provider: provider,
       program: program
     } do
-      Repo.update_all(BulkEnrollmentInviteSchema, set: [status: :failed, error_details: "test"])
+      Repo.update_all(BulkEnrollmentInvite, set: [status: :failed, error_details: "test"])
 
       Oban.Testing.with_testing_mode(:manual, fn ->
         event = EnrollmentEvents.bulk_invites_imported(provider.id, [program.id], 0)
@@ -91,7 +90,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
     end
 
     test "skips invites that already have tokens", %{provider: provider, program: program} do
-      invite = Repo.all(BulkEnrollmentInviteSchema) |> hd()
+      invite = Repo.all(BulkEnrollmentInvite) |> hd()
       invite |> Ecto.Changeset.change(%{invite_token: "pre-existing"}) |> Repo.update!()
 
       Oban.Testing.with_testing_mode(:manual, fn ->
@@ -114,7 +113,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
       provider: provider,
       program: program
     } do
-      invites = Repo.all(BulkEnrollmentInviteSchema)
+      invites = Repo.all(BulkEnrollmentInvite)
       target = hd(invites)
 
       Oban.Testing.with_testing_mode(:manual, fn ->
@@ -138,7 +137,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
       provider: provider,
       program: program
     } do
-      target = Repo.all(BulkEnrollmentInviteSchema) |> hd()
+      target = Repo.all(BulkEnrollmentInvite) |> hd()
 
       Oban.Testing.with_testing_mode(:manual, fn ->
         event =
@@ -146,7 +145,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
 
         assert :ok = EnqueueInviteEmails.handle(event)
 
-        updated = Repo.get!(BulkEnrollmentInviteSchema, target.id)
+        updated = Repo.get!(BulkEnrollmentInvite, target.id)
         assert updated.invite_token != nil
       end)
     end
@@ -156,14 +155,14 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
       program: program
     } do
       # Mark each invite with a unique token so UseCase returns empty pairs
-      Repo.all(BulkEnrollmentInviteSchema)
+      Repo.all(BulkEnrollmentInvite)
       |> Enum.each(fn inv ->
         inv
         |> Ecto.Changeset.change(%{invite_token: "token-#{inv.id}"})
         |> Repo.update!()
       end)
 
-      target_id = Repo.all(BulkEnrollmentInviteSchema) |> hd() |> Map.get(:id)
+      target_id = Repo.all(BulkEnrollmentInvite) |> hd() |> Map.get(:id)
 
       Oban.Testing.with_testing_mode(:manual, fn ->
         event =
@@ -178,7 +177,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
       provider: provider,
       program: program
     } do
-      invites = Repo.all(BulkEnrollmentInviteSchema)
+      invites = Repo.all(BulkEnrollmentInvite)
       target = hd(invites)
       other = List.last(invites)
 

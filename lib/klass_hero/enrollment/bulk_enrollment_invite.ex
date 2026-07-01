@@ -1,10 +1,14 @@
-defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema do
+defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
   @moduledoc """
-  Ecto schema for the bulk_enrollment_invites table.
+  A denormalized CSV-import staging record (`bulk_enrollment_invites` table).
 
-  Stores denormalized CSV data as a staging record for bulk enrollment.
-  When a parent acts on the invite, real domain entities (User, ParentProfile,
+  When a guardian acts on the invite, real domain entities (User, ParentProfile,
   Child, Enrollment, Consents) are created from this data.
+
+  This module is both the Ecto schema and the struct consumers pattern-match.
+  The changesets are the validation gatekeepers; the predicates, `generate_token/0`
+  and `dedup_key/4` are the functional core. Status follows a state machine
+  (see `valid_transitions/0`).
   """
 
   use Ecto.Schema
@@ -18,6 +22,7 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
   @timestamps_opts [type: :utc_datetime]
 
   @statuses [:pending, :invite_sent, :registered, :enrolled, :failed]
+  @resendable_statuses [:pending, :invite_sent, :failed]
 
   schema "bulk_enrollment_invites" do
     field :program_id, :binary_id
@@ -48,6 +53,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
     timestamps()
   end
 
+  @type t :: %__MODULE__{}
+
   @required_fields ~w(program_id provider_id child_first_name child_last_name child_date_of_birth guardian_email)a
 
   @optional_fields ~w(
@@ -75,10 +82,9 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
     failed: [:pending]
   }
 
-  @lifecycle_fields ~w(
-    status invite_token invite_sent_at registered_at enrolled_at
-    enrollment_id error_details
-  )a
+  @lifecycle_fields ~w(status invite_token invite_sent_at registered_at enrolled_at enrollment_id error_details)a
+
+  def valid_transitions, do: @valid_transitions
 
   def changeset(schema \\ %__MODULE__{}, attrs) do
     schema
@@ -96,14 +102,11 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
     |> check_constraint(:school_grade, name: :valid_school_grade)
   end
 
-  def valid_transitions, do: @valid_transitions
-
   @doc """
   Changeset for creating invite records from CSV import data.
 
-  Only accepts fields from the CSV. Status defaults to "pending".
-  Lifecycle fields (invite_token, timestamps, enrollment_id, error_details)
-  are managed via transition_changeset/2.
+  Only accepts fields from the CSV. Status defaults to `:pending`.
+  Lifecycle fields are managed via `transition_changeset/2`.
   """
   def import_changeset(schema \\ %__MODULE__{}, attrs) do
     schema
@@ -119,10 +122,8 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
   end
 
   @doc """
-  Changeset for transitioning invite status.
-
-  Validates that the transition from current status to target status
-  is legal per the state machine. Also casts lifecycle fields.
+  Changeset for transitioning invite status, validating the transition is
+  legal per the state machine.
   """
   def transition_changeset(%__MODULE__{} = schema, attrs) do
     schema
@@ -152,5 +153,53 @@ defmodule KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmen
           )
         end
     end
+  end
+
+  @doc "Returns true if the invite is in `:pending` status."
+  @spec pending?(t()) :: boolean()
+  def pending?(%__MODULE__{status: :pending}), do: true
+  def pending?(%__MODULE__{}), do: false
+
+  @doc "Returns true if the invite is in `:invite_sent` status."
+  @spec invite_sent?(t()) :: boolean()
+  def invite_sent?(%__MODULE__{status: :invite_sent}), do: true
+  def invite_sent?(%__MODULE__{}), do: false
+
+  @doc "Returns true if the invite status allows resending."
+  @spec resendable?(t()) :: boolean()
+  def resendable?(%__MODULE__{status: status}) when status in @resendable_statuses, do: true
+  def resendable?(%__MODULE__{}), do: false
+
+  @doc """
+  Tuple-returning variant of `resendable?/1` for composing in `with` chains.
+  """
+  @spec ensure_resendable(t()) :: {:ok, t()} | {:error, :not_resendable}
+  def ensure_resendable(%__MODULE__{status: status} = invite) when status in @resendable_statuses, do: {:ok, invite}
+  def ensure_resendable(%__MODULE__{}), do: {:error, :not_resendable}
+
+  @doc """
+  Tuple-returning input guard for the claim path — an invite may only be claimed
+  from `:invite_sent` status.
+  """
+  @spec ensure_claimable(t()) :: {:ok, t()} | {:error, :already_claimed}
+  def ensure_claimable(%__MODULE__{status: :invite_sent} = invite), do: {:ok, invite}
+  def ensure_claimable(%__MODULE__{}), do: {:error, :already_claimed}
+
+  @doc "Generates a cryptographically secure URL-safe token for invite links."
+  @spec generate_token() :: String.t()
+  def generate_token do
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
+  end
+
+  @doc """
+  Natural dedup key for an invite — program_id plus downcased guardian email
+  and child name, matching the case-insensitive DB unique index.
+  """
+  @spec dedup_key(binary(), String.t(), String.t(), String.t()) ::
+          {binary(), String.t(), String.t(), String.t()}
+  def dedup_key(program_id, guardian_email, child_first_name, child_last_name)
+      when is_binary(program_id) and is_binary(guardian_email) and is_binary(child_first_name) and
+             is_binary(child_last_name) do
+    {program_id, String.downcase(guardian_email), String.downcase(child_first_name), String.downcase(child_last_name)}
   end
 end

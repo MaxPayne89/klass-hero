@@ -1,10 +1,10 @@
-defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipantTest do
+defmodule KlassHero.Enrollment.InviteSingleParticipantTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
-  alias KlassHero.Enrollment.Application.Commands.InviteSingleParticipant
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.InviteSingleParticipant
   alias KlassHero.Repo
 
   setup do
@@ -35,7 +35,7 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipantTest 
                InviteSingleParticipant.execute(provider.id, valid_attrs(program))
 
       assert is_binary(invite_id)
-      invite = Repo.get!(BulkEnrollmentInviteSchema, invite_id)
+      invite = Repo.get!(BulkEnrollmentInvite, invite_id)
       assert invite.program_id == program.id
       assert invite.provider_id == provider.id
       assert invite.guardian_email == "parent@example.com"
@@ -59,7 +59,7 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipantTest 
         })
 
       assert {:ok, %{invite_id: id}} = InviteSingleParticipant.execute(provider.id, attrs)
-      invite = Repo.get!(BulkEnrollmentInviteSchema, id)
+      invite = Repo.get!(BulkEnrollmentInvite, id)
       assert invite.school_grade == 3
       assert invite.nut_allergy == true
       assert invite.consent_photo_marketing == true
@@ -119,7 +119,7 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipantTest 
                f == :program_id and m =~ "does not belong"
              end)
 
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 0
+      assert Repo.aggregate(BulkEnrollmentInvite, :count) == 0
     end
   end
 
@@ -138,7 +138,7 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipantTest 
         })
 
       assert {:error, :duplicate} = InviteSingleParticipant.execute(provider.id, retry)
-      assert Repo.aggregate(BulkEnrollmentInviteSchema, :count) == 1
+      assert Repo.aggregate(BulkEnrollmentInvite, :count) == 1
     end
 
     test "returns :no_programs when the provider has an empty catalog" do
@@ -167,7 +167,7 @@ defmodule KlassHero.Enrollment.Application.Commands.InviteSingleParticipantTest 
       assert {:ok, %{invite_id: id}} =
                InviteSingleParticipant.execute(provider.id, valid_attrs(program))
 
-      invite = Repo.get!(BulkEnrollmentInviteSchema, id)
+      invite = Repo.get!(BulkEnrollmentInvite, id)
       assert invite.status == :invite_sent
       assert is_binary(invite.invite_token)
     end

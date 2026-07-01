@@ -1,11 +1,10 @@
-defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
+defmodule KlassHero.Enrollment.EnqueueInviteEmailsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
-  alias KlassHero.Enrollment.Application.Commands.EnqueueInviteEmails
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Repo
 
   defp create_pending_invites(_context) do
@@ -34,7 +33,7 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
     ]
 
     Enum.each(rows, fn attrs ->
-      {:ok, _} = BulkEnrollmentInviteRepository.create_one(attrs)
+      {:ok, _} = KlassHero.Enrollment.create_invite(attrs)
     end)
 
     %{provider: provider, program: program}
@@ -47,7 +46,7 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
       provider: provider,
       program: program
     } do
-      Repo.update_all(BulkEnrollmentInviteSchema, set: [status: :failed, error_details: "test"])
+      Repo.update_all(BulkEnrollmentInvite, set: [status: :failed, error_details: "test"])
 
       assert {:ok, []} = EnqueueInviteEmails.execute([program.id], provider.id)
     end
@@ -68,7 +67,7 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
     } do
       {:ok, _pairs} = EnqueueInviteEmails.execute([program.id], provider.id)
 
-      invites = Repo.all(BulkEnrollmentInviteSchema)
+      invites = Repo.all(BulkEnrollmentInvite)
       tokens = Enum.map(invites, & &1.invite_token)
 
       assert Enum.all?(tokens, &(not is_nil(&1)))
@@ -89,7 +88,7 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
       orphan_program = insert(:program_schema, provider_id: other_provider.id, title: "Other")
 
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: orphan_program.id,
           provider_id: provider.id,
           child_first_name: "Orphan",
@@ -99,7 +98,7 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmailsTest do
         })
 
       # Move existing invites to non-pending so only the orphan gets picked up
-      from(s in BulkEnrollmentInviteSchema,
+      from(s in BulkEnrollmentInvite,
         where: s.program_id != ^orphan_program.id
       )
       |> Repo.update_all(set: [status: :failed, error_details: "test"])

@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmails do
+defmodule KlassHero.Enrollment.EnqueueInviteEmails do
   @moduledoc """
   Use case that generates invite tokens for pending bulk enrollment invites
   and returns data needed to enqueue email delivery.
@@ -9,26 +9,15 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmails do
   infrastructure-specific jobs (e.g. Oban workers).
   """
 
-  alias KlassHero.Enrollment.Domain.Models.BulkEnrollmentInvite
+  alias KlassHero.Enrollment
+  alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
 
   require Logger
 
-  @invite_reader Application.compile_env!(:klass_hero, [
-                   :enrollment,
-                   :for_querying_bulk_enrollment_invites
-                 ])
-  @invite_repository Application.compile_env!(:klass_hero, [
-                       :enrollment,
-                       :for_storing_bulk_enrollment_invites
-                     ])
-  @program_catalog_acl Application.compile_env!(:klass_hero, [
-                         :enrollment,
-                         :for_resolving_program_catalog
-                       ])
-
   @spec execute([binary()], binary()) :: {:ok, [{binary(), String.t()}]}
   def execute(program_ids, provider_id) when is_list(program_ids) and is_binary(provider_id) do
-    pending_invites = @invite_reader.list_pending_without_token(program_ids)
+    pending_invites = Enrollment.list_pending_invites_without_token(program_ids)
 
     if pending_invites == [] do
       Logger.info("[Enrollment.EnqueueInviteEmails] No pending invites to process")
@@ -46,7 +35,7 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmails do
         {invite.id, BulkEnrollmentInvite.generate_token()}
       end)
 
-    {:ok, _count} = @invite_repository.bulk_assign_tokens(id_token_pairs)
+    {:ok, _count} = Enrollment.bulk_assign_invite_tokens(id_token_pairs)
 
     pairs =
       Enum.map(invites, fn invite ->
@@ -62,7 +51,7 @@ defmodule KlassHero.Enrollment.Application.Commands.EnqueueInviteEmails do
   end
 
   defp build_programs_by_id(provider_id) do
-    @program_catalog_acl.list_program_titles_for_provider(provider_id)
+    ProgramCatalogACL.list_program_titles_for_provider(provider_id)
     |> Map.new(fn {title, id} -> {id, title} end)
   end
 end

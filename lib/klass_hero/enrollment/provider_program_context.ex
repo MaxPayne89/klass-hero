@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.ProviderProgramContext do
+defmodule KlassHero.Enrollment.ProviderProgramContext do
   @moduledoc """
   Builds the shared `programs_by_title` lookup context that invite-creation
   commands use to resolve a human-readable program name into a `program_id`.
@@ -10,10 +10,7 @@ defmodule KlassHero.Enrollment.Application.ProviderProgramContext do
   Returned map uses downcased keys for case-insensitive lookup downstream.
   """
 
-  @program_catalog_acl Application.compile_env!(:klass_hero, [
-                         :enrollment,
-                         :for_resolving_program_catalog
-                       ])
+  alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL
 
   @type context :: %{
           provider_id: binary(),
@@ -25,7 +22,7 @@ defmodule KlassHero.Enrollment.Application.ProviderProgramContext do
           | {:error, :no_programs}
           | {:error, {:title_collisions, [String.t()]}}
   def for_provider(provider_id) when is_binary(provider_id) do
-    programs_by_title = @program_catalog_acl.list_program_titles_for_provider(provider_id)
+    programs_by_title = ProgramCatalogACL.list_program_titles_for_provider(provider_id)
 
     if programs_by_title == %{} do
       {:error, :no_programs}

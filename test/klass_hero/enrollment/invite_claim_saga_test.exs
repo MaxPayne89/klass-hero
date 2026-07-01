@@ -22,10 +22,9 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias KlassHero.Enrollment
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
-  alias KlassHero.Enrollment.Application.ClaimResult
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Family
   # EventSubscriber process names that participate in the saga.
   # These GenServers receive PubSub integration events and access the DB.
@@ -60,7 +59,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
     email = "saga-test-#{System.unique_integer([:positive])}@example.com"
 
     {:ok, _} =
-      BulkEnrollmentInviteRepository.create_one(%{
+      KlassHero.Enrollment.create_invite(%{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Emma",
@@ -72,7 +71,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       })
 
     invite =
-      BulkEnrollmentInviteSchema
+      BulkEnrollmentInvite
       |> where([i], i.guardian_email == ^email and i.program_id == ^program.id)
       |> Repo.one!()
 
@@ -82,7 +81,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
     |> Repo.update!()
 
     updated_invite =
-      BulkEnrollmentInviteSchema
+      BulkEnrollmentInvite
       |> where([i], i.id == ^invite.id)
       |> Repo.one!()
 
@@ -142,7 +141,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       # Step 2: Verify synchronous effects (domain event handlers on Enrollment bus)
       # MarkInviteRegistered runs synchronously via DomainEventBus.dispatch
       # PromoteIntegrationEvents also runs synchronously, broadcasting to PubSub
-      updated = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :registered
       assert updated.registered_at != nil
 
@@ -152,7 +151,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       # Enrollment InviteFamilyReadyHandler creates enrollment, transitions invite to enrolled
       assert_eventually(
         fn ->
-          final = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+          final = Repo.get!(BulkEnrollmentInvite, invite.id)
           final.status == :enrolled
         end,
         timeout_ms: 5000,
@@ -160,7 +159,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       )
 
       # Verify terminal invite state
-      final = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      final = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert final.status == :enrolled
       assert final.enrolled_at != nil
       assert final.enrollment_id != nil

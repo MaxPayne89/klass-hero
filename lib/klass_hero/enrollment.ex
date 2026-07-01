@@ -17,28 +17,17 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Queries.EnrollmentQueries
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
-
-  alias KlassHero.Enrollment.Application.Commands.{
-    ClaimInvite,
-    DeleteInvite,
-    ImportEnrollmentCsv,
-    InviteSingleParticipant,
-    ResendInvite
-  }
-
   alias KlassHero.Enrollment.Application.ParticipantPolicyForm
-
-  alias KlassHero.Enrollment.Application.Queries.{
-    CountProgramInvites,
-    ListProgramInvites
-  }
-
-  alias KlassHero.Enrollment.Application.SingleInviteForm
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Enrollment.ClaimInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
   alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Enrollment.EnrollmentPolicy
+  alias KlassHero.Enrollment.ImportEnrollmentCsv
+  alias KlassHero.Enrollment.InviteSingleParticipant
   alias KlassHero.Enrollment.ParticipantPolicy
+  alias KlassHero.Enrollment.SingleInviteForm
   alias KlassHero.Family
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
@@ -339,8 +328,21 @@ defmodule KlassHero.Enrollment do
   Returns `{:ok, invite}` on success, `{:error, :not_found}` or `{:error, :not_resendable}`.
   """
   def resend_invite(invite_id, provider_id) when is_binary(invite_id) and is_binary(provider_id) do
-    ResendInvite.execute(invite_id, provider_id)
+    with {:ok, invite} <- get_invite(invite_id),
+         {:ok, invite} <- authorize_invite_owner(invite, provider_id),
+         {:ok, invite} <- BulkEnrollmentInvite.ensure_resendable(invite),
+         {:ok, reset} <- reset_invite_for_resend(invite) do
+      # Dedicated event distinguishes single resend from bulk import; EnqueueInviteEmails
+      # assigns a fresh token + enqueues the job.
+      reset.provider_id
+      |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
+      |> EventDispatchHelper.dispatch_or_ok(__MODULE__, reset)
+    end
   end
+
+  # Returns :not_found (not :forbidden) on mismatch to avoid leaking invite existence.
+  defp authorize_invite_owner(%{provider_id: provider_id} = invite, provider_id), do: {:ok, invite}
+  defp authorize_invite_owner(_invite, _provider_id), do: {:error, :not_found}
 
   @doc """
   Deletes a bulk enrollment invite by ID.
@@ -350,7 +352,19 @@ defmodule KlassHero.Enrollment do
   Returns `:ok` on success, `{:error, :not_found}`, or `{:error, :delete_failed}`.
   """
   def delete_invite(invite_id, provider_id) when is_binary(invite_id) and is_binary(provider_id) do
-    DeleteInvite.execute(invite_id, provider_id)
+    with {:ok, invite} <- get_invite(invite_id),
+         {:ok, _invite} <- authorize_invite_owner(invite, provider_id),
+         :ok <- delete_invite_record(invite_id) do
+      invite.id
+      |> EnrollmentEvents.invite_deleted(%{
+        invite_id: invite.id,
+        program_id: invite.program_id,
+        provider_id: invite.provider_id
+      })
+      |> EventDispatchHelper.dispatch(__MODULE__)
+
+      :ok
+    end
   end
 
   @doc """
@@ -859,14 +873,152 @@ defmodule KlassHero.Enrollment do
   Returns `{:ok, [invite]}` or `{:ok, []}` if no invites exist.
   """
   def list_program_invites(program_id) when is_binary(program_id) do
-    ListProgramInvites.execute(program_id)
+    invites =
+      BulkEnrollmentInvite
+      |> where([i], i.program_id == ^program_id)
+      |> order_by([i], asc: i.child_last_name, asc: i.child_first_name)
+      |> Repo.all()
+
+    {:ok, invites}
   end
 
   @doc """
   Returns the count of bulk enrollment invites for a program.
   """
   def count_program_invites(program_id) when is_binary(program_id) do
-    CountProgramInvites.execute(program_id)
+    BulkEnrollmentInvite
+    |> where([i], i.program_id == ^program_id)
+    |> Repo.aggregate(:count)
+  end
+
+  # === Bulk enrollment invite persistence (used by the invite orchestrators,
+  # workers, and integration event handlers, all internal to this context) ===
+
+  @doc "Fetches an invite by id. Returns `{:ok, invite}` or `{:error, :not_found}`."
+  def get_invite(id) when is_binary(id) do
+    case Repo.get(BulkEnrollmentInvite, id) do
+      nil -> {:error, :not_found}
+      invite -> {:ok, invite}
+    end
+  end
+
+  @doc "Fetches an invite by token. Returns `{:ok, invite}` or `{:error, :not_found}`."
+  def get_invite_by_token(nil), do: {:error, :not_found}
+
+  def get_invite_by_token(token) when is_binary(token) do
+    case Repo.get_by(BulkEnrollmentInvite, invite_token: token) do
+      nil -> {:error, :not_found}
+      invite -> {:ok, invite}
+    end
+  end
+
+  @doc "Inserts a single invite from CSV/form import data via `import_changeset/2`."
+  def create_invite(attrs) when is_map(attrs) do
+    %BulkEnrollmentInvite{}
+    |> BulkEnrollmentInvite.import_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc "Applies a validated status transition to an invite (refetched by id)."
+  def transition_invite(%{id: id}, attrs) when is_map(attrs) do
+    case Repo.get(BulkEnrollmentInvite, id) do
+      nil ->
+        {:error, :not_found}
+
+      invite ->
+        invite
+        |> BulkEnrollmentInvite.transition_changeset(attrs)
+        |> Repo.update()
+    end
+  end
+
+  @doc """
+  Resets a resendable invite to pending, clearing its token and sent metadata.
+  Bypasses `transition_changeset` intentionally — this is a reverse reset.
+  """
+  def reset_invite_for_resend(%{id: id, status: status}) when status in [:pending, :invite_sent, :failed] do
+    case Repo.get(BulkEnrollmentInvite, id) do
+      nil ->
+        {:error, :not_found}
+
+      invite ->
+        invite
+        |> Ecto.Changeset.change(%{status: :pending, invite_token: nil, invite_sent_at: nil, error_details: nil})
+        |> Repo.update()
+    end
+  end
+
+  def reset_invite_for_resend(%{id: _id}), do: {:error, :not_resendable}
+
+  defp delete_invite_record(id) do
+    case Repo.get(BulkEnrollmentInvite, id) do
+      nil ->
+        {:error, :not_found}
+
+      invite ->
+        case Repo.delete(invite) do
+          {:ok, _deleted} -> :ok
+          {:error, _changeset} -> {:error, :delete_failed}
+        end
+    end
+  end
+
+  @doc "Lists pending invites in the given programs that have no token yet."
+  def list_pending_invites_without_token([]), do: []
+
+  def list_pending_invites_without_token(program_ids) when is_list(program_ids) do
+    BulkEnrollmentInvite
+    |> where([i], i.program_id in ^program_ids and i.status == :pending and is_nil(i.invite_token))
+    |> Repo.all()
+  end
+
+  @doc "Bulk-assigns tokens to invites in one round-trip. Returns `{:ok, count}`."
+  def bulk_assign_invite_tokens([]), do: {:ok, 0}
+
+  def bulk_assign_invite_tokens(id_token_pairs) when is_list(id_token_pairs) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    {ids, tokens} = Enum.unzip(id_token_pairs)
+
+    sql = """
+    UPDATE bulk_enrollment_invites AS b
+    SET invite_token = v.token, updated_at = $3::timestamp
+    FROM unnest($1::text[], $2::text[]) AS v(id, token)
+    WHERE b.id = v.id::uuid
+    """
+
+    case Repo.query(sql, [ids, tokens, now]) do
+      {:ok, %{num_rows: count}} -> {:ok, count}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc "Returns true if an invite already exists for the case-insensitive natural key."
+  def invite_exists?(program_id, guardian_email, child_first_name, child_last_name)
+      when is_binary(program_id) and is_binary(guardian_email) and is_binary(child_first_name) and
+             is_binary(child_last_name) do
+    email_down = String.downcase(guardian_email)
+    first_down = String.downcase(child_first_name)
+    last_down = String.downcase(child_last_name)
+
+    BulkEnrollmentInvite
+    |> where([i], i.program_id == ^program_id)
+    |> where([i], fragment("lower(?)", i.guardian_email) == ^email_down)
+    |> where([i], fragment("lower(?)", i.child_first_name) == ^first_down)
+    |> where([i], fragment("lower(?)", i.child_last_name) == ^last_down)
+    |> Repo.exists?()
+  end
+
+  @doc "Returns a MapSet of dedup keys for all invites in the given programs."
+  def list_existing_invite_keys([]), do: MapSet.new()
+
+  def list_existing_invite_keys(program_ids) when is_list(program_ids) do
+    BulkEnrollmentInvite
+    |> where([i], i.program_id in ^program_ids)
+    |> select([i], {i.program_id, i.guardian_email, i.child_first_name, i.child_last_name})
+    |> Repo.all()
+    |> MapSet.new(fn {pid, email, first, last} ->
+      BulkEnrollmentInvite.dedup_key(pid, email, first, last)
+    end)
   end
 
   @doc """

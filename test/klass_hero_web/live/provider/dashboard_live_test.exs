@@ -4,7 +4,6 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
   import Phoenix.LiveViewTest
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.ProviderFixtures
@@ -458,7 +457,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
         )
 
       {:ok, _invite} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Jane",
@@ -511,7 +510,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
         )
 
       {:ok, _invite} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Jane",
@@ -661,7 +660,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
     } do
       # Seed an existing invite matching the form submission
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Emma",
@@ -762,7 +761,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Jane",
@@ -772,23 +771,23 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
         })
 
       # Walk through the state machine to enrolled
-      [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
+      {:ok, [invite]} = KlassHero.Enrollment.list_program_invites(program.id)
 
       {:ok, sent} =
-        BulkEnrollmentInviteRepository.transition_status(invite, %{
+        KlassHero.Enrollment.transition_invite(invite, %{
           status: "invite_sent",
           invite_token: "tok",
           invite_sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
         })
 
       {:ok, registered} =
-        BulkEnrollmentInviteRepository.transition_status(sent, %{
+        KlassHero.Enrollment.transition_invite(sent, %{
           status: "registered",
           registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
         })
 
       {:ok, _enrolled} =
-        BulkEnrollmentInviteRepository.transition_status(registered, %{
+        KlassHero.Enrollment.transition_invite(registered, %{
           status: "enrolled",
           enrolled_at: DateTime.utc_now() |> DateTime.truncate(:second)
         })
@@ -807,7 +806,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Jane",
@@ -821,8 +820,8 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       view |> element("#roster-tab-invites") |> render_click()
 
       # Delete the invite from the DB while the DOM still has the button
-      [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
-      :ok = BulkEnrollmentInviteRepository.delete(invite.id)
+      {:ok, [invite]} = KlassHero.Enrollment.list_program_invites(program.id)
+      :ok = KlassHero.Enrollment.delete_invite(invite.id, invite.provider_id)
 
       view |> element("[phx-click=resend_invite]") |> render_click()
 
@@ -835,7 +834,7 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       program: program
     } do
       {:ok, _} =
-        BulkEnrollmentInviteRepository.create_one(%{
+        KlassHero.Enrollment.create_invite(%{
           program_id: program.id,
           provider_id: provider.id,
           child_first_name: "Jane",
@@ -849,8 +848,8 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       view |> element("#roster-tab-invites") |> render_click()
 
       # Delete the invite from DB while the DOM still shows it
-      [invite] = BulkEnrollmentInviteRepository.list_by_program(program.id)
-      :ok = BulkEnrollmentInviteRepository.delete(invite.id)
+      {:ok, [invite]} = KlassHero.Enrollment.list_program_invites(program.id)
+      :ok = KlassHero.Enrollment.delete_invite(invite.id, invite.provider_id)
 
       view |> element("[phx-click=delete_invite]") |> render_click()
 

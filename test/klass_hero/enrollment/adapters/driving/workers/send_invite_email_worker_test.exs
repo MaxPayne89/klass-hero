@@ -3,9 +3,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
   import KlassHero.Factory
 
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.BulkEnrollmentInviteRepository
-  alias KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.BulkEnrollmentInviteSchema
   alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Repo
 
   defp create_pending_invite(_context) do
@@ -13,7 +12,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
     program = insert(:program_schema, provider_id: provider.id, title: "Dance Class")
 
     {:ok, _} =
-      BulkEnrollmentInviteRepository.create_one(%{
+      KlassHero.Enrollment.create_invite(%{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Emma",
@@ -23,7 +22,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
         guardian_first_name: "Hans"
       })
 
-    invite = Repo.one!(BulkEnrollmentInviteSchema)
+    invite = Repo.one!(BulkEnrollmentInvite)
     invite = invite |> Ecto.Changeset.change(%{invite_token: "test-token-123"}) |> Repo.update!()
 
     %{invite: invite, program: program}
@@ -38,14 +37,14 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
                  args: %{"invite_id" => invite.id, "program_name" => program.title}
                })
 
-      updated = Repo.get!(BulkEnrollmentInviteSchema, invite.id)
+      updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :invite_sent
       assert updated.invite_sent_at != nil
     end
 
     test "skips already-sent invite", %{invite: invite, program: program} do
       invite
-      |> BulkEnrollmentInviteSchema.transition_changeset(%{
+      |> BulkEnrollmentInvite.transition_changeset(%{
         status: :invite_sent,
         invite_sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
       })

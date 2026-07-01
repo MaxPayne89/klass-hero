@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.SingleInviteForm do
+defmodule KlassHero.Enrollment.SingleInviteForm do
   @moduledoc """
   Schemaless embedded form backing the provider's manual single-invite
   LiveView. Delegates field-shape validations to

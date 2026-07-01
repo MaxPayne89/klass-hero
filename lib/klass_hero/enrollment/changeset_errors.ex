@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.ChangesetErrors do
+defmodule KlassHero.Enrollment.ChangesetErrors do
   @moduledoc """
   Converts an `Ecto.Changeset`'s errors into the flat
   `[{field :: atom, message :: String.t()}]` list that enrollment commands
