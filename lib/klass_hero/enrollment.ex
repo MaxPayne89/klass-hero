@@ -975,6 +975,7 @@ defmodule KlassHero.Enrollment do
   @doc "Bulk-assigns tokens to invites in one round-trip. Returns `{:ok, count}`."
   def bulk_assign_invite_tokens([]), do: {:ok, 0}
 
+  # sobelow_skip ["SQL.Query"] — static heredoc; ids/tokens/now bound via $1/$2/$3, no interpolation
   def bulk_assign_invite_tokens(id_token_pairs) when is_list(id_token_pairs) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     {ids, tokens} = Enum.unzip(id_token_pairs)
