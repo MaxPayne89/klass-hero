@@ -18,9 +18,6 @@ alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
 alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
-alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentNotificationScheduler
-alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramStaffAssignmentRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfileRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProgramRepository
@@ -207,10 +204,6 @@ config :klass_hero, :provider,
   for_querying_session_details: SessionDetailsRepository,
   for_querying_session_stats: SessionStatsRepository,
   for_resolving_session_stats: ParticipationSessionStatsACL,
-  for_storing_incident_reports: IncidentReportRepository,
-  for_querying_incident_reports: IncidentReportRepository,
-  for_scheduling_incident_notifications: IncidentNotificationScheduler,
-  for_sending_incident_emails: IncidentReportedEmailNotifier,
   for_querying_provider_programs: ProviderProgramRepository
 
 config :klass_hero, :resend_req_options, []

@@ -4,8 +4,8 @@ defmodule KlassHeroWeb.Presenters.IncidentReportPresenter do
   display-ready maps for the per-program incidents listing.
   """
 
-  alias KlassHero.Provider.Domain.Models.IncidentReport
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
+  alias KlassHero.Provider.IncidentReport
 
   @type list_view :: %{
           id: String.t(),

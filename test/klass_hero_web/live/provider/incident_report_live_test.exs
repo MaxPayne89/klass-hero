@@ -4,8 +4,8 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IncidentReportSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
+  alias KlassHero.Provider.IncidentReport
   alias KlassHero.Repo
 
   defp insert_provider_program!(attrs) do
@@ -115,7 +115,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
       {path, flash} = assert_redirect(view)
       assert path == "/provider/dashboard"
       assert flash["info"] =~ "submitted"
-      assert Repo.aggregate(IncidentReportSchema, :count) == 1
+      assert Repo.aggregate(IncidentReport, :count) == 1
     end
 
     test "snapshots the reporter's display name from current_scope on submit", %{
@@ -140,7 +140,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
       |> render_submit()
 
       assert_redirect(view)
-      [stored] = Repo.all(IncidentReportSchema)
+      [stored] = Repo.all(IncidentReport)
       expected = user.name || user.email
       assert stored.reporter_display_name == expected
     end
@@ -167,7 +167,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
         |> render_submit()
 
       assert html =~ "at least 10"
-      assert Repo.aggregate(IncidentReportSchema, :count) == 0
+      assert Repo.aggregate(IncidentReport, :count) == 0
     end
 
     # Trigger: form-tampered category value that resolves to an existing BEAM atom
@@ -198,8 +198,10 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
           }
         })
 
-      assert html =~ "is invalid"
-      assert Repo.aggregate(IncidentReportSchema, :count) == 0
+      # Tampered category is dropped to nil by the allow-list guard, so the
+      # changeset rejects it as blank — the security property is that it never persists.
+      assert html =~ "blank"
+      assert Repo.aggregate(IncidentReport, :count) == 0
     end
   end
 end

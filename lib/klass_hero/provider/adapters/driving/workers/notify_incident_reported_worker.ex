@@ -9,7 +9,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Workers.NotifyIncidentReportedWork
 
   use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
 
-  alias KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReported
+  alias KlassHero.Provider.NotifyIncidentReported
 
   defguardp is_present(s) when is_binary(s) and byte_size(s) > 0
 

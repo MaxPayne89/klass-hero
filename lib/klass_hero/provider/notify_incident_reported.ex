@@ -1,22 +1,21 @@
-defmodule KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReported do
+defmodule KlassHero.Provider.NotifyIncidentReported do
   @moduledoc """
   Emails a provider's business owner when an incident report is submitted.
 
-  Payload-driven: `business_owner_email` and `business_name` arrive in the
-  args map (forwarded by `NotifyIncidentReportedWorker` from the enqueued
-  Oban job). No `ProviderProfile` lookup happens here — that responsibility
-  is upstream in `SubmitIncidentReport`, which loads the profile once and
-  threads the two fields through the scheduler.
+  Payload-driven: `business_owner_email` and `business_name` arrive in the args
+  map (forwarded by `NotifyIncidentReportedWorker` from the enqueued Oban job).
+  No `ProviderProfile` lookup happens here — that responsibility is upstream in
+  `SubmitIncidentReport`, which loads the profile once and threads the two
+  fields through the enqueue.
   """
 
-  alias KlassHero.Provider.Domain.Models.IncidentReport
+  alias KlassHero.Provider
+  alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
+  alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
+  alias KlassHero.Provider.IncidentReport
   alias KlassHero.Shared.Storage
 
   require Logger
-
-  @incident_query Application.compile_env!(:klass_hero, [:provider, :for_querying_incident_reports])
-  @program_query Application.compile_env!(:klass_hero, [:provider, :for_querying_provider_programs])
-  @notifier Application.compile_env!(:klass_hero, [:provider, :for_sending_incident_emails])
 
   @signed_url_ttl_seconds 3600
   @program_fallback_label "a program"
@@ -34,8 +33,8 @@ defmodule KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReporte
   @doc """
   Sends the incident-report email for the given args map.
 
-  Returns `:ok` on success or `{:error, reason}` when the report row cannot
-  be loaded or the notifier rejects the email.
+  Returns `:ok` on success or `{:error, reason}` when the report row cannot be
+  loaded or the notifier rejects the email.
   """
   @spec execute(args()) :: :ok | {:error, term()}
   def execute(%{incident_report_id: id, business_owner_email: owner_email, business_name: business_name})
@@ -54,14 +53,14 @@ defmodule KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReporte
   end
 
   defp fetch_report(id) do
-    case @incident_query.get(id) do
+    case Provider.get_incident_report(id) do
       {:ok, %IncidentReport{} = report} -> {:ok, report}
       {:error, :not_found} -> {:error, :incident_report_not_found}
     end
   end
 
   defp resolve_program_label(%IncidentReport{program_id: pid}) when is_binary(pid) do
-    case @program_query.get_by_id(pid) do
+    case ProviderProgramQueries.get_by_id(pid) do
       {:ok, %{name: name}} when is_binary(name) and byte_size(name) > 0 ->
         name
 
@@ -102,7 +101,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReporte
       business_name: business_name
     }
 
-    case @notifier.send_incident_report(recipient, report, context) do
+    case IncidentReportedEmailNotifier.send_incident_report(recipient, report, context) do
       {:ok, _email} -> :ok
       {:error, reason} -> {:error, reason}
     end

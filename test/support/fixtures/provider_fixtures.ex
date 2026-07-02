@@ -5,11 +5,10 @@ defmodule KlassHero.ProviderFixtures do
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
-  alias KlassHero.Provider.Domain.Models.IncidentReport
+  alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
 
@@ -223,8 +222,12 @@ defmodule KlassHero.ProviderFixtures do
       reporter_display_name: "Test Reporter"
     }
 
-    {:ok, report} = IncidentReport.new(Map.merge(defaults, attrs_map))
-    {:ok, persisted} = IncidentReportRepository.create(report)
+    {:ok, persisted} =
+      defaults
+      |> Map.merge(attrs_map)
+      |> IncidentReport.create_changeset()
+      |> Repo.insert()
+
     persisted
   end
 
