@@ -7,7 +7,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
 
   describe "execute/4" do
     test "sends message successfully for participant" do

@@ -12,7 +12,7 @@ defmodule KlassHero.Messaging.Attachment do
 
   import Ecto.Changeset
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Message
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -25,7 +25,7 @@ defmodule KlassHero.Messaging.Attachment do
     field :content_type, :string
     field :file_size_bytes, :integer
 
-    belongs_to :message, MessageSchema
+    belongs_to :message, Message
 
     timestamps()
   end

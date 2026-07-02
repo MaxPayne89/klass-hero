@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.Conversation do
 
   import Ecto.Changeset
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -34,7 +34,7 @@ defmodule KlassHero.Messaging.Conversation do
       foreign_key: :conversation_id,
       preload_order: [asc: :joined_at]
 
-    has_many :messages, MessageSchema, foreign_key: :conversation_id
+    has_many :messages, Message, foreign_key: :conversation_id
 
     timestamps()
   end

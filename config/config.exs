@@ -19,7 +19,6 @@ alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
 alias KlassHero.Messaging.Adapters.Driven.ObanEmailJobScheduler
 alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
 alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
 alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
 alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
 alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
@@ -196,8 +195,6 @@ config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klassher
 
 # Configure Messaging bounded context
 config :klass_hero, :messaging,
-  for_managing_messages: MessageRepository,
-  for_querying_messages: MessageRepository,
   for_resolving_users: UserResolver,
   for_querying_enrollments: EnrollmentResolver,
   for_resolving_program_staff: ProgramStaffParticipantRepository,

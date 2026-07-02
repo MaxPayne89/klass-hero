@@ -5,8 +5,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
 
   @doc """
@@ -118,7 +118,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   """
   def order_by_recent_message(query) do
     query
-    |> join(:left, [conversation: c], m in MessageSchema,
+    |> join(:left, [conversation: c], m in Message,
       on: m.conversation_id == c.id,
       as: :message
     )
@@ -152,7 +152,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
       on: p.conversation_id == c.id and p.user_id == ^user_id,
       as: :user_participant
     )
-    |> join(:left, [conversation: c, user_participant: p], m in MessageSchema,
+    |> join(:left, [conversation: c, user_participant: p], m in Message,
       on:
         m.conversation_id == c.id and
           (is_nil(p.last_read_at) or m.inserted_at > p.last_read_at) and
@@ -194,7 +194,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
     from(p in Participant,
       join: c in Conversation,
       on: c.id == p.conversation_id,
-      join: m in MessageSchema,
+      join: m in Message,
       on:
         m.conversation_id == c.id and
           (is_nil(p.last_read_at) or m.inserted_at > p.last_read_at) and

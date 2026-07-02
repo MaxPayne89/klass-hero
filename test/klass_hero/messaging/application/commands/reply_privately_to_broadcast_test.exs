@@ -6,7 +6,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast
 
@@ -65,7 +64,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
 
       # Verify system note was inserted
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(direct_conversation_id, limit: 10)
+        KlassHero.Messaging.list_messages_for_conversation(direct_conversation_id, limit: 10)
 
       system_messages = Enum.filter(messages, &(&1.message_type == :system))
       assert length(system_messages) == 1
@@ -93,7 +92,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
         ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation_id, limit: 50)
+        KlassHero.Messaging.list_messages_for_conversation(conversation_id, limit: 50)
 
       system_messages = Enum.filter(messages, &(&1.message_type == :system))
       assert length(system_messages) == 1
@@ -142,7 +141,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
         ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation_id, limit: 200)
+        KlassHero.Messaging.list_messages_for_conversation(conversation_id, limit: 200)
 
       system_messages = Enum.filter(messages, &(&1.message_type == :system))
       assert length(system_messages) == 1

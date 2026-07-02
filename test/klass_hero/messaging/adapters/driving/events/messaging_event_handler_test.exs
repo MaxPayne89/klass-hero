@@ -10,8 +10,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandlerTest 
 
   alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
+  alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
 
   describe "handle_event/1 for :user_anonymized" do
@@ -47,7 +47,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandlerTest 
       # Verify message content was anonymized
       reloaded_message =
         Repo.one!(
-          from(m in MessageSchema,
+          from(m in Message,
             where: m.sender_id == ^user.id
           )
         )

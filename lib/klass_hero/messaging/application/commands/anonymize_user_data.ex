@@ -18,7 +18,6 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserData do
   require Logger
 
   @context KlassHero.Messaging
-  @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
 
   @doc """
   Anonymizes all messaging data for a user.
@@ -47,7 +46,7 @@ defmodule KlassHero.Messaging.Application.Commands.AnonymizeUserData do
   defp run_anonymization_transaction(user_id) do
     Repo.transaction(fn ->
       with {:ok, msg_count} <-
-             tag_step(:anonymize_messages, @message_repo.anonymize_for_sender(user_id)),
+             tag_step(:anonymize_messages, KlassHero.Messaging.anonymize_messages_for_sender(user_id)),
            {:ok, part_count} <-
              tag_step(:mark_as_left, KlassHero.Messaging.mark_all_participations_left(user_id)) do
         %{messages_anonymized: msg_count, participants_updated: part_count}

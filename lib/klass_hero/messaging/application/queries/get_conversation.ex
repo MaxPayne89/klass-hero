@@ -15,8 +15,6 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversation do
 
   require Logger
 
-  @message_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_messages])
-
   @doc """
   Gets a conversation with its messages.
 
@@ -47,7 +45,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversation do
            KlassHero.Messaging.get_conversation_by_id(conversation_id, preload: [:participants]),
          :ok <- Shared.verify_participant(conversation_id, user_id),
          {:ok, messages, sender_names, has_more} <-
-           @message_reader.list_with_senders(conversation_id, opts) do
+           KlassHero.Messaging.list_messages_with_senders(conversation_id, opts) do
       maybe_mark_as_read(mark_as_read?, conversation_id, user_id)
 
       Logger.debug("Retrieved conversation",

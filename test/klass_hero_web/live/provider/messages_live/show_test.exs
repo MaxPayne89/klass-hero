@@ -4,8 +4,6 @@ defmodule KlassHeroWeb.Provider.MessagesLive.ShowTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
-
   describe "authentication and authorization" do
     test "requires authentication", %{conn: conn} do
       conversation = insert(:conversation_schema)
@@ -62,7 +60,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.ShowTest do
       )
 
       {:ok, _msg} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: conversation.id,
           sender_id: user.id,
           content: "Hello world!"
@@ -120,7 +118,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.ShowTest do
       |> render_submit()
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation.id, limit: 10)
+        KlassHero.Messaging.list_messages_for_conversation(conversation.id, limit: 10)
 
       assert length(messages) == 1
       assert hd(messages).content == "Hello from provider!"
@@ -141,7 +139,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.ShowTest do
       |> render_submit()
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation.id, limit: 10)
+        KlassHero.Messaging.list_messages_for_conversation(conversation.id, limit: 10)
 
       assert messages == []
     end

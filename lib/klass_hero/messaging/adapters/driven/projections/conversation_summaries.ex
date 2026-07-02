@@ -52,10 +52,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   import Ecto.Query
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.Message
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
@@ -701,13 +701,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   # Subquery avoids loading N×M rows via :messages preload.
   defp fetch_latest_messages(conversation_ids) when conversation_ids != [] do
     latest_times =
-      from(m in MessageSchema,
+      from(m in Message,
         where: m.conversation_id in ^conversation_ids,
         group_by: m.conversation_id,
         select: %{conversation_id: m.conversation_id, max_at: max(m.inserted_at)}
       )
 
-    from(m in MessageSchema,
+    from(m in Message,
       join: lt in subquery(latest_times),
       on: m.conversation_id == lt.conversation_id and m.inserted_at == lt.max_at,
       select: %{
@@ -739,10 +739,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   defp fetch_attachment_message_ids(_), do: MapSet.new()
 
   defp fetch_system_notes(conversation_ids) when conversation_ids != [] do
-    from(m in MessageSchema,
+    from(m in Message,
       where:
         m.conversation_id in ^conversation_ids and
-          m.message_type == "system" and
+          m.message_type == :system and
           is_nil(m.deleted_at) and
           like(m.content, "%[broadcast:%"),
       select: %{
@@ -789,7 +789,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   defp fetch_unread_counts_nil(readers) do
     Enum.reduce(readers, %{}, fn {conv_id, user_id, _}, acc ->
       count =
-        from(m in MessageSchema,
+        from(m in Message,
           where: m.conversation_id == ^conv_id and m.sender_id != ^user_id,
           select: count(m.id)
         )
@@ -804,7 +804,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   defp fetch_unread_counts_dated(readers) do
     Enum.reduce(readers, %{}, fn {conv_id, user_id, last_read_at}, acc ->
       count =
-        from(m in MessageSchema,
+        from(m in Message,
           where:
             m.conversation_id == ^conv_id and
               m.sender_id != ^user_id and

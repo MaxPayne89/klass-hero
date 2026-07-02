@@ -4,7 +4,6 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Application.Queries.GetConversation
   alias KlassHero.Messaging.Conversation
 
@@ -19,7 +18,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationTest do
       )
 
       {:ok, _msg} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: conversation.id,
           sender_id: user.id,
           content: "Hello!"
@@ -45,7 +44,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationTest do
       )
 
       {:ok, _msg} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: conversation.id,
           sender_id: user.id,
           content: "Hello!"
@@ -66,7 +65,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationTest do
       )
 
       for i <- 1..5 do
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: conversation.id,
           sender_id: user.id,
           content: "Message #{i}"
@@ -90,7 +89,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationTest do
       )
 
       {:ok, _msg} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: conversation.id,
           sender_id: user.id,
           content: "Hello!"

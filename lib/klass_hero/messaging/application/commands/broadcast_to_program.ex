@@ -17,7 +17,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
   alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
 

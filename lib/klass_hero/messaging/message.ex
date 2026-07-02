@@ -1,8 +1,12 @@
-defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema do
+defmodule KlassHero.Messaging.Message do
   @moduledoc """
-  Ecto schema for the messages table.
+  A message within a conversation: a regular `:text` message or a `:system` note.
 
-  Use MessageMapper to convert between schema and domain Message entities.
+  Conventional Phoenix — the Ecto schema is the struct that flows through the
+  `KlassHero.Messaging` context; changesets are the single validation gatekeeper.
+  `message_type` is an `Ecto.Enum`, so it loads/dumps as an atom without a mapper.
+  The "content or attachments" rule is enforced by the `send_message` use case, which
+  orchestrates the message + its attachments together.
   """
 
   use Ecto.Schema
@@ -17,14 +21,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema 
   @foreign_key_type :binary_id
   @timestamps_opts [type: :utc_datetime]
 
-  @valid_message_types ~w(text system)
   @max_content_length 10_000
 
   schema "messages" do
     field :conversation_id, :binary_id
     field :sender_id, :binary_id
     field :content, :string
-    field :message_type, :string, default: "text"
+    field :message_type, Ecto.Enum, values: [:text, :system], default: :text
     field :deleted_at, :utc_datetime
 
     belongs_to :conversation, Conversation, define_field: false
@@ -34,27 +37,33 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema 
     timestamps()
   end
 
+  @type message_type :: :text | :system
+
+  @type t :: %__MODULE__{
+          id: String.t(),
+          conversation_id: String.t(),
+          sender_id: String.t(),
+          content: String.t() | nil,
+          message_type: message_type() | nil,
+          deleted_at: DateTime.t() | nil,
+          inserted_at: DateTime.t() | nil,
+          updated_at: DateTime.t() | nil
+        }
+
   @required_fields ~w(conversation_id sender_id)a
   @optional_fields ~w(content message_type deleted_at)a
 
-  @doc """
-  Creates a changeset for new message creation.
-
-  Content is optional — a message may consist of attachments only.
-  """
+  @doc "Changeset for creating a message."
   def create_changeset(schema \\ %__MODULE__{}, attrs) do
     schema
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
-    |> validate_inclusion(:message_type, @valid_message_types)
     |> validate_length(:content, max: @max_content_length)
     |> foreign_key_constraint(:conversation_id)
     |> foreign_key_constraint(:sender_id)
   end
 
-  @doc """
-  Creates a changeset for soft deleting a message.
-  """
+  @doc "Changeset for soft-deleting a message."
   def delete_changeset(schema, attrs) do
     schema
     |> cast(attrs, [:deleted_at])

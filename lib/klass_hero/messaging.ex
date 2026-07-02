@@ -32,7 +32,7 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationSummaryQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
   alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
   alias KlassHero.Messaging.Application.Commands.{
@@ -64,7 +64,8 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Messaging.Domain.Models.{EmailReply, Message}
+  alias KlassHero.Messaging.Domain.Models.EmailReply
+  alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
 
@@ -963,6 +964,193 @@ defmodule KlassHero.Messaging do
     end
   end
 
+  # === Persistence — messages ===
+
+  @doc "Creates a message. Content-or-attachments is enforced by the caller (send_message)."
+  @spec create_message(map()) :: {:ok, Message.t()} | {:error, Ecto.Changeset.t()}
+  def create_message(attrs) do
+    context_span entity: "message" do
+      create_attrs = Map.take(attrs, [:conversation_id, :sender_id, :content, :message_type])
+
+      %Message{}
+      |> Message.create_changeset(create_attrs)
+      |> Repo.insert()
+      |> case do
+        {:ok, message} ->
+          Logger.debug("Created message", message_id: message.id, conversation_id: message.conversation_id)
+          {:ok, message}
+
+        error ->
+          error
+      end
+    end
+  end
+
+  @doc "Soft-deletes a message by setting `deleted_at`."
+  @spec soft_delete_message(Message.t()) ::
+          {:ok, Message.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def soft_delete_message(message) do
+    context_span entity: "message" do
+      case Repo.get(Message, message.id) do
+        nil ->
+          {:error, :not_found}
+
+        schema ->
+          schema
+          |> Message.delete_changeset(%{deleted_at: DateTime.utc_now()})
+          |> Repo.update()
+          |> case do
+            {:ok, updated} ->
+              Logger.info("Soft deleted message", message_id: message.id)
+              {:ok, updated}
+
+            error ->
+              error
+          end
+      end
+    end
+  end
+
+  @doc "Blanks the content of all messages by a sender (GDPR anonymization)."
+  @spec anonymize_messages_for_sender(String.t()) ::
+          {:ok, non_neg_integer()} | {:error, :database_connection_error | :database_query_error}
+  def anonymize_messages_for_sender(sender_id) do
+    context_span entity: "message" do
+      {count, _} =
+        from(m in Message, where: m.sender_id == ^sender_id)
+        |> Repo.update_all(set: [content: "[deleted]"])
+
+      Logger.debug("Anonymized messages for sender", sender_id: sender_id, count: count)
+      {:ok, count}
+    end
+  rescue
+    e in DBConnection.ConnectionError ->
+      Logger.error("Database connection error anonymizing messages for sender",
+        sender_id: sender_id,
+        error: Exception.message(e)
+      )
+
+      {:error, :database_connection_error}
+
+    e in Postgrex.Error ->
+      Logger.error("Database query error anonymizing messages for sender",
+        sender_id: sender_id,
+        error: Exception.message(e)
+      )
+
+      {:error, :database_query_error}
+  end
+
+  @doc "Hard-deletes all messages belonging to conversations whose retention expired before `before`."
+  @spec delete_messages_for_expired_conversations(DateTime.t()) ::
+          {:ok, non_neg_integer(), [String.t()]}
+  def delete_messages_for_expired_conversations(before) do
+    context_span entity: "message" do
+      expired_conversation_ids =
+        from(c in Conversation,
+          where: not is_nil(c.retention_until) and c.retention_until < ^before,
+          select: c.id
+        )
+        |> Repo.all()
+
+      if expired_conversation_ids == [] do
+        {:ok, 0, []}
+      else
+        {count, _} =
+          from(m in Message, where: m.conversation_id in ^expired_conversation_ids)
+          |> Repo.delete_all()
+
+        Logger.info("Deleted messages for expired conversations",
+          count: count,
+          conversation_count: length(expired_conversation_ids)
+        )
+
+        {:ok, count, expired_conversation_ids}
+      end
+    end
+  end
+
+  @doc "Fetches a message by id."
+  @spec get_message_by_id(String.t()) :: {:ok, Message.t()} | {:error, :not_found}
+  def get_message_by_id(id) do
+    MessageQueries.base()
+    |> MessageQueries.by_id(id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      message -> {:ok, message}
+    end
+  end
+
+  @doc "Lists a conversation's non-deleted messages, newest first, with attachments. Limit+1 paginated."
+  @spec list_messages_for_conversation(String.t(), keyword()) :: {:ok, [Message.t()], boolean()}
+  def list_messages_for_conversation(conversation_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+
+    results =
+      MessageQueries.base()
+      |> MessageQueries.by_conversation(conversation_id)
+      |> MessageQueries.not_deleted()
+      |> MessageQueries.order_by_newest()
+      |> MessageQueries.paginate(opts)
+      |> MessageQueries.preload_assocs([:attachments])
+      |> Repo.all()
+
+    {:ok, Enum.take(results, limit), length(results) > limit}
+  end
+
+  @doc """
+  Lists messages with their attachments plus a sender_id => display-name map.
+
+  Returns `{:ok, messages, sender_names, has_more}`.
+  """
+  @spec list_messages_with_senders(String.t(), keyword()) ::
+          {:ok, [Message.t()], %{String.t() => String.t()}, boolean()}
+  def list_messages_with_senders(conversation_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+
+    results =
+      MessageQueries.base()
+      |> MessageQueries.by_conversation(conversation_id)
+      |> MessageQueries.not_deleted()
+      |> MessageQueries.order_by_newest()
+      |> MessageQueries.paginate(opts)
+      |> MessageQueries.preload_assocs([:sender, :attachments])
+      |> Repo.all()
+
+    messages = Enum.take(results, limit)
+    {:ok, messages, build_sender_names_map(messages), length(results) > limit}
+  end
+
+  @doc "Fetches the latest non-deleted message in a conversation."
+  @spec get_latest_message(String.t()) :: {:ok, Message.t()} | {:error, :not_found}
+  def get_latest_message(conversation_id) do
+    MessageQueries.latest_for_conversation(conversation_id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      message -> {:ok, message}
+    end
+  end
+
+  @doc "Counts unread (non-deleted) messages in a conversation after `last_read_at`."
+  @spec count_unread_messages(String.t(), DateTime.t() | nil) :: non_neg_integer()
+  def count_unread_messages(conversation_id, last_read_at) do
+    MessageQueries.count_unread(conversation_id, last_read_at)
+    |> Repo.one()
+    |> Kernel.||(0)
+  end
+
+  # Builds a sender_id => display-name map from preloaded messages, skipping
+  # messages whose sender wasn't loaded (last-write-wins on duplicate senders).
+  defp build_sender_names_map(messages) do
+    messages
+    |> Enum.reject(fn m ->
+      match?(%Ecto.Association.NotLoaded{}, m.sender) or is_nil(m.sender)
+    end)
+    |> Map.new(fn m -> {m.sender_id, m.sender.name} end)
+  end
+
   # === Persistence — participants ===
 
   @doc "Adds a participant to a conversation. Defaults `joined_at` to now."
@@ -1299,7 +1487,7 @@ defmodule KlassHero.Messaging do
   def attachment_storage_paths_for_conversations(conversation_ids) do
     paths =
       from(a in Attachment,
-        join: m in MessageSchema,
+        join: m in Message,
         on: a.message_id == m.id,
         where: m.conversation_id in ^conversation_ids,
         select: a.storage_path

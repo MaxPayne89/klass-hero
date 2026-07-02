@@ -1,7 +1,7 @@
 defmodule KlassHeroWeb.MessagingLiveHelperTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
   alias KlassHeroWeb.MessagingLiveHelper
 
   describe "get_conversation_title/3" do

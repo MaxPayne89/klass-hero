@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
   alias KlassHero.Repo
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.Storage
@@ -18,7 +18,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   require Logger
 
   @context KlassHero.Messaging
-  @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
   @staff_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_program_staff])
   @provider_staff_resolver Application.compile_env!(:klass_hero, [
@@ -169,7 +168,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
 
     result =
       Repo.transaction(fn ->
-        with {:ok, message} <- @message_repo.create(message_attrs),
+        with {:ok, message} <- KlassHero.Messaging.create_message(message_attrs),
              {:ok, attachments} <- create_attachments(message.id, uploaded_files) do
           %{message | attachments: attachments}
         else

@@ -5,7 +5,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.EventTestHelper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
 
   setup do
@@ -33,7 +32,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
       )
 
       {:ok, _message} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: active_conversation.id,
           sender_id: user.id,
           content: "Active message"
@@ -65,7 +64,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
       )
 
       {:ok, _message} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: expired_conversation.id,
           sender_id: user.id,
           content: "Message to delete"
@@ -100,7 +99,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
       )
 
       {:ok, _} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: expired_conversation.id,
           sender_id: user.id,
           content: "Will be deleted"

@@ -33,10 +33,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.Family.ChildGuardian
   alias KlassHero.Family.Consent
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
@@ -1315,6 +1314,7 @@ defmodule KlassHero.Factory do
         ),
       content: sequence(:message_content, &"Test message #{&1}"),
       message_type: :text,
+      attachments: [],
       deleted_at: nil,
       inserted_at: ~U[2025-01-01 12:00:00Z],
       updated_at: ~U[2025-01-01 12:00:00Z]
@@ -1322,7 +1322,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating MessageSchema Ecto schemas.
+  Factory for creating Message rows.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a conversation and user when inserted.
@@ -1342,12 +1342,12 @@ defmodule KlassHero.Factory do
       user_id: user.id
     )
 
-    %MessageSchema{
+    %Message{
       id: Ecto.UUID.generate(),
       conversation_id: conversation.id,
       sender_id: user.id,
       content: sequence(:message_schema_content, &"Test message #{&1}"),
-      message_type: "text",
+      message_type: :text,
       deleted_at: nil
     }
   end

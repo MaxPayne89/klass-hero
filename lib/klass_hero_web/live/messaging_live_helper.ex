@@ -35,7 +35,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Attachment
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias Phoenix.LiveView.Socket
 

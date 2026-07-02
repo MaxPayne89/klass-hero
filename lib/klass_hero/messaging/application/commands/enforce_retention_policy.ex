@@ -25,7 +25,6 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicy do
   require Logger
 
   @context KlassHero.Messaging
-  @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
 
   @doc """
   Enforces retention policy by deleting expired messages and conversations.
@@ -60,7 +59,7 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicy do
   defp run_deletion_transaction(now) do
     Repo.transaction(fn ->
       with {:ok, msg_count, _conv_ids} <-
-             @message_repo.delete_for_expired_conversations(now),
+             KlassHero.Messaging.delete_messages_for_expired_conversations(now),
            {:ok, conv_count} <- KlassHero.Messaging.delete_expired_conversations(now) do
         %{messages_deleted: msg_count, conversations_deleted: conv_count}
       else

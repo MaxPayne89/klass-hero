@@ -5,10 +5,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   import KlassHero.Factory
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -62,22 +62,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       })
 
       # Create messages — one before and one after user_1's last_read_at
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_2.id,
         content: "Old message",
-        message_type: "text",
+        message_type: :text,
         inserted_at: DateTime.add(five_min_ago, -60, :second),
         updated_at: DateTime.add(five_min_ago, -60, :second)
       })
 
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_2.id,
         content: "Latest message",
-        message_type: "text",
+        message_type: :text,
         inserted_at: now,
         updated_at: now
       })
@@ -159,23 +159,23 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Insert a system message with a broadcast token
       token = "[broadcast:#{Ecto.UUID.generate()}]"
 
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_1.id,
         content: "System note #{token}",
-        message_type: "system",
+        message_type: :system,
         inserted_at: now,
         updated_at: now
       })
 
       # Insert a regular text message (should NOT appear in system_notes)
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_2.id,
         content: "Just a regular message",
-        message_type: "text",
+        message_type: :text,
         inserted_at: now,
         updated_at: now
       })
@@ -673,7 +673,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: message_id,
             sender_id: user_1.id,
             content: "Hello Bob!",
-            message_type: "text",
+            message_type: :text,
             sent_at: now
           }
         )
@@ -758,7 +758,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: Ecto.UUID.generate(),
             sender_id: user_1.id,
             content: "System note #{token}",
-            message_type: "system",
+            message_type: :system,
             sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
           }
         )
@@ -829,7 +829,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: Ecto.UUID.generate(),
             sender_id: user_1.id,
             content: "Just a regular message [broadcast:#{Ecto.UUID.generate()}]",
-            message_type: "text",
+            message_type: :text,
             sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
           }
         )
@@ -902,7 +902,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: Ecto.UUID.generate(),
             sender_id: user_1.id,
             content: "System note #{token}",
-            message_type: "system",
+            message_type: :system,
             sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
           }
         )
@@ -1407,12 +1407,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       # Seed an existing message so the new participant's summary back-fills
       # last-message data and unread_count
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: parent.id,
         content: "Hi there",
-        message_type: "text",
+        message_type: :text,
         inserted_at: now,
         updated_at: now
       })
