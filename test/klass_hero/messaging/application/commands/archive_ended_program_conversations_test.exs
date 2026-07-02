@@ -5,7 +5,6 @@ defmodule KlassHero.Messaging.Application.Commands.ArchiveEndedProgramConversati
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.EventTestHelper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Application.Commands.ArchiveEndedProgramConversations
 
   setup do
@@ -34,7 +33,7 @@ defmodule KlassHero.Messaging.Application.Commands.ArchiveEndedProgramConversati
       assert conversation.id in result.conversation_ids
 
       # Verify conversation is now archived
-      {:ok, archived} = ConversationRepository.get_by_id(conversation.id)
+      {:ok, archived} = KlassHero.Messaging.get_conversation_by_id(conversation.id)
       assert archived.archived_at != nil
       assert archived.retention_until != nil
     end

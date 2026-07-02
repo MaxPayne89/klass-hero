@@ -24,17 +24,13 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaff do
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
   @type removal :: %{conversation_id: String.t()}
 
   @spec execute(String.t(), String.t()) ::
           {:ok, {[removal()], [DomainEvent.t()]}} | {:error, term()}
   def execute(program_id, staff_user_id) do
     program_id
-    |> @conversation_reader.list_active_program_conversation_ids_with_participant(staff_user_id)
+    |> KlassHero.Messaging.list_active_program_conversation_ids_with_participant(staff_user_id)
     |> remove_each(staff_user_id, [], [])
   end
 

@@ -6,7 +6,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Application.Queries.GetConversation
-  alias KlassHero.Messaging.Domain.Models.Conversation
+  alias KlassHero.Messaging.Conversation
 
   describe "execute/3" do
     test "returns conversation with messages" do

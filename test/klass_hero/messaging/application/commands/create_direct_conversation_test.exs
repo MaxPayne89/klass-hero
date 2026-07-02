@@ -9,7 +9,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.CreateDirectConversation
-  alias KlassHero.Messaging.Domain.Models.Conversation
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 

@@ -18,14 +18,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
   @conversation_summaries_repo Application.compile_env!(:klass_hero, [
                                  :messaging,
@@ -76,7 +68,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   end
 
   defp fetch_broadcast(conversation_id) do
-    case @conversation_reader.get_by_id(conversation_id) do
+    case KlassHero.Messaging.get_conversation_by_id(conversation_id) do
       {:ok, %{type: :program_broadcast} = broadcast} -> {:ok, broadcast}
       {:ok, _non_broadcast} -> {:error, :not_broadcast}
       {:error, :not_found} -> {:error, :not_found}
@@ -86,7 +78,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   # Lookup by parent's user_id (not provider's) — uniquely identifies this (parent, provider)
   # pair. Provider-user lookup would collide across multiple parents.
   defp find_or_create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
-    case @conversation_reader.find_direct_conversation(provider_id, scope.user.id) do
+    case KlassHero.Messaging.find_direct_conversation(provider_id, scope.user.id) do
       {:ok, existing} ->
         {:ok, existing}
 
@@ -101,7 +93,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
         %{type: :direct, provider_id: provider_id}
         |> Shared.maybe_put_program_id(program_id)
 
-      with {:ok, conversation} <- @conversation_repo.create(attrs),
+      with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            {:ok, _} <-
              KlassHero.Messaging.add_participant(%{
                conversation_id: conversation.id,

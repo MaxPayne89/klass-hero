@@ -4,11 +4,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -35,9 +35,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Create a conversation in the write table
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -136,9 +136,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -226,9 +226,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -301,9 +301,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "program_broadcast",
+        type: :program_broadcast,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -353,9 +353,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -414,7 +414,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             program_id: nil,
             subject: nil,
@@ -478,7 +478,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "program_broadcast",
+            type: :program_broadcast,
             provider_id: provider.id,
             program_id: missing_program_id,
             subject: "Welcome",
@@ -528,7 +528,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "program_broadcast",
+            type: :program_broadcast,
             provider_id: provider.id,
             program_id: program.id,
             subject: "Welcome",
@@ -567,7 +567,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             program_id: nil,
             subject: nil,
@@ -645,7 +645,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -730,7 +730,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -803,7 +803,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -874,7 +874,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -955,7 +955,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -1057,7 +1057,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -1125,7 +1125,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             conv_id,
             %{
               conversation_id: conv_id,
-              type: "direct",
+              type: :direct,
               provider_id: provider_id,
               participant_ids: [user_1.id, user_2.id]
             }
@@ -1191,7 +1191,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -1267,9 +1267,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -1335,9 +1335,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -1390,9 +1390,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -1473,9 +1473,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -1559,9 +1559,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -1623,9 +1623,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "program_broadcast",
+        type: :program_broadcast,
         provider_id: provider.id
       })
 
@@ -1688,7 +1688,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, staff.id]
           }
@@ -1761,7 +1761,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, staff.id]
           }
@@ -1845,7 +1845,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, staff_a.id, staff_b.id]
           }
@@ -1936,7 +1936,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           %{
             conversation_id: conversation_id,
             participant_ids: [user_1.id, user_2.id],
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             program_id: nil,
             subject: nil

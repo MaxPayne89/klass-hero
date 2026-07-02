@@ -5,18 +5,15 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
-    ConversationSchema,
-    MessageSchema
-  }
-
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Participant
 
   @doc """
   Base query for conversations.
   """
   def base do
-    from(c in ConversationSchema, as: :conversation)
+    from(c in Conversation, as: :conversation)
   end
 
   @doc """
@@ -195,7 +192,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   """
   def total_unread_count(user_id) do
     from(p in Participant,
-      join: c in ConversationSchema,
+      join: c in Conversation,
       on: c.id == p.conversation_id,
       join: m in MessageSchema,
       on:

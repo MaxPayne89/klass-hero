@@ -18,10 +18,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
   @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
   @staff_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_program_staff])
@@ -240,7 +236,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
     result =
       if conversation && conversation.id == conversation_id,
         do: {:ok, conversation},
-        else: @conversation_reader.get_by_id(conversation_id)
+        else: KlassHero.Messaging.get_conversation_by_id(conversation_id)
 
     case result do
       {:ok, %{type: :program_broadcast, provider_id: provider_id, program_id: program_id}} ->

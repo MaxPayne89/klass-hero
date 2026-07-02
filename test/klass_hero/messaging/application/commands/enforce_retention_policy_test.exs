@@ -5,7 +5,6 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicyTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.EventTestHelper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Application.Commands.EnforceRetentionPolicy
   alias KlassHero.MessagingFixtures
@@ -47,7 +46,7 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicyTest do
       assert result.conversations_deleted >= 1
 
       # Verify conversation is deleted
-      assert {:error, :not_found} = ConversationRepository.get_by_id(expired_conversation.id)
+      assert {:error, :not_found} = KlassHero.Messaging.get_conversation_by_id(expired_conversation.id)
     end
 
     test "does nothing when no expired data" do
@@ -75,7 +74,7 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicyTest do
       assert result.conversations_deleted == 0
 
       # Verify conversation still exists
-      assert {:ok, _} = ConversationRepository.get_by_id(active_conversation.id)
+      assert {:ok, _} = KlassHero.Messaging.get_conversation_by_id(active_conversation.id)
     end
 
     test "publishes retention_enforced event" do
@@ -170,7 +169,7 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicyTest do
       assert result.conversations_deleted == 0
 
       # Verify conversation still exists
-      assert {:ok, _} = ConversationRepository.get_by_id(archived_conversation.id)
+      assert {:ok, _} = KlassHero.Messaging.get_conversation_by_id(archived_conversation.id)
     end
 
     test "deletes multiple expired conversations and their messages" do
@@ -211,8 +210,8 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicyTest do
       assert result.conversations_deleted >= 2
 
       # Verify both conversations are deleted
-      assert {:error, :not_found} = ConversationRepository.get_by_id(expired1.id)
-      assert {:error, :not_found} = ConversationRepository.get_by_id(expired2.id)
+      assert {:error, :not_found} = KlassHero.Messaging.get_conversation_by_id(expired1.id)
+      assert {:error, :not_found} = KlassHero.Messaging.get_conversation_by_id(expired2.id)
     end
 
     test "collects and attempts S3 deletion for attachments in expired conversations" do

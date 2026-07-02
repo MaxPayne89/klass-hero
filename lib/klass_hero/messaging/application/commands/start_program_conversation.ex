@@ -11,22 +11,14 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
 
   @spec execute(Scope.t(), String.t(), String.t()) ::
@@ -42,7 +34,7 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
   # direct conversations, so using their id would collide across parents.
   # See ReplyPrivatelyToBroadcast for the same pattern.
   defp find_or_create(scope, provider_id, program_id, owner_user_id) do
-    case @conversation_reader.find_direct_conversation(provider_id, scope.user.id) do
+    case KlassHero.Messaging.find_direct_conversation(provider_id, scope.user.id) do
       {:ok, existing} ->
         {:ok, existing}
 
@@ -55,7 +47,7 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
     attrs = %{type: :direct, provider_id: provider_id, program_id: program_id}
 
     Repo.transaction(fn ->
-      with {:ok, conversation} <- @conversation_repo.create(attrs),
+      with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, owner_user_id),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, program_id, scope.user.id) do

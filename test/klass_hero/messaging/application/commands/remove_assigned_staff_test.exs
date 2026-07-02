@@ -5,8 +5,8 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaffTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Application.Commands.RemoveAssignedStaff
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
@@ -118,9 +118,9 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaffTest do
   defp insert_conversation(provider_id, program_id, opts \\ []) do
     id = Ecto.UUID.generate()
 
-    Repo.insert!(%ConversationSchema{
+    Repo.insert!(%Conversation{
       id: id,
-      type: "direct",
+      type: :direct,
       provider_id: provider_id,
       program_id: program_id,
       archived_at: Keyword.get(opts, :archived_at)

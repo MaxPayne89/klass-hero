@@ -51,11 +51,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
@@ -152,7 +152,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp bootstrap_from_write_tables do
     conversations =
-      from(c in ConversationSchema, preload: [:participants])
+      from(c in Conversation, preload: [:participants])
       |> Repo.all()
 
     if conversations == [] do
@@ -245,7 +245,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       id: Ecto.UUID.generate(),
       conversation_id: conversation.id,
       user_id: participant.user_id,
-      conversation_type: conversation.type,
+      conversation_type: to_string(conversation.type),
       provider_id: conversation.provider_id,
       program_id: conversation.program_id,
       subject: conversation.subject,
@@ -354,7 +354,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   end
 
   defp load_conversation_with_participants(conversation_id) do
-    from(c in ConversationSchema,
+    from(c in Conversation,
       where: c.id == ^conversation_id,
       preload: [:participants]
     )
@@ -655,7 +655,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   defp fetch_program_names_for_broadcasts(conversations) do
     program_ids =
       for c <- conversations,
-          c.type == "program_broadcast",
+          c.type == :program_broadcast,
           not is_nil(c.program_id),
           uniq: true,
           do: c.program_id
@@ -680,7 +680,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp resolve_program_name(_type, _program_id), do: nil
 
-  defp resolve_other_participant_name("direct", user_id, participants, user_names) do
+  defp resolve_other_participant_name(:direct, user_id, participants, user_names) do
     case Enum.find(participants, fn p -> p.user_id != user_id end) do
       nil -> nil
       other -> Map.get(user_names, other.user_id)

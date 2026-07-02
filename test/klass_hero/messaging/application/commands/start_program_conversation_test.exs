@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversationTest 
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.StartProgramConversation
-  alias KlassHero.Messaging.Domain.Models.Conversation
+  alias KlassHero.Messaging.Conversation
 
   describe "execute/3" do
     test "creates a direct conversation with provider owner and assigned staff as participants" do

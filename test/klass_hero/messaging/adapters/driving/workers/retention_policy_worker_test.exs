@@ -5,7 +5,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.EventTestHelper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
 
@@ -45,7 +44,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
       assert :ok = RetentionPolicyWorker.perform(job)
 
       # Verify conversation still exists
-      assert {:ok, _} = ConversationRepository.get_by_id(active_conversation.id)
+      assert {:ok, _} = KlassHero.Messaging.get_conversation_by_id(active_conversation.id)
     end
 
     test "deletes expired conversations and messages" do
@@ -77,7 +76,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
       assert :ok = RetentionPolicyWorker.perform(job)
 
       # Verify conversation is deleted
-      assert {:error, :not_found} = ConversationRepository.get_by_id(expired_conversation.id)
+      assert {:error, :not_found} = KlassHero.Messaging.get_conversation_by_id(expired_conversation.id)
 
       # Verify event was published
       EventTestHelper.assert_event_published(:retention_enforced)

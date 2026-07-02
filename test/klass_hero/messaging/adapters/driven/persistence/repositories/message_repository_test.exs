@@ -5,8 +5,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Models.Message
 
   describe "create/1" do
@@ -419,7 +419,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
       past_retention =
         DateTime.utc_now() |> DateTime.add(-5, :day) |> DateTime.truncate(:second)
 
-      Repo.get(ConversationSchema, conversation.id)
+      Repo.get(Conversation, conversation.id)
       |> Ecto.Changeset.change(
         archived_at: DateTime.utc_now() |> DateTime.add(-35, :day) |> DateTime.truncate(:second),
         retention_until: past_retention
@@ -491,7 +491,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
       future_retention =
         DateTime.utc_now() |> DateTime.add(20, :day) |> DateTime.truncate(:second)
 
-      Repo.get(ConversationSchema, conversation.id)
+      Repo.get(Conversation, conversation.id)
       |> Ecto.Changeset.change(
         archived_at: DateTime.utc_now() |> DateTime.add(-10, :day) |> DateTime.truncate(:second),
         retention_until: future_retention

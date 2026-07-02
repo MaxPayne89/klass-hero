@@ -30,6 +30,7 @@ defmodule KlassHero.Messaging do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
@@ -60,7 +61,8 @@ defmodule KlassHero.Messaging do
   }
 
   alias KlassHero.Messaging.Attachment
-  alias KlassHero.Messaging.Domain.Models.{Conversation, EmailReply, Message}
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Domain.Models.{EmailReply, Message}
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
 
@@ -571,6 +573,232 @@ defmodule KlassHero.Messaging do
   """
   @spec user_messages_topic(String.t()) :: String.t()
   defdelegate user_messages_topic(user_id), to: NotifyLiveViews
+
+  # === Persistence — conversations ===
+
+  @doc "Creates a conversation. Rewrites the broadcast-uniqueness error to `:duplicate_broadcast`."
+  @spec create_conversation(map()) ::
+          {:ok, Conversation.t()} | {:error, :duplicate_broadcast | Ecto.Changeset.t()}
+  def create_conversation(attrs) do
+    context_span entity: "conversation" do
+      create_attrs = Map.take(attrs, [:type, :provider_id, :program_id, :subject])
+
+      %Conversation{}
+      |> Conversation.create_changeset(create_attrs)
+      |> Repo.insert()
+      |> case do
+        {:ok, conversation} ->
+          Logger.debug("Created conversation", conversation_id: conversation.id, type: conversation.type)
+          {:ok, conversation}
+
+        {:error, %Ecto.Changeset{errors: errors}} = result ->
+          if Keyword.has_key?(errors, :program_id), do: {:error, :duplicate_broadcast}, else: result
+      end
+    end
+  end
+
+  @doc """
+  Archives a conversation, setting a 30-day retention window.
+
+  Re-fetches the row before updating (ignoring the caller's in-memory `lock_version`)
+  so the optimistic lock only guards the narrow get/update window.
+  """
+  @spec archive_conversation(Conversation.t()) ::
+          {:ok, Conversation.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def archive_conversation(conversation) do
+    context_span entity: "conversation" do
+      now = DateTime.utc_now()
+      retention_until = DateTime.add(now, 30, :day)
+
+      case Repo.get(Conversation, conversation.id) do
+        nil ->
+          {:error, :not_found}
+
+        schema ->
+          schema
+          |> Conversation.archive_changeset(%{archived_at: now, retention_until: retention_until})
+          |> Repo.update()
+          |> case do
+            {:ok, updated} ->
+              Logger.info("Archived conversation", conversation_id: conversation.id)
+              {:ok, updated}
+
+            error ->
+              error
+          end
+      end
+    end
+  end
+
+  @doc "Hard-deletes archived conversations whose retention window expired before `before`."
+  @spec delete_expired_conversations(DateTime.t()) :: {:ok, non_neg_integer()}
+  def delete_expired_conversations(before) do
+    context_span entity: "conversation" do
+      {count, _} =
+        ConversationQueries.base()
+        |> ConversationQueries.archived_only()
+        |> ConversationQueries.retention_expired(before)
+        |> Repo.delete_all()
+
+      Logger.info("Deleted expired conversations", count: count)
+      {:ok, count}
+    end
+  end
+
+  @doc "Archives conversations for programs that ended before `cutoff_date`."
+  @spec archive_ended_program_conversations(DateTime.t(), non_neg_integer()) ::
+          {:ok, %{count: non_neg_integer(), conversation_ids: [String.t()]}}
+  def archive_ended_program_conversations(cutoff_date, retention_days) do
+    context_span entity: "conversation" do
+      now = DateTime.utc_now()
+      retention_until = DateTime.add(now, retention_days, :day)
+
+      conversation_ids =
+        ConversationQueries.base()
+        |> ConversationQueries.with_ended_program(cutoff_date)
+        |> ConversationQueries.select_ids()
+        |> Repo.all()
+
+      if conversation_ids == [] do
+        {:ok, %{count: 0, conversation_ids: []}}
+      else
+        {count, _} =
+          from(c in Conversation, where: c.id in ^conversation_ids)
+          |> Repo.update_all(set: [archived_at: now, retention_until: retention_until])
+
+        Logger.info("Archived conversations for ended programs",
+          count: count,
+          cutoff_date: cutoff_date,
+          retention_days: retention_days
+        )
+
+        {:ok, %{count: count, conversation_ids: conversation_ids}}
+      end
+    end
+  end
+
+  @doc "Fetches a conversation by id. `opts[:preload]` preloads associations."
+  @spec get_conversation_by_id(String.t(), keyword()) ::
+          {:ok, Conversation.t()} | {:error, :not_found}
+  def get_conversation_by_id(id, opts \\ []) do
+    preloads = Keyword.get(opts, :preload, [])
+
+    ConversationQueries.base()
+    |> ConversationQueries.by_id(id)
+    |> ConversationQueries.preload_assocs(preloads)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      conversation -> {:ok, conversation}
+    end
+  end
+
+  @doc "Finds the direct conversation between a provider and a user, if any."
+  @spec find_direct_conversation(String.t(), String.t()) ::
+          {:ok, Conversation.t()} | {:error, :not_found}
+  def find_direct_conversation(provider_id, user_id) do
+    ConversationQueries.find_direct(provider_id, user_id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      conversation -> {:ok, conversation}
+    end
+  end
+
+  @doc "Finds the active broadcast conversation for a program, if any."
+  @spec find_active_broadcast_for_program(String.t(), String.t()) ::
+          {:ok, Conversation.t()} | {:error, :not_found}
+  def find_active_broadcast_for_program(provider_id, program_id) do
+    ConversationQueries.base()
+    |> ConversationQueries.by_provider(provider_id)
+    |> ConversationQueries.by_type(:program_broadcast)
+    |> ConversationQueries.active_only()
+    |> ConversationQueries.by_program(program_id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      conversation -> {:ok, conversation}
+    end
+  end
+
+  @doc "Lists a user's active conversations with unread counts, most-recent first. Limit+1 paginated."
+  @spec list_conversations_for_user(String.t(), keyword()) ::
+          {:ok, [Conversation.t()], boolean()}
+  def list_conversations_for_user(user_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+
+    results =
+      ConversationQueries.base()
+      |> ConversationQueries.active_only()
+      |> ConversationQueries.where_user_is_participant(user_id)
+      |> ConversationQueries.with_unread_count(user_id)
+      |> ConversationQueries.order_by_recent_message()
+      |> ConversationQueries.paginate(opts)
+      |> Repo.all()
+
+    {:ok, Enum.take(results, limit), length(results) > limit}
+  end
+
+  @doc "Lists a provider's active conversations, most-recent first. Optional `:type` filter."
+  @spec list_conversations_for_provider(String.t(), keyword()) ::
+          {:ok, [Conversation.t()], boolean()}
+  def list_conversations_for_provider(provider_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+    type = Keyword.get(opts, :type)
+
+    query =
+      ConversationQueries.base()
+      |> ConversationQueries.by_provider(provider_id)
+      |> ConversationQueries.active_only()
+      |> ConversationQueries.order_by_recent_message()
+      |> ConversationQueries.paginate(opts)
+
+    query = if type, do: ConversationQueries.by_type(query, type), else: query
+
+    results = Repo.all(query)
+    {:ok, Enum.take(results, limit), length(results) > limit}
+  end
+
+  @doc "Total unread message count across a user's conversations."
+  @spec conversation_total_unread_count(String.t()) :: non_neg_integer()
+  def conversation_total_unread_count(user_id) do
+    case Repo.one(ConversationQueries.total_unread_count(user_id)) do
+      nil -> 0
+      count -> count
+    end
+  end
+
+  @doc "Ids of active program conversations the user is NOT a participant of."
+  @spec list_active_program_conversation_ids_without_participant(String.t(), String.t()) :: [String.t()]
+  def list_active_program_conversation_ids_without_participant(program_id, user_id) do
+    ConversationQueries.base()
+    |> ConversationQueries.by_program(program_id)
+    |> ConversationQueries.active_only()
+    |> ConversationQueries.where_user_is_not_participant(user_id)
+    |> ConversationQueries.select_ids()
+    |> Repo.all()
+  end
+
+  @doc "Ids of active program conversations the user IS a participant of."
+  @spec list_active_program_conversation_ids_with_participant(String.t(), String.t()) :: [String.t()]
+  def list_active_program_conversation_ids_with_participant(program_id, user_id) do
+    ConversationQueries.base()
+    |> ConversationQueries.by_program(program_id)
+    |> ConversationQueries.active_only()
+    |> ConversationQueries.where_user_is_participant(user_id)
+    |> ConversationQueries.select_ids()
+    |> Repo.all()
+  end
+
+  @doc "Ids of archived conversations whose retention window expired before `before`."
+  @spec list_expired_conversation_ids(DateTime.t()) :: [String.t()]
+  def list_expired_conversation_ids(before) do
+    ConversationQueries.base()
+    |> ConversationQueries.archived_only()
+    |> ConversationQueries.retention_expired(before)
+    |> ConversationQueries.select_ids()
+    |> Repo.all()
+  end
 
   # === Persistence — participants ===
 

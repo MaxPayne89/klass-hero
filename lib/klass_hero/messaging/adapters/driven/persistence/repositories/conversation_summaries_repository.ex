@@ -15,8 +15,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
   import Ecto.Query
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationSummaryQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.ReadModels.ConversationSummary
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
@@ -131,7 +131,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
 
   defp seed_summary_rows_with_token(conversation_id, token_json, now) do
     conversation =
-      from(c in ConversationSchema,
+      from(c in Conversation,
         where: c.id == ^conversation_id,
         select: %{type: c.type, provider_id: c.provider_id, subject: c.subject}
       )
@@ -164,7 +164,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.Conversat
               id: Ecto.UUID.generate(),
               conversation_id: conversation_id,
               user_id: user_id,
-              conversation_type: conversation.type,
+              conversation_type: to_string(conversation.type),
               provider_id: conversation.provider_id,
               subject: conversation.subject,
               system_notes: token_json,

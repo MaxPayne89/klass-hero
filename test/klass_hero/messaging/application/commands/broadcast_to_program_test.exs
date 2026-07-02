@@ -10,7 +10,8 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Application.Commands.BroadcastToProgram
-  alias KlassHero.Messaging.Domain.Models.{Conversation, Message}
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Provider.Domain.Models.ProviderProfile
 
   describe "execute/4" do

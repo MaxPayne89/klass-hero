@@ -15,8 +15,8 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
@@ -24,15 +24,6 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   require Logger
 
   @context KlassHero.Messaging
-
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
   @enrollment_resolver Application.compile_env!(:klass_hero, [
                          :messaging,
                          :for_querying_enrollments
@@ -167,7 +158,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
 
   defp get_or_create_broadcast_conversation(provider_id, program_id, subject) do
     # Check before insert to avoid unique constraint violation aborting a parent transaction.
-    case @conversation_reader.find_active_broadcast_for_program(provider_id, program_id) do
+    case KlassHero.Messaging.find_active_broadcast_for_program(provider_id, program_id) do
       {:ok, conversation} ->
         {:ok, conversation}
 
@@ -179,13 +170,13 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
           subject: subject
         }
 
-        case @conversation_repo.create(attrs) do
+        case KlassHero.Messaging.create_conversation(attrs) do
           {:ok, conversation} ->
             {:ok, conversation}
 
           # Race: another request won between our find and create; re-query for the winner.
           {:error, :duplicate_broadcast} ->
-            @conversation_reader.find_active_broadcast_for_program(provider_id, program_id)
+            KlassHero.Messaging.find_active_broadcast_for_program(provider_id, program_id)
         end
     end
   end

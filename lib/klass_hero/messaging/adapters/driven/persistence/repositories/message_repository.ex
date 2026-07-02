@@ -14,12 +14,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.MessageMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
-
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
-    ConversationSchema,
-    MessageSchema
-  }
-
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
 
@@ -190,7 +186,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRe
   def delete_for_expired_conversations(before) do
     db_interaction operation: :delete_for_expired_conversations, entity: "message" do
       expired_conversation_ids =
-        from(c in ConversationSchema,
+        from(c in Conversation,
           where: not is_nil(c.retention_until),
           where: c.retention_until < ^before,
           select: c.id

@@ -6,7 +6,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast
@@ -232,7 +231,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcastTest
       assert {:ok, direct_conversation_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
 
-      assert {:ok, conversation} = ConversationRepository.get_by_id(direct_conversation_id)
+      assert {:ok, conversation} = KlassHero.Messaging.get_conversation_by_id(direct_conversation_id)
       assert conversation.program_id == ctx.program.id
     end
 

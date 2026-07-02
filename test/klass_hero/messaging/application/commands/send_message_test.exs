@@ -4,10 +4,9 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMapper
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.SendMessage
-  alias KlassHero.Messaging.Domain.Models.Conversation
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Models.Message
 
   describe "execute/4" do
@@ -176,7 +175,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
         user_id: provider_user.id
       )
 
-      domain_conversation = ConversationMapper.to_domain(broadcast)
+      domain_conversation = broadcast
       assert %Conversation{} = domain_conversation
 
       assert {:ok, message} =
@@ -207,7 +206,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
 
       # Build a direct conversation domain struct with a different ID
       direct = insert(:conversation_schema, type: "direct", provider_id: provider.id)
-      mismatched_conversation = ConversationMapper.to_domain(direct)
+      mismatched_conversation = direct
 
       # Trigger: parent passes a direct conversation struct targeting a broadcast conversation_id
       # Why: the ID mismatch must cause a DB fetch, which correctly identifies the broadcast

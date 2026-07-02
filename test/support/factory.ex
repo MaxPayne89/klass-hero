@@ -35,12 +35,12 @@ defmodule KlassHero.Factory do
   alias KlassHero.Family.ParentProfile
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
-    ConversationSchema,
     ConversationSummarySchema,
     MessageSchema
   }
 
-  alias KlassHero.Messaging.Domain.Models.{Conversation, Message}
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
@@ -1212,9 +1212,9 @@ defmodule KlassHero.Factory do
   def conversation_schema_factory do
     provider = insert(:provider_profile_schema)
 
-    %ConversationSchema{
+    %Conversation{
       id: Ecto.UUID.generate(),
-      type: "direct",
+      type: :direct,
       provider_id: provider.id,
       program_id: nil,
       subject: nil,
@@ -1278,9 +1278,9 @@ defmodule KlassHero.Factory do
     provider = insert(:provider_profile_schema)
     program = insert(:program_schema)
 
-    %ConversationSchema{
+    %Conversation{
       id: Ecto.UUID.generate(),
-      type: "program_broadcast",
+      type: :program_broadcast,
       provider_id: provider.id,
       program_id: program.id,
       subject: "Important Update",

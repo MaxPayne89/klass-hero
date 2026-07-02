@@ -6,8 +6,8 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
@@ -38,9 +38,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -90,9 +90,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -114,9 +114,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -147,9 +147,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })

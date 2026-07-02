@@ -10,8 +10,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema 
   import Ecto.Changeset
 
   alias KlassHero.Accounts.User
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.Conversation
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -27,7 +27,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema 
     field :message_type, :string, default: "text"
     field :deleted_at, :utc_datetime
 
-    belongs_to :conversation, ConversationSchema, define_field: false
+    belongs_to :conversation, Conversation, define_field: false
     belongs_to :sender, User, foreign_key: :sender_id, define_field: false
     has_many :attachments, Attachment, foreign_key: :message_id
 

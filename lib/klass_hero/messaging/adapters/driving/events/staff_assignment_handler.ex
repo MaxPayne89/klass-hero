@@ -29,10 +29,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   require Logger
 
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
   @staff_projection Application.compile_env!(:klass_hero, [
                       :messaging,
                       :for_resolving_program_staff
@@ -102,7 +98,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   # so the projection (separate DB connection) sees the committed writes.
   defp add_staff_to_existing_conversations(program_id, staff_user_id) do
     conversation_ids =
-      @conversation_reader.list_active_program_conversation_ids_without_participant(
+      KlassHero.Messaging.list_active_program_conversation_ids_without_participant(
         program_id,
         staff_user_id
       )
