@@ -19,11 +19,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
 
   require Logger
 
-  @doc_repository Application.compile_env!(:klass_hero, [
-                    :provider,
-                    :for_querying_verification_documents
-                  ])
-
   @profile_repository Application.compile_env!(:klass_hero, [
                         :provider,
                         :for_querying_provider_profiles
@@ -39,7 +34,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
   def handle(%DomainEvent{event_type: :verification_document_approved, payload: payload}) do
     %{provider_id: provider_id, reviewer_id: reviewer_id} = payload
 
-    with {:ok, docs} <- @doc_repository.get_by_provider(provider_id),
+    with {:ok, docs} <- KlassHero.Provider.get_provider_verification_documents(provider_id),
          true <- all_approved?(docs) do
       case VerifyProvider.execute(%{provider_id: provider_id, admin_id: reviewer_id}) do
         {:ok, _} ->

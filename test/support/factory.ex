@@ -46,9 +46,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VerificationDocumentSchema
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.VerificationDocument
 
   @doc """
   Factory for creating Program domain entities (pure Elixir structs).
@@ -726,13 +726,13 @@ defmodule KlassHero.Factory do
   def verification_document_schema_factory do
     provider = insert(:provider_profile_schema)
 
-    %VerificationDocumentSchema{
+    %VerificationDocument{
       id: Ecto.UUID.generate(),
-      provider_id: provider.id,
-      document_type: "business_registration",
+      provider_profile_id: provider.id,
+      document_type: :business_registration,
       file_url: "verification-docs/providers/#{provider.id}/#{System.unique_integer([:positive])}_doc.pdf",
       original_filename: "registration.pdf",
-      status: "pending"
+      status: :pending
     }
   end
 
@@ -745,7 +745,7 @@ defmodule KlassHero.Factory do
     struct!(
       verification_document_schema_factory(),
       %{
-        status: "approved",
+        status: :approved,
         reviewed_by_id: reviewer.id,
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
       }
@@ -761,7 +761,7 @@ defmodule KlassHero.Factory do
     struct!(
       verification_document_schema_factory(),
       %{
-        status: "rejected",
+        status: :rejected,
         rejection_reason: "Document is illegible",
         reviewed_by_id: reviewer.id,
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)

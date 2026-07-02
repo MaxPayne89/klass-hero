@@ -1909,18 +1909,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   defp past?(date, today), do: Date.after?(today, date)
 
   defp fetch_verification_docs(provider_id) do
-    case Provider.get_provider_verification_documents(provider_id) do
-      {:ok, docs} ->
-        docs
-
-      {:error, reason} ->
-        Logger.error("[DashboardLive] Failed to load verification documents",
-          provider_id: provider_id,
-          reason: inspect(reason)
-        )
-
-        []
-    end
+    {:ok, docs} = Provider.get_provider_verification_documents(provider_id)
+    docs
   end
 
   defp update_staff_count(socket, count) do

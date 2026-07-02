@@ -22,8 +22,13 @@ defmodule KlassHero.Provider do
       {:ok, members} = Provider.list_staff_members("provider-uuid")
   """
 
+  use KlassHero.Shared.Tracing
+
+  import Ecto.Query, warn: false
+
   alias KlassHero.Provider.Adapters.Driven.Persistence.ChangeProviderProfile
   alias KlassHero.Provider.Adapters.Driven.Persistence.ChangeStaffMember
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport
   alias KlassHero.Provider.Application.Commands.Providers.CompleteProviderProfile
   alias KlassHero.Provider.Application.Commands.Providers.CreateProviderProfile
@@ -40,9 +45,6 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Commands.StaffMembers.SelectStaffContext
   alias KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFromProgram
   alias KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMember
-  alias KlassHero.Provider.Application.Commands.Verification.ApproveVerificationDocument
-  alias KlassHero.Provider.Application.Commands.Verification.RejectVerificationDocument
-  alias KlassHero.Provider.Application.Commands.Verification.SubmitVerificationDocument
   alias KlassHero.Provider.Application.Queries.IncidentReportQueries
   alias KlassHero.Provider.Application.Queries.ListProgramSessions
   alias KlassHero.Provider.Application.Queries.ProgramStaffAssignmentQueries
@@ -50,17 +52,20 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
   alias KlassHero.Provider.Application.Queries.StaffMemberQueries
   alias KlassHero.Provider.Application.Queries.StaffMembers.ListStaffAssignedPrograms
-  alias KlassHero.Provider.Application.Queries.Verification.GetVerificationDocumentPreview
-  alias KlassHero.Provider.Application.Queries.VerificationDocumentQueries
   alias KlassHero.Provider.Domain.Models.ProgramStaffAssignment
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.Domain.Models.StaffMember
-  alias KlassHero.Provider.Domain.Models.VerificationDocument
-  alias KlassHero.Provider.Domain.Ports.ForQueryingVerificationDocuments
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
   alias KlassHero.Provider.Domain.ReadModels.SessionDetail
   alias KlassHero.Provider.Domain.ReadModels.StaffMembership
+  alias KlassHero.Provider.VerificationDocument
+  alias KlassHero.Repo
+  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Storage
+
+  require Logger
 
   @doc """
   Creates a new provider profile.
@@ -122,7 +127,12 @@ defmodule KlassHero.Provider do
   - `:storage_opts` - Optional keyword list of additional storage adapter options
   """
   def submit_verification_document(params) do
-    SubmitVerificationDocument.execute(params)
+    context_span entity: "verification_document" do
+      with :ok <- validate_verification_submission(params),
+           {:ok, file_url} <- upload_verification_file(params) do
+        insert_verification_document(params, file_url)
+      end
+    end
   end
 
   @doc """
@@ -160,19 +170,27 @@ defmodule KlassHero.Provider do
 
   @doc "Approves a verification document (admin only)."
   def approve_verification_document(document_id, reviewer_id) do
-    ApproveVerificationDocument.execute(%{
-      document_id: document_id,
-      reviewer_id: reviewer_id
-    })
+    context_span entity: "verification_document" do
+      with {:ok, doc} <- get_verification_document(document_id),
+           {:ok, approved} <- VerificationDocument.approve(doc, reviewer_id),
+           {:ok, persisted} <- persist_verification_review(doc, approved) do
+        dispatch_verification_event(:verification_document_approved, persisted, reviewer_id)
+        {:ok, persisted}
+      end
+    end
   end
 
   @doc "Rejects a verification document with reason (admin only)."
   def reject_verification_document(document_id, reviewer_id, reason) do
-    RejectVerificationDocument.execute(%{
-      document_id: document_id,
-      reviewer_id: reviewer_id,
-      reason: reason
-    })
+    context_span entity: "verification_document" do
+      with :ok <- validate_rejection_reason(reason),
+           {:ok, doc} <- get_verification_document(document_id),
+           {:ok, rejected} <- VerificationDocument.reject(doc, reviewer_id, reason),
+           {:ok, persisted} <- persist_verification_review(doc, rejected) do
+        dispatch_verification_event(:verification_document_rejected, persisted, reviewer_id)
+        {:ok, persisted}
+      end
+    end
   end
 
   @doc "Verifies a provider (admin only)."
@@ -341,13 +359,27 @@ defmodule KlassHero.Provider do
   end
 
   @doc "Returns all verification documents for a provider."
-  def get_provider_verification_documents(provider_profile_id) do
-    VerificationDocumentQueries.get_by_provider(provider_profile_id)
+  @spec get_provider_verification_documents(String.t()) :: {:ok, [VerificationDocument.t()]}
+  def get_provider_verification_documents(provider_profile_id) when is_binary(provider_profile_id) do
+    docs =
+      VerificationDocument
+      |> where([d], d.provider_profile_id == ^provider_profile_id)
+      |> order_by([d], desc: d.inserted_at)
+      |> Repo.all()
+
+    {:ok, docs}
   end
 
   @doc "Lists all pending verification documents (admin)."
+  @spec list_pending_verification_documents() :: {:ok, [VerificationDocument.t()]}
   def list_pending_verification_documents do
-    VerificationDocumentQueries.list_pending()
+    docs =
+      VerificationDocument
+      |> where([d], d.status == :pending)
+      |> order_by([d], asc: d.inserted_at)
+      |> Repo.all()
+
+    {:ok, docs}
   end
 
   @doc """
@@ -360,16 +392,28 @@ defmodule KlassHero.Provider do
   - `:rejected` - Rejected documents (newest first)
   """
   @spec list_verification_documents_for_admin(VerificationDocument.status() | nil) ::
-          {:ok, [ForQueryingVerificationDocuments.admin_review_result()]}
+          {:ok, [VerificationDocument.admin_review_result()]}
   def list_verification_documents_for_admin(status \\ nil) do
-    VerificationDocumentQueries.list_for_admin_review(status)
+    results =
+      status
+      |> admin_review_query()
+      |> Repo.all()
+      |> Enum.map(&to_admin_review_result/1)
+
+    {:ok, results}
   end
 
   @doc "Returns a single verification document with provider info for admin review."
   @spec get_verification_document_for_admin(String.t()) ::
-          {:ok, ForQueryingVerificationDocuments.admin_review_result()} | {:error, :not_found}
+          {:ok, VerificationDocument.admin_review_result()} | {:error, :not_found}
   def get_verification_document_for_admin(document_id) do
-    VerificationDocumentQueries.get_for_admin_review(document_id)
+    admin_review_base_query()
+    |> where([d], d.id == ^document_id)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      row -> {:ok, to_admin_review_result(row)}
+    end
   end
 
   @doc """
@@ -385,12 +429,154 @@ defmodule KlassHero.Provider do
            }}
           | {:error, :not_found}
   def get_verification_document_preview(document_id) do
-    GetVerificationDocumentPreview.execute(document_id)
+    with {:ok, result} <- get_verification_document_for_admin(document_id) do
+      signed_url = verified_preview_url(result.document.file_url)
+      preview_type = verification_preview_type(result.document.original_filename)
+      {:ok, Map.merge(result, %{signed_url: signed_url, preview_type: preview_type})}
+    end
   end
 
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types,
     to: VerificationDocument
+
+  # --- Verification document internals ------------------------------------
+
+  @required_verification_fields ~w(provider_profile_id original_filename document_type)a
+
+  defp validate_verification_submission(params) do
+    errors =
+      Enum.reduce(@required_verification_fields, [], fn field, acc ->
+        case params[field] do
+          val when is_binary(val) and byte_size(val) > 0 -> acc
+          _ -> [{field, "is required"} | acc]
+        end
+      end)
+
+    errors =
+      if is_nil(params[:file_binary]), do: [{:file_binary, "is required"} | errors], else: errors
+
+    case errors do
+      [] -> :ok
+      _ -> {:error, errors}
+    end
+  end
+
+  defp upload_verification_file(params) do
+    path =
+      Storage.build_timestamped_path(
+        "verification-docs/providers",
+        params[:provider_profile_id],
+        params[:original_filename],
+        "document.pdf"
+      )
+
+    opts =
+      [content_type: params[:content_type] || "application/octet-stream"]
+      |> Keyword.merge(Map.get(params, :storage_opts, []))
+
+    Storage.upload(:private, path, params[:file_binary], opts)
+  end
+
+  defp insert_verification_document(params, file_url) do
+    %{
+      provider_profile_id: params[:provider_profile_id],
+      document_type: params[:document_type],
+      file_url: file_url,
+      original_filename: params[:original_filename]
+    }
+    |> VerificationDocument.create_changeset()
+    |> Repo.insert()
+  end
+
+  defp validate_rejection_reason(reason) when is_binary(reason) and byte_size(reason) > 0, do: :ok
+  defp validate_rejection_reason(_), do: {:error, :reason_required}
+
+  defp get_verification_document(id) do
+    case Repo.get(VerificationDocument, id) do
+      nil -> {:error, :not_found}
+      doc -> {:ok, doc}
+    end
+  end
+
+  # Persists the review decision by casting the transitioned fields onto the
+  # original (still-pending) record, so Ecto sees a real status change.
+  defp persist_verification_review(%VerificationDocument{} = original, %VerificationDocument{} = updated) do
+    attrs = Map.take(updated, [:status, :rejection_reason, :reviewed_by_id, :reviewed_at])
+
+    original
+    |> VerificationDocument.review_changeset(attrs)
+    |> Repo.update()
+  end
+
+  defp dispatch_verification_event(event_name, doc, reviewer_id) do
+    DomainEvent.new(
+      event_name,
+      doc.id,
+      :verification_document,
+      %{provider_id: doc.provider_profile_id, reviewer_id: reviewer_id}
+    )
+    |> EventDispatchHelper.dispatch(KlassHero.Provider)
+  end
+
+  defp admin_review_base_query do
+    from d in VerificationDocument,
+      join: p in ProviderProfileSchema,
+      on: d.provider_profile_id == p.id,
+      select: {d, p.business_name}
+  end
+
+  # :pending orders oldest-first (FIFO); nil and other statuses order newest-first.
+  defp admin_review_query(nil), do: order_by(admin_review_base_query(), [d], desc: d.inserted_at)
+
+  defp admin_review_query(:pending) do
+    admin_review_base_query()
+    |> where([d], d.status == :pending)
+    |> order_by([d], asc: d.inserted_at)
+  end
+
+  defp admin_review_query(status) when is_atom(status) do
+    admin_review_base_query()
+    |> where([d], d.status == ^status)
+    |> order_by([d], desc: d.inserted_at)
+  end
+
+  defp to_admin_review_result({%VerificationDocument{} = doc, business_name}) do
+    %{document: doc, provider_business_name: business_name}
+  end
+
+  # Checks existence before signing: signed_url/3 is URL math and succeeds even
+  # for missing files, which would render broken previews.
+  defp verified_preview_url(file_url) when is_binary(file_url) do
+    with {:ok, true} <- Storage.file_exists?(:private, file_url),
+         {:ok, url} <- Storage.signed_url(:private, file_url, 900) do
+      url
+    else
+      {:ok, false} ->
+        Logger.warning("[Provider] Verification preview file not found in storage: #{file_url}")
+        nil
+
+      {:error, reason} ->
+        Logger.error("[Provider] Failed to generate verification preview URL for #{file_url}: #{inspect(reason)}")
+
+        nil
+    end
+  end
+
+  defp verified_preview_url(_), do: nil
+
+  defp verification_preview_type(filename) when is_binary(filename) do
+    filename
+    |> String.downcase()
+    |> Path.extname()
+    |> case do
+      ext when ext in ~w(.jpg .jpeg .png .gif .webp) -> :image
+      ".pdf" -> :pdf
+      _ -> :other
+    end
+  end
+
+  defp verification_preview_type(_), do: :other
 
   @doc "Retrieves a single staff member by ID."
   def get_staff_member(staff_id) when is_binary(staff_id) do

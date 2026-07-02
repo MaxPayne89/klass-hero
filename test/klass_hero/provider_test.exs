@@ -11,9 +11,8 @@ defmodule KlassHero.ProviderTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
   alias KlassHero.Provider.Domain.Models.ProviderProfile
-  alias KlassHero.Provider.Domain.Models.VerificationDocument
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHero.ProviderFixtures
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
@@ -330,16 +329,14 @@ defmodule KlassHero.ProviderTest do
   # ============================================================================
 
   defp create_pending_document(provider_id) do
-    {:ok, doc} =
-      VerificationDocument.new(%{
-        id: Ecto.UUID.generate(),
-        provider_profile_id: provider_id,
-        document_type: "business_registration",
-        file_url: "verification-docs/test.pdf",
-        original_filename: "doc.pdf"
-      })
-
-    VerificationDocumentRepository.create(doc)
+    %{
+      provider_profile_id: provider_id,
+      document_type: "business_registration",
+      file_url: "verification-docs/test.pdf",
+      original_filename: "doc.pdf"
+    }
+    |> VerificationDocument.create_changeset()
+    |> KlassHero.Repo.insert()
   end
 
   defp create_and_approve_document(provider_id, admin_id) do

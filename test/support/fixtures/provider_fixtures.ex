@@ -6,12 +6,11 @@ defmodule KlassHero.ProviderFixtures do
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
   alias KlassHero.Provider.Domain.Models.IncidentReport
-  alias KlassHero.Provider.Domain.Models.VerificationDocument
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
 
   @doc """
@@ -129,16 +128,16 @@ defmodule KlassHero.ProviderFixtures do
   def verification_document_fixture(attrs \\ %{}) do
     attrs_map = Map.new(attrs)
 
-    {:ok, doc} =
-      VerificationDocument.new(%{
-        id: Ecto.UUID.generate(),
+    {:ok, persisted} =
+      %{
         provider_profile_id: attrs_map[:provider_id] || provider_profile_fixture().id,
         document_type: attrs_map[:document_type] || "business_registration",
         file_url: attrs_map[:file_url] || "verification-docs/#{Ecto.UUID.generate()}.pdf",
         original_filename: attrs_map[:original_filename] || "doc.pdf"
-      })
+      }
+      |> VerificationDocument.create_changeset()
+      |> Repo.insert()
 
-    {:ok, persisted} = VerificationDocumentRepository.create(doc)
     persisted
   end
 
@@ -154,7 +153,7 @@ defmodule KlassHero.ProviderFixtures do
 
     doc = verification_document_fixture(attrs)
     {:ok, approved} = VerificationDocument.approve(doc, reviewer_id)
-    {:ok, persisted} = VerificationDocumentRepository.update(approved)
+    {:ok, persisted} = persist_review(doc, approved)
     persisted
   end
 
@@ -171,8 +170,16 @@ defmodule KlassHero.ProviderFixtures do
 
     doc = verification_document_fixture(attrs)
     {:ok, rejected} = VerificationDocument.reject(doc, reviewer_id, reason)
-    {:ok, persisted} = VerificationDocumentRepository.update(rejected)
+    {:ok, persisted} = persist_review(doc, rejected)
     persisted
+  end
+
+  defp persist_review(%VerificationDocument{} = original, %VerificationDocument{} = updated) do
+    original
+    |> VerificationDocument.review_changeset(
+      Map.take(updated, [:status, :rejection_reason, :reviewed_by_id, :reviewed_at])
+    )
+    |> Repo.update()
   end
 
   @doc """

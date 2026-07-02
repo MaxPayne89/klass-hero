@@ -34,28 +34,16 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
   defp apply_action(socket, :index, params) do
     status = parse_status_filter(params)
 
-    case Provider.list_verification_documents_for_admin(status) do
-      {:ok, results} ->
-        socket
-        |> assign(:page_title, gettext("Verifications"))
-        |> assign(:current_status, status)
-        |> assign(:document_count, length(results))
-        |> stream(:documents, results,
-          reset: true,
-          dom_id: fn %{document: doc} -> "doc-#{doc.id}" end
-        )
+    {:ok, results} = Provider.list_verification_documents_for_admin(status)
 
-      {:error, _reason} ->
-        socket
-        |> assign(:page_title, gettext("Verifications"))
-        |> assign(:current_status, status)
-        |> assign(:document_count, 0)
-        |> stream(:documents, [],
-          reset: true,
-          dom_id: fn %{document: doc} -> "doc-#{doc.id}" end
-        )
-        |> put_flash(:error, gettext("Could not load verification documents."))
-    end
+    socket
+    |> assign(:page_title, gettext("Verifications"))
+    |> assign(:current_status, status)
+    |> assign(:document_count, length(results))
+    |> stream(:documents, results,
+      reset: true,
+      dom_id: fn %{document: doc} -> "doc-#{doc.id}" end
+    )
   end
 
   # Non-UUID strings cause Ecto.Query.CastError — redirect instead of crashing.
