@@ -9,6 +9,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
@@ -18,7 +19,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   require Logger
 
   @context KlassHero.Messaging
-  @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
 
   @doc """
   Orchestrates a private reply to a broadcast.
@@ -35,7 +35,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
     # broadcast participants can initiate private replies.
     with {:ok, broadcast} <- fetch_broadcast(broadcast_conversation_id),
          :ok <- Shared.verify_participant(broadcast.id, scope.user.id),
-         {:ok, provider_user_id} <- @user_resolver.get_user_id_for_provider(broadcast.provider_id),
+         {:ok, provider_user_id} <- UserResolver.get_user_id_for_provider(broadcast.provider_id),
          {:ok, direct_conversation} <-
            find_or_create_direct_conversation(
              scope,

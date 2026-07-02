@@ -51,6 +51,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   import Ecto.Query
 
+  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
@@ -61,7 +62,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   alias KlassHero.Shared.Projection
   alias KlassHero.Shared.Projection.WithDomainEvents
 
-  @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
   @broadcast_token_regex ~r/\[broadcast:[^\]]+\]/
 
   @impl Projection
@@ -645,7 +645,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   # Private Functions — Helpers
 
   defp fetch_user_names(user_ids) when is_list(user_ids) and user_ids != [] do
-    {:ok, names} = @user_resolver.get_display_names(user_ids)
+    {:ok, names} = UserResolver.get_display_names(user_ids)
     names
   end
 

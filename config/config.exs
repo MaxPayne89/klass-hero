@@ -14,10 +14,6 @@ alias KlassHero.Accounts.Scope
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
-alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
-alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
-alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
@@ -189,12 +185,10 @@ config :klass_hero, :integration_event_publisher,
 
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}
 
-# Configure Messaging bounded context
+# Messaging context needs no port wiring: it is conventional Phoenix (context module
+# + Ecto schemas calling Repo directly). Its outbound cross-context ACL resolvers and
+# the program-staff projection repository are called by name, not via dependency injection.
 config :klass_hero, :messaging,
-  for_resolving_users: UserResolver,
-  for_querying_enrollments: EnrollmentResolver,
-  for_resolving_program_staff: ProgramStaffParticipantRepository,
-  for_resolving_provider_staff: ProviderStaffResolver,
   retention: [
     days_after_program_end: 30,
     retention_period_days: 30

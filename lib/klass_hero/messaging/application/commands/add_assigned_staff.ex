@@ -23,13 +23,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaff do
   - `{:error, reason}` — when the participant batch insert fails.
   """
 
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Shared.Domain.Events.DomainEvent
-
-  @staff_resolver Application.compile_env!(:klass_hero, [
-                    :messaging,
-                    :for_resolving_program_staff
-                  ])
 
   @spec execute(String.t(), String.t() | nil, String.t()) ::
           {:ok, {[String.t()], [DomainEvent.t()]}} | {:error, term()}
@@ -37,7 +33,7 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaff do
 
   def execute(conversation_id, program_id, excluded_user_id) do
     program_id
-    |> @staff_resolver.get_active_staff_user_ids()
+    |> ProgramStaffParticipantRepository.get_active_staff_user_ids()
     |> Enum.reject(&(&1 == excluded_user_id))
     |> add(conversation_id)
   end

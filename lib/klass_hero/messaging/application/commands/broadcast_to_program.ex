@@ -12,6 +12,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Application.Shared
@@ -24,10 +25,6 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   require Logger
 
   @context KlassHero.Messaging
-  @enrollment_resolver Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_enrollments
-                       ])
 
   @doc """
   Sends a broadcast message to all enrolled parents of a program.
@@ -111,7 +108,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   end
 
   defp get_enrolled_parent_user_ids(program_id) do
-    {:ok, @enrollment_resolver.get_enrolled_parent_user_ids(program_id)}
+    {:ok, EnrollmentResolver.get_enrolled_parent_user_ids(program_id)}
   end
 
   defp verify_has_recipients([]), do: {:error, :no_enrollments}

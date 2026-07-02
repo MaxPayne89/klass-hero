@@ -9,6 +9,7 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Conversation
@@ -19,13 +20,12 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
   require Logger
 
   @context KlassHero.Messaging
-  @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
 
   @spec execute(Scope.t(), String.t(), String.t()) ::
           {:ok, Conversation.t()} | {:error, :not_found | :not_entitled | term()}
   def execute(%Scope{} = scope, provider_id, program_id) do
     with :ok <- Shared.maybe_check_entitlement(scope, []),
-         {:ok, owner_user_id} <- @user_resolver.get_user_id_for_provider(provider_id) do
+         {:ok, owner_user_id} <- UserResolver.get_user_id_for_provider(provider_id) do
       find_or_create(scope, provider_id, program_id, owner_user_id)
     end
   end

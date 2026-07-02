@@ -7,6 +7,9 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   updates sender's last_read_at, and publishes a message_sent event.
   """
 
+  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
+  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
@@ -18,12 +21,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   require Logger
 
   @context KlassHero.Messaging
-  @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
-  @staff_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_program_staff])
-  @provider_staff_resolver Application.compile_env!(:klass_hero, [
-                             :messaging,
-                             :for_resolving_provider_staff
-                           ])
 
   @doc """
   Sends a message to a conversation.
@@ -259,7 +256,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   end
 
   defp provider_owner?(provider_id, sender_id) do
-    case @user_resolver.get_user_id_for_provider(provider_id) do
+    case UserResolver.get_user_id_for_provider(provider_id) do
       {:ok, ^sender_id} -> true
       _ -> false
     end
@@ -268,7 +265,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   defp staff_assigned?(nil, _sender_id), do: false
 
   defp staff_assigned?(program_id, sender_id) do
-    staff_user_ids = @staff_resolver.get_active_staff_user_ids(program_id)
+    staff_user_ids = ProgramStaffParticipantRepository.get_active_staff_user_ids(program_id)
     sender_id in staff_user_ids
   end
 
@@ -276,7 +273,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   # provider-level staff are also authorised to broadcast for any program of their
   # provider (see `StaffBroadcastLive.mount/3`). The two checks must agree — bug #669.
   defp active_staff_for_provider?(provider_id, sender_id) do
-    @provider_staff_resolver.active_staff_for_provider?(provider_id, sender_id)
+    ProviderStaffResolver.active_staff_for_provider?(provider_id, sender_id)
   end
 
   defp update_sender_read_status(conversation_id, sender_id) do

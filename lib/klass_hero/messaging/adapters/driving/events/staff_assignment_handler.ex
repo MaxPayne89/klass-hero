@@ -21,6 +21,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.RemoveAssignedStaff
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Repo
@@ -29,10 +30,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   require Logger
 
-  @staff_projection Application.compile_env!(:klass_hero, [
-                      :messaging,
-                      :for_resolving_program_staff
-                    ])
   @context Messaging
 
   @impl true
@@ -61,7 +58,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_assignment_with_retry(payload) do
     operation = fn ->
-      @staff_projection.upsert_active(%{
+      ProgramStaffParticipantRepository.upsert_active(%{
         provider_id: payload.provider_id,
         program_id: payload.program_id,
         staff_user_id: payload.staff_user_id
@@ -81,7 +78,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_unassignment_with_retry(payload) do
     operation = fn ->
-      @staff_projection.deactivate(payload.program_id, payload.staff_user_id)
+      ProgramStaffParticipantRepository.deactivate(payload.program_id, payload.staff_user_id)
       remove_staff_from_existing_conversations(payload.program_id, payload.staff_user_id)
     end
 
