@@ -1,7 +1,7 @@
 defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorkerTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
+  alias KlassHero.Messaging
   alias KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker
   alias KlassHero.MessagingFixtures
 
@@ -19,7 +19,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorkerTest 
                  args: %{"reply_id" => reply.id}
                })
 
-      {:ok, updated} = EmailReplyRepository.get_by_id(reply.id)
+      {:ok, updated} = Messaging.get_email_reply_by_id(reply.id)
       assert updated.status == :sent
       assert updated.sent_at != nil
     end

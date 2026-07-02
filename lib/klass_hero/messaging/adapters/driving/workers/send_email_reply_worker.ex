@@ -7,24 +7,14 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
   """
 
   use Oban.Worker, queue: :email, max_attempts: 3
+  use KlassHero.Shared.Interaction
 
+  alias KlassHero.Messaging
   alias KlassHero.Shared.RateLimitedEmailWorker
 
   require Logger
 
   @from Application.compile_env!(:klass_hero, [:mailer_defaults, :from])
-  @email_reply_reader Application.compile_env!(:klass_hero, [
-                        :messaging,
-                        :for_querying_email_replies
-                      ])
-  @email_reply_repo Application.compile_env!(:klass_hero, [
-                      :messaging,
-                      :for_managing_email_replies
-                    ])
-  @inbound_email_reader Application.compile_env!(:klass_hero, [
-                          :messaging,
-                          :for_querying_inbound_emails
-                        ])
 
   # Custom backoff: 429 responses need longer delay than Oban's default.
   @impl Oban.Worker
@@ -32,19 +22,11 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"reply_id" => reply_id}} = job) do
-    with {:ok, reply} <- @email_reply_reader.get_by_id(reply_id),
-         {:ok, email} <- @inbound_email_reader.get_by_id(reply.inbound_email_id) do
-      swoosh_email =
-        Swoosh.Email.new()
-        |> Swoosh.Email.to(email.from_address)
-        |> Swoosh.Email.from(@from)
-        |> Swoosh.Email.subject("Re: #{email.subject}")
-        |> Swoosh.Email.text_body(reply.body)
-        |> maybe_add_threading_headers(email.message_id)
-
+    with {:ok, reply} <- Messaging.get_email_reply_by_id(reply_id),
+         {:ok, email} <- Messaging.get_inbound_email_by_id(reply.inbound_email_id) do
       now = DateTime.utc_now()
 
-      case KlassHero.Mailer.deliver(swoosh_email) do
+      case deliver_reply(reply, email) do
         {:ok, %{id: resend_id}} ->
           mark_reply_sent(reply_id, %{resend_message_id: resend_id, sent_at: now})
           Logger.info("Delivered reply #{reply_id} to #{email.from_address}")
@@ -68,9 +50,21 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
     end
   end
 
+  defp deliver_reply(reply, email) do
+    email_interaction operation: :send_reply do
+      Swoosh.Email.new()
+      |> Swoosh.Email.to(email.from_address)
+      |> Swoosh.Email.from(@from)
+      |> Swoosh.Email.subject("Re: #{email.subject}")
+      |> Swoosh.Email.text_body(reply.body)
+      |> maybe_add_threading_headers(email.message_id)
+      |> KlassHero.Mailer.deliver()
+    end
+  end
+
   # Email already sent — do not raise/retry on status update failure (would cause duplicate sends).
   defp mark_reply_sent(reply_id, attrs) do
-    case @email_reply_repo.update_status(reply_id, "sent", attrs) do
+    case Messaging.update_email_reply_status(reply_id, "sent", attrs) do
       {:ok, _} ->
         :ok
 
@@ -81,7 +75,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
 
   defp mark_reply_failed_if_final(reply_id, job) do
     if job.attempt >= job.max_attempts do
-      case @email_reply_repo.update_status(reply_id, "failed", %{}) do
+      case Messaging.update_email_reply_status(reply_id, "failed", %{}) do
         {:ok, _} ->
           Logger.error("Marked reply #{reply_id} as permanently failed")
 

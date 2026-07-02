@@ -3,10 +3,7 @@ defmodule KlassHero.Messaging.Application.Commands.ScheduleEmailContentFetch do
   Command for scheduling a content fetch retry for an inbound email.
   """
 
-  @email_job_scheduler Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_scheduling_email_jobs
-                       ])
+  alias KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker
 
   @doc """
   Schedules a content fetch for an inbound email.
@@ -21,6 +18,8 @@ defmodule KlassHero.Messaging.Application.Commands.ScheduleEmailContentFetch do
   """
   @spec execute(String.t(), String.t()) :: {:ok, term()} | {:error, term()}
   def execute(email_id, resend_id) do
-    @email_job_scheduler.schedule_content_fetch(email_id, resend_id)
+    %{email_id: email_id, resend_id: resend_id}
+    |> FetchEmailContentWorker.new()
+    |> Oban.insert()
   end
 end

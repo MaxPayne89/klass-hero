@@ -5,25 +5,15 @@ defmodule KlassHero.Messaging.Application.Commands.ReceiveInboundEmail do
   Handles deduplication by resend_id — returns {:ok, :duplicate} for already-stored emails.
   """
 
-  require Logger
+  alias KlassHero.Messaging
+  alias KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker
 
-  @inbound_email_reader Application.compile_env!(:klass_hero, [
-                          :messaging,
-                          :for_querying_inbound_emails
-                        ])
-  @inbound_email_repo Application.compile_env!(:klass_hero, [
-                        :messaging,
-                        :for_managing_inbound_emails
-                      ])
-  @email_job_scheduler Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_scheduling_email_jobs
-                       ])
+  require Logger
 
   @spec execute(map()) :: {:ok, struct()} | {:ok, :duplicate} | {:error, term()}
   def execute(attrs) when is_map(attrs) do
     # Resend retries on non-2xx; deduplicate by resend_id.
-    case @inbound_email_reader.get_by_resend_id(attrs.resend_id) do
+    case Messaging.get_inbound_email_by_resend_id(attrs.resend_id) do
       {:ok, _existing} ->
         Logger.debug("Duplicate inbound email ignored: #{attrs.resend_id}")
         {:ok, :duplicate}
@@ -35,7 +25,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReceiveInboundEmail do
 
   # Concurrent deliveries may both pass the dedup check; unique_index catches the race.
   defp create_with_race_handling(attrs) do
-    case @inbound_email_repo.create(attrs) do
+    case Messaging.create_inbound_email(attrs) do
       {:ok, email} ->
         schedule_content_fetch(email)
         {:ok, email}
@@ -55,13 +45,16 @@ defmodule KlassHero.Messaging.Application.Commands.ReceiveInboundEmail do
 
   # Resend webhook omits body; fetch html/text/headers via API in a background job.
   defp schedule_content_fetch(email) do
-    case @email_job_scheduler.schedule_content_fetch(email.id, email.resend_id) do
+    %{email_id: email.id, resend_id: email.resend_id}
+    |> FetchEmailContentWorker.new()
+    |> Oban.insert()
+    |> case do
       {:ok, _job} ->
         Logger.debug("Enqueued content fetch for email #{email.id}")
 
       {:error, reason} ->
         Logger.error("Failed to enqueue content fetch for #{email.id}: #{inspect(reason)}")
-        @inbound_email_repo.update_content(email.id, %{content_status: "failed"})
+        Messaging.update_inbound_email_content(email.id, %{content_status: "failed"})
     end
   end
 

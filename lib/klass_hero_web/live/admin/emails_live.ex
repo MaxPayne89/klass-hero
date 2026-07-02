@@ -47,11 +47,7 @@ defmodule KlassHeroWeb.Admin.EmailsLive do
 
     with {:ok, uuid} <- Ecto.UUID.cast(id),
          {:ok, email} <- Messaging.get_inbound_email(uuid, mark_read: true, reader_id: reader_id) do
-      replies =
-        case Messaging.list_email_replies(email.id) do
-          {:ok, replies} -> replies
-          {:error, _reason} -> []
-        end
+      {:ok, replies} = Messaging.list_email_replies(email.id)
 
       socket
       |> assign(:email, email)

@@ -16,12 +16,8 @@ alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
 alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
-alias KlassHero.Messaging.Adapters.Driven.ObanEmailJobScheduler
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
 alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
 alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
-alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
@@ -199,12 +195,6 @@ config :klass_hero, :messaging,
   for_querying_enrollments: EnrollmentResolver,
   for_resolving_program_staff: ProgramStaffParticipantRepository,
   for_resolving_provider_staff: ProviderStaffResolver,
-  for_managing_inbound_emails: InboundEmailRepository,
-  for_querying_inbound_emails: InboundEmailRepository,
-  for_fetching_email_content: ResendEmailContentAdapter,
-  for_managing_email_replies: EmailReplyRepository,
-  for_querying_email_replies: EmailReplyRepository,
-  for_scheduling_email_jobs: ObanEmailJobScheduler,
   retention: [
     days_after_program_end: 30,
     retention_period_days: 30

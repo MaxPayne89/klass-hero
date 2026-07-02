@@ -3,8 +3,7 @@ defmodule KlassHero.MessagingFixtures do
   Test fixtures for the Messaging bounded context.
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
+  alias KlassHero.Messaging
   alias KlassHero.Messaging.Attachment
 
   def attachment_fixture(message_id, attrs \\ %{}) do
@@ -49,7 +48,7 @@ defmodule KlassHero.MessagingFixtures do
     {:ok, email} =
       attrs
       |> valid_inbound_email_attrs()
-      |> InboundEmailRepository.create()
+      |> Messaging.create_inbound_email()
 
     email
   end
@@ -76,7 +75,7 @@ defmodule KlassHero.MessagingFixtures do
     {:ok, reply} =
       attrs
       |> valid_email_reply_attrs()
-      |> EmailReplyRepository.create()
+      |> Messaging.create_email_reply()
 
     reply
   end

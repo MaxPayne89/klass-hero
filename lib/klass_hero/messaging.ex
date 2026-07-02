@@ -32,6 +32,8 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationSummaryQueries
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQueries
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
   alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
@@ -45,9 +47,7 @@ defmodule KlassHero.Messaging do
     ReplyToEmail,
     ScheduleEmailContentFetch,
     SendMessage,
-    StartProgramConversation,
-    UpdateInboundEmailContent,
-    UpdateInboundEmailStatus
+    StartProgramConversation
   }
 
   alias KlassHero.Messaging.Application.Queries.{
@@ -55,16 +55,15 @@ defmodule KlassHero.Messaging do
     GetConversationContext,
     GetInboundEmail,
     GetTotalUnreadCount,
-    InboundEmailQueries,
     ListConversations,
-    ListInboundEmails,
     ResolverQueries
   }
 
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Messaging.Domain.Models.EmailReply
+  alias KlassHero.Messaging.EmailReply
+  alias KlassHero.Messaging.InboundEmail
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
@@ -313,28 +312,48 @@ defmodule KlassHero.Messaging do
 
   @doc "Updates inbound email content fields (body, headers, content_status)."
   @spec update_inbound_email_content(String.t(), map()) ::
-          {:ok, struct()} | {:error, term()}
-  defdelegate update_inbound_email_content(id, attrs),
-    to: UpdateInboundEmailContent,
-    as: :execute
+          {:ok, InboundEmail.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def update_inbound_email_content(id, attrs) do
+    context_span entity: "inbound_email" do
+      case Repo.get(InboundEmail, id) do
+        nil ->
+          {:error, :not_found}
+
+        email ->
+          email
+          |> InboundEmail.content_changeset(attrs)
+          |> Repo.update()
+      end
+    end
+  end
 
   @doc """
   Updates the status of an inbound email.
 
   ## Parameters
   - `id` - The email ID
-  - `status` - The new status string ("unread", "read", "archived")
-  - `attrs` - Additional attributes to update
+  - `status` - The new status ("unread", "read", "archived" — atom or string)
+  - `attrs` - Additional attributes to update (e.g. `read_by_id`, `read_at`)
 
   ## Returns
   - `{:ok, email}` - Updated email
   - `{:error, reason}` - Failure
   """
-  @spec update_inbound_email_status(String.t(), String.t(), map()) ::
-          {:ok, struct()} | {:error, term()}
-  defdelegate update_inbound_email_status(id, status, attrs \\ %{}),
-    to: UpdateInboundEmailStatus,
-    as: :execute
+  @spec update_inbound_email_status(String.t(), String.t() | atom(), map()) ::
+          {:ok, InboundEmail.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def update_inbound_email_status(id, status, attrs \\ %{}) do
+    context_span entity: "inbound_email" do
+      case Repo.get(InboundEmail, id) do
+        nil ->
+          {:error, :not_found}
+
+        email ->
+          email
+          |> InboundEmail.status_changeset(Map.put(attrs, :status, status))
+          |> Repo.update()
+      end
+    end
+  end
 
   @doc """
   Subscribes to real-time updates for a conversation.
@@ -474,12 +493,26 @@ defmodule KlassHero.Messaging do
   ## Options
   - `:limit` - Max emails to return (default 50)
   - `:status` - Filter by status atom (:unread, :read, :archived)
+  - `:before` - Cursor: only emails received before this timestamp
 
   ## Returns
   - `{:ok, emails, has_more}` - List of inbound emails with pagination flag
   """
-  @spec list_inbound_emails(keyword()) :: {:ok, [struct()], boolean()}
-  defdelegate list_inbound_emails(opts \\ []), to: ListInboundEmails, as: :execute
+  @spec list_inbound_emails(keyword()) :: {:ok, [InboundEmail.t()], boolean()}
+  def list_inbound_emails(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+    status = Keyword.get(opts, :status)
+
+    # Fetch limit+1 to detect a next page without a separate COUNT query.
+    results =
+      InboundEmailQueries.base()
+      |> InboundEmailQueries.by_status(status)
+      |> InboundEmailQueries.order_by_newest()
+      |> InboundEmailQueries.paginate(opts)
+      |> Repo.all()
+
+    {:ok, Enum.take(results, limit), length(results) > limit}
+  end
 
   @doc """
   Retrieves an inbound email by ID, optionally marking it as read.
@@ -492,22 +525,22 @@ defmodule KlassHero.Messaging do
   - `{:ok, email}` - The inbound email
   - `{:error, :not_found}` - Email not found
   """
-  @spec get_inbound_email(String.t(), keyword()) :: {:ok, struct()} | {:error, :not_found}
+  @spec get_inbound_email(String.t(), keyword()) :: {:ok, InboundEmail.t()} | {:error, :not_found}
   defdelegate get_inbound_email(id, opts \\ []), to: GetInboundEmail, as: :execute
 
   @doc """
-  Lists all email replies for a given inbound email.
-
-  ## Parameters
-  - `inbound_email_id` - The ID of the inbound email
-
-  ## Returns
-  - `{:ok, replies}` - List of email replies
+  Lists all email replies for a given inbound email, oldest first.
   """
   @spec list_email_replies(String.t()) :: {:ok, [EmailReply.t()]}
-  defdelegate list_email_replies(inbound_email_id),
-    to: InboundEmailQueries,
-    as: :list_replies
+  def list_email_replies(inbound_email_id) do
+    replies =
+      EmailReplyQueries.base()
+      |> EmailReplyQueries.by_email(inbound_email_id)
+      |> EmailReplyQueries.order_by_oldest()
+      |> Repo.all()
+
+    {:ok, replies}
+  end
 
   @doc """
   Sanitizes inbound email HTML for safe rendering.
@@ -534,9 +567,105 @@ defmodule KlassHero.Messaging do
 
   """
   @spec count_inbound_emails_by_status(atom()) :: non_neg_integer()
-  defdelegate count_inbound_emails_by_status(status),
-    to: InboundEmailQueries,
-    as: :count_by_status
+  def count_inbound_emails_by_status(status) do
+    status
+    |> InboundEmailQueries.count_by_status()
+    |> Repo.one()
+    |> Kernel.||(0)
+  end
+
+  ## Inbound email persistence (called by the email use cases + workers)
+
+  @doc "Stores a newly received inbound email (called by ReceiveInboundEmail)."
+  @spec create_inbound_email(map()) :: {:ok, InboundEmail.t()} | {:error, Ecto.Changeset.t()}
+  def create_inbound_email(attrs) do
+    context_span entity: "inbound_email" do
+      %InboundEmail{}
+      |> InboundEmail.create_changeset(attrs)
+      |> Repo.insert()
+    end
+  end
+
+  @doc "Fetches an inbound email by id."
+  @spec get_inbound_email_by_id(String.t()) :: {:ok, InboundEmail.t()} | {:error, :not_found}
+  def get_inbound_email_by_id(id) do
+    case Repo.get(InboundEmail, id) do
+      nil -> {:error, :not_found}
+      email -> {:ok, email}
+    end
+  end
+
+  @doc "Fetches an inbound email by its Resend webhook id (dedup lookup)."
+  @spec get_inbound_email_by_resend_id(String.t()) ::
+          {:ok, InboundEmail.t()} | {:error, :not_found}
+  def get_inbound_email_by_resend_id(resend_id) do
+    case Repo.get_by(InboundEmail, resend_id: resend_id) do
+      nil -> {:error, :not_found}
+      email -> {:ok, email}
+    end
+  end
+
+  @doc """
+  Marks an inbound email as read by the given reader.
+
+  Idempotent: an already-read or archived email is returned unchanged with no
+  DB write. Only an unread email is transitioned to `:read` (stamping
+  `read_by_id`/`read_at`).
+  """
+  @spec mark_inbound_email_read(InboundEmail.t(), String.t()) ::
+          {:ok, InboundEmail.t()} | {:error, Ecto.Changeset.t()}
+  def mark_inbound_email_read(%InboundEmail{status: status} = email, _reader_id) when status in [:read, :archived],
+    do: {:ok, email}
+
+  def mark_inbound_email_read(%InboundEmail{} = email, reader_id) do
+    context_span entity: "inbound_email" do
+      email
+      |> InboundEmail.status_changeset(%{
+        status: :read,
+        read_by_id: reader_id,
+        read_at: DateTime.utc_now()
+      })
+      |> Repo.update()
+    end
+  end
+
+  ## Email reply persistence (called by ReplyToEmail + SendEmailReplyWorker)
+
+  @doc "Creates an email reply row (defaults to :sending)."
+  @spec create_email_reply(map()) :: {:ok, EmailReply.t()} | {:error, Ecto.Changeset.t()}
+  def create_email_reply(attrs) do
+    context_span entity: "email_reply" do
+      %EmailReply{}
+      |> EmailReply.create_changeset(attrs)
+      |> Repo.insert()
+    end
+  end
+
+  @doc "Fetches an email reply by id."
+  @spec get_email_reply_by_id(String.t()) :: {:ok, EmailReply.t()} | {:error, :not_found}
+  def get_email_reply_by_id(id) do
+    case Repo.get(EmailReply, id) do
+      nil -> {:error, :not_found}
+      reply -> {:ok, reply}
+    end
+  end
+
+  @doc "Transitions an email reply's delivery status (:sent / :failed)."
+  @spec update_email_reply_status(String.t(), String.t() | atom(), map()) ::
+          {:ok, EmailReply.t()} | {:error, :not_found | Ecto.Changeset.t()}
+  def update_email_reply_status(id, status, attrs \\ %{}) do
+    context_span entity: "email_reply" do
+      case Repo.get(EmailReply, id) do
+        nil ->
+          {:error, :not_found}
+
+        reply ->
+          reply
+          |> EmailReply.status_changeset(Map.put(attrs, :status, status))
+          |> Repo.update()
+      end
+    end
+  end
 
   @doc """
   Returns the display name for a user.

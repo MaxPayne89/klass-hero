@@ -2,11 +2,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter do
   @moduledoc """
   Fetches inbound email content from Resend's receiving API.
 
-  Implements ForFetchingEmailContent port using Req HTTP client.
-  Endpoint: GET https://api.resend.com/emails/receiving/{id}
+  Plain module (called by fixed name from `FetchEmailContentWorker`) wrapping the
+  Req HTTP client. Endpoint: GET https://api.resend.com/emails/receiving/{id}
   """
-
-  @behaviour KlassHero.Messaging.Domain.Ports.ForFetchingEmailContent
 
   use KlassHero.Shared.Interaction
 
@@ -14,7 +12,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter do
 
   @base_url "https://api.resend.com"
 
-  @impl true
   def fetch_content(resend_email_id) do
     http_interaction operation: :fetch_email_content, service: "resend" do
       extra_opts = Application.get_env(:klass_hero, :resend_req_options, [])

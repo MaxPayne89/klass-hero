@@ -10,14 +10,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQuer
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EmailReplySchema
+  alias KlassHero.Messaging.EmailReply
 
   describe "base/0" do
-    test "returns base query for EmailReplySchema" do
+    test "returns base query for EmailReply" do
       query = EmailReplyQueries.base()
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"email_replies", EmailReplySchema}
+      assert query.from.source == {"email_replies", EmailReply}
     end
   end
 
