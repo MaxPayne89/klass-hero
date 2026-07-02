@@ -15,7 +15,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   # interaction events would otherwise arrive at this test's handler.
   use KlassHero.DataCase, async: false
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 
@@ -37,8 +36,8 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   end
 
   describe "every DB context drives I/O through the Interaction envelope" do
-    # Accounts, Family, Program Catalog, Participation, and Enrollment have no probe here:
-    # the conventional-Phoenix flatten replaced the per-adapter Interaction envelope with the
+    # Accounts, Family, Program Catalog, Participation, Enrollment, and Messaging have no probe
+    # here: the conventional-Phoenix flatten replaced the per-adapter Interaction envelope with the
     # seam-level `context_span` macro, which emits OTel spans (not the
     # `[:klass_hero, :interaction, :stop]` event this sweep watches).
 
@@ -47,13 +46,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
 
       assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
                       %{io_kind: :db, operation: :list_for_provider, status: :ok}}
-    end
-
-    test "messaging — ConversationSummariesRepository.get_total_unread_count/1" do
-      assert ConversationSummariesRepository.get_total_unread_count(Ecto.UUID.generate()) == 0
-
-      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :get_total_unread_count, status: :ok}}
     end
 
     test "shared (greenfield) — ProcessedEventRepository.mark_processed/2" do

@@ -31,6 +31,7 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationSummaryQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
@@ -62,6 +63,7 @@ defmodule KlassHero.Messaging do
 
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.Domain.Models.{EmailReply, Message}
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
@@ -798,6 +800,167 @@ defmodule KlassHero.Messaging do
     |> ConversationQueries.retention_expired(before)
     |> ConversationQueries.select_ids()
     |> Repo.all()
+  end
+
+  # === Persistence — conversation summaries (read model) ===
+
+  @doc "Lists a user's non-archived conversation summaries, newest first. Limit+1 paginated."
+  @spec list_conversation_summaries_for_user(String.t(), keyword()) ::
+          {:ok, [ConversationSummary.t()], boolean()}
+  def list_conversation_summaries_for_user(user_id, opts) do
+    limit = Keyword.get(opts, :limit, 25)
+
+    schemas =
+      from(s in ConversationSummary,
+        where: s.user_id == ^user_id and is_nil(s.archived_at),
+        order_by: [desc: s.latest_message_at, desc: s.id],
+        limit: ^(limit + 1)
+      )
+      |> Repo.all()
+
+    {:ok, Enum.take(schemas, limit), length(schemas) > limit}
+  end
+
+  @doc "Sum of unread counts across a user's non-archived conversation summaries."
+  @spec summaries_total_unread_count(String.t()) :: non_neg_integer()
+  def summaries_total_unread_count(user_id) do
+    from(s in ConversationSummary,
+      where: s.user_id == ^user_id and is_nil(s.archived_at),
+      select: coalesce(sum(s.unread_count), 0)
+    )
+    |> Repo.one()
+  end
+
+  @doc "True if any summary row for the conversation carries the given system-note token."
+  @spec has_system_note?(String.t(), String.t()) :: boolean()
+  def has_system_note?(conversation_id, token) do
+    ConversationSummaryQueries.base()
+    |> ConversationSummaryQueries.by_conversation(conversation_id)
+    |> ConversationSummaryQueries.has_system_note_key(token)
+    |> Repo.exists?()
+  end
+
+  @doc "Returns the enrolled child names and other-participant name for a conversation summary row."
+  @spec get_conversation_summary_context(String.t(), String.t()) :: %{
+          enrolled_child_names: [String.t()],
+          other_participant_name: String.t() | nil
+        }
+  def get_conversation_summary_context(conversation_id, user_id) do
+    from(s in ConversationSummary,
+      where: s.conversation_id == ^conversation_id and s.user_id == ^user_id,
+      select: %{
+        enrolled_child_names: s.enrolled_child_names,
+        other_participant_name: s.other_participant_name
+      }
+    )
+    |> Repo.one()
+    |> case do
+      nil ->
+        %{enrolled_child_names: [], other_participant_name: nil}
+
+      %{enrolled_child_names: names, other_participant_name: other} ->
+        %{enrolled_child_names: names || [], other_participant_name: other}
+    end
+  end
+
+  @doc """
+  Synchronously stamps a system-note token onto a conversation's summary rows.
+
+  Complements the async projection: if the write-through races ahead of the
+  projection, seed minimal rows so the token isn't lost (the projection's upsert
+  merges the remaining fields when it catches up).
+  """
+  @spec write_system_note_token(String.t(), String.t()) :: :ok
+  def write_system_note_token(conversation_id, token) do
+    context_span entity: "conversation_summary" do
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      token_json = %{token => DateTime.to_iso8601(now)}
+
+      {updated, _} =
+        from(s in ConversationSummary,
+          where: s.conversation_id == ^conversation_id,
+          update: [
+            set: [
+              system_notes: fragment("coalesce(system_notes, '{}')::jsonb || ?::jsonb", ^token_json),
+              updated_at: ^now
+            ]
+          ]
+        )
+        |> Repo.update_all([])
+
+      if updated == 0 do
+        seed_conversation_summary_rows_with_token(conversation_id, token_json, now)
+      end
+
+      :ok
+    end
+  end
+
+  defp seed_conversation_summary_rows_with_token(conversation_id, token_json, now) do
+    conversation =
+      from(c in Conversation,
+        where: c.id == ^conversation_id,
+        select: %{type: c.type, provider_id: c.provider_id, subject: c.subject}
+      )
+      |> Repo.one()
+
+    participant_user_ids =
+      from(p in Participant,
+        where: p.conversation_id == ^conversation_id and is_nil(p.left_at),
+        select: p.user_id
+      )
+      |> Repo.all()
+
+    cond do
+      is_nil(conversation) ->
+        Logger.warning(
+          "seed_conversation_summary_rows_with_token: conversation not found, projection will handle",
+          conversation_id: conversation_id
+        )
+
+      participant_user_ids == [] ->
+        Logger.warning(
+          "seed_conversation_summary_rows_with_token: no active participants, projection will handle",
+          conversation_id: conversation_id
+        )
+
+      true ->
+        entries =
+          Enum.map(participant_user_ids, fn user_id ->
+            %{
+              id: Ecto.UUID.generate(),
+              conversation_id: conversation_id,
+              user_id: user_id,
+              conversation_type: to_string(conversation.type),
+              provider_id: conversation.provider_id,
+              subject: conversation.subject,
+              system_notes: token_json,
+              unread_count: 0,
+              participant_count: length(participant_user_ids),
+              inserted_at: now,
+              updated_at: now
+            }
+          end)
+
+        # JSONB || merge preserves tokens the projection wrote between our
+        # update_all and this insert_all.
+        Repo.insert_all(ConversationSummary, entries,
+          on_conflict:
+            from(s in ConversationSummary,
+              update: [
+                set: [
+                  system_notes:
+                    fragment(
+                      "coalesce(?.system_notes, '{}')::jsonb || excluded.system_notes::jsonb",
+                      s
+                    ),
+                  updated_at: fragment("excluded.updated_at")
+                ]
+              ]
+            ),
+          conflict_target: [:conversation_id, :user_id]
+        )
+    end
   end
 
   # === Persistence — participants ===

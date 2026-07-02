@@ -3,7 +3,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.IndexTest do
 
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Repo
 
   describe "authentication and authorization" do
@@ -106,7 +106,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.IndexTest do
 
     merged = Map.merge(defaults, attrs)
 
-    %ConversationSummarySchema{}
+    %ConversationSummary{}
     |> Ecto.Changeset.change(merged)
     |> Repo.insert!()
   end

@@ -33,13 +33,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.Family.ChildGuardian
   alias KlassHero.Family.Consent
   alias KlassHero.Family.ParentProfile
-
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
-    ConversationSummarySchema,
-    MessageSchema
-  }
-
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.Domain.Models.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Participation.BehavioralNote
@@ -1199,7 +1195,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ConversationSchema Ecto schemas.
+  Factory for creating Conversation rows.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a provider when inserted to avoid foreign key violations.
@@ -1225,7 +1221,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ConversationSummarySchema Ecto schemas (CQRS read model).
+  Factory for creating ConversationSummary rows (CQRS read model).
 
   Used in tests that interact with the denormalized conversation_summaries read table.
   No FK constraints — all IDs are plain UUIDs.
@@ -1236,7 +1232,7 @@ defmodule KlassHero.Factory do
       schema = insert(:conversation_summary_schema, unread_count: 3)
   """
   def conversation_summary_schema_factory do
-    %ConversationSummarySchema{
+    %ConversationSummary{
       id: Ecto.UUID.generate(),
       conversation_id: Ecto.UUID.generate(),
       user_id: Ecto.UUID.generate(),

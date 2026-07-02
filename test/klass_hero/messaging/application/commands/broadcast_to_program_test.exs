@@ -6,7 +6,6 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Application.Commands.BroadcastToProgram
@@ -566,7 +565,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
       ConversationSummaries.handle_event(:participant_added, event)
 
       for user_id <- [scope.user.id, parent1_user.id, parent2_user.id] do
-        {:ok, summaries, _has_more} = ConversationSummariesRepository.list_for_user(user_id, [])
+        {:ok, summaries, _has_more} = KlassHero.Messaging.list_conversation_summaries_for_user(user_id, [])
 
         assert Enum.any?(summaries, &(&1.conversation_id == conversation.id)),
                "expected user #{user_id} to see broadcast conversation #{conversation.id} in inbox; " <>

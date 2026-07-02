@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   ## Architecture
 
   Built on KlassHero.Shared.Projection + WithBootstrapRetry + WithDomainEvents.
-  The read-side repository (`ConversationSummariesRepository`) queries the table
+  The read side (the `KlassHero.Messaging` context) queries the table
   this projection writes.
 
   ## Startup Behavior
@@ -51,11 +51,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
@@ -190,7 +190,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         0
       else
         {count, _} =
-          Repo.insert_all(ConversationSummarySchema, entries,
+          Repo.insert_all(ConversationSummary, entries,
             on_conflict: {:replace_all_except, [:id, :inserted_at]},
             conflict_target: [:conversation_id, :user_id]
           )
@@ -306,7 +306,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
           unread_count: 0
         }
 
-        %ConversationSummarySchema{}
+        %ConversationSummary{}
         |> Ecto.Changeset.change(attrs)
         |> Repo.insert!(
           # Idempotency: on replay, refresh conversation metadata only.
@@ -375,7 +375,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
           build_summary_entry(conversation, participant, context)
         end)
 
-      Repo.insert_all(ConversationSummarySchema, entries,
+      Repo.insert_all(ConversationSummary, entries,
         # Idempotency: read-state and message-state preserved on replay.
         # `archived_at` IS in the replace list: the entry's value comes from
         # the conversation row (via build_summary_entry). For an active
@@ -435,7 +435,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     else
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where: s.conversation_id == ^conversation_id and s.user_id in ^user_ids,
         update: [
           set: [
@@ -462,7 +462,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     has_attachments = (Map.get(payload, :attachments) || []) != []
 
     Repo.transaction(fn ->
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where: s.conversation_id == ^conversation_id
       )
       |> Repo.update_all(
@@ -475,7 +475,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         ]
       )
 
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where: s.conversation_id == ^conversation_id and s.user_id != ^sender_id
       )
       |> Repo.update_all(inc: [unread_count: 1])
@@ -499,7 +499,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     read_at = Map.get(payload, :read_at)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(s in ConversationSummarySchema,
+    from(s in ConversationSummary,
       where: s.conversation_id == ^conversation_id and s.user_id == ^user_id
     )
     |> Repo.update_all(
@@ -517,7 +517,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     archived_at = Map.get(payload, :archived_at)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(s in ConversationSummarySchema,
+    from(s in ConversationSummary,
       where: s.conversation_id == ^conversation_id
     )
     |> Repo.update_all(
@@ -535,7 +535,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     if conversation_ids != [] do
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where: s.conversation_id in ^conversation_ids
       )
       |> Repo.update_all(
@@ -552,14 +552,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     conversation_ids =
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where: s.user_id == ^anonymized_user_id,
         select: s.conversation_id
       )
       |> Repo.all()
 
     if conversation_ids != [] do
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where:
           s.conversation_id in ^conversation_ids and
             s.user_id != ^anonymized_user_id
@@ -578,7 +578,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     child_names = Map.get(event.payload, :enrolled_child_names, [])
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(s in ConversationSummarySchema,
+    from(s in ConversationSummary,
       where: s.conversation_id == ^conversation_id
     )
     |> Repo.update_all(
@@ -602,7 +602,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         truncated_at = DateTime.truncate(sent_at, :second)
         token_json = %{token => DateTime.to_iso8601(truncated_at)}
 
-        from(s in ConversationSummarySchema,
+        from(s in ConversationSummary,
           where: s.conversation_id == ^conversation_id,
           update: [
             set: [

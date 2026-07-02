@@ -8,11 +8,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationSu
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
+  alias KlassHero.Messaging.ConversationSummary
 
   @doc "Base query for conversation summaries."
   def base do
-    from(s in ConversationSummarySchema)
+    from(s in ConversationSummary)
   end
 
   @doc "Filter by conversation ID."

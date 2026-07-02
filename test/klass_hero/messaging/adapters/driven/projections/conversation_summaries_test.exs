@@ -4,11 +4,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -96,7 +96,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_1's summary row
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -114,7 +114,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_2's summary row
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -195,7 +195,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify the bootstrapped summary row has the token in system_notes
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -270,14 +270,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       parent_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^parent_user.id
           )
         )
 
       provider_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^provider_user.id
           )
         )
@@ -332,7 +332,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       _ = :sys.get_state(bootstrap_pid)
 
       summaries =
-        Repo.all(from(s in ConversationSummarySchema, where: s.conversation_id == ^conversation_id))
+        Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
 
       assert length(summaries) == 2
       assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
@@ -375,7 +375,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       # The read table should not have this conversation yet
       assert Repo.all(
-               from(s in ConversationSummarySchema,
+               from(s in ConversationSummary,
                  where: s.conversation_id == ^conversation_id
                )
              ) == []
@@ -385,7 +385,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -434,7 +434,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_1's summary row
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -449,7 +449,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_2's summary row
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -496,7 +496,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user.id
           )
         )
@@ -545,7 +545,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       _ = :sys.get_state(@test_server_name)
 
       summaries =
-        Repo.all(from(s in ConversationSummarySchema, where: s.conversation_id == ^conversation_id))
+        Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
 
       assert length(summaries) == 2
       assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
@@ -591,7 +591,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       {1, _} =
         Repo.update_all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           ),
           set: [last_read_at: read_at, unread_count: 7]
@@ -608,7 +608,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -689,7 +689,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_2 should have unread_count incremented and latest message updated
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -702,7 +702,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_1 (sender) should have latest message updated but unread_count still 0
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -774,7 +774,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Both participants should have the token in system_notes
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -845,7 +845,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # system_notes should remain empty
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -927,7 +927,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # system_notes should have exactly 1 key (idempotent merge)
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -995,7 +995,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_2 has unread_count = 1
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -1029,7 +1029,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify unread_count is now 0
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -1095,7 +1095,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Both participants' summary rows should have archived_at set
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -1164,7 +1164,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # All 4 summary rows (2 per conversation) should have archived_at set
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id in ^[conv_1_id, conv_2_id]
           )
         )
@@ -1208,7 +1208,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify initial names are correct
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -1236,7 +1236,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_1's summary should now show "Deleted User" as the other participant
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -1246,7 +1246,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_2's summary should remain unchanged (their own name display is not affected)
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -1301,7 +1301,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # All 3 participants should have a summary row
       all_summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -1367,7 +1367,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       staff_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff_user.id
           )
         )
@@ -1448,7 +1448,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1519,7 +1519,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       {1, _} =
         Repo.update_all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           ),
           set: [last_read_at: read_at, unread_count: 0]
@@ -1536,7 +1536,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1601,7 +1601,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where:
               s.conversation_id == ^conversation_id and
                 s.user_id in ^[staff_a.id, staff_b.id],
@@ -1659,7 +1659,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1725,7 +1725,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       staff_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1736,7 +1736,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Non-removed users keep their row intact
       user_1_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -1798,7 +1798,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       first =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id,
             select: s.archived_at
           )
@@ -1818,7 +1818,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       second =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id,
             select: s.archived_at
           )
@@ -1882,7 +1882,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       archived_count =
         Repo.aggregate(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where:
               s.conversation_id == ^conversation_id and
                 s.user_id in ^[staff_a.id, staff_b.id] and
@@ -1903,7 +1903,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
   defp list_summaries_for_user(user_id) do
     Repo.all(
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where: s.user_id == ^user_id
       )
     )

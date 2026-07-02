@@ -19,14 +19,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
 
   @context KlassHero.Messaging
   @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
-  @conversation_summaries_repo Application.compile_env!(:klass_hero, [
-                                 :messaging,
-                                 :for_managing_conversation_summaries
-                               ])
-  @conversation_summaries_reader Application.compile_env!(:klass_hero, [
-                                   :messaging,
-                                   :for_querying_conversation_summaries
-                                 ])
 
   @doc """
   Orchestrates a private reply to a broadcast.
@@ -152,7 +144,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
         # this, a rapid second call could miss the token and insert a duplicate.
         # Projection's async handler is idempotent, so the double-write is harmless.
         try do
-          @conversation_summaries_repo.write_system_note_token(
+          KlassHero.Messaging.write_system_note_token(
             direct_conversation.id,
             token
           )
@@ -170,6 +162,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   end
 
   defp system_note_exists?(conversation_id, token) do
-    @conversation_summaries_reader.has_system_note?(conversation_id, token)
+    KlassHero.Messaging.has_system_note?(conversation_id, token)
   end
 end

@@ -7,11 +7,6 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationContext do
   to build human-readable conversation titles, e.g. "Sarah for Emma, Liam".
   """
 
-  @conversation_summaries_reader Application.compile_env!(:klass_hero, [
-                                   :messaging,
-                                   :for_querying_conversation_summaries
-                                 ])
-
   @doc """
   Returns enrolled child names and other participant name for a conversation/user pair.
 
@@ -25,6 +20,6 @@ defmodule KlassHero.Messaging.Application.Queries.GetConversationContext do
   @spec execute(String.t(), String.t()) ::
           %{enrolled_child_names: [String.t()], other_participant_name: String.t() | nil}
   def execute(conversation_id, user_id) do
-    @conversation_summaries_reader.get_conversation_context(conversation_id, user_id)
+    KlassHero.Messaging.get_conversation_summary_context(conversation_id, user_id)
   end
 end

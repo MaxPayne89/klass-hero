@@ -17,7 +17,6 @@ alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
 alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
 alias KlassHero.Messaging.Adapters.Driven.ObanEmailJobScheduler
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
 alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
 alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
 alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
@@ -203,8 +202,6 @@ config :klass_hero, :messaging,
   for_querying_enrollments: EnrollmentResolver,
   for_resolving_program_staff: ProgramStaffParticipantRepository,
   for_resolving_provider_staff: ProviderStaffResolver,
-  for_managing_conversation_summaries: ConversationSummariesRepository,
-  for_querying_conversation_summaries: ConversationSummariesRepository,
   for_managing_inbound_emails: InboundEmailRepository,
   for_querying_inbound_emails: InboundEmailRepository,
   for_fetching_email_content: ResendEmailContentAdapter,
