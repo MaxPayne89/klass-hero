@@ -5,13 +5,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQu
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.InboundEmailSchema
+  alias KlassHero.Messaging.InboundEmail
 
   @doc """
   Base query for inbound emails.
   """
   def base do
-    from(e in InboundEmailSchema, as: :inbound_email)
+    from(e in InboundEmail, as: :inbound_email)
   end
 
   @doc """

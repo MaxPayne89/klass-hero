@@ -2,11 +2,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
   @moduledoc """
   Ecto-based repository for the program_staff_participants projection table.
 
-  Implements ForResolvingProgramStaff port. Kept in sync by integration events
-  from the Provider context via the messaging integration event handler.
+  Plain module (called by fixed name — no port/behaviour). Kept in sync by
+  integration events from the Provider context via the messaging integration
+  event handler, and read by the messaging commands that resolve active staff.
   """
-
-  @behaviour KlassHero.Messaging.Domain.Ports.ForResolvingProgramStaff
 
   use KlassHero.Shared.Interaction
 
@@ -15,7 +14,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ProgramStaffParticipantSchema
   alias KlassHero.Repo
 
-  @impl true
   def get_active_staff_user_ids(program_id) do
     db_interaction operation: :get_active_staff_user_ids, entity: "program_staff_participant" do
       ProgramStaffParticipantSchema
@@ -25,7 +23,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
     end
   end
 
-  @impl true
   def upsert_active(attrs) do
     db_interaction operation: :upsert_active, entity: "program_staff_participant" do
       %ProgramStaffParticipantSchema{}
@@ -46,7 +43,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
     end
   end
 
-  @impl true
   def deactivate(program_id, staff_user_id) do
     db_interaction operation: :deactivate, entity: "program_staff_participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:microsecond)

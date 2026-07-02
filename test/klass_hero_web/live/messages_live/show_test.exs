@@ -5,7 +5,6 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
 
   describe "authentication" do
     test "requires authentication", %{conn: conn} do
@@ -49,7 +48,7 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
       )
 
       {:ok, _msg} =
-        MessageRepository.create(%{
+        KlassHero.Messaging.create_message(%{
           conversation_id: conversation.id,
           sender_id: user.id,
           content: "Hello world!"
@@ -124,7 +123,7 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
       |> render_submit()
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation.id, limit: 10)
+        KlassHero.Messaging.list_messages_for_conversation(conversation.id, limit: 10)
 
       assert length(messages) == 1
       assert hd(messages).content == "Hello from test!"
@@ -145,7 +144,7 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
       |> render_submit()
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation.id, limit: 10)
+        KlassHero.Messaging.list_messages_for_conversation(conversation.id, limit: 10)
 
       assert messages == []
     end
@@ -321,7 +320,7 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
       |> render_submit()
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation.id, limit: 10)
+        KlassHero.Messaging.list_messages_for_conversation(conversation.id, limit: 10)
 
       assert length(messages) == 1
       assert hd(messages).content == "Check this out!"
@@ -353,7 +352,7 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
       |> render_submit()
 
       {:ok, messages, _} =
-        MessageRepository.list_for_conversation(conversation.id, limit: 10)
+        KlassHero.Messaging.list_messages_for_conversation(conversation.id, limit: 10)
 
       assert length(messages) == 1
       assert hd(messages).content == nil

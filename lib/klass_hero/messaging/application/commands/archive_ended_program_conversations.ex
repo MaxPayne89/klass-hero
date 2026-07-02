@@ -16,10 +16,6 @@ defmodule KlassHero.Messaging.Application.Commands.ArchiveEndedProgramConversati
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
   @retention_config Application.compile_env!(:klass_hero, [:messaging, :retention])
 
   @default_days_after_program_end 30
@@ -55,7 +51,7 @@ defmodule KlassHero.Messaging.Application.Commands.ArchiveEndedProgramConversati
       retention_period_days: retention_days
     )
 
-    case @conversation_repo.archive_ended_program_conversations(
+    case KlassHero.Messaging.archive_ended_program_conversations(
            cutoff_date,
            retention_days
          ) do

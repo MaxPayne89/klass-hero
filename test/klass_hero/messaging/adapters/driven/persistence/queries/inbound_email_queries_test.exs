@@ -10,14 +10,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQu
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.InboundEmailSchema
+  alias KlassHero.Messaging.InboundEmail
 
   describe "base/0" do
-    test "returns base query for InboundEmailSchema" do
+    test "returns base query for InboundEmail" do
       query = InboundEmailQueries.base()
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"inbound_emails", InboundEmailSchema}
+      assert query.from.source == {"inbound_emails", InboundEmail}
     end
   end
 
@@ -138,7 +138,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQu
       query = InboundEmailQueries.count_by_status(:unread)
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"inbound_emails", InboundEmailSchema}
+      assert query.from.source == {"inbound_emails", InboundEmail}
       assert length(query.wheres) == 1
       assert query.select != nil
     end

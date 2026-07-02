@@ -5,13 +5,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQuer
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EmailReplySchema
+  alias KlassHero.Messaging.EmailReply
 
   @doc """
   Base query for email replies.
   """
   def base do
-    from(r in EmailReplySchema, as: :email_reply)
+    from(r in EmailReply, as: :email_reply)
   end
 
   @doc """

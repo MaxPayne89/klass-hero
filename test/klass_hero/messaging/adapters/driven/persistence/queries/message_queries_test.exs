@@ -10,14 +10,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Message
 
   describe "base/0" do
-    test "returns base query for MessageSchema" do
+    test "returns base query for Message" do
       query = MessageQueries.base()
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"messages", MessageSchema}
+      assert query.from.source == {"messages", Message}
     end
   end
 
@@ -131,7 +131,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
       query = MessageQueries.latest_for_conversation(conversation_id)
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"messages", MessageSchema}
+      assert query.from.source == {"messages", Message}
       # by_conversation and not_deleted each add 1 where
       assert length(query.wheres) == 2
       assert length(query.order_bys) == 1

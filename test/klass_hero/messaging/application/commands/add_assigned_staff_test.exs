@@ -5,10 +5,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
@@ -39,9 +38,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -52,8 +51,8 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
                end)
 
       assert Enum.sort(added_ids) == Enum.sort([staff_a.id, staff_b.id])
-      assert ParticipantRepository.is_participant?(conversation_id, staff_a.id)
-      assert ParticipantRepository.is_participant?(conversation_id, staff_b.id)
+      assert KlassHero.Messaging.participant?(conversation_id, staff_a.id)
+      assert KlassHero.Messaging.participant?(conversation_id, staff_b.id)
 
       assert [%DomainEvent{} = event] = events
       assert event.event_type == :participant_added
@@ -91,9 +90,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -104,7 +103,7 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
                end)
 
       assert added_ids == [staff.id]
-      refute ParticipantRepository.is_participant?(conversation_id, owner.id)
+      refute KlassHero.Messaging.participant?(conversation_id, owner.id)
       assert event.payload.participant_user_ids == [staff.id]
     end
 
@@ -115,9 +114,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
@@ -148,9 +147,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaffTest do
 
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })

@@ -3,9 +3,8 @@ defmodule KlassHero.MessagingFixtures do
   Test fixtures for the Messaging bounded context.
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.AttachmentSchema
+  alias KlassHero.Messaging
+  alias KlassHero.Messaging.Attachment
 
   def attachment_fixture(message_id, attrs \\ %{}) do
     path = "messaging/attachments/#{Ecto.UUID.generate()}/photo.jpg"
@@ -22,7 +21,7 @@ defmodule KlassHero.MessagingFixtures do
     {:ok, attachment} =
       defaults
       |> Map.merge(attrs)
-      |> then(&AttachmentSchema.create_changeset(%AttachmentSchema{}, &1))
+      |> then(&Attachment.create_changeset(%Attachment{}, &1))
       |> KlassHero.Repo.insert()
 
     attachment
@@ -49,7 +48,7 @@ defmodule KlassHero.MessagingFixtures do
     {:ok, email} =
       attrs
       |> valid_inbound_email_attrs()
-      |> InboundEmailRepository.create()
+      |> Messaging.create_inbound_email()
 
     email
   end
@@ -76,7 +75,7 @@ defmodule KlassHero.MessagingFixtures do
     {:ok, reply} =
       attrs
       |> valid_email_reply_attrs()
-      |> EmailReplyRepository.create()
+      |> Messaging.create_email_reply()
 
     reply
   end

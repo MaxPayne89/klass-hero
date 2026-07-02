@@ -58,8 +58,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -247,7 +247,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   defp re_derive_and_emit(parent_user_id, program_id) do
     conversation_ids =
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where:
           s.user_id == ^parent_user_id and
             s.program_id == ^program_id and

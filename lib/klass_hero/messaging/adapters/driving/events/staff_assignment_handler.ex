@@ -21,6 +21,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.RemoveAssignedStaff
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Repo
@@ -29,15 +30,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   require Logger
 
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @staff_projection Application.compile_env!(:klass_hero, [
-                      :messaging,
-                      :for_resolving_program_staff
-                    ])
   @context Messaging
 
   @impl true
@@ -66,7 +58,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_assignment_with_retry(payload) do
     operation = fn ->
-      @staff_projection.upsert_active(%{
+      ProgramStaffParticipantRepository.upsert_active(%{
         provider_id: payload.provider_id,
         program_id: payload.program_id,
         staff_user_id: payload.staff_user_id
@@ -86,7 +78,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_unassignment_with_retry(payload) do
     operation = fn ->
-      @staff_projection.deactivate(payload.program_id, payload.staff_user_id)
+      ProgramStaffParticipantRepository.deactivate(payload.program_id, payload.staff_user_id)
       remove_staff_from_existing_conversations(payload.program_id, payload.staff_user_id)
     end
 
@@ -103,7 +95,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   # so the projection (separate DB connection) sees the committed writes.
   defp add_staff_to_existing_conversations(program_id, staff_user_id) do
     conversation_ids =
-      @conversation_reader.list_active_program_conversation_ids_without_participant(
+      KlassHero.Messaging.list_active_program_conversation_ids_without_participant(
         program_id,
         staff_user_id
       )
@@ -126,7 +118,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   end
 
   defp backfill_participants(staff_user_id, ids) do
-    case @participant_repo.add_to_conversations_batch(staff_user_id, ids) do
+    case KlassHero.Messaging.add_user_to_conversations(staff_user_id, ids) do
       {:ok, _count} ->
         Enum.map(ids, fn conversation_id ->
           MessagingEvents.participant_added(

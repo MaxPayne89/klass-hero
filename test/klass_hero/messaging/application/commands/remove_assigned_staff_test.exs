@@ -5,10 +5,9 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaffTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ParticipantSchema
   alias KlassHero.Messaging.Application.Commands.RemoveAssignedStaff
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
@@ -41,8 +40,8 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaffTest do
       assert Enum.sort(Enum.map(removed, & &1.conversation_id)) ==
                Enum.sort([conv_a, conv_b])
 
-      refute ParticipantRepository.is_participant?(conv_a, staff.id)
-      refute ParticipantRepository.is_participant?(conv_b, staff.id)
+      refute KlassHero.Messaging.participant?(conv_a, staff.id)
+      refute KlassHero.Messaging.participant?(conv_b, staff.id)
 
       assert length(events) == 2
       assert Enum.all?(events, &match?(%DomainEvent{event_type: :participant_removed}, &1))
@@ -87,7 +86,7 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaffTest do
                  RemoveAssignedStaff.execute(program.id, staff.id)
                end)
 
-      assert ParticipantRepository.is_participant?(archived_conv, staff.id)
+      assert KlassHero.Messaging.participant?(archived_conv, staff.id)
     end
 
     test "leaves non-program conversations alone" do
@@ -111,17 +110,17 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaffTest do
 
       assert Enum.map(removed, & &1.conversation_id) == [target_conv]
       assert event.aggregate_id == target_conv
-      refute ParticipantRepository.is_participant?(target_conv, staff.id)
-      assert ParticipantRepository.is_participant?(other_conv, staff.id)
+      refute KlassHero.Messaging.participant?(target_conv, staff.id)
+      assert KlassHero.Messaging.participant?(other_conv, staff.id)
     end
   end
 
   defp insert_conversation(provider_id, program_id, opts \\ []) do
     id = Ecto.UUID.generate()
 
-    Repo.insert!(%ConversationSchema{
+    Repo.insert!(%Conversation{
       id: id,
-      type: "direct",
+      type: :direct,
       provider_id: provider_id,
       program_id: program_id,
       archived_at: Keyword.get(opts, :archived_at)
@@ -131,7 +130,7 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaffTest do
   end
 
   defp insert_participant(conversation_id, user_id, joined_at) do
-    Repo.insert!(%ParticipantSchema{
+    Repo.insert!(%Participant{
       id: Ecto.UUID.generate(),
       conversation_id: conversation_id,
       user_id: user_id,

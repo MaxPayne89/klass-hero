@@ -7,10 +7,9 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.CreateDirectConversation
-  alias KlassHero.Messaging.Domain.Models.Conversation
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
@@ -138,7 +137,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
       assert {:ok, conversation} =
                CreateDirectConversation.execute(scope, provider.id, target_user.id, program_id: program.id)
 
-      assert ParticipantRepository.is_participant?(conversation.id, staff_user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
     test "publishes :participant_added integration event when staff are added" do
@@ -196,9 +195,9 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
                )
 
       # Conversation persists despite the publish failure
-      assert ParticipantRepository.is_participant?(conversation.id, scope.user.id)
-      assert ParticipantRepository.is_participant?(conversation.id, target_user.id)
-      assert ParticipantRepository.is_participant?(conversation.id, staff_user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, scope.user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, target_user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
     test "does not add staff when no program_id provided" do
@@ -217,7 +216,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
       assert {:ok, conversation} =
                CreateDirectConversation.execute(scope, provider.id, target_user.id)
 
-      refute ParticipantRepository.is_participant?(conversation.id, staff_user.id)
+      refute KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
     test "does not add owner as duplicate staff participant" do
@@ -261,7 +260,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
                CreateDirectConversation.execute(scope, provider.id, target_user.id, program_id: program.id)
 
       assert first_conversation.id == second_conversation.id
-      refute ParticipantRepository.is_participant?(second_conversation.id, staff_user.id)
+      refute KlassHero.Messaging.participant?(second_conversation.id, staff_user.id)
     end
   end
 

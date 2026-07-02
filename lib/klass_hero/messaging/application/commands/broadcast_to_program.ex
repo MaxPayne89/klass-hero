@@ -12,32 +12,19 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Commands.SendMessage
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Conversation
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
   alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
   @context KlassHero.Messaging
-
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @enrollment_resolver Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_enrollments
-                       ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
 
   @doc """
   Sends a broadcast message to all enrolled parents of a program.
@@ -121,7 +108,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
   end
 
   defp get_enrolled_parent_user_ids(program_id) do
-    {:ok, @enrollment_resolver.get_enrolled_parent_user_ids(program_id)}
+    {:ok, EnrollmentResolver.get_enrolled_parent_user_ids(program_id)}
   end
 
   defp verify_has_recipients([]), do: {:error, :no_enrollments}
@@ -141,7 +128,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
     candidate_ids = Enum.uniq([scope.user.id | parent_user_ids])
 
     Repo.transaction(fn ->
-      with {:ok, inserted} <- @participant_repo.add_batch(conversation.id, candidate_ids),
+      with {:ok, inserted} <- KlassHero.Messaging.add_participants(conversation.id, candidate_ids),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, conversation.program_id, scope.user.id) do
         build_broadcast_event(conversation.id, inserted) ++ staff_events
@@ -168,7 +155,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
 
   defp get_or_create_broadcast_conversation(provider_id, program_id, subject) do
     # Check before insert to avoid unique constraint violation aborting a parent transaction.
-    case @conversation_reader.find_active_broadcast_for_program(provider_id, program_id) do
+    case KlassHero.Messaging.find_active_broadcast_for_program(provider_id, program_id) do
       {:ok, conversation} ->
         {:ok, conversation}
 
@@ -180,13 +167,13 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgram do
           subject: subject
         }
 
-        case @conversation_repo.create(attrs) do
+        case KlassHero.Messaging.create_conversation(attrs) do
           {:ok, conversation} ->
             {:ok, conversation}
 
           # Race: another request won between our find and create; re-query for the winner.
           {:error, :duplicate_broadcast} ->
-            @conversation_reader.find_active_broadcast_for_program(provider_id, program_id)
+            KlassHero.Messaging.find_active_broadcast_for_program(provider_id, program_id)
         end
     end
   end

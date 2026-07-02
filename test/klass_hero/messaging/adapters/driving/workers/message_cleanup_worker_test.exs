@@ -4,7 +4,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorkerTest 
   import KlassHero.Factory
 
   alias KlassHero.EventTestHelper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
   alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 
   setup do
@@ -39,7 +38,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorkerTest 
       assert :ok = MessageCleanupWorker.perform(job)
 
       # Verify conversation is now archived
-      {:ok, archived} = ConversationRepository.get_by_id(conversation.id)
+      {:ok, archived} = KlassHero.Messaging.get_conversation_by_id(conversation.id)
       assert archived.archived_at != nil
     end
 

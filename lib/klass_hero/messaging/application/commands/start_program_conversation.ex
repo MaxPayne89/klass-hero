@@ -9,32 +9,23 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
 
   @spec execute(Scope.t(), String.t(), String.t()) ::
           {:ok, Conversation.t()} | {:error, :not_found | :not_entitled | term()}
   def execute(%Scope{} = scope, provider_id, program_id) do
     with :ok <- Shared.maybe_check_entitlement(scope, []),
-         {:ok, owner_user_id} <- @user_resolver.get_user_id_for_provider(provider_id) do
+         {:ok, owner_user_id} <- UserResolver.get_user_id_for_provider(provider_id) do
       find_or_create(scope, provider_id, program_id, owner_user_id)
     end
   end
@@ -43,7 +34,7 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
   # direct conversations, so using their id would collide across parents.
   # See ReplyPrivatelyToBroadcast for the same pattern.
   defp find_or_create(scope, provider_id, program_id, owner_user_id) do
-    case @conversation_reader.find_direct_conversation(provider_id, scope.user.id) do
+    case KlassHero.Messaging.find_direct_conversation(provider_id, scope.user.id) do
       {:ok, existing} ->
         {:ok, existing}
 
@@ -56,7 +47,7 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
     attrs = %{type: :direct, provider_id: provider_id, program_id: program_id}
 
     Repo.transaction(fn ->
-      with {:ok, conversation} <- @conversation_repo.create(attrs),
+      with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, owner_user_id),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, program_id, scope.user.id) do
@@ -95,9 +86,9 @@ defmodule KlassHero.Messaging.Application.Commands.StartProgramConversation do
 
   defp add_participants(conversation_id, user_id_1, user_id_2) do
     with {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_1}),
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_1}),
          {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_2}) do
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_2}) do
       :ok
     end
   end

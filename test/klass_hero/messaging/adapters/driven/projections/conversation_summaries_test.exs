@@ -4,12 +4,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ParticipantSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.Message
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -35,9 +35,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Create a conversation in the write table
       conversation_id = Ecto.UUID.generate()
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -45,7 +45,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       now = DateTime.utc_now() |> DateTime.truncate(:second)
       five_min_ago = DateTime.add(now, -300, :second)
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_1.id,
@@ -53,7 +53,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         last_read_at: five_min_ago
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_2.id,
@@ -62,22 +62,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       })
 
       # Create messages — one before and one after user_1's last_read_at
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_2.id,
         content: "Old message",
-        message_type: "text",
+        message_type: :text,
         inserted_at: DateTime.add(five_min_ago, -60, :second),
         updated_at: DateTime.add(five_min_ago, -60, :second)
       })
 
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_2.id,
         content: "Latest message",
-        message_type: "text",
+        message_type: :text,
         inserted_at: now,
         updated_at: now
       })
@@ -96,7 +96,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_1's summary row
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -114,7 +114,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_2's summary row
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -136,20 +136,20 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_1.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_2.id,
@@ -159,23 +159,23 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Insert a system message with a broadcast token
       token = "[broadcast:#{Ecto.UUID.generate()}]"
 
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_1.id,
         content: "System note #{token}",
-        message_type: "system",
+        message_type: :system,
         inserted_at: now,
         updated_at: now
       })
 
       # Insert a regular text message (should NOT appear in system_notes)
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: user_2.id,
         content: "Just a regular message",
-        message_type: "text",
+        message_type: :text,
         inserted_at: now,
         updated_at: now
       })
@@ -195,7 +195,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify the bootstrapped summary row has the token in system_notes
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -226,21 +226,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id,
         program_id: program.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider_user.id,
@@ -270,14 +270,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       parent_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^parent_user.id
           )
         )
 
       provider_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^provider_user.id
           )
         )
@@ -301,21 +301,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "program_broadcast",
+        type: :program_broadcast,
         provider_id: provider.id,
         program_id: program.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider_user.id,
@@ -332,7 +332,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       _ = :sys.get_state(bootstrap_pid)
 
       summaries =
-        Repo.all(from(s in ConversationSummarySchema, where: s.conversation_id == ^conversation_id))
+        Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
 
       assert length(summaries) == 2
       assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
@@ -353,20 +353,20 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_1.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: user_2.id,
@@ -375,7 +375,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       # The read table should not have this conversation yet
       assert Repo.all(
-               from(s in ConversationSummarySchema,
+               from(s in ConversationSummary,
                  where: s.conversation_id == ^conversation_id
                )
              ) == []
@@ -385,7 +385,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -414,7 +414,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             program_id: nil,
             subject: nil,
@@ -434,7 +434,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_1's summary row
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -449,7 +449,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_2's summary row
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -478,7 +478,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "program_broadcast",
+            type: :program_broadcast,
             provider_id: provider.id,
             program_id: missing_program_id,
             subject: "Welcome",
@@ -496,7 +496,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user.id
           )
         )
@@ -528,7 +528,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "program_broadcast",
+            type: :program_broadcast,
             provider_id: provider.id,
             program_id: program.id,
             subject: "Welcome",
@@ -545,7 +545,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       _ = :sys.get_state(@test_server_name)
 
       summaries =
-        Repo.all(from(s in ConversationSummarySchema, where: s.conversation_id == ^conversation_id))
+        Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
 
       assert length(summaries) == 2
       assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
@@ -567,7 +567,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             program_id: nil,
             subject: nil,
@@ -591,7 +591,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       {1, _} =
         Repo.update_all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           ),
           set: [last_read_at: read_at, unread_count: 7]
@@ -608,7 +608,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -645,7 +645,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -673,7 +673,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: message_id,
             sender_id: user_1.id,
             content: "Hello Bob!",
-            message_type: "text",
+            message_type: :text,
             sent_at: now
           }
         )
@@ -689,7 +689,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_2 should have unread_count incremented and latest message updated
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -702,7 +702,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_1 (sender) should have latest message updated but unread_count still 0
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -730,7 +730,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -758,7 +758,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: Ecto.UUID.generate(),
             sender_id: user_1.id,
             content: "System note #{token}",
-            message_type: "system",
+            message_type: :system,
             sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
           }
         )
@@ -774,7 +774,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Both participants should have the token in system_notes
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -803,7 +803,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -829,7 +829,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: Ecto.UUID.generate(),
             sender_id: user_1.id,
             content: "Just a regular message [broadcast:#{Ecto.UUID.generate()}]",
-            message_type: "text",
+            message_type: :text,
             sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
           }
         )
@@ -845,7 +845,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # system_notes should remain empty
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -874,7 +874,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -902,7 +902,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             message_id: Ecto.UUID.generate(),
             sender_id: user_1.id,
             content: "System note #{token}",
-            message_type: "system",
+            message_type: :system,
             sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
           }
         )
@@ -927,7 +927,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # system_notes should have exactly 1 key (idempotent merge)
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -955,7 +955,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -995,7 +995,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify user_2 has unread_count = 1
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -1029,7 +1029,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify unread_count is now 0
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -1057,7 +1057,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -1095,7 +1095,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Both participants' summary rows should have archived_at set
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -1125,7 +1125,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             conv_id,
             %{
               conversation_id: conv_id,
-              type: "direct",
+              type: :direct,
               provider_id: provider_id,
               participant_ids: [user_1.id, user_2.id]
             }
@@ -1164,7 +1164,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # All 4 summary rows (2 per conversation) should have archived_at set
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id in ^[conv_1_id, conv_2_id]
           )
         )
@@ -1191,7 +1191,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, user_2.id]
           }
@@ -1208,7 +1208,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Verify initial names are correct
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -1236,7 +1236,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_1's summary should now show "Deleted User" as the other participant
       summary_1 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -1246,7 +1246,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # user_2's summary should remain unchanged (their own name display is not affected)
       summary_2 =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_2.id
           )
         )
@@ -1267,28 +1267,28 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
       # Insert participants: owner first, then parent, then staff
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider.identity_id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff_user.id,
@@ -1301,7 +1301,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # All 3 participants should have a summary row
       all_summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id
           )
         )
@@ -1335,28 +1335,28 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
       # Use distinct joined_at timestamps to guarantee ordering via preload_order
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent_user.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: provider.identity_id,
         joined_at: DateTime.add(now, 1, :second)
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff_user.id,
@@ -1367,7 +1367,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       staff_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff_user.id
           )
         )
@@ -1390,14 +1390,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
       for {uid, ts} <- [{parent.id, now}, {provider_user.id, DateTime.add(now, 1, :second)}] do
-        Repo.insert!(%ParticipantSchema{
+        Repo.insert!(%Participant{
           id: Ecto.UUID.generate(),
           conversation_id: conversation_id,
           user_id: uid,
@@ -1407,18 +1407,18 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       # Seed an existing message so the new participant's summary back-fills
       # last-message data and unread_count
-      Repo.insert!(%MessageSchema{
+      Repo.insert!(%Message{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         sender_id: parent.id,
         content: "Hi there",
-        message_type: "text",
+        message_type: :text,
         inserted_at: now,
         updated_at: now
       })
 
       # Add staff participant in write model — projection event follows
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff.id,
@@ -1448,7 +1448,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1473,20 +1473,20 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: parent.id,
         joined_at: now
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff.id,
@@ -1519,7 +1519,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       {1, _} =
         Repo.update_all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           ),
           set: [last_read_at: read_at, unread_count: 0]
@@ -1536,7 +1536,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1559,9 +1559,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "direct",
+        type: :direct,
         provider_id: provider.id
       })
 
@@ -1570,7 +1570,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
             {staff_a.id, DateTime.add(now, 1, :second)},
             {staff_b.id, DateTime.add(now, 2, :second)}
           ] do
-        Repo.insert!(%ParticipantSchema{
+        Repo.insert!(%Participant{
           id: Ecto.UUID.generate(),
           conversation_id: conversation_id,
           user_id: uid,
@@ -1601,7 +1601,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summaries =
         Repo.all(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where:
               s.conversation_id == ^conversation_id and
                 s.user_id in ^[staff_a.id, staff_b.id],
@@ -1623,13 +1623,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ConversationSchema{
+      Repo.insert!(%Conversation{
         id: conversation_id,
-        type: "program_broadcast",
+        type: :program_broadcast,
         provider_id: provider.id
       })
 
-      Repo.insert!(%ParticipantSchema{
+      Repo.insert!(%Participant{
         id: Ecto.UUID.generate(),
         conversation_id: conversation_id,
         user_id: staff.id,
@@ -1659,7 +1659,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1688,7 +1688,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, staff.id]
           }
@@ -1725,7 +1725,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       staff_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id
           )
         )
@@ -1736,7 +1736,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Non-removed users keep their row intact
       user_1_summary =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^user_1.id
           )
         )
@@ -1761,7 +1761,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, staff.id]
           }
@@ -1798,7 +1798,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       first =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id,
             select: s.archived_at
           )
@@ -1818,7 +1818,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       second =
         Repo.one(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where: s.conversation_id == ^conversation_id and s.user_id == ^staff.id,
             select: s.archived_at
           )
@@ -1845,7 +1845,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           conversation_id,
           %{
             conversation_id: conversation_id,
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             participant_ids: [user_1.id, staff_a.id, staff_b.id]
           }
@@ -1882,7 +1882,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       archived_count =
         Repo.aggregate(
-          from(s in ConversationSummarySchema,
+          from(s in ConversationSummary,
             where:
               s.conversation_id == ^conversation_id and
                 s.user_id in ^[staff_a.id, staff_b.id] and
@@ -1903,7 +1903,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
   defp list_summaries_for_user(user_id) do
     Repo.all(
-      from(s in ConversationSummarySchema,
+      from(s in ConversationSummary,
         where: s.user_id == ^user_id
       )
     )
@@ -1936,7 +1936,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           %{
             conversation_id: conversation_id,
             participant_ids: [user_1.id, user_2.id],
-            type: "direct",
+            type: :direct,
             provider_id: provider_id,
             program_id: nil,
             subject: nil

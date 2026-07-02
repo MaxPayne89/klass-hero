@@ -24,29 +24,20 @@ defmodule KlassHero.Messaging.Application.Commands.RemoveAssignedStaff do
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @participant_repo Application.compile_env!(:klass_hero, [
-                      :messaging,
-                      :for_managing_participants
-                    ])
-
   @type removal :: %{conversation_id: String.t()}
 
   @spec execute(String.t(), String.t()) ::
           {:ok, {[removal()], [DomainEvent.t()]}} | {:error, term()}
   def execute(program_id, staff_user_id) do
     program_id
-    |> @conversation_reader.list_active_program_conversation_ids_with_participant(staff_user_id)
+    |> KlassHero.Messaging.list_active_program_conversation_ids_with_participant(staff_user_id)
     |> remove_each(staff_user_id, [], [])
   end
 
   defp remove_each([], _staff_user_id, removals, events), do: {:ok, {Enum.reverse(removals), Enum.reverse(events)}}
 
   defp remove_each([conversation_id | rest], staff_user_id, removals, events) do
-    with {:ok, _participant} <- @participant_repo.leave(conversation_id, staff_user_id) do
+    with {:ok, _participant} <- KlassHero.Messaging.leave_conversation(conversation_id, staff_user_id) do
       event =
         MessagingEvents.participant_removed(
           conversation_id,

@@ -14,19 +14,6 @@ alias KlassHero.Accounts.Scope
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
-alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
-alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
-alias KlassHero.Messaging.Adapters.Driven.ObanEmailJobScheduler
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.AttachmentRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.EmailReplyRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.InboundEmailRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.MessageRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
-alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
-alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
@@ -198,28 +185,10 @@ config :klass_hero, :integration_event_publisher,
 
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}
 
-# Configure Messaging bounded context
+# Messaging context needs no port wiring: it is conventional Phoenix (context module
+# + Ecto schemas calling Repo directly). Its outbound cross-context ACL resolvers and
+# the program-staff projection repository are called by name, not via dependency injection.
 config :klass_hero, :messaging,
-  for_managing_attachments: AttachmentRepository,
-  for_querying_attachments: AttachmentRepository,
-  for_managing_conversations: ConversationRepository,
-  for_querying_conversations: ConversationRepository,
-  for_managing_messages: MessageRepository,
-  for_querying_messages: MessageRepository,
-  for_managing_participants: ParticipantRepository,
-  for_querying_participants: ParticipantRepository,
-  for_resolving_users: UserResolver,
-  for_querying_enrollments: EnrollmentResolver,
-  for_resolving_program_staff: ProgramStaffParticipantRepository,
-  for_resolving_provider_staff: ProviderStaffResolver,
-  for_managing_conversation_summaries: ConversationSummariesRepository,
-  for_querying_conversation_summaries: ConversationSummariesRepository,
-  for_managing_inbound_emails: InboundEmailRepository,
-  for_querying_inbound_emails: InboundEmailRepository,
-  for_fetching_email_content: ResendEmailContentAdapter,
-  for_managing_email_replies: EmailReplyRepository,
-  for_querying_email_replies: EmailReplyRepository,
-  for_scheduling_email_jobs: ObanEmailJobScheduler,
   retention: [
     days_after_program_end: 30,
     retention_period_days: 30

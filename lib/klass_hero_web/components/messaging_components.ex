@@ -8,7 +8,7 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   import KlassHeroWeb.UIComponents, only: [icon: 1]
 
-  alias KlassHero.Messaging.Domain.Models.Attachment
+  alias KlassHero.Messaging.Attachment
   alias KlassHeroWeb.MessagingLiveHelper
   alias KlassHeroWeb.Theme
   alias Phoenix.LiveView.JS

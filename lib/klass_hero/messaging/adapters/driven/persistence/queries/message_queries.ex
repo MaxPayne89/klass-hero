@@ -5,13 +5,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
+  alias KlassHero.Messaging.Message
 
   @doc """
   Base query for messages.
   """
   def base do
-    from(m in MessageSchema, as: :message)
+    from(m in Message, as: :message)
   end
 
   @doc """

@@ -7,7 +7,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Repo
 
@@ -237,7 +237,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
 
     merged = Map.merge(defaults, attrs)
 
-    %ConversationSummarySchema{}
+    %ConversationSummary{}
     |> Ecto.Changeset.change(merged)
     |> Repo.insert!()
   end
@@ -245,7 +245,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
   defp update_summary_unread_count(conversation_id, user_id, new_count) do
     import Ecto.Query
 
-    from(s in ConversationSummarySchema,
+    from(s in ConversationSummary,
       where: s.conversation_id == ^conversation_id and s.user_id == ^user_id
     )
     |> Repo.update_all(set: [unread_count: new_count])

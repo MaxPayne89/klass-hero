@@ -4,13 +4,10 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Mappers.ConversationMapper
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.AttachmentRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.SendMessage
-  alias KlassHero.Messaging.Domain.Models.Conversation
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Message
 
   describe "execute/4" do
     test "sends message successfully for participant" do
@@ -61,7 +58,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
       before = DateTime.utc_now() |> DateTime.truncate(:second)
       {:ok, _message} = SendMessage.execute(conversation.id, user.id, "Hello!")
 
-      {:ok, participant} = ParticipantRepository.get(conversation.id, user.id)
+      {:ok, participant} = KlassHero.Messaging.get_participant(conversation.id, user.id)
       assert participant.last_read_at != nil
       assert DateTime.compare(participant.last_read_at, before) in [:gt, :eq]
     end
@@ -178,7 +175,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
         user_id: provider_user.id
       )
 
-      domain_conversation = ConversationMapper.to_domain(broadcast)
+      domain_conversation = broadcast
       assert %Conversation{} = domain_conversation
 
       assert {:ok, message} =
@@ -209,7 +206,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
 
       # Build a direct conversation domain struct with a different ID
       direct = insert(:conversation_schema, type: "direct", provider_id: provider.id)
-      mismatched_conversation = ConversationMapper.to_domain(direct)
+      mismatched_conversation = direct
 
       # Trigger: parent passes a direct conversation struct targeting a broadcast conversation_id
       # Why: the ID mismatch must cause a DB fetch, which correctly identifies the broadcast
@@ -455,7 +452,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessageTest do
       assert length(message.attachments) == 1
 
       # Verify attachment is actually in the DB
-      attachments = AttachmentRepository.list_for_message(message.id)
+      attachments = KlassHero.Messaging.list_attachments_for_message(message.id)
       assert length(attachments) == 1
       assert hd(attachments).original_filename == "photo.jpg"
     end

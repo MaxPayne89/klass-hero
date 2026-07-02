@@ -6,9 +6,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
   provider-to-user ID mapping (via Provider facade) for
   messaging UI and permission checks.
   """
-
-  @behaviour KlassHero.Messaging.Domain.Ports.ForResolvingUsers
-
   use KlassHero.Shared.Tracing
 
   import Ecto.Query
@@ -16,7 +13,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
   alias KlassHero.Accounts.User
   alias KlassHero.Repo
 
-  @impl true
   @spec get_display_names([String.t()]) :: {:ok, %{String.t() => String.t()}}
   def get_display_names([]), do: {:ok, %{}}
 
@@ -34,7 +30,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
     end
   end
 
-  @impl true
   @spec get_display_name(String.t()) :: {:ok, String.t()} | {:error, :not_found}
   def get_display_name(user_id) do
     acl_span source: "messaging", target: "accounts" do
@@ -45,7 +40,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver do
     end
   end
 
-  @impl true
   @spec get_user_id_for_provider(String.t()) :: {:ok, String.t()} | {:error, :not_found}
   def get_user_id_for_provider(provider_id) do
     acl_span source: "messaging", target: "accounts" do

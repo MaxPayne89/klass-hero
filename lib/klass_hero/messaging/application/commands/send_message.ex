@@ -7,10 +7,13 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   updates sender's last_read_at, and publishes a message_sent event.
   """
 
+  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
+  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Attachment
-  alias KlassHero.Messaging.Domain.Models.Message
+  alias KlassHero.Messaging.Message
   alias KlassHero.Repo
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.Storage
@@ -18,20 +21,6 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @participant_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_participants])
-  @attachment_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_attachments])
-  @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
-  @staff_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_program_staff])
-  @provider_staff_resolver Application.compile_env!(:klass_hero, [
-                             :messaging,
-                             :for_resolving_provider_staff
-                           ])
 
   @doc """
   Sends a message to a conversation.
@@ -65,7 +54,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
 
     with :ok <- validate_message_content(trimmed_content, attachment_files),
          :ok <- validate_attachment_files(attachment_files),
-         :ok <- Shared.verify_participant(conversation_id, sender_id, @participant_reader),
+         :ok <- Shared.verify_participant(conversation_id, sender_id),
          :ok <- verify_broadcast_send_permission(conversation_id, sender_id, conversation),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),
          {:ok, message_with_attachments} <-
@@ -176,7 +165,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
 
     result =
       Repo.transaction(fn ->
-        with {:ok, message} <- @message_repo.create(message_attrs),
+        with {:ok, message} <- KlassHero.Messaging.create_message(message_attrs),
              {:ok, attachments} <- create_attachments(message.id, uploaded_files) do
           %{message | attachments: attachments}
         else
@@ -208,7 +197,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
         Map.put(file, :message_id, message_id)
       end)
 
-    @attachment_repo.create_many(attrs_list)
+    KlassHero.Messaging.create_attachments(attrs_list)
   end
 
   defp cleanup_uploaded_files([]), do: :ok
@@ -243,7 +232,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
     result =
       if conversation && conversation.id == conversation_id,
         do: {:ok, conversation},
-        else: @conversation_reader.get_by_id(conversation_id)
+        else: KlassHero.Messaging.get_conversation_by_id(conversation_id)
 
     case result do
       {:ok, %{type: :program_broadcast, provider_id: provider_id, program_id: program_id}} ->
@@ -267,7 +256,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   end
 
   defp provider_owner?(provider_id, sender_id) do
-    case @user_resolver.get_user_id_for_provider(provider_id) do
+    case UserResolver.get_user_id_for_provider(provider_id) do
       {:ok, ^sender_id} -> true
       _ -> false
     end
@@ -276,7 +265,7 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   defp staff_assigned?(nil, _sender_id), do: false
 
   defp staff_assigned?(program_id, sender_id) do
-    staff_user_ids = @staff_resolver.get_active_staff_user_ids(program_id)
+    staff_user_ids = ProgramStaffParticipantRepository.get_active_staff_user_ids(program_id)
     sender_id in staff_user_ids
   end
 
@@ -284,13 +273,13 @@ defmodule KlassHero.Messaging.Application.Commands.SendMessage do
   # provider-level staff are also authorised to broadcast for any program of their
   # provider (see `StaffBroadcastLive.mount/3`). The two checks must agree — bug #669.
   defp active_staff_for_provider?(provider_id, sender_id) do
-    @provider_staff_resolver.active_staff_for_provider?(provider_id, sender_id)
+    ProviderStaffResolver.active_staff_for_provider?(provider_id, sender_id)
   end
 
   defp update_sender_read_status(conversation_id, sender_id) do
     now = DateTime.utc_now()
 
-    case @participant_repo.mark_as_read(conversation_id, sender_id, now) do
+    case KlassHero.Messaging.mark_participant_read(conversation_id, sender_id, now) do
       {:ok, _} ->
         :ok
 

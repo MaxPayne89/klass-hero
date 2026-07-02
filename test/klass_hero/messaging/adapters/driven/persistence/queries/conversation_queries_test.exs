@@ -12,14 +12,15 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{ConversationSchema, ParticipantSchema}
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Participant
 
   describe "base/0" do
-    test "returns base query for ConversationSchema" do
+    test "returns base query for Conversation" do
       query = ConversationQueries.base()
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"conversations", ConversationSchema}
+      assert query.from.source == {"conversations", Conversation}
     end
   end
 
@@ -146,7 +147,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
       query = ConversationQueries.find_direct(provider_id, user_id)
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"conversations", ConversationSchema}
+      assert query.from.source == {"conversations", Conversation}
       # by_provider + by_type(:direct) + active_only
       assert length(query.wheres) == 3
       # where_user_is_participant
@@ -253,7 +254,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
       query = ConversationQueries.total_unread_count(user_id)
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"conversation_participants", ParticipantSchema}
+      assert query.from.source == {"conversation_participants", Participant}
     end
 
     test "includes JOIN to conversations and messages" do

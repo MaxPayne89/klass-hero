@@ -33,15 +33,10 @@ defmodule KlassHero.Factory do
   alias KlassHero.Family.ChildGuardian
   alias KlassHero.Family.Consent
   alias KlassHero.Family.ParentProfile
-
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.{
-    ConversationSchema,
-    ConversationSummarySchema,
-    MessageSchema,
-    ParticipantSchema
-  }
-
-  alias KlassHero.Messaging.Domain.Models.{Conversation, Message, Participant}
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.Message
+  alias KlassHero.Messaging.Participant
   alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
@@ -1199,7 +1194,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ConversationSchema Ecto schemas.
+  Factory for creating Conversation rows.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a provider when inserted to avoid foreign key violations.
@@ -1212,9 +1207,9 @@ defmodule KlassHero.Factory do
   def conversation_schema_factory do
     provider = insert(:provider_profile_schema)
 
-    %ConversationSchema{
+    %Conversation{
       id: Ecto.UUID.generate(),
-      type: "direct",
+      type: :direct,
       provider_id: provider.id,
       program_id: nil,
       subject: nil,
@@ -1225,7 +1220,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ConversationSummarySchema Ecto schemas (CQRS read model).
+  Factory for creating ConversationSummary rows (CQRS read model).
 
   Used in tests that interact with the denormalized conversation_summaries read table.
   No FK constraints — all IDs are plain UUIDs.
@@ -1236,7 +1231,7 @@ defmodule KlassHero.Factory do
       schema = insert(:conversation_summary_schema, unread_count: 3)
   """
   def conversation_summary_schema_factory do
-    %ConversationSummarySchema{
+    %ConversationSummary{
       id: Ecto.UUID.generate(),
       conversation_id: Ecto.UUID.generate(),
       user_id: Ecto.UUID.generate(),
@@ -1278,9 +1273,9 @@ defmodule KlassHero.Factory do
     provider = insert(:provider_profile_schema)
     program = insert(:program_schema)
 
-    %ConversationSchema{
+    %Conversation{
       id: Ecto.UUID.generate(),
-      type: "program_broadcast",
+      type: :program_broadcast,
       provider_id: provider.id,
       program_id: program.id,
       subject: "Important Update",
@@ -1319,6 +1314,7 @@ defmodule KlassHero.Factory do
         ),
       content: sequence(:message_content, &"Test message #{&1}"),
       message_type: :text,
+      attachments: [],
       deleted_at: nil,
       inserted_at: ~U[2025-01-01 12:00:00Z],
       updated_at: ~U[2025-01-01 12:00:00Z]
@@ -1326,7 +1322,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating MessageSchema Ecto schemas.
+  Factory for creating Message rows.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a conversation and user when inserted.
@@ -1346,12 +1342,12 @@ defmodule KlassHero.Factory do
       user_id: user.id
     )
 
-    %MessageSchema{
+    %Message{
       id: Ecto.UUID.generate(),
       conversation_id: conversation.id,
       sender_id: user.id,
       content: sequence(:message_schema_content, &"Test message #{&1}"),
-      message_type: "text",
+      message_type: :text,
       deleted_at: nil
     }
   end
@@ -1402,9 +1398,11 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ParticipantSchema Ecto schemas.
+  Factory for a persisted-shape Participant with real conversation/user FKs.
 
   Used in repository and integration tests where we need database persistence.
+  Since the Ecto schema is the struct, this builds the same `%Participant{}` as
+  `participant_factory/0`, but wired to insertable foreign keys.
 
   ## Examples
 
@@ -1415,7 +1413,7 @@ defmodule KlassHero.Factory do
     conversation = insert(:conversation_schema)
     user = AccountsFixtures.user_fixture()
 
-    %ParticipantSchema{
+    %Participant{
       id: Ecto.UUID.generate(),
       conversation_id: conversation.id,
       user_id: user.id,

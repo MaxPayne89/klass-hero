@@ -6,12 +6,11 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ConversationSummariesRepository
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Application.Commands.BroadcastToProgram
-  alias KlassHero.Messaging.Domain.Models.{Conversation, Message}
+  alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.Message
   alias KlassHero.Provider.Domain.Models.ProviderProfile
 
   describe "execute/4" do
@@ -185,7 +184,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
       assert {:ok, conversation, _message, _count} =
                BroadcastToProgram.execute(scope, program.id, "Important update!")
 
-      assert ParticipantRepository.is_participant?(conversation.id, staff_user.id)
+      assert KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
     test "does not duplicate owner when owner is also assigned as staff" do
@@ -246,11 +245,11 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
       refute second_msg.id == first_msg.id
 
       # Sender stays a single participant — no duplicate insert
-      assert ParticipantRepository.is_participant?(first_conv.id, scope.user.id)
+      assert KlassHero.Messaging.participant?(first_conv.id, scope.user.id)
 
       sender_rows =
         first_conv.id
-        |> ParticipantRepository.list_for_conversation()
+        |> KlassHero.Messaging.list_participants()
         |> Enum.filter(&(&1.user_id == scope.user.id))
 
       assert length(sender_rows) == 1
@@ -566,7 +565,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
       ConversationSummaries.handle_event(:participant_added, event)
 
       for user_id <- [scope.user.id, parent1_user.id, parent2_user.id] do
-        {:ok, summaries, _has_more} = ConversationSummariesRepository.list_for_user(user_id, [])
+        {:ok, summaries, _has_more} = KlassHero.Messaging.list_conversation_summaries_for_user(user_id, [])
 
         assert Enum.any?(summaries, &(&1.conversation_id == conversation.id)),
                "expected user #{user_id} to see broadcast conversation #{conversation.id} in inbox; " <>

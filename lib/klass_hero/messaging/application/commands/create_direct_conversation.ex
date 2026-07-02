@@ -19,23 +19,14 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Domain.Models.Conversation
   alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
 
   @doc """
   Creates or retrieves a direct conversation between provider and user.
@@ -66,7 +57,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
   end
 
   defp find_or_create_conversation(scope, provider_id, target_user_id, opts) do
-    case @conversation_reader.find_direct_conversation(provider_id, target_user_id) do
+    case KlassHero.Messaging.find_direct_conversation(provider_id, target_user_id) do
       {:ok, existing} ->
         Logger.debug("Found existing conversation", conversation_id: existing.id)
         {:ok, existing}
@@ -84,7 +75,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
         %{type: :direct, provider_id: provider_id}
         |> Shared.maybe_put_program_id(program_id)
 
-      with {:ok, conversation} <- @conversation_repo.create(attrs),
+      with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, target_user_id),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, program_id, scope.user.id) do
@@ -122,9 +113,9 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversation do
 
   defp add_participants(conversation_id, user_id_1, user_id_2) do
     with {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_1}),
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_1}),
          {:ok, _} <-
-           @participant_repo.add(%{conversation_id: conversation_id, user_id: user_id_2}) do
+           KlassHero.Messaging.add_participant(%{conversation_id: conversation_id, user_id: user_id_2}) do
       :ok
     end
   end

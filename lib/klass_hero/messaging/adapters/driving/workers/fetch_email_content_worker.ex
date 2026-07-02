@@ -8,18 +8,11 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
 
   use Oban.Worker, queue: :email, max_attempts: 3
 
+  alias KlassHero.Messaging
+  alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
   alias KlassHero.Shared.RateLimitedEmailWorker
 
   require Logger
-
-  @email_content_fetcher Application.compile_env!(:klass_hero, [
-                           :messaging,
-                           :for_fetching_email_content
-                         ])
-  @inbound_email_repo Application.compile_env!(:klass_hero, [
-                        :messaging,
-                        :for_managing_inbound_emails
-                      ])
 
   # Custom backoff: 429 responses need longer delay than Oban's default.
   @impl Oban.Worker
@@ -27,7 +20,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"email_id" => email_id, "resend_id" => resend_id}} = job) do
-    case @email_content_fetcher.fetch_content(resend_id) do
+    case ResendEmailContentAdapter.fetch_content(resend_id) do
       {:ok, content} ->
         attrs = %{
           body_html: content.html,
@@ -36,7 +29,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
           content_status: "fetched"
         }
 
-        case @inbound_email_repo.update_content(email_id, attrs) do
+        case Messaging.update_inbound_email_content(email_id, attrs) do
           {:ok, _email} ->
             Logger.info("Fetched content for inbound email #{email_id}")
             :ok
@@ -61,7 +54,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
 
   defp maybe_mark_permanently_failed(email_id, job) do
     if job.attempt >= job.max_attempts do
-      case @inbound_email_repo.update_content(email_id, %{content_status: "failed"}) do
+      case Messaging.update_inbound_email_content(email_id, %{content_status: "failed"}) do
         {:ok, _} ->
           Logger.error("Marked email #{email_id} content as permanently failed")
 

@@ -23,14 +23,9 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaff do
   - `{:error, reason}` — when the participant batch insert fails.
   """
 
+  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Shared.Domain.Events.DomainEvent
-
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @staff_resolver Application.compile_env!(:klass_hero, [
-                    :messaging,
-                    :for_resolving_program_staff
-                  ])
 
   @spec execute(String.t(), String.t() | nil, String.t()) ::
           {:ok, {[String.t()], [DomainEvent.t()]}} | {:error, term()}
@@ -38,7 +33,7 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaff do
 
   def execute(conversation_id, program_id, excluded_user_id) do
     program_id
-    |> @staff_resolver.get_active_staff_user_ids()
+    |> ProgramStaffParticipantRepository.get_active_staff_user_ids()
     |> Enum.reject(&(&1 == excluded_user_id))
     |> add(conversation_id)
   end
@@ -46,7 +41,7 @@ defmodule KlassHero.Messaging.Application.Commands.AddAssignedStaff do
   defp add([], _conversation_id), do: {:ok, {[], []}}
 
   defp add(ids, conversation_id) do
-    with {:ok, _} <- @participant_repo.add_batch(conversation_id, ids) do
+    with {:ok, _} <- KlassHero.Messaging.add_participants(conversation_id, ids) do
       event = MessagingEvents.participant_added(conversation_id, ids, :initial_staff)
       {:ok, {ids, [event]}}
     end

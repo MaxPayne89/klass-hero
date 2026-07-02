@@ -3,7 +3,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetInboundEmailTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Application.Queries.GetInboundEmail
-  alias KlassHero.Messaging.Domain.Models.InboundEmail
+  alias KlassHero.Messaging.InboundEmail
   alias KlassHero.MessagingFixtures
 
   describe "execute/2" do

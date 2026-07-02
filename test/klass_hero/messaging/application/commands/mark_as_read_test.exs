@@ -5,7 +5,7 @@ defmodule KlassHero.Messaging.Application.Commands.MarkAsReadTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Application.Commands.MarkAsRead
-  alias KlassHero.Messaging.Domain.Models.Participant
+  alias KlassHero.Messaging.Participant
 
   describe "execute/3" do
     test "updates last_read_at timestamp" do

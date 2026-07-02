@@ -9,6 +9,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
   alias KlassHero.Messaging.Application.Commands.AddAssignedStaff
   alias KlassHero.Messaging.Application.Shared
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
@@ -18,25 +19,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   require Logger
 
   @context KlassHero.Messaging
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @participant_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_participants])
-  @participant_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_participants])
-  @user_resolver Application.compile_env!(:klass_hero, [:messaging, :for_resolving_users])
-  @conversation_summaries_repo Application.compile_env!(:klass_hero, [
-                                 :messaging,
-                                 :for_managing_conversation_summaries
-                               ])
-  @conversation_summaries_reader Application.compile_env!(:klass_hero, [
-                                   :messaging,
-                                   :for_querying_conversation_summaries
-                                 ])
 
   @doc """
   Orchestrates a private reply to a broadcast.
@@ -52,8 +34,8 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
     # pattern match on :program_broadcast + participation check ensures only
     # broadcast participants can initiate private replies.
     with {:ok, broadcast} <- fetch_broadcast(broadcast_conversation_id),
-         :ok <- Shared.verify_participant(broadcast.id, scope.user.id, @participant_reader),
-         {:ok, provider_user_id} <- @user_resolver.get_user_id_for_provider(broadcast.provider_id),
+         :ok <- Shared.verify_participant(broadcast.id, scope.user.id),
+         {:ok, provider_user_id} <- UserResolver.get_user_id_for_provider(broadcast.provider_id),
          {:ok, direct_conversation} <-
            find_or_create_direct_conversation(
              scope,
@@ -78,7 +60,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   end
 
   defp fetch_broadcast(conversation_id) do
-    case @conversation_reader.get_by_id(conversation_id) do
+    case KlassHero.Messaging.get_conversation_by_id(conversation_id) do
       {:ok, %{type: :program_broadcast} = broadcast} -> {:ok, broadcast}
       {:ok, _non_broadcast} -> {:error, :not_broadcast}
       {:error, :not_found} -> {:error, :not_found}
@@ -88,7 +70,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   # Lookup by parent's user_id (not provider's) — uniquely identifies this (parent, provider)
   # pair. Provider-user lookup would collide across multiple parents.
   defp find_or_create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
-    case @conversation_reader.find_direct_conversation(provider_id, scope.user.id) do
+    case KlassHero.Messaging.find_direct_conversation(provider_id, scope.user.id) do
       {:ok, existing} ->
         {:ok, existing}
 
@@ -103,14 +85,14 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
         %{type: :direct, provider_id: provider_id}
         |> Shared.maybe_put_program_id(program_id)
 
-      with {:ok, conversation} <- @conversation_repo.create(attrs),
+      with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            {:ok, _} <-
-             @participant_repo.add(%{
+             KlassHero.Messaging.add_participant(%{
                conversation_id: conversation.id,
                user_id: scope.user.id
              }),
            {:ok, _} <-
-             @participant_repo.add(%{
+             KlassHero.Messaging.add_participant(%{
                conversation_id: conversation.id,
                user_id: provider_user_id
              }),
@@ -162,7 +144,7 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
         # this, a rapid second call could miss the token and insert a duplicate.
         # Projection's async handler is idempotent, so the double-write is harmless.
         try do
-          @conversation_summaries_repo.write_system_note_token(
+          KlassHero.Messaging.write_system_note_token(
             direct_conversation.id,
             token
           )
@@ -180,6 +162,6 @@ defmodule KlassHero.Messaging.Application.Commands.ReplyPrivatelyToBroadcast do
   end
 
   defp system_note_exists?(conversation_id, token) do
-    @conversation_summaries_reader.has_system_note?(conversation_id, token)
+    KlassHero.Messaging.has_system_note?(conversation_id, token)
   end
 end

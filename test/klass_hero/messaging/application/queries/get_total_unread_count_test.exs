@@ -2,8 +2,8 @@ defmodule KlassHero.Messaging.Application.Queries.GetTotalUnreadCountTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSummarySchema
   alias KlassHero.Messaging.Application.Queries.GetTotalUnreadCount
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Repo
 
   defp insert_summary(attrs) do
@@ -29,7 +29,7 @@ defmodule KlassHero.Messaging.Application.Queries.GetTotalUnreadCountTest do
 
     merged = Map.merge(defaults, attrs)
 
-    %ConversationSummarySchema{}
+    %ConversationSummary{}
     |> Ecto.Changeset.change(merged)
     |> Repo.insert!()
   end

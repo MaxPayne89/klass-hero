@@ -25,16 +25,6 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicy do
   require Logger
 
   @context KlassHero.Messaging
-  @message_repo Application.compile_env!(:klass_hero, [:messaging, :for_managing_messages])
-  @conversation_repo Application.compile_env!(:klass_hero, [
-                       :messaging,
-                       :for_managing_conversations
-                     ])
-  @conversation_reader Application.compile_env!(:klass_hero, [
-                         :messaging,
-                         :for_querying_conversations
-                       ])
-  @attachment_reader Application.compile_env!(:klass_hero, [:messaging, :for_querying_attachments])
 
   @doc """
   Enforces retention policy by deleting expired messages and conversations.
@@ -69,8 +59,8 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicy do
   defp run_deletion_transaction(now) do
     Repo.transaction(fn ->
       with {:ok, msg_count, _conv_ids} <-
-             @message_repo.delete_for_expired_conversations(now),
-           {:ok, conv_count} <- @conversation_repo.delete_expired(now) do
+             KlassHero.Messaging.delete_messages_for_expired_conversations(now),
+           {:ok, conv_count} <- KlassHero.Messaging.delete_expired_conversations(now) do
         %{messages_deleted: msg_count, conversations_deleted: conv_count}
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -79,21 +69,11 @@ defmodule KlassHero.Messaging.Application.Commands.EnforceRetentionPolicy do
   end
 
   defp collect_attachment_storage_paths(now) do
-    conversation_ids = @conversation_reader.list_expired_ids(now)
+    conversation_ids = KlassHero.Messaging.list_expired_conversation_ids(now)
 
-    case @attachment_reader.get_storage_paths_for_conversations(conversation_ids) do
-      {:ok, paths} ->
-        Logger.debug("Collected S3 storage paths for retention cleanup", count: length(paths))
-        {:ok, paths}
-
-      {:error, reason} ->
-        Logger.error(
-          "Failed to collect attachment storage paths — aborting retention to prevent orphaned S3 files",
-          reason: inspect(reason)
-        )
-
-        {:error, :path_collection_failed}
-    end
+    {:ok, paths} = KlassHero.Messaging.attachment_storage_paths_for_conversations(conversation_ids)
+    Logger.debug("Collected S3 storage paths for retention cleanup", count: length(paths))
+    {:ok, paths}
   end
 
   defp cleanup_s3_files([]), do: :ok
