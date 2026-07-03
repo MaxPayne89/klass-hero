@@ -9,7 +9,7 @@ Elixir idioms for writing clean, functional, and domain-driven code covering pat
 **Use when:**
 
 - Writing new Elixir code
-- Designing Phoenix applications with DDD principles
+- Designing Phoenix applications with bounded contexts (conventional Phoenix)
 - Refactoring code
 - Implementing bounded contexts
 - Leveraging OTP patterns effectively
@@ -85,7 +85,7 @@ Test-drives code changes using Playwright and Tidewave MCP. Verifies backend log
 
 ### gen-migration
 
-Scaffolds a complete database-backed entity (migration, domain model, schema, mapper, repository, port) following DDD/Ports & Adapters conventions. Generates 6 files and updates 2 (config + Boundary exports).
+Scaffolds a database-backed entity following conventional Phoenix (schema-as-struct): a migration and one entity module (Ecto schema + struct + functional core) at the context root, plus a test. Updates the context facade with CRUD. No domain model, mapper, repository, port, or DI wiring.
 
 **Use when:** `/gen-migration <context> <entity> [field:type ...]`
 
@@ -109,7 +109,7 @@ Performs memory consolidation — a reflective pass that synthesizes recent lear
 
 ### review-architecture
 
-Runs a comprehensive 18-check architecture review by spawning the `architecture-reviewer` (12 structural checks) and `boundary-checker` (6 semantic checks) agents in parallel, scoped to changed files. Consolidates findings into a unified report.
+Runs a comprehensive 21-check review of conventional-Phoenix conventions by spawning the `architecture-reviewer` (8 structural checks), `boundary-checker` (5 semantic checks), and `regression-analyzer` (8 behaviour checks) agents in parallel, scoped to changed files. Consolidates findings into a unified report.
 
 **Use when:** `/review-architecture` or when reviewing a PR, checking architecture before merge, or after modifying bounded context code
 
@@ -117,12 +117,12 @@ Runs a comprehensive 18-check architecture review by spawning the `architecture-
 
 ### architecture-reviewer
 
-Reviews code for DDD/Ports & Adapters architecture compliance. Runs 12 checks covering port/adapter locations, naming conventions, behaviour declarations, use case structure, Boundary configuration, DI wiring, and cross-context isolation.
+Reviews code for conventional-Phoenix convention compliance (post-flatten). Runs 8 checks covering schema-as-struct integrity, no reintroduced ports/DI/Boundary, cross-context-via-facade access, and correct placement of the surviving projection/event/worker/ACL subdirectories.
 
 **Use when:** Architecture review needed during PR review or after structural changes. Spawn as a subagent.
 
 ### boundary-checker
 
-Detects semantic boundary violations that the `boundary` library cannot catch at compile time. Checks for cross-context adapter calls, schema leaks, port bypasses, domain layer purity, and ACL adapter correctness. Supports `changed-files` or `full` scan scope.
+Detects semantic cross-context boundary violations (boundaries are convention-only since the `boundary` library was removed). Checks for reaching into another context's internals instead of its root facade, cross-context Repo/schema access, event-handler facade use, event/read-model purity, and ACL adapter correctness. Supports `changed-files` or `full` scan scope.
 
 **Use when:** Deep boundary analysis needed, especially after adding cross-context features. Spawn as a subagent.

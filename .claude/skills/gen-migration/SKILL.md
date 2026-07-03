@@ -1,52 +1,56 @@
 ---
 name: gen-migration
 description: >-
-  Scaffold a new database-backed entity for the DDD/Ports & Adapters architecture.
-  Generates an Ecto migration, domain model struct, Ecto schema, mapper,
-  repository, port behaviour, and wires DI in config. Invoke with:
+  Scaffold a new database-backed entity in conventional Phoenix (schema-as-struct).
+  Generates an Ecto migration and ONE entity module (Ecto schema + struct +
+  functional core) at the context root, a test, and wires CRUD into the context
+  facade. Invoke with:
   /gen-migration <context> <entity> [field:type ...] [--references table:field]
-  Example: /gen-migration messaging reaction user_id:binary_id message_id:binary_id emoji:string --references users:user_id messages:message_id
+  Example: /gen-migration messaging reaction message_id:binary_id emoji:string --references messages:message_id
 ---
 
 # Gen-Migration
 
-Scaffold a complete database-backed entity following the project's DDD/Ports & Adapters architecture.
+Scaffold a database-backed entity following the project's **conventional Phoenix**
+(schema-as-struct) convention. The contexts were flattened from DDD/Ports & Adapters
+(#986–#1002): there are no domain-model structs, mappers, repository ports, or DI
+wiring anymore. A new entity is ONE module at the context root.
 
 **Type:** Rigid workflow. Follow steps exactly.
+
+**Reference before generating:** read an existing table-backed entity in the same
+context (canonical: `lib/klass_hero/provider/staff_member.ex`) and match its shape.
 
 ---
 
 ## Step 1: Parse Arguments
 
 Extract from `$ARGUMENTS`:
-- **context** (required): The bounded context name in snake_case (e.g., `messaging`, `enrollment`, `provider`)
-- **entity** (required): The entity name in snake_case (e.g., `reaction`, `program_review`)
-- **fields** (optional): Space-separated `name:type` pairs
-- **--references** (optional): Space-separated `table:field` pairs for foreign keys
+- **context** (required): bounded context in snake_case (`messaging`, `enrollment`, `provider`)
+- **entity** (required): entity name in snake_case (`reaction`, `program_review`)
+- **fields** (optional): space-separated `name:type` pairs
+- **--references** (optional): space-separated `table:field` pairs for foreign keys
 
 Validate:
 1. Context must exist under `lib/klass_hero/` — check the directory exists
 2. Entity name must be snake_case
-3. Field types must be valid Ecto migration types: `:string`, `:text`, `:integer`, `:boolean`, `:decimal`, `:binary_id`, `:utc_datetime`, `:utc_datetime_usec`, `:date`, `:map`, `{:array, :string}`
-
-If context doesn't exist, ask: "Context `{name}` doesn't exist. Should I create the full context directory structure?"
+3. Field types must be valid Ecto types: `:string`, `:text`, `:integer`, `:boolean`,
+   `:decimal`, `:binary_id`, `:utc_datetime`, `:utc_datetime_usec`, `:date`, `:map`,
+   `{:array, :string}`, or an `Ecto.Enum` (see Step 3)
 
 If no fields are provided, ask the user to describe the entity's fields.
 
 ## Step 2: Derive Names
 
-From the parsed arguments, compute all module names:
-
 | Concept | Derivation | Example (context=messaging, entity=reaction) |
 |---------|-----------|-----------------------------------------------|
 | Table name | Pluralized snake_case | `reactions` |
-| Module suffix | PascalCase | `Reaction` |
-| Domain model | `KlassHero.{Context}.Domain.Models.{Module}` | `KlassHero.Messaging.Domain.Models.Reaction` |
-| Schema | `KlassHero.{Context}.Adapters.Driven.Persistence.Schemas.{Module}Schema` | `...Schemas.ReactionSchema` |
-| Mapper | `KlassHero.{Context}.Adapters.Driven.Persistence.Mappers.{Module}Mapper` | `...Mappers.ReactionMapper` |
-| Repository | `KlassHero.{Context}.Adapters.Driven.Persistence.Repositories.{Module}Repository` | `...Repositories.ReactionRepository` |
-| Port | `KlassHero.{Context}.Domain.Ports.ForManaging{Pluralized}` | `...Ports.ForManagingReactions` |
-| Config key | `for_managing_{pluralized}` | `:for_managing_reactions` |
+| Entity module | `KlassHero.{Context}.{Module}` | `KlassHero.Messaging.Reaction` |
+| Entity file | `lib/klass_hero/{context}/{entity}.ex` | `lib/klass_hero/messaging/reaction.ex` |
+| Context facade | `lib/klass_hero/{context}.ex` | `lib/klass_hero/messaging.ex` |
+| Test file | `test/klass_hero/{context}/{entity}_test.exs` | `test/klass_hero/messaging/reaction_test.exs` |
+
+There is NO separate domain model, schema, mapper, repository, port, or config key.
 
 Present the derived names to the user for confirmation before generating.
 
@@ -55,8 +59,6 @@ Present the derived names to the user for confirmation before generating.
 **File:** `priv/repo/migrations/{timestamp}_create_{table_name}.exs`
 
 Generate timestamp: `date -u +"%Y%m%d%H%M%S"`
-
-Follow the project's migration conventions exactly:
 
 ```elixir
 defmodule KlassHero.Repo.Migrations.Create{PluralizedPascal} do
@@ -78,7 +80,6 @@ defmodule KlassHero.Repo.Migrations.Create{PluralizedPascal} do
 
     # Index on every foreign key column
     create index(:{table_name}, [:{fk_field}])
-
     # Unique indexes if specified
   end
 end
@@ -86,54 +87,25 @@ end
 
 **Conventions:**
 - `primary_key: false` on table, manual `:id` with `:binary_id`
-- `timestamps(type: :utc_datetime_usec)` — older tables may use `:utc_datetime`; all new tables use microsecond precision
+- `timestamps(type: :utc_datetime_usec)` — microsecond precision on all new tables
 - All references use `type: :binary_id` and `on_delete: :delete_all`
-- `null: false` on required fields
-- Explicit `create index` on every foreign key column
+- `null: false` on required fields; explicit `create index` on every foreign key
 
-## Step 4: Generate Domain Model
+## Step 4: Generate the Entity (schema-as-struct)
 
-**File:** `lib/klass_hero/{context}/domain/models/{entity}.ex`
+**File:** `lib/klass_hero/{context}/{entity}.ex`
 
-```elixir
-defmodule KlassHero.{Context}.Domain.Models.{Module} do
-  @moduledoc """
-  {Entity description} in the {Context} bounded context.
-  """
-
-  @enforce_keys [:id, {required_fields}]
-
-  defstruct [
-    :id,
-    {all_fields},
-    :inserted_at,
-    :updated_at
-  ]
-
-  @type t :: %__MODULE__{
-          id: String.t(),
-          {field_typespecs},
-          inserted_at: DateTime.t() | nil,
-          updated_at: DateTime.t() | nil
-        }
-end
-```
-
-**Conventions:**
-- `@enforce_keys` includes `:id` and all business-required fields
-- `defstruct` lists all fields plus `:inserted_at`, `:updated_at`
-- `@type t` with full typespec for every field
-- String IDs (`String.t()`), timestamps (`DateTime.t() | nil`)
-- NO Ecto, NO Phoenix, NO infrastructure imports — pure Elixir only
-
-## Step 5: Generate Schema
-
-**File:** `lib/klass_hero/{context}/adapters/driven/persistence/schemas/{entity}_schema.ex`
+This ONE module is the Ecto schema, the struct callers pattern-match on, and the
+functional core.
 
 ```elixir
-defmodule KlassHero.{Context}.Adapters.Driven.Persistence.Schemas.{Module}Schema do
+defmodule KlassHero.{Context}.{Module} do
   @moduledoc """
-  Ecto schema for the {table_name} table.
+  {Entity description} (`{table_name}` table).
+
+  Schema-as-struct: this module is both the Ecto schema and the struct consumers
+  pattern-match on. Changesets are the validation gatekeeper at the DB boundary;
+  pure business logic (validators, predicates) lives here too.
   """
 
   use Ecto.Schema
@@ -145,11 +117,12 @@ defmodule KlassHero.{Context}.Adapters.Driven.Persistence.Schemas.{Module}Schema
   @timestamps_opts [type: :utc_datetime_usec]
 
   schema "{table_name}" do
-    # Reference fields as :binary_id (not belongs_to, unless preloading needed)
+    # Reference fields as :binary_id (or belongs_to when preloading is needed)
     field :{fk_field}, :binary_id
 
     # Regular fields
     field :{field}, :{type}
+    # Enum fields: field :status, Ecto.Enum, values: [:pending, :active]
 
     timestamps()
   end
@@ -157,200 +130,70 @@ defmodule KlassHero.{Context}.Adapters.Driven.Persistence.Schemas.{Module}Schema
   @required_fields ~w({required_field_names})a
   @optional_fields ~w({optional_field_names})a
 
-  def create_changeset(schema \\ %__MODULE__{}, attrs) do
-    schema
+  @doc "Changeset for creating a {entity}."
+  def create_changeset(%__MODULE__{} = {entity} \\ %__MODULE__{}, attrs) do
+    {entity}
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> validate_required(@required_fields)
     |> foreign_key_constraint(:{fk_field})
   end
+
+  @doc "Changeset for updating a {entity}."
+  def update_changeset(%__MODULE__{} = {entity}, attrs) do
+    {entity}
+    |> cast(attrs, @optional_fields)
+    |> validate_required(@required_fields)
+  end
+
+  # --- functional core: pure predicates / validators go here ---
+  # e.g. def active?(%__MODULE__{status: :active}), do: true
 end
 ```
 
 **Conventions:**
-- `@primary_key {:id, :binary_id, autogenerate: true}`
-- `@foreign_key_type :binary_id`
-- `@timestamps_opts [type: :utc_datetime_usec]`
-- Programmatically-set fields (like `user_id`) must NOT be in `cast` — use `put_change` instead
-- `@required_fields` and `@optional_fields` as module attributes
-- Named changeset functions: `create_changeset/2`, `update_changeset/2`
+- `@primary_key {:id, :binary_id, autogenerate: true}`, `@foreign_key_type :binary_id`,
+  `@timestamps_opts [type: :utc_datetime_usec]`
+- Programmatically-set fields (like `user_id`) must NOT be in `cast` — set via
+  `put_change`/on struct creation (security: never cast server-controlled fields)
+- `@required_fields` / `@optional_fields` module attributes; named changeset functions
+- Pure business logic (predicates, state machines returning `{:error, [msg]}`) in the
+  same module — no separate domain model
+- NO mapper, NO repository, NO port, NO DI wiring
 
-## Step 6: Generate Mapper
-
-**File:** `lib/klass_hero/{context}/adapters/driven/persistence/mappers/{entity}_mapper.ex`
-
-```elixir
-defmodule KlassHero.{Context}.Adapters.Driven.Persistence.Mappers.{Module}Mapper do
-  @moduledoc """
-  Maps between {Module}Schema (Ecto) and {Module} (domain model).
-  """
-
-  alias KlassHero.{Context}.Adapters.Driven.Persistence.Schemas.{Module}Schema
-  alias KlassHero.{Context}.Domain.Models.{Module}
-
-  @doc "Converts a {Module}Schema to a domain {Module}."
-  @spec to_domain({Module}Schema.t()) :: {Module}.t()
-  def to_domain(%{Module}Schema{} = schema) do
-    %{Module}{
-      id: to_string(schema.id),
-      {field_mappings},
-      inserted_at: schema.inserted_at,
-      updated_at: schema.updated_at
-    }
-  end
-
-  @doc "Converts creation attributes to schema-compatible format."
-  @spec to_create_attrs(map()) :: map()
-  def to_create_attrs(attrs) when is_map(attrs) do
-    attrs
-    |> Map.take([{field_atom_list}])
-  end
-end
-```
-
-**Conventions:**
-- `to_domain/1` is mandatory — pattern matches on the schema struct
-- `to_create_attrs/1` for transforming raw attrs to schema-compatible format
-- `@spec` annotations on all public functions
-- Binary UUID fields: `to_string(schema.field)` when converting to domain
-- Atom/string conversions for enum fields via `String.to_existing_atom`
-
-## Step 7: Generate Port
-
-**File:** `lib/klass_hero/{context}/domain/ports/for_managing_{pluralized}.ex`
-
-```elixir
-defmodule KlassHero.{Context}.Domain.Ports.ForManaging{PluralizedPascal} do
-  @moduledoc """
-  Repository port for managing {pluralized} in the {Context} bounded context.
-
-  This behaviour defines the contract for {entity} persistence.
-  Implemented by adapters in the infrastructure layer.
-  """
-
-  alias KlassHero.{Context}.Domain.Models.{Module}
-
-  @doc """
-  Creates a new {entity}.
-
-  Returns:
-  - `{:ok, {Module}.t()}` - {Entity} created
-  - `{:error, changeset}` - Validation failure
-  """
-  @callback create(attrs :: map()) ::
-              {:ok, {Module}.t()} | {:error, term()}
-
-  @doc """
-  Retrieves a {entity} by ID.
-
-  Returns:
-  - `{:ok, {Module}.t()}` - {Entity} found
-  - `{:error, :not_found}` - No {entity} exists with the given ID
-  """
-  @callback get_by_id(id :: binary()) ::
-              {:ok, {Module}.t()} | {:error, :not_found}
-end
-```
-
-**Conventions:**
-- `@callback` with full typespecs and `@doc` for each
-- Return `{:ok, result}` or `{:error, reason}` tagged tuples
-- Port name uses the verb that best fits: `ForStoring*` for simple CRUD, `ForManaging*` for complex
-
-## Step 8: Generate Repository
-
-**File:** `lib/klass_hero/{context}/adapters/driven/persistence/repositories/{entity}_repository.ex`
-
-```elixir
-defmodule KlassHero.{Context}.Adapters.Driven.Persistence.Repositories.{Module}Repository do
-  @moduledoc """
-  Ecto-based repository for managing {pluralized}.
-
-  Implements ForManaging{PluralizedPascal} port.
-  """
-
-  @behaviour KlassHero.{Context}.Domain.Ports.ForManaging{PluralizedPascal}
-
-  use KlassHero.Shared.Tracing
-
-  alias KlassHero.{Context}.Adapters.Driven.Persistence.Mappers.{Module}Mapper
-  alias KlassHero.{Context}.Adapters.Driven.Persistence.Schemas.{Module}Schema
-  alias KlassHero.Repo
-
-  # Add `import Ecto.Query` and `require Logger` when needed by your callbacks
-
-  @impl true
-  def create(attrs) do
-    span do
-      set_attributes("db", operation: "insert", entity: "{entity}")
-
-      schema_attrs = {Module}Mapper.to_create_attrs(attrs)
-
-      %{Module}Schema{}
-      |> {Module}Schema.create_changeset(schema_attrs)
-      |> Repo.insert()
-      |> case do
-        {:ok, schema} -> {:ok, {Module}Mapper.to_domain(schema)}
-        error -> error
-      end
-    end
-  end
-
-  @impl true
-  def get_by_id(id) do
-    span do
-      set_attributes("db", operation: "select", entity: "{entity}")
-
-      {Module}Schema
-      |> Repo.get(id)
-      |> case do
-        nil -> {:error, :not_found}
-        schema -> {:ok, {Module}Mapper.to_domain(schema)}
-      end
-    end
-  end
-end
-```
-
-**Conventions:**
-- `@behaviour` declaration referencing the port
-- `use KlassHero.Shared.Tracing` for OpenTelemetry spans
-- `@impl true` on every callback
-- `span do ... end` with `set_attributes("db", operation: "...", entity: "...")`
-- Use mapper for all conversions between schema and domain
-- Logger for significant operations
-
-## Step 9: Wire DI Configuration
-
-**File:** `config/config.exs`
-
-Add under the context's config block:
-```elixir
-config :klass_hero, :{context},
-  # ... existing entries ...
-  for_managing_{pluralized}:
-    KlassHero.{Context}.Adapters.Driven.Persistence.Repositories.{Module}Repository
-```
-
-If the context doesn't have a config block yet, create one following existing patterns.
-
-## Step 10: Update Boundary Exports
+## Step 5: Wire CRUD into the Context Facade
 
 **File:** `lib/klass_hero/{context}.ex`
 
-Add the domain model to the `exports:` list:
+The context module is the public data-access API and calls `Repo` directly. Add
+functions mirroring the existing style in that facade:
+
 ```elixir
-use Boundary,
-  top_level?: true,
-  deps: [...],
-  exports: [
-    # ... existing exports ...
-    Domain.Models.{Module}
-  ]
+alias KlassHero.{Context}.{Module}
+alias KlassHero.Repo
+
+def create_{entity}(attrs) do
+  %{Module}{}
+  |> {Module}.create_changeset(attrs)
+  |> Repo.insert()
+end
+
+def get_{entity}(id), do: Repo.get({Module}, id)
 ```
 
-## Step 11: Present Summary and Confirm
+Match the surrounding facade's return-tuple and naming conventions. If the context
+uses `application/commands|queries/` modules for orchestration, put multi-step
+operations there and keep simple CRUD on the facade.
 
-Before creating any files, present a summary:
+## Step 6: Generate a Test
+
+**File:** `test/klass_hero/{context}/{entity}_test.exs`
+
+Use `KlassHero.DataCase`. Cover: `create_changeset/2` validation (required fields,
+FK constraint), and any functional-core predicate. Follow the `exunit-testing` skill.
+
+## Step 7: Present Summary and Confirm
+
+Before creating any files, present:
 
 ```
 ## Gen-Migration Plan
@@ -359,69 +202,49 @@ Before creating any files, present a summary:
 
 ### Files to create:
 1. priv/repo/migrations/{timestamp}_create_{table_name}.exs
-2. lib/klass_hero/{context}/domain/models/{entity}.ex
-3. lib/klass_hero/{context}/domain/ports/for_managing_{pluralized}.ex
-4. lib/klass_hero/{context}/adapters/driven/persistence/schemas/{entity}_schema.ex
-5. lib/klass_hero/{context}/adapters/driven/persistence/mappers/{entity}_mapper.ex
-6. lib/klass_hero/{context}/adapters/driven/persistence/repositories/{entity}_repository.ex
+2. lib/klass_hero/{context}/{entity}.ex        # schema-as-struct
+3. test/klass_hero/{context}/{entity}_test.exs
 
 ### Files to modify:
-7. config/config.exs — add DI wiring
-8. lib/klass_hero/{context}.ex — add Boundary export
+4. lib/klass_hero/{context}.ex                 # add CRUD facade functions
 
 ### Table: {table_name}
 | Column | Type | Constraints |
 |--------|------|-------------|
 | id | binary_id | primary key |
 | ... | ... | ... |
-| inserted_at | utc_datetime_usec | not null |
-| updated_at | utc_datetime_usec | not null |
+| inserted_at / updated_at | utc_datetime_usec | not null |
 
-### Indexes:
-- {index list}
+### Indexes: {index list}
 ```
 
 **Wait for user confirmation before creating files.**
 
-## Step 12: Generate All Files
+## Step 8: Generate All Files, then Verify
 
-Create files in dependency order:
-1. Domain model (no dependencies)
-2. Port behaviour (depends on domain model)
-3. Migration (independent)
-4. Schema (independent of domain)
-5. Mapper (depends on domain model + schema)
-6. Repository (depends on all above)
-7. Config update (depends on repository module name)
-8. Boundary export update (depends on domain model)
-
-After generation, run:
+Create the migration, entity module, test, and facade edit. Then run:
 ```bash
 mix format
 mix compile --warnings-as-errors
+mix test test/klass_hero/{context}/{entity}_test.exs
 ```
+Diagnose and fix any failure before proceeding.
 
-If compilation fails, diagnose and fix before proceeding.
+## Step 9: Run Migration
 
-## Step 13: Run Migration
-
-Ask the user if they want to run the migration now:
-```bash
-mix ecto.migrate
-```
+Ask the user if they want to run it now: `mix ecto.migrate`
 
 ---
 
 ## Rules
 
-- **Never generate without confirmation.** Present the full plan in Step 11 first.
-- **Read a similar entity in the same context as reference.** Match its patterns exactly.
-- **Binary UUIDs everywhere.** All IDs are `:binary_id`, never `:id` or `:integer`.
-- **utc_datetime_usec for timestamps.** Both in migration and schema `@timestamps_opts`.
+- **Never generate without confirmation.** Present the full plan in Step 7 first.
+- **Read a similar entity in the same context as reference** (e.g. `provider/staff_member.ex`). Match its patterns.
+- **One module per entity** — Ecto schema + struct + functional core together. No domain model, mapper, repository, port, or DI wiring.
+- **The context facade calls `Repo` directly** — that is the data-access API now.
+- **Binary UUIDs everywhere.** All IDs are `:binary_id`.
+- **utc_datetime_usec for timestamps.** In migration and `@timestamps_opts`.
 - **primary_key: false on tables.** Manual `:id` field with `:binary_id`.
 - **Indexes on all foreign keys.** Every `references()` column gets an explicit index.
-- **Domain models are pure.** No Ecto, no infrastructure imports.
-- **Mappers are bidirectional.** At minimum `to_domain/1`, preferably also `to_create_attrs/1`.
-- **Repositories use Tracing.** `use KlassHero.Shared.Tracing` and `span do` blocks.
-- **DI wiring is mandatory.** Every port must have a `config/config.exs` entry.
+- **Never cast server-controlled fields** (`user_id`, etc.) — set them explicitly.
 - **Run `mix compile --warnings-as-errors` after generation.** Zero warnings.

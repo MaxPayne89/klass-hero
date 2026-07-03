@@ -4,15 +4,17 @@ The project uses **Phoenix's standard `phx.gen.auth` authentication** for simpli
 
 ## Directory Structure
 
-Accounts context follows DDD/Ports & Adapters:
+Accounts is conventional Phoenix (flattened from DDD, #993):
 
 ```
 lib/klass_hero/accounts/
-  domain/models/user.ex              # Domain model
-  adapters/driven/persistence/
-    schemas/user.ex                  # Ecto schema
-  user_token.ex                      # Token generation/verification
-  user_notifier.ex                   # Email sending utility
+  user.ex              # Schema-as-struct: Ecto schema + struct + functional core
+  user_token.ex        # Token generation/verification
+  scope.ex             # Accounts.Scope (auth scope)
+  persona_grant.ex     # Role/persona grants
+  user_notifier.ex     # Email sending utility
+  types/               # user_role.ex, user_roles.ex (Ecto.Enum types)
+  domain/events/       # user_events.ex, accounts_integration_events.ex
 
 lib/klass_hero_web/
   user_auth.ex         # Authentication plug and helpers

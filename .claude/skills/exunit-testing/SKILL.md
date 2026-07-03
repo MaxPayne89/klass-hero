@@ -1,6 +1,6 @@
 ---
 name: exunit-testing
-description: Use when writing, modifying, or reviewing tests for Elixir/Phoenix code in this project — ExUnit unit/integration tests, property-based tests with stream_data, or Phoenix LiveView tests. Triggers on `.exs` test files, `mix test` failures, modules ending in `Test`, `use ExUnit.Case`, `use ExUnitProperties`, `Phoenix.LiveViewTest`, `live/3`, `render_submit`, `assert_patch`, ConnCase, DataCase, Mox, factories, sandbox setup, or when adding tests for new domain models, schemas, use cases, or LiveViews. Distilled from "Testing Elixir" by Leopardi & Matthias.
+description: Use when writing, modifying, or reviewing tests for Elixir/Phoenix code in this project — ExUnit unit/integration tests, property-based tests with stream_data, or Phoenix LiveView tests. Triggers on `.exs` test files, `mix test` failures, modules ending in `Test`, `use ExUnit.Case`, `use ExUnitProperties`, `Phoenix.LiveViewTest`, `live/3`, `render_submit`, `assert_patch`, ConnCase, DataCase, Mox, factories, sandbox setup, or when adding tests for new entities, schemas, context functions, or LiveViews. Distilled from "Testing Elixir" by Leopardi & Matthias.
 ---
 
 # ExUnit Testing

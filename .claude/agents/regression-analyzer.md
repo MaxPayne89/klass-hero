@@ -170,19 +170,19 @@ Each check produces concrete examples of what could break, not just style notes.
 
 ## Check 7: Event / Handler Registration Drift
 
-**Rule:** Changes to `lib/klass_hero/application.ex` (`DomainEventBus` handler specs), `config/config.exs` (DI bindings, `critical_event_handlers` registry, scope configs), or any supervision-tree child spec are silently-breaking — the supervision tree reads these at startup and code reloading does not refresh them. Removing or replacing a handler severs side effects.
+**Rule:** Changes to `lib/klass_hero/application.ex` (`DomainEventBus` handler specs), `config/config.exs` (`critical_event_handlers` registry, scope configs), or any supervision-tree child spec are silently-breaking — the supervision tree reads these at startup and code reloading does not refresh them. Removing or replacing a handler severs side effects.
 
 **How to verify:**
 1. Check the diff for changes to:
    - `lib/klass_hero/application.ex` — `handlers:` lists per context
-   - `config/config.exs` — `:klass_hero, :<context>` DI keys, `:critical_event_handlers` map, `:scopes` config
+   - `config/config.exs` — `:critical_event_handlers` map, `:scopes` config (per-context DI/port keys were removed in the #986–#1002 flatten; only `:shared, for_tracking_processed_events` remains)
    - Any child spec changes in the supervision tree
 2. For each removed/changed handler entry, identify what side effect is no longer fired
-3. For each removed DI binding, grep for `Application.compile_env!(:klass_hero, [...])` references — they will raise at compile time
+3. For any remaining `Application.compile_env!(:klass_hero, [...])` reference whose config key is removed — it will raise at compile time
 
 **Violations to flag:**
 - A `{:event_type, {Handler, :fn}}` removed from `application.ex` without a replacement — side effect dropped
-- A DI key removed from `config.exs` while the corresponding `Application.compile_env!` remains in a use case
+- A config key removed from `config.exs` while a corresponding `Application.compile_env!` reference remains in code
 - A `critical_event_handlers` entry removed — durable cross-context delivery dropped
 
 **Severity:** `error` (handler/DI drift is always a silent breakage); `warning` if the registration is for an event type the diff also removed entirely.

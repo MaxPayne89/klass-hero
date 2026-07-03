@@ -42,27 +42,34 @@ mix usage_rules.search_docs "query"     # Search across all packages
 
 ## Architecture
 
-### Bounded Contexts (DDD + Ports & Adapters)
+### Bounded Contexts (conventional Phoenix, post-flatten)
 
-Each context under `lib/klass_hero/` follows this internal structure:
+All 7 contexts were flattened from DDD/Ports & Adapters to conventional Phoenix (PRs #986→#1002, `boundary` library removed). Each context under `lib/klass_hero/` now looks like:
 
 ```
+context.ex                  # Public API — the ONLY module other contexts call
 context/
+├── <entity>.ex             # Schema-as-struct: ONE module that is the Ecto schema,
+│                           #   the struct consumers pattern-match, AND the functional
+│                           #   core (validators, state machines). No mappers, no ports.
+│                           #   e.g. provider/staff_member.ex, family/child.ex
+├── <use_case>.ex           # Command/query modules at the root (e.g. claim_invite.ex)
 ├── domain/
-│   ├── models/          # Pure Elixir structs (entities, value objects)
-│   ├── ports/           # Driven port contracts (flat = driven by convention)
-│   │   └── driving/     # Driving port contracts (only in shared context)
-│   ├── services/        # Domain logic
-│   └── events/          # Domain events
-├── application/
-│   └── use_cases/       # Orchestration layer
+│   ├── events/             # Domain & integration event structs
+│   └── read_models/        # CQRS read-model DTOs (display-optimized, no logic)
 └── adapters/
-    ├── driven/          # Outbound adapters (persistence, ACL, notifications, infra)
-    │   └── persistence/ # Ecto schemas, repos, mappers
-    └── driving/         # Inbound adapters (event handlers, workers)
-        ├── events/      # Domain & integration event handlers
-        └── workers/     # Oban background job workers
+    ├── driven/
+    │   ├── projections/     # CQRS projection GenServers (maintain read tables)
+    │   ├── persistence/     # Ecto schemas/repos for PROJECTION read tables only
+    │   └── acl/             # Cross-context read adapters (anti-corruption layer)
+    └── driving/
+        ├── events/          # Event handlers (react to other contexts' events)
+        └── workers/         # Oban background job workers
 ```
+
+**Key rule — schema-as-struct:** an entity module is simultaneously the Ecto schema, the struct callers match on, and the functional core. Changesets are the validation gatekeeper at the DB boundary; pure business logic (invitation state machines, `full_name/1`, domain validators returning `{:error, [msg]}` lists) lives in the same file. See `provider/staff_member.ex`'s moduledoc for the canonical explanation.
+
+**What survives in subdirs:** only indirection that earns its place — CQRS projections + read-models, event handlers/workers, and cross-context ACL adapters. Aggregate ports, mappers, and DI wiring were deleted.
 
 **Active contexts:**
 
@@ -74,29 +81,16 @@ context/
 - **Entitlements** (`shared/entitlements.ex`) - Pure domain service for subscription tier authorization (cross-context, no DB)
 - **Messaging** (`messaging/`) - Conversations, messages, participants, retention policies
 - **Participation** (`participation/`) - Session tracking, check-in/out, attendance rosters
-- **Shared** (`shared/`) - Event publishing, Ecto helpers, pagination, domain events
+- **Shared** (`shared/`) - Event publishing, projections base macro, interaction/tracing, Ecto helpers
+- **Admin** (`admin/queries.ex`) - Backpex admin read queries
 
 See `.claude/rules/domain-architecture.md` for patterns. For context-specific details, read the code under `lib/klass_hero/<context>/` directly — Claude Code explores on-demand.
 
-**Context boundaries:** Not tooling-enforced. The `boundary` library was removed; cross-context isolation is a convention — call other contexts only through their root module's public API (e.g. `KlassHero.Family`), never reach into their internals. The Family context has been flattened to conventional Phoenix (context module + Ecto schemas, no ports/adapters/mappers); other contexts still follow DDD/Ports & Adapters pending similar flattening.
+**Context boundaries:** Not tooling-enforced (`boundary` library removed). Cross-context isolation is a convention — call other contexts only through their root module's public API (e.g. `KlassHero.Family`), never reach into their internals. For cross-context *reads*, use an ACL adapter under `adapters/driven/acl/` or subscribe an event handler to build a local read model — never call another context's Repo/schemas directly.
 
-**CQRS direction:** New use cases go under `application/commands/` or `application/queries/`. New ports separate read contracts (`ForQuerying*`, `ForListing*`, `ForResolving*`) from write contracts (`ForStoring*`, `ForCreating*`, `ForUpdating*`). Existing `ForManaging*` ports will be split incrementally.
+**CQRS reads:** Read models are maintained by projection GenServers (`adapters/driven/projections/`) that subscribe to events and denormalize into dedicated read tables, exposed as read-model DTOs (`domain/read_models/`). Program Catalog, Messaging, and Provider have these. Build new projections on `KlassHero.Shared.Projection` (base macro) — see `provider/adapters/driven/projections/provider_programs.ex` for the canonical example.
 
-### Dependency Injection (Port Wiring)
-
-Each bounded context's port-to-adapter bindings are configured in `config/config.exs` using a naming convention that mirrors the port behaviour names:
-
-```elixir
-# config/config.exs — each context gets a key with port → adapter mappings
-config :klass_hero, :enrollment,
-  for_managing_enrollments: EnrollmentRepository,
-  for_resolving_participant_details: ParticipantDetailsACL,
-  for_sending_invite_emails: InviteEmailNotifier
-
-# config/test.exs can override with test doubles
-```
-
-When adding a new port: define the behaviour in `domain/ports/`, implement the adapter in `adapters/driven/`, then wire it in `config/config.exs` under the context's key.
+> **Note:** DI wiring via `config :klass_hero, :<context>, for_managing_*: Adapter` maps is gone. The flatten deleted per-context port config; the only residual key is `:shared, for_tracking_processed_events`. Do not add new port-wiring config — call collaborators directly or via an ACL module.
 
 ### Event System (Two-Tier)
 

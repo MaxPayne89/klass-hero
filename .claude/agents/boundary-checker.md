@@ -1,176 +1,146 @@
 ---
 name: boundary-checker
 description: >-
-  Check semantic boundary violations that the Boundary library cannot detect
-  at compile time. Finds use cases calling cross-context adapters directly,
-  schemas leaking across context boundaries, and port contracts being bypassed
-  via direct Repo calls. Run as a subagent for deep boundary analysis.
+  Check semantic cross-context boundary violations. Finds code reaching into
+  another context's internals (schemas, entity modules, Repo) instead of going
+  through its root facade, and checks ACL adapter correctness. Run as a subagent
+  for deep boundary analysis.
 ---
 
 # Boundary Checker
 
-Detect semantic boundary violations that compile-time tools miss.
+Detect semantic boundary violations across bounded contexts.
 
-**Type:** Deep analysis. Scan code patterns across the entire codebase.
+**Type:** Deep analysis. Scan code patterns across the codebase.
+
+The project flattened away DDD ports/adapters (#986–#1002) and removed the
+`boundary` library — boundaries are now a **convention**, not tooling-enforced.
+The core rule that survived the flatten: a context is reached only through its
+root module `KlassHero.<Context>`; nothing reaches into another context's
+internals. This agent enforces that convention.
 
 ---
 
 ## Scope
 
-This agent supports two scan modes, specified by the caller:
+Two scan modes, specified by the caller:
 
 - **`full`** (default) — Scan the entire codebase. Use for comprehensive audits.
-- **`changed-files`** — Scan only the provided list of changed files, plus any files they directly reference (aliases, imports). Use for PR reviews where a full scan would be too slow.
+- **`changed-files`** — Scan only the provided files, plus any files they directly
+  reference. Use for PR reviews where a full scan would be too slow.
 
-When running in `changed-files` mode, the caller provides the list of files to check. For each check, apply the rules only to those files and their immediate dependencies. If a changed file imports a module from another context, follow that reference to verify it's valid, but don't recursively scan the entire target context.
+In `changed-files` mode, apply each check only to the provided files and their
+immediate dependencies. If a changed file references a module from another
+context, follow that reference to verify it's valid, but don't recursively scan
+the whole target context.
 
 ---
 
 ## Context
 
-The `boundary` library enforces module-level dependency rules at compile time via
-`use Boundary` declarations. However, it CANNOT detect these semantic violations:
+Boundaries are enforced by convention. The valid ways for context A to use
+context B's data are:
 
-1. A use case that calls another context's driven adapter if that adapter was pragmatically exported
-2. Ecto schemas from one context being queried or joined in another context's repository
-3. Direct `KlassHero.Repo` calls in use cases or domain code, bypassing port abstractions
-4. Integration event handlers reaching into another context's internals instead of using the facade API
+1. Call B's root facade: `KlassHero.B.some_function(...)`.
+2. Read B's data through an ACL adapter under A's `adapters/driven/acl/`, which
+   itself calls B's facade and maps the result to A's own types.
+3. Subscribe to B's events and build a local read model (projection).
 
-This subagent fills those gaps.
+Everything else — aliasing B's schemas/entity modules, querying B's tables via
+`Repo`, calling B's internal use-case/adapter modules — is a violation.
 
 ---
 
-## Check 1: Use Cases Must Not Call Cross-Context Adapters
+## Check 1: No reaching into another context's internals
 
-**Rule:** Use cases (`application/use_cases/`) must only call:
-- Ports via DI module attributes (`@repo`, `@resolver`, etc.)
-- Their own context's facade module
-- Other contexts' facade modules (e.g., `KlassHero.Messaging.send_message/3`)
-- Shared infrastructure (`DomainEventBus`, `FeatureFlags`, etc.)
-
-**Violation pattern:** A use case in context A directly aliases or calls a module from context B's `adapters/` directory.
+**Rule:** Code in context A must reference context B only via `KlassHero.B` (the
+root facade) or an ACL adapter. It must not alias/call B's entity modules,
+schemas, or `adapters/` modules.
 
 **How to verify:**
-1. For each use case file, extract all `alias` and module references
+1. For each file, extract all `alias`/module references
 2. Determine each referenced module's owning context
-3. If a module belongs to another context's `adapters/` namespace, flag it
-4. Exception: Shared context adapters that are explicitly exported (e.g., `Tracing`, `RepositoryHelpers`)
+3. Flag references that resolve to another context's internals
+   (`KlassHero.B.<Entity>`, `KlassHero.B.Adapters.*`, `KlassHero.B.<...>Schema`)
+   rather than `KlassHero.B` itself
+4. Exception: Shared infrastructure (`KlassHero.Shared.*` — `Tracing`, `Projection`,
+   `DomainEventBus`, `FeatureFlags`, `RepositoryHelpers`) is universal
 
 **Example violation:**
 ```elixir
-# In messaging/application/use_cases/send_message.ex
-# BAD: directly calling enrollment's repository
-alias KlassHero.Enrollment.Adapters.Driven.Persistence.Repositories.EnrollmentRepository
-EnrollmentRepository.get_by_id(id)
+# In messaging/send_message.ex — BAD: reaching into enrollment internals
+alias KlassHero.Enrollment.Enrollment
+KlassHero.Repo.get(Enrollment, id)
 ```
-
 **Correct pattern:**
 ```elixir
-# Use a port + ACL adapter within the messaging context
-@enrollment_resolver Application.compile_env!(:klass_hero, [:messaging, :for_querying_enrollments])
-@enrollment_resolver.get_enrollments_for_program(program_id)
+KlassHero.Enrollment.get_enrollment(id)          # facade call
+# or, for a hot read path, an ACL adapter / an event-fed projection
 ```
 
-## Check 2: No Cross-Context Schema Access in Repositories
+## Check 2: No cross-context Repo / schema access
 
-**Rule:** A repository in context A must not query, join, or reference Ecto schemas from context B — even indirectly via `from(e in OtherContextSchema)`.
+**Rule:** A module in context A must not query, join, or reference another
+context's Ecto schemas / tables via `Repo` — even indirectly via
+`from(x in OtherContextSchema)`. A context calling `Repo` for **its own** schemas
+is fine (schema-as-struct: the context module is the data-access API).
 
 **Exceptions:**
-- `KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserSchema` — commonly used for `belongs_to` associations (known pragmatic exception)
-- Schemas explicitly listed in another context's `exports:` Boundary config
+- `KlassHero.Accounts.User` — commonly used for `belongs_to` associations (known exception)
 
 **How to verify:**
-1. For each repository file (`adapters/driven/persistence/repositories/*.ex`)
-2. Extract all schema modules referenced in queries (`from(x in Schema)`, `join`, `preload`, etc.)
-3. Determine each schema's owning context
-4. Flag references to schemas from other contexts (except the allowed exceptions)
+1. For each changed module, extract schema modules referenced in queries
+   (`from`, `join`, `preload`) and any `Repo` calls
+2. Determine each schema's owning context
+3. Flag references to another context's schemas/tables (except the allowed exception)
+4. Do NOT flag a context using `Repo` on its own schemas — that is the convention now
+
+## Check 3: Event handlers must use facade APIs
+
+**Rule:** Event handlers in `adapters/driving/events/` that act on another context
+must call that context's root facade — not its internal entity, query, or adapter
+modules.
+
+**How to verify:**
+1. For each event handler, extract calls that reach into another context
+2. Calls should be to `KlassHero.<Context>.function_name()` (facade)
+3. Flag calls to `KlassHero.<Context>.Adapters.*` or internal entity modules
+4. Within-context handlers MAY call their own context's internals directly
 
 **Example violation:**
 ```elixir
-# In messaging/adapters/driven/persistence/repositories/conversation_repository.ex
-# BAD: directly querying enrollment schema
-from(e in KlassHero.Enrollment.Adapters.Driven.Persistence.Schemas.EnrollmentSchema,
-  where: e.program_id == ^program_id)
+# BAD: calling another context's internal module
+KlassHero.Provider.Adapters.Driven.Persistence.Repositories.X.assign(attrs)
 ```
-
-## Check 3: Port Contracts Must Not Be Bypassed
-
-**Rule:** Use cases and domain services must NEVER call `KlassHero.Repo` directly. All database access goes through port-based repository adapters injected via DI.
-
-**How to verify:**
-1. Grep for `KlassHero.Repo.` or `alias KlassHero.Repo` in:
-   - `application/use_cases/`
-   - `domain/models/`
-   - `domain/services/`
-   - `domain/events/`
-2. Flag every occurrence — there should be ZERO matches in these directories
-3. `KlassHero.Repo` calls are ONLY allowed in:
-   - `adapters/driven/persistence/repositories/`
-   - `adapters/driven/persistence/queries/`
-   - `adapters/driven/acl/`
-   - Shared infrastructure helpers (`RepositoryHelpers`, etc.)
-
-**Example violation:**
-```elixir
-# In messaging/application/use_cases/send_message.ex
-# BAD: direct Repo call bypassing the port
-KlassHero.Repo.insert(%MessageSchema{content: content})
-```
-
-## Check 4: Event Handlers Must Use Facade APIs
-
-**Rule:** Integration event handlers in `adapters/driving/events/` must call the target context's public facade API — not internal use cases, repositories, or adapters.
-
-**How to verify:**
-1. For each integration event handler
-2. Extract all module calls that reach into another context
-3. Calls should be to `KlassHero.{Context}.function_name()` (facade)
-4. Flag calls to `KlassHero.{Context}.Application.UseCases.*` or `KlassHero.{Context}.Adapters.*`
-5. Within-context event handlers MAY call their own use cases directly
-
-**Example violation:**
-```elixir
-# In messaging/adapters/driving/events/staff_assignment_handler.ex
-# BAD: calling another context's use case directly
-KlassHero.Provider.Application.UseCases.StaffMembers.AssignStaffToProgram.execute(attrs)
-```
-
 **Correct pattern:**
 ```elixir
-# Call the facade
 KlassHero.Provider.assign_staff_to_program(attrs)
 ```
 
-## Check 5: Domain Layer Isolation
+## Check 4: Domain event & read-model isolation
 
-**Rule:** The domain layer (`domain/models/`, `domain/services/`, `domain/events/`) must have ZERO dependencies on:
-- Ecto (`Ecto.Changeset`, `Ecto.Schema`, `Ecto.Query`)
-- Phoenix (`Phoenix.*`)
-- Infrastructure (`KlassHero.Repo`, `Oban`, `Jason`)
-- Other contexts' internals
+**Rule:** `domain/events/` and `domain/read_models/` must be pure — ZERO
+dependencies on Ecto (`Ecto.Changeset/Schema/Query`), Phoenix, infrastructure
+(`KlassHero.Repo`, `Oban`, `Jason`), or other contexts' internals.
 
 **How to verify:**
-1. For each file in `domain/models/`, `domain/services/`, `domain/events/`
-2. Extract all `alias`, `import`, `use`, and `require` declarations
-3. Check each referenced module against the allow-list:
-   - Own context's domain modules
-   - Elixir/Erlang standard library
-   - `KlassHero.Shared.Domain.*` (shared domain types)
-   - `Logger` (acceptable for domain services)
+1. For each file in `domain/events/`, `domain/read_models/`
+2. Extract `alias`/`import`/`use`/`require` declarations
+3. Allow: own context's domain modules, Elixir/Erlang stdlib,
+   `KlassHero.Shared.Domain.*`, `Logger`
 4. Flag any infrastructure or cross-context dependency
 
-## Check 6: ACL Adapter Correctness
+## Check 5: ACL adapter correctness
 
 **Rule:** Anti-Corruption Layer adapters (`adapters/driven/acl/`) must:
-- Implement a port behaviour from their own context
 - Call the target context's PUBLIC facade API (not internal modules)
-- Map external data to their own context's domain types
+- Map external data to their own context's types
+- Expose a plain read function for their own context to consume (no port behaviour required)
 
 **How to verify:**
 1. For each ACL adapter file
-2. Verify it declares `@behaviour` for a port in its own context
-3. Check all external calls go through facade modules (e.g., `KlassHero.Family.get_child/1`)
-4. Flag direct calls to another context's repositories, schemas, or use cases
+2. Check all external calls go through facade modules (e.g. `KlassHero.Family.get_child/1`)
+3. Flag direct calls to another context's repositories, schemas, or internal modules
 
 ---
 
@@ -180,7 +150,7 @@ KlassHero.Provider.assign_staff_to_program(attrs)
 # Boundary Analysis Report
 
 ## Summary
-- Checks passed: N/6
+- Checks passed: N/5
 - Semantic violations found: N
 - Context pairs with violations: [list]
 
@@ -194,7 +164,7 @@ KlassHero.Provider.assign_staff_to_program(attrs)
 - **Fix:** [specific refactoring needed]
 
 ## Cross-Context Dependency Map
-[visual or tabular summary of actual cross-context calls found]
+[tabular summary of actual cross-context calls found]
 ```
 
 ---
@@ -203,10 +173,9 @@ KlassHero.Provider.assign_staff_to_program(attrs)
 
 - In `full` mode, scan the ENTIRE codebase — boundary violations can be pre-existing
 - In `changed-files` mode, scan only the provided files and their immediate references
-- The Accounts.User schema reference is a KNOWN exception — do not flag it
-- Shared context exports are accessible to all — check `lib/klass_hero/shared.ex` exports list
-- Boundary `exports:` are pragmatic exceptions — note them but flag as warnings, not errors
-- ACL adapters are the CORRECT way to access cross-context data — verify they exist where needed
-- If a violation is found, suggest the correct pattern (port + ACL adapter, or facade call)
-- Critical severity: bypassing ports, direct Repo in domain/use-cases
-- Warning severity: cross-context schema in belongs_to, missing ACL where one should exist
+- The `Accounts.User` reference is a KNOWN exception — do not flag it
+- Shared (`KlassHero.Shared.*`) is universal infrastructure — accessible to all
+- A context using `Repo` on its OWN schemas is correct (schema-as-struct) — never flag it
+- Prefer projections/ACL over facade calls on hot read paths, but a facade call is valid
+- Critical severity: cross-context Repo/schema access, reaching into another context's internals
+- Warning severity: cross-context `belongs_to` beyond the User exception, a missing ACL where one should exist

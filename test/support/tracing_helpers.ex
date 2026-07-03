@@ -91,9 +91,9 @@ defmodule KlassHero.TracingHelpers do
     quote do
       KlassHero.TracingHelpers.flush_spans()
 
-      refute_receive {:span, KlassHero.TracingHelpers.span(name: name)}
-                     when name == unquote(expected_name),
-                     100
+      # Match the name literally in the record pattern rather than via a `when`
+      # guard — Elixir 1.20.2's `refute_receive` rejects a remote `==` guard here.
+      refute_receive {:span, KlassHero.TracingHelpers.span(name: unquote(expected_name))}, 100
     end
   end
 

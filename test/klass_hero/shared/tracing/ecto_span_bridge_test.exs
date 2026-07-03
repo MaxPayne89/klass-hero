@@ -56,8 +56,10 @@ defmodule KlassHero.Shared.Tracing.EctoSpanBridgeTest do
     test "emits nothing for a query with no enclosing span (child-only)" do
       Caller.query_no_span()
 
-      flush_spans()
-      refute_receive {:span, _}, 200
+      # Scope to this query's own span name — the OTel exporter is process-global,
+      # so an unrelated span (e.g. a concurrent auth "users.query") can land in the
+      # mailbox; a bare `refute_receive {:span, _}` would wrongly match it.
+      refute_span("children.query")
     end
   end
 end

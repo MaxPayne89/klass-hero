@@ -56,7 +56,7 @@ Present classification with evidence (file paths, code snippets) to the user bef
 Collect everything useful for the issue:
 
 - **Relevant files** — paths and line numbers for existing related code
-- **Bounded context** — which DDD context this belongs to (explore `lib/klass_hero/<context>/` to identify)
+- **Bounded context** — which context this belongs to (explore `lib/klass_hero/<context>/` to identify)
 - **Existing patterns** — similar implementations to follow as reference
 - **Dependencies** — prerequisites or related issues
 

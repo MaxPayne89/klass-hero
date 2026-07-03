@@ -87,8 +87,8 @@ For `fix` and `nit` items, estimate effort:
 ### Architecture Alignment Check
 
 For each `fix` item, assess whether the proposed change aligns with:
-- **DDD** — Does it respect bounded context boundaries?
-- **Ports & Adapters** — Does it maintain proper layering?
+- **Bounded contexts** — Does it respect context boundaries (cross-context calls via the `<context>.ex` root API only)?
+- **Schema-as-struct** — Does it keep entity logic + persistence in the context module / entity module, without reintroducing repository/port layering?
 - **Event-driven** — Does it preserve async communication patterns?
 - **CQRS** — Does it keep read/write paths appropriately separated?
 
@@ -126,7 +126,7 @@ Display the triage summary for user confirmation. Use this exact format:
 - **Comment:** [Author] on [file:line] — "[truncated quote]"
 - **Classification:** fix | [effort]
 - **Analysis:** [Why this needs fixing, what the correct approach is]
-- **Architecture:** [DDD/P&A/Event/CQRS alignment notes, if relevant]
+- **Architecture:** [convention alignment notes — bounded contexts, schema-as-struct, event-driven, CQRS — if relevant]
 - **Test Impact:** [Which tests affected, new tests needed]
 - **Proposed Change:** [Brief description of the fix]
 
@@ -175,7 +175,7 @@ Plan all fixes together as a cohesive changeset. For each fix:
 - Identify exact files and line ranges to modify
 - Describe the change with code
 - Note test files that need updating
-- Ensure DDD/Ports & Adapters/event-driven/CQRS alignment
+- Ensure alignment with the conventions (bounded-context boundaries, schema-as-struct, event-driven, CQRS)
 
 ## Step 6: Apply Fixes
 
@@ -253,7 +253,7 @@ Present final summary:
 - **Always invoke `/idiomatic-elixir` before planning fixes.** Load architecture context first.
 - **Always run `mix precommit` before committing.** Zero warnings, zero test failures.
 - **Always push after committing.** Work is not done until pushed.
-- **Respect architecture.** If a reviewer suggestion would violate DDD/P&A/event-driven/CQRS, propose an alternative that maintains alignment rather than blindly applying the suggestion.
+- **Respect architecture.** If a reviewer suggestion would violate the conventions (bounded-context boundaries, schema-as-struct, event-driven, CQRS), propose an alternative that maintains alignment rather than blindly applying the suggestion.
 - **Consider test impact for every fix.** Note whether existing tests break, new tests are needed, or integration tests need updating.
 - **Never dismiss without rationale.** Every dismissed comment gets a clear explanation.
 - **Thread awareness.** Group related comments in the same thread — don't treat each reply as a separate item.

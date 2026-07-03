@@ -1,77 +1,83 @@
 # Domain Architecture
 
-The project follows Domain-Driven Design with Ports & Adapters architecture (Hexagonal Architecture).
+The project **used to** follow Domain-Driven Design with Ports & Adapters (Hexagonal). All 7 bounded contexts were flattened to **conventional Phoenix** (PRs #986→#1002); the `boundary` library was removed. Contexts remain as bounded contexts by convention — this doc describes the post-flatten shape.
 
 ## Bounded Contexts
 
-1. **Program Catalog Context** - Program discovery, details, availability
-2. **Enrollment Context** - Enrollment process from selection to payment
-3. **Family Context** - Parent profiles, children management, consents, referral codes, GDPR family data
-4. **Provider Context** - Provider profiles, staff members, verification documents
-5. **Progress Tracking Context** - Child progress and achievements
-6. **Review & Rating Context** - Program reviews and feedback
+Domain contexts under `lib/klass_hero/`, each with a public API module `<context>.ex`:
 
-## Architecture Documentation
+1. **Accounts** — auth (`phx.gen.auth`), scopes, roles, tokens
+2. **Program Catalog** — program discovery, details, availability, pricing
+3. **Enrollment** — enrollment/booking from selection to payment
+4. **Family** — parent profiles, children, consents, referral codes, GDPR family data
+5. **Provider** — provider profiles, staff members, verification/incident documents
+6. **Messaging** — conversations, messages, participants, support inbox, email
+7. **Participation** — session tracking, check-in/out, attendance, behavioral notes
+8. **Shared** — event infrastructure, projection macro, interaction/tracing, entitlements
 
-Authoritative reference is the code itself — read existing context implementations under `lib/klass_hero/<context>/` and mirror established patterns. Recommended reads when learning the conventions:
+(Progress Tracking and Review & Rating are planned, not yet implemented.)
 
-- `lib/klass_hero/enrollment/` — full DDD shape (commands, queries, ports, driven + driving adapters)
-- `lib/klass_hero/messaging/` — projections + read-model pattern
-- `lib/klass_hero/shared/` — event infrastructure (publishers, registry, retry helpers)
-- `config/config.exs` — DI wiring per context and `critical_event_handlers` registry
+## Context Layout (conventional Phoenix)
 
-## Authentication Note
+```
+context.ex                  # Public API — the ONLY module other contexts call
+context/
+├── <entity>.ex             # Schema-as-struct (see below)
+├── <use_case>.ex           # Command/query modules at the root
+├── domain/
+│   ├── events/             # Domain & integration event structs
+│   └── read_models/        # CQRS read-model DTOs (no logic)
+└── adapters/
+    ├── driven/{projections,persistence,acl,notifications}/
+    └── driving/{events,workers}/
+```
 
-The authentication system uses Phoenix's standard `phx.gen.auth` for simplicity and maintainability. New bounded contexts follow the DDD/Ports & Adapters patterns described below.
+### Schema-as-struct
 
-## Port & Adapter Directionality
+An entity is **one module** that is simultaneously:
+- the **Ecto schema** + changesets (the validation gatekeeper at the DB boundary), and
+- the **struct** callers pattern-match on, and
+- the **functional core** — pure business logic ported from the former domain model (state machines like `transition_invitation/2`, `full_name/1`, `initials/1`, domain validators returning `{:error, [message]}` lists).
 
-Ports and adapters are split by **direction of control flow**:
+`provider/staff_member.ex` is the canonical example — read its moduledoc. No separate `domain/models/`, no mappers, no ports.
 
-### Classification Rule
+### What survives in `adapters/`
+
+The flatten deleted aggregate ports, mappers, and DI wiring. Subdirectories remain only where indirection earns its place:
+
+- `adapters/driven/projections/` — CQRS projection GenServers
+- `adapters/driven/persistence/` — Ecto schemas/repos for **projection read tables only**
+- `adapters/driven/acl/` — cross-context read adapters (anti-corruption layer)
+- `adapters/driven/notifications/` — email/notification senders
+- `adapters/driving/events/` — event handlers reacting to other contexts' events
+- `adapters/driving/workers/` — Oban workers
+
+## Cross-Context Access
+
+- Call other contexts **only** through their root `<context>.ex` module — never their internal schemas/Repo.
+- For cross-context **reads**: use an ACL adapter (`adapters/driven/acl/`) or subscribe an event handler that builds a local read model. Prefer projections over ACLs for hot read paths.
+- There is **no** `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly.
+
+## Event System
+
+Directionality still classifies the surviving event code:
 
 > If Oban or the event bus triggers it, it's **driving**. If the application calls it outward, it's **driven**.
 
-### Ports (`domain/ports/`)
+- **Domain events** (non-critical) — published via PubSub for real-time UI updates.
+- **Integration events** (critical) — routed through the `critical_event_handlers` registry in `config/config.exs` to Oban-backed handlers for durable, at-least-once cross-context delivery.
+- **Shared event infrastructure** (`shared/adapters/driven/events/` + `shared/domain_event_bus.ex`, `event_dispatch_helper.ex`, `integration_event_publishing.ex`): publishers, subscriber, registry, retry helpers, test doubles — driven, because the application calls them outward. Individual context handlers live under their own `adapters/driving/events/`.
 
-- **Driven ports** (flat in `ports/`): Contracts the application calls outward — persistence, ACL queries, publishing, sending. Named `for_storing_*`, `for_managing_*`, `for_resolving_*`, `for_publishing_*`, etc.
-- **Driving ports** (in `ports/driving/`, shared context only): Contracts that external stimuli implement to drive the application. Named `for_handling_*`. Currently only `ForHandlingEvents` and `ForHandlingIntegrationEvents`.
+## CQRS Read Models
 
-### Adapters
+- Projection GenServers in `adapters/driven/projections/` subscribe to events and denormalize into dedicated read tables.
+- Read-model DTOs in `domain/read_models/` are display-optimized structs with no business logic.
+- Build new projections on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
+- Canonical example: `provider/adapters/driven/projections/provider_programs.ex`. Program Catalog and Messaging also have projections.
 
-- **Driven adapters** (`adapters/driven/`): Outbound implementations — Ecto repositories, ACL adapters, email senders, event publishing infrastructure, file storage.
-- **Driving adapters** (`adapters/driving/`): Inbound entry points — event handlers (domain and integration), Oban workers. These receive external triggers and drive use cases inward.
+## Recommended Reads
 
-### Shared Context Infrastructure
-
-The shared context's `adapters/driven/events/` directory contains event **infrastructure** (publishers, subscriber, registry, serializers, retry helpers, test doubles) — these are driven because the application calls them outward. Individual context event **handlers** live under their own `adapters/driving/events/`.
-
-## CQRS Direction
-
-The codebase is moving toward Command Query Responsibility Segregation:
-
-- New use cases go under `application/commands/` or `application/queries/`
-- New ports should separate read contracts (`ForQuerying*`, `ForListing*`) from write contracts (`ForStoring*`, `ForCreating*`, `ForUpdating*`)
-- Existing mixed `ForManaging*` ports will be split incrementally
-- `ForResolving*` ports (ACL) are already read-only — no change needed
-
-**Naming conventions:**
-- Commands: `Application.Commands.CreateEnrollment` — state-changing operations
-- Queries: `Application.Queries.ListParentEnrollments` — read-only operations
-- Mixed use cases that read then write: classify as Commands
-- Utility/shared modules stay at `application/` level (not in commands/ or queries/)
-
-**Existing CQRS infrastructure:**
-- Program Catalog and Messaging have event-driven projections with denormalized read tables
-- Projection GenServers in `adapters/driven/projections/` maintain read models
-- Read model DTOs in `domain/read_models/` are display-optimized structs with no business logic
-
-## Key Patterns for Future Contexts
-
-- Domain entities and value objects (pure Elixir structs)
-- Repository ports and Ecto adapters
-- Use case orchestration patterns
-- Phoenix web adapters (driving adapters)
-- Event handler and worker adapters (driving adapters under `adapters/driving/`)
-- Configuration and dependency injection
-- Event-driven projections (driven adapters under `adapters/driven/projections/`) — use `KlassHero.Shared.Projection` (base macro) and optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). The calling module declares `:topics` in `use Projection, ...` and implements `bootstrap_impl/0` and `handle_event/2`. See `ProviderPrograms` for the canonical example.
+- `lib/klass_hero/provider/staff_member.ex` — schema-as-struct with inlined functional core
+- `lib/klass_hero/provider/adapters/driven/projections/provider_programs.ex` — projection pattern
+- `lib/klass_hero/shared/` — event infrastructure, projection macro, interaction/tracing
+- `config/config.exs` — `critical_event_handlers` registry (DI port maps are gone)
