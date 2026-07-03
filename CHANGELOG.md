@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.1](https://github.com/MaxPayne89/klass-hero/compare/v0.54.0...v0.54.1) (2026-07-03)
+
+
+### Code Refactoring
+
+* flatten Accounts to conventional Phoenix; drop ports/adapters/mappers ([#993](https://github.com/MaxPayne89/klass-hero/issues/993)) ([d727ac9](https://github.com/MaxPayne89/klass-hero/commit/d727ac9162983dcd52af6ef00518fd6d6bf892b4))
+* flatten Enrollment to conventional Phoenix ([#999](https://github.com/MaxPayne89/klass-hero/issues/999)) ([74355f0](https://github.com/MaxPayne89/klass-hero/commit/74355f030dd81ce46438400ad130642799d1365c))
+* flatten Family to conventional Phoenix; remove boundary library ([#986](https://github.com/MaxPayne89/klass-hero/issues/986)) ([6def5fc](https://github.com/MaxPayne89/klass-hero/commit/6def5fcbb8b4d535a1fe5631d1ebc68452ac8e8c))
+* flatten Messaging bounded context to conventional Phoenix ([#1001](https://github.com/MaxPayne89/klass-hero/issues/1001)) ([a80b0c9](https://github.com/MaxPayne89/klass-hero/commit/a80b0c9887b5105b0c20e208838604970afcaabe))
+* flatten Participation to conventional Phoenix ([#997](https://github.com/MaxPayne89/klass-hero/issues/997)) ([e0f4a18](https://github.com/MaxPayne89/klass-hero/commit/e0f4a1860a9722c1fcf2afee75ab1066d1e24d75))
+* flatten Program Catalog to conventional Phoenix; keep CQRS read model ([#995](https://github.com/MaxPayne89/klass-hero/issues/995)) ([1c5d9b4](https://github.com/MaxPayne89/klass-hero/commit/1c5d9b43b3f5a808b85896895b50cc208cd799d6))
+* flatten Provider to conventional Phoenix (7th & final context) ([#1002](https://github.com/MaxPayne89/klass-hero/issues/1002)) ([8004790](https://github.com/MaxPayne89/klass-hero/commit/800479030c8c8a62ccc49ca7e52d5f78098baf0b))
+
 ## [0.54.0](https://github.com/MaxPayne89/klass-hero/compare/v0.53.1...v0.54.0) (2026-06-14)
 
 
