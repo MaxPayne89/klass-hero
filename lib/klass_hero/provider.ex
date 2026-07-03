@@ -27,6 +27,7 @@ defmodule KlassHero.Provider do
   import Ecto.Query, warn: false
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
+  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Application.Queries.ListProgramSessions
   alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
@@ -1022,12 +1023,10 @@ defmodule KlassHero.Provider do
       order_by: [asc: a.assigned_at]
   end
 
-  @session_stats_repo Application.compile_env!(:klass_hero, [:provider, :for_querying_session_stats])
-
   @doc "Returns the total completed session count across all programs for a provider."
   @spec get_total_session_count(String.t()) :: non_neg_integer()
   def get_total_session_count(provider_id) when is_binary(provider_id) do
-    @session_stats_repo.get_total_count(provider_id)
+    SessionStatsRepository.get_total_count(provider_id)
   end
 
   @doc """

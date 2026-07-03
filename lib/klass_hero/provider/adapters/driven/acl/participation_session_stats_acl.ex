@@ -8,36 +8,29 @@ defmodule KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL do
   Used exclusively during ProviderSessionStats projection bootstrap.
   """
 
-  @behaviour KlassHero.Provider.Domain.Ports.ForResolvingSessionStats
-
-  use KlassHero.Shared.Tracing
-
   import Ecto.Query
 
   alias KlassHero.Repo
 
   require Logger
 
-  @impl true
   def list_completed_session_counts do
-    acl_span source: "provider", target: "participation" do
-      results =
-        from(s in "program_sessions",
-          join: p in "programs",
-          on: s.program_id == p.id,
-          where: s.status == "completed",
-          group_by: [p.provider_id, p.id, p.title],
-          select: %{
-            provider_id: type(p.provider_id, :binary_id),
-            program_id: type(p.id, :binary_id),
-            program_title: p.title,
-            sessions_completed_count: count(s.id)
-          }
-        )
-        |> Repo.all()
+    results =
+      from(s in "program_sessions",
+        join: p in "programs",
+        on: s.program_id == p.id,
+        where: s.status == "completed",
+        group_by: [p.provider_id, p.id, p.title],
+        select: %{
+          provider_id: type(p.provider_id, :binary_id),
+          program_id: type(p.id, :binary_id),
+          program_title: p.title,
+          sessions_completed_count: count(s.id)
+        }
+      )
+      |> Repo.all()
 
-      {:ok, results}
-    end
+    {:ok, results}
   rescue
     error ->
       Logger.error("[ParticipationSessionStatsACL] Bootstrap query failed: #{Exception.message(error)}")

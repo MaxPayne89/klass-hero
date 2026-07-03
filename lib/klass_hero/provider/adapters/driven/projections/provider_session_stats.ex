@@ -24,12 +24,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
 
   import Ecto.Query
 
+  alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
-
-  @acl Application.compile_env!(:klass_hero, [:provider, :for_resolving_session_stats])
 
   @impl Projection
   def bootstrap_impl, do: bootstrap_counts()
@@ -44,7 +43,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
   end
 
   defp bootstrap_counts do
-    case @acl.list_completed_session_counts() do
+    case ParticipationSessionStatsACL.list_completed_session_counts() do
       {:ok, []} ->
         0
 

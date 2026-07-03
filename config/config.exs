@@ -17,10 +17,6 @@ alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
-alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProgramRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
@@ -188,14 +184,6 @@ config :klass_hero, :messaging,
   ]
 
 # Participation context needs no port wiring (conventional Phoenix; ACL adapters called directly).
-
-# Configure Provider bounded context
-config :klass_hero, :provider,
-  repo: KlassHero.Repo,
-  for_querying_session_details: SessionDetailsRepository,
-  for_querying_session_stats: SessionStatsRepository,
-  for_resolving_session_stats: ParticipationSessionStatsACL,
-  for_querying_provider_programs: ProviderProgramRepository
 
 config :klass_hero, :resend_req_options, []
 
