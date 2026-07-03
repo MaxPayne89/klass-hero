@@ -20,7 +20,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   describe "staff messaging end-to-end" do

@@ -13,8 +13,8 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHeroWeb.Helpers.DateTimeHelpers
   alias KlassHeroWeb.Theme
 

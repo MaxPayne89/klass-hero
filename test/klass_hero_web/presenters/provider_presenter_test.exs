@@ -1,7 +1,7 @@
 defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHeroWeb.Presenters.ProviderPresenter
 
   describe "verification_status_from_docs/2" do

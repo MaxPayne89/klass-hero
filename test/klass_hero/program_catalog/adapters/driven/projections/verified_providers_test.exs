@@ -3,8 +3,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfileRepository
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   # Use a unique name for each test to avoid conflicts with the supervision tree
@@ -150,19 +150,18 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
       verified_user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider])
 
       {:ok, provider} =
-        ProviderProfileRepository.create_provider_profile(%{
+        Provider.create_provider_profile(%{
           identity_id: verified_user.id,
           business_name: "Verified Business"
         })
 
-      {:ok, verified} = ProviderProfile.verify(provider, admin.id)
-      {:ok, _} = ProviderProfileRepository.update(verified)
+      {:ok, _} = Provider.verify_provider(provider.id, admin.id)
 
       # Also create an unverified provider
       unverified_user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider])
 
       {:ok, unverified_provider} =
-        ProviderProfileRepository.create_provider_profile(%{
+        Provider.create_provider_profile(%{
           identity_id: unverified_user.id,
           business_name: "Unverified Business"
         })
@@ -192,13 +191,12 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
       verified_user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider])
 
       {:ok, provider} =
-        ProviderProfileRepository.create_provider_profile(%{
+        Provider.create_provider_profile(%{
           identity_id: verified_user.id,
           business_name: "Rebuild Test Business"
         })
 
-      {:ok, verified} = ProviderProfile.verify(provider, admin.id)
-      {:ok, _} = ProviderProfileRepository.update(verified)
+      {:ok, _} = Provider.verify_provider(provider.id, admin.id)
 
       # The running test server was started before this provider existed,
       # so it shouldn't know about it yet

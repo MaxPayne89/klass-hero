@@ -22,7 +22,7 @@ defmodule KlassHero.Provider.StaffMember do
 
   `belongs_to :provider` keeps the struct field `provider_id` (the DB column),
   matching the frozen public-API struct shape. The association targets the
-  still-DDD `ProviderProfileSchema` (parked alias — repointed to the flattened
+  still-DDD `ProviderProfile` (parked alias — repointed to the flattened
   `KlassHero.Provider.ProviderProfile` in Slice 5).
   """
 
@@ -32,8 +32,8 @@ defmodule KlassHero.Provider.StaffMember do
 
   # Parked alias to the still-DDD ProviderProfile schema — repointed to the
   # flattened KlassHero.Provider.ProviderProfile in Slice 5.
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.PayRate
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Categories
   alias KlassHero.Shared.Domain.Types.Money
   alias KlassHero.Shared.NameUtils
@@ -58,7 +58,7 @@ defmodule KlassHero.Provider.StaffMember do
   @invitation_expiry_days 7
 
   schema "staff_members" do
-    belongs_to :provider, ProviderProfileSchema, type: :binary_id
+    belongs_to :provider, ProviderProfile, type: :binary_id
     field :first_name, :string
     field :last_name, :string
     field :role, :string

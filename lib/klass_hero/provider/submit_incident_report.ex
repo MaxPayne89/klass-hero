@@ -18,8 +18,8 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   alias KlassHero.Provider.Adapters.Driving.Workers.NotifyIncidentReportedWorker
   alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
   alias KlassHero.Provider.Domain.Events.ProviderEvents
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.Storage

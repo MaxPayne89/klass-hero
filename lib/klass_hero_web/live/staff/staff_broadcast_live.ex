@@ -30,17 +30,6 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
          socket
          |> put_flash(:error, gettext("Provider not found"))
          |> push_navigate(to: ~p"/staff/dashboard")}
-
-      {:error, reason} ->
-        Logger.error("Failed to load provider for staff broadcast",
-          reason: inspect(reason),
-          provider_id: staff_member.provider_id
-        )
-
-        {:ok,
-         socket
-         |> put_flash(:error, gettext("Something went wrong. Please try again."))
-         |> push_navigate(to: ~p"/staff/dashboard")}
     end
   end
 

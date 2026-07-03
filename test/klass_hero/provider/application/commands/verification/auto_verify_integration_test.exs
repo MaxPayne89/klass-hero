@@ -9,7 +9,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
   import KlassHero.EventTestHelper
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfileRepository
+  alias KlassHero.Provider
   alias KlassHero.ProviderFixtures
 
   setup do
@@ -36,13 +36,13 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
       # Approve first doc -- provider should NOT be verified yet
       KlassHero.Provider.approve_verification_document(doc1.id, admin.id)
 
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
+      {:ok, profile} = Provider.get_provider_profile(provider.id)
       assert profile.verified == false
 
       # Approve second doc -- NOW provider should be verified
       KlassHero.Provider.approve_verification_document(doc2.id, admin.id)
 
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
+      {:ok, profile} = Provider.get_provider_profile(provider.id)
       assert profile.verified == true
       assert profile.verified_at != nil
     end
@@ -56,7 +56,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
 
       KlassHero.Provider.approve_verification_document(doc.id, admin.id)
 
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
+      {:ok, profile} = Provider.get_provider_profile(provider.id)
       assert profile.verified == true
     end
   end
@@ -82,7 +82,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
       KlassHero.Provider.approve_verification_document(doc1.id, admin.id)
       KlassHero.Provider.approve_verification_document(doc2.id, admin.id)
 
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
+      {:ok, profile} = Provider.get_provider_profile(provider.id)
       assert profile.verified == true
 
       # Now submit a new doc and have it rejected
@@ -94,7 +94,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegra
 
       KlassHero.Provider.reject_verification_document(doc3.id, admin.id, "Expired")
 
-      {:ok, profile} = ProviderProfileRepository.get(provider.id)
+      {:ok, profile} = Provider.get_provider_profile(provider.id)
       assert profile.verified == false
     end
   end

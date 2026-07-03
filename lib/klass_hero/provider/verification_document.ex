@@ -25,7 +25,7 @@ defmodule KlassHero.Provider.VerificationDocument do
   alias KlassHero.Accounts.User
   # Parked alias to the still-DDD ProviderProfile schema — repointed to the
   # flattened KlassHero.Provider.ProviderProfile in Slice 5.
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
+  alias KlassHero.Provider.ProviderProfile
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -48,7 +48,7 @@ defmodule KlassHero.Provider.VerificationDocument do
     field :rejection_reason, :string
     field :reviewed_at, :utc_datetime_usec
 
-    belongs_to :provider, ProviderProfileSchema,
+    belongs_to :provider, ProviderProfile,
       foreign_key: :provider_profile_id,
       source: :provider_id,
       references: :id

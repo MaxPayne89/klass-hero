@@ -2,15 +2,11 @@ defmodule KlassHero.Provider.Application.Commands.Providers.UpdateProviderProfil
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
 
   setup do
     provider = KlassHero.Factory.insert(:provider_profile_schema)
 
-    mapper = ProviderProfileMapper
-    domain_provider = mapper.to_domain(provider)
-
-    %{provider: domain_provider}
+    %{provider: provider}
   end
 
   describe "update_provider_profile/2" do

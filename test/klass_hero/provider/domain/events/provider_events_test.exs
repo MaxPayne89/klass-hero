@@ -2,8 +2,8 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Provider.Domain.Events.ProviderEvents
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
   describe "incident_reported/3" do

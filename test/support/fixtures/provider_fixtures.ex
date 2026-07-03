@@ -3,10 +3,9 @@ defmodule KlassHero.ProviderFixtures do
   Test helpers for creating entities in the Provider bounded context.
   """
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
@@ -14,7 +13,7 @@ defmodule KlassHero.ProviderFixtures do
   @doc """
   Creates a provider profile for testing.
 
-  Uses the schema directly to insert into database, then maps to domain model.
+  Inserts a provider profile via its changeset and returns the struct.
   """
   def provider_profile_fixture(attrs \\ %{}) do
     attrs_map = Map.new(attrs)
@@ -33,12 +32,12 @@ defmodule KlassHero.ProviderFixtures do
 
     merged = Map.merge(defaults, attrs_map)
 
-    {:ok, schema} =
-      %ProviderProfileSchema{}
-      |> ProviderProfileSchema.changeset(merged)
+    {:ok, profile} =
+      %ProviderProfile{}
+      |> ProviderProfile.changeset(merged)
       |> Repo.insert()
 
-    ProviderProfileMapper.to_domain(schema)
+    profile
   end
 
   @doc """

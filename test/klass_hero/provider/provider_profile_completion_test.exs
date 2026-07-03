@@ -1,11 +1,11 @@
-defmodule KlassHero.Provider.Domain.Models.ProviderProfileCompletionTest do
+defmodule KlassHero.Provider.ProviderProfileCompletionTest do
   @moduledoc """
   Tests for ProviderProfile profile_status field and complete_profile/2.
   """
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
 
   @valid_base_attrs %{
     id: "550e8400-e29b-41d4-a716-446655440000",

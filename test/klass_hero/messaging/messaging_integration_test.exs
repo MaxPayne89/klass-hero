@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging
   alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo
 
   describe "complete direct messaging flow" do

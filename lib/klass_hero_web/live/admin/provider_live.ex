@@ -16,10 +16,10 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
   # credo:disable-for-lines:10 Credo.Check.Design.AliasUsage
   use Backpex.LiveResource,
     adapter_config: [
-      schema: KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema,
+      schema: KlassHero.Provider.ProviderProfile,
       repo: KlassHero.Repo,
-      update_changeset: &KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema.admin_changeset/3,
-      create_changeset: &KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema.admin_changeset/3
+      update_changeset: &KlassHero.Provider.ProviderProfile.admin_changeset/3,
+      create_changeset: &KlassHero.Provider.ProviderProfile.admin_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
     init_order: %{by: :inserted_at, direction: :desc}

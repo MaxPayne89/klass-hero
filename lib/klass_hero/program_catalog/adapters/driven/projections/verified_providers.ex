@@ -95,9 +95,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   end
 
   defp load_verified_ids do
-    case Provider.list_verified_provider_ids() do
-      {:ok, ids} -> MapSet.new(ids)
-      {:error, reason} -> raise "Failed to bootstrap verified providers: #{inspect(reason)}"
-    end
+    {:ok, ids} = Provider.list_verified_provider_ids()
+    MapSet.new(ids)
   end
 end

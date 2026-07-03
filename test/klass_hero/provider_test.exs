@@ -11,7 +11,7 @@ defmodule KlassHero.ProviderTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.ProviderFixtures
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter

@@ -13,16 +13,10 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
   - :verification_document_rejected
   """
 
-  alias KlassHero.Provider.Application.Commands.Providers.UnverifyProvider
-  alias KlassHero.Provider.Application.Commands.Providers.VerifyProvider
+  alias KlassHero.Provider
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
   require Logger
-
-  @profile_repository Application.compile_env!(:klass_hero, [
-                        :provider,
-                        :for_querying_provider_profiles
-                      ])
 
   @doc """
   Handles verification document domain events.
@@ -34,9 +28,9 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
   def handle(%DomainEvent{event_type: :verification_document_approved, payload: payload}) do
     %{provider_id: provider_id, reviewer_id: reviewer_id} = payload
 
-    with {:ok, docs} <- KlassHero.Provider.get_provider_verification_documents(provider_id),
+    with {:ok, docs} <- Provider.get_provider_verification_documents(provider_id),
          true <- all_approved?(docs) do
-      case VerifyProvider.execute(%{provider_id: provider_id, admin_id: reviewer_id}) do
+      case Provider.verify_provider(provider_id, reviewer_id) do
         {:ok, _} ->
           :ok
 
@@ -53,9 +47,9 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.CheckProvider
   def handle(%DomainEvent{event_type: :verification_document_rejected, payload: payload}) do
     %{provider_id: provider_id, reviewer_id: reviewer_id} = payload
 
-    with {:ok, profile} <- @profile_repository.get(provider_id),
+    with {:ok, profile} <- Provider.get_provider_profile(provider_id),
          true <- profile.verified do
-      case UnverifyProvider.execute(%{provider_id: provider_id, admin_id: reviewer_id}) do
+      case Provider.unverify_provider(provider_id, reviewer_id) do
         {:ok, _} ->
           :ok
 

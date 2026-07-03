@@ -1,11 +1,11 @@
-defmodule KlassHero.Provider.Domain.Models.ProviderProfileTest do
+defmodule KlassHero.Provider.ProviderProfileTest do
   @moduledoc """
   Tests for the ProviderProfile domain entity.
   """
 
-  use ExUnit.Case, async: true
+  use KlassHero.DataCase, async: true
 
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
 
   describe "new/1 with valid attributes" do
     test "creates provider profile with all fields" do
@@ -110,6 +110,59 @@ defmodule KlassHero.Provider.Domain.Models.ProviderProfileTest do
       }
 
       refute ProviderProfile.valid?(profile)
+    end
+  end
+
+  describe "changeset/2 (persistence gatekeeper)" do
+    test "requires identity_id and business_name" do
+      changeset = ProviderProfile.changeset(%ProviderProfile{}, %{})
+
+      refute changeset.valid?
+      errors = errors_on(changeset)
+      assert "can't be blank" in errors.identity_id
+      assert "can't be blank" in errors.business_name
+    end
+
+    test "rejects a non-https website" do
+      changeset =
+        ProviderProfile.changeset(%ProviderProfile{}, %{
+          identity_id: Ecto.UUID.generate(),
+          business_name: "Acme",
+          website: "http://insecure.example.com"
+        })
+
+      refute changeset.valid?
+      assert "must start with https://" in errors_on(changeset).website
+    end
+  end
+
+  describe "profile_status as Ecto.Enum" do
+    test "casts the string form to the atom value" do
+      changeset =
+        ProviderProfile.changeset(%ProviderProfile{}, %{
+          identity_id: Ecto.UUID.generate(),
+          business_name: "Acme",
+          profile_status: "draft"
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :profile_status) == :draft
+    end
+
+    test "rejects an unknown status value" do
+      changeset =
+        ProviderProfile.changeset(%ProviderProfile{}, %{
+          identity_id: Ecto.UUID.generate(),
+          business_name: "Acme",
+          profile_status: "archived"
+        })
+
+      refute changeset.valid?
+      assert "is invalid" in errors_on(changeset).profile_status
+    end
+
+    test "defaults to :active on a bare struct" do
+      assert %ProviderProfile{}.profile_status == :active
     end
   end
 end

@@ -11,7 +11,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHeroWeb.Presenters.IncidentReportPresenter
   alias KlassHeroWeb.Theme
 

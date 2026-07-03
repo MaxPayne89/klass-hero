@@ -12,7 +12,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CreateProviderProfil
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
 
   defp valid_attrs(overrides \\ %{}) do
     user =

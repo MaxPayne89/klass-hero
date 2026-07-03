@@ -42,10 +42,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
 
@@ -346,7 +345,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ProviderProfileSchema Ecto schemas.
+  Factory for creating ProviderProfile Ecto schemas.
 
   Used in repository and integration tests where we need database persistence.
 
@@ -361,7 +360,7 @@ defmodule KlassHero.Factory do
     # Outcome: every provider profile is linked to a real user record
     user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider])
 
-    %ProviderProfileSchema{
+    %ProviderProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
       business_name: sequence(:provider_schema_business_name, &"Test Provider #{&1}"),
@@ -373,7 +372,7 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: ["sports", "outdoor"],
-      profile_status: "active"
+      profile_status: :active
     }
   end
 
@@ -385,7 +384,7 @@ defmodule KlassHero.Factory do
   def draft_provider_profile_schema_factory do
     user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:staff, :provider])
 
-    %ProviderProfileSchema{
+    %ProviderProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
       business_name: sequence(:draft_provider_business_name, &"Draft Provider #{&1}"),
@@ -397,7 +396,7 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: [],
-      profile_status: "draft"
+      profile_status: :draft
     }
   end
 

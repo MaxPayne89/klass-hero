@@ -19,8 +19,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.PayRate
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Entitlements
   alias KlassHero.Shared.NameUtils
@@ -171,7 +171,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
       socket
       |> assign(page_title: gettext("Edit Profile"))
       |> assign(active_nav: :home)
-      |> assign(form: to_form(changeset))
+      |> assign(form: to_form(changeset, as: :provider_profile_schema))
       |> assign(doc_type: "business_registration")
       |> stream(:verification_docs, docs, reset: true, dom_id: &"vdoc-#{&1.id}")
 
@@ -441,7 +441,10 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     provider = socket.assigns.current_scope.provider
     changeset = Provider.change_provider_profile(provider, params)
 
-    {:noreply, assign(socket, form: to_form(Map.put(changeset, :action, :validate)))}
+    {:noreply,
+     assign(socket,
+       form: to_form(Map.put(changeset, :action, :validate), as: :provider_profile_schema)
+     )}
   end
 
   @impl true
@@ -482,7 +485,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
              |> push_navigate(to: ~p"/")}
 
           {:error, changeset} ->
-            {:noreply, assign(socket, form: to_form(changeset))}
+            {:noreply, assign(socket, form: to_form(changeset, as: :provider_profile_schema))}
         end
     end
   end
