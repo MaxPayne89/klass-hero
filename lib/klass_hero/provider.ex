@@ -28,7 +28,6 @@ defmodule KlassHero.Provider do
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.ChangeProviderProfile
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Application.Commands.Providers.CompleteProviderProfile
@@ -36,26 +35,26 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Application.Commands.Providers.UnverifyProvider
   alias KlassHero.Provider.Application.Commands.Providers.UpdateProviderProfile
   alias KlassHero.Provider.Application.Commands.Providers.VerifyProvider
-  alias KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProgram
-  alias KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFromProgram
   alias KlassHero.Provider.Application.Queries.ListProgramSessions
-  alias KlassHero.Provider.Application.Queries.ProgramStaffAssignmentQueries
   alias KlassHero.Provider.Application.Queries.ProviderProfileQueries
   alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
-  alias KlassHero.Provider.Domain.Models.ProgramStaffAssignment
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
   alias KlassHero.Provider.Domain.ReadModels.SessionDetail
   alias KlassHero.Provider.Domain.ReadModels.StaffMembership
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.SubmitIncidentReport
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.IntegrationEventPublishing
   alias KlassHero.Shared.Storage
@@ -407,7 +406,24 @@ defmodule KlassHero.Provider do
   @spec assign_staff_to_program(map()) ::
           {:ok, ProgramStaffAssignment.t()}
           | {:error, :already_assigned | :not_found | term()}
-  defdelegate assign_staff_to_program(attrs), to: AssignStaffToProgram, as: :execute
+  def assign_staff_to_program(attrs) when is_map(attrs) do
+    context_span entity: "program_staff_assignment" do
+      with {:ok, staff_member} <- get_staff_member(attrs.staff_member_id),
+           assignment_attrs = Map.put(attrs, :assigned_at, DateTime.utc_now()),
+           {:ok, assignment} <- insert_program_staff_assignment(assignment_attrs) do
+        assignment
+        |> ProviderEvents.staff_assigned_to_program(staff_member)
+        |> dispatch_assignment_event()
+
+        Logger.info("Staff member assigned to program",
+          staff_member_id: assignment.staff_member_id,
+          program_id: assignment.program_id
+        )
+
+        {:ok, assignment}
+      end
+    end
+  end
 
   @doc """
   Unassigns a staff member from a program.
@@ -418,9 +434,65 @@ defmodule KlassHero.Provider do
   """
   @spec unassign_staff_from_program(String.t(), String.t()) ::
           {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | term()}
-  defdelegate unassign_staff_from_program(program_id, staff_member_id),
-    to: UnassignStaffFromProgram,
-    as: :execute
+  def unassign_staff_from_program(program_id, staff_member_id)
+      when is_binary(program_id) and is_binary(staff_member_id) do
+    context_span entity: "program_staff_assignment" do
+      with {:ok, staff_member} <- get_staff_member(staff_member_id),
+           {:ok, assignment} <- unassign_program_staff_assignment(program_id, staff_member_id) do
+        assignment
+        |> ProviderEvents.staff_unassigned_from_program(staff_member)
+        |> dispatch_assignment_event()
+
+        Logger.info("Staff member unassigned from program",
+          staff_member_id: staff_member_id,
+          program_id: program_id
+        )
+
+        {:ok, assignment}
+      end
+    end
+  end
+
+  # Non-critical fire-and-forget fan-out (no critical_event_handlers entry for
+  # these topics → PubSub-only, no Oban durability — preserved from the former
+  # AssignStaffToProgram/UnassignStaffFromProgram use cases).
+  defp dispatch_assignment_event(event), do: DomainEventBus.dispatch(__MODULE__, event)
+
+  defp insert_program_staff_assignment(attrs) do
+    %ProgramStaffAssignment{}
+    |> ProgramStaffAssignment.create_changeset(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, assignment} ->
+        {:ok, assignment}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        if EctoErrorHelpers.any_unique_constraint_violation?(changeset.errors) do
+          {:error, :already_assigned}
+        else
+          {:error, changeset}
+        end
+    end
+  end
+
+  defp unassign_program_staff_assignment(program_id, staff_member_id) do
+    ProgramStaffAssignment
+    |> where(
+      [a],
+      a.program_id == ^program_id and a.staff_member_id == ^staff_member_id and
+        is_nil(a.unassigned_at)
+    )
+    |> Repo.one()
+    |> case do
+      nil ->
+        {:error, :not_found}
+
+      assignment ->
+        assignment
+        |> ProgramStaffAssignment.unassign_changeset()
+        |> Repo.update()
+    end
+  end
 
   @doc "Retrieves a provider profile by identity ID."
   def get_provider_by_identity(identity_id) when is_binary(identity_id) do
@@ -810,7 +882,9 @@ defmodule KlassHero.Provider do
           ProgramStaffAssignment.t()
         ]
   def list_active_assignments_for_program(program_id) when is_binary(program_id) do
-    ProgramStaffAssignmentQueries.list_active_for_program(program_id)
+    active_assignments_query()
+    |> where([a], a.program_id == ^program_id)
+    |> Repo.all()
   end
 
   @doc """
@@ -822,7 +896,7 @@ defmodule KlassHero.Provider do
   @spec list_active_staff_for_program(String.t()) :: [StaffMember.t()]
   def list_active_staff_for_program(program_id) when is_binary(program_id) do
     from(s in StaffMember,
-      join: a in ProgramStaffAssignmentSchema,
+      join: a in ProgramStaffAssignment,
       on: a.staff_member_id == s.id and a.provider_id == s.provider_id,
       where: a.program_id == ^program_id and is_nil(a.unassigned_at) and s.active == true,
       order_by: [asc: a.assigned_at],
@@ -837,7 +911,9 @@ defmodule KlassHero.Provider do
           ProgramStaffAssignment.t()
         ]
   def list_active_assignments_for_provider(provider_id) when is_binary(provider_id) do
-    ProgramStaffAssignmentQueries.list_active_for_provider(provider_id)
+    active_assignments_query()
+    |> where([a], a.provider_id == ^provider_id)
+    |> Repo.all()
   end
 
   @doc "Lists all active program assignments for a staff member."
@@ -845,7 +921,17 @@ defmodule KlassHero.Provider do
           ProgramStaffAssignment.t()
         ]
   def list_active_assignments_for_staff_member(staff_member_id) when is_binary(staff_member_id) do
-    ProgramStaffAssignmentQueries.list_active_for_staff_member(staff_member_id)
+    active_assignments_query()
+    |> where([a], a.staff_member_id == ^staff_member_id)
+    |> Repo.all()
+  end
+
+  # Active assignments (never unassigned), oldest-first — shared base for the
+  # three list_active_assignments_* reads above.
+  defp active_assignments_query do
+    from a in ProgramStaffAssignment,
+      where: is_nil(a.unassigned_at),
+      order_by: [asc: a.assigned_at]
   end
 
   @session_stats_repo Application.compile_env!(:klass_hero, [:provider, :for_querying_session_stats])

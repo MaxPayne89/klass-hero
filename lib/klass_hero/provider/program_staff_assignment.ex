@@ -1,12 +1,12 @@
-defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema do
+defmodule KlassHero.Provider.ProgramStaffAssignment do
   @moduledoc """
-  Ecto schema for the program_staff_assignments table.
+  Schema-as-struct for the `program_staff_assignments` table.
 
   Tracks which staff members are assigned to which programs for a provider.
-  A staff member can only have one active assignment per program (enforced via
-  partial unique index on program_id + staff_member_id where unassigned_at IS NULL).
-
-  Use a mapper to convert between this schema and domain entities.
+  A staff member can only have one active assignment per program, enforced via
+  a partial unique index on `program_id + staff_member_id` where
+  `unassigned_at IS NULL`. Soft-deleting (setting `unassigned_at`) lifts that
+  constraint and allows future re-assignment.
   """
 
   use Ecto.Schema
@@ -30,14 +30,16 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAss
     timestamps()
   end
 
+  @type t :: %__MODULE__{}
+
   @castable_fields ~w(program_id assigned_at)a
   @optional_fields ~w(unassigned_at)a
 
   @doc """
   Changeset for creating a new program staff assignment.
 
-  provider_id and staff_member_id are set programmatically, not from user input.
-  assigned_at must be set by the caller (use DateTime.utc_now/0).
+  `provider_id` and `staff_member_id` are set programmatically, not cast from
+  user input. `assigned_at` must be supplied by the caller (`DateTime.utc_now/0`).
   """
   def create_changeset(schema \\ %__MODULE__{}, attrs) do
     schema
@@ -57,10 +59,15 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAss
   @doc """
   Changeset for unassigning a staff member from a program.
 
-  Sets unassigned_at to the current UTC time, which lifts the partial unique
+  Sets `unassigned_at` to the current UTC time, which lifts the partial unique
   index constraint and allows future re-assignment.
   """
   def unassign_changeset(schema) do
     change(schema, %{unassigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)})
   end
+
+  @doc "Returns true when the assignment is still active (never unassigned)."
+  @spec active?(t()) :: boolean()
+  def active?(%__MODULE__{unassigned_at: nil}), do: true
+  def active?(%__MODULE__{}), do: false
 end

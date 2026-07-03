@@ -4,9 +4,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Repo
 
   @tag :bootstrap
@@ -62,8 +62,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
       )
 
     {:ok, _assignment} =
-      %ProgramStaffAssignmentSchema{}
-      |> ProgramStaffAssignmentSchema.create_changeset(%{
+      %ProgramStaffAssignment{}
+      |> ProgramStaffAssignment.create_changeset(%{
         provider_id: provider.id,
         staff_member_id: staff.id,
         program_id: program.id,
@@ -115,8 +115,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
     second_assigned_at = ~U[2026-04-02 09:00:00Z]
 
     {:ok, _} =
-      %ProgramStaffAssignmentSchema{}
-      |> ProgramStaffAssignmentSchema.create_changeset(%{
+      %ProgramStaffAssignment{}
+      |> ProgramStaffAssignment.create_changeset(%{
         provider_id: provider.id,
         staff_member_id: first_staff.id,
         program_id: program.id,
@@ -125,8 +125,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
       |> Repo.insert()
 
     {:ok, _} =
-      %ProgramStaffAssignmentSchema{}
-      |> ProgramStaffAssignmentSchema.create_changeset(%{
+      %ProgramStaffAssignment{}
+      |> ProgramStaffAssignment.create_changeset(%{
         provider_id: provider.id,
         staff_member_id: second_staff.id,
         program_id: program.id,

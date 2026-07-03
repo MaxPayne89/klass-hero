@@ -5,9 +5,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
   import ExUnit.CaptureLog
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -88,8 +88,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         )
 
       {:ok, _assignment} =
-        %ProgramStaffAssignmentSchema{}
-        |> ProgramStaffAssignmentSchema.create_changeset(%{
+        %ProgramStaffAssignment{}
+        |> ProgramStaffAssignment.create_changeset(%{
           provider_id: provider.id,
           staff_member_id: staff.id,
           program_id: program.id,

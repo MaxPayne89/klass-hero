@@ -11,9 +11,9 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   All events are returned as `DomainEvent` structs.
   """
 
-  alias KlassHero.Provider.Domain.Models.ProgramStaffAssignment
   alias KlassHero.Provider.Domain.Models.ProviderProfile
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent

@@ -18,7 +18,6 @@ alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
 alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramStaffAssignmentRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfileRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProgramRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
@@ -196,8 +195,6 @@ config :klass_hero, :provider,
   repo: KlassHero.Repo,
   for_storing_provider_profiles: ProviderProfileRepository,
   for_querying_provider_profiles: ProviderProfileRepository,
-  for_storing_program_staff_assignments: ProgramStaffAssignmentRepository,
-  for_querying_program_staff_assignments: ProgramStaffAssignmentRepository,
   for_querying_session_details: SessionDetailsRepository,
   for_querying_session_stats: SessionStatsRepository,
   for_resolving_session_stats: ParticipationSessionStatsACL,

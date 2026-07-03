@@ -1,19 +1,19 @@
-defmodule KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProgramTest do
+defmodule KlassHero.Provider.AssignStaffToProgramTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProgram
-  alias KlassHero.Provider.Domain.Models.ProgramStaffAssignment
+  alias KlassHero.Provider
+  alias KlassHero.Provider.ProgramStaffAssignment
 
-  describe "execute/1" do
-    test "creates assignment and returns domain model" do
+  describe "assign_staff_to_program/1" do
+    test "creates assignment and returns the flat struct" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
       staff = insert(:staff_member_schema, provider_id: provider.id)
 
       assert {:ok, %ProgramStaffAssignment{} = assignment} =
-               AssignStaffToProgram.execute(%{
+               Provider.assign_staff_to_program(%{
                  provider_id: provider.id,
                  program_id: program.id,
                  staff_member_id: staff.id
@@ -37,8 +37,8 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProg
         staff_member_id: staff.id
       }
 
-      assert {:ok, _} = AssignStaffToProgram.execute(attrs)
-      assert {:error, :already_assigned} = AssignStaffToProgram.execute(attrs)
+      assert {:ok, _} = Provider.assign_staff_to_program(attrs)
+      assert {:error, :already_assigned} = Provider.assign_staff_to_program(attrs)
     end
 
     test "returns not_found when staff member does not exist" do
@@ -46,7 +46,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProg
       program = insert(:program_schema, provider_id: provider.id)
 
       assert {:error, :not_found} =
-               AssignStaffToProgram.execute(%{
+               Provider.assign_staff_to_program(%{
                  provider_id: provider.id,
                  program_id: program.id,
                  staff_member_id: Ecto.UUID.generate()

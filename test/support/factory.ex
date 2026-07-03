@@ -42,10 +42,10 @@ defmodule KlassHero.Factory do
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
 
@@ -481,7 +481,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ProgramStaffAssignmentSchema Ecto schemas.
+  Factory for creating ProgramStaffAssignment Ecto structs.
 
   Inserts a provider profile, a program, and a staff member as prerequisites.
   Used in repository and integration tests that need a persisted staff assignment.
@@ -496,7 +496,7 @@ defmodule KlassHero.Factory do
     program = insert(:program_schema, provider_id: provider.id)
     staff = insert(:staff_member_schema, provider_id: provider.id)
 
-    %ProgramStaffAssignmentSchema{
+    %ProgramStaffAssignment{
       id: Ecto.UUID.generate(),
       provider_id: provider.id,
       program_id: program.id,
