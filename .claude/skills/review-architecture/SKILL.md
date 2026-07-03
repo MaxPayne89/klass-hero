@@ -1,9 +1,9 @@
 ---
 name: review-architecture
 description: >-
-  Review code changes for DDD/Ports & Adapters architecture compliance by
-  spawning the architecture-reviewer (12 structural checks), boundary-checker
-  (6 semantic violation checks), and regression-analyzer (8 behaviour-
+  Review code changes for conventional-Phoenix convention compliance by
+  spawning the architecture-reviewer (8 structural checks), boundary-checker
+  (5 semantic violation checks), and regression-analyzer (8 behaviour-
   preservation checks) agents in parallel. Consolidates findings into a unified
   report. Use when: reviewing a PR, checking architecture before merge,
   validating structural changes, or after modifying bounded context code.
@@ -12,8 +12,9 @@ description: >-
 
 # Review Architecture
 
-Run a comprehensive DDD/Ports & Adapters architecture review by dispatching three
-specialized agents in parallel, then consolidating their reports.
+Run a comprehensive conventional-Phoenix convention review (post-flatten:
+schema-as-struct, no ports/DI/Boundary, cross-context via facade) by dispatching
+three specialized agents in parallel, then consolidating their reports.
 
 **Type:** Rigid workflow. Follow steps exactly.
 
@@ -52,7 +53,7 @@ From the changed file paths, extract which bounded contexts are touched:
 
 - `lib/klass_hero/enrollment/...` -> Enrollment
 - `lib/klass_hero/family/...` -> Family
-- `config/config.exs` -> Cross-cutting (DI wiring)
+- `config/config.exs` -> Cross-cutting (event handlers, scopes)
 
 Display: `Affected contexts: Enrollment, Family, Shared`
 
@@ -68,20 +69,22 @@ Use the `architecture-reviewer` subagent. In the prompt, provide:
 
 - The list of changed files
 - The affected contexts
-- Instruction to focus the 12 checks on changed files and their surrounding context
+- Instruction to focus the 8 checks on changed files and their surrounding context
 
 Example prompt:
 
 ```
-Review these changed files for DDD/Ports & Adapters architecture compliance.
-Focus your 12 checks on these files and the contexts they belong to.
+Review these changed files for conventional-Phoenix convention compliance
+(schema-as-struct; no reintroduced ports/DI/Boundary; cross-context via facade;
+correct placement of projections/events/workers/ACL).
+Focus your 8 checks on these files and the contexts they belong to.
 
 Changed files:
 <file list>
 
 Affected contexts: <context list>
 
-Run all 12 checks but scope them to the changed files and their immediate
+Run all 8 checks but scope them to the changed files and their immediate
 context directories. Report findings in your standard output format.
 ```
 
@@ -102,7 +105,7 @@ Scope: changed-files
 Changed files:
 <file list>
 
-Run all 6 checks scoped to these files and their immediate references.
+Run all 5 checks scoped to these files and their immediate references.
 Report findings in your standard output format.
 ```
 
@@ -136,9 +139,9 @@ Once both agents complete, merge their findings into a single unified report.
 ### Deduplication
 
 Agents may flag the same issue from different angles:
-- Cross-context schema access → caught by architecture-reviewer Check 8 AND boundary-checker Check 2
-- Domain model purity drift → caught by architecture-reviewer Check 11 AND boundary-checker Check 5
-- A pattern widened in a use case → may surface as regression-analyzer Check 1 AND architecture-reviewer Check 5 (use case structure)
+- Cross-context access → caught by architecture-reviewer Check 4 (facade) AND boundary-checker Check 1/2
+- Read-model / event-struct purity → caught by architecture-reviewer Check 7/8 AND boundary-checker Check 4
+- A reintroduced port/DI → architecture-reviewer Check 3 AND (if it changes a config-read side effect) regression-analyzer
 
 Deduplicate by matching on the same file + line + violation type. Keep the more detailed description. For overlaps between regression-analyzer and the other two, prefer the regression-analyzer's framing — it speaks specifically to behaviour preservation, which is the action-shaping concern.
 
@@ -155,10 +158,10 @@ Deduplicate by matching on the same file + line + violation type. Keep the more 
 
 | Source | Checks | Passed | Violations | Warnings |
 |--------|--------|--------|------------|----------|
-| Structure (architecture-reviewer) | 12 | N | N | N |
-| Boundaries (boundary-checker) | 6 | N | N | N |
+| Structure (architecture-reviewer) | 8 | N | N | N |
+| Boundaries (boundary-checker) | 5 | N | N | N |
 | Behaviour (regression-analyzer) | 8 | N | N | N |
-| **Total** | **26** | **N** | **N** | **N** |
+| **Total** | **21** | **N** | **N** | **N** |
 
 ## Violations
 

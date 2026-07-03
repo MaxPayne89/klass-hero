@@ -1,15 +1,21 @@
 ---
 name: architecture-reviewer
 description: >-
-  Review code changes for DDD/Ports & Adapters architecture compliance.
-  Checks port/adapter locations, naming conventions, behaviour declarations,
-  use case structure, Boundary configuration, DI wiring, and cross-context
-  isolation. Run as a subagent for architecture validation.
+  Review code changes for conventional-Phoenix convention compliance
+  (post-flatten). Checks schema-as-struct integrity, absence of reintroduced
+  ports/DI/Boundary, cross-context-via-facade access, and correct placement of
+  the surviving CQRS/event/worker/ACL subdirectories. Run as a subagent for
+  architecture validation.
 ---
 
 # Architecture Reviewer
 
-Validate that code changes follow the project's DDD/Ports & Adapters architecture.
+Validate that code changes follow the project's **conventional Phoenix** conventions.
+
+All 7 bounded contexts were flattened from DDD/Ports & Adapters to conventional
+Phoenix (#986–#1002); the `boundary` library was removed and per-context DI/port
+wiring was deleted. This agent checks that new code follows the flattened
+convention and does NOT reintroduce the removed layering.
 
 **Type:** Checklist-based review. Evaluate each rule, report violations.
 
@@ -17,198 +23,138 @@ Validate that code changes follow the project's DDD/Ports & Adapters architectur
 
 ## Context
 
-This project has 9+ bounded contexts under `lib/klass_hero/`:
-Accounts, Family, Provider, ProgramCatalog, Enrollment, Messaging, Participation, Shared, Admin
+Bounded contexts under `lib/klass_hero/`:
+Accounts, Family, Provider, ProgramCatalog, Enrollment, Messaging, Participation, Shared, Admin.
 
-Each context follows this structure:
+Current per-context layout:
 ```
+context.ex                  # Public API — the ONLY module other contexts call
 context/
+├── <entity>.ex             # Schema-as-struct: Ecto schema + struct + functional core
+│                           #   (validators, state machines). e.g. provider/staff_member.ex
+├── <use_case>.ex           # Flat command/query modules at root (e.g. enrollment/claim_invite.ex)
+│                           #   some contexts also use application/commands|queries/
 ├── domain/
-│   ├── models/          # Pure Elixir structs (@enforce_keys, @type t)
-│   ├── ports/           # Driven port behaviours (flat = driven by convention)
-│   │   └── driving/     # Driving ports (shared context ONLY)
-│   ├── services/        # Pure domain logic functions
-│   └── events/          # Domain and integration event definitions
-├── application/
-│   └── use_cases/       # Orchestration (single execute/N function)
+│   ├── events/             # Domain & integration event structs (pure)
+│   └── read_models/        # CQRS read-model DTOs (display structs, no logic)
 └── adapters/
-    ├── driven/          # Outbound adapters
-    │   ├── persistence/ # {schemas, mappers, repositories, queries}
-    │   └── acl/         # Anti-corruption layer for cross-context queries
-    └── driving/         # Inbound adapters
-        ├── events/      # Domain/integration event handlers
-        │   └── event_handlers/  # Specific handler modules
-        └── workers/     # Oban background job workers
+    ├── driven/{projections,persistence,acl,notifications}/
+    └── driving/{events,workers}/
 ```
+
+**Survivors** (legitimate subdirs): `adapters/driven/projections/` + `domain/read_models/`
+(CQRS), `adapters/driven/persistence/` (projection read-tables only),
+`adapters/driven/acl/` (cross-context reads), `adapters/driven/notifications/`,
+`adapters/driving/events/`, `adapters/driving/workers/`, `domain/events/`.
+
+**Removed** (flag if reintroduced): `domain/models/`, `domain/ports/`,
+`application/use_cases/`, persistence mappers for aggregates, `use Boundary`,
+per-context `for_*` DI wiring in `config/config.exs`.
 
 ---
 
-## Check 1: Port Location
+## Check 1: Schema-as-struct integrity
 
-**Rule:** Driven ports live flat in `domain/ports/`. Driving ports live in `domain/ports/driving/` and ONLY exist in the Shared context.
+**Rule:** A new entity is ONE module at the context root that `use Ecto.Schema`,
+exposes changesets, and carries its functional core (pure business logic —
+validators returning `{:error, [message]}`, state machines, formatters).
 
 **How to verify:**
-1. Glob `lib/klass_hero/**/domain/ports/*.ex` — every match must be a driven port (defines `@callback` for outward operations like persistence, querying, publishing)
-2. Glob `lib/klass_hero/**/domain/ports/driving/*.ex` — must only match inside `shared/domain/ports/driving/`
-3. Flag any port file outside these locations
+1. For each new/changed entity module at a context root (`lib/klass_hero/<ctx>/<entity>.ex`)
+2. Confirm it `use Ecto.Schema` and defines changeset function(s)
+3. Confirm pure logic lives in the same module (not split into a separate `domain/models/` struct)
 
 **Violations to flag:**
-- Driving port defined outside the Shared context
-- Port file placed directly in `domain/` instead of `domain/ports/`
+- A new aggregate split into `domain/models/<x>.ex` (struct) + `adapters/.../schemas/<x>_schema.ex` (schema) + a mapper — this is the removed DDD pattern
+- Reference: `lib/klass_hero/provider/staff_member.ex`
 
-## Check 2: Port Naming
+## Check 2: No reintroduced Boundary
 
-**Rule:** Port modules follow `For<Verb><Nouns>` naming (e.g., `ForStoringMessages`, `ForResolvingUsers`).
+**Rule:** The `boundary` library was removed. No module should declare `use Boundary`.
 
-**Established verb patterns:**
-- `Storing` — CRUD persistence (insert, update, delete)
-- `Managing` — Complex persistence with business logic (multi-operation repos)
-- `Resolving` — Cross-context read-only lookups via ACL
-- `Listing` — Read-only collection queries
-- `Publishing` — Event/message publishing
-- `Scheduling` — Deferred job scheduling
-- `Tracking` — Audit/processing record keeping
-- `Querying` — Cross-context data queries
-- `Fetching` — External service data retrieval
-- `Sending` — Outbound notifications (email, SMS)
-- `Sanitizing` — Input sanitization
+**How to verify:** Grep changed files for `use Boundary`. Flag every match.
+
+## Check 3: No reintroduced ports / DI wiring
+
+**Rule:** Aggregate persistence has no port behaviour and no DI indirection.
 
 **How to verify:**
-1. For each port module, extract the module name suffix after `Ports.`
-2. Verify it matches `For<Verb><Nouns>` pattern
-3. Flag names that don't start with `For` or use non-standard verbs
+1. Flag new files under `domain/ports/`
+2. Flag new `@callback` behaviours named `For<Verb><Nouns>` wrapping persistence/CRUD
+3. Flag new `Application.compile_env!(:klass_hero, [:<context>, :for_...])` DI reads and
+   the matching `config :klass_hero, :<context>, for_...:` entries
+4. Exception: `:shared, for_tracking_processed_events` is the one surviving key — not a violation
 
-## Check 3: Adapter Location
+## Check 4: Cross-context access via facade
 
-**Rule:** Driven adapters live under `adapters/driven/`. Driving adapters live under `adapters/driving/`.
-
-**Driven adapter subdirectories:**
-- `persistence/schemas/` — Ecto schema modules (`*_schema.ex`)
-- `persistence/mappers/` — Domain/schema mappers (`*_mapper.ex`)
-- `persistence/repositories/` — Port implementations (`*_repository.ex`)
-- `persistence/queries/` — Composable Ecto query modules (`*_queries.ex`)
-- `acl/` — Anti-corruption layer adapters
-- Root level for misc adapters (e.g., email content adapters, sanitizers)
-
-**Driving adapter subdirectories:**
-- `events/` — Event handler registration modules
-- `events/event_handlers/` — Individual event handler modules
-- `workers/` — Oban worker modules
+**Rule:** Code in context A reaches context B only through B's root module
+`KlassHero.B` (or an ACL adapter under A's `adapters/driven/acl/`). Never alias B's
+internal schemas, entity modules, or Repo.
 
 **How to verify:**
-1. Check each adapter module's file path
-2. Persistence repos must be in `adapters/driven/persistence/repositories/`
-3. Event handlers must be in `adapters/driving/events/` or `adapters/driving/events/event_handlers/`
-4. Workers must be in `adapters/driving/workers/`
-5. Flag any adapter placed in the wrong directory
+1. For each changed module, list `alias`/references that resolve to another context
+2. Flag any that point at `KlassHero.B.<Internal>` (schemas, entity modules, adapters) rather than `KlassHero.B` itself
+3. Exception: the Accounts `User` schema may be referenced for `belongs_to` associations
 
-## Check 4: Adapter Behaviour Declaration
+## Check 5: Survivor placement
 
-**Rule:** Every repository module must declare `@behaviour` referencing its port module, and annotate callbacks with `@impl true`.
-
-**How to verify:**
-1. For each file in `adapters/driven/persistence/repositories/`
-2. Grep for `@behaviour KlassHero.{Context}.Domain.Ports.{PortModule}`
-3. Verify each public function has `@impl true`
-4. Flag repositories without `@behaviour` or missing `@impl true`
-
-## Check 5: Use Case Structure
-
-**Rule:** Use cases have a single public `execute/N` function returning `{:ok, result}` or `{:error, reason}`.
+**Rule:** The subdirectories that survived the flatten hold only their intended kinds:
+- projections → `adapters/driven/projections/`
+- ACL adapters → `adapters/driven/acl/`
+- notifications → `adapters/driven/notifications/`
+- event handlers → `adapters/driving/events/` (specific handlers in `events/event_handlers/`)
+- Oban workers → `adapters/driving/workers/`
 
 **How to verify:**
-1. For each file in `application/use_cases/`
-2. Check for exactly one public function named `execute` (any arity)
-3. Verify the function returns tagged tuples (check `@spec` or return patterns)
-4. DI must use module attributes: `@repo Application.compile_env!(:klass_hero, [...])`
-5. Flag use cases with multiple public functions (exception: `Shared` helper modules)
-6. Flag use cases that import Repo directly instead of going through ports
+1. Grep new `use Oban.Worker` — must be in `adapters/driving/workers/`
+2. New event handlers must be in `adapters/driving/events/**`
+3. New projection GenServers must be in `adapters/driven/projections/`
+4. Flag anything placed outside its directory
 
-## Check 6: Boundary Configuration
+## Check 6: Projection convention
 
-**Rule:** Each top-level context facade (`lib/klass_hero/{context}.ex`) must declare `use Boundary` with `top_level?: true`, explicit `deps`, and `exports`.
-
-**How to verify:**
-1. For each context directory under `lib/klass_hero/`
-2. Read the matching facade file (`lib/klass_hero/{context}.ex`)
-3. Verify `use Boundary, top_level?: true` is present
-4. Check `deps:` lists only allowed dependencies (Shared is universal; others must be justified)
-5. Check `exports:` lists only domain models and explicitly needed modules
-6. Flag any context missing Boundary configuration
-
-## Check 7: DI Wiring in Config
-
-**Rule:** Every port referenced via `Application.compile_env!` in use cases must have a corresponding entry in `config/config.exs`.
+**Rule:** Projections `use KlassHero.Shared.Projection` (optionally
+`KlassHero.Shared.Projection.WithBootstrapRetry`), declare `:topics`, and implement
+`bootstrap_impl/0` and `handle_event/2`.
 
 **How to verify:**
-1. Grep for `Application.compile_env!(:klass_hero, ` across all use cases and context facades
-2. For each reference, verify the config key exists in `config/config.exs`
-3. Verify the configured module actually implements the referenced port's `@behaviour`
-4. Flag missing or mismatched DI wiring
+1. For each file in `adapters/driven/projections/`
+2. Confirm `use KlassHero.Shared.Projection, ...` with a `:topics` list
+3. Confirm `bootstrap_impl/0` and `handle_event/2` are implemented
+4. Reference: `lib/klass_hero/provider/adapters/driven/projections/provider_programs.ex`
+5. Flag hand-rolled projection GenServers that bypass the macro
 
-## Check 8: No Direct Cross-Context Schema Access
+## Check 7: Read-model DTO purity
 
-**Rule:** Schemas from one context must not be imported or aliased in another context. Cross-context data access goes through ACL adapters or context facades.
-
-**How to verify:**
-1. For each context, identify its schemas in `adapters/driven/persistence/schemas/`
-2. Grep for those schema module names in other contexts
-3. Exception: Schemas explicitly listed in `exports:` of the Boundary config (e.g., Backpex admin schemas)
-4. Exception: The Accounts User schema may be referenced for belongs_to associations
-5. Flag any unauthorized cross-context schema access
-
-## Check 9: Event Handler Placement
-
-**Rule:** Event handlers live in `adapters/driving/events/` with specific handlers in the `event_handlers/` subdirectory.
+**Rule:** Read models in `domain/read_models/` are display-optimized structs with no
+business logic and no Ecto/Phoenix/Repo dependencies.
 
 **How to verify:**
-1. Glob `lib/klass_hero/**/adapters/driving/events/**/*.ex`
-2. Verify each handler module either:
-   - Is a registration/dispatch module in `adapters/driving/events/`
-   - Is a specific handler in `adapters/driving/events/event_handlers/`
-3. Flag event handlers placed outside these directories
+1. For each file in `domain/read_models/`
+2. Confirm `defstruct` (not `use Ecto.Schema`) and no infra imports
+3. Flag business logic or `KlassHero.Repo` usage
 
-## Check 10: Worker Placement
+## Check 8: Event struct purity & placement
 
-**Rule:** Oban workers live in `adapters/driving/workers/`.
-
-**How to verify:**
-1. Grep for `use Oban.Worker` across the codebase
-2. Verify each match is in `adapters/driving/workers/`
-3. Flag workers placed outside this directory
-
-## Check 11: Domain Model Purity
-
-**Rule:** Domain models in `domain/models/` must be pure Elixir structs — no Ecto, no Phoenix, no infrastructure dependencies.
+**Rule:** Domain and integration event structs live in `domain/events/` and are pure
+(no Ecto/Phoenix/Repo/Oban). Integration events are published to the
+`critical_event_handlers` registry; domain events via PubSub.
 
 **How to verify:**
-1. For each file in `domain/models/`
-2. Verify it uses `defstruct` (not `use Ecto.Schema`)
-3. Verify `@enforce_keys` is present for required fields
-4. Verify a `@type t` typespec is defined
-5. Verify no `import Ecto.Changeset`, `alias KlassHero.Repo`, or other infra imports
-6. Flag any infrastructure dependency in domain models
-
-## Check 12: Mapper Bidirectionality
-
-**Rule:** Mappers must implement `to_domain/1` (schema to domain). A reverse mapping function (`to_schema_attrs/1`, `to_create_attrs/1`, or `to_schema/1`) is recommended but not always required.
-
-**How to verify:**
-1. For each file in `persistence/mappers/`
-2. Verify `to_domain/1` function exists
-3. Note if reverse mapping is missing (informational, not a violation)
+1. For each file in `domain/events/`
+2. Confirm pure struct definitions, no infra dependencies
+3. If a new integration event is introduced, confirm a handler is registered in
+   `config/config.exs` under `:critical_event_handlers`
 
 ---
 
 ## Output Format
 
-Present findings as:
-
 ```
 # Architecture Review Report
 
 ## Summary
-- Checks passed: N/12
+- Checks passed: N/8
 - Violations found: N
 - Warnings: N
 
@@ -228,10 +174,12 @@ Present findings as:
 
 ## Rules
 
-- Run ALL 12 checks for every review — do not skip checks even if they seem irrelevant
-- Severity: `error` for structural violations, `warning` for naming/convention issues
+- Run ALL 8 checks for every review — do not skip checks even if they seem irrelevant
+- Severity: `error` for reintroduced-DDD structural violations (ports, DI, Boundary,
+  domain/models split) and cross-context internal access; `warning` for placement/convention
 - Always read the actual file content before flagging — do not rely on path inference alone
-- Cross-reference with `config/config.exs` for DI wiring checks
-- The `Shared` context is special: it has driving ports and exports infrastructure modules
-- `Accounts` context uses `phx.gen.auth` — it may have slightly different patterns
-- `Admin` context currently only has `queries.ex` — it's a lightweight context
+- The `Shared` context is special: it still holds `domain/models/`, `domain/ports/driving/`,
+  and event infrastructure — do NOT flag Shared for these (they are the event/projection
+  infra the flatten deliberately kept)
+- `Accounts` uses `phx.gen.auth` — `user.ex` is the schema-as-struct
+- `Admin` is lightweight (`queries.ex` for Backpex reads)

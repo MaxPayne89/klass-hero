@@ -87,9 +87,9 @@ Domain modeling patterns for Phoenix applications and DDD.
 
 - Defines explicit contracts that modules must implement
 - Compile-time verification of implementations
-- Perfect for ports/adapters pattern (DDD infrastructure layer)
+- Good for genuinely swappable implementations (feature-flag adapters, external service clients)
 
-**Key principle:** Use behaviours for interchangeable implementations (repositories, external services). Protocols for data, behaviours for modules.
+**Key principle:** Use behaviours only where implementations are actually interchangeable. This codebase flattened away aggregate persistence ports (#986–#1002) — do NOT introduce a behaviour just to wrap `Repo`. Protocols for data, behaviours for modules.
 
 ---
 
@@ -134,13 +134,14 @@ Domain modeling patterns for Phoenix applications and DDD.
 
 ---
 
-## Pattern 11: Repository Pattern — Context APIs
+## Pattern 11: Schema-as-Struct — Data Access via the Context Module
 
-- Abstracts data access from domain logic
-- Enables swapping storage implementations
-- Provides domain-specific query interfaces
+- One module per entity is the Ecto schema, the struct callers match on, and the functional core (validators, state machines) — no separate domain model, mapper, or repository
+- The context module (`<context>.ex`) is the public data-access API and calls `Repo` directly; no port/behaviour wraps persistence
+- Fewer files and less indirection, at the deliberate cost of swappable storage (a trade this project decided it doesn't need)
 
-**Key principle:** Consumers don't know about Repo or queries. The context translates domain requests into data operations.
+**Key principle:** New query and persistence code goes in the context module (`<context>.ex`), and new validation goes in the entity's changesets — not in a repository or port layer. Canonical example: `lib/klass_hero/provider/staff_member.ex`. Persistence subdirectories (`adapters/driven/persistence/`) are reserved for CQRS projection read-tables only.
+
 
 ---
 

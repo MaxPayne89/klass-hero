@@ -236,10 +236,10 @@ test "successful submit fires the invite + flash + patch", %{conn: conn, current
 end
 ```
 
-If the LV invokes `Family.send_child_invite/2` directly (no port), and `Family` is a context module, you have two options:
+If the LV invokes `Family.send_child_invite/2` directly (the context module — the codebase is conventional Phoenix, no persistence ports), you have two options:
 
-1. **Stub the cross-context boundary at the port level** (preferred — DDD architecture).
-2. **Use a real test factory + sandbox** — let the call hit the real DB and the real domain. Slower but covers the whole vertical slice.
+1. **Use a real test factory + sandbox** (preferred) — let the call hit the real DB and the real context. Slower but covers the whole vertical slice, and there is no port to stub under schema-as-struct.
+2. **Stub with Mox only where a genuine behaviour exists** — e.g. a feature-flag adapter or an external-service client, not aggregate persistence.
 
 ### Pattern: Inserting test data via Factory
 

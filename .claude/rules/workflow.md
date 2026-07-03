@@ -13,7 +13,7 @@
 
 When implementing features, reference:
 
-- `.claude/rules/domain-architecture.md` - DDD patterns and key conventions
+- `.claude/rules/domain-architecture.md` - conventional-Phoenix conventions (schema-as-struct, bounded contexts) and key patterns
 - Existing context implementations under `lib/klass_hero/<context>/` - Follow established patterns
 - Existing LiveView pages - Established UI patterns and component usage
 

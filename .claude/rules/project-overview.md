@@ -53,7 +53,7 @@ This is a Phoenix application with standard directory structure:
 
 ## Development Status
 
-**Current State:** Multiple bounded contexts implemented with DDD/Ports & Adapters
+**Current State:** Bounded contexts in conventional Phoenix (flattened from DDD/Ports & Adapters, #986–#1002)
 
 - Authentication via `phx.gen.auth` with scope-based pattern
 - Core LiveView pages (Home, Programs, Program Detail, Booking, Dashboard, Settings)

@@ -114,9 +114,9 @@ For each confirmed finding, in order:
 
 1. Output progress: `Fixing 2/5: Missing session_date index on program_sessions`
 2. Re-read the file to get current state (it may have changed from prior fixes)
-3. Respect the project's DDD/Ports & Adapters architecture:
-   - **Domain logic** → `lib/klass_hero/{context}/domain/`
-   - **Persistence** → `lib/klass_hero/{context}/adapters/driven/persistence/`
+3. Respect the project's conventional-Phoenix layout (flattened from DDD, #986–#1002):
+   - **Entity logic + persistence** → the schema-as-struct module at the context root, e.g. `lib/klass_hero/{context}/{entity}.ex` (Ecto schema + struct + functional core); the context API is `lib/klass_hero/{context}.ex`
+   - **CQRS projections / read-tables** → `lib/klass_hero/{context}/adapters/driven/projections/` and `.../persistence/` (projection tables only)
    - **Migrations** → `priv/repo/migrations/`
    - **LiveView** → `lib/klass_hero_web/live/`
    - **Tests** → mirror the source file path under `test/`
@@ -179,7 +179,7 @@ gh issue create --title "QA: ..." --body "..."
 - **Read before editing.** Always read the current file state before making changes.
 - **Verify against current code.** Findings reference a point-in-time snapshot — always check if the code has changed.
 - **Minimal fixes.** Address exactly what the finding describes — don't refactor surrounding code.
-- **Respect DDD architecture.** Place changes in the correct architectural layer.
+- **Respect the conventional-Phoenix layout.** Entity logic + persistence go in the schema-as-struct module at the context root; keep the context API in `<context>.ex`.
 - **Invoke idiomatic-elixir before implementation.** Load Elixir patterns into context before writing code.
 - **Never stop mid-fix.** If a single finding can't be addressed, log the failure and continue.
 - **Always run tests.** `mix precommit` is mandatory before committing.
