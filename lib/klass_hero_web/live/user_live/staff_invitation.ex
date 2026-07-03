@@ -157,13 +157,6 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
       {:error, :not_found} ->
         Logger.info("[StaffInvitation] Token not found or already used")
         {:ok, assign_error(socket, :invalid)}
-
-      {:error, reason} ->
-        Logger.error("[StaffInvitation] Unexpected error during token verification",
-          reason: inspect(reason)
-        )
-
-        {:ok, assign_error(socket, :invalid)}
     end
   end
 

@@ -19,8 +19,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.PayRate
   alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.PayRate
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Entitlements
   alias KlassHero.Shared.NameUtils
@@ -99,7 +99,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           |> assign(search_query: "")
           |> assign(selected_staff: "all")
           |> assign(show_staff_form: false, editing_staff_id: nil)
-          |> assign(staff_form: to_form(Provider.new_staff_member_changeset()))
+          |> assign(staff_form: to_form(Provider.new_staff_member_changeset(), as: :staff_member_schema))
           |> assign(show_program_form: false, editing_program_id: nil)
           |> assign(
             show_roster: false,
@@ -308,7 +308,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     {:noreply,
      socket
      |> assign(show_staff_form: true, editing_staff_id: nil, self_staffing?: false)
-     |> assign(staff_form: to_form(Provider.new_staff_member_changeset()))}
+     |> assign(staff_form: to_form(Provider.new_staff_member_changeset(), as: :staff_member_schema))}
   end
 
   @impl true
@@ -325,7 +325,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
     {:noreply,
      socket
      |> assign(show_staff_form: true, editing_staff_id: nil, self_staffing?: true)
-     |> assign(staff_form: to_form(Provider.new_staff_member_changeset(prefill)))}
+     |> assign(staff_form: to_form(Provider.new_staff_member_changeset(prefill), as: :staff_member_schema))}
   end
 
   @impl true
@@ -337,7 +337,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         {:noreply,
          socket
          |> assign(show_staff_form: true, editing_staff_id: staff_id, self_staffing?: false)
-         |> assign(staff_form: to_form(changeset))}
+         |> assign(staff_form: to_form(changeset, as: :staff_member_schema))}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
@@ -369,7 +369,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
           end
       end
 
-    {:noreply, assign(socket, staff_form: to_form(Map.put(changeset, :action, :validate)))}
+    {:noreply, assign(socket, staff_form: to_form(Map.put(changeset, :action, :validate), as: :staff_member_schema))}
   end
 
   @impl true
@@ -1107,7 +1107,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
         {:noreply,
          socket
-         |> assign(staff_form: to_form(changeset))
+         |> assign(staff_form: to_form(changeset, as: :staff_member_schema))
          |> put_flash(:error, gettext("Please fix the errors below."))}
 
       {:error, :invitation_emission_failed} ->
@@ -1119,7 +1119,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
          )}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, staff_form: to_form(changeset))}
+        {:noreply, assign(socket, staff_form: to_form(changeset, as: :staff_member_schema))}
     end
   end
 
@@ -1158,7 +1158,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
         {:noreply,
          socket
-         |> assign(staff_form: to_form(changeset))
+         |> assign(staff_form: to_form(changeset, as: :staff_member_schema))
          |> put_flash(:error, gettext("Please fix the errors below."))}
 
       {:error, reason} ->
@@ -1250,7 +1250,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
         handle_staff_validation_error(socket, staff_id, params)
 
       {:error, changeset} ->
-        {:noreply, assign(socket, staff_form: to_form(changeset))}
+        {:noreply, assign(socket, staff_form: to_form(changeset, as: :staff_member_schema))}
     end
   end
 
@@ -1263,7 +1263,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
 
         {:noreply,
          socket
-         |> assign(staff_form: to_form(changeset))
+         |> assign(staff_form: to_form(changeset, as: :staff_member_schema))
          |> put_flash(:error, gettext("Please fix the errors below."))}
 
       {:error, :not_found} ->
@@ -1918,18 +1918,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   defp fetch_staff_members(provider_id) do
-    case Provider.list_staff_members(provider_id) do
-      {:ok, members} ->
-        members
-
-      {:error, reason} ->
-        Logger.error("[DashboardLive] Failed to load staff members",
-          provider_id: provider_id,
-          reason: inspect(reason)
-        )
-
-        []
-    end
+    {:ok, members} = Provider.list_staff_members(provider_id)
+    members
   end
 
   defp refresh_staff_options(socket) do
@@ -2146,18 +2136,8 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   end
 
   defp build_instructor_options(provider_id) do
-    case Provider.list_active_staff_members(provider_id) do
-      {:ok, members} ->
-        staff_to_options(members)
-
-      {:error, reason} ->
-        Logger.error("Failed to load instructor options",
-          provider_id: provider_id,
-          reason: inspect(reason)
-        )
-
-        []
-    end
+    {:ok, members} = Provider.list_active_staff_members(provider_id)
+    staff_to_options(members)
   end
 
   defp staff_to_options(members) do

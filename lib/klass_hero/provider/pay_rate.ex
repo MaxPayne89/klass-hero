@@ -1,10 +1,15 @@
-defmodule KlassHero.Provider.Domain.Models.PayRate do
+defmodule KlassHero.Provider.PayRate do
   @moduledoc """
   Value object pairing a rate type (`:hourly` | `:per_session`) with a `Money` amount.
 
   Staff members may have no rate (nil), an hourly rate, or a per-session rate —
   never both. Mutual exclusivity is guaranteed by the type tag: a single `PayRate`
   can only carry one type.
+
+  Persisted flat on `staff_members` as `rate_type`/`rate_amount`/`rate_currency`;
+  `KlassHero.Provider.StaffMember` flattens a `%PayRate{}` onto those columns on
+  write and rebuilds it (via `from_persistence/1`) into the virtual `:pay_rate`
+  field on read.
   """
 
   alias KlassHero.Shared.Domain.Types.Money
@@ -46,7 +51,7 @@ defmodule KlassHero.Provider.Domain.Models.PayRate do
 
   @doc """
   Reconstructs a PayRate from persisted parts without revalidating.
-  The caller (mapper) has already reconstructed the Money value object.
+  The caller (schema loader) has already reconstructed the Money value object.
   """
   @spec from_persistence(%{type: rate_type() | String.t(), money: Money.t()}) ::
           {:ok, t()} | {:error, :invalid_persistence_data}

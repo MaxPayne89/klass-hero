@@ -11,6 +11,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFrom
   - `{:error, :not_found}` — no active assignment exists for this program/staff pair
   """
 
+  alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Shared.DomainEventBus
 
@@ -21,7 +22,6 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFrom
                      :provider,
                      :for_storing_program_staff_assignments
                    ])
-  @staff_repo Application.compile_env!(:klass_hero, [:provider, :for_querying_staff_members])
 
   @doc """
   Unassigns a staff member from a program.
@@ -30,7 +30,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFrom
   - `staff_member_id` — The staff member to unassign.
   """
   def execute(program_id, staff_member_id) when is_binary(program_id) and is_binary(staff_member_id) do
-    with {:ok, staff_member} <- @staff_repo.get(staff_member_id),
+    with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id),
          {:ok, assignment} <- @assignment_repo.unassign(program_id, staff_member_id) do
       publish_event(assignment, staff_member)
 

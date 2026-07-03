@@ -5,7 +5,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMe
   import KlassHero.EventTestHelper
   import KlassHero.ProviderFixtures
 
-  alias KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMember
+  alias KlassHero.Provider
 
   setup do
     setup_test_integration_events()
@@ -22,7 +22,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMe
     } do
       attrs = %{first_name: "Max", last_name: "Founder", role: "Head Coach"}
 
-      assert {:ok, staff} = CreateSelfStaffMember.execute(provider.id, user.id, attrs)
+      assert {:ok, staff} = Provider.create_self_staff_member(provider.id, user.id, attrs)
 
       assert staff.provider_id == provider.id
       assert staff.user_id == user.id
@@ -37,7 +37,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMe
     test "publishes no invitation event", %{user: user, provider: provider} do
       attrs = %{first_name: "Max", last_name: "Founder"}
 
-      assert {:ok, _staff} = CreateSelfStaffMember.execute(provider.id, user.id, attrs)
+      assert {:ok, _staff} = Provider.create_self_staff_member(provider.id, user.id, attrs)
 
       types = get_published_integration_events() |> Enum.map(& &1.event_type)
       refute :staff_member_invited in types
@@ -47,10 +47,10 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMe
   describe "execute/3 (already staffed at this provider)" do
     test "returns :already_staffed and creates no second row", %{user: user, provider: provider} do
       attrs = %{first_name: "Max", last_name: "Founder"}
-      assert {:ok, _staff} = CreateSelfStaffMember.execute(provider.id, user.id, attrs)
+      assert {:ok, _staff} = Provider.create_self_staff_member(provider.id, user.id, attrs)
 
       assert {:error, :already_staffed} =
-               CreateSelfStaffMember.execute(provider.id, user.id, attrs)
+               Provider.create_self_staff_member(provider.id, user.id, attrs)
 
       assert {:ok, [_only_one]} = KlassHero.Provider.list_staff_members(provider.id)
     end
@@ -67,7 +67,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateSelfStaffMe
       })
 
       assert {:ok, _staff} =
-               CreateSelfStaffMember.execute(provider.id, user.id, %{
+               Provider.create_self_staff_member(provider.id, user.id, %{
                  first_name: "Max",
                  last_name: "Founder"
                })

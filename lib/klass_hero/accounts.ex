@@ -10,7 +10,7 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Accounts.Domain.Events.{AccountsIntegrationEvents, UserEvents}
   alias KlassHero.Accounts.{PersonaGrant, User, UserNotifier, UserToken}
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
   alias KlassHero.Shared.{EventDispatchHelper, IntegrationEventPublishing}
 

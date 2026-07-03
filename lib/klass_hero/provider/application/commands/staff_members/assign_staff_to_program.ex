@@ -12,6 +12,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProg
   - `{:error, :not_found}` — the staff member does not exist
   """
 
+  alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Shared.DomainEventBus
 
@@ -22,7 +23,6 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProg
                      :provider,
                      :for_storing_program_staff_assignments
                    ])
-  @staff_repo Application.compile_env!(:klass_hero, [:provider, :for_querying_staff_members])
 
   @doc """
   Assigns a staff member to a program.
@@ -33,7 +33,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProg
   - `:staff_member_id` — Required. The staff member to assign.
   """
   def execute(attrs) when is_map(attrs) do
-    with {:ok, staff_member} <- @staff_repo.get(attrs.staff_member_id),
+    with {:ok, staff_member} <- Provider.get_staff_member(attrs.staff_member_id),
          assignment_attrs = Map.put(attrs, :assigned_at, DateTime.utc_now()),
          {:ok, assignment} <- @assignment_repo.create(assignment_attrs) do
       publish_event(assignment, staff_member)

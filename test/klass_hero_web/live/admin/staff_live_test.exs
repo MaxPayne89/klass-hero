@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Admin.StaffLiveTest do
   import KlassHero.ProviderFixtures
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
+  alias KlassHero.Provider.StaffMember
 
   describe "admin access control" do
     setup :register_and_log_in_admin
@@ -77,7 +77,7 @@ defmodule KlassHeroWeb.Admin.StaffLiveTest do
 
       schema =
         KlassHero.Repo.get!(
-          StaffMemberSchema,
+          StaffMember,
           staff.id
         )
 
@@ -109,7 +109,7 @@ defmodule KlassHeroWeb.Admin.StaffLiveTest do
 
       schema =
         KlassHero.Repo.get!(
-          StaffMemberSchema,
+          StaffMember,
           staff.id
         )
 

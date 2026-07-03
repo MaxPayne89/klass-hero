@@ -3,8 +3,8 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvita
 
   import KlassHero.ProviderFixtures
 
-  alias KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvitation
-  alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider
+  alias KlassHero.Provider.StaffMember
 
   # Only :sent invitations may transition to :expired; every other status is an
   # invalid transition.
@@ -30,7 +30,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvita
     test "transitions a :sent invitation to :expired" do
       staff = staff_with_status(:sent)
 
-      assert {:ok, %StaffMember{} = updated} = ExpireStaffInvitation.execute(staff.id)
+      assert {:ok, %StaffMember{} = updated} = Provider.expire_staff_invitation(staff.id)
       assert updated.id == staff.id
       assert updated.invitation_status == :expired
     end
@@ -39,13 +39,13 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvita
       for status <- @invalid_source_statuses do
         staff = staff_with_status(status)
 
-        assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff.id),
+        assert {:error, :invalid_invitation_transition} = Provider.expire_staff_invitation(staff.id),
                "expected #{status} → :expired to be rejected"
       end
     end
 
     test "returns :not_found for a non-existent staff member" do
-      assert {:error, :not_found} = ExpireStaffInvitation.execute(Ecto.UUID.generate())
+      assert {:error, :not_found} = Provider.expire_staff_invitation(Ecto.UUID.generate())
     end
   end
 
@@ -53,7 +53,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvita
     test "transitions a :sent invitation to :expired without re-fetching from DB" do
       staff = staff_with_status(:sent)
 
-      assert {:ok, %StaffMember{} = updated} = ExpireStaffInvitation.execute(staff)
+      assert {:ok, %StaffMember{} = updated} = Provider.expire_staff_invitation(staff)
       assert updated.id == staff.id
       assert updated.invitation_status == :expired
     end
@@ -62,7 +62,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvita
       for status <- @invalid_source_statuses do
         staff = staff_with_status(status)
 
-        assert {:error, :invalid_invitation_transition} = ExpireStaffInvitation.execute(staff),
+        assert {:error, :invalid_invitation_transition} = Provider.expire_staff_invitation(staff),
                "expected #{status} → :expired to be rejected"
       end
     end

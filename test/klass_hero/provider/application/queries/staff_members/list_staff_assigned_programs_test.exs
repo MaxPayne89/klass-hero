@@ -3,14 +3,14 @@ defmodule KlassHero.Provider.Application.Queries.StaffMembers.ListStaffAssignedP
 
   import KlassHero.ProviderFixtures
 
-  alias KlassHero.Provider.Application.Queries.StaffMembers.ListStaffAssignedPrograms
+  alias KlassHero.Provider
 
   describe "execute/2" do
     test "returns all programs when staff has no tags" do
       staff = staff_member_fixture(%{tags: []})
       programs = [%{category: "sports"}, %{category: "arts"}]
 
-      result = ListStaffAssignedPrograms.execute(staff, programs)
+      result = Provider.list_assigned_programs(staff, programs)
       assert length(result) == 2
     end
 
@@ -18,7 +18,7 @@ defmodule KlassHero.Provider.Application.Queries.StaffMembers.ListStaffAssignedP
       staff = staff_member_fixture(%{tags: ["sports"]})
       programs = [%{category: "sports"}, %{category: "arts"}, %{category: "music"}]
 
-      result = ListStaffAssignedPrograms.execute(staff, programs)
+      result = Provider.list_assigned_programs(staff, programs)
       assert length(result) == 1
       assert hd(result).category == "sports"
     end
@@ -27,13 +27,13 @@ defmodule KlassHero.Provider.Application.Queries.StaffMembers.ListStaffAssignedP
       staff = staff_member_fixture(%{tags: ["music"]})
       programs = [%{category: "sports"}, %{category: "arts"}]
 
-      assert ListStaffAssignedPrograms.execute(staff, programs) == []
+      assert Provider.list_assigned_programs(staff, programs) == []
     end
 
     test "returns empty list when programs list is empty" do
       staff = staff_member_fixture(%{tags: ["sports"]})
 
-      assert ListStaffAssignedPrograms.execute(staff, []) == []
+      assert Provider.list_assigned_programs(staff, []) == []
     end
   end
 end

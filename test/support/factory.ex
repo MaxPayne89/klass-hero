@@ -45,9 +45,8 @@ defmodule KlassHero.Factory do
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
   alias KlassHero.Provider.Domain.Models.ProviderProfile
-  alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
 
   @doc """
@@ -433,7 +432,7 @@ defmodule KlassHero.Factory do
       staff = insert(:staff_member_schema, provider_id: provider.id)
   """
   def staff_member_schema_factory do
-    %StaffMemberSchema{
+    %StaffMember{
       first_name: sequence(:staff_first_name, &"Staff#{&1}"),
       last_name: "Member",
       role: "Coach",

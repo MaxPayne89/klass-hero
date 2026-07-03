@@ -5,7 +5,6 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
   import KlassHero.ProviderFixtures
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvitation
 
   defp sent_staff(provider, opts \\ []) do
     staff_member_fixture(
@@ -28,7 +27,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
       staff = sent_staff(provider)
       user_id = user_fixture().id
 
-      assert {:ok, accepted} = AcceptStaffInvitation.execute(staff, user_id)
+      assert {:ok, accepted} = Provider.accept_staff_invitation(staff, user_id)
       assert accepted.invitation_status == :accepted
       assert accepted.user_id == user_id
     end
@@ -38,8 +37,8 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
       staff = sent_staff(provider)
       user_id = user_fixture().id
 
-      assert {:ok, accepted} = AcceptStaffInvitation.execute(staff, user_id)
-      assert {:ok, again} = AcceptStaffInvitation.execute(accepted, user_id)
+      assert {:ok, accepted} = Provider.accept_staff_invitation(staff, user_id)
+      assert {:ok, again} = Provider.accept_staff_invitation(accepted, user_id)
 
       assert again.invitation_status == :accepted
       assert again.user_id == user_id
@@ -50,8 +49,8 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
       staff_a = sent_staff(provider_profile_fixture())
       staff_b = sent_staff(provider_profile_fixture())
 
-      assert {:ok, a} = AcceptStaffInvitation.execute(staff_a, user_id)
-      assert {:ok, b} = AcceptStaffInvitation.execute(staff_b, user_id)
+      assert {:ok, a} = Provider.accept_staff_invitation(staff_a, user_id)
+      assert {:ok, b} = Provider.accept_staff_invitation(staff_b, user_id)
 
       assert a.user_id == user_id
       assert b.user_id == user_id
@@ -85,7 +84,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
       new_employer = provider_profile_fixture()
       invite = sent_staff(new_employer)
 
-      assert {:ok, accepted} = AcceptStaffInvitation.execute(invite, user.id)
+      assert {:ok, accepted} = Provider.accept_staff_invitation(invite, user.id)
 
       assert {:ok, resolved} = Provider.get_active_staff_member_by_user(user.id)
       assert resolved.id == accepted.id
@@ -104,7 +103,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvita
       # Accepting with the stale :sent struct must read the fresh :expired state and
       # refuse — not blindly transition the in-memory :sent → :accepted (resurrection).
       assert {:error, :invalid_invitation_transition} =
-               AcceptStaffInvitation.execute(stale, user_id)
+               Provider.accept_staff_invitation(stale, user_id)
 
       assert {:ok, db} = Provider.get_staff_member(stale.id)
       assert db.invitation_status == :expired

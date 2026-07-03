@@ -1,7 +1,7 @@
-defmodule KlassHero.Provider.Domain.Models.PayRateTest do
+defmodule KlassHero.Provider.PayRateTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Provider.Domain.Models.PayRate
+  alias KlassHero.Provider.PayRate
   alias KlassHero.Shared.Domain.Types.Money
 
   describe "hourly/2" do

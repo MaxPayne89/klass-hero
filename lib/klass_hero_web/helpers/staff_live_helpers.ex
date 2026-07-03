@@ -10,7 +10,7 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpers do
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.StaffMember
 
   @doc """
   Loads the programs the staff member is currently assigned to, alongside a

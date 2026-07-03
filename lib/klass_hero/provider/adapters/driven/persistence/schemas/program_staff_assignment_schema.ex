@@ -14,7 +14,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAss
   import Ecto.Changeset
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
+  alias KlassHero.Provider.StaffMember
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -22,7 +22,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAss
 
   schema "program_staff_assignments" do
     belongs_to :provider, ProviderProfileSchema
-    belongs_to :staff_member, StaffMemberSchema
+    belongs_to :staff_member, StaffMember
     field :program_id, :binary_id
     field :assigned_at, :utc_datetime_usec
     field :unassigned_at, :utc_datetime_usec

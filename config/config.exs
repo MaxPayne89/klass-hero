@@ -23,7 +23,6 @@ alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfil
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProgramRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
 alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMemberRepository
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
@@ -197,8 +196,6 @@ config :klass_hero, :provider,
   repo: KlassHero.Repo,
   for_storing_provider_profiles: ProviderProfileRepository,
   for_querying_provider_profiles: ProviderProfileRepository,
-  for_storing_staff_members: StaffMemberRepository,
-  for_querying_staff_members: StaffMemberRepository,
   for_storing_program_staff_assignments: ProgramStaffAssignmentRepository,
   for_querying_program_staff_assignments: ProgramStaffAssignmentRepository,
   for_querying_session_details: SessionDetailsRepository,

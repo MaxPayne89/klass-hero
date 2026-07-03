@@ -9,7 +9,7 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Provider.Domain.Models.{PayRate, StaffMember}
+  alias KlassHero.Provider.{PayRate, StaffMember}
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
 
   defp staff_fixture(overrides) do

@@ -4,11 +4,10 @@ defmodule KlassHero.ProviderFixtures do
   """
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
 
@@ -71,8 +70,8 @@ defmodule KlassHero.ProviderFixtures do
     create_attrs = Map.drop(merged, invitation_keys)
 
     {:ok, schema} =
-      %StaffMemberSchema{}
-      |> StaffMemberSchema.create_changeset(create_attrs)
+      %StaffMember{}
+      |> StaffMember.create_changeset(create_attrs)
       |> Repo.insert()
 
     # Apply invitation fields if provided (these go through invitation_changeset, not create)
@@ -80,18 +79,9 @@ defmodule KlassHero.ProviderFixtures do
 
     schema =
       if map_size(invitation_fields) > 0 do
-        invitation_fields =
-          case invitation_fields[:invitation_status] do
-            status when is_atom(status) and not is_nil(status) ->
-              Map.put(invitation_fields, :invitation_status, Atom.to_string(status))
-
-            _ ->
-              invitation_fields
-          end
-
         {:ok, updated} =
           schema
-          |> StaffMemberSchema.invitation_changeset(invitation_fields)
+          |> StaffMember.invitation_changeset(invitation_fields)
           |> Repo.update()
 
         updated
@@ -101,7 +91,7 @@ defmodule KlassHero.ProviderFixtures do
 
     schema = apply_timestamp_overrides(schema, timestamp_overrides)
 
-    StaffMemberMapper.to_domain(schema)
+    StaffMember.load_pay_rate(schema)
   end
 
   defp apply_timestamp_overrides(schema, overrides) when map_size(overrides) == 0, do: schema
@@ -111,11 +101,11 @@ defmodule KlassHero.ProviderFixtures do
 
     {1, _} =
       Repo.update_all(
-        from(s in StaffMemberSchema, where: s.id == ^schema.id),
+        from(s in StaffMember, where: s.id == ^schema.id),
         set: Map.to_list(overrides)
       )
 
-    Repo.get!(StaffMemberSchema, schema.id)
+    Repo.get!(StaffMember, schema.id)
   end
 
   @doc """
