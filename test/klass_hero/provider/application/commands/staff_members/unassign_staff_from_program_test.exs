@@ -1,27 +1,26 @@
-defmodule KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFromProgramTest do
+defmodule KlassHero.Provider.UnassignStaffFromProgramTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Application.Commands.StaffMembers.AssignStaffToProgram
-  alias KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFromProgram
-  alias KlassHero.Provider.Domain.Models.ProgramStaffAssignment
+  alias KlassHero.Provider
+  alias KlassHero.Provider.ProgramStaffAssignment
 
-  describe "execute/2" do
+  describe "unassign_staff_from_program/2" do
     test "unassigns an active assignment and sets unassigned_at" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
       staff = insert(:staff_member_schema, provider_id: provider.id)
 
       {:ok, _} =
-        AssignStaffToProgram.execute(%{
+        Provider.assign_staff_to_program(%{
           provider_id: provider.id,
           program_id: program.id,
           staff_member_id: staff.id
         })
 
       assert {:ok, %ProgramStaffAssignment{} = assignment} =
-               UnassignStaffFromProgram.execute(program.id, staff.id)
+               Provider.unassign_staff_from_program(program.id, staff.id)
 
       assert assignment.staff_member_id == staff.id
       assert assignment.program_id == program.id
@@ -30,7 +29,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFrom
 
     test "returns not_found when no active assignment exists" do
       assert {:error, :not_found} =
-               UnassignStaffFromProgram.execute(Ecto.UUID.generate(), Ecto.UUID.generate())
+               Provider.unassign_staff_from_program(Ecto.UUID.generate(), Ecto.UUID.generate())
     end
 
     test "returns not_found when assignment was already unassigned" do
@@ -39,16 +38,16 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.UnassignStaffFrom
       staff = insert(:staff_member_schema, provider_id: provider.id)
 
       {:ok, _} =
-        AssignStaffToProgram.execute(%{
+        Provider.assign_staff_to_program(%{
           provider_id: provider.id,
           program_id: program.id,
           staff_member_id: staff.id
         })
 
-      assert {:ok, _} = UnassignStaffFromProgram.execute(program.id, staff.id)
+      assert {:ok, _} = Provider.unassign_staff_from_program(program.id, staff.id)
 
       # Second unassign on same pair should return not_found (no active assignment)
-      assert {:error, :not_found} = UnassignStaffFromProgram.execute(program.id, staff.id)
+      assert {:error, :not_found} = Provider.unassign_staff_from_program(program.id, staff.id)
     end
   end
 end

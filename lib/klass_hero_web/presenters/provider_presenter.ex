@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.NameUtils
 
   @doc """
@@ -87,13 +87,13 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   def build_verification_badges(_provider), do: []
 
   @doc """
-  Returns a human-readable label for a verification document type string.
+  Returns a human-readable label for a verification document type atom.
   """
-  @spec document_type_label(String.t()) :: String.t()
-  def document_type_label("business_registration"), do: gettext("Business Registration")
-  def document_type_label("insurance_certificate"), do: gettext("Insurance Certificate")
-  def document_type_label("id_document"), do: gettext("ID Document")
-  def document_type_label("tax_certificate"), do: gettext("Tax Certificate")
-  def document_type_label("other"), do: gettext("Other")
-  def document_type_label(type), do: type
+  @spec document_type_label(atom()) :: String.t()
+  def document_type_label(:business_registration), do: gettext("Business Registration")
+  def document_type_label(:insurance_certificate), do: gettext("Insurance Certificate")
+  def document_type_label(:id_document), do: gettext("ID Document")
+  def document_type_label(:tax_certificate), do: gettext("Tax Certificate")
+  def document_type_label(:other), do: gettext("Other")
+  def document_type_label(type), do: to_string(type)
 end

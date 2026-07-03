@@ -4,9 +4,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.DocumentReviewTes
   import KlassHero.EventTestHelper
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
-  alias KlassHero.Provider.Application.Commands.Verification.ApproveVerificationDocument
-  alias KlassHero.Provider.Application.Commands.Verification.RejectVerificationDocument
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHero.ProviderFixtures
   alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
   alias KlassHero.Shared.DomainEventBus
@@ -35,50 +33,47 @@ defmodule KlassHero.Provider.Application.Commands.Verification.DocumentReviewTes
 
   describe "ApproveVerificationDocument.execute/1" do
     test "approves pending document", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id}
-      assert {:ok, approved} = ApproveVerificationDocument.execute(params)
+      assert {:ok, approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
       assert approved.status == :approved
       assert approved.reviewed_by_id == admin.id
       assert approved.reviewed_at != nil
     end
 
     test "persists approved document to database", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id}
-      assert {:ok, _approved} = ApproveVerificationDocument.execute(params)
+      assert {:ok, _approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
 
       # Verify the document was persisted
-      assert {:ok, reloaded} = VerificationDocumentRepository.get(doc.id)
+      reloaded = KlassHero.Repo.get(VerificationDocument, doc.id)
       assert reloaded.status == :approved
       assert reloaded.reviewed_by_id == admin.id
     end
 
     test "fails for non-existent document", %{admin: admin} do
-      params = %{document_id: Ecto.UUID.generate(), reviewer_id: admin.id}
-      assert {:error, :not_found} = ApproveVerificationDocument.execute(params)
+      assert {:error, :not_found} =
+               KlassHero.Provider.approve_verification_document(Ecto.UUID.generate(), admin.id)
     end
 
     test "fails for already approved document", %{admin: admin, document: doc} do
       # First approval
-      params = %{document_id: doc.id, reviewer_id: admin.id}
-      assert {:ok, _approved} = ApproveVerificationDocument.execute(params)
+      assert {:ok, _approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
 
       # Second approval should fail
-      assert {:error, :document_not_pending} = ApproveVerificationDocument.execute(params)
+      assert {:error, :document_not_pending} =
+               KlassHero.Provider.approve_verification_document(doc.id, admin.id)
     end
 
     test "fails for already rejected document", %{admin: admin, document: doc} do
       # First reject
-      reject_params = %{document_id: doc.id, reviewer_id: admin.id, reason: "Invalid"}
-      assert {:ok, _rejected} = RejectVerificationDocument.execute(reject_params)
+      assert {:ok, _rejected} =
+               KlassHero.Provider.reject_verification_document(doc.id, admin.id, "Invalid")
 
       # Then try to approve should fail
-      approve_params = %{document_id: doc.id, reviewer_id: admin.id}
-      assert {:error, :document_not_pending} = ApproveVerificationDocument.execute(approve_params)
+      assert {:error, :document_not_pending} =
+               KlassHero.Provider.approve_verification_document(doc.id, admin.id)
     end
 
     test "dispatches :verification_document_approved domain event", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id}
-      assert {:ok, approved} = ApproveVerificationDocument.execute(params)
+      assert {:ok, approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
 
       event = assert_event_published(:verification_document_approved)
       assert event.aggregate_id == doc.id
@@ -89,8 +84,13 @@ defmodule KlassHero.Provider.Application.Commands.Verification.DocumentReviewTes
 
   describe "RejectVerificationDocument.execute/1" do
     test "rejects pending document with reason", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id, reason: "Document is expired"}
-      assert {:ok, rejected} = RejectVerificationDocument.execute(params)
+      assert {:ok, rejected} =
+               KlassHero.Provider.reject_verification_document(
+                 doc.id,
+                 admin.id,
+                 "Document is expired"
+               )
+
       assert rejected.status == :rejected
       assert rejected.rejection_reason == "Document is expired"
       assert rejected.reviewed_by_id == admin.id
@@ -98,53 +98,68 @@ defmodule KlassHero.Provider.Application.Commands.Verification.DocumentReviewTes
     end
 
     test "persists rejected document to database", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id, reason: "Unclear image"}
-      assert {:ok, _rejected} = RejectVerificationDocument.execute(params)
+      assert {:ok, _rejected} =
+               KlassHero.Provider.reject_verification_document(doc.id, admin.id, "Unclear image")
 
       # Verify the document was persisted
-      assert {:ok, reloaded} = VerificationDocumentRepository.get(doc.id)
+      reloaded = KlassHero.Repo.get(VerificationDocument, doc.id)
       assert reloaded.status == :rejected
       assert reloaded.rejection_reason == "Unclear image"
     end
 
     test "requires rejection reason", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id, reason: ""}
-      assert {:error, :reason_required} = RejectVerificationDocument.execute(params)
+      assert {:error, :reason_required} =
+               KlassHero.Provider.reject_verification_document(doc.id, admin.id, "")
     end
 
     test "requires non-nil rejection reason", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id, reason: nil}
-      assert {:error, :reason_required} = RejectVerificationDocument.execute(params)
+      assert {:error, :reason_required} =
+               KlassHero.Provider.reject_verification_document(doc.id, admin.id, nil)
     end
 
     test "fails for non-existent document", %{admin: admin} do
-      params = %{document_id: Ecto.UUID.generate(), reviewer_id: admin.id, reason: "Invalid"}
-      assert {:error, :not_found} = RejectVerificationDocument.execute(params)
+      assert {:error, :not_found} =
+               KlassHero.Provider.reject_verification_document(
+                 Ecto.UUID.generate(),
+                 admin.id,
+                 "Invalid"
+               )
     end
 
     test "fails for already rejected document", %{admin: admin, document: doc} do
       # First rejection
-      params = %{document_id: doc.id, reviewer_id: admin.id, reason: "First rejection"}
-      assert {:ok, _rejected} = RejectVerificationDocument.execute(params)
+      assert {:ok, _rejected} =
+               KlassHero.Provider.reject_verification_document(
+                 doc.id,
+                 admin.id,
+                 "First rejection"
+               )
 
       # Second rejection should fail
-      params2 = %{document_id: doc.id, reviewer_id: admin.id, reason: "Second rejection"}
-      assert {:error, :document_not_pending} = RejectVerificationDocument.execute(params2)
+      assert {:error, :document_not_pending} =
+               KlassHero.Provider.reject_verification_document(
+                 doc.id,
+                 admin.id,
+                 "Second rejection"
+               )
     end
 
     test "fails for already approved document", %{admin: admin, document: doc} do
       # First approve
-      approve_params = %{document_id: doc.id, reviewer_id: admin.id}
-      assert {:ok, _approved} = ApproveVerificationDocument.execute(approve_params)
+      assert {:ok, _approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
 
       # Then try to reject should fail
-      reject_params = %{document_id: doc.id, reviewer_id: admin.id, reason: "Too late"}
-      assert {:error, :document_not_pending} = RejectVerificationDocument.execute(reject_params)
+      assert {:error, :document_not_pending} =
+               KlassHero.Provider.reject_verification_document(doc.id, admin.id, "Too late")
     end
 
     test "dispatches :verification_document_rejected domain event", %{admin: admin, document: doc} do
-      params = %{document_id: doc.id, reviewer_id: admin.id, reason: "Expired document"}
-      assert {:ok, rejected} = RejectVerificationDocument.execute(params)
+      assert {:ok, rejected} =
+               KlassHero.Provider.reject_verification_document(
+                 doc.id,
+                 admin.id,
+                 "Expired document"
+               )
 
       event = assert_event_published(:verification_document_rejected)
       assert event.aggregate_id == doc.id

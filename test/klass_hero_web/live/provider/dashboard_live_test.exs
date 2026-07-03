@@ -149,9 +149,9 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       provider: provider
     } do
       KlassHero.Factory.insert(:verification_document_schema,
-        provider_id: provider.id,
-        document_type: "business_registration",
-        status: "pending"
+        provider_profile_id: provider.id,
+        document_type: :business_registration,
+        status: :pending
       )
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")

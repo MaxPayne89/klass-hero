@@ -2288,7 +2288,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               <option
                 :for={type <- @document_types}
                 value={type}
-                selected={type == @doc_type}
+                selected={to_string(type) == @doc_type}
               >
                 {ProviderPresenter.document_type_label(type)}
               </option>

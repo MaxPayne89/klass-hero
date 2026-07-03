@@ -14,10 +14,10 @@ defmodule KlassHeroWeb.Admin.StaffLive do
   # credo:disable-for-lines:10 Credo.Check.Design.AliasUsage
   use Backpex.LiveResource,
     adapter_config: [
-      schema: KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema,
+      schema: KlassHero.Provider.StaffMember,
       repo: KlassHero.Repo,
-      update_changeset: &KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema.admin_changeset/3,
-      create_changeset: &KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema.admin_changeset/3
+      update_changeset: &KlassHero.Provider.StaffMember.admin_changeset/3,
+      create_changeset: &KlassHero.Provider.StaffMember.admin_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
     init_order: %{by: :inserted_at, direction: :desc}

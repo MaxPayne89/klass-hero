@@ -15,7 +15,6 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   # interaction events would otherwise arrive at this test's handler.
   use KlassHero.DataCase, async: false
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 
   setup do
@@ -36,17 +35,11 @@ defmodule KlassHero.Shared.InteractionSweepTest do
   end
 
   describe "every DB context drives I/O through the Interaction envelope" do
-    # Accounts, Family, Program Catalog, Participation, Enrollment, and Messaging have no probe
-    # here: the conventional-Phoenix flatten replaced the per-adapter Interaction envelope with the
-    # seam-level `context_span` macro, which emits OTel spans (not the
-    # `[:klass_hero, :interaction, :stop]` event this sweep watches).
-
-    test "provider (greenfield read model) — SessionStatsRepository.list_for_provider/1" do
-      assert SessionStatsRepository.list_for_provider(Ecto.UUID.generate()) == []
-
-      assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :list_for_provider, status: :ok}}
-    end
+    # All seven domain contexts — Accounts, Family, Program Catalog, Participation, Enrollment,
+    # Messaging, and Provider — have no probe here: the conventional-Phoenix flatten replaced the
+    # per-adapter Interaction envelope with the seam-level `context_span` macro on writes (reads
+    # stay bare), so their DB I/O no longer emits the `[:klass_hero, :interaction, :stop]` event
+    # this sweep watches. Only the shared greenfield infra below still runs through the envelope.
 
     test "shared (greenfield) — ProcessedEventRepository.mark_processed/2" do
       assert ProcessedEventRepository.mark_processed(Ecto.UUID.generate(), "sweep-probe") == :ok

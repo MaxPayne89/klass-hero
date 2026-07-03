@@ -1,8 +1,6 @@
 defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificationDocumentTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
-  alias KlassHero.Provider.Application.Commands.Verification.SubmitVerificationDocument
   alias KlassHero.ProviderFixtures
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
@@ -33,9 +31,9 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:ok, doc} = SubmitVerificationDocument.execute(params)
+      assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
       assert doc.provider_profile_id == provider.id
-      assert doc.document_type == "business_registration"
+      assert doc.document_type == :business_registration
       assert doc.status == :pending
       assert doc.file_url =~ "verification-docs/providers/#{provider.id}"
     end
@@ -52,7 +50,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:ok, doc} = SubmitVerificationDocument.execute(params)
+      assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
 
       # Verify file was stored in the stub adapter
       assert {:ok, ^file_content} =
@@ -69,7 +67,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:ok, doc} = SubmitVerificationDocument.execute(params)
+      assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
       # Parentheses and spaces should be replaced with underscores
       assert doc.file_url =~ "my_file__1_.pdf"
     end
@@ -84,8 +82,10 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:error, errors} = SubmitVerificationDocument.execute(params)
-      assert :document_type in Keyword.keys(errors)
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               KlassHero.Provider.submit_verification_document(params)
+
+      assert :document_type in Keyword.keys(changeset.errors)
     end
 
     test "accepts all valid document types", %{provider: provider, storage: storage} do
@@ -102,8 +102,8 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
           storage_opts: [adapter: StubStorageAdapter, agent: storage]
         }
 
-        assert {:ok, doc} = SubmitVerificationDocument.execute(params)
-        assert doc.document_type == doc_type
+        assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
+        assert doc.document_type == String.to_existing_atom(doc_type)
       end
     end
 
@@ -116,7 +116,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:error, errors} = SubmitVerificationDocument.execute(params)
+      assert {:error, errors} = KlassHero.Provider.submit_verification_document(params)
       assert :provider_profile_id in Keyword.keys(errors)
     end
 
@@ -129,7 +129,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:error, errors} = SubmitVerificationDocument.execute(params)
+      assert {:error, errors} = KlassHero.Provider.submit_verification_document(params)
       assert :file_binary in Keyword.keys(errors)
     end
 
@@ -142,7 +142,7 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:error, errors} = SubmitVerificationDocument.execute(params)
+      assert {:error, errors} = KlassHero.Provider.submit_verification_document(params)
       assert :original_filename in Keyword.keys(errors)
     end
 
@@ -158,10 +158,10 @@ defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificatio
       # Trigger: storage adapter returns {:error, :upload_failed}
       # Why: the with chain should propagate the storage error
       # Outcome: no document record created, error returned to caller
-      assert {:error, :upload_failed} = SubmitVerificationDocument.execute(params)
+      assert {:error, :upload_failed} = KlassHero.Provider.submit_verification_document(params)
 
       # Verify no document was persisted
-      assert {:ok, []} = VerificationDocumentRepository.get_by_provider(provider.id)
+      assert {:ok, []} = KlassHero.Provider.get_provider_verification_documents(provider.id)
     end
   end
 end

@@ -6,7 +6,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   import KlassHero.ProviderFixtures
 
   alias KlassHero.Accounts.User
-  alias KlassHero.Provider.Domain.Models.PayRate
+  alias KlassHero.Provider.PayRate
 
   describe "staff dashboard" do
     setup %{conn: conn} do

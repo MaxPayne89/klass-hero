@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.Application.Commands.CreateDirectConversationTest 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Application.Commands.CreateDirectConversation
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "execute/4 with opts" do

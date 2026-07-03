@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Admin.ProviderLiveTest do
   import KlassHero.ProviderFixtures
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
+  alias KlassHero.Provider.ProviderProfile
 
   describe "admin access control" do
     setup :register_and_log_in_admin
@@ -61,7 +61,7 @@ defmodule KlassHeroWeb.Admin.ProviderLiveTest do
 
       schema =
         KlassHero.Repo.get!(
-          ProviderProfileSchema,
+          ProviderProfile,
           provider.id
         )
 
@@ -81,7 +81,7 @@ defmodule KlassHeroWeb.Admin.ProviderLiveTest do
 
       schema =
         KlassHero.Repo.get!(
-          ProviderProfileSchema,
+          ProviderProfile,
           provider.id
         )
 

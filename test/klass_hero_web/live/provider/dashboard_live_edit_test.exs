@@ -59,8 +59,8 @@ defmodule KlassHeroWeb.Provider.DashboardLiveEditTest do
     test "displays existing verification documents", %{conn: conn, provider: provider} do
       # Create a verification document for this provider
       KlassHero.Factory.insert(:verification_document_schema,
-        provider_id: provider.id,
-        document_type: "business_registration",
+        provider_profile_id: provider.id,
+        document_type: :business_registration,
         original_filename: "my_registration.pdf"
       )
 

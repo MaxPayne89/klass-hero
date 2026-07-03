@@ -3,21 +3,17 @@ defmodule KlassHero.ProviderFixtures do
   Test helpers for creating entities in the Provider bounded context.
   """
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.StaffMemberMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
-  alias KlassHero.Provider.Domain.Models.IncidentReport
-  alias KlassHero.Provider.Domain.Models.VerificationDocument
+  alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.StaffMember
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
 
   @doc """
   Creates a provider profile for testing.
 
-  Uses the schema directly to insert into database, then maps to domain model.
+  Inserts a provider profile via its changeset and returns the struct.
   """
   def provider_profile_fixture(attrs \\ %{}) do
     attrs_map = Map.new(attrs)
@@ -36,12 +32,12 @@ defmodule KlassHero.ProviderFixtures do
 
     merged = Map.merge(defaults, attrs_map)
 
-    {:ok, schema} =
-      %ProviderProfileSchema{}
-      |> ProviderProfileSchema.changeset(merged)
+    {:ok, profile} =
+      %ProviderProfile{}
+      |> ProviderProfile.changeset(merged)
       |> Repo.insert()
 
-    ProviderProfileMapper.to_domain(schema)
+    profile
   end
 
   @doc """
@@ -73,8 +69,8 @@ defmodule KlassHero.ProviderFixtures do
     create_attrs = Map.drop(merged, invitation_keys)
 
     {:ok, schema} =
-      %StaffMemberSchema{}
-      |> StaffMemberSchema.create_changeset(create_attrs)
+      %StaffMember{}
+      |> StaffMember.create_changeset(create_attrs)
       |> Repo.insert()
 
     # Apply invitation fields if provided (these go through invitation_changeset, not create)
@@ -82,18 +78,9 @@ defmodule KlassHero.ProviderFixtures do
 
     schema =
       if map_size(invitation_fields) > 0 do
-        invitation_fields =
-          case invitation_fields[:invitation_status] do
-            status when is_atom(status) and not is_nil(status) ->
-              Map.put(invitation_fields, :invitation_status, Atom.to_string(status))
-
-            _ ->
-              invitation_fields
-          end
-
         {:ok, updated} =
           schema
-          |> StaffMemberSchema.invitation_changeset(invitation_fields)
+          |> StaffMember.invitation_changeset(invitation_fields)
           |> Repo.update()
 
         updated
@@ -103,7 +90,7 @@ defmodule KlassHero.ProviderFixtures do
 
     schema = apply_timestamp_overrides(schema, timestamp_overrides)
 
-    StaffMemberMapper.to_domain(schema)
+    StaffMember.load_pay_rate(schema)
   end
 
   defp apply_timestamp_overrides(schema, overrides) when map_size(overrides) == 0, do: schema
@@ -113,11 +100,11 @@ defmodule KlassHero.ProviderFixtures do
 
     {1, _} =
       Repo.update_all(
-        from(s in StaffMemberSchema, where: s.id == ^schema.id),
+        from(s in StaffMember, where: s.id == ^schema.id),
         set: Map.to_list(overrides)
       )
 
-    Repo.get!(StaffMemberSchema, schema.id)
+    Repo.get!(StaffMember, schema.id)
   end
 
   @doc """
@@ -129,16 +116,16 @@ defmodule KlassHero.ProviderFixtures do
   def verification_document_fixture(attrs \\ %{}) do
     attrs_map = Map.new(attrs)
 
-    {:ok, doc} =
-      VerificationDocument.new(%{
-        id: Ecto.UUID.generate(),
+    {:ok, persisted} =
+      %{
         provider_profile_id: attrs_map[:provider_id] || provider_profile_fixture().id,
         document_type: attrs_map[:document_type] || "business_registration",
         file_url: attrs_map[:file_url] || "verification-docs/#{Ecto.UUID.generate()}.pdf",
         original_filename: attrs_map[:original_filename] || "doc.pdf"
-      })
+      }
+      |> VerificationDocument.create_changeset()
+      |> Repo.insert()
 
-    {:ok, persisted} = VerificationDocumentRepository.create(doc)
     persisted
   end
 
@@ -154,7 +141,7 @@ defmodule KlassHero.ProviderFixtures do
 
     doc = verification_document_fixture(attrs)
     {:ok, approved} = VerificationDocument.approve(doc, reviewer_id)
-    {:ok, persisted} = VerificationDocumentRepository.update(approved)
+    {:ok, persisted} = persist_review(doc, approved)
     persisted
   end
 
@@ -171,8 +158,16 @@ defmodule KlassHero.ProviderFixtures do
 
     doc = verification_document_fixture(attrs)
     {:ok, rejected} = VerificationDocument.reject(doc, reviewer_id, reason)
-    {:ok, persisted} = VerificationDocumentRepository.update(rejected)
+    {:ok, persisted} = persist_review(doc, rejected)
     persisted
+  end
+
+  defp persist_review(%VerificationDocument{} = original, %VerificationDocument{} = updated) do
+    original
+    |> VerificationDocument.review_changeset(
+      Map.take(updated, [:status, :rejection_reason, :reviewed_by_id, :reviewed_at])
+    )
+    |> Repo.update()
   end
 
   @doc """
@@ -216,8 +211,12 @@ defmodule KlassHero.ProviderFixtures do
       reporter_display_name: "Test Reporter"
     }
 
-    {:ok, report} = IncidentReport.new(Map.merge(defaults, attrs_map))
-    {:ok, persisted} = IncidentReportRepository.create(report)
+    {:ok, persisted} =
+      defaults
+      |> Map.merge(attrs_map)
+      |> IncidentReport.create_changeset()
+      |> Repo.insert()
+
     persisted
   end
 

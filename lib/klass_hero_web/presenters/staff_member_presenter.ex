@@ -12,7 +12,7 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenter do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
-  alias KlassHero.Provider.Domain.Models.{PayRate, StaffMember}
+  alias KlassHero.Provider.{PayRate, StaffMember}
   alias KlassHero.Shared.Domain.Types.Money
 
   @spec to_card_view(StaffMember.t()) :: map()

@@ -3,7 +3,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMemberRepository
+  alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
   alias KlassHero.ProviderFixtures
 
@@ -25,7 +25,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
-      assert {:ok, updated} = StaffMemberRepository.get(staff.id)
+      assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :sent
       assert updated.invitation_sent_at != nil
     end
@@ -42,7 +42,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
       # Status unchanged, already :sent
-      assert {:ok, updated} = StaffMemberRepository.get(staff.id)
+      assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :sent
     end
 
@@ -56,7 +56,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
       # Status unchanged
-      assert {:ok, unchanged} = StaffMemberRepository.get(staff.id)
+      assert {:ok, unchanged} = Provider.get_staff_member(staff.id)
       assert unchanged.invitation_status == :sent
     end
   end
@@ -69,7 +69,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
-      assert {:ok, updated} = StaffMemberRepository.get(staff.id)
+      assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :failed
     end
 
@@ -80,7 +80,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
-      assert {:ok, updated} = StaffMemberRepository.get(staff.id)
+      assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :failed
     end
   end
@@ -102,7 +102,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
-      assert {:ok, updated} = StaffMemberRepository.get(staff.id)
+      assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :accepted
       assert updated.user_id == user.id
     end
@@ -120,7 +120,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
-      assert {:ok, updated} = StaffMemberRepository.get(staff.id)
+      assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :accepted
       assert updated.user_id == user.id
     end
@@ -144,7 +144,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       # Second processing is idempotent (already :accepted)
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
-      assert {:ok, updated} = StaffMemberRepository.get(staff.id)
+      assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :accepted
       assert updated.user_id == user.id
     end

@@ -7,7 +7,7 @@ defmodule KlassHero.Provider.Domain.ReadModels.IncidentReportSummary do
   struct intentionally has no `reporter_user_id` field.
   """
 
-  alias KlassHero.Provider.Domain.Models.IncidentReport
+  alias KlassHero.Provider.IncidentReport
 
   @typedoc "A denormalized incident report row for the per-program incidents view."
   @type t :: %__MODULE__{

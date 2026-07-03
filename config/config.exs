@@ -17,17 +17,6 @@ alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
-alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
-alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentNotificationScheduler
-alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.IncidentReportRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProgramStaffAssignmentRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProfileRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProgramRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.StaffMemberRepository
-alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.VerificationDocumentRepository
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
@@ -195,26 +184,6 @@ config :klass_hero, :messaging,
   ]
 
 # Participation context needs no port wiring (conventional Phoenix; ACL adapters called directly).
-
-# Configure Provider bounded context
-config :klass_hero, :provider,
-  repo: KlassHero.Repo,
-  for_storing_provider_profiles: ProviderProfileRepository,
-  for_querying_provider_profiles: ProviderProfileRepository,
-  for_storing_verification_documents: VerificationDocumentRepository,
-  for_querying_verification_documents: VerificationDocumentRepository,
-  for_storing_staff_members: StaffMemberRepository,
-  for_querying_staff_members: StaffMemberRepository,
-  for_storing_program_staff_assignments: ProgramStaffAssignmentRepository,
-  for_querying_program_staff_assignments: ProgramStaffAssignmentRepository,
-  for_querying_session_details: SessionDetailsRepository,
-  for_querying_session_stats: SessionStatsRepository,
-  for_resolving_session_stats: ParticipationSessionStatsACL,
-  for_storing_incident_reports: IncidentReportRepository,
-  for_querying_incident_reports: IncidentReportRepository,
-  for_scheduling_incident_notifications: IncidentNotificationScheduler,
-  for_sending_incident_emails: IncidentReportedEmailNotifier,
-  for_querying_provider_programs: ProviderProgramRepository
 
 config :klass_hero, :resend_req_options, []
 

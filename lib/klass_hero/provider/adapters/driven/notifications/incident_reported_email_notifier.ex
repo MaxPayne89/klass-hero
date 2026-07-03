@@ -8,19 +8,16 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
   data and passes it as `context`.
   """
 
-  @behaviour KlassHero.Provider.Domain.Ports.ForSendingIncidentEmails
-
   use KlassHero.Shared.Interaction
 
   import Swoosh.Email
 
   alias KlassHero.Mailer
-  alias KlassHero.Provider.Domain.Models.IncidentReport
+  alias KlassHero.Provider.IncidentReport
   alias KlassHero.Shared.EmailHtml
 
   @from Application.compile_env!(:klass_hero, [:mailer_defaults, :from])
 
-  @impl true
   def send_incident_report(recipient, %IncidentReport{} = report, context) do
     email_interaction operation: :send_incident_report do
       recipient_name = recipient.name || recipient.email

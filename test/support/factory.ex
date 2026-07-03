@@ -42,13 +42,11 @@ defmodule KlassHero.Factory do
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProgramStaffAssignmentSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VerificationDocumentSchema
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
-  alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.StaffMember
+  alias KlassHero.Provider.VerificationDocument
 
   @doc """
   Factory for creating Program domain entities (pure Elixir structs).
@@ -347,7 +345,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ProviderProfileSchema Ecto schemas.
+  Factory for creating ProviderProfile Ecto schemas.
 
   Used in repository and integration tests where we need database persistence.
 
@@ -362,7 +360,7 @@ defmodule KlassHero.Factory do
     # Outcome: every provider profile is linked to a real user record
     user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider])
 
-    %ProviderProfileSchema{
+    %ProviderProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
       business_name: sequence(:provider_schema_business_name, &"Test Provider #{&1}"),
@@ -374,7 +372,7 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: ["sports", "outdoor"],
-      profile_status: "active"
+      profile_status: :active
     }
   end
 
@@ -386,7 +384,7 @@ defmodule KlassHero.Factory do
   def draft_provider_profile_schema_factory do
     user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:staff, :provider])
 
-    %ProviderProfileSchema{
+    %ProviderProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
       business_name: sequence(:draft_provider_business_name, &"Draft Provider #{&1}"),
@@ -398,7 +396,7 @@ defmodule KlassHero.Factory do
       verified: false,
       verified_at: nil,
       categories: [],
-      profile_status: "draft"
+      profile_status: :draft
     }
   end
 
@@ -433,7 +431,7 @@ defmodule KlassHero.Factory do
       staff = insert(:staff_member_schema, provider_id: provider.id)
   """
   def staff_member_schema_factory do
-    %StaffMemberSchema{
+    %StaffMember{
       first_name: sequence(:staff_first_name, &"Staff#{&1}"),
       last_name: "Member",
       role: "Coach",
@@ -482,7 +480,7 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating ProgramStaffAssignmentSchema Ecto schemas.
+  Factory for creating ProgramStaffAssignment Ecto structs.
 
   Inserts a provider profile, a program, and a staff member as prerequisites.
   Used in repository and integration tests that need a persisted staff assignment.
@@ -497,7 +495,7 @@ defmodule KlassHero.Factory do
     program = insert(:program_schema, provider_id: provider.id)
     staff = insert(:staff_member_schema, provider_id: provider.id)
 
-    %ProgramStaffAssignmentSchema{
+    %ProgramStaffAssignment{
       id: Ecto.UUID.generate(),
       provider_id: provider.id,
       program_id: program.id,
@@ -726,13 +724,13 @@ defmodule KlassHero.Factory do
   def verification_document_schema_factory do
     provider = insert(:provider_profile_schema)
 
-    %VerificationDocumentSchema{
+    %VerificationDocument{
       id: Ecto.UUID.generate(),
-      provider_id: provider.id,
-      document_type: "business_registration",
+      provider_profile_id: provider.id,
+      document_type: :business_registration,
       file_url: "verification-docs/providers/#{provider.id}/#{System.unique_integer([:positive])}_doc.pdf",
       original_filename: "registration.pdf",
-      status: "pending"
+      status: :pending
     }
   end
 
@@ -745,7 +743,7 @@ defmodule KlassHero.Factory do
     struct!(
       verification_document_schema_factory(),
       %{
-        status: "approved",
+        status: :approved,
         reviewed_by_id: reviewer.id,
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
       }
@@ -761,7 +759,7 @@ defmodule KlassHero.Factory do
     struct!(
       verification_document_schema_factory(),
       %{
-        status: "rejected",
+        status: :rejected,
         rejection_reason: "Document is illegible",
         reviewed_by_id: reviewer.id,
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)

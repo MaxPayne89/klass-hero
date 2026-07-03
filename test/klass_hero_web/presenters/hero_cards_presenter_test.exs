@@ -2,7 +2,7 @@ defmodule KlassHeroWeb.Presenters.HeroCardsPresenterTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.ProgramCatalog.Instructor
-  alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider.StaffMember
   alias KlassHeroWeb.Presenters.HeroCardsPresenter
 
   defp staff(attrs) do

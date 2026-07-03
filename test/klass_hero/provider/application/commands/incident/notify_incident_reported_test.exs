@@ -20,7 +20,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReporte
   import KlassHero.ProviderFixtures
   import Swoosh.TestAssertions
 
-  alias KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReported
+  alias KlassHero.Provider.NotifyIncidentReported
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
   setup do

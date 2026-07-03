@@ -5,7 +5,7 @@ defmodule KlassHero.Provider.Application.Queries.IncidentReportQueriesTest do
   import KlassHero.Factory
   import KlassHero.ProviderFixtures
 
-  alias KlassHero.Provider.Application.Queries.IncidentReportQueries
+  alias KlassHero.Provider
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
 
   describe "list_for_program/2" do
@@ -23,7 +23,7 @@ defmodule KlassHero.Provider.Application.Queries.IncidentReportQueriesTest do
         )
 
       assert [%IncidentReportSummary{} = summary] =
-               IncidentReportQueries.list_for_program(provider.id, program.id)
+               Provider.list_incident_reports_for_program(provider.id, program.id)
 
       assert summary.reporter_display_name == "Maria Schmidt"
       assert summary.program_id == program.id
@@ -33,7 +33,7 @@ defmodule KlassHero.Provider.Application.Queries.IncidentReportQueriesTest do
       provider = provider_profile_fixture()
       program = insert(:program_schema, provider_id: provider.id)
 
-      assert IncidentReportQueries.list_for_program(provider.id, program.id) == []
+      assert Provider.list_incident_reports_for_program(provider.id, program.id) == []
     end
   end
 end

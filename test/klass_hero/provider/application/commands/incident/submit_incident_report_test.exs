@@ -1,5 +1,6 @@
-defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportTest do
+defmodule KlassHero.Provider.SubmitIncidentReportTest do
   use KlassHero.DataCase, async: false
+  use Mimic
 
   import Ecto.Query
   import KlassHero.AccountsFixtures, only: [unconfirmed_user_fixture: 1]
@@ -9,13 +10,13 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
   import Swoosh.TestAssertions
 
   alias KlassHero.Accounts.User
-  alias KlassHero.Provider.Adapters.Driven.Notifications.StubIncidentNotificationScheduler
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IncidentReportSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
-  alias KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReport
+  alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.SubmitIncidentReport
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
   alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.Tracing.ObanEnqueue
 
   setup do
     provider = insert(:provider_profile_schema)
@@ -34,8 +35,6 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       send(test_pid, {:domain_event, event})
       :ok
     end)
-
-    on_exit(fn -> StubIncidentNotificationScheduler.reset() end)
 
     %{provider: provider, program_id: program.id, user: user}
   end
@@ -75,7 +74,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       params = base_params(p, pg, u)
 
       assert {:ok, report} = SubmitIncidentReport.execute(params)
-      assert Repo.get(IncidentReportSchema, report.id)
+      assert Repo.get(IncidentReport, report.id)
 
       assert_receive {:domain_event, event}, 500
       assert event.event_type == :incident_reported
@@ -91,16 +90,16 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
 
       assert {:error, errors} = SubmitIncidentReport.execute(params)
       assert errors[:program_id] == "does not belong to this provider"
-      refute Repo.exists?(from r in IncidentReportSchema, select: r.id, limit: 1)
+      refute Repo.exists?(from r in IncidentReport, select: r.id, limit: 1)
     end
 
     test "rejects invalid domain data without persistence (description too short)",
          %{provider: p, program_id: pg, user: u} do
       params = p |> base_params(pg, u) |> Map.put(:description, "short")
 
-      assert {:error, errors} = SubmitIncidentReport.execute(params)
-      assert errors[:description] =~ "at least 10"
-      refute Repo.exists?(from r in IncidentReportSchema, select: r.id, limit: 1)
+      assert {:error, %Ecto.Changeset{} = changeset} = SubmitIncidentReport.execute(params)
+      assert Enum.any?(errors_on(changeset).description, &(&1 =~ "at least 10"))
+      refute Repo.exists?(from r in IncidentReport, select: r.id, limit: 1)
     end
 
     test "persists reporter_display_name as a snapshot", %{provider: p, program_id: pg, user: u} do
@@ -109,16 +108,16 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       assert {:ok, report} = SubmitIncidentReport.execute(params)
       assert report.reporter_display_name == "Maria Schmidt"
 
-      stored = Repo.get(IncidentReportSchema, report.id)
+      stored = Repo.get(IncidentReport, report.id)
       assert stored.reporter_display_name == "Maria Schmidt"
     end
 
     test "rejects when reporter_display_name is blank", %{provider: p, program_id: pg, user: u} do
       params = p |> base_params(pg, u) |> Map.put(:reporter_display_name, "   ")
 
-      assert {:error, errors} = SubmitIncidentReport.execute(params)
-      assert errors[:reporter_display_name] =~ "required"
-      refute Repo.exists?(from r in IncidentReportSchema, select: r.id, limit: 1)
+      assert {:error, %Ecto.Changeset{} = changeset} = SubmitIncidentReport.execute(params)
+      assert Enum.any?(errors_on(changeset).reporter_display_name, &(&1 =~ "blank"))
+      refute Repo.exists?(from r in IncidentReport, select: r.id, limit: 1)
     end
   end
 
@@ -200,7 +199,6 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
 
     # Trigger: file_binary supplied without an original_filename (or with a blank one)
     # Why: validating filename presence AFTER upload leaves an orphan in private storage
-    #      because the downstream domain model rejects the photo_url via validate_photo_pair/1
     # Outcome: short-circuit with an :original_filename validation error and never call the storage adapter
     test "rejects with missing-filename error and never uploads when filename is blank", %{
       provider: p,
@@ -224,10 +222,8 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
   end
 
   describe "execute/1 — incident email pipeline (end-to-end)" do
-    # Trigger: assertions inspect Swoosh's per-process mailbox
-    # Why: previous test-runs may have left messages from other commands; flushing
-    #      keeps each test's assertions scoped to mail it just sent
-    # Outcome: empty mailbox at the start of every test in this describe
+    # Flush Swoosh's per-process mailbox so each test's assertions are scoped to
+    # mail it just sent.
     setup do
       flush_emails()
       :ok
@@ -238,9 +234,6 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       program_id: program_id,
       user: reporter
     } do
-      # Backfill the email column on the existing provider row so the use case can
-      # resolve a recipient — production rows are populated by ProviderEventHandler
-      # off the :user_registered integration event payload.
       provider
       |> Ecto.Changeset.change(%{business_owner_email: "owner@example.com"})
       |> Repo.update!()
@@ -255,7 +248,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       end)
     end
 
-    test "skips the scheduler call when the reporter is the provider owner (self-report)", %{
+    test "skips the notification when the reporter is the provider owner (self-report)", %{
       provider: provider,
       program_id: program_id
     } do
@@ -267,13 +260,12 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       assert {:ok, _report} = SubmitIncidentReport.execute(params)
 
       assert_no_email_sent()
-      assert StubIncidentNotificationScheduler.calls() == []
       # Domain event is still dispatched — preserves the eventing contract;
       # only the email work is skipped.
       assert_receive {:domain_event, _event}, 500
     end
 
-    test "skips the scheduler call when the provider has no business_owner_email on file", %{
+    test "skips the notification when the provider has no business_owner_email on file", %{
       provider: provider,
       program_id: program_id,
       user: reporter
@@ -284,45 +276,50 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       assert {:ok, _report} = SubmitIncidentReport.execute(params)
 
       assert_no_email_sent()
-      assert StubIncidentNotificationScheduler.calls() == []
       assert_receive {:domain_event, _event}, 500
     end
   end
 
   describe "execute/1 — transactional enqueue (#754)" do
-    # Trigger: Oban.insert returns {:error, _} from inside the persistence transaction
-    # Why: row insert and email-job insert must commit atomically — a failed enqueue
-    #      that leaves the report row behind orphans the notification permanently
+    # Trigger: the Oban enqueue returns {:error, _} from inside the persistence
+    # transaction. Row insert and email-job insert must commit atomically — a
+    # failed enqueue that leaves the report row behind orphans the notification.
     # Outcome: Repo.transaction rolls back, no incident_reports row exists, no
-    #          :incident_reported event fires, photo (if any) is cleaned up
+    # :incident_reported event fires, photo (if any) is cleaned up.
     test "rolls back the report when the email enqueue fails", %{
       provider: p,
       program_id: pg,
       user: u
     } do
       p = with_owner_email(p)
-      StubIncidentNotificationScheduler.set_failure_mode(:enqueue_failed)
+      expect(ObanEnqueue, :with_context, fn _worker, _args -> {:error, :enqueue_failed} end)
 
       params = base_params(p, pg, u)
 
       assert {:error, :enqueue_failed} = SubmitIncidentReport.execute(params)
 
-      refute Repo.exists?(IncidentReportSchema)
+      refute Repo.exists?(IncidentReport)
       refute_receive {:domain_event, _}, 100
     end
 
-    test "calls the scheduler with both the persisted report and the loaded profile",
+    test "enqueues the notification with the persisted report id and loaded profile",
          %{provider: p, program_id: pg, user: u} do
       p = with_owner_email(p)
+      test_pid = self()
+
+      expect(ObanEnqueue, :with_context, fn _worker, args ->
+        send(test_pid, {:enqueued, args})
+        {:ok, %Oban.Job{id: 1}}
+      end)
+
       params = base_params(p, pg, u)
 
       assert {:ok, report} = SubmitIncidentReport.execute(params)
 
-      assert [{enqueued_report, enqueued_profile}] = StubIncidentNotificationScheduler.calls()
-      assert enqueued_report.id == report.id
-      assert enqueued_profile.id == p.id
-      assert enqueued_profile.business_owner_email == "owner@example.com"
-      assert enqueued_profile.business_name == p.business_name
+      assert_receive {:enqueued, args}
+      assert args.incident_report_id == report.id
+      assert args.business_owner_email == "owner@example.com"
+      assert args.business_name == p.business_name
     end
 
     test "deletes the uploaded photo when the transaction rolls back", %{
@@ -335,7 +332,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       {:ok, storage} =
         StubStorageAdapter.start_link(name: :"storage_#{System.unique_integer([:positive])}")
 
-      StubIncidentNotificationScheduler.set_failure_mode(:enqueue_failed)
+      expect(ObanEnqueue, :with_context, fn _worker, _args -> {:error, :enqueue_failed} end)
 
       params =
         p
@@ -347,7 +344,7 @@ defmodule KlassHero.Provider.Application.Commands.Incident.SubmitIncidentReportT
       assert {:error, :enqueue_failed} = SubmitIncidentReport.execute(params)
 
       # Storage stub agent should hold no entries — proves cleanup_photo deleted
-      # the upload after the transaction rolled back
+      # the upload after the transaction rolled back.
       assert Agent.get(storage, & &1) == %{}
     end
   end

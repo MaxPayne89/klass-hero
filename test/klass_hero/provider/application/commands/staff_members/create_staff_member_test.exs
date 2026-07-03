@@ -1,11 +1,9 @@
 defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMemberTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
-  alias KlassHero.Provider.Domain.Models.PayRate
+  alias KlassHero.Provider
+  alias KlassHero.Provider.PayRate
   alias KlassHero.ProviderFixtures
-
-  @repository Application.compile_env!(:klass_hero, [:provider, :for_storing_staff_members])
 
   setup do
     provider = ProviderFixtures.provider_profile_fixture()
@@ -16,7 +14,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
     test "creates a staff member with required fields only", %{provider_id: provider_id} do
       attrs = %{provider_id: provider_id, first_name: "Alice", last_name: "Smith"}
 
-      assert {:ok, staff} = CreateStaffMember.execute(attrs)
+      assert {:ok, staff} = Provider.create_staff_member(attrs)
       assert staff.provider_id == provider_id
       assert staff.first_name == "Alice"
       assert staff.last_name == "Smith"
@@ -40,7 +38,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
         active: false
       }
 
-      assert {:ok, staff, _raw_token} = CreateStaffMember.execute(attrs)
+      assert {:ok, staff, _raw_token} = Provider.create_staff_member(attrs)
       assert staff.role == "Head Coach"
       assert staff.email == "bob@example.com"
       assert staff.bio == "Experienced coach"
@@ -62,7 +60,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
         :invitation_status => :accepted
       }
 
-      assert {:ok, staff} = CreateStaffMember.execute(attrs)
+      assert {:ok, staff} = Provider.create_staff_member(attrs)
       assert is_nil(staff.user_id)
       refute staff.invitation_status == :accepted
     end
@@ -70,7 +68,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
     test "returns validation error when first_name is empty", %{provider_id: provider_id} do
       attrs = %{provider_id: provider_id, first_name: "", last_name: "Smith"}
 
-      assert {:error, {:validation_error, errors}} = CreateStaffMember.execute(attrs)
+      assert {:error, {:validation_error, errors}} = Provider.create_staff_member(attrs)
       assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "First name"))
     end
@@ -78,7 +76,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
     test "returns validation error when last_name is empty", %{provider_id: provider_id} do
       attrs = %{provider_id: provider_id, first_name: "Alice", last_name: ""}
 
-      assert {:error, {:validation_error, errors}} = CreateStaffMember.execute(attrs)
+      assert {:error, {:validation_error, errors}} = Provider.create_staff_member(attrs)
       assert Enum.any?(errors, &String.contains?(&1, "Last name"))
     end
 
@@ -90,7 +88,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
         tags: ["invalid-category"]
       }
 
-      assert {:error, {:validation_error, errors}} = CreateStaffMember.execute(attrs)
+      assert {:error, {:validation_error, errors}} = Provider.create_staff_member(attrs)
       assert Enum.any?(errors, &String.contains?(&1, "Invalid tags"))
     end
 
@@ -102,16 +100,16 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
         email: "not-an-email"
       }
 
-      assert {:error, {:validation_error, errors}} = CreateStaffMember.execute(attrs)
+      assert {:error, {:validation_error, errors}} = Provider.create_staff_member(attrs)
       assert Enum.any?(errors, &String.contains?(&1, "Email"))
     end
 
     test "persists the staff member to the database", %{provider_id: provider_id} do
       attrs = %{provider_id: provider_id, first_name: "Dave", last_name: "Brown"}
 
-      assert {:ok, staff} = CreateStaffMember.execute(attrs)
+      assert {:ok, staff} = Provider.create_staff_member(attrs)
 
-      assert {:ok, fetched} = @repository.get(staff.id)
+      assert {:ok, fetched} = Provider.get_staff_member(staff.id)
       assert fetched.id == staff.id
       assert fetched.first_name == "Dave"
     end
@@ -126,7 +124,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
         pay_rate: pay_rate
       }
 
-      assert {:ok, staff} = CreateStaffMember.execute(attrs)
+      assert {:ok, staff} = Provider.create_staff_member(attrs)
       assert staff.pay_rate.type == :hourly
       assert Decimal.equal?(staff.pay_rate.money.amount, Decimal.new("25.00"))
       assert staff.pay_rate.money.currency == :EUR
@@ -135,7 +133,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
     test "defaults pay_rate to nil when not provided", %{provider_id: provider_id} do
       attrs = %{provider_id: provider_id, first_name: "Ken", last_name: "Norate"}
 
-      assert {:ok, staff} = CreateStaffMember.execute(attrs)
+      assert {:ok, staff} = Provider.create_staff_member(attrs)
       assert is_nil(staff.pay_rate)
     end
   end

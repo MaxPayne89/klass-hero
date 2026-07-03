@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.PayRate
+  alias KlassHero.Provider.PayRate
   alias KlassHero.ProviderFixtures
 
   setup :register_and_log_in_provider

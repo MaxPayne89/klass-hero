@@ -2,11 +2,10 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProfileMapper
 
   setup do
     provider = KlassHero.Factory.insert(:draft_provider_profile_schema)
-    domain_provider = ProviderProfileMapper.to_domain(provider)
+    domain_provider = provider
 
     %{provider: domain_provider}
   end
@@ -46,7 +45,7 @@ defmodule KlassHero.Provider.Application.Commands.Providers.CompleteProviderProf
 
     test "returns :already_active for an active profile" do
       active_provider = KlassHero.Factory.insert(:provider_profile_schema)
-      domain = ProviderProfileMapper.to_domain(active_provider)
+      domain = active_provider
 
       assert {:error, :already_active} =
                Provider.complete_provider_profile(domain.id, %{description: "test"})

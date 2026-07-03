@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.Application.Commands.BroadcastToProgramTest do
   alias KlassHero.Messaging.Application.Commands.BroadcastToProgram
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Message
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
 
   describe "execute/4" do
     test "creates broadcast conversation and message with enrolled parents" do

@@ -3,8 +3,8 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
 
   import KlassHero.EventTestHelper
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
-  alias KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
+  alias KlassHero.Provider
+  alias KlassHero.Provider.StaffMember
   alias KlassHero.ProviderFixtures
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
@@ -20,7 +20,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
       provider: provider
     } do
       {:ok, staff, _raw_token} =
-        CreateStaffMember.execute(%{
+        Provider.create_staff_member(%{
           provider_id: provider.id,
           first_name: "Jane",
           last_name: "Doe",
@@ -35,7 +35,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
       provider: provider
     } do
       {:ok, staff} =
-        CreateStaffMember.execute(%{
+        Provider.create_staff_member(%{
           provider_id: provider.id,
           first_name: "Bob",
           last_name: "Smith"
@@ -47,7 +47,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
 
     test "returns raw_token when email is present", %{provider: provider} do
       {:ok, staff, raw_token} =
-        CreateStaffMember.execute(%{
+        Provider.create_staff_member(%{
           provider_id: provider.id,
           first_name: "Jane",
           last_name: "Doe",
@@ -66,7 +66,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
       provider: provider
     } do
       {:ok, staff, _raw_token} =
-        CreateStaffMember.execute(%{
+        Provider.create_staff_member(%{
           provider_id: provider.id,
           first_name: "Jane",
           last_name: "Doe",
@@ -90,7 +90,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
       provider: provider
     } do
       assert {:error, {:validation_error, errors}} =
-               CreateStaffMember.execute(%{
+               Provider.create_staff_member(%{
                  provider_id: provider.id,
                  first_name: "Blank",
                  last_name: "Email",
@@ -103,7 +103,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
 
     test "does not emit integration event when email is absent", %{provider: provider} do
       {:ok, _staff} =
-        CreateStaffMember.execute(%{
+        Provider.create_staff_member(%{
           provider_id: provider.id,
           first_name: "Bob",
           last_name: "Smith"
@@ -118,7 +118,7 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
       TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
 
       assert {:error, :invitation_emission_failed} =
-               CreateStaffMember.execute(%{
+               Provider.create_staff_member(%{
                  provider_id: provider.id,
                  first_name: "Jane",
                  last_name: "Doe",
@@ -128,12 +128,12 @@ defmodule KlassHero.Provider.Application.Commands.StaffMembers.CreateStaffMember
       # Verify compensation: staff member persisted in :failed, not orphaned as :pending
       [schema] =
         Repo.all(
-          from(s in StaffMemberSchema,
+          from(s in StaffMember,
             where: s.provider_id == ^provider.id and s.email == "jane@example.com"
           )
         )
 
-      assert schema.invitation_status == "failed"
+      assert schema.invitation_status == :failed
     end
   end
 end

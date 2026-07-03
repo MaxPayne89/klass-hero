@@ -13,8 +13,8 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.IncidentReport
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHeroWeb.Helpers.DateTimeHelpers
   alias KlassHeroWeb.Theme
 
@@ -122,8 +122,10 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
          |> assign(form: form_with_errors(params, errors))}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        Logger.warning("Incident report persistence failed: #{inspect(changeset.errors)}")
-        {:noreply, put_flash(socket, :error, gettext("Something went wrong. Please try again."))}
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("Please fix the errors below."))
+         |> assign(form: form_with_changeset_errors(params, changeset))}
 
       {:error, reason} ->
         Logger.warning("Incident report submission failed", reason: inspect(reason))
@@ -208,6 +210,23 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   defp form_with_errors(params, errors) do
     form_errors = Enum.map(errors, fn {field, message} -> {field, {to_string(message), []}} end)
     to_form(params, as: "incident", errors: form_errors)
+  end
+
+  # Changeset errors arrive as `{field, {template, opts}}`; interpolate the opts
+  # (e.g. %{count}) so inline messages read "at least 10 characters", not the raw template.
+  defp form_with_changeset_errors(params, changeset) do
+    form_errors =
+      Enum.map(changeset.errors, fn {field, {template, opts}} ->
+        {field, {interpolate_error(template, opts), []}}
+      end)
+
+    to_form(params, as: "incident", errors: form_errors)
+  end
+
+  defp interpolate_error(template, opts) do
+    Enum.reduce(opts, template, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", to_string(value))
+    end)
   end
 
   defp category_options do

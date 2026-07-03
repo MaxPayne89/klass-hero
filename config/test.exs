@@ -1,7 +1,6 @@
 import Config
 
 alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
-alias KlassHero.Provider.Adapters.Driven.Notifications.StubIncidentNotificationScheduler
 alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
@@ -43,13 +42,6 @@ config :klass_hero, :feature_flags, adapter: StubFeatureFlagsAdapter
 config :klass_hero, :integration_event_publisher,
   module: TestIntegrationEventPublisher,
   pubsub: KlassHero.PubSub
-
-# Provider context overrides (test-only)
-# Why: stub the incident-notification enqueue port so individual tests can
-# flip it into failure mode to exercise the SubmitIncidentReport rollback path.
-# In its default passthrough mode the stub forwards to the real adapter, so
-# end-to-end email-pipeline tests (Oban testing: :inline) keep working.
-config :klass_hero, :provider, for_scheduling_incident_notifications: StubIncidentNotificationScheduler
 
 config :klass_hero, :resend_req_options,
   plug: {Req.Test, ResendEmailContentAdapter},

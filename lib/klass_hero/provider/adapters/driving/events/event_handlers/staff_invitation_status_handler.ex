@@ -14,15 +14,13 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
 
-  alias KlassHero.Provider.Application.Commands.StaffMembers.AcceptStaffInvitation
-  alias KlassHero.Provider.Domain.Models.StaffMember
+  alias KlassHero.Provider
+  alias KlassHero.Provider.StaffMember
+  alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   require Logger
-
-  @staff_query Application.compile_env!(:klass_hero, [:provider, :for_querying_staff_members])
-  @repository Application.compile_env!(:klass_hero, [:provider, :for_storing_staff_members])
 
   @impl true
   def subscribed_events, do: [:staff_invitation_sent, :staff_invitation_failed, :staff_user_registered]
@@ -44,10 +42,10 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
   def handle_event(%IntegrationEvent{event_type: :staff_user_registered, payload: payload}) do
     payload = MapperHelpers.normalize_keys(payload)
 
-    # Uses the same AcceptStaffInvitation command as the synchronous path (ADR-0005: never creates a ProviderProfile).
+    # Uses the same accept flow as the synchronous path (ADR-0005: never creates a ProviderProfile).
     with {:ok, user_id} <- Map.fetch(payload, :user_id),
          {:ok, staff_member_id} <- Map.fetch(payload, :staff_member_id),
-         {:ok, staff} <- @staff_query.get(staff_member_id) do
+         {:ok, staff} <- Provider.get_staff_member(staff_member_id) do
       accept_idempotently(staff, user_id)
     else
       :error ->
@@ -67,7 +65,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   # Idempotent: replays where the invitation is already past :sent/:pending are treated as success.
   defp accept_idempotently(staff, user_id) do
-    case AcceptStaffInvitation.execute(staff, user_id) do
+    case Provider.accept_staff_invitation(staff, user_id) do
       {:ok, _staff} ->
         :ok
 
@@ -90,10 +88,10 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   defp transition_and_persist(payload, new_status, update_fn \\ &Function.identity/1) do
     with {:ok, staff_member_id} <- Map.fetch(payload, :staff_member_id),
-         {:ok, staff} <- @staff_query.get(staff_member_id),
+         {:ok, staff} <- Provider.get_staff_member(staff_member_id),
          {:ok, transitioned} <- StaffMember.transition_invitation(staff, new_status),
          updated = update_fn.(transitioned),
-         {:ok, _persisted} <- @repository.update(updated) do
+         {:ok, _persisted} <- persist_invitation_transition(staff, updated) do
       Logger.info("[StaffInvitationStatusHandler] Transitioned to #{new_status}",
         staff_member_id: staff_member_id
       )
@@ -119,5 +117,16 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
         {:error, reason}
     end
+  end
+
+  # Casts the transitioned invitation fields onto the freshly-loaded row so Ecto
+  # sees a real status change (the state-machine guard already ran upstream).
+  defp persist_invitation_transition(%StaffMember{} = original, %StaffMember{} = updated) do
+    original
+    |> StaffMember.invitation_changeset(%{
+      invitation_status: updated.invitation_status,
+      invitation_sent_at: updated.invitation_sent_at
+    })
+    |> Repo.update()
   end
 end

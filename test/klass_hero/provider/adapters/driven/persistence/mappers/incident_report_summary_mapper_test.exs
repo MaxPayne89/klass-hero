@@ -11,8 +11,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
   use ExUnitProperties
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.IncidentReportSchema
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
+  alias KlassHero.Provider.IncidentReport
 
   @id Ecto.UUID.generate()
   @provider_id Ecto.UUID.generate()
@@ -24,7 +24,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
   defp valid_schema(overrides \\ %{}) do
     defaults = %{
       id: @id,
-      provider_id: @provider_id,
+      provider_profile_id: @provider_id,
       reporter_user_id: Ecto.UUID.generate(),
       reporter_display_name: "Jane Smith",
       program_id: @program_id,
@@ -39,7 +39,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
       updated_at: ~U[2025-03-15 15:00:00Z]
     }
 
-    struct!(IncidentReportSchema, Map.merge(defaults, overrides))
+    struct!(IncidentReport, Map.merge(defaults, overrides))
   end
 
   describe "from_schema/1" do
@@ -106,7 +106,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportS
         schema =
           valid_schema(%{
             id: id,
-            provider_id: provider_id,
+            provider_profile_id: provider_id,
             program_id: program_id,
             session_id: session_id,
             category: category,

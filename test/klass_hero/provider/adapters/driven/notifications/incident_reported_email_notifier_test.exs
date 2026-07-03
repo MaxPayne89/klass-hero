@@ -12,7 +12,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
   use ExUnit.Case, async: false
 
   alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
-  alias KlassHero.Provider.Domain.Models.IncidentReport
+  alias KlassHero.Provider.IncidentReport
 
   @recipient %{email: "owner@example.com", name: "Hannah Owner"}
 
@@ -37,25 +37,23 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
   end
 
   defp build_report(overrides \\ %{}) do
-    {:ok, report} =
-      IncidentReport.new(
-        Map.merge(
-          %{
-            id: "01HZ-incident-id",
-            provider_profile_id: "prov-1",
-            reporter_user_id: "user-1",
-            reporter_display_name: "Jane Doe",
-            program_id: "prog-1",
-            category: :safety_concern,
-            severity: :high,
-            description: "A child slipped near the edge of the play area.",
-            occurred_at: ~U[2026-04-20 14:30:00Z]
-          },
-          overrides
-        )
+    struct!(
+      IncidentReport,
+      Map.merge(
+        %{
+          id: "01HZ-incident-id",
+          provider_profile_id: "prov-1",
+          reporter_user_id: "user-1",
+          reporter_display_name: "Jane Doe",
+          program_id: "prog-1",
+          category: :safety_concern,
+          severity: :high,
+          description: "A child slipped near the edge of the play area.",
+          occurred_at: ~U[2026-04-20 14:30:00Z]
+        },
+        overrides
       )
-
-    report
+    )
   end
 
   defp build_context(overrides \\ %{}) do

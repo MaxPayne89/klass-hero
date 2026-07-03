@@ -11,7 +11,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Categories
   alias KlassHero.Shared.Storage
   alias KlassHeroWeb.Theme
@@ -40,7 +40,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
           |> assign(page_title: gettext("Complete Your Profile"))
           |> assign(active_nav: :onboarding)
           |> assign(provider: provider)
-          |> assign(form: to_form(changeset))
+          |> assign(form: to_form(changeset, as: :provider_profile_schema))
           |> assign(categories: Categories.categories())
           |> allow_upload(:logo,
             accept: ~w(.jpg .jpeg .png .webp),
@@ -60,7 +60,10 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
     provider = socket.assigns.provider
     changeset = Provider.change_provider_profile_completion(provider, params)
 
-    {:noreply, assign(socket, form: to_form(Map.put(changeset, :action, :validate)))}
+    {:noreply,
+     assign(socket,
+       form: to_form(Map.put(changeset, :action, :validate), as: :provider_profile_schema)
+     )}
   end
 
   @impl true
@@ -98,7 +101,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             {:noreply,
              socket
              |> put_flash(:error, gettext("Please fix the errors below."))
-             |> assign(form: to_form(Map.put(changeset, :action, :validate)))}
+             |> assign(form: to_form(Map.put(changeset, :action, :validate), as: :provider_profile_schema))}
 
           {:error, _reason} ->
             {:noreply, put_flash(socket, :error, gettext("Something went wrong. Please try again."))}

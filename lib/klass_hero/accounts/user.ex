@@ -16,7 +16,7 @@ defmodule KlassHero.Accounts.User do
   # Pragmatic DDD boundary crossing — see AccountLive moduledoc.
   alias KlassHero.Accounts.User
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
+  alias KlassHero.Provider.ProviderProfile
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -34,7 +34,7 @@ defmodule KlassHero.Accounts.User do
     field :is_admin, :boolean, default: false
 
     has_one :parent_profile, ParentProfile, foreign_key: :identity_id
-    has_one :provider_profile, ProviderProfileSchema, foreign_key: :identity_id
+    has_one :provider_profile, ProviderProfile, foreign_key: :identity_id
 
     timestamps(type: :utc_datetime)
   end

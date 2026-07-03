@@ -3,7 +3,7 @@ defmodule KlassHero.Shared.EntitlementsTest do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Provider.Domain.Models.ProviderProfile
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Entitlements
 
   # Helper to create a parent with a specific tier

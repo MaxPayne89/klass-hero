@@ -69,8 +69,8 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
 
       doc =
         insert(:verification_document_schema,
-          provider_id: provider.id,
-          document_type: "insurance_certificate",
+          provider_profile_id: provider.id,
+          document_type: :insurance_certificate,
           original_filename: "insurance.pdf"
         )
 
@@ -92,7 +92,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "filters by pending status", %{conn: conn} do
-      pending = insert(:verification_document_schema, status: "pending")
+      pending = insert(:verification_document_schema, status: :pending)
       approved = insert(:approved_verification_document_schema)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications?status=pending")
@@ -102,7 +102,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "filters by approved status", %{conn: conn} do
-      pending = insert(:verification_document_schema, status: "pending")
+      pending = insert(:verification_document_schema, status: :pending)
       approved = insert(:approved_verification_document_schema)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications?status=approved")
@@ -112,7 +112,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "filters by rejected status", %{conn: conn} do
-      pending = insert(:verification_document_schema, status: "pending")
+      pending = insert(:verification_document_schema, status: :pending)
       rejected = insert(:rejected_verification_document_schema)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications?status=rejected")
@@ -122,7 +122,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "shows all documents when no status filter", %{conn: conn} do
-      pending = insert(:verification_document_schema, status: "pending")
+      pending = insert(:verification_document_schema, status: :pending)
       approved = insert(:approved_verification_document_schema)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications")
@@ -156,8 +156,8 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
 
       doc =
         insert(:verification_document_schema,
-          provider_id: provider.id,
-          document_type: "business_registration",
+          provider_profile_id: provider.id,
+          document_type: :business_registration,
           original_filename: "business_reg.pdf"
         )
 
@@ -180,7 +180,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "renders action buttons for pending documents", %{conn: conn} do
-      doc = insert(:verification_document_schema, status: "pending")
+      doc = insert(:verification_document_schema, status: :pending)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 
@@ -252,7 +252,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     setup :register_and_log_in_admin
 
     test "approve event updates document status", %{conn: conn} do
-      doc = insert(:verification_document_schema, status: "pending")
+      doc = insert(:verification_document_schema, status: :pending)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 
@@ -298,7 +298,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     setup :register_and_log_in_admin
 
     test "toggle reject form shows the rejection textarea", %{conn: conn} do
-      doc = insert(:verification_document_schema, status: "pending")
+      doc = insert(:verification_document_schema, status: :pending)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 
@@ -311,7 +311,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "cancel hides the reject form", %{conn: conn} do
-      doc = insert(:verification_document_schema, status: "pending")
+      doc = insert(:verification_document_schema, status: :pending)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 
@@ -325,7 +325,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "reject with reason updates document and shows flash", %{conn: conn} do
-      doc = insert(:verification_document_schema, status: "pending")
+      doc = insert(:verification_document_schema, status: :pending)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 
@@ -359,7 +359,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
 
     test "reject without reason shows error flash", %{conn: conn} do
-      doc = insert(:verification_document_schema, status: "pending")
+      doc = insert(:verification_document_schema, status: :pending)
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 
