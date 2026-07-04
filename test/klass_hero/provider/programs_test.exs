@@ -1,18 +1,20 @@
-defmodule KlassHero.Provider.Application.Queries.ListProgramSessionsTest do
+defmodule KlassHero.Provider.ProgramsTest do
   @moduledoc """
-  Integration tests for the ListProgramSessions use case.
+  Integration tests for the provider programs/sessions read queries, exercised
+  through the `KlassHero.Provider` public facade.
 
-  Tests the complete data flow: Use Case -> Read Repository -> Database -> SessionDetail read model.
+  Tests the complete data flow: Facade -> Programs -> Read Repository ->
+  Database -> SessionDetail read model.
   """
 
   use KlassHero.DataCase, async: true
 
+  alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
-  alias KlassHero.Provider.Application.Queries.ListProgramSessions
   alias KlassHero.Provider.Domain.ReadModels.SessionDetail
   alias KlassHero.Repo
 
-  describe "execute/2" do
+  describe "list_program_sessions/2" do
     test "returns sessions for the provider's program ordered by date and start time" do
       provider_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
@@ -39,14 +41,14 @@ defmodule KlassHero.Provider.Application.Queries.ListProgramSessionsTest do
         status: :scheduled
       })
 
-      [first, second] = ListProgramSessions.execute(provider_id, program_id)
+      [first, second] = Provider.list_program_sessions(provider_id, program_id)
 
       assert %SessionDetail{session_date: ~D[2026-05-01]} = first
       assert %SessionDetail{session_date: ~D[2026-05-02]} = second
     end
 
     test "returns [] when the program has no sessions" do
-      assert [] == ListProgramSessions.execute(Ecto.UUID.generate(), Ecto.UUID.generate())
+      assert [] == Provider.list_program_sessions(Ecto.UUID.generate(), Ecto.UUID.generate())
     end
 
     test "does not leak sessions across providers" do
@@ -65,7 +67,7 @@ defmodule KlassHero.Provider.Application.Queries.ListProgramSessionsTest do
         status: :scheduled
       })
 
-      assert [] == ListProgramSessions.execute(mine, program_id)
+      assert [] == Provider.list_program_sessions(mine, program_id)
     end
   end
 
