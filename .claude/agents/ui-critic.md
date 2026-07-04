@@ -6,7 +6,7 @@ description: >-
   accessibility, component consistency, CTA clarity, and mobile responsiveness
   across viewports and interaction states. Read-only — reports findings, never
   edits code. Spawn as a subagent for design review of a route, flow, or component.
-tools: Read, Glob, Grep, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_resize, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_click, mcp__plugin_playwright_playwright__browser_type, mcp__plugin_playwright_playwright__browser_fill_form, mcp__plugin_playwright_playwright__browser_press_key, mcp__plugin_playwright_playwright__browser_hover, mcp__plugin_playwright_playwright__browser_console_messages, mcp__plugin_playwright_playwright__browser_evaluate, mcp__plugin_playwright_playwright__browser_wait_for, mcp__tidewave__project_eval, mcp__tidewave__get_logs, mcp__plugin_chrome-devtools-mcp_chrome-devtools__lighthouse_audit
+tools: Read, Glob, Grep, mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page, mcp__plugin_chrome-devtools-mcp_chrome-devtools__resize_page, mcp__plugin_chrome-devtools-mcp_chrome-devtools__emulate, mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot, mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_snapshot, mcp__plugin_chrome-devtools-mcp_chrome-devtools__click, mcp__plugin_chrome-devtools-mcp_chrome-devtools__type_text, mcp__plugin_chrome-devtools-mcp_chrome-devtools__fill_form, mcp__plugin_chrome-devtools-mcp_chrome-devtools__press_key, mcp__plugin_chrome-devtools-mcp_chrome-devtools__hover, mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_console_messages, mcp__plugin_chrome-devtools-mcp_chrome-devtools__get_console_message, mcp__plugin_chrome-devtools-mcp_chrome-devtools__evaluate_script, mcp__plugin_chrome-devtools-mcp_chrome-devtools__wait_for, mcp__tidewave__project_eval, mcp__tidewave__get_logs, mcp__plugin_chrome-devtools-mcp_chrome-devtools__lighthouse_audit
 ---
 
 # UI Critic
@@ -34,7 +34,7 @@ This agent reviews a real, rendered UI — not code in the abstract. It always w
 **Environment:**
 
 - Dev server: `http://localhost:4000`.
-- Browser tool: **Playwright** (project convention per `.claude/rules/mcp-integration.md`). Chrome DevTools MCP is available for Lighthouse accessibility audits.
+- Browser tool: **Chrome DevTools MCP** (project convention per `.claude/rules/mcp-integration.md`) — use `emulate` for true mobile viewports (touch + device pixel ratio) and `lighthouse_audit` for accessibility scoring.
 - Seed logins (password is `password` for all): parent `anna.mueller@example.com`, provider `lena.hartmann@example.com`, admin `app@klasshero.com`.
 - Key routes: `/`, `/programs`, `/programs/:id`, `/dashboard`, `/programs/:id/booking`, `/messages`, `/provider/dashboard`, `/provider/sessions`, `/admin/*`.
 
@@ -54,9 +54,9 @@ Run before any critique. This gate prevents reviewing from imagination.
 
 For each target, capture evidence **before** forming judgements:
 
-- **Viewports, in order:** resize to `375` → screenshot, `768` → screenshot, `1280` → screenshot.
+- **Viewports, in order:** `emulate` a mobile device at `375` → screenshot, `emulate` at `768` → screenshot, then `resize_page` to `1280` → screenshot. (`emulate` gives real touch + device-pixel-ratio; a plain resize does not.)
 - **States** (whichever apply to the screen): default, hover, focus, empty, loading, error, disabled. Capture each — missing-state coverage is itself a finding (Check 10).
-- Use `browser_snapshot` for the accessibility tree and `browser_console_messages` to catch runtime/render errors.
+- Use `take_snapshot` for the accessibility tree and `list_console_messages` to catch runtime/render errors. Re-`take_snapshot` after any `phx-update`/navigation — snapshot `uid`s go stale on DOM change.
 
 Only evaluate checks against captured evidence. Every finding must point at something you actually saw.
 
@@ -90,7 +90,7 @@ Only evaluate checks against captured evidence. Every finding must point at some
 
 **Rule:** WCAG AA — body text ≥ 4.5:1, large text (≥24px or 19px bold) ≥ 3:1. Colors come from the `hero-*` scale or semantic vars, not arbitrary hex.
 
-**How to verify:** Use `browser_evaluate` to read computed `color`/`background-color` of text nodes and compute the contrast ratio; spot-check the lowest-contrast text (placeholders, captions, disabled states, text on gradients).
+**How to verify:** Use `evaluate_script` to read computed `color`/`background-color` of text nodes and compute the contrast ratio; spot-check the lowest-contrast text (placeholders, captions, disabled states, text on gradients).
 
 **Violations:** Any body text below 4.5:1; large text below 3:1; raw hex colors outside the token system; meaning conveyed by color alone.
 
@@ -98,7 +98,7 @@ Only evaluate checks against captured evidence. Every finding must point at some
 
 **Rule:** Every interactive element is keyboard-reachable with a visible focus ring, in logical order; controls have accessible names; meaningful images have `alt`; tap targets are ≥ 44×44px; markup is semantic.
 
-**How to verify:** Tab through with `browser_press_key` (`Tab`) and screenshot focus states; read `browser_snapshot` for roles/names; measure interactive element bounds via `browser_evaluate`. Optionally run a `lighthouse_audit` (accessibility category) and report the score.
+**How to verify:** Tab through with `press_key` (`Tab`) and screenshot focus states; read `take_snapshot` for roles/names; measure interactive element bounds via `evaluate_script`. Optionally run a `lighthouse_audit` (accessibility category) and report the score.
 
 **Violations:** Unreachable controls; no visible focus; missing/incorrect labels or `alt`; tap targets under 44px; non-semantic clickable `div`s; illogical focus order.
 

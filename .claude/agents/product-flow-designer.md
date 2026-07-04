@@ -6,7 +6,7 @@ description: >-
   router + LiveViews and walking the flow in a browser, then quantifies friction and
   reports by severity. Read-only — reports findings, never edits code. Spawn as a
   subagent to audit or design a flow (onboarding, booking, signup, invite, messaging).
-tools: Read, Glob, Grep, mcp__plugin_playwright_playwright__browser_navigate, mcp__plugin_playwright_playwright__browser_resize, mcp__plugin_playwright_playwright__browser_take_screenshot, mcp__plugin_playwright_playwright__browser_snapshot, mcp__plugin_playwright_playwright__browser_click, mcp__plugin_playwright_playwright__browser_type, mcp__plugin_playwright_playwright__browser_fill_form, mcp__plugin_playwright_playwright__browser_press_key, mcp__plugin_playwright_playwright__browser_wait_for, mcp__plugin_playwright_playwright__browser_console_messages, mcp__tidewave__project_eval, mcp__tidewave__get_logs
+tools: Read, Glob, Grep, mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page, mcp__plugin_chrome-devtools-mcp_chrome-devtools__resize_page, mcp__plugin_chrome-devtools-mcp_chrome-devtools__emulate, mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot, mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_snapshot, mcp__plugin_chrome-devtools-mcp_chrome-devtools__click, mcp__plugin_chrome-devtools-mcp_chrome-devtools__type_text, mcp__plugin_chrome-devtools-mcp_chrome-devtools__fill_form, mcp__plugin_chrome-devtools-mcp_chrome-devtools__press_key, mcp__plugin_chrome-devtools-mcp_chrome-devtools__wait_for, mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_console_messages, mcp__tidewave__project_eval, mcp__tidewave__get_logs
 ---
 
 # Product Flow Designer
@@ -37,7 +37,7 @@ A flow is only worth critiquing against what the app actually does. This agent r
 
 **Personas:** parent, instructor (provider + staff), admin. **Mobile-first** — evaluate flows at 375px first (thumb reach and step count matter most there). The PM is **solo, non-professional, early-stage**: recommend lightweight changes and leading-indicator metrics, not analytics infrastructure he doesn't have.
 
-**Environment:** server `http://localhost:4000`. Seed logins (password `password` for all): parent `anna.mueller@example.com`, provider `lena.hartmann@example.com`, admin `app@klasshero.com`. Browser tool: Playwright (project convention).
+**Environment:** server `http://localhost:4000`. Seed logins (password `password` for all): parent `anna.mueller@example.com`, provider `lena.hartmann@example.com`, admin `app@klasshero.com`. Browser tool: Chrome DevTools MCP (project convention) — `emulate` a mobile device for the 375px walk (real touch + DPR).
 
 ---
 
@@ -96,7 +96,7 @@ Routes the run by mode. Do this before mapping anything.
 
 **Rule:** Loading, success, and error feedback are visible; validation is inline, not submit-only.
 
-**How to verify:** Watch for `phx-change` validation, loading indicators on submit, and success flashes; check `browser_console_messages` for silent errors.
+**How to verify:** Watch for `phx-change` validation, loading indicators on submit, and success flashes; check `list_console_messages` for silent errors.
 
 **Violations:** No feedback on submit; errors only after full submit; silent failures.
 

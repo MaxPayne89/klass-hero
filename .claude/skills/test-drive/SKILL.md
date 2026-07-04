@@ -1,7 +1,7 @@
 ---
 name: test-drive
 description: >-
-  Test-drive code changes using Playwright and Tidewave MCP.
+  Test-drive code changes using Chrome DevTools and Tidewave MCP.
   Verifies backend logic, UI flows, responsive design, and edge cases.
   Use when: completing a feature branch, before creating a PR,
   after addressing PR review comments, or when asked to "test-drive",
@@ -26,7 +26,7 @@ Before anything else, verify both MCP servers are available:
    Run: iex -S mix phx.server
    ```
 
-2. **Playwright**: call `browser_navigate` to `http://localhost:4000`. If it fails → note "UI checks will be skipped" and continue with backend-only mode.
+2. **Chrome DevTools**: call `navigate_page` to `http://localhost:4000`. If it fails → note "UI checks will be skipped" and continue with backend-only mode.
 
 If both fail, STOP entirely.
 
@@ -77,32 +77,34 @@ Use these tools:
 
 Log each check as PASS or FAIL with evidence.
 
-## Step 5: UI Verification (Playwright MCP)
+## Step 5: UI Verification (Chrome DevTools MCP)
 
-If Playwright is available, test each UI-facing change.
+If the browser is available, test each UI-facing change.
 
 **Auth first.** Read `references/auth-flows.md` for seed user credentials and login procedure. Pick the appropriate role (provider/parent/admin) for the routes being tested.
 
-**For each route/page:**
-1. `browser_navigate` to the page
-2. `browser_snapshot` to inspect DOM structure
-3. Verify key elements exist (headings, forms, buttons, links)
-4. `browser_take_screenshot` only when documenting a bug or a non-obvious pass
+**Snapshot discipline.** `take_snapshot` returns element `uid`s scoped to *that* snapshot; they go stale the moment the DOM changes. Re-`take_snapshot` after every navigation, `phx-update`, or form submit, before the next interaction — a stale `uid` is the most common cause of a mis-targeted action on a LiveView page.
 
-**For forms:**
-1. Fill with valid data → submit → verify success
-2. Fill with invalid data → submit → verify error messages
-3. Test `phx-change` real-time validation if present
+**For each route/page:**
+1. `navigate_page` to the page.
+2. `take_snapshot` to inspect DOM structure.
+3. Verify every element the diff added or changed is present by role/name (heading, form, button, link) — not "looks fine", but "the `#booking-form` element and its submit button exist in the snapshot".
+4. `take_screenshot` only when documenting a bug or a non-obvious pass.
+
+**For forms** (`fill_form` for bulk field entry; `type_text` when you must fire `phx-change` keystroke-by-keystroke; `click` to submit):
+1. Valid data → submit → success state is visible (flash, redirect, or updated content).
+2. Invalid data → submit → the specific error message for each invalid field renders.
+3. If `phx-change` validation is present, confirm the error appears on change, before submit.
 
 **For interactive elements:**
-1. Click buttons/links → verify navigation or state changes
-2. Test empty states (no data)
-3. Test edge cases (long text, special characters)
+1. `click` buttons/links → the expected navigation or state change happens.
+2. Empty state (no data) renders its intended placeholder, not a crash or blank.
+3. Edge cases (long text, special characters) do not overflow or break layout.
 
-**For responsive design:**
-1. `browser_resize` to 375x667 (mobile)
-2. Verify layout doesn't break
-3. Resize back to 1280x720 (desktop)
+**For responsive design** (mobile-first — this is a project mandate, not optional):
+1. `emulate` a mobile device at 375×667 (real touch + device pixel ratio, not a bare resize).
+2. Check, concretely: no horizontal scroll at 375px; the primary CTA is reachable without scrolling; no element overflows its container or clips text.
+3. `resize_page` back to 1280×720 and confirm the desktop layout is intact.
 
 ## Step 6: Auto-Fix Trivial Issues
 
@@ -137,8 +139,6 @@ For any finding with severity `critical` or `warning`:
 
 ## Rules
 
-- Phoenix server must be running for Tidewave to work
-- Always run backend checks before UI checks
-- Never modify test files as "auto-fixes"
-- Screenshots are for documenting bugs, not proving passes
-- If a check is ambiguous, flag it for human review rather than marking PASS
+- If a check is ambiguous, flag it for human review rather than marking PASS — when unsure, PASS is the wrong default.
+
+(The rest is already load-bearing in the steps: pre-flight gates the servers, Step 4 runs before Step 5, and Step 6 lists what must never be auto-fixed. No need to restate them here.)

@@ -79,7 +79,7 @@ Creates well-formed GitHub issues from findings or hypotheses. Validates against
 
 ### test-drive
 
-Test-drives code changes using Playwright and Tidewave MCP. Verifies backend logic, UI flows, responsive design, and edge cases. Includes pre-flight checks, prioritized test ordering, and structured report generation. References auth flows with seed user credentials.
+Test-drives code changes using Chrome DevTools and Tidewave MCP. Verifies backend logic, UI flows, responsive design, and edge cases. Includes pre-flight checks, prioritized test ordering, and structured report generation. References auth flows with seed user credentials.
 
 **Use when:** `/test-drive [branch|unstaged|<issue-number>]` or when asked to "test-drive", "verify changes", or "QA this"
 

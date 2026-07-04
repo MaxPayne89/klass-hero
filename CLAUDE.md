@@ -147,7 +147,7 @@ Router defines 5 `live_session` scopes with role-based access:
 
 If Tidewave unavailable: Alert user immediately - indicates Phoenix server not running or MCP issue.
 
-**Playwright MCP** for UI testing: test LiveView interactions, verify mobile-responsive designs.
+**Chrome DevTools MCP** for UI testing: test LiveView interactions, verify mobile-responsive designs (via `emulate`), run Lighthouse a11y audits.
 
 ## Project Constraints
 
