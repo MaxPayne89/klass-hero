@@ -61,42 +61,54 @@ When Tidewave is not connected or fails to respond:
 
 3. **Never silently degrade**: Do not fall back to bash/shell evaluation without explicitly notifying the user that Tidewave is unavailable
 
-## Playwright MCP Server (Browser Testing)
+## Chrome DevTools MCP Server (Browser Testing)
 
-**Purpose:** Automated browser testing and interaction
+**Purpose:** Automated browser testing and interaction. This is the project's browser tool of record (it replaced Playwright MCP) — it wins on the axis this app cares about most, real mobile emulation, and adds Lighthouse and performance tracing for free.
 
-### Use Playwright For
+### Use Chrome DevTools For
 
 - Testing LiveView interactions and flows
-- Verifying mobile-responsive designs
+- Verifying **mobile-responsive** designs — `emulate` gives true device viewport + touch + device-pixel-ratio + network/CPU throttling, not just a window resize
 - Taking screenshots of UI changes
-- Navigating through multi-step processes (enrollment, booking)
+- Navigating multi-step processes (enrollment, booking)
+- **Lighthouse accessibility/perf audits** (`lighthouse_audit`) and **Core Web Vitals traces** (`performance_start_trace` / `performance_analyze_insight`)
+- Catching browser-native a11y issues via `list_console_messages` (`types: ["issue"]`)
 
-### Common Playwright Commands
+### Common Chrome DevTools Commands
 
 ```javascript
 // Navigate to a page
-browser_navigate(url: "http://localhost:4000/programs")
+navigate_page(type: "url", url: "http://localhost:4000/programs")
+
+// Snapshot the accessibility tree (returns element uids to act on)
+take_snapshot()
 
 // Take screenshot
-browser_take_screenshot()
+take_screenshot()
 
-// Click element
-browser_click(element: "Sign Up button", ref: "...")
+// Click an element (target by uid from the latest snapshot)
+click(uid: "…")
 
-// Fill form
-browser_fill_form(fields: [...])
+// Fill a form
+fill_form(elements: [{ uid: "…", value: "…" }])
+
+// Emulate a mobile device for responsive checks
+emulate(viewport: "375x667x2,mobile,touch")
 ```
+
+**Snapshot uids go stale on any DOM change.** After a navigation, `phx-update`, or form submit, call `take_snapshot` again before targeting an element — this matters more on LiveView than on a static page.
+
+**Known limitations / escape hatch.** Chrome DevTools MCP has no multi-step scripting (Playwright's `browser_run_code_unsafe`), no one-call `<select multiple>`, and no external file/MIME drag-drop. The Playwright plugin remains installed globally; reach for it only for those specific edge cases.
 
 ## Testing Workflow with MCP
 
 1. Start Phoenix server: `mix phx.server`
 2. Use **Tidewave** to check application state, run queries, evaluate code
-3. Use **Playwright** to test UI flows and interactions
+3. Use **Chrome DevTools** to test UI flows and interactions
 4. Use **Tidewave** to check logs for warnings/errors
 5. Treat all warnings as errors to be addressed immediately
 
 ## Important Note
 
 - **Always use Tidewave MCP server** for Phoenix application interaction instead of bash tools
-- **Always use Playwright and/or Tidewave** to test changes by going through affected module flows
+- **Always use Chrome DevTools and/or Tidewave** to test changes by going through affected module flows

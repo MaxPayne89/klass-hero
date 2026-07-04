@@ -26,7 +26,7 @@ Use this structure for all test-drive reports. Sections with no findings should 
   - Actual: [what happens]
   - Evidence: [Tidewave output or query result]
 
-## UI Checks (Playwright MCP)
+## UI Checks (Chrome DevTools MCP)
 
 ### Pages Tested
 
