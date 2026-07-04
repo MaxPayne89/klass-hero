@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.Incident.NotifyIncidentReportedTest do
+defmodule KlassHero.Provider.Incidents.NotifyIncidentReportedTest do
   @moduledoc """
   Tests for the NotifyIncidentReported use case.
 

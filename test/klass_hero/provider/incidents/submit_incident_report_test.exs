@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.SubmitIncidentReportTest do
+defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
   use KlassHero.DataCase, async: false
   use Mimic
 

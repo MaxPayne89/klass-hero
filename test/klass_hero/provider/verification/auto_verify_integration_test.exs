@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.Verification.AutoVerifyIntegrationTest do
+defmodule KlassHero.Provider.Verification.AutoVerifyIntegrationTest do
   @moduledoc """
   Integration test for the full flow: approve all docs -> provider verified.
   Reject a doc -> provider unverified.

@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.Verification.DocumentReviewTest do
+defmodule KlassHero.Provider.Verification.DocumentReviewTest do
   use KlassHero.DataCase, async: false
 
   import KlassHero.EventTestHelper
