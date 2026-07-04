@@ -490,9 +490,11 @@ defmodule KlassHero.Provider do
     end
   end
 
-  # Non-critical fire-and-forget fan-out (no critical_event_handlers entry for
-  # these topics → PubSub-only, no Oban durability — preserved from the former
-  # AssignStaffToProgram/UnassignStaffFromProgram use cases).
+  # Dispatches the domain event on the Provider bus. PromoteIntegrationEvents
+  # then promotes it to a :critical integration event delivered belt-and-suspenders
+  # (PubSub + durable Oban via the critical_event_handlers registry for
+  # integration:provider:staff_(un)assigned_*; the event-id idempotency gate
+  # prevents double execution).
   defp dispatch_assignment_event(event), do: DomainEventBus.dispatch(__MODULE__, event)
 
   defp insert_program_staff_assignment(attrs) do

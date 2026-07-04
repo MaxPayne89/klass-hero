@@ -15,6 +15,7 @@ alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
+alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
@@ -121,6 +122,12 @@ config :klass_hero, :critical_event_handlers, %{
   ],
   "integration:provider:staff_member_invited" => [
     {StaffInvitationHandler, :handle_event}
+  ],
+  "integration:provider:staff_assigned_to_program" => [
+    {StaffAssignmentHandler, :handle_event}
+  ],
+  "integration:provider:staff_unassigned_from_program" => [
+    {StaffAssignmentHandler, :handle_event}
   ],
   "integration:accounts:staff_invitation_sent" => [
     {StaffInvitationStatusHandler, :handle_event}
