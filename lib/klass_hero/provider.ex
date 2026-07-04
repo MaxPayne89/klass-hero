@@ -26,18 +26,14 @@ defmodule KlassHero.Provider do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
-  alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.Domain.ReadModels.StaffMembership
-  alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.Incidents
   alias KlassHero.Provider.Programs
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
-  alias KlassHero.Provider.SubmitIncidentReport
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
@@ -171,69 +167,14 @@ defmodule KlassHero.Provider do
     end
   end
 
-  @doc """
-  Submit an incident report from a provider.
+  @doc "Submits an incident report from a provider."
+  defdelegate submit_incident_report(params), to: Incidents
 
-  Accepts a map with:
-  - `:provider_profile_id` - Required provider submitting the report
-  - `:reporter_user_id` - Required user submitting the report
-  - `:program_id` OR `:session_id` - Required, exactly one
-  - `:category` - Required (atom from `IncidentReport.valid_categories/0`)
-  - `:severity` - Required (atom from `IncidentReport.valid_severities/0`)
-  - `:description` - Required (free-text, at least 10 characters)
-  - `:occurred_at` - Required (`DateTime.t()`, cannot be in the future)
-  - `:file_binary`, `:original_filename`, `:content_type` - Optional photo upload
-  """
-  def submit_incident_report(params) when is_map(params) do
-    SubmitIncidentReport.execute(params)
-  end
-
-  @doc """
-  Lists incident report summaries for a program owned by the given provider.
-
-  Includes both program-direct and session-linked reports. Ordered by
-  `occurred_at` descending. Returns `[]` for unknown or unowned programs.
-  """
-  @spec list_incident_reports_for_program(String.t(), String.t()) ::
-          [IncidentReportSummary.t()]
-  def list_incident_reports_for_program(provider_id, program_id)
-      when is_binary(provider_id) and is_binary(program_id) do
-    program_direct = list_incidents_program_direct(provider_id, program_id)
-    session_linked = list_incidents_session_linked(provider_id, program_id)
-
-    (program_direct ++ session_linked)
-    |> Enum.sort_by(& &1.occurred_at, {:desc, DateTime})
-    |> Enum.map(&IncidentReportSummaryMapper.from_schema/1)
-  end
+  @doc "Lists incident report summaries for a program owned by the given provider."
+  defdelegate list_incident_reports_for_program(provider_id, program_id), to: Incidents
 
   @doc "Retrieves a single incident report by ID (used by the notification worker)."
-  @spec get_incident_report(String.t()) :: {:ok, IncidentReport.t()} | {:error, :not_found}
-  def get_incident_report(id) when is_binary(id) do
-    case Repo.get(IncidentReport, id) do
-      nil -> {:error, :not_found}
-      report -> {:ok, report}
-    end
-  end
-
-  defp list_incidents_program_direct(provider_id, program_id) do
-    IncidentReport
-    |> where([r], r.provider_profile_id == ^provider_id and r.program_id == ^program_id)
-    |> Repo.all()
-  end
-
-  # Session-linked reports match through the provider_session_details projection.
-  defp list_incidents_session_linked(provider_id, program_id) do
-    from(r in IncidentReport,
-      join: s in ProviderSessionDetailSchema,
-      on: s.session_id == r.session_id,
-      where:
-        r.provider_profile_id == ^provider_id and
-          s.provider_id == ^provider_id and
-          s.program_id == ^program_id,
-      select: r
-    )
-    |> Repo.all()
-  end
+  defdelegate get_incident_report(id), to: Incidents
 
   @doc "Approves a verification document (admin only)."
   def approve_verification_document(document_id, reviewer_id) do
