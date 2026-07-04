@@ -7,8 +7,8 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   enrollment).
   """
 
+  alias KlassHero.Accounts
   alias KlassHero.Enrollment
-  alias KlassHero.Enrollment.Adapters.Driven.Accounts.UserAccountResolver
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
@@ -45,9 +45,9 @@ defmodule KlassHero.Enrollment.ClaimInvite do
 
   # Returning parents must not get a duplicate account — link invite to existing user and skip onboarding.
   defp resolve_user(invite) do
-    case UserAccountResolver.get_user_by_email(invite.guardian_email) do
+    case Accounts.get_user_by_email(invite.guardian_email) do
       %{} = user ->
-        {:ok, :existing_user, user}
+        {:ok, :existing_user, to_user_result(user)}
 
       nil ->
         register_new_user(invite)
@@ -61,11 +61,15 @@ defmodule KlassHero.Enrollment.ClaimInvite do
       intended_roles: [:parent]
     }
 
-    case UserAccountResolver.register_user(attrs) do
-      {:ok, user} -> {:ok, :new_user, user}
+    case Accounts.register_user(attrs) do
+      {:ok, user} -> {:ok, :new_user, to_user_result(user)}
       {:error, reason} -> {:error, reason}
     end
   end
+
+  # Narrow the Accounts.User struct to a lightweight map so Enrollment's public
+  # ClaimResult never leaks an %Accounts.User{} type across the context boundary.
+  defp to_user_result(user), do: %{id: user.id, email: user.email, name: user.name}
 
   defp guardian_name(invite) do
     case {invite.guardian_first_name, invite.guardian_last_name} do
