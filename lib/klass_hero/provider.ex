@@ -27,16 +27,15 @@ defmodule KlassHero.Provider do
   import Ecto.Query, warn: false
 
   alias KlassHero.Provider.Assignments
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
   alias KlassHero.Provider.Domain.ReadModels.StaffMembership
   alias KlassHero.Provider.Incidents
+  alias KlassHero.Provider.Profiles
   alias KlassHero.Provider.Programs
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.Verification
   alias KlassHero.Repo
-  alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.IntegrationEventPublishing
 
@@ -59,89 +58,18 @@ defmodule KlassHero.Provider do
 
   @staff_updatable_fields ~w(first_name last_name role email bio headshot_url tags qualifications active pay_rate)a
 
-  # Fields a caller may change via update_provider_profile/2 (all other keys stripped).
-  @profile_update_fields ~w(description logo_url)a
+  @doc "Creates a new provider profile."
+  defdelegate create_provider_profile(attrs), to: Profiles
 
-  # Scalar fields re-cast when persisting a transitioned profile struct. identity_id
-  # and id never change, so they stay out; Ecto only stages actual diffs.
-  @profile_persist_fields ~w(business_name business_owner_email description phone website address logo_url verified verified_at verified_by_id categories profile_status)a
+  @doc "Creates a draft provider profile for a deliberate upgrade (#968, ADR-0005)."
+  defdelegate create_draft_provider_profile(identity_id, business_name, business_owner_email),
+    to: Profiles
 
-  @doc """
-  Creates a new provider profile.
-  """
-  def create_provider_profile(attrs) when is_map(attrs) do
-    context_span entity: "provider_profile" do
-      attrs_with_id = Map.put_new(attrs, :id, Ecto.UUID.generate())
+  @doc "Updates an existing provider profile."
+  defdelegate update_provider_profile(provider_id, attrs), to: Profiles
 
-      with {:ok, _validated} <- ProviderProfile.new(attrs_with_id),
-           {:ok, persisted} <- insert_provider_profile(attrs_with_id) do
-        {:ok, persisted}
-      else
-        result -> CommandResult.wrap_validation_errors(result)
-      end
-    end
-  end
-
-  @doc """
-  Creates a draft provider profile for a deliberate upgrade (#968, ADR-0005).
-
-  Owns the draft-birth policy: `profile_status: :draft` (the completion flow
-  collects real business details). Every post-ADR-0005 provider is a deliberate
-  act, so there's no longer a creation origin to record (#970).
-
-  Same returns as `create_provider_profile/1`.
-  """
-  @spec create_draft_provider_profile(String.t(), String.t() | nil, String.t() | nil) ::
-          {:ok, ProviderProfile.t()} | {:error, term()}
-  def create_draft_provider_profile(identity_id, business_name, business_owner_email) when is_binary(identity_id) do
-    create_provider_profile(%{
-      identity_id: identity_id,
-      business_name: business_name,
-      business_owner_email: business_owner_email,
-      profile_status: :draft
-    })
-  end
-
-  @doc """
-  Updates an existing provider profile.
-  """
-  @spec update_provider_profile(String.t(), map()) ::
-          {:ok, ProviderProfile.t()}
-          | {:error, :not_found | {:validation_error, list()} | Ecto.Changeset.t()}
-  def update_provider_profile(provider_id, attrs) when is_binary(provider_id) and is_map(attrs) do
-    context_span entity: "provider_profile" do
-      attrs = Map.take(attrs, @profile_update_fields)
-
-      with {:ok, existing} <- get_provider_profile(provider_id),
-           merged = Map.merge(Map.from_struct(existing), attrs),
-           {:ok, _validated} <- ProviderProfile.new(merged),
-           updated = struct(existing, attrs),
-           {:ok, persisted} <- persist_provider_profile(existing, updated) do
-        {:ok, persisted}
-      else
-        result -> CommandResult.wrap_validation_errors(result)
-      end
-    end
-  end
-
-  @doc """
-  Completes a draft provider profile, transitioning `profile_status` from `:draft` to `:active`.
-  Returns `{:error, :already_active}` if the profile is not in draft status.
-  """
-  @spec complete_provider_profile(String.t(), map()) ::
-          {:ok, ProviderProfile.t()}
-          | {:error, :not_found | :already_active | {:validation_error, list()} | Ecto.Changeset.t()}
-  def complete_provider_profile(provider_id, attrs) when is_binary(provider_id) and is_map(attrs) do
-    context_span entity: "provider_profile" do
-      with {:ok, existing} <- get_provider_profile(provider_id),
-           {:ok, completed} <- ProviderProfile.complete_profile(existing, attrs),
-           {:ok, persisted} <- persist_provider_profile(existing, completed) do
-        {:ok, persisted}
-      else
-        result -> CommandResult.wrap_validation_errors(result)
-      end
-    end
-  end
+  @doc "Completes a draft provider profile (draft → active)."
+  defdelegate complete_provider_profile(provider_id, attrs), to: Profiles
 
   @doc "Submits a verification document for a provider."
   defdelegate submit_verification_document(params), to: Verification
@@ -162,28 +90,10 @@ defmodule KlassHero.Provider do
   defdelegate reject_verification_document(document_id, reviewer_id, reason), to: Verification
 
   @doc "Verifies a provider (admin only)."
-  def verify_provider(provider_id, admin_id) do
-    context_span entity: "provider_profile" do
-      with {:ok, profile} <- get_provider_profile(provider_id),
-           {:ok, verified} <- ProviderProfile.verify(profile, admin_id),
-           {:ok, persisted} <- persist_provider_profile(profile, verified),
-           :ok <- publish_verification_event(persisted, admin_id, :verified) do
-        {:ok, persisted}
-      end
-    end
-  end
+  defdelegate verify_provider(provider_id, admin_id), to: Profiles
 
   @doc "Unverifies a provider (admin only)."
-  def unverify_provider(provider_id, admin_id) do
-    context_span entity: "provider_profile" do
-      with {:ok, profile} <- get_provider_profile(provider_id),
-           {:ok, unverified} <- ProviderProfile.unverify(profile),
-           {:ok, persisted} <- persist_provider_profile(profile, unverified),
-           :ok <- publish_verification_event(persisted, admin_id, :unverified) do
-        {:ok, persisted}
-      end
-    end
-  end
+  defdelegate unverify_provider(provider_id, admin_id), to: Profiles
 
   @doc """
   Creates the provider's OWN staff row — pre-linked, `:accepted`, no
@@ -336,51 +246,19 @@ defmodule KlassHero.Provider do
   defdelegate unassign_staff_from_program(program_id, staff_member_id), to: Assignments
 
   @doc "Retrieves a provider profile by identity ID."
-  def get_provider_by_identity(identity_id) when is_binary(identity_id) do
-    case Repo.get_by(ProviderProfile, identity_id: identity_id) do
-      nil -> {:error, :not_found}
-      profile -> {:ok, profile}
-    end
-  end
+  defdelegate get_provider_by_identity(identity_id), to: Profiles
 
   @doc "Returns true if a provider profile exists for the given identity ID."
-  def has_provider_profile?(identity_id) when is_binary(identity_id) do
-    Repo.exists?(from p in ProviderProfile, where: p.identity_id == ^identity_id)
-  end
+  defdelegate has_provider_profile?(identity_id), to: Profiles
 
   @doc "Returns the provider profile by ID."
-  @spec get_provider_profile(String.t()) :: {:ok, ProviderProfile.t()} | {:error, :not_found}
-  def get_provider_profile(provider_id) when is_binary(provider_id) do
-    case Repo.get(ProviderProfile, provider_id) do
-      nil -> {:error, :not_found}
-      profile -> {:ok, profile}
-    end
-  end
+  defdelegate get_provider_profile(provider_id), to: Profiles
 
-  @doc """
-  Gets the user (identity) ID for a provider profile ID.
-
-  Used by cross-context consumers (e.g. Messaging) to resolve
-  `conversation.provider_id` (provider profile ID) back to a user ID
-  for permission and authorization checks.
-
-  Returns:
-  - `{:ok, identity_id}` - The user ID that owns this provider profile
-  - `{:error, :not_found}` - No provider profile exists with this ID
-  """
-  @spec get_identity_id_for_provider(String.t()) :: {:ok, String.t()} | {:error, :not_found}
-  def get_identity_id_for_provider(provider_id) when is_binary(provider_id) do
-    case get_provider_profile(provider_id) do
-      {:ok, %ProviderProfile{identity_id: identity_id}} -> {:ok, identity_id}
-      {:error, :not_found} -> {:error, :not_found}
-    end
-  end
+  @doc "Gets the user (identity) ID that owns a provider profile ID (used by cross-context consumers)."
+  defdelegate get_identity_id_for_provider(provider_id), to: Profiles
 
   @doc "Lists all verified provider IDs (used by projections at bootstrap)."
-  def list_verified_provider_ids do
-    ids = Repo.all(from p in ProviderProfile, where: p.verified == true, select: p.id)
-    {:ok, ids}
-  end
+  defdelegate list_verified_provider_ids, to: Profiles
 
   @doc "Returns all verification documents for a provider."
   defdelegate get_provider_verification_documents(provider_profile_id), to: Verification
@@ -399,48 +277,6 @@ defmodule KlassHero.Provider do
 
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types, to: Verification
-
-  # Persists a create by validating at the domain boundary, then mapping the
-  # unique-identity violation back to the frozen :duplicate_resource contract
-  # (ProviderEventHandler/Accounts depend on that literal atom).
-  defp insert_provider_profile(attrs) do
-    %ProviderProfile{}
-    |> ProviderProfile.changeset(attrs)
-    |> Repo.insert()
-    |> case do
-      {:ok, profile} ->
-        {:ok, profile}
-
-      {:error, %Ecto.Changeset{errors: errors} = changeset} ->
-        if EctoErrorHelpers.unique_constraint_violation?(errors, :identity_id) do
-          {:error, :duplicate_resource}
-        else
-          {:error, changeset}
-        end
-    end
-  end
-
-  # Persists a transitioned profile by casting the changed scalar fields onto the
-  # originally-loaded record, so Ecto sees real changes (and auto-bumps updated_at).
-  defp persist_provider_profile(%ProviderProfile{} = original, %ProviderProfile{} = updated) do
-    attrs = Map.take(updated, @profile_persist_fields)
-
-    original
-    |> ProviderProfile.changeset(attrs)
-    |> Repo.update()
-  end
-
-  defp publish_verification_event(profile, admin_id, :verified) do
-    profile
-    |> ProviderEvents.provider_verified(admin_id)
-    |> IntegrationEventPublishing.publish()
-  end
-
-  defp publish_verification_event(profile, admin_id, :unverified) do
-    profile
-    |> ProviderEvents.provider_unverified(admin_id)
-    |> IntegrationEventPublishing.publish()
-  end
 
   @doc "Retrieves a single staff member by ID."
   @spec get_staff_member(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
@@ -581,16 +417,10 @@ defmodule KlassHero.Provider do
   defdelegate list_provider_programs(provider_id), to: Programs
 
   @doc "Returns a changeset for tracking provider profile form changes (for `to_form()` / `phx-change`)."
-  @spec change_provider_profile(ProviderProfile.t(), map()) :: Ecto.Changeset.t()
-  def change_provider_profile(%ProviderProfile{} = provider, attrs \\ %{}) do
-    ProviderProfile.edit_changeset(provider, attrs)
-  end
+  defdelegate change_provider_profile(provider, attrs \\ %{}), to: Profiles
 
   @doc "Changeset for the profile completion form — casts a broader set of fields than `change_provider_profile/2`."
-  @spec change_provider_profile_completion(ProviderProfile.t(), map()) :: Ecto.Changeset.t()
-  def change_provider_profile_completion(%ProviderProfile{} = provider, attrs \\ %{}) do
-    ProviderProfile.completion_changeset(provider, attrs)
-  end
+  defdelegate change_provider_profile_completion(provider, attrs \\ %{}), to: Profiles
 
   @doc "Returns a changeset for tracking staff member form changes."
   def change_staff_member(%StaffMember{} = staff, attrs \\ %{}) do
