@@ -1,24 +1,21 @@
 defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
   @moduledoc """
-  Shared fetch-and-map helpers for repository adapters.
+  Two small conveniences shared by persistence-adapter code.
 
-  Each helper delegates domain mapping to a `mapper` module implementing
-  `to_domain/1`. None emit telemetry spans — callers wrap calls in their own
-  `span` so traces attribute to the repository, not this module.
+  The mapper-taking fetch-and-map variants were removed post-flatten (#986→#1002)
+  once every schema became its own domain struct. What remains is unrelated:
+
+    * `get_schema_by_uuid/2` — a UUID-safe `Repo.get` that returns
+      `{:error, :not_found}` for a malformed id instead of raising.
+    * `log_validation_error/2` — canonical changeset-failure logging.
+
+  Neither emits telemetry spans; callers wrap their own `span` so traces
+  attribute to the repository, not this module.
   """
 
   alias KlassHero.Repo
 
   require Logger
-
-  @doc "Fetches by primary key and maps to a domain struct. Raises on a malformed id."
-  @spec get_by_id(module(), term(), module()) :: {:ok, struct()} | {:error, :not_found}
-  def get_by_id(schema, id, mapper) do
-    case Repo.get(schema, id) do
-      nil -> {:error, :not_found}
-      record -> {:ok, mapper.to_domain(record)}
-    end
-  end
 
   @doc """
   Fetches a schema record by UUID primary key, returning `{:error, :not_found}`
@@ -38,24 +35,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
 
       :error ->
         {:error, :not_found}
-    end
-  end
-
-  @doc "UUID-safe `get_by_id/3`: maps to a domain struct, `:not_found` for a malformed id."
-  @spec get_by_uuid(module(), term(), module()) :: {:ok, struct()} | {:error, :not_found}
-  def get_by_uuid(schema, id, mapper) do
-    case get_schema_by_uuid(schema, id) do
-      {:ok, record} -> {:ok, mapper.to_domain(record)}
-      {:error, :not_found} -> {:error, :not_found}
-    end
-  end
-
-  @doc "Runs a single-row query and maps the result."
-  @spec fetch_one(Ecto.Queryable.t(), module()) :: {:ok, struct()} | {:error, :not_found}
-  def fetch_one(queryable, mapper) do
-    case Repo.one(queryable) do
-      nil -> {:error, :not_found}
-      record -> {:ok, mapper.to_domain(record)}
     end
   end
 
