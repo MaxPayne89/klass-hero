@@ -11,8 +11,8 @@ defmodule KlassHero.Provider.NotifyIncidentReported do
 
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
-  alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.Programs
   alias KlassHero.Shared.Storage
 
   require Logger
@@ -60,7 +60,7 @@ defmodule KlassHero.Provider.NotifyIncidentReported do
   end
 
   defp resolve_program_label(%IncidentReport{program_id: pid}) when is_binary(pid) do
-    case ProviderProgramQueries.get_by_id(pid) do
+    case Programs.get_provider_program(pid) do
       {:ok, %{name: name}} when is_binary(name) and byte_size(name) > 0 ->
         name
 

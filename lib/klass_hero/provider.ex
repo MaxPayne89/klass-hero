@@ -27,17 +27,13 @@ defmodule KlassHero.Provider do
   import Ecto.Query, warn: false
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
-  alias KlassHero.Provider.Application.Queries.ListProgramSessions
-  alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
-  alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
-  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
   alias KlassHero.Provider.Domain.ReadModels.StaffMembership
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.Programs
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
@@ -1026,33 +1022,16 @@ defmodule KlassHero.Provider do
   end
 
   @doc "Returns the total completed session count across all programs for a provider."
-  @spec get_total_session_count(String.t()) :: non_neg_integer()
-  def get_total_session_count(provider_id) when is_binary(provider_id) do
-    SessionStatsRepository.get_total_count(provider_id)
-  end
+  defdelegate get_total_session_count(provider_id), to: Programs
 
-  @doc """
-  Lists per-session detail rows for a provider's program from the
-  `provider_session_details` projection. Cross-provider lookups return `[]`.
-  """
-  @spec list_program_sessions(String.t(), String.t()) :: [
-          SessionDetail.t()
-        ]
-  def list_program_sessions(provider_id, program_id) when is_binary(provider_id) and is_binary(program_id) do
-    ListProgramSessions.execute(provider_id, program_id)
-  end
+  @doc "Lists per-session detail rows for a provider's program from the projection."
+  defdelegate list_program_sessions(provider_id, program_id), to: Programs
 
   @doc "Returns the provider-owned program by ID from the `provider_programs` projection."
-  @spec get_provider_program(String.t()) :: {:ok, ProviderProgram.t()} | {:error, :not_found}
-  def get_provider_program(program_id) when is_binary(program_id) do
-    ProviderProgramQueries.get_by_id(program_id)
-  end
+  defdelegate get_provider_program(program_id), to: Programs
 
   @doc "Lists all programs owned by the given provider, ordered by name asc."
-  @spec list_provider_programs(String.t()) :: [ProviderProgram.t()]
-  def list_provider_programs(provider_id) when is_binary(provider_id) do
-    ProviderProgramQueries.list_by_provider(provider_id)
-  end
+  defdelegate list_provider_programs(provider_id), to: Programs
 
   @doc "Returns a changeset for tracking provider profile form changes (for `to_form()` / `phx-change`)."
   @spec change_provider_profile(ProviderProfile.t(), map()) :: Ecto.Changeset.t()

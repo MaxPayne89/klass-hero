@@ -16,9 +16,9 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
   alias KlassHero.Provider.Adapters.Driving.Workers.NotifyIncidentReportedWorker
-  alias KlassHero.Provider.Application.Queries.ProviderProgramQueries
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.Programs
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.DomainEventBus
@@ -72,7 +72,7 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
 
   # Ownership enforced via Provider-local projections — no cross-context sync read.
   defp validate_ownership(%{program_id: pid, provider_profile_id: prov_id}) when is_binary(pid) do
-    case ProviderProgramQueries.get_by_id(pid) do
+    case Programs.get_provider_program(pid) do
       {:ok, %{provider_id: ^prov_id}} -> :ok
       _ -> {:error, [program_id: "does not belong to this provider"]}
     end
