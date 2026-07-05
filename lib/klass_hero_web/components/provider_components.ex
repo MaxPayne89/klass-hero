@@ -244,7 +244,8 @@ defmodule KlassHeroWeb.ProviderComponents do
     <div
       id="verification-status"
       class={[
-        "flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 text-xs font-medium",
+        "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium",
+        Theme.status_badge(:available),
         Theme.rounded(:full)
       ]}
     >
@@ -259,7 +260,8 @@ defmodule KlassHeroWeb.ProviderComponents do
     <div
       id="verification-status"
       class={[
-        "flex items-center gap-1.5 px-3 py-1.5 bg-yellow-100 text-yellow-700 text-xs font-medium",
+        "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium",
+        Theme.status_badge(:limited),
         Theme.rounded(:full)
       ]}
     >
@@ -274,7 +276,8 @@ defmodule KlassHeroWeb.ProviderComponents do
     <div
       id="verification-status"
       class={[
-        "flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 text-xs font-medium",
+        "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium",
+        Theme.status_badge(:full),
         Theme.rounded(:full)
       ]}
     >
@@ -289,7 +292,8 @@ defmodule KlassHeroWeb.ProviderComponents do
     <div
       id="verification-status"
       class={[
-        "flex items-center gap-1.5 px-3 py-1.5 bg-hero-grey-100 text-hero-grey-500 text-xs font-medium",
+        "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium",
+        Theme.status_badge(:neutral),
         Theme.rounded(:full)
       ]}
     >
@@ -307,27 +311,27 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :label, :string, required: true
 
   defp invitation_status_badge(assigns) do
-    {bg_class, text_class} = invitation_status_colors(assigns.status)
-    assigns = assign(assigns, bg_class: bg_class, text_class: text_class)
+    assigns = assign(assigns, :badge_class, invitation_status_badge_class(assigns.status))
 
     ~H"""
     <span class={[
       "shrink-0 px-2 py-0.5 text-xs font-medium",
       Theme.rounded(:full),
-      @bg_class,
-      @text_class
+      @badge_class
     ]}>
       {@label}
     </span>
     """
   end
 
-  defp invitation_status_colors(:pending), do: {"bg-yellow-100", "text-yellow-700"}
-  defp invitation_status_colors(:sent), do: {"bg-blue-100", "text-blue-700"}
-  defp invitation_status_colors(:accepted), do: {"bg-green-100", "text-green-700"}
-  defp invitation_status_colors(:failed), do: {"bg-red-100", "text-red-700"}
-  defp invitation_status_colors(:expired), do: {"bg-hero-grey-100", "text-hero-grey-600"}
-  defp invitation_status_colors(_), do: {"bg-hero-grey-100", "text-hero-grey-500"}
+  # `:sent` (was blue) folds into `:neutral` — the filled token drops blue for
+  # guaranteed WCAG AA contrast; the bordered `Theme.status/1` keeps `:info`.
+  defp invitation_status_badge_class(:pending), do: Theme.status_badge(:limited)
+  defp invitation_status_badge_class(:sent), do: Theme.status_badge(:neutral)
+  defp invitation_status_badge_class(:accepted), do: Theme.status_badge(:available)
+  defp invitation_status_badge_class(:failed), do: Theme.status_badge(:full)
+  defp invitation_status_badge_class(:expired), do: Theme.status_badge(:neutral)
+  defp invitation_status_badge_class(_), do: Theme.status_badge(:neutral)
 
   attr :icon, :string, required: true
   attr :label, :string, required: true
@@ -335,7 +339,8 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp verification_badge(assigns) do
     ~H"""
     <div class={[
-      "flex items-center gap-1.5 px-3 py-1.5 bg-hero-grey-100 text-hero-grey-700 text-xs font-medium",
+      "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium",
+      Theme.status_badge(:neutral),
       Theme.rounded(:full)
     ]}>
       <.icon name={@icon} class="w-4 h-4 text-green-600" />

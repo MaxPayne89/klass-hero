@@ -273,6 +273,24 @@ defmodule KlassHeroWeb.Theme do
   def status(:neutral), do: "bg-gray-50 border-gray-200 text-gray-700"
 
   @doc """
+  Returns filled (borderless) badge classes for a status pill: a tinted `-100`
+  background with `-800` text. The `-800` shade clears WCAG AA (≥4.5:1) on the
+  `-100` tint, unlike the lighter `-700`/`-600` pairings that drift below it.
+
+  Use for solid status badges (verification outcomes, document review). For the
+  bordered, lighter pill use `status/1`.
+
+  ## Examples
+
+      iex> Theme.status_badge(:available)
+      "bg-green-100 text-green-800"
+  """
+  def status_badge(:available), do: "bg-green-100 text-green-800"
+  def status_badge(:limited), do: "bg-yellow-100 text-yellow-800"
+  def status_badge(:full), do: "bg-red-100 text-red-800"
+  def status_badge(:neutral), do: "bg-hero-grey-100 text-hero-grey-800"
+
+  @doc """
   Returns width and height classes for icon sizing.
 
   ## Sizes
