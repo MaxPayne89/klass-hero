@@ -670,7 +670,7 @@ defmodule KlassHero.Messaging do
   Used by LiveView helpers to resolve sender names for real-time messages.
   """
   @spec get_display_name(String.t()) :: {:ok, String.t()} | {:error, :not_found}
-  defdelegate get_display_name(user_id), to: ResolverQueries
+  defdelegate get_display_name(user_id), to: KlassHero.Accounts
 
   @doc """
   Returns the user IDs of active staff assigned to a program.

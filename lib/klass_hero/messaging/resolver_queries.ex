@@ -1,25 +1,9 @@
 defmodule KlassHero.Messaging.ResolverQueries do
   @moduledoc """
-  Queries for resolving user and staff information via ACL adapters.
+  Queries for resolving staff information via ACL adapters.
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
-
-  @doc """
-  Returns the display name for a user.
-
-  ## Parameters
-  - user_id: The user ID to resolve
-
-  ## Returns
-  - `{:ok, name}` - The user's display name
-  - `{:error, :not_found}` - User not found
-  """
-  @spec get_display_name(String.t()) :: {:ok, String.t()} | {:error, :not_found}
-  def get_display_name(user_id) do
-    UserResolver.get_display_name(user_id)
-  end
 
   @doc """
   Returns the user IDs of active staff assigned to a program.

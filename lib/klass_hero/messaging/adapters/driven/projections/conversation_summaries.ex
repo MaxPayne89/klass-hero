@@ -51,7 +51,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
+  alias KlassHero.Accounts
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
@@ -645,8 +645,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   # Private Functions — Helpers
 
   defp fetch_user_names(user_ids) when is_list(user_ids) and user_ids != [] do
-    {:ok, names} = UserResolver.get_display_names(user_ids)
-    names
+    Accounts.get_display_names(user_ids)
   end
 
   defp fetch_user_names(_), do: %{}

@@ -49,6 +49,35 @@ defmodule KlassHero.AccountsTest do
     end
   end
 
+  describe "get_display_names/1" do
+    test "returns an empty map for an empty list" do
+      assert Accounts.get_display_names([]) == %{}
+    end
+
+    test "maps known ids to their display name and omits unknown ids" do
+      alice = user_fixture(name: "Alice Smith")
+      bob = user_fixture(name: "Bob Jones")
+      unknown_id = "00000000-0000-0000-0000-000000000000"
+
+      assert Accounts.get_display_names([alice.id, bob.id, unknown_id]) == %{
+               alice.id => "Alice Smith",
+               bob.id => "Bob Jones"
+             }
+    end
+  end
+
+  describe "get_display_name/1" do
+    test "returns {:ok, name} for a known user" do
+      user = user_fixture(name: "Bob Jones")
+      assert Accounts.get_display_name(user.id) == {:ok, "Bob Jones"}
+    end
+
+    test "returns {:error, :not_found} for an unknown id" do
+      assert Accounts.get_display_name("00000000-0000-0000-0000-000000000000") ==
+               {:error, :not_found}
+    end
+  end
+
   describe "register_user/1" do
     test "requires email to be set" do
       {:error, changeset} = Accounts.register_user(%{})
