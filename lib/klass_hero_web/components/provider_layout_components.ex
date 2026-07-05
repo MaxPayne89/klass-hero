@@ -207,7 +207,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class={pv_topbar_title_classes()}>{@provider[:name]}</h1>
+            <span class={pv_topbar_title_classes()}>{@provider[:name]}</span>
             <.kh_pill :if={@provider[:verified?]} tone={:success}>
               <.icon name="hero-shield-check" class="w-3 h-3" /> {gettext("Verified")}
             </.kh_pill>
@@ -237,7 +237,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
         {String.first(@provider[:name] || "?") |> String.upcase()}
       </div>
       <div class="flex-1 min-w-0 flex items-center gap-1.5">
-        <h1 class={pv_topbar_mobile_title_classes()}>{@provider[:name]}</h1>
+        <span class={pv_topbar_mobile_title_classes()}>{@provider[:name]}</span>
         <.icon
           :if={@provider[:verified?]}
           name="hero-shield-check"

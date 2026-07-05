@@ -45,6 +45,28 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     end
   end
 
+  describe "document heading outline" do
+    setup [:create_session_with_child]
+
+    test "page renders exactly one <h1> (the page header owns it)", %{
+      conn: conn,
+      session: session
+    } do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      # Render after mount so @session is loaded (mount assigns it nil, then
+      # load_session_data/1 fills it). The page's single top-level heading is
+      # the <.page_header> title; the topbar no longer emits an <h1>. See #984.
+      html = render(view)
+
+      # Count opening <h1 tags across the whole page. There is no element/2
+      # equivalent for "exactly one of X", so we count tag openings directly.
+      h1_count = length(String.split(html, "<h1")) - 1
+
+      assert h1_count == 1
+    end
+  end
+
   describe "sidebar navigation" do
     setup [:create_session_with_child]
 

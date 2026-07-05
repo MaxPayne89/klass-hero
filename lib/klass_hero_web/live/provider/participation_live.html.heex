@@ -12,6 +12,11 @@
   <.error_alert :if={assigns[:session_error]} errors={[@session_error]} />
 
   <%= if @session do %>
+    <.page_header class="mb-6" container_class="max-w-4xl mx-auto">
+      <:title>{Map.get(@session, :program_name, gettext("Session"))}</:title>
+      <:subtitle>{gettext("Participation")}</:subtitle>
+    </.page_header>
+
     <div class="mb-6">
       <.participation_card session={@session} role={:provider} />
     </div>
