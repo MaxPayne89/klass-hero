@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.RecordCheckInIntegrationTest do
+defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
   @moduledoc """
   Integration tests for RecordCheckIn and RecordCheckOut use cases.
 

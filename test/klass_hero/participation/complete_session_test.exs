@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.CompleteSessionTest do
+defmodule KlassHero.Participation.CompleteSessionTest do
   @moduledoc """
   Integration tests for CompleteSession use case.
 

@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.CorrectAttendanceTest do
+defmodule KlassHero.Participation.CorrectAttendanceTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory

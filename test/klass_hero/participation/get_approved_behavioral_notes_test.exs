@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Queries.GetApprovedBehavioralNotesTest do
+defmodule KlassHero.Participation.GetApprovedBehavioralNotesTest do
   @moduledoc """
   Integration tests for GetApprovedBehavioralNotes use case.
   """

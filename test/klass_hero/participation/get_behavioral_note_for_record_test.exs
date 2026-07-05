@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Queries.GetBehavioralNoteForRecordTest do
+defmodule KlassHero.Participation.GetBehavioralNoteForRecordTest do
   @moduledoc """
   Integration tests for GetBehavioralNoteForRecord use case.
 

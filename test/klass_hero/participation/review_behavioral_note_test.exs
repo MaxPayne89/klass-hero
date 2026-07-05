@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.ReviewBehavioralNoteTest do
+defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
   @moduledoc """
   Integration tests for ReviewBehavioralNote use case.
   """

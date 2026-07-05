@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.SubmitBehavioralNoteTest do
+defmodule KlassHero.Participation.SubmitBehavioralNoteTest do
   @moduledoc """
   Integration tests for SubmitBehavioralNote use case.
   """
