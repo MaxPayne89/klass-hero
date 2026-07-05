@@ -5,6 +5,21 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.3](https://github.com/MaxPayne89/klass-hero/compare/v0.54.2...v0.54.3) (2026-07-05)
+
+
+### Bug Fixes
+
+* demote provider topbar name from h1 to span for single page heading ([#1025](https://github.com/MaxPayne89/klass-hero/issues/1025)) ([1706f25](https://github.com/MaxPayne89/klass-hero/commit/1706f2520ae8dd86cb8fdb38269d87ab0a1ea600)), closes [#984](https://github.com/MaxPayne89/klass-hero/issues/984)
+
+
+### Code Refactoring
+
+* flatten Messaging application layer to conventional Phoenix ([#1022](https://github.com/MaxPayne89/klass-hero/issues/1022)) ([b85f0ed](https://github.com/MaxPayne89/klass-hero/commit/b85f0ed12f8370518b42fb12b6fb9864879020bf)), closes [#1021](https://github.com/MaxPayne89/klass-hero/issues/1021)
+* flatten participation test tree to context root ([#1017](https://github.com/MaxPayne89/klass-hero/issues/1017)) ([2188f58](https://github.com/MaxPayne89/klass-hero/commit/2188f58e8a7d5dc1429e359f061074286dcf919e))
+* migrate provider status pills onto Theme.status_badge/1 ([#1024](https://github.com/MaxPayne89/klass-hero/issues/1024)) ([f57c1a0](https://github.com/MaxPayne89/klass-hero/commit/f57c1a0aa22902b0f86d555483cbde9d0f56652e)), closes [#983](https://github.com/MaxPayne89/klass-hero/issues/983)
+* mirror provider test tree to post-[#1003](https://github.com/MaxPayne89/klass-hero/issues/1003) sub-domain layout ([#1016](https://github.com/MaxPayne89/klass-hero/issues/1016)) ([36388d7](https://github.com/MaxPayne89/klass-hero/commit/36388d7b1082a599e836a0dd0e5033e2eddf9c8d)), closes [#1013](https://github.com/MaxPayne89/klass-hero/issues/1013)
+
 ## [0.54.2](https://github.com/MaxPayne89/klass-hero/compare/v0.54.1...v0.54.2) (2026-07-04)
 
 
