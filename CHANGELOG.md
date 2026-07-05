@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.4](https://github.com/MaxPayne89/klass-hero/compare/v0.54.3...v0.54.4) (2026-07-05)
+
+
+### Code Refactoring
+
+* flatten Shared context, preserve env-swapped adapter seams ([#1014](https://github.com/MaxPayne89/klass-hero/issues/1014)) ([#1031](https://github.com/MaxPayne89/klass-hero/issues/1031)) ([7c030a5](https://github.com/MaxPayne89/klass-hero/commit/7c030a51d88089c259f0e5b6e58e04d703045b41))
+* read user display names via Accounts facade, drop Messaging ACL ([#1029](https://github.com/MaxPayne89/klass-hero/issues/1029)) ([319db5c](https://github.com/MaxPayne89/klass-hero/commit/319db5c486da3f370f8508829b24da2f94c78bcd))
+
 ## [0.54.3](https://github.com/MaxPayne89/klass-hero/compare/v0.54.2...v0.54.3) (2026-07-05)
 
 
