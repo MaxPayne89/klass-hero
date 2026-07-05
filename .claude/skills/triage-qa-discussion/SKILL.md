@@ -104,9 +104,9 @@ Ask the user which findings to address. Default: all `actionable` + `migration-n
 
 **Do NOT make any code changes before user confirmation.**
 
-## Step 6: Invoke Idiomatic Elixir Skill
+## Step 6: Load Elixir Patterns
 
-Before making any changes, invoke the `idiomatic-elixir` skill to load Elixir patterns and DDD guidance into context.
+Elixir idioms and DDD guidance auto-load via `.claude/rules/elixir-style.md` and `.claude/rules/domain-architecture.md` — no skill invocation needed. For a full test-first feature build, run `/build-elixir` instead of fixing ad hoc.
 
 ## Step 7: Systematically Fix
 
@@ -180,7 +180,7 @@ gh issue create --title "QA: ..." --body "..."
 - **Verify against current code.** Findings reference a point-in-time snapshot — always check if the code has changed.
 - **Minimal fixes.** Address exactly what the finding describes — don't refactor surrounding code.
 - **Respect the conventional-Phoenix layout.** Entity logic + persistence go in the schema-as-struct module at the context root; keep the context API in `<context>.ex`.
-- **Invoke idiomatic-elixir before implementation.** Load Elixir patterns into context before writing code.
+- **Elixir patterns auto-load.** `.claude/rules/elixir-style.md` + `domain-architecture.md` are always in context; no skill call needed before writing code.
 - **Never stop mid-fix.** If a single finding can't be addressed, log the failure and continue.
 - **Always run tests.** `mix precommit` is mandatory before committing.
 - **Always push.** Work isn't done until `git push` succeeds.
