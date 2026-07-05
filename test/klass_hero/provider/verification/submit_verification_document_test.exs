@@ -5,7 +5,7 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
   defmodule FailingStorageAdapter do
-    @behaviour KlassHero.Shared.Domain.Ports.ForStoringFiles
+    @behaviour KlassHero.Shared.ForStoringFiles
 
     def upload(_bucket, _path, _binary, _opts), do: {:error, :upload_failed}
     def signed_url(_, _, _, _), do: {:error, :not_implemented}

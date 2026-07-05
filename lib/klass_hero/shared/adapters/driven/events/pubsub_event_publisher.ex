@@ -6,7 +6,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher do
   `{:domain_event, %DomainEvent{}}` and received via `handle_info/2`.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForPublishingEvents
+  @behaviour KlassHero.Shared.ForPublishingEvents
 
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubBroadcaster
   alias KlassHero.Shared.Domain.Events.DomainEvent

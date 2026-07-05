@@ -18,7 +18,7 @@ defmodule KlassHero.TestableIntegrationEventHandler do
       on_exit(fn -> stop_test_subscriber(subscriber) end)
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
 
   alias KlassHero.TestableEventHandler
 

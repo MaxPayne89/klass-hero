@@ -56,7 +56,7 @@ The flatten deleted aggregate ports, mappers, and DI wiring. Subdirectories rema
 
 - Call other contexts **only** through their root `<context>.ex` module — never their internal schemas/Repo.
 - For cross-context **reads**: use an ACL adapter (`adapters/driven/acl/`) or subscribe an event handler that builds a local read model. Prefer projections over ACLs for hot read paths.
-- There is **no** `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly.
+- There is **no** per-context *aggregate* `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly. (Shared is the exception: its genuine env-swapped adapter seams — `event_publisher`, `integration_event_publisher`, `feature_flags`, `storage`, `for_tracking_processed_events` — keep a slim behaviour at the Shared root + a config-selected impl. That is idiomatic Elixir DI, not ceremony; see ADR 0006.)
 
 ## Event System
 

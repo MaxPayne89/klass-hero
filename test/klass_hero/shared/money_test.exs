@@ -1,7 +1,7 @@
-defmodule KlassHero.Shared.Domain.Types.MoneyTest do
+defmodule KlassHero.Shared.MoneyTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Shared.Domain.Types.Money
+  alias KlassHero.Shared.Money
 
   describe "new/2" do
     test "creates Money with Decimal amount and explicit currency" do

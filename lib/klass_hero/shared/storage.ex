@@ -24,7 +24,7 @@ defmodule KlassHero.Shared.Storage do
       :ok = Storage.delete(:public, "logos/providers/123/logo.png")
   """
 
-  alias KlassHero.Shared.Domain.Ports.ForStoringFiles
+  alias KlassHero.Shared.ForStoringFiles
 
   @doc """
   Upload a file to storage.

@@ -35,7 +35,7 @@ defmodule KlassHero.Provider.StaffMember do
   alias KlassHero.Provider.PayRate
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Categories
-  alias KlassHero.Shared.Domain.Types.Money
+  alias KlassHero.Shared.Money
   alias KlassHero.Shared.NameUtils
 
   @primary_key {:id, :binary_id, autogenerate: true}

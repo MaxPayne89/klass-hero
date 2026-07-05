@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Types.Money do
+defmodule KlassHero.Shared.Money do
   @moduledoc """
   Immutable value object representing a monetary amount in a specific currency.
 

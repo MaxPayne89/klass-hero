@@ -7,14 +7,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
   Also enqueues one `CriticalEventWorker` Oban job per registered handler for critical events.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForPublishingIntegrationEvents
+  @behaviour KlassHero.Shared.ForPublishingIntegrationEvents
 
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventHandlerRegistry
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubBroadcaster
   alias KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorker
+  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-  alias KlassHero.Shared.Domain.Services.CriticalEventDispatcher
   alias KlassHero.Shared.Tracing.Context
 
   require Logger

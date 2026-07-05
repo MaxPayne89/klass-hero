@@ -6,7 +6,7 @@ defmodule KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter do
   the `ForManagingFeatureFlags` port contract.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForManagingFeatureFlags
+  @behaviour KlassHero.Shared.ForManagingFeatureFlags
 
   @impl true
   def enabled?(flag_name, _opts) do

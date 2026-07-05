@@ -2,7 +2,7 @@ defmodule KlassHero.Provider.PayRateTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Provider.PayRate
-  alias KlassHero.Shared.Domain.Types.Money
+  alias KlassHero.Shared.Money
 
   describe "hourly/2" do
     test "builds an hourly PayRate with default EUR currency" do

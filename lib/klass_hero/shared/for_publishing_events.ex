@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Ports.ForPublishingEvents do
+defmodule KlassHero.Shared.ForPublishingEvents do
   @moduledoc """
   Port (interface) for publishing domain events.
 

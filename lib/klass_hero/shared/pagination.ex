@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Types.Pagination do
+defmodule KlassHero.Shared.Pagination do
   @moduledoc """
   Pure domain types for cursor-based (seek) pagination across bounded contexts.
   """

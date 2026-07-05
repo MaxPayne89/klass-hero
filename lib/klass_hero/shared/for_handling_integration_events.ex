@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents do
+defmodule KlassHero.Shared.ForHandlingIntegrationEvents do
   @moduledoc """
   Behaviour for integration event handlers.
 
@@ -9,7 +9,7 @@ defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents do
   ## Example
 
       defmodule MyApp.Participation.ChildAnonymizedHandler do
-        @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
+        @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
 
         @impl true
         def subscribed_events, do: [:child_data_anonymized]

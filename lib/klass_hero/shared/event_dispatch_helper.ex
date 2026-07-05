@@ -10,8 +10,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
   For critical events, failed handlers are automatically retried via Oban.
   """
 
+  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.DomainEvent
-  alias KlassHero.Shared.Domain.Services.CriticalEventDispatcher
   alias KlassHero.Shared.DomainEventBus
 
   require Logger

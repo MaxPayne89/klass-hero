@@ -5,7 +5,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   Stores files in an Agent for test assertions.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForStoringFiles
+  @behaviour KlassHero.Shared.ForStoringFiles
 
   use Agent
 

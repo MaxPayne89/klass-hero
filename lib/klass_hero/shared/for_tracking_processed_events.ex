@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Ports.ForTrackingProcessedEvents do
+defmodule KlassHero.Shared.ForTrackingProcessedEvents do
   @moduledoc """
   Port for tracking which event-handler pairs have been processed.
 

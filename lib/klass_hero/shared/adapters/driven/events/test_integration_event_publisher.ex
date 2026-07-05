@@ -32,7 +32,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher 
       end
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForPublishingIntegrationEvents
+  @behaviour KlassHero.Shared.ForPublishingIntegrationEvents
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 

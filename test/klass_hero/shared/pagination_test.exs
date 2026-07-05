@@ -1,7 +1,7 @@
-defmodule KlassHero.Shared.Domain.Types.PaginationTest do
+defmodule KlassHero.Shared.PaginationTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Shared.Domain.Types.Pagination.{PageParams, PageResult}
+  alias KlassHero.Shared.Pagination.{PageParams, PageResult}
 
   describe "PageParams.new/1" do
     test "creates PageParams with default limit when no attrs provided" do

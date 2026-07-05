@@ -12,7 +12,7 @@ defmodule KlassHero.Provider.PayRate do
   field on read.
   """
 
-  alias KlassHero.Shared.Domain.Types.Money
+  alias KlassHero.Shared.Money
 
   @enforce_keys [:type, :money]
   defstruct [:type, :money]

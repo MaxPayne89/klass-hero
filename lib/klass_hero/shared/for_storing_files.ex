@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Ports.ForStoringFiles do
+defmodule KlassHero.Shared.ForStoringFiles do
   @moduledoc """
   Port for file storage operations.
 

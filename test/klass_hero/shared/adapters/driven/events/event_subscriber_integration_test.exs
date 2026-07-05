@@ -19,9 +19,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSubscriberIntegrationTest
   alias KlassHero.Shared.Adapters.Driven.Events.EventSubscriber
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
+  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-  alias KlassHero.Shared.Domain.Services.CriticalEventDispatcher
   alias KlassHero.Test.CriticalFailingTestHandler
   alias KlassHero.Test.CriticalTestHandler
 

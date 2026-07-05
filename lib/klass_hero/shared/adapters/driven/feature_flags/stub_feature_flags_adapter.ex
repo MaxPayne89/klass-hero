@@ -22,7 +22,7 @@ defmodule KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter 
       end
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForManagingFeatureFlags
+  @behaviour KlassHero.Shared.ForManagingFeatureFlags
 
   use Agent
 

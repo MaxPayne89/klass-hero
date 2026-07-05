@@ -17,7 +17,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorker do
     max_attempts: 3
 
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
-  alias KlassHero.Shared.Domain.Services.CriticalEventDispatcher
+  alias KlassHero.Shared.CriticalEventDispatcher
 
   require Logger
 
