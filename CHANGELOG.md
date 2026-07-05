@@ -5,6 +5,20 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.2](https://github.com/MaxPayne89/klass-hero/compare/v0.54.1...v0.54.2) (2026-07-04)
+
+
+### Bug Fixes
+
+* durable Oban delivery for provider staff-assignment events ([#1011](https://github.com/MaxPayne89/klass-hero/issues/1011)) ([e0689a0](https://github.com/MaxPayne89/klass-hero/commit/e0689a0c3f4e0ebe9978b37b32c508b43dcb0775)), closes [#1004](https://github.com/MaxPayne89/klass-hero/issues/1004)
+
+
+### Code Refactoring
+
+* delete Enrollment→Accounts UserAccountResolver ACL ([#1015](https://github.com/MaxPayne89/klass-hero/issues/1015)) ([7130fcc](https://github.com/MaxPayne89/klass-hero/commit/7130fccec9e6a26bc6f5aa4d27e56c56e77b8fc9)), closes [#990](https://github.com/MaxPayne89/klass-hero/issues/990)
+* remove dead RepositoryHelpers mapper-variant functions ([#1008](https://github.com/MaxPayne89/klass-hero/issues/1008)) ([bdaacf3](https://github.com/MaxPayne89/klass-hero/commit/bdaacf3b23fdf148d63e435dbbf05b178f8550de)), closes [#1005](https://github.com/MaxPayne89/klass-hero/issues/1005)
+* split KlassHero.Provider context module by sub-domain ([#1012](https://github.com/MaxPayne89/klass-hero/issues/1012)) ([03f2c79](https://github.com/MaxPayne89/klass-hero/commit/03f2c796e8e9f2489bd30763e3f31053d901bf5c))
+
 ## [0.54.1](https://github.com/MaxPayne89/klass-hero/compare/v0.54.0...v0.54.1) (2026-07-03)
 
 
