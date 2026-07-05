@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Ports.ForPublishingIntegrationEvents do
+defmodule KlassHero.Shared.ForPublishingIntegrationEvents do
   @moduledoc """
   Port (interface) for publishing integration events across bounded contexts.
 

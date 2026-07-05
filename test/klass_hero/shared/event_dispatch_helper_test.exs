@@ -5,8 +5,8 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
 
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
+  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.DomainEvent
-  alias KlassHero.Shared.Domain.Services.CriticalEventDispatcher
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.EventDispatchHelper
 

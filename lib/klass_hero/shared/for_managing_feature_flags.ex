@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Ports.ForManagingFeatureFlags do
+defmodule KlassHero.Shared.ForManagingFeatureFlags do
   @moduledoc """
   Port for feature flag operations.
 

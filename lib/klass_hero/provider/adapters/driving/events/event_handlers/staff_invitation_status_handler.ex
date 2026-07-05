@@ -12,7 +12,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
   success and logs accordingly.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
 
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember

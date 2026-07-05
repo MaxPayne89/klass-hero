@@ -1,11 +1,11 @@
-defmodule KlassHero.Shared.Domain.Services.CriticalEventDispatcherTest do
+defmodule KlassHero.Shared.CriticalEventDispatcherTest do
   use KlassHero.DataCase, async: true
 
   import ExUnit.CaptureLog
 
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
-  alias KlassHero.Shared.Domain.Services.CriticalEventDispatcher
+  alias KlassHero.Shared.CriticalEventDispatcher
 
   describe "handler_ref/1" do
     test "produces canonical string from {module, function} tuple" do

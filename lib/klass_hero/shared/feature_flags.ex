@@ -17,7 +17,7 @@ defmodule KlassHero.Shared.FeatureFlags do
       :ok = FeatureFlags.disable(:new_booking_flow)
   """
 
-  alias KlassHero.Shared.Domain.Ports.ForManagingFeatureFlags
+  alias KlassHero.Shared.ForManagingFeatureFlags
 
   @doc "Check if a flag is globally enabled."
   @spec enabled?(ForManagingFeatureFlags.flag_name(), keyword()) ::

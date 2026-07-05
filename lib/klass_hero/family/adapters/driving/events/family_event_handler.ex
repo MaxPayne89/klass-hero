@@ -18,7 +18,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler do
   - Transient errors → Retry once, then log error
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Family
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers

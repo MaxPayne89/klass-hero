@@ -6,7 +6,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
   atomicity guarantees for exactly-once event handler execution.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForTrackingProcessedEvents
+  @behaviour KlassHero.Shared.ForTrackingProcessedEvents
 
   use KlassHero.Shared.Interaction
 

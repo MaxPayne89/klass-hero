@@ -6,9 +6,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorkerTest do
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorker
+  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-  alias KlassHero.Shared.Domain.Services.CriticalEventDispatcher
 
   describe "perform/1 with domain events" do
     test "deserializes event and dispatches via CriticalEventDispatcher" do

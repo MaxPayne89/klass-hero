@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Services.CriticalEventDispatcher do
+defmodule KlassHero.Shared.CriticalEventDispatcher do
   @moduledoc """
   Exactly-once dispatch for critical events.
 

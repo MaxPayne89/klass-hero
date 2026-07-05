@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents do
+defmodule KlassHero.Shared.ForHandlingEvents do
   @moduledoc """
   Behaviour for domain event handlers.
 
@@ -9,7 +9,7 @@ defmodule KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents do
   ## Example
 
       defmodule MyApp.Family.UserEventHandler do
-        @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents
+        @behaviour KlassHero.Shared.ForHandlingEvents
 
         @impl true
         def subscribed_events, do: [:user_registered, :user_confirmed]

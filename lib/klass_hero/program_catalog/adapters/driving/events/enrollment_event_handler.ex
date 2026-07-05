@@ -10,7 +10,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandle
     when programs become filterable by eligibility criteria.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   require Logger
 

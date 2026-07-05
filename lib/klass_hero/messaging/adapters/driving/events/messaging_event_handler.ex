@@ -17,7 +17,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler do
   Errors are returned as tuples for the EventSubscriber to log without blocking event processing.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.Driving.ForHandlingEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Messaging
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers

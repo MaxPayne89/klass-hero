@@ -90,7 +90,7 @@ See `.claude/rules/domain-architecture.md` for patterns. For context-specific de
 
 **CQRS reads:** Read models are maintained by projection GenServers (`adapters/driven/projections/`) that subscribe to events and denormalize into dedicated read tables, exposed as read-model DTOs (`domain/read_models/`). Program Catalog, Messaging, and Provider have these. Build new projections on `KlassHero.Shared.Projection` (base macro) — see `provider/adapters/driven/projections/provider_programs.ex` for the canonical example.
 
-> **Note:** DI wiring via `config :klass_hero, :<context>, for_managing_*: Adapter` maps is gone. The flatten deleted per-context port config; the only residual key is `:shared, for_tracking_processed_events`. Do not add new port-wiring config — call collaborators directly or via an ACL module.
+> **Note:** Per-context *aggregate* port DI wiring (`config :klass_hero, :<context>, for_managing_*: Adapter`) is gone — those ports were ceremony (one prod impl). What survives is Shared's genuine env-swapped adapter seams, where a behaviour + config-selected impl is idiomatic Elixir DI, not DDD ceremony: `event_publisher`, `integration_event_publisher`, `feature_flags`, `storage` (each real-vs-test/stub), plus `:shared, for_tracking_processed_events`. Their slim behaviours live at the Shared root (`KlassHero.Shared.ForStoringFiles` etc.), not in a `domain/ports/` tree. Do not add new *aggregate* port-wiring — call collaborators directly or via an ACL module — but a new genuinely swappable external adapter may follow the Shared seam pattern.
 
 ### Event System (Two-Tier)
 

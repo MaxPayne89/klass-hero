@@ -5,7 +5,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter do
   Works with AWS S3, Tigris, MinIO, and other S3-compatible services.
   """
 
-  @behaviour KlassHero.Shared.Domain.Ports.ForStoringFiles
+  @behaviour KlassHero.Shared.ForStoringFiles
 
   use KlassHero.Shared.Interaction
 

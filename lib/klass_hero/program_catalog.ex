@@ -39,9 +39,9 @@ defmodule KlassHero.ProgramCatalog do
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
-  alias KlassHero.Shared.Domain.Types.Pagination.PageResult
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.ErrorIds
+  alias KlassHero.Shared.Pagination.PageResult
 
   require Logger
 
