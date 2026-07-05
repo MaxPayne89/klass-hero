@@ -7,9 +7,9 @@ defmodule KlassHero.Messaging.SendMessage do
   updates sender's last_read_at, and publishes a message_sent event.
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Accounts.UserResolver
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
+  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderUserResolver
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Message
@@ -256,7 +256,7 @@ defmodule KlassHero.Messaging.SendMessage do
   end
 
   defp provider_owner?(provider_id, sender_id) do
-    case UserResolver.get_user_id_for_provider(provider_id) do
+    case ProviderUserResolver.get_user_id_for_provider(provider_id) do
       {:ok, ^sender_id} -> true
       _ -> false
     end

@@ -127,17 +127,18 @@ defmodule KlassHero.Accounts do
           {:ok, User.t(), StaffMember.t()} | {:error, :not_a_provider | :already_staffed | term()}
   def add_self_as_staff(%User{} = user, staff_attrs) when is_map(staff_attrs) do
     case Provider.get_provider_by_identity(user.id) do
-      {:ok, provider} ->
-        with {:ok, {updated_user, staff}} <-
-               PersonaGrant.grant(user, :staff, fn fresh_user ->
-                 attrs = Map.put(staff_attrs, :email, fresh_user.email)
-                 Provider.create_self_staff_member(provider.id, fresh_user.id, attrs)
-               end) do
-          {:ok, updated_user, staff}
-        end
+      {:ok, provider} -> grant_self_staff(user, provider, staff_attrs)
+      {:error, :not_found} -> {:error, :not_a_provider}
+    end
+  end
 
-      {:error, :not_found} ->
-        {:error, :not_a_provider}
+  defp grant_self_staff(user, provider, staff_attrs) do
+    with {:ok, {updated_user, staff}} <-
+           PersonaGrant.grant(user, :staff, fn fresh_user ->
+             attrs = Map.put(staff_attrs, :email, fresh_user.email)
+             Provider.create_self_staff_member(provider.id, fresh_user.id, attrs)
+           end) do
+      {:ok, updated_user, staff}
     end
   end
 
@@ -511,6 +512,33 @@ defmodule KlassHero.Accounts do
   """
   def get_user_by_email(email) when is_binary(email) do
     Repo.get_by(User, email: email)
+  end
+
+  @doc """
+  Resolves display names for a batch of user IDs.
+
+  Returns a map of `user_id => name`. Unknown IDs are omitted from the result.
+  Used by other contexts (e.g. Messaging) that need human-readable
+  sender/participant names without reaching into the `User` schema.
+  """
+  @spec get_display_names([String.t()]) :: %{String.t() => String.t()}
+  def get_display_names([]), do: %{}
+
+  def get_display_names(user_ids) when is_list(user_ids) do
+    from(u in User, where: u.id in ^user_ids, select: {u.id, u.name})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  Resolves a single user's display name.
+  """
+  @spec get_display_name(String.t()) :: {:ok, String.t()} | {:error, :not_found}
+  def get_display_name(user_id) do
+    case Repo.one(from(u in User, where: u.id == ^user_id, select: u.name)) do
+      nil -> {:error, :not_found}
+      name -> {:ok, name}
+    end
   end
 
   @doc """
