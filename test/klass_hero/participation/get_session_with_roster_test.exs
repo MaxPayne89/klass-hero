@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Queries.GetSessionWithRosterTest do
+defmodule KlassHero.Participation.GetSessionWithRosterTest do
   @moduledoc """
   Integration tests for GetSessionWithRoster use case.
 

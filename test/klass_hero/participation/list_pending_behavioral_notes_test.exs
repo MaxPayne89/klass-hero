@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Queries.ListPendingBehavioralNotesTest do
+defmodule KlassHero.Participation.ListPendingBehavioralNotesTest do
   @moduledoc """
   Integration tests for ListPendingBehavioralNotes use case.
   """

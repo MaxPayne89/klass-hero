@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.BulkCheckInTest do
+defmodule KlassHero.Participation.BulkCheckInTest do
   @moduledoc """
   Tests for BulkCheckIn use case.
 

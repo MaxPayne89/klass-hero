@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.CreateSessionTest do
+defmodule KlassHero.Participation.CreateSessionTest do
   @moduledoc """
   Integration tests for CreateSession use case.
 

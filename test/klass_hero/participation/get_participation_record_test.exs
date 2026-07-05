@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Queries.GetParticipationRecordTest do
+defmodule KlassHero.Participation.GetParticipationRecordTest do
   @moduledoc """
   Integration tests for GetParticipationRecord use case.
 

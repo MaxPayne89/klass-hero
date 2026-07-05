@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Queries.ListProviderSessionsTest do
+defmodule KlassHero.Participation.ListProviderSessionsTest do
   @moduledoc """
   Integration tests for ListProviderSessions use case.
 

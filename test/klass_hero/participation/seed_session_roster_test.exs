@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Application.Commands.SeedSessionRosterTest do
+defmodule KlassHero.Participation.SeedSessionRosterTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
