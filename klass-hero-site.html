@@ -1355,7 +1355,7 @@ function pageProviderProfile(slug){
           <button class="btn btn-ghost btn-sm" onclick="toast('Sign in to message this provider')">${ic('chat','icon-sm')} Message</button>
         </div>
       </div>
-      ${p.requestOnly ? `<div class="notice notice-warn" style="margin-top:1rem">${ic('info','icon-sm')}<span><strong>Request, not instant booking.</strong> ${p.name} reviews each request — you'll share your child's details and they confirm availability before any payment is taken.</span></div>` : ""}
+      ${p.requestOnly ? `<div class="notice notice-warn" style="margin-top:1rem">${ic('info','icon-sm')}<span><strong>Request to Book, not Book Now.</strong> ${p.name} reviews each request — you'll share your child's details and they confirm availability before any payment is taken.</span></div>` : ""}
     </div>
   </div>
   <div class="container-mid" style="padding:2rem 1.25rem 4rem">
@@ -1380,7 +1380,7 @@ function pageProviderProfile(slug){
     <h3 class="section-title" style="font-size:1.2rem;margin-top:2.5rem">Price breakdown</h3>
     <div class="card" style="padding:1.25rem;margin-top:.75rem">
       ${progs.map(pr=>`<div class="rate-row"><span>${pr.title} <span class="tiny muted">· ${pr.period} · Ages ${pr.age}</span></span><strong>€${ebPriceCalc(pr)}</strong></div>`).join("")}
-      <p class="tiny muted" style="margin-top:.6rem">No booking fees for parents. ${p.requestOnly?'Final camp pricing is confirmed with your request.':'Instant booking available on every program.'}</p>
+      <p class="tiny muted" style="margin-top:.6rem">No booking fees for parents. ${p.requestOnly?'Final camp pricing is confirmed with your request.':'Book Now available on every program.'}</p>
     </div>
 
     <h3 class="section-title" style="font-size:1.2rem;margin-top:2.5rem">Location</h3>
@@ -1780,40 +1780,70 @@ function pageProviders(){
 /* ============================================================
    PAGE: Berlin provider checklist (#674)
    ============================================================ */
+const vetState = {type:"individual"};
+const VET_ITEMS = {
+  individual: [
+    {t:"Stripe Express: identity & payouts", d:"Stripe verifies your identity document and connects your bank account for SEPA payouts. You leave Klass Hero for this step — it's Stripe-hosted and takes about 5 minutes. We never see or store your ID.", meta:"Free · ~5 min · handled by Stripe", status:"approved"},
+    {t:"Erweitertes Führungszeugnis", d:"The extended police clearance for working with minors (Belegart O). Must be no older than 3 months when submitted; renewed annually.", meta:"€13 · 2–4 weeks · apply at any Bürgeramt or online with eID", status:"submitted", help:"Need the request letter for the Bürgeramt? We'll send you a pre-filled one — just ask."},
+    {t:"Liability insurance", d:"An active Betriebshaftpflicht policy covering your teaching activity. Mandatory for every provider before the first session.", meta:"From ~€8/month · same-day online", status:"submitted", help:"Not covered yet? Get a policy in minutes through our Allianz broker link."},
+    {t:"Qualifications & experience", d:"Degree, training certificate, coaching license, or references showing at least one year working with children. Reviewed by our team.", meta:"Free · references on letterhead carry the most weight", status:"approved"},
+    {t:"Safeguarding training", d:"A recognized Kinderschutz course — many are free online via sports federations. Certificates older than 3 years must be refreshed.", meta:"Free–€50 · 2–6 hours", status:"not_started"},
+    {t:"Community Standards Agreement", d:"Read and sign our standards on conduct, professionalism, and child safety. Signed online in minutes.", meta:"Free · instant", status:"not_started"}
+  ],
+  business: [
+    {t:"Stripe Express: business registration & payouts", d:"Stripe verifies your business registration, company structure, VAT details, and the identity of your Responsible Person — then connects the company bank account for SEPA payouts. Stripe-hosted; Klass Hero never handles these documents.", meta:"Free · ~10 min · handled by Stripe", status:"approved"},
+    {t:"Business liability insurance", d:"Company-level Betriebshaftpflicht covering all programs and staff activity with children.", meta:"Policy documents uploaded directly", status:"submitted", help:"Need coverage? Our Allianz broker link works for business policies too."},
+    {t:"Qualifications & experience", d:"Evidence of relevant experience for the business and each of its initial Heroes. Reviewed by our team.", meta:"Free · gather everything in one upload", status:"submitted"},
+    {t:"Safeguarding training (Responsible Person)", d:"Your Responsible Person completes a recognized Kinderschutz course.", meta:"Free–€50 · 2–6 hours", status:"not_started"},
+    {t:"Community Standards Agreement", d:"Signed by the Responsible Person on behalf of the organisation.", meta:"Free · instant", status:"not_started"},
+    {t:"Team Accountability Declaration", d:"The Responsible Person confirms every team member working with children holds the required checks. Each Hero added later completes their own individual checklist before joining live programs.", meta:"Free · instant · legally binding", status:"not_started"}
+  ]
+};
+function vetPill(st){
+  if(st==="approved") return `<span class="pill pill-success">✓ Approved</span>`;
+  if(st==="submitted") return `<span class="pill pill-warning">Submitted · in review</span>`;
+  return `<span class="pill pill-outline">Not started</span>`;
+}
 function pageChecklist(){
-  const docs = [
-    ["Erweitertes Führungszeugnis","Extended police clearance certificate — the non-negotiable for working with minors.","€13 · 2–4 weeks · apply at any Bürgeramt or online with your eID. Tip: request it 'zur Vorlage bei einer Behörde' and start early — it's the slowest document on this list."],
-    ["Government-issued photo ID","Passport or Personalausweis to verify identity and age (18+).","Free if current · instant. Tip: make sure it doesn't expire mid-season."],
-    ["Proof of qualification","Degree, training certificate, coaching license, or references demonstrating at least one year working with children.","Free · gather scans of everything; references on letterhead carry the most weight."],
-    ["Child safeguarding certificate","A recognized Kinderschutz course (many are free online, e.g. via sports federations).","Free–€50 · 2–6 hours. Tip: certificates older than 3 years should be refreshed."],
-    ["Liability insurance (Betriebshaftpflicht)","Active policy covering your teaching activity — required before your first session.","From ~€8/month · same day online. Tip: check whether your sports club or studio already covers you."],
-    ["Gewerbeanmeldung or freelance registration","Business registration (Gewerbe) or Finanzamt freelance tax number, depending on your activity.","€15–€31 (Gewerbe) · same day at the Bezirksamt. Teaching is often freiberuflich — ask the Finanzamt first; it saves the trade-tax paperwork."],
-    ["Bank account for SEPA payouts","A EUR account in your (or your company's) name for weekly Monday payouts.","Free · instant. Tip: a separate account keeps tax season painless."]
-  ];
+  const items = VET_ITEMS[vetState.type];
+  const approved = items.filter(i=>i.status==="approved").length;
   return `
   <section class="mk-hero" style="padding-bottom:4rem">
     ${orbs()}
     <div class="container rel">
-      <span class="pill pill-outline" style="margin-bottom:1.25rem">For Providers · Berlin</span>
-      <h1 class="hero-h1-sm">The 7 documents you need to <span class="hl">teach kids</span> in Berlin</h1>
-      <p class="lede" style="max-width:640px;margin:1.25rem auto 0">In plain English — what each document is, what it costs, how long it takes, and the tips that save you weeks.</p>
+      <span class="pill pill-outline" style="margin-bottom:1.25rem">Hero Verification</span>
+      <h1 class="hero-h1-sm">Your verification checklist — <span class="hl">any order you like</span></h1>
+      <p class="lede" style="max-width:660px;margin:1.25rem auto 0">Complete each item whenever it suits you. Once everything is submitted, our team reviews your application — and the moment it's approved, you can publish programs and take bookings.</p>
     </div>
   </section>
   <section class="band band-white" style="padding-top:2rem">
     <div class="container-mid">
+      <div class="viewtoggle" style="margin:0 auto 1.5rem;max-width:340px">
+        <button class="${vetState.type==='individual'?'on':''}" style="flex:1" onclick="vetState.type='individual';route()">Individual</button>
+        <button class="${vetState.type==='business'?'on':''}" style="flex:1" onclick="vetState.type='business';route()">Business</button>
+      </div>
+      <div class="card-soft" style="padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div class="small" style="font-weight:700">${approved} of ${items.length} approved</div>
+          <div style="height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:.4rem"><div style="width:${Math.round(approved/items.length*100)}%;height:100%;background:var(--grad-primary);border-radius:999px"></div></div>
+        </div>
+        <span class="tiny muted">Program publishing unlocks when all items are approved</span>
+      </div>
       <div style="display:flex;flex-direction:column;gap:1rem">
-        ${docs.map(([t,d,meta],i)=>`
-          <div class="step-row">
-            <div class="num-bubble">${i+1}</div>
-            <div>
-              <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">${t}</h3>
-              <p class="small muted" style="margin-top:.25rem">${d}</p>
-              <p class="tiny" style="margin-top:.5rem;color:var(--blue-700);font-weight:600">${meta}</p>
+        ${items.map(it=>`
+          <div class="card" style="padding:1.25rem 1.5rem">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
+              <h3 style="font-family:var(--font-sans);font-size:1.05rem;font-weight:700">${it.t}</h3>
+              ${vetPill(it.status)}
             </div>
+            <p class="small muted" style="margin-top:.4rem">${it.d}</p>
+            <p class="tiny" style="margin-top:.4rem;color:var(--blue-700);font-weight:600">${it.meta}</p>
+            ${it.help?`<div class="notice notice-info" style="margin-top:.6rem;padding:.6rem .85rem">${ic('info','icon-sm')}<span class="small"><strong>We can help:</strong> ${it.help} <a href="#/contact" style="color:var(--blue-700);font-weight:700">Request →</a></span></div>`:""}
+            ${it.status==="not_started"?`<div style="margin-top:.75rem"><button class="btn btn-primary btn-sm" onclick="toast('Demo: this step opens during real onboarding')">Start this step</button></div>`:""}
           </div>`).join("")}
       </div>
-      <div class="notice notice-info" style="margin-top:2rem">${ic('info','icon-sm')}<span>Klass Hero walks you through uploading each document during Hero verification — and reminds you before anything expires.</span></div>
-      <div style="margin-top:2rem;text-align:center"><a class="btn btn-primary btn-lg" href="#/register">Start your verification →</a></div>
+      <div class="notice notice-info" style="margin-top:2rem">${ic('info','icon-sm')}<span><strong>What happens next:</strong> when every item is submitted, your application moves to admin review. If anything needs a fix, we flag just that item — you never redo the rest. Approved items stay approved.</span></div>
+      <div style="margin-top:2rem;text-align:center"><a class="btn btn-primary btn-lg" href="#/register">Create your provider account →</a></div>
     </div>
   </section>`;
 }
@@ -2644,10 +2674,142 @@ function pageRegister(){
           ${r==="provider"
             ? `<label class="f-check"><input type="checkbox" required> I accept the <a href="#/terms">Provider Agreement</a> (vetting, payouts, community standards)<span class="req">*</span></label>`
             : `<label class="f-check"><input type="checkbox" required> I accept the <a href="#/terms">Parent Agreement</a> (booking &amp; cancellation rules)<span class="req">*</span></label>`}
+          ${r==="parent" ? `<div class="notice notice-info" style="margin-bottom:1rem">${ic('info','icon-sm')}<span>Prefer a guided setup? Our <a href="#/register/parent" style="color:var(--blue-700);font-weight:700">step-by-step family sign-up</a> walks you through children, emergency contacts, and consents one screen at a time.</span></div>` : ""}
           <p class="tiny muted" style="margin-bottom:1rem">How we handle your data: <a href="#/privacy" style="color:var(--blue-700)">Privacy Policy</a>. You can add a ${r==="parent"?"Provider":"Parent"} profile later in Settings and switch roles from the navigation.</p>
           <button class="btn btn-primary btn-block" type="submit">Create account →</button>
         </form>
       </div>
+    </div>
+  </section>`;
+}
+
+/* ============================================================
+   PAGE: Parent guided sign-up wizard — 8 focused steps
+   (contact → profile questionnaire → child → emergency →
+    medical → consents → terms → email verification)
+   ============================================================ */
+const PSW_STEPS = ["Contact details","About your family","Add a child","Emergency contact","Medical & allergies","Consents","Terms & privacy","Verify email"];
+const pswState = {
+  step:1, done:false,
+  features:{search:true, planner:false, messaging:false, jobs:false},
+  cats:{Sports:true, Arts:false, Music:false, Education:false, "Life Skills":false, Camps:false, Workshops:false},
+  skills:{social:true, physical:false, creative:false, cognitive:false, communication:false, technology:false},
+  kids:[{first:"Emma", last:"Schmidt", dob:"2018-03-14", ecName:"", ecRel:"", ecPhone:"", medical:"", photo:true, marketing:false}],
+  terms:false
+};
+function pswToggle(group,key){ pswState[group][key]=!pswState[group][key]; route(); }
+function pswAddKid(){ pswState.kids.push({first:"",last:"",dob:"",ecName:"",ecRel:"",ecPhone:"",medical:"",photo:true,marketing:false}); route(); }
+function pswGo(n){ pswState.step=n; route(); window.scrollTo({top:0}); }
+function pswChip(on,label,onclick){ return `<button class="kidchip ${on?'on':''}" onclick="${onclick}">${label}</button>`; }
+function pageParentSignup(){
+  const s = pswState;
+  const stepLabel = s.done ? "All set!" : PSW_STEPS[s.step-1];
+  const pct = s.done ? 100 : Math.round((s.step-1)/PSW_STEPS.length*100);
+  let body = "";
+  if(s.done){
+    body = `
+    <div style="text-align:center;padding:1rem 0">
+      <div class="chip chip-lg g-safety" style="margin:0 auto">${ic('check')}</div>
+      <h2 class="section-title" style="margin-top:1.25rem;font-size:1.6rem">Welcome to Klass Hero! 🎉</h2>
+      <p class="muted" style="margin-top:.75rem;max-width:420px;margin-left:auto;margin-right:auto">Your family dashboard is ready — with program recommendations preloaded from the categories and skills you picked.</p>
+      <div style="margin-top:1.75rem"><a class="btn btn-primary btn-lg" href="#/dashboard">Go to your Family Dashboard →</a></div>
+    </div>`;
+  } else if(s.step===1){
+    body = `
+    <h3 class="psw-h">Let's start with you</h3>
+    <p class="small muted psw-sub">Just your name and email — everything else comes one step at a time.</p>
+    <div class="f-group"><label class="f-label">Your full name<span class="req">*</span></label><input class="f-input" placeholder="Anna Schmidt"></div>
+    <div class="f-group"><label class="f-label">Email<span class="req">*</span></label><input class="f-input" type="email" placeholder="anna@example.com"></div>
+    <div class="psw-nav"><span></span><button class="btn btn-primary" onclick="pswGo(2)">Continue →</button></div>`;
+  } else if(s.step===2){
+    const feat = [["search","Program search"],["planner","Family planner"],["messaging","Messaging with providers"],["jobs","Job board"]];
+    body = `
+    <h3 class="psw-h">What brings you here?</h3>
+    <p class="small muted psw-sub">Pick as many as you like — this powers the recommendations on your dashboard. No wrong answers.</p>
+    <div class="tiny uc muted psw-q">Which features interest you most?</div>
+    <div class="psw-chips">${feat.map(([k,l])=>pswChip(s.features[k],l,`pswToggle('features','${k}')`)).join("")}</div>
+    <div class="tiny uc muted psw-q">What type of activities is your family interested in?</div>
+    <div class="psw-chips">${Object.keys(s.cats).map(c=>pswChip(s.cats[c],c,`pswToggle('cats','${c.replace(/'/g,"\\'")}')`)).join("")}</div>
+    <div class="tiny uc muted psw-q">Which skills matter most to your family?</div>
+    <div class="psw-chips">${Object.keys(s.skills).map(k=>{const c=SKILL_CATS[k];return pswChip(s.skills[k],`${c.emoji} ${c.label.split(' &')[0]}`,`pswToggle('skills','${k}')`);}).join("")}</div>
+    <div class="psw-nav"><button class="btn btn-ghost" onclick="pswGo(1)">← Back</button><button class="btn btn-primary" onclick="pswGo(3)">Continue →</button></div>`;
+  } else if(s.step===3){
+    body = `
+    <h3 class="psw-h">Who's the hero of this story?</h3>
+    <p class="small muted psw-sub">Add at least one child. The date of birth is what makes age-eligibility checks work everywhere on Klass Hero.</p>
+    ${s.kids.map((k,i)=>`
+      <div class="card-muted" style="padding:1rem 1.25rem;margin-bottom:.9rem">
+        <div class="tiny uc muted" style="font-weight:700;margin-bottom:.6rem">Child ${i+1}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="f-group" style="margin-bottom:.5rem"><label class="f-label">First name<span class="req">*</span></label><input class="f-input" value="${k.first}" oninput="pswState.kids[${i}].first=this.value"></div>
+          <div class="f-group" style="margin-bottom:.5rem"><label class="f-label">Last name<span class="req">*</span></label><input class="f-input" value="${k.last}" oninput="pswState.kids[${i}].last=this.value"></div>
+        </div>
+        <div class="f-group" style="margin-bottom:.25rem"><label class="f-label">Date of birth<span class="req">*</span></label><input class="f-input" type="date" value="${k.dob}" oninput="pswState.kids[${i}].dob=this.value"></div>
+      </div>`).join("")}
+    <button class="btn btn-ghost btn-sm" onclick="pswAddKid()">+ Add another child</button>
+    <div class="psw-nav"><button class="btn btn-ghost" onclick="pswGo(2)">← Back</button><button class="btn btn-primary" onclick="pswGo(4)">Continue →</button></div>`;
+  } else if(s.step===4){
+    body = `
+    <h3 class="psw-h">If we ever need to reach someone</h3>
+    <p class="small muted psw-sub">An emergency contact per child — essential for providers running in-person activities.</p>
+    ${s.kids.map((k,i)=>`
+      <div class="card-muted" style="padding:1rem 1.25rem;margin-bottom:.9rem">
+        <div class="tiny uc muted" style="font-weight:700;margin-bottom:.6rem">For ${k.first||`Child ${i+1}`}</div>
+        <div class="f-group" style="margin-bottom:.5rem"><label class="f-label">Contact name<span class="req">*</span></label><input class="f-input" placeholder="Thomas Schmidt" value="${k.ecName}" oninput="pswState.kids[${i}].ecName=this.value"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+          <div class="f-group" style="margin-bottom:.25rem"><label class="f-label">Relationship<span class="req">*</span></label><input class="f-input" placeholder="Father" value="${k.ecRel}" oninput="pswState.kids[${i}].ecRel=this.value"></div>
+          <div class="f-group" style="margin-bottom:.25rem"><label class="f-label">Phone<span class="req">*</span></label><input class="f-input" placeholder="+49 170 1234567" value="${k.ecPhone}" oninput="pswState.kids[${i}].ecPhone=this.value"></div>
+        </div>
+      </div>`).join("")}
+    <div class="psw-nav"><button class="btn btn-ghost" onclick="pswGo(3)">← Back</button><button class="btn btn-primary" onclick="pswGo(5)">Continue →</button></div>`;
+  } else if(s.step===5){
+    body = `
+    <h3 class="psw-h">Anything providers should know?</h3>
+    <p class="small muted psw-sub">Allergies or medical notes are shared only with the providers and Heroes of programs you actually book. Leave blank if there's nothing.</p>
+    ${s.kids.map((k,i)=>`
+      <div class="f-group"><label class="f-label">${k.first||`Child ${i+1}`} — medical info &amp; allergies</label><textarea class="f-input" rows="2" placeholder="e.g. Peanut allergy (carries EpiPen). No other conditions." oninput="pswState.kids[${i}].medical=this.value">${k.medical}</textarea></div>`).join("")}
+    <div class="psw-nav"><button class="btn btn-ghost" onclick="pswGo(4)">← Back</button><button class="btn btn-primary" onclick="pswGo(6)">Continue →</button></div>`;
+  } else if(s.step===6){
+    body = `
+    <h3 class="psw-h">You decide what's shared</h3>
+    <p class="small muted psw-sub">Per child, in plain language. Declining never blocks your account — you can change any of these later in Settings.</p>
+    ${s.kids.map((k,i)=>`
+      <div class="card-muted" style="padding:1rem 1.25rem;margin-bottom:.9rem">
+        <div class="tiny uc muted" style="font-weight:700;margin-bottom:.5rem">${k.first||`Child ${i+1}`}</div>
+        <label class="f-check"><input type="checkbox" ${k.photo?"checked":""} onchange="pswState.kids[${i}].photo=this.checked"> Photo &amp; media consent — group photos in program documentation. Never used for advertising.</label>
+        <label class="f-check" style="margin-bottom:0"><input type="checkbox" ${k.marketing?"checked":""} onchange="pswState.kids[${i}].marketing=this.checked"> Marketing consent — occasional program recommendations by email.</label>
+      </div>`).join("")}
+    <div class="psw-nav"><button class="btn btn-ghost" onclick="pswGo(5)">← Back</button><button class="btn btn-primary" onclick="pswGo(7)">Continue →</button></div>`;
+  } else if(s.step===7){
+    body = `
+    <h3 class="psw-h">The legal bit</h3>
+    <p class="small muted psw-sub">One required agreement — that's it.</p>
+    <label class="f-check"><input type="checkbox" ${s.terms?"checked":""} onchange="pswState.terms=this.checked;route()"> I accept the <a href="#/terms">Terms of Service</a> and <a href="#/privacy">Privacy Policy</a><span class="req">*</span></label>
+    <div class="notice notice-info" style="margin-top:.75rem">${ic('info','icon-sm')}<span>Your children's data is visible only to you and the providers you book. Never profiled, never sold, never used for advertising.</span></div>
+    <div class="psw-nav"><button class="btn btn-ghost" onclick="pswGo(6)">← Back</button><button class="btn btn-primary" ${s.terms?"":"disabled"} onclick="pswGo(8)">Continue →</button></div>`;
+  } else {
+    body = `
+    <div style="text-align:center;padding:.5rem 0">
+      <div class="chip chip-lg g-primary" style="margin:0 auto">${ic('chat')}</div>
+      <h3 class="psw-h" style="margin-top:1rem">Check your inbox</h3>
+      <p class="small muted" style="max-width:380px;margin:.5rem auto 0">We sent a verification link to <strong>anna@example.com</strong>. Click it to activate your account — then your dashboard is ready.</p>
+      <div style="margin-top:1.5rem;display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="pswState.done=true;route();window.scrollTo({top:0})">I've clicked the link →</button>
+        <button class="btn btn-ghost" onclick="toast('Verification email re-sent (demo)')">Resend email</button>
+      </div>
+      <div class="psw-nav" style="justify-content:center"><button class="btn btn-ghost btn-sm" onclick="pswGo(7)">← Back</button></div>
+    </div>`;
+  }
+  return `
+  <section class="band band-white" style="min-height:70vh">
+    <div class="container" style="max-width:560px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
+        <span class="tiny uc muted" style="font-weight:700">${s.done?"Family sign-up complete":`Step ${s.step} of ${PSW_STEPS.length}`}</span>
+        <span class="tiny" style="color:var(--blue-700);font-weight:700">${stepLabel}</span>
+      </div>
+      <div style="height:6px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-bottom:1.5rem"><div style="width:${pct}%;height:100%;background:var(--grad-primary);border-radius:999px;transition:width .3s"></div></div>
+      <div class="card" style="padding:1.75rem">${body}</div>
+      <style>.psw-h{font-family:var(--font-sans);font-size:1.25rem;font-weight:700}.psw-sub{margin:.3rem 0 1.25rem}.psw-q{font-weight:700;margin:1.1rem 0 .5rem}.psw-chips{display:flex;gap:.5rem;flex-wrap:wrap}.psw-nav{display:flex;justify-content:space-between;margin-top:1.5rem}</style>
     </div>
   </section>`;
 }
@@ -3238,7 +3400,7 @@ const GLOSSARY = [
     {t:"Skills", who:"Parents", d:"What a child builds by taking part — Teamwork, Creativity, Problem Solving and more. Tracked per child as they attend sessions."}
   ]},
   {group:"Booking & Payments", items:[
-    {t:"Instant Booking", who:"Parents", d:"A place that's confirmed the moment you pay — no waiting for approval. Most weekly classes work this way."},
+    {t:"Book Now", who:"Parents", d:"A place that's confirmed the moment you pay — no waiting for approval. Most weekly classes work this way."},
     {t:"Request to Book", who:"Parents", d:"A booking the provider approves first — used when group fit, dietary or medical needs should be checked. No payment is taken until it's accepted."},
     {t:"Enrollment", who:"Everyone", d:"A confirmed booking: paid, accepted, and your child has a place. The cancellation terms that applied at booking are saved onto the record."},
     {t:"Waitlist", who:"Parents", d:"Join when a program is full and we'll alert you the moment a spot opens. No payment is taken and no queue position is shown."},
@@ -3357,6 +3519,7 @@ const routes = [
   {re:/^#\/provider\/dashboard$/,nav:"",          cta:"providers", fn:()=>pageProviderDash()},
   {re:/^#\/login$/,              nav:"",          cta:"default",   fn:()=>pageLogin()},
   {re:/^#\/register$/,           nav:"",          cta:"default",   fn:()=>pageRegister()},
+  {re:/^#\/register\/parent$/,   nav:"",          cta:"default",   fn:()=>pageParentSignup()},
   {re:/^#\/terms$/,              nav:"",          cta:"default",   fn:()=>pageTerms()},
   {re:/^#\/privacy$/,            nav:"",          cta:"default",   fn:()=>pagePrivacy()}
 ];
