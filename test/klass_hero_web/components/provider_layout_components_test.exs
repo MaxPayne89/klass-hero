@@ -74,6 +74,16 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
 
       assert html =~ "New program"
     end
+
+    test "emits no <h1> — the page title owns the single document heading", %{} do
+      # Both desktop + mobile variants render in the same DOM, so the topbar
+      # must not contribute any <h1>; each provider page's LiveView supplies it.
+      html = render_pv_topbar(provider: %{name: "CodeKids Berlin", verified?: true})
+
+      refute html =~ "<h1"
+      # Provider name still renders (just not as a heading).
+      assert html =~ "CodeKids Berlin"
+    end
   end
 
   describe "pv_stat_card/1" do
