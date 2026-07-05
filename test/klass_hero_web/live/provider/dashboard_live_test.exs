@@ -171,6 +171,8 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
 
       assert has_element?(view, "#verification-status", "Verified")
       refute has_element?(view, "#verification-status", "Not Verified")
+      # locks the Theme.status_badge(:available) migration (AA-safe -800 shade)
+      assert has_element?(view, "#verification-status.text-green-800")
     end
   end
 
