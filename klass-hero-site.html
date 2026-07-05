@@ -428,6 +428,24 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
 .agent-caret{flex-shrink:0;transition:transform .2s;color:#fff;opacity:.9}
 .agent:not(.collapsed) .agent-caret{transform:rotate(180deg)}
 .agent.collapsed .agent-body,.agent.collapsed .agent-chips,.agent.collapsed .agent-input{display:none}
+/* Agent Hero corner launcher — small FAB that opens a popup chat */
+.agent-fab{position:fixed;right:18px;z-index:80;width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.28);padding:3px;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.agent-fab:hover{transform:scale(1.07)}
+.agent-fab svg{width:100%;height:100%}
+.agent-pop{position:fixed;right:18px;z-index:81;width:min(360px,calc(100vw - 32px));display:none}
+.agent-pop.open{display:block}
+.agent-pop .agent{box-shadow:0 14px 40px rgba(0,0,0,.25)}
+.agent-pop .agent-body{max-height:260px;overflow-y:auto}
+/* Earned skill badge — real medal: starburst seal + ribbons + name */
+.medal{display:inline-flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;background:none;border:none;padding:0}
+.medal .seal-wrap{position:relative;width:46px;height:56px;display:flex;justify-content:center}
+.medal .rib{position:absolute;top:30px;width:11px;height:24px;clip-path:polygon(0 0,100% 0,100% 100%,50% 72%,0 100%);filter:brightness(.8);z-index:0}
+.medal .rib.l{left:8px;transform:rotate(-16deg)}
+.medal .rib.r{right:8px;transform:rotate(16deg)}
+.medal .burst{position:absolute;top:1px;width:46px;height:46px;z-index:1;opacity:.95;clip-path:polygon(50.0% 0.0%,60.9% 9.4%,75.0% 6.7%,79.7% 20.3%,93.3% 25.0%,90.6% 39.1%,100.0% 50.0%,90.6% 60.9%,93.3% 75.0%,79.7% 79.7%,75.0% 93.3%,60.9% 90.6%,50.0% 100.0%,39.1% 90.6%,25.0% 93.3%,20.3% 79.7%,6.7% 75.0%,9.4% 60.9%,0.0% 50.0%,9.4% 39.1%,6.7% 25.0%,20.3% 20.3%,25.0% 6.7%,39.1% 9.4%)}
+.medal .seal{position:absolute;top:5px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;z-index:2;box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.7),0 1px 4px rgba(0,0,0,.25)}
+.medal .lbl{font-size:.64rem;font-weight:800;max-width:78px;text-align:center;line-height:1.15;color:var(--fg-primary)}
+.medal:hover .seal-wrap{transform:scale(1.05)}
 .agent-head .nm{font-family:var(--font-display);font-weight:800;font-size:1.05rem;line-height:1.1}
 .agent-head .tg{font-size:.78rem;opacity:.9}
 .agent-badge{font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:.18rem .5rem;border-radius:999px;background:rgba(255,255,255,.25);margin-left:auto;align-self:flex-start}
@@ -586,7 +604,7 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
           <ul>
             <li><a href="#/for-providers">Start Teaching</a></li>
             <li><a href="#/for-providers">Pricing</a></li>
-            <li><a href="#/providers/checklist">Berlin Document Checklist</a></li>
+            <li><a href="#/provider/dashboard" onclick="provState.tab='team'">Hero Verification</a></li>
             <li><a href="#/provider/dashboard">Provider Dashboard</a></li>
             <li><a href="#/contact">Help Center</a></li>
           </ul>
@@ -1075,7 +1093,7 @@ function pageBrowse(){
 
   <section class="band-white" style="padding:2rem 0 5rem">
     <div class="container">
-      <div style="margin-bottom:1.75rem">${agentHero('maven')}</div>
+      ${agentFab('maven')}
       <div id="catalog-zone"></div>
     </div>
   </section>
@@ -1701,7 +1719,7 @@ function pageProviders(){
       <div class="grid grid-4" style="gap:1rem">
         ${bar.map(([i,t,d])=>`<div class="card feature-card" style="padding:1.4rem"><div class="chip chip-sm g-cool">${ic(i)}</div><h3 style="font-size:1rem;margin-top:1rem">${t}</h3><p class="small">${d}</p></div>`).join("")}
       </div>
-      <p style="text-align:center;margin-top:2rem" class="small muted">Working with children in Berlin needs the right paperwork. <a href="#/providers/checklist" style="color:var(--blue-700);font-weight:700">See the 7-document Berlin checklist →</a></p>
+      <p style="text-align:center;margin-top:2rem" class="small muted">Working with children in Berlin needs the right paperwork. Your verification checklist lives in your provider dashboard — complete it in any order. <a href="#/trust-safety" style="color:var(--blue-700);font-weight:700">See how vetting works →</a></p>
     </div>
   </section>
 
@@ -1953,16 +1971,8 @@ function pageTrust(){
     </div>
   </section>
 
-  <!-- Guardian — safety Agent Hero (#102) -->
-  <section class="band band-white">
-    <div class="container-mid">
-      <div class="sec-head" style="margin-bottom:2rem">
-        <span class="pill pill-primary" style="margin-bottom:.75rem">Ask our Safety Hero</span>
-        <h2 class="section-title">Got a safety question? Guardian has answers.</h2>
-      </div>
-      ${agentHero('guardian')}
-    </div>
-  </section>
+  <!-- Guardian — safety Agent Hero (#102), corner popup -->
+  ${agentFab('guardian')}
 
   <section class="band band-peach" style="text-align:center">
     <div class="container-narrow">
@@ -2194,7 +2204,14 @@ const CHILD_BADGES = {
 };
 function sbPill(key, pct){
   const c = SKILL_CATS[key]; if(!c) return '';
-  if(pct>=100) return `<span class="badge-pill" style="background:${c.color};cursor:pointer" onclick="openBadge('${key}',${pct})">${c.emoji} ${c.badge}</span>`;
+  if(pct>=100) return `<button class="medal" onclick="openBadge('${key}',${pct})" title="${c.badge} — badge earned!">
+    <span class="seal-wrap">
+      <span class="rib l" style="background:${c.color}"></span><span class="rib r" style="background:${c.color}"></span>
+      <span class="burst" style="background:${c.color}"></span>
+      <span class="seal" style="background:${c.color}">${c.emoji}</span>
+    </span>
+    <span class="lbl">${c.badge}</span>
+  </button>`;
   return `<span class="skill-pill" style="--p:${pct};--pc:${c.color};cursor:pointer" onclick="openBadge('${key}',${pct})">${c.emoji} ${c.label.split(' &')[0]}</span>`;
 }
 function openBadge(key, pct){
@@ -2343,20 +2360,20 @@ function pageParentDash(){
         <button class="kidchip" onclick="toast('Demo: add a child')">${ic('plus','icon-sm')} Add child</button>
       </div>
 
-      <!-- Skills & Badges — category badges, progress border = building, filled = earned -->
-      <div style="margin-top:.85rem;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid var(--border-light);border-radius:14px;padding:.9rem 1.25rem">
-        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.8rem">
+      <!-- Skills & Badges — earned = medal, in progress = ring pill. Kept calm: plain card, one-line legend -->
+      <div class="card" style="margin-top:.85rem;padding:.9rem 1.25rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;margin-bottom:.7rem">
           <h3 style="font-family:var(--font-sans);font-size:1rem;font-weight:700">Skills &amp; Badges</h3>
-          <span class="tiny muted">Each session fills the border — 10 sessions earns the badge. Hover to see which skills count.</span>
+          <button class="view-link small" style="background:none;border:none;cursor:pointer" onclick="openSkillsRef()">How badges work →</button>
         </div>
         <div class="grid grid-2" style="gap:1rem">
           ${Object.entries(CHILD_BADGES).map(([name,prog])=>`
           <div>
-            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.55rem">
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem">
               <span class="dot" style="background:${name==='Emma'?'var(--blue-500)':'#10b981'};width:8px;height:8px"></span>
               <span style="font-weight:700;font-size:.9rem">${name}</span>
             </div>
-            <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <div style="display:flex;gap:.55rem;flex-wrap:wrap;align-items:flex-start">
               ${Object.entries(prog).map(([k,p])=>sbPill(k,p)).join('')}
             </div>
           </div>`).join('')}
@@ -2368,11 +2385,9 @@ function pageParentDash(){
           .map(([v,l])=>`<div class="stat role-blue"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}
       </div>
 
-      <!-- Agent Heroes: dashboard helper + parent tips (#102) -->
-      <div class="grid grid-2" style="margin-top:1.5rem;align-items:start">
-        ${agentHero('helphero')}
-        ${agentHero('pal')}
-      </div>
+      <!-- Agent Heroes: corner popups instead of inline widgets (#102) -->
+      ${agentFab('helphero')}
+      ${agentFab('pal',1)}
 
       <div class="grid grid-2" style="margin-top:1.5rem;align-items:start">
         <div class="card" style="padding:1.5rem">
@@ -2590,6 +2605,37 @@ function provTab(){
         </div>`).join("")}
     </div>
     <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>Staff↔parent conversations are visible to you for oversight, and participants see a notice that provider-context messages may be monitored.</span></div>
+
+    <!-- Hero Verification checklist — lives here in the dashboard, complete in any order -->
+    ${(()=>{ const items = VET_ITEMS[vetState.type].filter(it=>it.t!=="Team Accountability Declaration");
+       const approved = items.filter(it=>it.status==="approved").length;
+       return `
+    <div class="card" style="margin-top:1.25rem;padding:1.5rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
+        <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Hero Verification</h3>
+        <div class="viewtoggle" style="max-width:230px">
+          <button class="${vetState.type==='individual'?'on':''}" style="flex:1" onclick="vetState.type='individual';route()">Individual</button>
+          <button class="${vetState.type==='business'?'on':''}" style="flex:1" onclick="vetState.type='business';route()">Business</button>
+        </div>
+      </div>
+      <p class="small muted" style="margin-top:.4rem">Complete each item in any order. Program publishing unlocks when everything is approved. Approved items stay approved.</p>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-top:.75rem">
+        <div style="flex:1;height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${Math.round(approved/items.length*100)}%;height:100%;background:var(--grad-primary);border-radius:999px"></div></div>
+        <span class="tiny" style="font-weight:700">${approved} of ${items.length} approved</span>
+      </div>
+      <div style="margin-top:1rem;display:flex;flex-direction:column;gap:.6rem">
+        ${items.map(it=>`
+        <div class="session-row" style="border:1px solid var(--border-light);border-radius:12px;padding:.75rem 1rem">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600">${it.t}</div>
+            <div class="tiny muted" style="margin-top:1px">${it.meta}</div>
+            ${it.help?`<div class="tiny" style="margin-top:.3rem;color:var(--blue-700)"><strong>We can help:</strong> ${it.help} <a href="#/contact" style="font-weight:700">Request →</a></div>`:""}
+          </div>
+          ${vetPill(it.status)}
+          ${it.status==="not_started"?`<button class="btn btn-primary btn-sm" onclick="toast('Demo: this step opens during real onboarding')">Start</button>`:""}
+        </div>`).join("")}
+      </div>
+    </div>`; })()}
 
     <!-- Team Accountability Declaration -->
     <div class="card" style="margin-top:1.25rem;padding:1.5rem;border:2px solid var(--border-light)">
@@ -2913,6 +2959,23 @@ function toggleAgent(id){
   if(nowCollapsed){ agentOpen.delete(id); }
   else { agentOpen.add(id); renderAgentBody(id,false); }
 }
+/* Corner launcher: small floating button, agent opens as a popup (idx stacks multiple FABs) */
+function agentFab(id, idx){
+  const a = AGENTS[id]; const i = idx||0;
+  return `
+  <button class="agent-fab" style="bottom:${18+i*64}px;background:${a.grad}" onclick="toggleAgentPop('${id}')" aria-label="Chat with ${a.name}" title="${a.name} — ${a.tagline}">${maskFace(a.mask)}</button>
+  <div class="agent-pop" id="agent-pop-${id}" style="bottom:${80+i*64}px">${agentHero(id)}</div>`;
+}
+function toggleAgentPop(id){
+  const pop = document.getElementById('agent-pop-'+id); if(!pop) return;
+  const open = pop.classList.toggle('open');
+  if(open){
+    document.querySelectorAll('.agent-pop.open').forEach(el=>{ if(el!==pop) el.classList.remove('open'); });
+    agentOpen.add(id);
+    const w = document.getElementById('agent-'+id); if(w) w.classList.remove('collapsed');
+    renderAgentBody(id,false);
+  }
+}
 function renderAgentBody(id, typing){
   const body = document.getElementById('agent-body-'+id); if(!body) return;
   const a = AGENTS[id]; const convo = agentConvos[id]||[];
@@ -3085,7 +3148,7 @@ function provFinances(){
   const months = [["Jan",1650,520],["Feb",1820,560],["Mar",1980,540],["Apr",2240,610],["May",2080,580],["Jun",2140,690]];
   const max = 2500;
   return `
-    ${agentHero('prophet')}
+    ${agentFab('prophet')}
 
     <!-- Embedded Stripe dashboard (imagined) -->
     <div class="stripe-embed" style="margin-top:1.5rem">
