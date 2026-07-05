@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.Providers.CreateProviderProfileTest do
+defmodule KlassHero.Provider.Profiles.CreateProviderProfileTest do
   @moduledoc """
   Integration tests for CreateProviderProfile use case.
 

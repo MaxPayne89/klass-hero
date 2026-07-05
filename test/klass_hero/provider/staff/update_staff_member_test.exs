@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.StaffMembers.UpdateStaffMemberTest do
+defmodule KlassHero.Provider.Staff.UpdateStaffMemberTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider

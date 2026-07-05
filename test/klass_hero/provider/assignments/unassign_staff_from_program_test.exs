@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.UnassignStaffFromProgramTest do
+defmodule KlassHero.Provider.Assignments.UnassignStaffFromProgramTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory

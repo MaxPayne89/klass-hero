@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.Providers.ProviderVerificationTest do
+defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
   @moduledoc """
   Tests for provider verification use cases.
 

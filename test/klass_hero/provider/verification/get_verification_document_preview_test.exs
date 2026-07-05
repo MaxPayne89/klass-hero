@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Queries.Verification.GetVerificationDocumentPreviewTest do
+defmodule KlassHero.Provider.Verification.GetVerificationDocumentPreviewTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Factory

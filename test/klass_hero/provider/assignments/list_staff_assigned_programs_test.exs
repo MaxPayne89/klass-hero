@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Queries.StaffMembers.ListStaffAssignedProgramsTest do
+defmodule KlassHero.Provider.Assignments.ListStaffAssignedProgramsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.ProviderFixtures

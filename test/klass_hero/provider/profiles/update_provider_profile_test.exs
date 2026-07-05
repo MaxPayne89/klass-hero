@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.Providers.UpdateProviderProfileTest do
+defmodule KlassHero.Provider.Profiles.UpdateProviderProfileTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider

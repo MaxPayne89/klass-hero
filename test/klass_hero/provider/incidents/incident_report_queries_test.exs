@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Queries.IncidentReportQueriesTest do
+defmodule KlassHero.Provider.Incidents.IncidentReportQueriesTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures

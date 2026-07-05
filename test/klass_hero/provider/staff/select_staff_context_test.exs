@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.StaffMembers.SelectStaffContextTest do
+defmodule KlassHero.Provider.Staff.SelectStaffContextTest do
   @moduledoc """
   Tests for Provider.select_staff_context/2 (#969 staff-context switcher):
   remembering which employment a multi-employer staff user works in.

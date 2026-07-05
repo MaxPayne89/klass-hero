@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.StaffMembers.DeleteStaffMemberTest do
+defmodule KlassHero.Provider.Staff.DeleteStaffMemberTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider

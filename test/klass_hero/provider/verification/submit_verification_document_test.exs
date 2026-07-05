@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.Verification.SubmitVerificationDocumentTest do
+defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.ProviderFixtures

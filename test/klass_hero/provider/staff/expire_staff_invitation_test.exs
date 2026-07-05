@@ -1,4 +1,4 @@
-defmodule KlassHero.Provider.Application.Commands.StaffMembers.ExpireStaffInvitationTest do
+defmodule KlassHero.Provider.Staff.ExpireStaffInvitationTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.ProviderFixtures
