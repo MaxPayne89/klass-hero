@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker do
 
   use Oban.Worker, queue: :cleanup, max_attempts: 3
 
-  alias KlassHero.Messaging.Application.Commands.EnforceRetentionPolicy
+  alias KlassHero.Messaging.EnforceRetentionPolicy
 
   require Logger
 
