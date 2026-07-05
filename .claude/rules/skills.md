@@ -2,18 +2,6 @@
 
 The following specialized skills are available for this repository and should be consulted when relevant:
 
-## idiomatic-elixir
-
-Elixir idioms for writing clean, functional, and domain-driven code covering patterns from pattern matching to Phoenix contexts.
-
-**Use when:**
-
-- Writing new Elixir code
-- Designing Phoenix applications with bounded contexts (conventional Phoenix)
-- Refactoring code
-- Implementing bounded contexts
-- Leveraging OTP patterns effectively
-
 ## elixir-ecto-patterns
 
 Phoenix Ecto patterns for clean, maintainable data access covering production-ready patterns.
@@ -65,11 +53,11 @@ Reads a Daily QA GitHub Discussion by number, triages Carried-Forward and New Co
 
 **Use when:** `/triage-qa-discussion <discussion-number>`
 
-### idiomatic-elixir (project version)
+### build-elixir
 
-Enhanced version of the global skill with auto-triggering on `.ex`/`.exs` files and modern Elixir 1.17–1.20 patterns (type system, Duration, built-in JSON, parameterized tests).
+User-invoked umbrella router for TDD-first, design-heavy Elixir/Phoenix development. Sequences `/design-an-interface` (surface rival designs — user picks), `/tdd` (red→green), `exunit-testing` (fold tests lean via tabular for-comprehensions + property tests), auto-attaching idiom/Iron-Law/LiveView guidance, then verify. Generic Elixir idioms live in `.claude/rules/elixir-style.md` + `domain-architecture.md` and the `elixir-phoenix` plugin (auto-loaded), not a skill.
 
-**Triggers automatically** when working on any Elixir file.
+**Use when:** `/build-elixir <what you're building>`
 
 ### create-issue
 

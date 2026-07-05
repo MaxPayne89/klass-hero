@@ -165,7 +165,7 @@ Do NOT proceed to fixes until user confirms.
 After user confirmation, enter plan mode for all confirmed `fix` items.
 
 Before planning:
-1. **Invoke the `/idiomatic-elixir` skill** to load Elixir patterns and DDD guidance
+1. **Elixir patterns and DDD guidance auto-load** via `.claude/rules/elixir-style.md` + `domain-architecture.md` — no skill call needed
 2. **Invoke additional skills** as relevant to the fix:
    - Changes to events → architecture patterns are already loaded
    - Changes to LiveViews → check Phoenix/LiveView rules in `.claude/rules/`
@@ -250,7 +250,7 @@ Present final summary:
 ## Rules
 
 - **Never apply fixes before user confirms the assessment.** The triage is a proposal, not a decision.
-- **Always invoke `/idiomatic-elixir` before planning fixes.** Load architecture context first.
+- **Architecture context auto-loads.** `.claude/rules/domain-architecture.md` + `elixir-style.md` are always in context — no skill call before planning fixes.
 - **Always run `mix precommit` before committing.** Zero warnings, zero test failures.
 - **Always push after committing.** Work is not done until pushed.
 - **Respect architecture.** If a reviewer suggestion would violate the conventions (bounded-context boundaries, schema-as-struct, event-driven, CQRS), propose an alternative that maintains alignment rather than blindly applying the suggestion.

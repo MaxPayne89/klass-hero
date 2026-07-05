@@ -75,6 +75,18 @@ Directionality still classifies the surviving event code:
 - Build new projections on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
 - Canonical example: `provider/adapters/driven/projections/provider_programs.ex`. Program Catalog and Messaging also have projections.
 
+## Domain Modeling Idioms
+
+DDD coding patterns for this project (generic BEAM/Phoenix idioms live in `elixir-style.md` and the `elixir-phoenix` plugin; these are the domain-modeling-specific ones):
+
+- **Protocols for polymorphic data** — use `defprotocol`/`defimpl` when different domain types need the same operation with different implementations (`Priceable`, `Serializable`). Protocols for data; behaviours only for genuinely swappable *modules* (feature-flag adapters, external clients) — never to wrap `Repo` (ports were deleted, #986–#1002).
+- **Contexts are DDD bounded contexts** — each context owns its data and logic; other contexts talk only to its public `<context>.ex` API, never its internals (see `## Cross-Context Access`).
+- **Aggregates with structs** — an aggregate root enforces its invariants; external code never mutates nested entities directly, only through the root.
+- **Changesets are the validation boundary** — validate at the DB boundary; changesets are the gatekeepers that accumulate errors and admit only valid data. Context-specific (create vs update) changesets are expected.
+- **Functional core, imperative shell** — the core computes (pure, framework-agnostic, exhaustively unit-tested); the shell acts (side effects, integration-tested). Schema-as-struct entities *are* the functional core (validators, state machines inline); the context module is the shell.
+
+Schema-as-struct itself is covered above under `## Context Layout` and `## Recommended Reads` — new query/persistence code goes in `<context>.ex`, new validation in the entity's changesets.
+
 ## Recommended Reads
 
 - `lib/klass_hero/provider/staff_member.ex` — schema-as-struct with inlined functional core
