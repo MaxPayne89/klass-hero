@@ -37,26 +37,23 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
   alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
-  alias KlassHero.Messaging.Application.Commands.{
+  alias KlassHero.Messaging.{
     AnonymizeUserData,
     BroadcastToProgram,
     CreateDirectConversation,
-    MarkAsRead,
-    ReceiveInboundEmail,
-    ReplyPrivatelyToBroadcast,
-    ReplyToEmail,
-    ScheduleEmailContentFetch,
-    SendMessage,
-    StartProgramConversation
-  }
-
-  alias KlassHero.Messaging.Application.Queries.{
     GetConversation,
     GetConversationContext,
     GetInboundEmail,
     GetTotalUnreadCount,
     ListConversations,
-    ResolverQueries
+    MarkAsRead,
+    ReceiveInboundEmail,
+    ReplyPrivatelyToBroadcast,
+    ReplyToEmail,
+    ResolverQueries,
+    ScheduleEmailContentFetch,
+    SendMessage,
+    StartProgramConversation
   }
 
   alias KlassHero.Messaging.Attachment

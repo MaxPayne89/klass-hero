@@ -22,8 +22,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
-  alias KlassHero.Messaging.Application.Commands.RemoveAssignedStaff
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.RemoveAssignedStaff
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers
   alias KlassHero.Shared.EventDispatchHelper

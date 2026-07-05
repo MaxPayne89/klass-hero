@@ -22,7 +22,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
-  alias KlassHero.Messaging.Application.Commands.CreateDirectConversation
+  alias KlassHero.Messaging.CreateDirectConversation
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 

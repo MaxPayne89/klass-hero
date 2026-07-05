@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker do
 
   use Oban.Worker, queue: :cleanup, max_attempts: 3
 
-  alias KlassHero.Messaging.Application.Commands.ArchiveEndedProgramConversations
+  alias KlassHero.Messaging.ArchiveEndedProgramConversations
 
   require Logger
 
