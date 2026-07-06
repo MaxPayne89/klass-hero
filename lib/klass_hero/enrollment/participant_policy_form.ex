@@ -1,4 +1,4 @@
-defmodule KlassHero.Enrollment.Application.ParticipantPolicyForm do
+defmodule KlassHero.Enrollment.ParticipantPolicyForm do
   @moduledoc """
   Schemaless form for participant policy validation.
 

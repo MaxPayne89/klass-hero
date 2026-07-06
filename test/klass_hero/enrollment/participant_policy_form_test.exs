@@ -1,7 +1,7 @@
-defmodule KlassHero.Enrollment.Application.ParticipantPolicyFormTest do
+defmodule KlassHero.Enrollment.ParticipantPolicyFormTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Enrollment.Application.ParticipantPolicyForm
+  alias KlassHero.Enrollment.ParticipantPolicyForm
 
   describe "changeset/2 — valid inputs" do
     test "accepts all fields with valid values" do

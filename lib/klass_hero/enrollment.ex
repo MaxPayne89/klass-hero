@@ -17,7 +17,6 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Queries.EnrollmentQueries
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
-  alias KlassHero.Enrollment.Application.ParticipantPolicyForm
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
@@ -27,6 +26,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.ImportEnrollmentCsv
   alias KlassHero.Enrollment.InviteSingleParticipant
   alias KlassHero.Enrollment.ParticipantPolicy
+  alias KlassHero.Enrollment.ParticipantPolicyForm
   alias KlassHero.Enrollment.SingleInviteForm
   alias KlassHero.Family
   alias KlassHero.Family.ParentProfile
