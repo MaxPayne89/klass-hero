@@ -149,6 +149,22 @@ defmodule KlassHero.Provider.Profiles do
   end
 
   @doc """
+  Resolves business names for a batch of provider IDs.
+
+  Returns a map of `provider_id => business_name`. Unknown IDs are omitted.
+  Used by other contexts (e.g. Participation) that need human-readable provider
+  names without reaching into the `ProviderProfile` schema.
+  """
+  @spec get_business_names([String.t()]) :: %{String.t() => String.t()}
+  def get_business_names([]), do: %{}
+
+  def get_business_names(provider_ids) when is_list(provider_ids) do
+    from(p in ProviderProfile, where: p.id in ^provider_ids, select: {p.id, p.business_name})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
   Gets the user (identity) ID for a provider profile ID.
 
   Used by cross-context consumers (e.g. Messaging) to resolve

@@ -120,6 +120,14 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
       assert length(session.participation_records) == 1
     end
 
+    test "resolves program_name via the ProgramCatalog facade" do
+      program = insert(:program_schema, title: "Chess Club")
+      session_schema = insert(:program_session_schema, program_id: program.id)
+
+      assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
+      assert session.program_name == "Chess Club"
+    end
+
     test "returns error when session not found" do
       non_existent_id = Ecto.UUID.generate()
 

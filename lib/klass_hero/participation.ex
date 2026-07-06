@@ -5,8 +5,9 @@ defmodule KlassHero.Participation do
   Covers session lifecycle, check-in/check-out, attendance, and behavioral notes.
   Conventional Phoenix context: orchestration and persistence live here; the
   state machines live on the schema structs (`ProgramSession`,
-  `ParticipationRecord`, `BehavioralNote`). Cross-context reads route through ACL
-  adapters (`SessionProgramAcl`, the `*Resolver`s).
+  `ParticipationRecord`, `BehavioralNote`). Cross-context reads route through the
+  owning contexts' public facades (`ProgramCatalog`, `Provider`) and the local
+  `*Resolver` ACL adapters.
 
   State-changing operations open a `context_span`; the Ecto telemetry bridge
   nests per-query spans beneath it. Reads stay bare.
@@ -19,13 +20,14 @@ defmodule KlassHero.Participation do
   alias KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver
   alias KlassHero.Participation.Adapters.Driven.ACL.EnrolledChildrenResolver
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
-  alias KlassHero.Participation.Adapters.Driven.ACL.SessionProgramAcl
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.BehavioralNoteQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
+  alias KlassHero.ProgramCatalog
+  alias KlassHero.Provider
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
@@ -126,13 +128,138 @@ defmodule KlassHero.Participation do
         filters
       end
 
-    SessionProgramAcl.list_admin_sessions(filters)
+    filters
+    |> resolve_provider_scope()
+    |> aggregate_admin_sessions()
+    |> enrich_session_names()
   end
 
   @doc "Lists sessions for a provider on a specific date (defaults to today)."
   def list_provider_sessions(provider_id, date \\ nil) when is_binary(provider_id) do
     date = date || Date.utc_today()
-    {:ok, SessionProgramAcl.list_by_provider_and_date(provider_id, date)}
+
+    case ProgramCatalog.list_program_ids_for_provider(provider_id) do
+      [] ->
+        {:ok, []}
+
+      program_ids ->
+        sessions =
+          from(s in ProgramSession,
+            where: s.program_id in ^program_ids and s.session_date == ^date,
+            order_by: [asc: s.start_time]
+          )
+          |> Repo.all()
+
+        {:ok, sessions}
+    end
+  end
+
+  # Statuses that count toward the attendance tally ("has attended", not "currently present").
+  @admin_checked_in_statuses ~w(checked_in checked_out)
+
+  # Translate a cross-context :provider_id filter into a local :program_ids filter,
+  # so the aggregation query stays free of ProgramCatalog/Provider vocabulary.
+  defp resolve_provider_scope(%{provider_id: provider_id} = filters) do
+    program_ids = ProgramCatalog.list_program_ids_for_provider(provider_id)
+
+    filters
+    |> Map.delete(:provider_id)
+    |> Map.put(:program_ids, program_ids)
+  end
+
+  defp resolve_provider_scope(filters), do: filters
+
+  # Local aggregation over Participation-owned tables only; no cross-context joins.
+  defp aggregate_admin_sessions(filters) do
+    ProgramSession
+    |> join(:left, [s], pr in ParticipationRecord, on: pr.session_id == s.id)
+    |> apply_admin_filters(filters)
+    |> group_by([s, _pr], s.id)
+    |> select([s, pr], %{
+      id: s.id,
+      program_id: s.program_id,
+      session_date: s.session_date,
+      start_time: s.start_time,
+      end_time: s.end_time,
+      status: s.status,
+      checked_in_count: count(fragment("CASE WHEN ? = ANY(?) THEN 1 END", pr.status, ^@admin_checked_in_statuses)),
+      total_count: count(pr.id)
+    })
+    |> order_by([s, _pr], asc: s.session_date, asc: s.start_time)
+    |> Repo.all()
+    |> Enum.map(&atomize_session_status/1)
+  end
+
+  defp apply_admin_filters(query, filters) do
+    query
+    |> maybe_filter_date(filters)
+    |> maybe_filter_date_range(filters)
+    |> maybe_filter_program_ids(filters)
+    |> maybe_filter_program(filters)
+    |> maybe_filter_status(filters)
+  end
+
+  defp maybe_filter_date(query, %{date: date}), do: where(query, [s, _pr], s.session_date == ^date)
+  defp maybe_filter_date(query, _), do: query
+
+  defp maybe_filter_date_range(query, %{date_from: from, date_to: to}),
+    do: where(query, [s, _pr], s.session_date >= ^from and s.session_date <= ^to)
+
+  defp maybe_filter_date_range(query, _), do: query
+
+  defp maybe_filter_program_ids(query, %{program_ids: ids}), do: where(query, [s, _pr], s.program_id in ^ids)
+
+  defp maybe_filter_program_ids(query, _), do: query
+
+  defp maybe_filter_program(query, %{program_id: id}), do: where(query, [s, _pr], s.program_id == type(^id, Ecto.UUID))
+
+  defp maybe_filter_program(query, _), do: query
+
+  defp maybe_filter_status(query, %{status: status}), do: where(query, [s, _pr], s.status == ^status)
+
+  defp maybe_filter_status(query, _), do: query
+
+  # Ecto map-`select` returns the enum column as its raw DB string; coerce back to an atom
+  # so consumers (the LiveView) pattern-match on atoms as before.
+  defp atomize_session_status(%{status: status} = row) when is_binary(status),
+    do: %{row | status: String.to_existing_atom(status)}
+
+  defp atomize_session_status(row), do: row
+
+  # Single program title via the owning context's facade; nil when the program is absent
+  # (preserves the prior Repo.one-returns-nil behaviour).
+  defp fetch_program_name(program_id) do
+    case ProgramCatalog.get_program_by_id(program_id) do
+      {:ok, program} -> program.title
+      {:error, :not_found} -> nil
+    end
+  end
+
+  # Batch-resolve program titles + provider names through the owning contexts' facades.
+  # Fixed 2 extra queries regardless of row count (keyed on distinct ids).
+  defp enrich_session_names(rows) do
+    program_facts =
+      rows
+      |> Enum.map(& &1.program_id)
+      |> Enum.uniq()
+      |> ProgramCatalog.get_programs_by_ids()
+      |> Map.new(&{&1.id, {&1.title, &1.provider_id}})
+
+    provider_names =
+      program_facts
+      |> Map.values()
+      |> Enum.map(fn {_title, provider_id} -> provider_id end)
+      |> Enum.uniq()
+      |> Provider.get_business_names()
+
+    Enum.map(rows, fn row ->
+      {title, provider_id} = Map.get(program_facts, row.program_id, {nil, nil})
+
+      Map.merge(row, %{
+        program_name: title,
+        provider_name: Map.get(provider_names, provider_id)
+      })
+    end)
   end
 
   @doc """
@@ -182,7 +309,7 @@ defmodule KlassHero.Participation do
         session
         |> Map.from_struct()
         |> Map.put(:participation_records, enriched_records)
-        |> Map.put(:program_name, SessionProgramAcl.get_program_name(session.program_id))
+        |> Map.put(:program_name, fetch_program_name(session.program_id))
 
       {:ok, enriched_session}
     end
