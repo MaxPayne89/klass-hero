@@ -26,22 +26,19 @@ defmodule KlassHero.Provider.VerificationDocument do
   # Parked alias to the still-DDD ProviderProfile schema — repointed to the
   # flattened KlassHero.Provider.ProviderProfile in Slice 5.
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.Types.DocumentType
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   @timestamps_opts [type: :utc_datetime_usec]
 
   @statuses [:pending, :approved, :rejected]
-  @document_types [
-    :business_registration,
-    :insurance_certificate,
-    :id_document,
-    :tax_certificate,
-    :other
-  ]
+  # Canonical write-side values are owned by the custom `DocumentType` type, which
+  # also tolerates unknown legacy values on load (maps them to `:unknown`, #1026).
+  @document_types DocumentType.valid_values()
 
   schema "verification_documents" do
-    field :document_type, Ecto.Enum, values: @document_types
+    field :document_type, DocumentType
     field :file_url, :string
     field :original_filename, :string
     field :status, Ecto.Enum, values: @statuses, default: :pending

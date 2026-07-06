@@ -48,6 +48,16 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
     end
   end
 
+  describe "document_type_label/1" do
+    test "humanizes a canonical type" do
+      assert ProviderPresenter.document_type_label(:business_registration) == "Business Registration"
+    end
+
+    test "labels the :unknown legacy sentinel (#1026)" do
+      assert ProviderPresenter.document_type_label(:unknown) == "Unknown"
+    end
+  end
+
   describe "to_business_view/1" do
     # Provider tiers removed (ADR-0004): no slot/seat limit fields in the view
     test "carries no program-slot or team-seat limit fields" do
