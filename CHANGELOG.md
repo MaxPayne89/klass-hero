@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.5](https://github.com/MaxPayne89/klass-hero/compare/v0.54.4...v0.54.5) (2026-07-06)
+
+
+### Code Refactoring
+
+* route Participation session reads through ProgramCatalog/Provider facades ([#1032](https://github.com/MaxPayne89/klass-hero/issues/1032)) ([d3efb54](https://github.com/MaxPayne89/klass-hero/commit/d3efb54452f8f9f5faf8c4de73574355af42f48e)), closes [#998](https://github.com/MaxPayne89/klass-hero/issues/998)
+
 ## [0.54.4](https://github.com/MaxPayne89/klass-hero/compare/v0.54.3...v0.54.4) (2026-07-05)
 
 
