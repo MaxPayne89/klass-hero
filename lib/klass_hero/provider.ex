@@ -65,6 +65,9 @@ defmodule KlassHero.Provider do
   @doc "Gets the user (identity) ID that owns a provider profile ID (used by cross-context consumers)."
   defdelegate get_identity_id_for_provider(provider_id), to: Profiles
 
+  @doc "Batch-resolves business names for provider IDs (used by cross-context consumers). Unknown IDs are omitted."
+  defdelegate get_business_names(provider_ids), to: Profiles
+
   @doc "Lists all verified provider IDs (used by projections at bootstrap)."
   defdelegate list_verified_provider_ids, to: Profiles
 

@@ -151,5 +151,33 @@ defmodule KlassHero.Participation.ListSessionsTest do
       results = KlassHero.Participation.list_admin_sessions(%{provider_id: other_provider.id})
       assert results == []
     end
+
+    test "enriches rows with provider_name from the Provider facade", %{provider: provider} do
+      [row] = KlassHero.Participation.list_admin_sessions(%{})
+      assert row.provider_name == provider.business_name
+    end
+
+    test "tallies attendance counting both checked_in and checked_out as attended", %{program: program} do
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          start_time: ~T[08:00:00]
+        )
+
+      insert(:participation_record_schema, session_id: session.id, status: :registered)
+      insert(:participation_record_schema, session_id: session.id, status: :checked_in)
+
+      insert(:participation_record_schema,
+        session_id: session.id,
+        status: :checked_out,
+        check_in_at: DateTime.utc_now(),
+        check_out_at: DateTime.utc_now()
+      )
+
+      row = Enum.find(KlassHero.Participation.list_admin_sessions(%{}), &(&1.id == session.id))
+      assert row.total_count == 3
+      assert row.checked_in_count == 2
+    end
   end
 end

@@ -155,6 +155,15 @@ defmodule KlassHero.ProgramCatalog do
     |> Repo.all()
   end
 
+  @doc "Returns the IDs of all programs owned by a provider (write model). Used by cross-context session reads."
+  @spec list_program_ids_for_provider(String.t()) :: [String.t()]
+  def list_program_ids_for_provider(provider_id) when is_binary(provider_id) do
+    Program
+    |> where([p], p.provider_id == ^provider_id)
+    |> select([p], p.id)
+    |> Repo.all()
+  end
+
   @doc "Returns an empty changeset for the program creation form."
   @spec new_program_changeset(map()) :: Ecto.Changeset.t()
   def new_program_changeset(attrs \\ %{}) do
