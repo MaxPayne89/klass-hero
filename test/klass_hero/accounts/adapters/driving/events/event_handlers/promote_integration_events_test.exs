@@ -57,7 +57,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
         DomainEvent.new(:user_anonymized, user_id, :user, %{
           anonymized_email: "deleted_#{user_id}@anonymized.local",
           previous_email: "old@example.com",
-          anonymized_at: DateTime.utc_now()
+          anonymized_at: DateTime.to_iso8601(DateTime.utc_now())
         })
 
       assert :ok = PromoteIntegrationEvents.handle(domain_event)
@@ -76,7 +76,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
         DomainEvent.new(:user_anonymized, user_id, :user, %{
           anonymized_email: "deleted_#{user_id}@anonymized.local",
           previous_email: "old@example.com",
-          anonymized_at: DateTime.utc_now()
+          anonymized_at: DateTime.to_iso8601(DateTime.utc_now())
         })
 
       TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
@@ -93,7 +93,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
         DomainEvent.new(:user_confirmed, user_id, :user, %{
           email: "test@example.com",
           name: "Test Provider",
-          confirmed_at: ~U[2024-01-01 12:00:00Z],
+          confirmed_at: DateTime.to_iso8601(~U[2024-01-01 12:00:00Z]),
           intended_roles: ["provider"]
         })
 
@@ -114,7 +114,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
         DomainEvent.new(:user_confirmed, user_id, :user, %{
           email: "test@example.com",
           name: "Test User",
-          confirmed_at: ~U[2024-01-01 12:00:00Z],
+          confirmed_at: DateTime.to_iso8601(~U[2024-01-01 12:00:00Z]),
           intended_roles: ["parent"]
         })
 

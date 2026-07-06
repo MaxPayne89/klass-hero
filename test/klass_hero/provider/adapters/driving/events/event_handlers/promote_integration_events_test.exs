@@ -39,8 +39,8 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegr
       assert event.entity_type == :incident_report
       assert event.payload.incident_report_id == incident_report_id
       assert event.payload.provider_id == provider_id
-      assert event.payload.category == :injury
-      assert event.payload.severity == :high
+      assert event.payload.category == "injury"
+      assert event.payload.severity == "high"
       assert event.payload.has_photo == true
     end
 

@@ -309,6 +309,8 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
   def participant_added(conversation_id, %{participant_user_ids: [_ | _] = _ids, source: _source} = payload, opts)
       when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
     base_payload = %{conversation_id: conversation_id}
+    # Critical payload must be a JSON scalar; the atom source is write-only (see #1010).
+    payload = Map.update!(payload, :source, &to_string/1)
     opts = Keyword.put_new(opts, :criticality, :critical)
 
     IntegrationEvent.new(
@@ -352,6 +354,8 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents do
   def participant_removed(conversation_id, %{participant_user_ids: [_ | _] = _ids, source: _source} = payload, opts)
       when is_binary(conversation_id) and byte_size(conversation_id) > 0 do
     base_payload = %{conversation_id: conversation_id}
+    # Critical payload must be a JSON scalar; the atom source is write-only (see #1010).
+    payload = Map.update!(payload, :source, &to_string/1)
     opts = Keyword.put_new(opts, :criticality, :critical)
 
     IntegrationEvent.new(

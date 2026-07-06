@@ -93,7 +93,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
 
       assert Enum.all?(events, fn e ->
                e.payload.participant_user_ids == [staff_user.id] and
-                 e.payload.source == :later_assignment
+                 e.payload.source == "later_assignment"
              end)
     end
 
@@ -186,7 +186,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
 
       assert Enum.all?(events, fn e ->
                e.payload.participant_user_ids == [staff_user.id] and
-                 e.payload.source == :staff_unassignment
+                 e.payload.source == "staff_unassignment"
              end)
     end
   end

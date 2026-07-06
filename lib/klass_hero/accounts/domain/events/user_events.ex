@@ -42,7 +42,9 @@ defmodule KlassHero.Accounts.Domain.Events.UserEvents do
     base_payload = %{
       email: user.email,
       name: Map.get(user, :name),
-      confirmed_at: user.confirmed_at,
+      # Critical events serialize to jsonb; ISO8601 string keeps this a scalar
+      # so it round-trips with its type intact (see #1010).
+      confirmed_at: encode_timestamp(user.confirmed_at),
       intended_roles: Enum.map(Map.get(user, :intended_roles) || [], &Atom.to_string/1)
     }
 
@@ -119,6 +121,12 @@ defmodule KlassHero.Accounts.Domain.Events.UserEvents do
 
   defp validate_field!(_field, _value, :list_or_nil, _event_name), do: :ok
 
+  # Encodes a timestamp as an ISO8601 string so it stays a JSON scalar through
+  # critical-event serialization (see #1010). Accepts nil defensively — the
+  # confirmation validator already rejects a nil `confirmed_at` upstream.
+  defp encode_timestamp(%DateTime{} = timestamp), do: DateTime.to_iso8601(timestamp)
+  defp encode_timestamp(nil), do: nil
+
   defp validate_user_for_registration!(user) do
     validate_user!(user, :user_registered, [
       {:id, :required},
@@ -153,9 +161,11 @@ defmodule KlassHero.Accounts.Domain.Events.UserEvents do
       when is_binary(previous_email) and byte_size(previous_email) > 0 do
     validate_user_for_anonymization!(user)
 
+    # Critical events serialize to jsonb; carry the timestamp as an ISO8601
+    # string so it survives the round trip as a scalar (see #1010).
     base_payload = %{
       anonymized_email: Map.get(user, :email),
-      anonymized_at: DateTime.utc_now()
+      anonymized_at: DateTime.to_iso8601(DateTime.utc_now())
     }
 
     opts = Keyword.put_new(opts, :criticality, :critical)

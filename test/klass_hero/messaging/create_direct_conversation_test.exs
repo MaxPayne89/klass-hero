@@ -164,7 +164,7 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       event = assert_integration_event_published(:participant_added)
       assert event.entity_id == conversation.id
       assert event.payload.participant_user_ids == [staff_user.id]
-      assert event.payload.source == :initial_staff
+      assert event.payload.source == "initial_staff"
     end
 
     test "post-commit dispatch contract: publish failure does NOT roll back the conversation" do

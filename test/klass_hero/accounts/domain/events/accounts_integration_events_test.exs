@@ -24,10 +24,10 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEventsTest do
     test "includes user_id in payload" do
       user_id = Ecto.UUID.generate()
 
-      event = AccountsIntegrationEvents.user_registered(user_id, %{registration_source: :web})
+      event = AccountsIntegrationEvents.user_registered(user_id, %{registration_source: "web"})
 
       assert event.payload.user_id == user_id
-      assert event.payload.registration_source == :web
+      assert event.payload.registration_source == "web"
     end
 
     test "base_payload user_id wins over caller-supplied user_id" do

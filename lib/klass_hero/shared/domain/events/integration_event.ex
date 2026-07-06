@@ -101,6 +101,7 @@ defmodule KlassHero.Shared.Domain.Events.IntegrationEvent do
   def new(event_type, source_context, entity_type, entity_id, payload, opts \\ []) do
     metadata = EventMetadata.build_metadata(opts)
     version = Keyword.get(opts, :version, 1)
+    EventMetadata.validate_critical_payload!(metadata.criticality, payload)
 
     %__MODULE__{
       event_id: EventMetadata.generate_event_id(),

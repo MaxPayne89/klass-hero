@@ -42,7 +42,7 @@ defmodule KlassHero.Accounts do
     |> Repo.insert()
     |> case do
       {:ok, user} ->
-        UserEvents.user_registered(user, %{registration_source: :web})
+        UserEvents.user_registered(user, %{registration_source: "web"})
         |> EventDispatchHelper.dispatch(__MODULE__)
 
         {:ok, user}
@@ -389,7 +389,7 @@ defmodule KlassHero.Accounts do
     |> update_user_and_delete_all_tokens()
     |> case do
       {:ok, {confirmed_user, tokens}} ->
-        UserEvents.user_confirmed(confirmed_user, %{confirmation_method: :magic_link})
+        UserEvents.user_confirmed(confirmed_user, %{confirmation_method: "magic_link"})
         |> EventDispatchHelper.dispatch(__MODULE__)
 
         {:ok, {confirmed_user, tokens}}

@@ -105,12 +105,12 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEventsStaffTest do
       event =
         AccountsIntegrationEvents.staff_invitation_failed(staff_member_id, %{
           provider_id: provider_id,
-          reason: :email_delivery_failed
+          reason: "email_delivery_failed"
         })
 
       assert event.payload.staff_member_id == staff_member_id
       assert event.payload.provider_id == provider_id
-      assert event.payload.reason == :email_delivery_failed
+      assert event.payload.reason == "email_delivery_failed"
     end
 
     test "base_payload staff_member_id wins over caller-supplied staff_member_id", %{
