@@ -5,6 +5,20 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.6](https://github.com/MaxPayne89/klass-hero/compare/v0.54.5...v0.54.6) (2026-07-06)
+
+
+### Bug Fixes
+
+* guard critical-event payloads to JSON scalars ([#1010](https://github.com/MaxPayne89/klass-hero/issues/1010)) ([#1038](https://github.com/MaxPayne89/klass-hero/issues/1038)) ([dd2fae1](https://github.com/MaxPayne89/klass-hero/commit/dd2fae1020426b81bac85c6305f485451a2b3fad))
+* tolerate out-of-enum verification document_type ([#1026](https://github.com/MaxPayne89/klass-hero/issues/1026)) ([#1039](https://github.com/MaxPayne89/klass-hero/issues/1039)) ([03d0149](https://github.com/MaxPayne89/klass-hero/commit/03d0149af640dd7be65e2926b1a257cb757d560f))
+
+
+### Code Refactoring
+
+* flatten Enrollment.ParticipantPolicyForm to context root ([#1020](https://github.com/MaxPayne89/klass-hero/issues/1020)) ([#1037](https://github.com/MaxPayne89/klass-hero/issues/1037)) ([833543a](https://github.com/MaxPayne89/klass-hero/commit/833543affb792560e7f2e7daf26e1ef7c516402c))
+* flatten Family.ProcessInviteClaim to context root ([#1019](https://github.com/MaxPayne89/klass-hero/issues/1019)) ([#1034](https://github.com/MaxPayne89/klass-hero/issues/1034)) ([66f6f41](https://github.com/MaxPayne89/klass-hero/commit/66f6f4116e5562335c4dc4fd4ca97e8061c8c036))
+
 ## [0.54.5](https://github.com/MaxPayne89/klass-hero/compare/v0.54.4...v0.54.5) (2026-07-06)
 
 
