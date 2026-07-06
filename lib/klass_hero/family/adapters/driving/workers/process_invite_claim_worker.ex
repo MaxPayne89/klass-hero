@@ -12,7 +12,7 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
     queue: :family,
     max_attempts: 3
 
-  alias KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim
+  alias KlassHero.Family.ProcessInviteClaim
 
   @impl true
   def execute(%Oban.Job{args: args}) do
