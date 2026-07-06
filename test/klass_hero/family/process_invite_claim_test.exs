@@ -1,10 +1,10 @@
-defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaimTest do
+defmodule KlassHero.Family.ProcessInviteClaimTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
 
   alias KlassHero.Family
-  alias KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim
+  alias KlassHero.Family.ProcessInviteClaim
 
   defp valid_attrs(user_id, overrides \\ %{}) do
     Map.merge(

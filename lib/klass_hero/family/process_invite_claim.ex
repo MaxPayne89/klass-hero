@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Application.Commands.Invites.ProcessInviteClaim do
+defmodule KlassHero.Family.ProcessInviteClaim do
   @moduledoc """
   Use case for processing an invite claim into a family unit.
 
