@@ -59,9 +59,9 @@ defmodule KlassHero.Accounts.Domain.Events.UserEventsTest do
     test "succeeds with valid user and custom payload" do
       user = %{id: 1, email: "test@example.com", name: "Test User"}
 
-      event = UserEvents.user_registered(user, %{source: :web})
+      event = UserEvents.user_registered(user, %{source: "web"})
 
-      assert event.payload.source == :web
+      assert event.payload.source == "web"
     end
 
     test "sets criticality to critical by default" do
@@ -175,7 +175,8 @@ defmodule KlassHero.Accounts.Domain.Events.UserEventsTest do
       assert event.aggregate_id == 1
       assert event.aggregate_type == :user
       assert event.payload.email == "test@example.com"
-      assert event.payload.confirmed_at == confirmed_at
+      # Critical payloads carry timestamps as ISO8601 strings (see #1010).
+      assert event.payload.confirmed_at == DateTime.to_iso8601(confirmed_at)
     end
 
     test "succeeds with valid user and custom payload" do

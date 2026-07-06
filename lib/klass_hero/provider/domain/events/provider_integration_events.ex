@@ -191,7 +191,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
       @incident_report_entity_type,
       incident_report_id,
       # Merge order: base_payload wins so callers cannot accidentally overwrite canonical IDs.
-      Map.merge(payload, base_payload),
+      Map.merge(scalarize_payload(payload), base_payload),
       opts
     )
   end
@@ -200,4 +200,18 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
     raise ArgumentError,
           "incident_reported/3 requires a non-empty incident_report_id string, got: #{inspect(incident_report_id)}"
   end
+
+  # Critical payloads serialize to jsonb, so category/severity atoms and the
+  # occurred_at DateTime must be encoded as JSON scalars (see #1010). All three
+  # are write-only over the integration channel (no registered handler). Only
+  # keys actually present are touched.
+  defp scalarize_payload(payload) do
+    payload
+    |> Map.replace_lazy(:category, &to_string/1)
+    |> Map.replace_lazy(:severity, &to_string/1)
+    |> Map.replace_lazy(:occurred_at, &encode_timestamp/1)
+  end
+
+  defp encode_timestamp(%DateTime{} = timestamp), do: DateTime.to_iso8601(timestamp)
+  defp encode_timestamp(other), do: other
 end

@@ -41,8 +41,8 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsIncidentTest
 
       assert event.payload.incident_report_id == incident_report_id
       assert event.payload.provider_id == provider_id
-      assert event.payload.category == :injury
-      assert event.payload.severity == :high
+      assert event.payload.category == "injury"
+      assert event.payload.severity == "high"
     end
 
     test "base_payload incident_report_id wins over caller-supplied incident_report_id", %{

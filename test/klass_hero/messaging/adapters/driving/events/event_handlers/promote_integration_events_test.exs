@@ -240,7 +240,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
       assert event.source_context == :messaging
       assert event.entity_type == :conversation
       assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == :initial_staff
+      assert event.payload.source == "initial_staff"
       assert IntegrationEvent.critical?(event)
     end
 
@@ -279,7 +279,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
       assert event.source_context == :messaging
       assert event.entity_type == :conversation
       assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == :staff_unassignment
+      assert event.payload.source == "staff_unassignment"
       assert IntegrationEvent.critical?(event)
     end
 

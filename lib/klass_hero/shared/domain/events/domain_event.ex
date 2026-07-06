@@ -16,6 +16,14 @@ defmodule KlassHero.Shared.Domain.Events.DomainEvent do
   Events can be marked with a criticality level via metadata:
   - `:critical` - Must not be lost (durable delivery via CriticalEventDispatcher + Oban)
   - `:normal` - Standard fire-and-forget (default)
+
+  ## Payload Constraint (critical events)
+
+  `:critical` event payloads are serialized to Oban's jsonb `args` for durable
+  delivery, so their values must be JSON scalars (string/number/boolean/nil),
+  nested freely in maps and lists. A `DateTime`, atom, or tuple value silently
+  loses its type across the round trip (see #1010); `new/5` raises on such
+  payloads. Encode timestamps as ISO8601 strings and enums as strings.
   """
 
   alias KlassHero.Shared.Domain.Events.EventMetadata
@@ -68,6 +76,7 @@ defmodule KlassHero.Shared.Domain.Events.DomainEvent do
   def new(event_type, aggregate_id, aggregate_type, payload, opts \\ []) do
     # DomainEvent includes :user_id in metadata (unlike IntegrationEvent) for audit/tracing.
     metadata = EventMetadata.build_metadata(opts, [:user_id])
+    EventMetadata.validate_critical_payload!(metadata.criticality, payload)
 
     %__MODULE__{
       event_id: EventMetadata.generate_event_id(),

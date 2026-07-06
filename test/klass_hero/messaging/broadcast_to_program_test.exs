@@ -436,7 +436,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
         get_published_integration_events()
         |> Enum.find(
           &match?(
-            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+            %{event_type: :participant_added, payload: %{source: "broadcast_setup"}},
             &1
           )
         )
@@ -473,7 +473,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       refute Enum.any?(
                get_published_integration_events(),
                &match?(
-                 %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+                 %{event_type: :participant_added, payload: %{source: "broadcast_setup"}},
                  &1
                )
              ),
@@ -514,7 +514,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
         get_published_integration_events()
         |> Enum.find(
           &match?(
-            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+            %{event_type: :participant_added, payload: %{source: "broadcast_setup"}},
             &1
           )
         )
@@ -554,7 +554,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
         get_published_integration_events()
         |> Enum.find(
           &match?(
-            %{event_type: :participant_added, payload: %{source: :broadcast_setup}},
+            %{event_type: :participant_added, payload: %{source: "broadcast_setup"}},
             &1
           )
         )

@@ -337,7 +337,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEventsTest do
 
       assert event.payload.conversation_id == real_id
       assert event.payload.participant_user_ids == [staff_id]
-      assert event.payload.source == :later_assignment
+      assert event.payload.source == "later_assignment"
       assert event.payload.extra == "data"
     end
 
@@ -433,7 +433,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEventsTest do
 
       assert event.payload.conversation_id == real_id
       assert event.payload.participant_user_ids == [staff_id]
-      assert event.payload.source == :staff_unassignment
+      assert event.payload.source == "staff_unassignment"
       assert event.payload.extra == "data"
     end
 
