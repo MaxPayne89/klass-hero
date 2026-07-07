@@ -2481,10 +2481,10 @@ function openSessionSkills(i){
         ${Object.entries(SKILL_CATS).map(([k,c])=>`<button class="kidchip ${tagged.has(k)?'on':''}" id="sst-${k}" onclick="toggleSessionSkill(${i},'${k}')">${c.emoji} ${c.label.split(' &')[0]}</button>`).join("")}
       </div>
       <div class="notice notice-info" style="margin-top:1.1rem">${ic('info','icon-sm')}<span>Tags apply the moment you save, and only to this session — other sessions in the same program keep their own tags.</span></div>
-      <div style="margin-top:1.1rem;display:flex;justify-content:flex-end;gap:.5rem">
-        <button class="btn btn-ghost" onclick="closeSessionSkills()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveSessionSkills(${i})">Save tags</button>
-      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeSessionSkills()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSessionSkills(${i})">Save tags</button>
     </div>
   </div>`;
   m.classList.add('open');
