@@ -164,6 +164,22 @@ defmodule KlassHero.ProgramCatalog do
     |> Repo.all()
   end
 
+  @doc """
+  Returns a map of `program_id => title` for the given ids (write model).
+
+  Unknown ids are omitted from the result. Used by other contexts (e.g. the
+  Messaging broadcast-summary projection) that need program titles without
+  reaching into the `programs` schema.
+  """
+  @spec get_titles([String.t()]) :: %{String.t() => String.t()}
+  def get_titles([]), do: %{}
+
+  def get_titles(program_ids) when is_list(program_ids) do
+    from(p in Program, where: p.id in ^program_ids, select: {p.id, p.title})
+    |> Repo.all()
+    |> Map.new()
+  end
+
   @doc "Returns an empty changeset for the program creation form."
   @spec new_program_changeset(map()) :: Ecto.Changeset.t()
   def new_program_changeset(attrs \\ %{}) do

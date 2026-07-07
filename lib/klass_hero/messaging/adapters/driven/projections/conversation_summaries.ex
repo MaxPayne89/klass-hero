@@ -57,6 +57,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.Message
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
@@ -650,7 +651,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp fetch_user_names(_), do: %{}
 
-  # Cross-context raw-string query to sidestep Boundary isolation (#892 pattern, #685 tracks cleanup).
   defp fetch_program_names_for_broadcasts(conversations) do
     program_ids =
       for c <- conversations,
@@ -665,12 +665,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   defp fetch_program_names([]), do: %{}
 
   defp fetch_program_names(program_ids) do
-    from(p in "programs",
-      where: p.id in type(^program_ids, {:array, :binary_id}),
-      select: {type(p.id, :binary_id), p.title}
-    )
-    |> Repo.all()
-    |> Map.new()
+    ProgramCatalog.get_titles(program_ids)
   end
 
   defp resolve_program_name("program_broadcast", program_id) when not is_nil(program_id) do
