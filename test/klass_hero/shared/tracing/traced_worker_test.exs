@@ -18,21 +18,8 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
 
   alias KlassHero.Shared.Tracing.TracedWorker
 
-  # Drain leftover spans between tests. Waits briefly for any in-flight
-  # span messages, then returns once the mailbox appears empty.
-  setup do
-    flush_spans()
-    drain_span_mailbox()
-    :ok
-  end
-
-  defp drain_span_mailbox do
-    receive do
-      {:span, _} -> drain_span_mailbox()
-    after
-      10 -> :ok
-    end
-  end
+  # Span isolation (flush + drain between tests) is provided by the shared
+  # `use KlassHero.TracingHelpers` setup.
 
   defp build_job(attrs \\ %{}) do
     defaults = %Oban.Job{

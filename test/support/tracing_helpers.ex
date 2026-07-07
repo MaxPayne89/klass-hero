@@ -26,6 +26,13 @@ defmodule KlassHero.TracingHelpers do
 
       setup do
         :otel_batch_processor.set_exporter(:otel_exporter_pid, self())
+        # Clear spans buffered by earlier tests before this test's code runs.
+        # The batch exporter is process-global and flushes late, so a prior
+        # test's span (matched by name in refute_span/1) can otherwise leak
+        # into this process's mailbox. Draining must happen here, before the
+        # code under test — draining after would consume a genuine span too.
+        flush_spans()
+        drain_span_mailbox()
         :ok
       end
     end
@@ -37,6 +44,20 @@ defmodule KlassHero.TracingHelpers do
   """
   def flush_spans do
     :otel_tracer_provider.force_flush()
+  end
+
+  @doc """
+  Drains any leftover `{:span, _}` messages from the current process mailbox.
+  Waits briefly for in-flight span messages, then returns once the mailbox is
+  quiet. Pair with `flush_spans/0` in setup to isolate a test from spans
+  buffered by earlier tests (the batch exporter is process-global).
+  """
+  def drain_span_mailbox do
+    receive do
+      {:span, _} -> drain_span_mailbox()
+    after
+      10 -> :ok
+    end
   end
 
   @doc """

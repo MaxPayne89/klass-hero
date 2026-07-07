@@ -7,21 +7,8 @@ defmodule KlassHero.Shared.Tracing.PlugTest do
 
   alias KlassHero.Shared.Tracing.Plug, as: TracingPlug
 
-  # Drain leftover spans between tests. Waits up to 10ms for any in-flight
-  # span messages, then returns once the mailbox is empty.
-  setup do
-    flush_spans()
-    drain_span_mailbox()
-    :ok
-  end
-
-  defp drain_span_mailbox do
-    receive do
-      {:span, _} -> drain_span_mailbox()
-    after
-      10 -> :ok
-    end
-  end
+  # Span isolation (flush + drain between tests) is provided by the shared
+  # `use KlassHero.TracingHelpers` setup.
 
   defp run_plug(conn) do
     opts = TracingPlug.init([])
