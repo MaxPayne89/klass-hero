@@ -6,21 +6,8 @@ defmodule KlassHero.Shared.Tracing.LiveViewHookTest do
   alias KlassHeroWeb.Provider.ProgramLive.Index
   alias Phoenix.LiveView.Socket
 
-  # Drain leftover spans between tests. Waits up to 10ms for any pending
-  # span messages before returning once the mailbox is empty.
-  setup do
-    flush_spans()
-    drain_span_mailbox()
-    :ok
-  end
-
-  defp drain_span_mailbox do
-    receive do
-      {:span, _} -> drain_span_mailbox()
-    after
-      10 -> :ok
-    end
-  end
+  # Span isolation (flush + drain between tests) is provided by the shared
+  # `use KlassHero.TracingHelpers` setup.
 
   # Asserts no span with the given name was exported. Ignores unrelated spans
   # from the global OTel exporter to avoid flaky failures.
