@@ -23,7 +23,6 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   alias KlassHero.Messaging
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Shared.Entitlements
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
@@ -162,7 +161,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
          roster_enrolled_count: length(roster),
          roster_invite_count: invite_count,
          import_errors: nil,
-         can_message?: Entitlements.can_initiate_messaging?(socket.assigns.current_scope),
+         can_message?: Messaging.can_initiate_messaging?(socket.assigns.current_scope),
          invite_mode: "single",
          single_invite_form: blank_single_invite_form()
        )}
