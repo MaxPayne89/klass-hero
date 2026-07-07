@@ -213,21 +213,21 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
     test "navigates to team section via tab", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
 
-      # Click on Team & Profiles tab
+      # Click on Team & Profiles tab — now a separate LiveView, so a full navigate
       view |> element("a", "Team & Profiles") |> render_click()
 
-      # Verify URL has patched to team section
-      assert_patch(view, ~p"/provider/dashboard/team")
+      # Verify navigation to the team sub-LiveView
+      assert_redirect(view, ~p"/provider/dashboard/team")
     end
 
     test "navigates to programs section via tab", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
 
-      # Click on My Programs tab
+      # Click on My Programs tab — separate LiveView, full navigate
       view |> element("a", "My Programs") |> render_click()
 
-      # Verify URL has patched to programs section
-      assert_patch(view, ~p"/provider/dashboard/programs")
+      # Verify navigation to the programs sub-LiveView
+      assert_redirect(view, ~p"/provider/dashboard/programs")
     end
   end
 
@@ -310,10 +310,11 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       # Mount on team tab first
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
-      # Navigate to programs tab
+      # Navigate to programs tab — separate LiveView, full navigate + remount
       view |> element("a", "My Programs") |> render_click()
-      assert_patch(view, ~p"/provider/dashboard/programs")
+      assert_redirect(view, ~p"/provider/dashboard/programs")
 
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       assert has_element?(view, "td", "Soccer Academy")
     end
 
@@ -330,10 +331,11 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       # Mount on team tab first
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
-      # Navigate to programs tab
+      # Navigate to programs tab — separate LiveView, full navigate + remount
       view |> element("a", "My Programs") |> render_click()
-      assert_patch(view, ~p"/provider/dashboard/programs")
+      assert_redirect(view, ~p"/provider/dashboard/programs")
 
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       # Staff filter dropdown should include the staff member
       assert render(view) =~ "Alice Smith"
     end

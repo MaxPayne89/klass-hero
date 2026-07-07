@@ -68,21 +68,21 @@ defmodule KlassHeroWeb.ProviderComponents do
     <nav class="border-b border-hero-grey-200 mb-6">
       <div class="flex gap-1 overflow-x-auto pb-px -mb-px">
         <.nav_tab
-          patch={~p"/provider/dashboard"}
+          navigate={~p"/provider/dashboard"}
           active={@current_tab == :overview}
           icon="hero-squares-2x2-mini"
         >
           {gettext("Overview")}
         </.nav_tab>
         <.nav_tab
-          patch={~p"/provider/dashboard/team"}
+          navigate={~p"/provider/dashboard/team"}
           active={@current_tab == :team}
           icon="hero-user-group-mini"
         >
           {gettext("Team & Profiles")}
         </.nav_tab>
         <.nav_tab
-          patch={~p"/provider/dashboard/programs"}
+          navigate={~p"/provider/dashboard/programs"}
           active={@current_tab == :programs}
           icon="hero-queue-list-mini"
         >

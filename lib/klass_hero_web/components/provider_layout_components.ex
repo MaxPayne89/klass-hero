@@ -285,6 +285,82 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   end
 
   @doc """
+  Shared shell for the tab-based provider dashboard sub-LiveViews
+  (Overview / Team / Programs).
+
+  Wraps `pv_dashboard_chrome` with the profile-completion banner and the
+  dual-role cross-navigation link that every tab renders, so each sub-LiveView
+  supplies only its own section via the inner block. Edit renders its own bare
+  shell and does not use this.
+  """
+  attr :business, :map, required: true
+
+  attr :current_tab, :atom,
+    required: true,
+    values: [:overview, :team, :programs]
+
+  attr :profile_draft?, :boolean, default: false
+  attr :dual_role?, :boolean, default: false
+
+  slot :inner_block, required: true
+
+  def pv_dashboard_shell(assigns) do
+    ~H"""
+    <.pv_dashboard_chrome business={@business} current_tab={@current_tab}>
+      <.profile_completion_banner :if={@profile_draft?} />
+      <.link
+        :if={@dual_role?}
+        id="cross-nav-staff-link"
+        navigate={~p"/staff/dashboard"}
+        class="inline-flex items-center gap-1 text-sm text-brand hover:text-brand/80"
+      >
+        {gettext("View your assignments")} →
+      </.link>
+
+      {render_slot(@inner_block)}
+    </.pv_dashboard_chrome>
+    """
+  end
+
+  defp profile_completion_banner(assigns) do
+    ~H"""
+    <div
+      id="profile-completion-banner"
+      class={[
+        "mb-6 p-4 border-2 border-amber-300 bg-amber-50",
+        Theme.rounded(:xl)
+      ]}
+    >
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-start gap-3">
+          <.icon name="hero-exclamation-triangle" class="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 class={["font-semibold", Theme.typography(:card_title)]}>
+              {gettext("Complete your provider profile")}
+            </h3>
+            <p class="text-sm text-gray-500 mt-0.5">
+              {gettext(
+                "Fill in your business details so parents can find you. Your profile will be reviewed by Klass Hero before going live."
+              )}
+            </p>
+          </div>
+        </div>
+        <.link
+          navigate={~p"/provider/complete-profile"}
+          class={[
+            "inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white whitespace-nowrap",
+            Theme.rounded(:lg),
+            Theme.gradient(:primary)
+          ]}
+        >
+          {gettext("Complete Profile")}
+        </.link>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Provider stat card. Maps to bundle's `PvStatCard` (Sections.jsx:115).
 
   `trend` is an optional integer percentage delta — if `nil`, the up/down
