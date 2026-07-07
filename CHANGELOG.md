@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.7](https://github.com/MaxPayne89/klass-hero/compare/v0.54.6...v0.54.7) (2026-07-07)
+
+
+### Bug Fixes
+
+* isolate tracing tests from cross-test span leakage ([#1042](https://github.com/MaxPayne89/klass-hero/issues/1042)) ([e27583c](https://github.com/MaxPayne89/klass-hero/commit/e27583c1f304fadb07f2f885f7e205be46bd525b)), closes [#1035](https://github.com/MaxPayne89/klass-hero/issues/1035)
+
+
+### Code Refactoring
+
+* replace raw programs query in conversation summaries with facade read ([#1040](https://github.com/MaxPayne89/klass-hero/issues/1040)) ([f0b51b1](https://github.com/MaxPayne89/klass-hero/commit/f0b51b19dbfd7ccc820705e92ab9d9fafc475fed)), closes [#1027](https://github.com/MaxPayne89/klass-hero/issues/1027)
+
 ## [0.54.6](https://github.com/MaxPayne89/klass-hero/compare/v0.54.5...v0.54.6) (2026-07-06)
 
 
