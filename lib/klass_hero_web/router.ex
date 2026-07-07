@@ -120,7 +120,7 @@ defmodule KlassHeroWeb.Router do
 
         live "/dashboard", DashboardLive, :overview
         live "/dashboard/team", TeamLive, :index
-        live "/dashboard/programs", DashboardLive, :programs
+        live "/dashboard/programs", ProgramsLive, :index
         live "/dashboard/edit", EditProfileLive, :index
 
         live "/messages", MessagesLive.Index, :index

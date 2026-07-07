@@ -189,6 +189,13 @@ defmodule KlassHeroWeb.Provider.TeamLive do
     {:noreply, cancel_upload(socket, String.to_existing_atom(upload_name), ref)}
   end
 
+  # The shared dashboard header's "New Program" CTA lives on every tab; from Team
+  # it navigates to the Programs tab with the create form opened.
+  @impl true
+  def handle_event("add_program", _params, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/provider/dashboard/programs?new=1")}
+  end
+
   defp save_new_staff(socket, params, provider, headshot_result) do
     {headshot_status, attrs} =
       params
