@@ -179,7 +179,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
   describe "participant eligibility enforcement" do
     test "rejects enrollment when child is ineligible (too young)" do
       program = insert(:program_schema)
-      parent = insert(:parent_profile_schema, subscription_tier: "active")
+      parent = insert(:parent_profile_schema)
 
       # Born 30 days ago — far too young for min_age 60 months
       {child, _parent} =
@@ -211,7 +211,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
     test "allows enrollment when child meets all restrictions" do
       program = insert(:program_schema)
-      parent = insert(:parent_profile_schema, subscription_tier: "active")
+      parent = insert(:parent_profile_schema)
 
       {child, _parent} =
         insert_child_with_guardian(
@@ -243,7 +243,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
     test "allows enrollment when no participant policy exists" do
       program = insert(:program_schema)
-      parent = insert(:parent_profile_schema, subscription_tier: "active")
+      parent = insert(:parent_profile_schema)
       {child, _parent} = insert_child_with_guardian(parent: parent)
 
       assert {:ok, _enrollment} =
@@ -257,7 +257,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
     test "returns processing_failed when child does not exist" do
       program = insert(:program_schema)
-      parent = insert(:parent_profile_schema, subscription_tier: "active")
+      parent = insert(:parent_profile_schema)
 
       {:ok, _policy} =
         KlassHero.Enrollment.set_participant_policy(%{

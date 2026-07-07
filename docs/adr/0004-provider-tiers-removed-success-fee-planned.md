@@ -6,7 +6,7 @@ The replacement model is a **success-based fee** calculated from a Provider's in
 
 Tiers could be removed this bluntly because they were never monetised: the €19/€49 prices were displayed but no payment integration was ever wired, so no Provider pays today, and removal is a strict silent upgrade for every existing account. Both storage columns (`providers.subscription_tier` and the legacy `users.provider_subscription_tier`) are dropped in the same change — the old tier value carries no information the future fee model needs.
 
-**Parent tiers (`explorer`, `active`) are explicitly out of scope.** They remain live and continue to gate parent capabilities through the Shared Entitlements service. The broader direction (CONTEXT.md flagged ambiguity: all tiers and Entitlements eventually retire) still stands; this ADR executes only the Provider half.
+**Parent tiers (`explorer`, `active`) were out of scope for this ADR** — it executed only the Provider half. They were subsequently removed in ADR-0007, which deletes the remaining parent half of the Entitlements service and retires the tier system entirely.
 
 ## Consequences
 

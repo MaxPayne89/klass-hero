@@ -17,7 +17,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
       provider_scope = build_scope_with_provider(provider)
 
       parent_user = AccountsFixtures.user_fixture()
-      _parent_scope = build_scope_with_parent(parent_user, :active)
+      _parent_scope = build_scope_with_parent(parent_user)
 
       assert {:ok, conversation} =
                Messaging.create_direct_conversation(
@@ -277,12 +277,11 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
     }
   end
 
-  defp build_scope_with_parent(user, tier) do
+  defp build_scope_with_parent(user) do
     parent_profile = %ParentProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
-      display_name: "Test Parent",
-      subscription_tier: tier
+      display_name: "Test Parent"
     }
 
     %Scope{

@@ -6,7 +6,6 @@ defmodule KlassHeroWeb.BookingLive do
   alias KlassHero.Enrollment
   alias KlassHero.Family
   alias KlassHero.ProgramCatalog
-  alias KlassHero.Shared.Entitlements
   alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
@@ -18,8 +17,8 @@ defmodule KlassHeroWeb.BookingLive do
          :ok <- validate_program_capacity(program) do
       identity_id = socket.assigns.current_scope.user.id
 
-      # Resolve parent once and reuse for both children lookup and booking limits (1 DB round-trip).
-      {parent, children} =
+      # Resolve parent once to load their children (1 DB round-trip).
+      {_parent, children} =
         case Family.get_parent_by_identity(identity_id) do
           {:ok, parent} -> {parent, Family.get_children(parent.id)}
           {:error, :not_found} -> {nil, []}
@@ -46,7 +45,6 @@ defmodule KlassHeroWeb.BookingLive do
           payment_method: "card",
           total_amount: total_amount
         )
-        |> assign_booking_limit_info(parent)
 
       {:ok, socket}
     else
@@ -157,14 +155,6 @@ defmodule KlassHeroWeb.BookingLive do
           {:error, :child_not_selected} ->
             {:noreply, put_flash(socket, :error, gettext("Please select a child for enrollment."))}
 
-          {:error, :booking_limit_exceeded} ->
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               gettext("You've reached your monthly booking limit. Upgrade to Active tier for unlimited bookings.")
-             )}
-
           {:error, :no_parent_profile} ->
             {:noreply,
              socket
@@ -272,29 +262,6 @@ defmodule KlassHeroWeb.BookingLive do
     Enrollment.create_enrollment(enrollment_params)
   end
 
-  # Reuses already-resolved parent; skips booking limits when parent unavailable.
-  defp assign_booking_limit_info(socket, nil) do
-    assign(socket,
-      booking_tier: nil,
-      booking_cap: nil,
-      bookings_used: 0,
-      bookings_remaining: :unlimited
-    )
-  end
-
-  defp assign_booking_limit_info(socket, parent) do
-    cap = Entitlements.monthly_booking_cap(parent)
-    used = Enrollment.count_monthly_bookings(parent.id)
-    remaining = if cap == :unlimited, do: :unlimited, else: max(0, cap - used)
-
-    assign(socket,
-      booking_tier: parent.subscription_tier,
-      booking_cap: cap,
-      bookings_used: used,
-      bookings_remaining: remaining
-    )
-  end
-
   defp build_special_requirements(nil), do: ""
 
   defp build_special_requirements(child) do
@@ -365,34 +332,6 @@ defmodule KlassHeroWeb.BookingLive do
             </a>
           </div>
         </div>
-
-        <.info_box
-          :if={@bookings_remaining != :unlimited}
-          variant={:info}
-          icon="📊"
-          title={gettext("Your Booking Plan")}
-          class="mb-6"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm">
-                {gettext("You have %{remaining} of %{total} bookings remaining this month.",
-                  remaining: @bookings_remaining,
-                  total: @booking_cap
-                )}
-              </p>
-              <p class="text-xs text-hero-blue-600 mt-1">
-                <span class="capitalize">{@booking_tier}</span> {gettext("tier")}
-              </p>
-            </div>
-            <.link
-              navigate={~p"/settings"}
-              class="text-sm text-hero-blue-600 hover:text-hero-blue-800 underline"
-            >
-              {gettext("Upgrade")}
-            </.link>
-          </div>
-        </.info_box>
 
         <form phx-submit="complete_enrollment" class="space-y-6">
           <div class={[Theme.bg(:surface), Theme.rounded(:xl), "p-6 shadow-lg"]}>

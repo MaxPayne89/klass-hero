@@ -32,7 +32,6 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
-  alias KlassHero.Shared.Entitlements
   alias KlassHero.Shared.EventDispatchHelper
 
   @active_statuses ~w(pending confirmed)
@@ -51,8 +50,6 @@ defmodule KlassHero.Enrollment do
 
   defp do_create_enrollment(%{identity_id: identity_id} = params) when is_binary(identity_id) do
     with {:ok, parent} <- fetch_parent(identity_id),
-         {:ok, _parent} <-
-           Entitlements.ensure_booking_capacity(parent, count_monthly_bookings(parent.id)),
          {:ok, :eligible} <- ensure_eligible(params[:program_id], params[:child_id]) do
       params
       |> build_enrollment_attrs(parent.id)
@@ -555,7 +552,6 @@ defmodule KlassHero.Enrollment do
 
   @doc """
   Counts active (pending/confirmed) enrollments for a parent in the given month (defaults to current month).
-  Used by the entitlements system to enforce monthly booking limits.
   """
   def count_monthly_bookings(parent_id, month \\ nil) when is_binary(parent_id) do
     date = month || Date.utc_today()
@@ -568,30 +564,6 @@ defmodule KlassHero.Enrollment do
     |> EnrollmentQueries.by_date_range(start_date, end_date)
     |> EnrollmentQueries.count()
     |> Repo.one()
-  end
-
-  @doc """
-  Returns `{:ok, info}` with booking usage for a parent's subscription tier
-  (`parent_id`, `tier`, `cap`, `used`, `remaining`), or `{:error, :no_parent_profile}`.
-  """
-  def get_booking_usage_info(identity_id) when is_binary(identity_id) do
-    case Family.get_parent_by_identity(identity_id) do
-      {:ok, parent} -> {:ok, build_usage_info(parent)}
-      {:error, :not_found} -> {:error, :no_parent_profile}
-    end
-  end
-
-  defp build_usage_info(parent) do
-    cap = Entitlements.monthly_booking_cap(parent)
-    used = count_monthly_bookings(parent.id)
-
-    remaining =
-      case cap do
-        :unlimited -> :unlimited
-        cap -> max(0, cap - used)
-      end
-
-    %{parent_id: parent.id, tier: parent.subscription_tier, cap: cap, used: used, remaining: remaining}
   end
 
   @doc """

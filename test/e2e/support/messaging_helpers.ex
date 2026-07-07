@@ -37,10 +37,7 @@ defmodule KlassHeroWeb.E2E.MessagingHelpers do
 
     parent_user = user_fixture(%{intended_roles: [:parent]}) |> set_password()
 
-    insert(:parent_profile_schema,
-      identity_id: parent_user.id,
-      subscription_tier: "active"
-    )
+    insert(:parent_profile_schema, identity_id: parent_user.id)
 
     provider_scope = Scope.for_user(provider_user) |> Scope.resolve_roles()
 

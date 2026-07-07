@@ -87,7 +87,6 @@ parent_user_data = [
   %{name: "Klaus Fischer", email: "klaus.fischer@example.com"},
   %{name: "Petra Becker", email: "petra.becker@example.com"},
   %{name: "Michael Wagner", email: "michael.wagner@example.com"},
-  # Parents 7-10: active tier
   %{name: "Julia Hoffmann", email: "julia.hoffmann@example.com"},
   %{name: "Stefan Schäfer", email: "stefan.schaefer@example.com"},
   %{name: "Monika Koch", email: "monika.koch@example.com"},
@@ -147,27 +146,22 @@ provider_users =
 Logger.info("Created #{length(provider_users)} provider users")
 
 # ==============================================================================
-# S2: PARENT PROFILES (10 total: 6 explorer + 4 active)
+# S2: PARENT PROFILES (10 total)
 # ==============================================================================
 
 Logger.info("Seeding parent profiles...")
 
 parent_profile_data = [
-  %{display_name: "Anna M.", phone: "+49 170 111 0001", location: "Berlin", tier: "explorer"},
-  %{display_name: "Thomas S.", phone: "+49 170 111 0002", location: "Hamburg", tier: "explorer"},
-  %{display_name: "Sabine W.", phone: "+49 170 111 0003", location: "Munich", tier: "explorer"},
-  %{display_name: "Klaus F.", phone: "+49 170 111 0004", location: "Cologne", tier: "explorer"},
-  %{display_name: "Petra B.", phone: "+49 170 111 0005", location: "Frankfurt", tier: "explorer"},
-  %{
-    display_name: "Michael W.",
-    phone: "+49 170 111 0006",
-    location: "Stuttgart",
-    tier: "explorer"
-  },
-  %{display_name: "Julia H.", phone: "+49 170 111 0007", location: "Dresden", tier: "active"},
-  %{display_name: "Stefan S.", phone: "+49 170 111 0008", location: "Leipzig", tier: "active"},
-  %{display_name: "Monika K.", phone: "+49 170 111 0009", location: "Düsseldorf", tier: "active"},
-  %{display_name: "Andreas B.", phone: "+49 170 111 0010", location: "Nuremberg", tier: "active"}
+  %{display_name: "Anna M.", phone: "+49 170 111 0001", location: "Berlin"},
+  %{display_name: "Thomas S.", phone: "+49 170 111 0002", location: "Hamburg"},
+  %{display_name: "Sabine W.", phone: "+49 170 111 0003", location: "Munich"},
+  %{display_name: "Klaus F.", phone: "+49 170 111 0004", location: "Cologne"},
+  %{display_name: "Petra B.", phone: "+49 170 111 0005", location: "Frankfurt"},
+  %{display_name: "Michael W.", phone: "+49 170 111 0006", location: "Stuttgart"},
+  %{display_name: "Julia H.", phone: "+49 170 111 0007", location: "Dresden"},
+  %{display_name: "Stefan S.", phone: "+49 170 111 0008", location: "Leipzig"},
+  %{display_name: "Monika K.", phone: "+49 170 111 0009", location: "Düsseldorf"},
+  %{display_name: "Andreas B.", phone: "+49 170 111 0010", location: "Nuremberg"}
 ]
 
 parent_profiles =
@@ -178,13 +172,12 @@ parent_profiles =
       identity_id: user.id,
       display_name: data.display_name,
       phone: data.phone,
-      location: data.location,
-      subscription_tier: data.tier
+      location: data.location
     })
     |> Repo.insert!()
   end)
 
-Logger.info("Created #{length(parent_profiles)} parent profiles (6 explorer, 4 active)")
+Logger.info("Created #{length(parent_profiles)} parent profiles")
 
 # ==============================================================================
 # S3: PROVIDER PROFILES (5 total: 2 starter + 2 professional + 1 business_plus)
@@ -1326,8 +1319,8 @@ Logger.info("Created #{length(behavioral_notes)} behavioral notes")
 
 Logger.info("Seeding conversations...")
 
-# 3 direct conversations (active-tier parents with messaging-enabled providers)
-# Active parents: indices 6-9 (Julia, Stefan, Monika, Andreas)
+# 3 direct conversations (parents with providers)
+# Parents: indices 6-9 (Julia, Stefan, Monika, Andreas)
 # Messaging-enabled providers: pro_1, pro_2, biz (professional + business_plus)
 
 direct_conversations = [

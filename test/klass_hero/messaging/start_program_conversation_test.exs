@@ -23,7 +23,7 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
         staff_user_id: staff_user.id
       })
 
-      parent_scope = build_scope_with_parent(:active)
+      parent_scope = build_scope_with_parent()
 
       assert {:ok, conversation} =
                StartProgramConversation.execute(parent_scope, provider.id, program.id)
@@ -40,7 +40,7 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
       owner = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema, identity_id: owner.id)
       program = insert(:program_schema, provider_id: provider.id)
-      parent_scope = build_scope_with_parent(:active)
+      parent_scope = build_scope_with_parent()
 
       assert {:ok, first} =
                StartProgramConversation.execute(parent_scope, provider.id, program.id)
@@ -52,7 +52,7 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
     end
 
     test "returns not_found when provider does not exist" do
-      parent_scope = build_scope_with_parent(:active)
+      parent_scope = build_scope_with_parent()
 
       assert {:error, :not_found} =
                StartProgramConversation.execute(
@@ -61,16 +61,6 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
                  Ecto.UUID.generate()
                )
     end
-
-    test "returns not_entitled for free-tier parent" do
-      owner = AccountsFixtures.user_fixture()
-      provider = insert(:provider_profile_schema, identity_id: owner.id)
-      program = insert(:program_schema, provider_id: provider.id)
-      parent_scope = build_scope_with_parent(:explorer)
-
-      assert {:error, :not_entitled} =
-               StartProgramConversation.execute(parent_scope, provider.id, program.id)
-    end
   end
 
   describe "cross-parent isolation" do
@@ -78,8 +68,8 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
       owner = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema, identity_id: owner.id)
       program = insert(:program_schema, provider_id: provider.id)
-      parent_a_scope = build_scope_with_parent(:active)
-      parent_b_scope = build_scope_with_parent(:active)
+      parent_a_scope = build_scope_with_parent()
+      parent_b_scope = build_scope_with_parent()
 
       assert {:ok, conv_a} =
                StartProgramConversation.execute(parent_a_scope, provider.id, program.id)
@@ -97,14 +87,13 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
     end
   end
 
-  defp build_scope_with_parent(tier) do
+  defp build_scope_with_parent do
     user = AccountsFixtures.user_fixture()
 
     parent_profile = %ParentProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
-      display_name: "Test Parent",
-      subscription_tier: tier
+      display_name: "Test Parent"
     }
 
     %Scope{

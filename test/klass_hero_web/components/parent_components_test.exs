@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.ParentComponentsTest do
 
   Asserts each component renders the bundle's structural contract: sidebar
   active state, kid picker selection markup, stat-card "Coming soon"
-  treatment, booking-usage hide-on-unlimited, etc.
+  treatment, etc.
   """
 
   use KlassHeroWeb.ConnCase, async: true
@@ -206,32 +206,6 @@ defmodule KlassHeroWeb.ParentComponentsTest do
       assert html =~ "Tech"
       assert html =~ "Mon 14:00"
       assert html =~ "CodeKids Berlin"
-    end
-  end
-
-  describe "pa_booking_usage/1" do
-    test "renders the meter when cap is integer", %{} do
-      html =
-        render_component(&ParentComponents.pa_booking_usage/1, %{
-          tier: :explorer,
-          used: 3,
-          cap: 5
-        })
-
-      assert html =~ "Monthly booking usage"
-      assert html =~ ~r|font-extrabold[^>]*>\s*2\s*</span>|
-      assert html =~ "explorer"
-    end
-
-    test "renders nothing when cap is :unlimited", %{} do
-      html =
-        render_component(&ParentComponents.pa_booking_usage/1, %{
-          tier: :active,
-          used: 99,
-          cap: :unlimited
-        })
-
-      refute html =~ "Monthly booking usage"
     end
   end
 

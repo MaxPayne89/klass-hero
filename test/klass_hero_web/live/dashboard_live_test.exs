@@ -111,7 +111,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
   describe "Contact Provider flow" do
     test "clicking contact_provider starts a conversation and navigates to it", %{conn: conn} do
       user = AccountsFixtures.user_fixture(intended_roles: [:parent])
-      parent = insert(:parent_profile_schema, identity_id: user.id, subscription_tier: "active")
+      parent = insert(:parent_profile_schema, identity_id: user.id)
       owner = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema, identity_id: owner.id)
       program = insert(:program_schema, provider_id: provider.id)

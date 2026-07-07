@@ -27,16 +27,10 @@ defmodule KlassHero.Family.ParentProfileTest do
           display_name: "John Doe",
           phone: "+1234567890",
           location: "Berlin",
-          notification_preferences: %{email: true},
-          subscription_tier: :active
+          notification_preferences: %{email: true}
         })
 
       assert ParentProfile.changeset(%ParentProfile{}, attrs).valid?
-    end
-
-    test "defaults subscription_tier to :explorer" do
-      changeset = ParentProfile.changeset(%ParentProfile{}, valid_attrs())
-      assert Ecto.Changeset.apply_changes(changeset).subscription_tier == :explorer
     end
   end
 
@@ -54,13 +48,6 @@ defmodule KlassHero.Family.ParentProfileTest do
 
       refute changeset.valid?
       assert %{display_name: [_]} = errors_on(changeset)
-    end
-
-    test "rejects an unknown subscription_tier" do
-      changeset = ParentProfile.changeset(%ParentProfile{}, valid_attrs(%{subscription_tier: :gold}))
-
-      refute changeset.valid?
-      assert %{subscription_tier: [_]} = errors_on(changeset)
     end
   end
 

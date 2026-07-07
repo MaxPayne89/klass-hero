@@ -35,8 +35,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
 
       parent_profile = %ParentProfile{
         id: Ecto.UUID.generate(),
-        identity_id: parent_user.id,
-        subscription_tier: :explorer
+        identity_id: parent_user.id
       }
 
       scope = %Scope{
@@ -98,8 +97,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
       assert length(system_messages) == 1
     end
 
-    test "works regardless of subscription tier (explorer parent)", ctx do
-      # ctx.scope already has an explorer-tier parent (lowest tier)
+    test "works for any parent", ctx do
       assert {:ok, _conversation_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
     end
@@ -155,8 +153,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
         roles: [:parent],
         parent: %ParentProfile{
           id: Ecto.UUID.generate(),
-          identity_id: non_participant_user.id,
-          subscription_tier: :explorer
+          identity_id: non_participant_user.id
         },
         provider: nil
       }
@@ -189,8 +186,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
 
       parent_profile = %ParentProfile{
         id: Ecto.UUID.generate(),
-        identity_id: parent_user.id,
-        subscription_tier: :explorer
+        identity_id: parent_user.id
       }
 
       scope = %Scope{

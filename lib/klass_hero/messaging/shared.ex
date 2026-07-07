@@ -8,7 +8,6 @@ defmodule KlassHero.Messaging.Shared do
   """
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Shared.Entitlements
 
   require Logger
 
@@ -41,7 +40,7 @@ defmodule KlassHero.Messaging.Shared do
   """
   @spec check_entitlement(Scope.t(), keyword()) :: :ok | {:error, :not_entitled}
   def check_entitlement(%Scope{} = scope, metadata \\ []) do
-    if Entitlements.can_initiate_messaging?(scope) do
+    if KlassHero.Messaging.can_initiate_messaging?(scope) do
       :ok
     else
       Logger.debug(
@@ -61,7 +60,7 @@ defmodule KlassHero.Messaging.Shared do
 
   Accepts optional `metadata` keyword list forwarded to `check_entitlement/2`.
   """
-  # ReplyPrivatelyToBroadcast skips entitlement: provider initiated contact, so all tiers may reply.
+  # ReplyPrivatelyToBroadcast skips the check: the provider initiated contact, so the parent may reply.
   @spec maybe_check_entitlement(Scope.t(), keyword(), keyword()) :: :ok | {:error, :not_entitled}
   def maybe_check_entitlement(%Scope{} = scope, opts, metadata \\ []) do
     if Keyword.get(opts, :skip_entitlement_check, false) do

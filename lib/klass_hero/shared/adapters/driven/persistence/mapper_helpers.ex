@@ -2,11 +2,10 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
   @moduledoc """
   Shared helper functions for persistence mappers across bounded contexts.
 
-  Provides common conversion utilities for collection mapping, tier atoms/strings,
-  and optional id handling. Used by mapper and repository modules across all contexts.
+  Provides common conversion utilities for collection mapping, atom/string
+  normalization, and optional id handling. Used by mapper and repository
+  modules across all contexts.
   """
-
-  alias KlassHero.Shared.SubscriptionTiers
 
   require Logger
 
@@ -18,39 +17,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
   def to_domain_list(schemas, mapper_module) when is_list(schemas) and is_atom(mapper_module) do
     Enum.map(schemas, &mapper_module.to_domain/1)
   end
-
-  # Derive tier list from the single source of truth (parent tiers only —
-  # provider tiers removed, ADR-0004)
-  @all_tiers SubscriptionTiers.parent_tiers()
-
-  @doc """
-  Converts a string tier to an atom, returning the default if nil or unknown.
-
-  Uses String.to_existing_atom/1 to prevent atom table exhaustion from
-  untrusted input. Falls back to default if the atom doesn't exist or
-  isn't in the allowed tier list.
-  """
-  @spec string_to_tier(String.t() | nil, atom()) :: atom()
-  def string_to_tier(nil, default), do: default
-
-  def string_to_tier(tier, default) when is_binary(tier) do
-    atom = String.to_existing_atom(tier)
-
-    if atom in @all_tiers do
-      atom
-    else
-      default
-    end
-  rescue
-    ArgumentError -> default
-  end
-
-  @doc """
-  Converts an atom tier to a string, returning the default string if nil.
-  """
-  @spec tier_to_string(atom() | nil, String.t()) :: String.t()
-  def tier_to_string(nil, default), do: default
-  def tier_to_string(tier, _default) when is_atom(tier), do: Atom.to_string(tier)
 
   @doc """
   Converts an atom field in an attrs map to its string representation.
@@ -67,12 +33,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers do
         attrs
     end
   end
-
-  @doc """
-  Converts `:subscription_tier` in an attrs map from atom to string. Delegates to `normalize_atom_field/2`.
-  """
-  @spec normalize_subscription_tier(map()) :: map()
-  def normalize_subscription_tier(attrs), do: normalize_atom_field(attrs, :subscription_tier)
 
   @doc """
   Conditionally adds an id to attrs map if the id is not nil.

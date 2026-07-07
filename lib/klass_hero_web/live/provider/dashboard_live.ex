@@ -22,7 +22,6 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
   alias KlassHero.Provider.PayRate
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.DomainEvent
-  alias KlassHero.Shared.Entitlements
   alias KlassHero.Shared.NameUtils
   alias KlassHero.Shared.Storage
   alias KlassHeroWeb.Helpers.TaskHelpers
@@ -617,7 +616,7 @@ defmodule KlassHeroWeb.Provider.DashboardLive do
          roster_enrolled_count: length(roster),
          roster_invite_count: invite_count,
          import_errors: nil,
-         can_message?: Entitlements.can_initiate_messaging?(socket.assigns.current_scope),
+         can_message?: Messaging.can_initiate_messaging?(socket.assigns.current_scope),
          invite_mode: "single",
          single_invite_form: blank_single_invite_form()
        )}

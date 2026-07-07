@@ -10,7 +10,6 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Attachment
   alias KlassHero.ProgramCatalog
-  alias KlassHero.Shared.Entitlements
   alias KlassHeroWeb.MessagingComponents
   alias KlassHeroWeb.MessagingLiveHelper
 
@@ -20,12 +19,12 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
   def mount(%{"program_id" => program_id}, _session, socket) do
     scope = socket.assigns.current_scope
 
-    if Entitlements.can_initiate_messaging?(scope) do
+    if Messaging.can_initiate_messaging?(scope) do
       mount_broadcast_form(socket, program_id)
     else
       {:ok,
        socket
-       |> put_flash(:error, gettext("Your subscription tier doesn't support broadcasts"))
+       |> put_flash(:error, gettext("You don't have permission to send broadcasts"))
        |> push_navigate(to: ~p"/provider/dashboard")}
     end
   end

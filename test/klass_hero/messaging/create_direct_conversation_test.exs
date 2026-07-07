@@ -13,37 +13,6 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
-  describe "execute/4 with opts" do
-    test "skips entitlement check when skip_entitlement_check: true" do
-      provider = insert(:provider_profile_schema)
-      user = AccountsFixtures.user_fixture()
-      target_user = AccountsFixtures.user_fixture()
-
-      # Explorer tier would normally be blocked by entitlement check
-      scope = %Scope{
-        user: user,
-        roles: [:parent],
-        parent: %ParentProfile{
-          id: Ecto.UUID.generate(),
-          identity_id: user.id,
-          subscription_tier: :explorer
-        },
-        provider: nil
-      }
-
-      # Without bypass, this would return {:error, :not_entitled}
-      assert {:ok, conversation} =
-               CreateDirectConversation.execute(
-                 scope,
-                 provider.id,
-                 target_user.id,
-                 skip_entitlement_check: true
-               )
-
-      assert conversation.type == :direct
-    end
-  end
-
   describe "execute/3" do
     test "creates new conversation with participants" do
       provider = insert(:provider_profile_schema)
@@ -74,17 +43,7 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       assert first_conversation.id == second_conversation.id
     end
 
-    test "returns not_entitled error for free-tier parent" do
-      provider = insert(:provider_profile_schema)
-      scope = build_scope_with_parent(:explorer)
-
-      target_user = AccountsFixtures.user_fixture()
-
-      assert {:error, :not_entitled} =
-               CreateDirectConversation.execute(scope, provider.id, target_user.id)
-    end
-
-    test "provider with professional tier can initiate" do
+    test "provider can initiate" do
       provider = insert(:provider_profile_schema)
       scope = build_scope_with_provider(provider)
 
@@ -94,19 +53,9 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
                CreateDirectConversation.execute(scope, provider.id, target_user.id)
     end
 
-    test "provider with business_plus tier can initiate" do
+    test "parent can initiate" do
       provider = insert(:provider_profile_schema)
-      scope = build_scope_with_provider(provider)
-
-      target_user = AccountsFixtures.user_fixture()
-
-      assert {:ok, _conversation} =
-               CreateDirectConversation.execute(scope, provider.id, target_user.id)
-    end
-
-    test "parent with active tier can initiate" do
-      provider = insert(:provider_profile_schema)
-      scope = build_scope_with_parent(:active)
+      scope = build_scope_with_parent()
 
       target_user = AccountsFixtures.user_fixture()
 
@@ -281,14 +230,13 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
     }
   end
 
-  defp build_scope_with_parent(tier) do
+  defp build_scope_with_parent do
     user = AccountsFixtures.user_fixture()
 
     parent_profile = %ParentProfile{
       id: Ecto.UUID.generate(),
       identity_id: user.id,
-      display_name: "Test Parent",
-      subscription_tier: tier
+      display_name: "Test Parent"
     }
 
     %Scope{
