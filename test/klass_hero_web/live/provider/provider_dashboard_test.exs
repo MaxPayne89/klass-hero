@@ -1,4 +1,12 @@
-defmodule KlassHeroWeb.Provider.DashboardLiveTest do
+defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
+  @moduledoc """
+  Cross-tab integration tests for the provider dashboard, which is served by four
+  route-level sub-LiveViews (OverviewLive, TeamLive, ProgramsLive, EditProfileLive)
+  since #904. Exercises each tab's route plus tab-to-tab navigation. Per-tab unit
+  tests live in the dedicated `dashboard_team_test.exs`,
+  `dashboard_self_staff_test.exs`, `dashboard_program_creation_test.exs`, and
+  `edit_profile_live_test.exs` files.
+  """
   use KlassHeroWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
@@ -213,21 +221,21 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
     test "navigates to team section via tab", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
 
-      # Click on Team & Profiles tab
+      # Click on Team & Profiles tab — now a separate LiveView, so a full navigate
       view |> element("a", "Team & Profiles") |> render_click()
 
-      # Verify URL has patched to team section
-      assert_patch(view, ~p"/provider/dashboard/team")
+      # Verify navigation to the team sub-LiveView
+      assert_redirect(view, ~p"/provider/dashboard/team")
     end
 
     test "navigates to programs section via tab", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
 
-      # Click on My Programs tab
+      # Click on My Programs tab — separate LiveView, full navigate
       view |> element("a", "My Programs") |> render_click()
 
-      # Verify URL has patched to programs section
-      assert_patch(view, ~p"/provider/dashboard/programs")
+      # Verify navigation to the programs sub-LiveView
+      assert_redirect(view, ~p"/provider/dashboard/programs")
     end
   end
 
@@ -310,10 +318,11 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       # Mount on team tab first
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
-      # Navigate to programs tab
+      # Navigate to programs tab — separate LiveView, full navigate + remount
       view |> element("a", "My Programs") |> render_click()
-      assert_patch(view, ~p"/provider/dashboard/programs")
+      assert_redirect(view, ~p"/provider/dashboard/programs")
 
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       assert has_element?(view, "td", "Soccer Academy")
     end
 
@@ -330,10 +339,11 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
       # Mount on team tab first
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
-      # Navigate to programs tab
+      # Navigate to programs tab — separate LiveView, full navigate + remount
       view |> element("a", "My Programs") |> render_click()
-      assert_patch(view, ~p"/provider/dashboard/programs")
+      assert_redirect(view, ~p"/provider/dashboard/programs")
 
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
       # Staff filter dropdown should include the staff member
       assert render(view) =~ "Alice Smith"
     end
@@ -1578,6 +1588,25 @@ defmodule KlassHeroWeb.Provider.DashboardLiveTest do
 
       {:ok, reloaded} = KlassHero.Enrollment.get_enrollment(enrollment.id)
       assert reloaded.status == :pending
+    end
+  end
+
+  # Regression coverage for the #904 split: shared chrome state that used to be set
+  # by the god-module's mount/handle_params must be reproduced on every sub-LiveView.
+  describe "shared dashboard chrome (post-split)" do
+    for {tab, path} <- [
+          {"overview", "/provider/dashboard"},
+          {"team", "/provider/dashboard/team"},
+          {"programs", "/provider/dashboard/programs"},
+          {"edit", "/provider/dashboard/edit"}
+        ] do
+      test "#{tab} route marks the active provider-nav item (active_nav assigned)", %{conn: conn} do
+        {:ok, view, _html} = live(conn, unquote(path))
+
+        # active_nav drives pv_sidebar's aria-current; a nil assign (the regression)
+        # leaves no nav item marked active on any route.
+        assert has_element?(view, "[aria-current='page']")
+      end
     end
   end
 end

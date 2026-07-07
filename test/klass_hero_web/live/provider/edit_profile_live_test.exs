@@ -1,4 +1,4 @@
-defmodule KlassHeroWeb.Provider.DashboardLiveEditTest do
+defmodule KlassHeroWeb.Provider.EditProfileLiveTest do
   use KlassHeroWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest

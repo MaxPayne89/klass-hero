@@ -118,10 +118,10 @@ defmodule KlassHeroWeb.Router do
         live "/incidents/new", IncidentReportLive, :new
         live "/programs/:program_id/incidents", IncidentReportsLive, :index
 
-        live "/dashboard", DashboardLive, :overview
-        live "/dashboard/team", DashboardLive, :team
-        live "/dashboard/programs", DashboardLive, :programs
-        live "/dashboard/edit", DashboardLive, :edit
+        live "/dashboard", OverviewLive, :index
+        live "/dashboard/team", TeamLive, :index
+        live "/dashboard/programs", ProgramsLive, :index
+        live "/dashboard/edit", EditProfileLive, :index
 
         live "/messages", MessagesLive.Index, :index
         live "/messages/:id", MessagesLive.Show, :show
