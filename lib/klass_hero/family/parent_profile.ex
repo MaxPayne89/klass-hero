@@ -3,10 +3,9 @@ defmodule KlassHero.Family.ParentProfile do
   A parent profile in the Family context — the link between an Accounts identity
   and family data.
 
-  The Ecto schema is the domain struct: validation lives in the changeset, and
-  `subscription_tier` is an `Ecto.Enum` so it loads as an atom (`:explorer` /
-  `:active`) for consumers without a mapper. Parents reference the Accounts
-  context by correlation id (`identity_id`), not a foreign key.
+  The Ecto schema is the domain struct: validation lives in the changeset.
+  Parents reference the Accounts context by correlation id (`identity_id`),
+  not a foreign key.
   """
 
   use Ecto.Schema
@@ -23,7 +22,6 @@ defmodule KlassHero.Family.ParentProfile do
     field :phone, :string
     field :location, :string
     field :notification_preferences, :map
-    field :subscription_tier, Ecto.Enum, values: [:explorer, :active], default: :explorer
 
     timestamps()
   end
@@ -33,7 +31,6 @@ defmodule KlassHero.Family.ParentProfile do
 
   - Required: `identity_id`
   - `display_name` 1–100, `phone` 1–20, `location` 1–200 characters when present
-  - `subscription_tier` must be `:explorer` or `:active` (enforced by `Ecto.Enum`)
   - `identity_id` is unique (one profile per identity)
   """
   def changeset(parent_profile, attrs) do
@@ -43,8 +40,7 @@ defmodule KlassHero.Family.ParentProfile do
       :display_name,
       :phone,
       :location,
-      :notification_preferences,
-      :subscription_tier
+      :notification_preferences
     ])
     |> validate_required([:identity_id])
     |> validate_length(:display_name, min: 1, max: 100)
@@ -69,7 +65,6 @@ defmodule KlassHero.Family.ParentProfile do
           phone: String.t() | nil,
           location: String.t() | nil,
           notification_preferences: map() | nil,
-          subscription_tier: :explorer | :active,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }

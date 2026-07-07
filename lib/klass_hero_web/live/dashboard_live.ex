@@ -9,7 +9,6 @@ defmodule KlassHeroWeb.DashboardLive do
   alias KlassHero.Family.Child
   alias KlassHero.Messaging
   alias KlassHero.ProgramCatalog
-  alias KlassHero.Shared.Entitlements
   alias KlassHeroWeb.Helpers.Greeting
   alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.ChildPresenter
@@ -23,7 +22,7 @@ defmodule KlassHeroWeb.DashboardLive do
     user = socket.assigns.current_scope.user
 
     # user.id is the Accounts identity_id; enrollment.parent_id is the Family profile ID — resolve once, then fan out.
-    {parent, children, active_programs, expired_programs} =
+    {_parent, children, active_programs, expired_programs} =
       case Family.get_parent_by_identity(user.id) do
         {:ok, parent} ->
           children_task =
@@ -70,7 +69,6 @@ defmodule KlassHeroWeb.DashboardLive do
         family_programs_empty?: active_programs == [] and expired_programs == []
       )
       |> stream(:family_programs, build_family_program_items(active_programs, expired_programs))
-      |> assign_booking_usage_info(parent)
 
     {:ok, socket}
   end
@@ -180,26 +178,6 @@ defmodule KlassHeroWeb.DashboardLive do
   end
 
   defp relative_time(_), do: nil
-
-  defp assign_booking_usage_info(socket, nil), do: assign(socket, show_booking_usage: false)
-
-  defp assign_booking_usage_info(socket, parent) do
-    cap = Entitlements.monthly_booking_cap(parent)
-
-    if cap == :unlimited do
-      assign(socket, show_booking_usage: false)
-    else
-      used = Enrollment.count_monthly_bookings(parent.id)
-
-      assign(socket,
-        show_booking_usage: true,
-        booking_tier: parent.subscription_tier,
-        booking_cap: cap,
-        bookings_used: used,
-        bookings_remaining: max(0, cap - used)
-      )
-    end
-  end
 
   defp load_family_programs(parent_id) do
     enrollments = Enrollment.list_parent_enrollments(parent_id)
@@ -318,12 +296,6 @@ defmodule KlassHeroWeb.DashboardLive do
 
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <.pa_weekly_goal />
-        <.pa_booking_usage
-          :if={@show_booking_usage}
-          tier={@booking_tier}
-          used={@bookings_used}
-          cap={@booking_cap}
-        />
       </section>
 
       <section id="upcoming-sessions" class="bg-white rounded-2xl shadow-sm p-5">

@@ -6,7 +6,6 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
   alias KlassHero.Provider
-  alias KlassHero.Shared.Entitlements
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme
@@ -107,7 +106,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   def handle_event("view_roster", %{"id" => program_id} = params, socket) do
     if MapSet.member?(socket.assigns.assigned_program_ids, program_id) do
       roster = Enrollment.list_program_enrollments(program_id)
-      can_message? = Entitlements.can_initiate_messaging?(%{provider: socket.assigns.provider})
+      can_message? = Messaging.can_initiate_messaging?(%{provider: socket.assigns.provider})
       enrolled_count = Enum.count(roster, &(&1.status == :confirmed))
 
       {:noreply,

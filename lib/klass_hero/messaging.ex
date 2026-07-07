@@ -12,10 +12,10 @@ defmodule KlassHero.Messaging do
   - `:direct` - Private conversation between one provider and one parent
   - `:program_broadcast` - Announcement from provider to all enrolled parents
 
-  ## Entitlements
+  ## Messaging permission
 
-  Free-tier parents cannot initiate conversations but can receive and reply.
-  Use `KlassHero.Shared.Entitlements.can_initiate_messaging?/1` to check permissions.
+  Any parent or provider (including staff acting for a loaded provider) may
+  initiate conversations. Use `can_initiate_messaging?/1` to check a scope.
 
   ## Real-time Updates
 
@@ -93,6 +93,20 @@ defmodule KlassHero.Messaging do
   def create_direct_conversation(scope, provider_id, target_user_id, opts \\ []) do
     CreateDirectConversation.execute(scope, provider_id, target_user_id, opts)
   end
+
+  @doc """
+  Returns whether the given scope may initiate messaging.
+
+  Any parent or provider (including a staff member whose provider is loaded)
+  may initiate. A pure staff-only scope (staff_member set but no provider and
+  no parent) and any unrecognised scope shape are denied.
+  """
+  @spec can_initiate_messaging?(map()) :: boolean()
+  def can_initiate_messaging?(%{staff_member: %{provider_id: _}, provider: nil, parent: nil}), do: false
+  def can_initiate_messaging?(%{parent: parent, provider: provider}), do: not is_nil(parent) or not is_nil(provider)
+  def can_initiate_messaging?(%{parent: parent}), do: not is_nil(parent)
+  def can_initiate_messaging?(%{provider: provider}), do: not is_nil(provider)
+  def can_initiate_messaging?(_scope), do: false
 
   @doc """
   Starts (or retrieves) a direct conversation between a parent and a provider

@@ -543,73 +543,6 @@ defmodule KlassHeroWeb.ParentComponents do
   end
 
   ## ---------------------------------------------------------------------------
-  ## Booking usage meter
-  ## ---------------------------------------------------------------------------
-
-  @doc """
-  Renders the monthly booking usage meter.
-
-  Backed by `KlassHero.Shared.Entitlements.monthly_booking_cap/1` and
-  `KlassHero.Enrollment.count_monthly_bookings/2`. Hides itself when `cap`
-  is `:unlimited`.
-  """
-  attr :tier, :atom, required: true
-  attr :used, :integer, required: true
-  attr :cap, :any, required: true, doc: "Integer or :unlimited"
-
-  def pa_booking_usage(assigns) do
-    if assigns.cap == :unlimited do
-      ~H""
-    else
-      remaining = max(0, assigns.cap - assigns.used)
-      pct = if assigns.cap > 0, do: min(100, round(assigns.used / assigns.cap * 100)), else: 0
-      assigns = assign(assigns, remaining: remaining, pct: pct)
-
-      ~H"""
-      <.kh_card class="p-5">
-        <div class="flex items-start gap-4">
-          <div class="w-11 h-11 rounded-xl bg-hero-blue-100 flex items-center justify-center text-xl shrink-0">
-            <.icon name="hero-chart-bar" class="w-5 h-5" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-3 flex-wrap">
-              <div>
-                <h3 class="font-bold text-base">{gettext("Monthly booking usage")}</h3>
-                <p class="text-sm text-hero-grey-600 mt-0.5">
-                  {gettext("You have used %{used} of %{cap} bookings this month.",
-                    used: @used,
-                    cap: @cap
-                  )}
-                </p>
-              </div>
-              <.link
-                navigate="/family/settings"
-                class="text-sm font-bold text-[var(--brand-primary-dark)] underline shrink-0"
-              >
-                {gettext("Upgrade")} →
-              </.link>
-            </div>
-            <div class="mt-3 flex items-baseline gap-3">
-              <span class={booking_usage_remaining_classes()}>{@remaining}</span>
-              <span class="text-sm text-hero-grey-600">
-                {gettext("remaining")} · <span class="capitalize">{@tier}</span> {gettext("tier")}
-              </span>
-            </div>
-            <div class="mt-2 h-2 rounded-full bg-hero-grey-100 overflow-hidden">
-              <div
-                class="h-full rounded-full bg-gradient-to-r from-hero-blue-500 to-hero-blue-700 transition-all duration-500"
-                style={"width: #{@pct}%"}
-              >
-              </div>
-            </div>
-          </div>
-        </div>
-      </.kh_card>
-      """
-    end
-  end
-
-  ## ---------------------------------------------------------------------------
   ## Internal helpers
   ## ---------------------------------------------------------------------------
 
@@ -636,9 +569,4 @@ defmodule KlassHeroWeb.ParentComponents do
 
   # typography-lint-ignore: PaFamilyProgramCard "Open" CTA matches bundle
   defp card_open_link_classes, do: "text-xs font-bold font-display text-[var(--brand-primary-dark)]"
-
-  defp booking_usage_remaining_classes do
-    # typography-lint-ignore: PaBookingUsage remaining number is numeric callout
-    "font-display font-extrabold text-2xl tracking-tight text-[var(--brand-primary-dark)]"
-  end
 end

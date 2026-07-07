@@ -27,7 +27,6 @@ defmodule KlassHero.Family.ParentProfilesTest do
       assert {:ok, %ParentProfile{} = profile} = Family.create_parent_profile(attrs)
       assert profile.identity_id == attrs.identity_id
       assert profile.display_name == "John Doe"
-      assert profile.subscription_tier == :explorer
       assert %DateTime{} = profile.inserted_at
     end
 

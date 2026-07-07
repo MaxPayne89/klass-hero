@@ -66,10 +66,6 @@ defmodule KlassHero.Accounts.Scope do
   """
   def dual_role?(%__MODULE__{} = scope), do: provider?(scope) and staff?(scope)
 
-  @doc "Returns the parent's subscription tier, or nil if no parent profile."
-  def parent_tier(%__MODULE__{parent: nil}), do: nil
-  def parent_tier(%__MODULE__{parent: %{subscription_tier: tier}}), do: tier
-
   defp extract_profile({:ok, profile}), do: profile
   defp extract_profile({:error, _}), do: nil
 

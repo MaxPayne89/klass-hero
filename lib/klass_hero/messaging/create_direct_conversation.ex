@@ -13,7 +13,8 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
      `ConversationSummaries` projection can read-your-own-writes on a
      separate DB connection.
 
-  Free-tier parents cannot initiate conversations but can receive and reply to them.
+  Any parent or provider may initiate a conversation (see
+  `KlassHero.Messaging.can_initiate_messaging?/1`).
   """
 
   alias KlassHero.Accounts.Scope
@@ -36,8 +37,8 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
   - provider_id: The provider's profile ID
   - target_user_id: The user ID to start conversation with
   - opts: Optional keyword list
-    - `:skip_entitlement_check` - When `true`, bypasses the entitlement check.
-      Used by ReplyPrivatelyToBroadcast so that any tier can reply when the
+    - `:skip_entitlement_check` - When `true`, bypasses the permission check.
+      Used by ReplyPrivatelyToBroadcast so a parent can reply when the
       provider initiated contact via a broadcast.
     - `:program_id` - When set, associates the conversation with a program and
       auto-adds assigned staff members as participants.

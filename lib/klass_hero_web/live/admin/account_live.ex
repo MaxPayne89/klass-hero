@@ -107,34 +107,6 @@ defmodule KlassHeroWeb.Admin.AccountLive do
           """
         end
       },
-      subscription: %{
-        module: Text,
-        label: "Subscription",
-        readonly: true,
-        only: [:index, :show],
-        render: fn assigns ->
-          ~H"""
-          <div class="flex flex-wrap gap-1">
-            <%= if @item.parent_profile do %>
-              <span class={[
-                "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                parent_tier_class(@item.parent_profile.subscription_tier)
-              ]}>
-                {parent_tier_label(@item.parent_profile.subscription_tier)}
-              </span>
-            <% end %>
-            <%= if @item.provider_profile do %>
-              <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">
-                Provider
-              </span>
-            <% end %>
-            <%= if !@item.parent_profile && !@item.provider_profile do %>
-              <span>&mdash;</span>
-            <% end %>
-          </div>
-          """
-        end
-      },
       is_admin: %{
         module: Boolean,
         label: "Admin",
@@ -148,12 +120,4 @@ defmodule KlassHeroWeb.Admin.AccountLive do
       }
     ]
   end
-
-  defp parent_tier_label(:explorer), do: "Explorer"
-  defp parent_tier_label(:active), do: "Active"
-  defp parent_tier_label(nil), do: ""
-  defp parent_tier_label(tier), do: tier |> to_string() |> String.capitalize()
-
-  defp parent_tier_class(:active), do: "bg-green-100 text-green-700"
-  defp parent_tier_class(_), do: "bg-gray-100 text-gray-700"
 end

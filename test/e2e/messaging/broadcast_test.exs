@@ -25,10 +25,7 @@ defmodule KlassHeroWeb.E2E.Messaging.BroadcastTest do
       parent_user = user_fixture(%{intended_roles: [:parent]}) |> set_password()
 
       parent =
-        insert(:parent_profile_schema,
-          identity_id: parent_user.id,
-          subscription_tier: "active"
-        )
+        insert(:parent_profile_schema, identity_id: parent_user.id)
 
       {child, _parent_schema} = insert_child_with_guardian(parent: parent)
       program = insert(:program_schema, provider_id: provider.id)
