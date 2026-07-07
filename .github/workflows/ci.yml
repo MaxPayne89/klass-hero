@@ -120,6 +120,9 @@ jobs:
       - name: Typography lint
         run: mix lint_typography
 
+      - name: Gettext catalog check (structure + DE completeness)
+        run: mix lint_translations
+
   test:
     name: Tests
     runs-on: ubuntu-latest
