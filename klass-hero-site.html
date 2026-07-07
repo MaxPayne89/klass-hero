@@ -444,6 +444,7 @@ input[type=range]{width:100%;accent-color:var(--brand-primary);height:6px}
 .medal .rib.r{right:8px;transform:rotate(16deg)}
 .medal .burst{position:absolute;top:1px;width:46px;height:46px;z-index:1;opacity:.95;clip-path:polygon(50.0% 0.0%,60.9% 9.4%,75.0% 6.7%,79.7% 20.3%,93.3% 25.0%,90.6% 39.1%,100.0% 50.0%,90.6% 60.9%,93.3% 75.0%,79.7% 79.7%,75.0% 93.3%,60.9% 90.6%,50.0% 100.0%,39.1% 90.6%,25.0% 93.3%,20.3% 79.7%,6.7% 75.0%,9.4% 60.9%,0.0% 50.0%,9.4% 39.1%,6.7% 25.0%,20.3% 20.3%,25.0% 6.7%,39.1% 9.4%)}
 .medal .seal{position:absolute;top:5px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;z-index:2;box-shadow:inset 0 0 0 2.5px rgba(255,255,255,.7),0 1px 4px rgba(0,0,0,.25)}
+.medal .lvl{position:absolute;top:-3px;right:0;background:#111;color:#fff;font-size:.58rem;font-weight:800;border-radius:999px;padding:1.5px 5px;line-height:1.35;box-shadow:0 0 0 2px #fff;z-index:3;white-space:nowrap}
 .medal .lbl{font-size:.64rem;font-weight:800;max-width:78px;text-align:center;line-height:1.15;color:var(--fg-primary)}
 .medal:hover .seal-wrap{transform:scale(1.05)}
 .agent-head .nm{font-family:var(--font-display);font-weight:800;font-size:1.05rem;line-height:1.1}
@@ -2198,44 +2199,76 @@ const SKILL_CATS = {
   awareness:    {label:"Awareness & Life Skills",    badge:"World Aware",            emoji:"🌍", color:"#16a34a",
     skills:["Environmental awareness","Safety awareness"]}
 };
-/* Demo progress per child — key → 0-100; 100 = badge earned */
-const CHILD_BADGES = {
-  Emma: {social:100, physical:100, creative:55, cognitive:40, personal:30},
-  Leo:  {cognitive:22, physical:15, technology:10}
+/* Demo skill-check state per child, per category: which skills are checked in the
+   CURRENT cycle, and how many full cycles ("levels") have already been completed.
+   A badge levels up when every skill in c.skills has been checked — the checked
+   set then resets to empty and counting starts again toward the next level. */
+const CHILD_SKILL_CHECKS = {
+  Emma: {
+    social:    {level:2, checked:new Set(["Teamwork","Collaboration","Empathy","Social skills","Conflict resolution"])},
+    physical:  {level:1, checked:new Set(["Coordination","Balance","Flexibility"])},
+    creative:  {level:0, checked:new Set(["Creativity","Imagination","Drawing","Painting"])},
+    personal:  {level:0, checked:new Set(["Confidence","Self awareness","Patience"])}
+  },
+  Leo: {
+    cognitive:  {level:0, checked:new Set(["Critical thinking","Problem solving","Curiosity"])},
+    physical:   {level:0, checked:new Set(["Coordination"])},
+    technology: {level:0, checked:new Set()}
+  }
 };
-function sbPill(key, pct){
+function skillProgress(child, key){
+  const rec = (CHILD_SKILL_CHECKS[child]||{})[key];
+  const total = SKILL_CATS[key].skills.length;
+  const checked = rec ? rec.checked.size : 0;
+  const level = rec ? rec.level : 0;
+  return {level, checked, total, pct: Math.round(checked/total*100)};
+}
+function sbPill(child, key){
   const c = SKILL_CATS[key]; if(!c) return '';
-  if(pct>=100) return `<button class="medal" onclick="openBadge('${key}',${pct})" title="${c.badge} — badge earned!">
+  const {level, pct} = skillProgress(child, key);
+  if(level>=1) return `<button class="medal" onclick="openBadge('${child}','${key}')" title="${c.badge} — Level ${level}">
     <span class="seal-wrap">
       <span class="rib l" style="background:${c.color}"></span><span class="rib r" style="background:${c.color}"></span>
       <span class="burst" style="background:${c.color}"></span>
       <span class="seal" style="background:${c.color}">${c.emoji}</span>
+      <span class="lvl">Lvl ${level}</span>
     </span>
     <span class="lbl">${c.badge}</span>
   </button>`;
-  return `<span class="skill-pill" style="--p:${pct};--pc:${c.color};cursor:pointer" onclick="openBadge('${key}',${pct})">${c.emoji} ${c.label.split(' &')[0]}</span>`;
+  return `<span class="skill-pill" style="--p:${pct};--pc:${c.color};cursor:pointer" onclick="openBadge('${child}','${key}')">${c.emoji} ${c.label.split(' &')[0]}</span>`;
 }
-function openBadge(key, pct){
+function openBadge(child, key){
   const c=SKILL_CATS[key]; if(!c) return;
   const m=document.getElementById('badge-modal'); if(!m) return;
-  const earned=pct>=100, left=earned?0:Math.ceil((100-pct)/10);
+  const {level, checked, total, pct} = skillProgress(child, key);
+  const checkedSet = (CHILD_SKILL_CHECKS[child]||{})[key]?.checked || new Set();
+  const earned = level>=1;
   m.innerHTML=`
     <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
       <div class="modal-head">
         <div style="display:flex;align-items:center;gap:.75rem">
           <div style="width:48px;height:48px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">${c.emoji}</div>
-          <div><h3 style="margin:0">${c.badge}</h3><span class="tiny muted">${c.label}</span></div>
+          <div><h3 style="margin:0">${c.badge}</h3><span class="tiny muted">${c.label}${earned?` · Level ${level}`:''}</span></div>
         </div>
         <button class="modal-x" onclick="closeBadge()">✕</button>
       </div>
       <div class="modal-body">
         ${earned
-          ? `<div style="background:#f0fdf4;border-radius:10px;padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem"><span style="font-size:1.4rem">🏆</span><div><div style="font-weight:700;color:#065f46">Badge earned!</div><div class="tiny muted">10 of 10 sessions completed</div></div></div>`
-          : `<div><div style="display:flex;justify-content:space-between;margin-bottom:.4rem" class="small"><span style="font-weight:600">Progress</span><span class="muted">${pct}% · ${left} session${left!==1?'s':''} to go</span></div><div style="height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${pct}%;height:100%;background:${c.color};border-radius:999px"></div></div></div>`}
+          ? `<div style="background:#f0fdf4;border-radius:10px;padding:.85rem 1rem;display:flex;align-items:center;gap:.75rem">
+               <span style="font-size:1.4rem">🏆</span>
+               <div><div style="font-weight:700;color:#065f46">Level ${level} earned!</div><div class="tiny muted">Every skill below was checked off${level>1?` — ${level} times over`:''}. Check them all again to reach Level ${level+1}.</div></div>
+             </div>`
+          : ``}
+        <div style="margin-top:${earned?'1.1rem':'0'}">
+          <div style="display:flex;justify-content:space-between;margin-bottom:.4rem" class="small"><span style="font-weight:600">${earned?`Progress to Level ${level+1}`:'Progress to Level 1'}</span><span class="muted">${checked} of ${total} skills checked</span></div>
+          <div style="height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden"><div style="width:${pct}%;height:100%;background:${c.color};border-radius:999px"></div></div>
+        </div>
         <div style="margin-top:1.1rem">
-          <div class="tiny uc muted" style="font-weight:700;margin-bottom:.5rem">Skills that build this badge</div>
+          <div class="tiny uc muted" style="font-weight:700;margin-bottom:.5rem">Skills in this category</div>
           <div style="display:flex;flex-wrap:wrap;gap:.35rem">
-            ${c.skills.map(s=>`<span style="background:#f3f4f6;border-radius:999px;padding:3px 10px;font-size:.78rem">${s}</span>`).join('')}
+            ${c.skills.map(s=>{ const on = checkedSet.has(s);
+              return `<span style="background:${on?c.color+'1c':'#f3f4f6'};color:${on?c.color:'var(--fg-muted)'};border:1px solid ${on?c.color:'transparent'};border-radius:999px;padding:3px 10px 3px 8px;font-size:.78rem;font-weight:${on?700:500}">${on?'✓ ':''}${s}</span>`;
+            }).join('')}
           </div>
         </div>
         <div class="divider" style="margin:.9rem 0 .75rem"></div>
@@ -2251,13 +2284,13 @@ function openSkillsRef(){
     <div class="modal" style="max-width:640px;max-height:80vh;display:flex;flex-direction:column" onclick="event.stopPropagation()">
       <div class="modal-head"><h3>Skills &amp; Badges — Full Guide</h3><button class="modal-x" onclick="closeSkillsRef()">✕</button></div>
       <div class="modal-body" style="overflow-y:auto">
-        <p class="small muted" style="margin-bottom:1.25rem">Every program on Klass Hero tags skills below. Attending 10 sessions that include a skill category earns that badge.</p>
+        <p class="small muted" style="margin-bottom:1.25rem">Heroes check off skills as your child builds them. Get every skill in a category checked and they earn <strong>Level 1</strong> of that badge. Check them all again from scratch and they level up to <strong>Level 2</strong> — and so on, with no limit.</p>
         <div style="display:flex;flex-direction:column;gap:.75rem">
           ${Object.entries(SKILL_CATS).map(([k,c])=>`
             <div style="border:1px solid var(--border-light);border-radius:12px;padding:.85rem 1rem">
               <div style="display:flex;align-items:center;gap:.65rem;margin-bottom:.5rem">
                 <div style="width:36px;height:36px;border-radius:50%;background:${c.color};display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">${c.emoji}</div>
-                <div><div style="font-weight:700;font-size:.95rem">${c.label}</div><div class="tiny muted">Earns: <strong style="color:${c.color}">${c.badge}</strong></div></div>
+                <div><div style="font-weight:700;font-size:.95rem">${c.label}</div><div class="tiny muted">Earns: <strong style="color:${c.color}">${c.badge}</strong> · ${c.skills.length} skills to check</div></div>
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:.3rem">
                 ${c.skills.map(s=>`<span style="background:#f3f4f6;border-radius:999px;padding:2px 9px;font-size:.75rem;color:var(--fg-muted)">${s}</span>`).join('')}
@@ -2368,14 +2401,14 @@ function pageParentDash(){
           <button class="view-link small" style="background:none;border:none;cursor:pointer" onclick="openSkillsRef()">How badges work →</button>
         </div>
         <div class="grid grid-2" style="gap:1rem">
-          ${Object.entries(CHILD_BADGES).map(([name,prog])=>`
+          ${Object.entries(CHILD_SKILL_CHECKS).map(([name,prog])=>`
           <div>
             <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem">
               <span class="dot" style="background:${name==='Emma'?'var(--blue-500)':'#10b981'};width:8px;height:8px"></span>
               <span style="font-weight:700;font-size:.9rem">${name}</span>
             </div>
             <div style="display:flex;gap:.55rem;flex-wrap:wrap;align-items:flex-start">
-              ${Object.entries(prog).map(([k,p])=>sbPill(k,p)).join('')}
+              ${Object.keys(prog).map(k=>sbPill(name,k)).join('')}
             </div>
           </div>`).join('')}
         </div>
