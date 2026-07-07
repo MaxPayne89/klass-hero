@@ -78,6 +78,9 @@ defmodule KlassHero.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 1.0"},
+      # Direct dep (also transitive via gettext) so `mix lint_translations`'
+      # PO parsing can't break on a future gettext bump dropping expo.
+      {:expo, "~> 1.0"},
       {:nimble_csv, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
@@ -141,6 +144,7 @@ defmodule KlassHero.MixProject do
         "deps.unlock --unused",
         "format",
         "lint_typography",
+        "lint_translations",
         "cmd env MIX_ENV=test mix test"
       ]
     ]

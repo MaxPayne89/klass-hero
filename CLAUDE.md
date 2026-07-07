@@ -139,7 +139,7 @@ Router defines 5 `live_session` scopes with role-based access:
 
 **Presenters** in `lib/klass_hero_web/presenters/` transform domain models for templates.
 
-**Internationalization:** Gettext with English (`en`) and German (`de`) in `priv/gettext/`.
+**Internationalization:** Gettext with English (`en`, source/fallback) and German (`de`) in `priv/gettext/`. New `gettext(...)`/`dgettext(...)` calls must ship with a German translation in the **same PR** (or, for an intentional English passthrough, an entry with a reason in `priv/gettext/de/untranslated_allowlist.exs`). Enforced by `mix lint_translations` (in `precommit` and CI), which fails on stale `.pot` templates, empty `de` `msgstr`, or `fuzzy` entries. Run `mix gettext.extract && mix gettext.merge priv/gettext` after adding strings, then translate the new `de` entries.
 
 ## MCP Integration
 
