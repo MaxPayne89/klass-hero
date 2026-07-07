@@ -1,7 +1,29 @@
 defmodule KlassHeroWeb.Provider.Dashboard.ParamsTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHeroWeb.Provider.Dashboard.Params
+
+  describe "parser round-trip properties" do
+    property "parse_integer/1 round-trips any positive integer's string form" do
+      check all(n <- positive_integer()) do
+        assert Params.parse_integer(Integer.to_string(n)) == n
+      end
+    end
+
+    property "parse_date/1 round-trips any ISO8601 date string" do
+      check all(offset <- integer(-3650..3650)) do
+        date = Date.add(~D[2026-01-01], offset)
+        assert Params.parse_date(Date.to_iso8601(date)) == date
+      end
+    end
+
+    property "parse_decimal/1 round-trips non-negative integer strings" do
+      check all(n <- non_negative_integer()) do
+        assert Decimal.equal?(Params.parse_decimal(Integer.to_string(n)), Decimal.new(n))
+      end
+    end
+  end
 
   describe "parse_decimal/1" do
     test "parses a valid decimal string" do

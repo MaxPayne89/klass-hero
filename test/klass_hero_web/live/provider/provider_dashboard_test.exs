@@ -1,4 +1,12 @@
-defmodule KlassHeroWeb.Provider.DashboardLiveTest do
+defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
+  @moduledoc """
+  Cross-tab integration tests for the provider dashboard, which is served by four
+  route-level sub-LiveViews (OverviewLive, TeamLive, ProgramsLive, EditProfileLive)
+  since #904. Exercises each tab's route plus tab-to-tab navigation. Per-tab unit
+  tests live in the dedicated `dashboard_team_test.exs`,
+  `dashboard_self_staff_test.exs`, `dashboard_program_creation_test.exs`, and
+  `edit_profile_live_test.exs` files.
+  """
   use KlassHeroWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
