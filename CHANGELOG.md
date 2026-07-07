@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.55.0](https://github.com/MaxPayne89/klass-hero/compare/v0.54.7...v0.55.0) (2026-07-07)
+
+
+### Features
+
+* remove parent subscription tiers and the Entitlements service ([#1044](https://github.com/MaxPayne89/klass-hero/issues/1044)) ([8a6d757](https://github.com/MaxPayne89/klass-hero/commit/8a6d757f3ec1bf14d9feb471d0260eb52cc37df1)), closes [#925](https://github.com/MaxPayne89/klass-hero/issues/925)
+
+
+### Code Refactoring
+
+* reconcile drifted gettext catalogs and add sync gate ([#1043](https://github.com/MaxPayne89/klass-hero/issues/1043)) ([6113a49](https://github.com/MaxPayne89/klass-hero/commit/6113a4927bf03a44becbaa34af00a1f50319c431)), closes [#876](https://github.com/MaxPayne89/klass-hero/issues/876)
+* split ProviderDashboardLive into four sub-LiveViews ([#904](https://github.com/MaxPayne89/klass-hero/issues/904)) ([#1047](https://github.com/MaxPayne89/klass-hero/issues/1047)) ([69025c0](https://github.com/MaxPayne89/klass-hero/commit/69025c0b8910b9899b9d140f48fc1df7f37ebf06))
+
 ## [0.54.7](https://github.com/MaxPayne89/klass-hero/compare/v0.54.6...v0.54.7) (2026-07-07)
 
 
