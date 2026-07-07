@@ -56,6 +56,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     socket =
       socket
       |> assign(page_title: gettext("Provider Dashboard"))
+      |> assign(active_nav: :home)
       |> assign(business: business)
       |> assign(programs_count: length(program_listings))
       |> assign(total_sessions_completed: total_sessions)

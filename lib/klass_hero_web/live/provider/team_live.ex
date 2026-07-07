@@ -35,6 +35,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
       socket
       |> Chrome.assign()
       |> assign(page_title: gettext("Team & Profiles"))
+      |> assign(active_nav: :home)
       |> assign(:self_staffed?, self_staffed?(staff_members, scope))
       |> assign(:self_staffing?, false)
       |> stream(:team_members, staff_views)

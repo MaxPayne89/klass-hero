@@ -49,6 +49,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       socket
       |> Chrome.assign()
       |> assign(page_title: gettext("My Programs"))
+      |> assign(active_nav: :programs)
       |> stream(:programs, programs)
       |> assign(programs_count: length(programs))
       |> assign(staff_options: staff_options)
@@ -167,7 +168,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
        )}
     else
       false ->
-        Logger.warning("[DashboardLive] Unauthorized roster access attempt",
+        Logger.warning("[ProgramsLive] Unauthorized roster access attempt",
           program_id: program_id,
           provider_id: provider_id
         )
@@ -275,7 +276,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         {:noreply, put_flash(socket, :error, gettext("This invite cannot be resent."))}
 
       {:error, reason} ->
-        Logger.warning("[DashboardLive] Resend invite failed unexpectedly",
+        Logger.warning("[ProgramsLive] Resend invite failed unexpectedly",
           invite_id: invite_id,
           reason: inspect(reason)
         )
@@ -329,7 +330,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         {:noreply, put_flash(socket, :error, gettext("No file selected."))}
 
       {:ok, [{:error, reason}]} ->
-        Logger.warning("[DashboardLive] CSV file read failed: #{inspect(reason)}")
+        Logger.warning("[ProgramsLive] CSV file read failed: #{inspect(reason)}")
         {:noreply, put_flash(socket, :error, gettext("Could not read the uploaded file."))}
 
       {:ok, [{:ok, csv_binary}]} ->
@@ -767,7 +768,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
         # Program already created — don't roll back, propagate error to show a warning flash.
         {:error, reason} ->
-          Logger.warning("[Provider.DashboardLive] Failed to save enrollment policy",
+          Logger.warning("[Provider.ProgramsLive] Failed to save enrollment policy",
             program_id: program_id,
             reason: inspect(reason)
           )
@@ -842,7 +843,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         :ok
 
       {:error, reason} ->
-        Logger.warning("[Provider.DashboardLive] Failed to save participant policy",
+        Logger.warning("[Provider.ProgramsLive] Failed to save participant policy",
           program_id: program_id,
           reason: inspect(reason)
         )

@@ -12,9 +12,11 @@ defmodule KlassHeroWeb.Provider.Dashboard.Chrome do
   `/provider/*` route, so this is safe to call at the top of `mount/3`.
 
   It assigns a coarse baseline `business.verification_status` (`:verified` for
-  verified providers, presenter default otherwise). OverviewLive refines this from
-  the provider's verification documents; the other tabs intentionally show the
-  baseline, matching the pre-split behaviour.
+  verified providers, presenter default otherwise) — no document query. The header
+  only ever compares this against `:verified` (to gate the "New Program" CTA), so
+  the coarse value is sufficient on every tab. OverviewLive is the one tab that
+  renders the full verification badge (`business_profile_card`), so it refines the
+  status from the provider's documents in its own mount.
   """
 
   import Phoenix.Component, only: [assign: 2]
@@ -37,7 +39,6 @@ defmodule KlassHeroWeb.Provider.Dashboard.Chrome do
     )
   end
 
-  # Other tabs need a baseline; :overview refines from docs. Verified providers get :verified immediately.
   defp build_business(provider_profile) do
     business = ProviderPresenter.to_business_view(provider_profile)
 

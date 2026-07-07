@@ -1590,4 +1590,23 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       assert reloaded.status == :pending
     end
   end
+
+  # Regression coverage for the #904 split: shared chrome state that used to be set
+  # by the god-module's mount/handle_params must be reproduced on every sub-LiveView.
+  describe "shared dashboard chrome (post-split)" do
+    for {tab, path} <- [
+          {"overview", "/provider/dashboard"},
+          {"team", "/provider/dashboard/team"},
+          {"programs", "/provider/dashboard/programs"},
+          {"edit", "/provider/dashboard/edit"}
+        ] do
+      test "#{tab} route marks the active provider-nav item (active_nav assigned)", %{conn: conn} do
+        {:ok, view, _html} = live(conn, unquote(path))
+
+        # active_nav drives pv_sidebar's aria-current; a nil assign (the regression)
+        # leaves no nav item marked active on any route.
+        assert has_element?(view, "[aria-current='page']")
+      end
+    end
+  end
 end

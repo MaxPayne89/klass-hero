@@ -29,6 +29,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
       socket
       |> Chrome.assign()
       |> assign(page_title: gettext("Edit Profile"))
+      |> assign(active_nav: :home)
       |> assign(form: to_form(changeset, as: :provider_profile_schema))
       |> assign(doc_type: "business_registration")
       |> assign(document_types: Provider.valid_document_types())
