@@ -2125,6 +2125,7 @@ function pageContact(){
               <button class="btn btn-primary" type="submit">Send Message →</button>
             </div>
           </form>
+          <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>This form goes to a real person, not a bot — we don't yet have live chat support, so replies come by email within one business day. For questions our <a href="#/glossary" style="color:var(--blue-700);font-weight:700">Glossary</a> or <a href="#/trust-safety" style="color:var(--blue-700);font-weight:700">Trust &amp; Safety</a> page might answer faster.</span></div>
         </div>
         <div style="display:flex;flex-direction:column;gap:1.5rem">
           <div class="card" style="padding:1.75rem">
@@ -2437,6 +2438,7 @@ function pageParentDash(){
                 : `<button class="btn btn-yellow btn-sm" onclick="toast('Thanks! Your 5★ review helps other families. (demo)')">★ Leave a Review</button>`}
             </div>`).join("")}
         </div>
+        <div class="notice notice-info" style="margin-top:1rem">${ic('info','icon-sm')}<span>Every Rechnung is a German-compliant receipt — keep them for your tax return as evidence of childcare costs. Klass Hero is shown as merchant of record on each one.</span></div>
       </div>
     </div>
   </div>
@@ -2456,6 +2458,51 @@ const provState = {tab:"overview", sessView:"list", programs:[
   {name:"Holiday Football Camp", enrolled:0, cap:24, status:"draft", season:"No Season"}
 ], pending:[{kid:"Mia S. (7)", prog:"Soccer Fundamentals"},{kid:"Jonas K. (9)", prog:"Basketball League"}]};
 
+/* Session list for the provider dashboard's My Programs > Sessions view. Stable indices so skill tags persist across re-renders. */
+const PROV_SESSION_LIST = [
+  {m:"TODAY", d:"", title:"Soccer Fundamentals — U8 group", meta:"16:00–17:30 · Sportplatz Prenzlauer Berg", n:"11 expected", hero:"Jonas Weber"},
+  {m:"AUG", d:"18", title:"Soccer Fundamentals — U10 group", meta:"16:00–17:30 · Sportplatz Prenzlauer Berg", n:"9 expected", hero:"Mia Krüger"},
+  {m:"AUG", d:"22", title:"Basketball League — Match day", meta:"11:00–13:00 · Halle Friedrichshain", n:"12 expected", hero:"Jonas Weber"}
+];
+const sessionSkillState = {0: new Set(["physical","social"])};
+function openSessionSkills(i){
+  const s = PROV_SESSION_LIST[i]; if(!s) return;
+  const m = document.getElementById('session-skills-modal'); if(!m) return;
+  const tagged = sessionSkillState[i] || new Set();
+  m.innerHTML = `
+  <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div><h3 style="margin:0">Tag skills for this session</h3><span class="tiny muted">${s.title} · ${s.m}${s.d?" "+s.d:""}</span></div>
+      <button class="modal-x" onclick="closeSessionSkills()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="small muted">Every child who attends earns progress toward the badges below. Pick every category this session genuinely builds — most sessions tag one to three.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.9rem">
+        ${Object.entries(SKILL_CATS).map(([k,c])=>`<button class="kidchip ${tagged.has(k)?'on':''}" id="sst-${k}" onclick="toggleSessionSkill(${i},'${k}')">${c.emoji} ${c.label.split(' &')[0]}</button>`).join("")}
+      </div>
+      <div class="notice notice-info" style="margin-top:1.1rem">${ic('info','icon-sm')}<span>Tags apply the moment you save, and only to this session — other sessions in the same program keep their own tags.</span></div>
+      <div style="margin-top:1.1rem;display:flex;justify-content:flex-end;gap:.5rem">
+        <button class="btn btn-ghost" onclick="closeSessionSkills()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSessionSkills(${i})">Save tags</button>
+      </div>
+    </div>
+  </div>`;
+  m.classList.add('open');
+}
+function toggleSessionSkill(i,key){
+  sessionSkillState[i] = sessionSkillState[i] || new Set();
+  const set = sessionSkillState[i];
+  set.has(key) ? set.delete(key) : set.add(key);
+  const btn = document.getElementById('sst-'+key); if(btn) btn.classList.toggle('on');
+}
+function saveSessionSkills(i){
+  closeSessionSkills();
+  provState.tab='programs';
+  route();
+  toast('Skill tags saved — logged for every child who attends this session');
+}
+function closeSessionSkills(){ const m=document.getElementById('session-skills-modal'); if(m) m.classList.remove('open'); }
+
 function pageProviderDash(){
   return `
   <div class="dash">
@@ -2467,6 +2514,16 @@ function pageProviderDash(){
       <a class="${provState.tab==='finances'?'on-yellow':''}" onclick="provState.tab='finances';route()">${ic('euro','icon-sm')} Finances</a>
       <a href="#/community">${ic('users','icon-sm')} Community</a>
       <a onclick="toast('Demo: provider settings (account, business profile, billing)')">${ic('info','icon-sm')} Settings</a>
+      <div class="divider" style="margin:.85rem .9rem .7rem"></div>
+      <!-- Commission progress: subtle sidebar widget, replaces the large Overview card -->
+      <div style="padding:0 .9rem">
+        <div style="display:flex;align-items:center;gap:.3rem;margin-bottom:.45rem">
+          <span class="tiny uc muted" style="font-weight:700">Commission</span>
+          <span class="tooltip">${ic('info','icon-sm')}<span class="tip">You're on the Growth rate (12%) this month. It steps down to the Pro rate (8%) above €4,000 in monthly bookings — about €1,860 more. Rates apply progressively, like tax brackets, so growing never costs you. Full breakdown in Finances.</span></span>
+        </div>
+        <div class="gmv-bar" style="height:5px"><div style="width:53%"></div></div>
+        <div class="tiny muted" style="margin-top:.4rem">€2,140 this month · <a onclick="provState.tab='finances';route()" style="color:var(--blue-700);font-weight:700;cursor:pointer">12% rate →</a></div>
+      </div>
     </aside>
     <div class="dash-main">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
@@ -2483,7 +2540,8 @@ function pageProviderDash(){
       </div>
       <div id="prov-tab">${provTab()}</div>
     </div>
-  </div>`;
+  </div>
+  <div class="modal-backdrop" id="session-skills-modal" onclick="if(event.target===this)closeSessionSkills()"></div>`;
 }
 function provTab(){
   const t = provState.tab;
@@ -2492,16 +2550,8 @@ function provTab(){
       ${[["2","Active programs"],["€2,140","Bookings this month"],["7","Sessions this week"],["4.9★","Avg. rating"]]
         .map(([v,l])=>`<div class="stat role-yellow"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}
     </div>
-    <!-- GMV / commission progress widget (issue #883) -->
-    <div class="card" style="padding:1.5rem;margin-top:1.25rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
-        <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Commission this month</h3>
-        <span class="pill pill-primary">Effective rate: 15.9%</span>
-      </div>
-      <p class="small muted" style="margin-top:.4rem">€2,140 of monthly bookings · Growth rate (12%) applies above €750 — <strong>€1,860 to go</strong> until the Pro rate (8%) kicks in at €4,000.</p>
-      <div class="gmv-bar" style="margin-top:.9rem"><div style="width:53%"></div></div>
-      <div style="display:flex;justify-content:space-between" class="tiny muted"><span>€0 · 18%</span><span>€750 · 12%</span><span>€4,000 · 8%</span></div>
-    </div>
+    <!-- Commission progress now lives as a subtle widget in the sidebar (see aside above); this keeps Overview focused on today's actions -->
+    <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>Your commission progress moved to the sidebar for a quick glance any time. See the full breakdown, by rate and by booking, in <a onclick="provState.tab='finances';route()" style="color:var(--blue-700);font-weight:700;cursor:pointer">Finances</a>.</span></div>
     <div class="grid grid-2" style="margin-top:1.25rem;align-items:start">
       <!-- Pending enrollments with Confirm/Cancel (issue #623) -->
       <div class="card" style="padding:1.5rem" id="pending-card">
@@ -2538,6 +2588,7 @@ function provTab(){
       <h3 style="font-family:var(--font-sans);font-size:1.1rem;font-weight:700">Program Inventory</h3>
       <button class="btn btn-primary btn-sm" onclick="toast('Demo: new program modal — sessions auto-generate from your schedule')">${ic('plus','icon-sm')} New program</button>
     </div>
+    <div class="notice notice-info" style="margin-top:.85rem">${ic('info','icon-sm')}<span>Every program starts as a <strong>draft</strong>, visible only to you, until you publish it. Unpublishing later hides it from new families without cancelling anyone already enrolled.</span></div>
     <div class="card" style="margin-top:1rem;overflow-x:auto">
       <table class="table">
         <thead><tr><th>Program</th><th>Season</th><th>Enrolled</th><th>Status</th><th></th></tr></thead>
@@ -2574,18 +2625,22 @@ function provTab(){
       </div>
       ${provState.sessView==='calendar'
         ? `<div style="margin-top:1rem"><div class="tiny uc muted" style="font-weight:700;margin-bottom:.5rem">Week of Aug 17–23</div>${weekCalendar(PROV_SESSIONS,{compact:true})}</div>`
-        : [["TODAY","","Soccer Fundamentals — U8 group","16:00–17:30 · Sportplatz Prenzlauer Berg","11 expected","Jonas Weber"],
-           ["AUG","18","Soccer Fundamentals — U10 group","16:00–17:30 · Sportplatz Prenzlauer Berg","9 expected","Mia Krüger"],
-           ["AUG","22","Basketball League — Match day","11:00–13:00 · Halle Friedrichshain","12 expected","Jonas Weber"]]
-          .map(([m,d,t2,meta,n,hero])=>`
-          <div class="session-row">
-            <div class="datebadge" style="background:var(--yellow-100)"><div class="m" style="color:#92400e">${m}</div><div class="d">${d||"·"}</div></div>
-            <div style="flex:1;min-width:0"><div style="font-weight:600">${t2}</div><div class="tiny muted">${meta}</div><div class="tiny" style="color:var(--blue-700);font-weight:600;margin-top:1px;display:flex;align-items:center;gap:.25rem">${ic('user','icon-sm')} Led by ${hero}</div></div>
-            <span class="pill pill-outline">${n}</span>
+        : PROV_SESSION_LIST.map((s,i)=>`
+          <div class="session-row" style="flex-wrap:wrap">
+            <div class="datebadge" style="background:var(--yellow-100)"><div class="m" style="color:#92400e">${s.m}</div><div class="d">${s.d||"·"}</div></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600">${s.title}</div>
+              <div class="tiny muted">${s.meta}</div>
+              <div class="tiny" style="color:var(--blue-700);font-weight:600;margin-top:1px;display:flex;align-items:center;gap:.25rem">${ic('user','icon-sm')} Led by ${s.hero}</div>
+              ${sessionSkillState[i] && sessionSkillState[i].size ? `<div style="margin-top:.4rem;display:flex;gap:.3rem;flex-wrap:wrap">${[...sessionSkillState[i]].map(k=>`<span class="tiny" style="background:${SKILL_CATS[k].color}18;color:${SKILL_CATS[k].color};border-radius:999px;padding:2px 8px;font-weight:700">${SKILL_CATS[k].emoji} ${SKILL_CATS[k].label.split(' &')[0]}</span>`).join("")}</div>` : ""}
+            </div>
+            <span class="pill pill-outline">${s.n}</span>
             <button class="btn btn-ghost btn-sm" onclick="toast('Demo: opens attendance roster &amp; check-in')">Roster</button>
+            <button class="btn btn-ghost btn-sm" onclick="openSessionSkills(${i})">${ic('star','icon-sm')} Skills</button>
             <button class="btn btn-ghost btn-sm" onclick="toast('Demo: add a session note — developmental, positive, or welfare concern. Welfare notes trigger a parent notification.')">${ic('info','icon-sm')} Note</button>
           </div>`).join("")}
-    </div>`;
+    </div>
+    <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span><strong>Skill tags feed Skills &amp; Badges:</strong> every child who attends a session earns progress toward the categories tagged on it. Ten tagged sessions in a category earns that child the badge — tag honestly, most sessions cover just one to three categories.</span></div>`;
   if(t==="finances") return provFinances();
   if(t==="team") return `
 
