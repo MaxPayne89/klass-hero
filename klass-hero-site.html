@@ -975,7 +975,7 @@ function pageHome(){
         `<p>Yes! Register for free and start listing immediately.</p>
          <p><strong>What you can list:</strong></p>
          <ul><li>Regular classes and courses (weekly/monthly)</li><li>Camps and holiday programs</li><li>Workshops and one-time events</li><li>Private lessons and tutoring</li></ul>
-         <p><strong>Pricing:</strong> joining is free — no subscription, no setup fees. You pay a simple success-based commission only on bookings made through the platform: <strong>18%</strong> on your first €750 of monthly bookings, <strong>12%</strong> from €751–€4,000, and <strong>8%</strong> above that. All plans include your profile page, booking system, payment processing, messaging, and marketing to Berlin families.</p>`)}
+         <p><strong>Pricing:</strong> joining is free — no subscription, no setup fees. You're simply on a success-based rate that applies only to bookings made through the platform: <strong>18%</strong> on your first €750 of monthly bookings, <strong>12%</strong> from €751–€4,000, and <strong>8%</strong> above that. All plans include your profile page, booking system, payment processing, messaging, and marketing to Berlin families.</p>`)}
       ${faqItem("How does the booking system work?",
         `<p>Simple and automated — we handle everything.</p>
          <p><strong>When someone books:</strong></p>
@@ -1770,7 +1770,7 @@ function pageProviders(){
       <div class="sec-head" style="margin-bottom:2.5rem">
         <h2 class="section-title">Provider questions, answered</h2>
       </div>
-      ${faqItem("How much does Klass Hero cost?", `<p>Joining is free — every feature is included for all providers, with no subscription or setup fees. You pay a success-based commission only on bookings made through the platform: 18% on your first €750 of monthly bookings, 12% from €751–€4,000, and 8% above that. The rate applies progressively, so growing never makes you worse off.</p>`, true)}
+      ${faqItem("How much does Klass Hero cost?", `<p>Joining is free — every feature is included for all providers, with no subscription or setup fees. Your rate is simply success-based, applied only on bookings made through the platform: 18% on your first €750 of monthly bookings, 12% from €751–€4,000, and 8% above that. Your rate applies progressively, so growing never makes you worse off.</p>`, true)}
       ${faqItem("How quickly can I start accepting bookings?", `<p>Once your listing is live and you've completed Hero verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week.</p>`)}
       ${faqItem("How and when do I get paid?", `<p>We use SEPA bank transfers, paid out every Monday for the previous week's completed sessions. You'll receive an automatic invoice for each payout, and VAT is handled per-booking.</p>`)}
       ${faqItem("What's the verification process like?", `<p>It's the Hero standard — 7 steps: identity &amp; age verification, experience validation, extended police background check (Erweitertes Führungszeugnis, Belegart O), a short recorded video reviewed by our team, child safeguarding training, proof of active liability insurance (Betriebshaftpflicht), and signing our community standards. See the <a href="#/trust-safety" style="color:var(--blue-700);font-weight:600">Trust &amp; Safety page</a> for the full breakdown.</p>`)}
@@ -2515,11 +2515,11 @@ function pageProviderDash(){
       <a href="#/community">${ic('users','icon-sm')} Community</a>
       <a onclick="toast('Demo: provider settings (account, business profile, billing)')">${ic('info','icon-sm')} Settings</a>
       <div class="divider" style="margin:.85rem .9rem .7rem"></div>
-      <!-- Commission progress: subtle sidebar widget, replaces the large Overview card -->
+      <!-- Your Rate progress: subtle sidebar widget, replaces the large Overview card -->
       <div style="padding:0 .9rem">
         <div style="display:flex;align-items:center;gap:.3rem;margin-bottom:.45rem">
-          <span class="tiny uc muted" style="font-weight:700">Commission</span>
-          <span class="tooltip">${ic('info','icon-sm')}<span class="tip">You're on the Growth rate (12%) this month. It steps down to the Pro rate (8%) above €4,000 in monthly bookings — about €1,860 more. Rates apply progressively, like tax brackets, so growing never costs you. Full breakdown in Finances.</span></span>
+          <span class="tiny uc muted" style="font-weight:700">Your Rate</span>
+          <span class="tooltip">${ic('info','icon-sm')}<span class="tip">You're on the Growth rate (12%) this month. It steps down to the Pro rate (8%) above €4,000 in monthly bookings — about €1,860 more. Your rate improves automatically as you grow, like tax brackets in reverse. Full breakdown in Finances.</span></span>
         </div>
         <div class="gmv-bar" style="height:5px"><div style="width:53%"></div></div>
         <div class="tiny muted" style="margin-top:.4rem">€2,140 this month · <a onclick="provState.tab='finances';route()" style="color:var(--blue-700);font-weight:700;cursor:pointer">12% rate →</a></div>
@@ -2550,8 +2550,8 @@ function provTab(){
       ${[["2","Active programs"],["€2,140","Bookings this month"],["7","Sessions this week"],["4.9★","Avg. rating"]]
         .map(([v,l])=>`<div class="stat role-yellow"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}
     </div>
-    <!-- Commission progress now lives as a subtle widget in the sidebar (see aside above); this keeps Overview focused on today's actions -->
-    <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>Your commission progress moved to the sidebar for a quick glance any time. See the full breakdown, by rate and by booking, in <a onclick="provState.tab='finances';route()" style="color:var(--blue-700);font-weight:700;cursor:pointer">Finances</a>.</span></div>
+    <!-- Your Rate progress now lives as a subtle widget in the sidebar (see aside above); this keeps Overview focused on today's actions -->
+    <div class="notice notice-info" style="margin-top:1.25rem">${ic('info','icon-sm')}<span>Your Rate progress moved to the sidebar for a quick glance any time. See the full breakdown, by rate and by booking, in <a onclick="provState.tab='finances';route()" style="color:var(--blue-700);font-weight:700;cursor:pointer">Finances</a>.</span></div>
     <div class="grid grid-2" style="margin-top:1.25rem;align-items:start">
       <!-- Pending enrollments with Confirm/Cancel (issue #623) -->
       <div class="card" style="padding:1.5rem" id="pending-card">
@@ -2765,7 +2765,7 @@ function pageRegister(){
           <button class="${r==='parent'?'on':''}" style="flex:1" onclick="regState.role='parent';route()">I'm a Parent</button>
           <button class="${r==='provider'?'on':''}" style="flex:1" onclick="regState.role='provider';route()">I'm a Provider</button>
         </div>
-        ${r==="provider" ? `<div class="notice notice-info" style="margin-top:1rem">${ic('info','icon-sm')}<span>Every provider starts with all features included — your commission rate simply drops as your bookings grow. No plans to pick.</span></div>` : ""}
+        ${r==="provider" ? `<div class="notice notice-info" style="margin-top:1rem">${ic('info','icon-sm')}<span>Every provider starts with all features included — your rate simply improves as your bookings grow. No plans to pick.</span></div>` : ""}
         <form style="margin-top:1.25rem" onsubmit="event.preventDefault();toast('Demo site — registration lives at klasshero.com');">
           <div class="f-group"><label class="f-label">Full name<span class="req">*</span></label><input class="f-input" required placeholder="${r==='parent'?'Anna Schmidt':'Jonas Weber'}"></div>
           <div class="f-group"><label class="f-label">Email<span class="req">*</span></label><input class="f-input" type="email" required placeholder="${r==='parent'?'anna@example.com':'jonas@berlinkickers.de'}"></div>
@@ -2983,7 +2983,7 @@ const AGENTS = {
     chips:["How are providers vetted?","Is my family's data safe?","What if there's an incident?"],
     answer:guardAnswer},
   prophet:{name:"Profit Prophet", mask:"#635bff", grad:"linear-gradient(135deg,#635bff,#00a3d9)", badge:"AI Hero · Earnings", tagline:"Your earnings co-pilot",
-    intro:"I read your Stripe numbers and help you grow. Ask about payouts, commission tiers, or a forecast.",
+    intro:"I read your Stripe numbers and help you grow. Ask about payouts, your rate, or a forecast.",
     chips:["How do I reach the 8% rate?","Forecast next month","Where can I cut costs?"],
     answer:prophetAnswer}
 };
@@ -3090,9 +3090,9 @@ function guardAnswer(q){
 function prophetAnswer(q){
   const t = q.toLowerCase();
   if(/8%|pro|tier|rate|commission|reach|lower/.test(t)) return "You're at <strong>€2,140</strong> of monthly bookings — the 12% Growth rate. The 8% Pro rate kicks in above <strong>€4,000</strong>, so about <strong>€1,860</strong> more. Filling your two open U10 spots plus the Saturday league would get you ~80% of the way there.";
-  if(/forecast|next month|predict|project|future/.test(t)) return "Based on your last 6 months and current enrollments, next month projects to <strong>€2,480</strong> GMV (+16%) and a <strong>€2,090</strong> net payout after commission. Summer-camp pre-bookings could push it higher.";
+  if(/forecast|next month|predict|project|future/.test(t)) return "Based on your last 6 months and current enrollments, next month projects to <strong>€2,480</strong> GMV (+16%) and a <strong>€2,090</strong> net payout after your rate. Summer-camp pre-bookings could push it higher.";
   if(/cost|cut|expense|save|margin|spend/.test(t)) return "Your biggest expenses are venue hire (€480) and equipment (€210). Equipment is trending up 12% — bulk-ordering before the autumn season could save ~€60/month. Your net margin is a healthy <strong>72%</strong>.";
-  return "I read your Stripe data to help you grow. Ask about commission tiers, a revenue forecast, or where to trim costs.";
+  return "I read your Stripe data to help you grow. Ask about your rate, a revenue forecast, or where to trim costs.";
 }
 
 /* ============================================================
@@ -3258,7 +3258,7 @@ function provFinances(){
           <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
           <tbody>
             ${[["08 Jun","€820","paid"],["01 Jun","€760","paid"],["25 May","€910","paid"],["15 Jun","€900","scheduled"]]
-              .map(([d,a,st])=>`<tr><td>${d}</td><td style="font-weight:600">${a}</td><td><span class="pill ${st==='paid'?'pill-success':'pill-info'}">${st}</span></td><td>${st==='paid'?`<button class="btn btn-ghost btn-sm" onclick="toast('Demo: Gutschrift downloaded — your self-billing credit note showing gross booking value, commission deducted, and net payout. Required for German VAT compliance.')">Gutschrift</button>`:''}</td></tr>`).join("")}
+              .map(([d,a,st])=>`<tr><td>${d}</td><td style="font-weight:600">${a}</td><td><span class="pill ${st==='paid'?'pill-success':'pill-info'}">${st}</span></td><td>${st==='paid'?`<button class="btn btn-ghost btn-sm" onclick="toast('Demo: Gutschrift downloaded — your self-billing credit note showing gross booking value, your rate deducted, and net payout. Required for German VAT compliance.')">Gutschrift</button>`:''}</td></tr>`).join("")}
           </tbody>
         </table>
       </div>
@@ -3416,7 +3416,7 @@ const BLOG = [
     excerpt:"The levers that actually move enrollments — pricing, reviews, consistency, and word of mouth.",
     body:[
       ["Reviews are your growth engine","Parents trust other parents. After a strong session, prompt happy families to leave a review — a handful of genuine five-star reviews will out-perform any ad. Klass Hero surfaces your rating right on your profile and program cards."],
-      ["Price for value, not for fear","Underpricing signals low quality and starves your business. Anchor your price to the transformation you deliver and the small-group attention you give. The platform's progressive commission means growing never makes you worse off."],
+      ["Price for value, not for fear","Underpricing signals low quality and starves your business. Anchor your price to the transformation you deliver and the small-group attention you give. Your rate improves progressively as you grow, so growing never makes you worse off."],
       ["Show your work","Post Highlights of what your classes actually do (no faces — activities and projects only). It builds trust with browsing parents and keeps your current families proud to be part of it."],
       ["Consistency compounds","Same time, same quality, every week. Reliability is what turns a trial booking into a season, and a season into a referral."]
     ]},
@@ -3432,7 +3432,7 @@ const BLOG = [
     body:[
       ["A complete profile gets booked","Fill out your description, tags, schedule, and price breakdown. A searchable, well-tagged provider profile shows up for exactly the parents looking for what you offer."],
       ["Use broadcasts and messaging","Keep enrolled families informed with one-to-many broadcasts, and answer questions fast with built-in messaging. Responsiveness is a booking multiplier."],
-      ["Watch your numbers","The Finances tab and Profit Prophet read your real Stripe data — use the GMV widget to see how close you are to a lower commission tier, and the P&L view to keep your margins healthy."]
+      ["Watch your numbers","The Finances tab and Profit Prophet read your real Stripe data — use the GMV widget to see how close you are to a better rate tier, and the P&L view to keep your margins healthy."]
     ]}
 ];
 function pageBlog(){
@@ -3523,11 +3523,11 @@ const GLOSSARY = [
     {t:"Enrollment", who:"Everyone", d:"A confirmed booking: paid, accepted, and your child has a place. The cancellation terms that applied at booking are saved onto the record."},
     {t:"Waitlist", who:"Parents", d:"Join when a program is full and we'll alert you the moment a spot opens. No payment is taken and no queue position is shown."},
     {t:"Cancellation terms", who:"Parents", d:"For public programs: free cancellation up to 14 days before, 50% refund 7–13 days before. Private programs use the provider's own published terms, shown before you book."},
-    {t:"Commission", who:"Providers", d:"Klass Hero's success-based fee, deducted from each booking. It drops as your monthly bookings grow — 18%, then 12%, then 8% — applied in brackets like income tax. No subscriptions or setup fees."},
-    {t:"GMV", who:"Providers", d:"Gross Merchandise Value — the total value of bookings in a period. Decides which commission bracket applies, and is shown in your earnings widget."},
-    {t:"Payout", who:"Providers", d:"Your weekly SEPA bank transfer for completed sessions, every Monday, with commission already deducted. Instant payouts (min €50) are available any time."},
+    {t:"Your Rate", who:"Providers", d:"Klass Hero's success-based rate, applied to each booking (sometimes called a commission in legal and tax documents). It improves as your monthly bookings grow — 18%, then 12%, then 8% — applied in brackets like income tax. No subscriptions or setup fees."},
+    {t:"GMV", who:"Providers", d:"Gross Merchandise Value — the total value of bookings in a period. Decides which rate bracket applies, and is shown in your earnings widget."},
+    {t:"Payout", who:"Providers", d:"Your weekly SEPA bank transfer for completed sessions, every Monday, with your rate already deducted. Instant payouts (min €50) are available any time."},
     {t:"Rechnung", who:"Parents", d:"Your German-compliant payment receipt for a booking — usable as evidence of childcare spending for tax. Klass Hero is shown as merchant of record."},
-    {t:"Gutschrift", who:"Providers", d:"The self-billing credit note issued for each payout — gross booking value, commission deducted, and net paid. Required for German VAT."},
+    {t:"Gutschrift", who:"Providers", d:"The self-billing credit note issued for each payout — gross booking value, your rate deducted, and net paid. Required for German VAT."},
     {t:"Early-bird price", who:"Parents", d:"A limited-time discount before a program fills or its start date approaches. Both the discounted and original prices are shown."},
     {t:"Sibling discount", who:"Parents", d:"An automatic price reduction when a second child from the same family is enrolled in the same program."}
   ]},
@@ -3544,7 +3544,7 @@ const GLOSSARY = [
     {t:"Planner", who:"Parents", d:"A shared family calendar that fills in all your Klass Hero bookings automatically. You can add custom appointments and share it with a partner or family member."},
     {t:"Skills & Badges", who:"Parents", d:"A per-child progress tracker. Attending skill-tagged sessions logs progress, and hitting a threshold earns a badge like 🏅 Team Player."},
     {t:"Explorer", who:"Parents", d:"The parent account — all booking, messaging, session tracking, skills progress and the shared family planner included. Free."},
-    {t:"Provider Dashboard", who:"Providers", d:"Your workspace: an overview with commission progress, your programs and sessions, your team, and a finances tab wired to Stripe."},
+    {t:"Provider Dashboard", who:"Providers", d:"Your workspace: an overview with your rate progress, your programs and sessions, your team, and a finances tab wired to Stripe."},
     {t:"Broadcast", who:"Providers", d:"A single message to every parent enrolled in a program — for reminders or schedule changes. Parents who enroll later see the full history too."},
     {t:"Highlight", who:"Providers", d:"A provider post in Community — a photo or moment from a session. Activity-focused; no identifiable faces of children, and every upload is auto-screened before publishing."}
   ]},
