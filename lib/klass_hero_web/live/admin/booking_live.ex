@@ -73,31 +73,6 @@ defmodule KlassHeroWeb.Admin.BookingLive do
         orderable: true,
         only: [:index, :show]
       },
-      child: %{
-        module: BelongsTo,
-        label: "Child",
-        display_field: :first_name,
-        searchable: true,
-        only: [:index, :show],
-        render: fn assigns ->
-          ~H"""
-          <span>
-            <%= if @value do %>
-              {@value.first_name} {@value.last_name}
-            <% else %>
-              <span class="text-gray-400 italic">Deleted</span>
-            <% end %>
-          </span>
-          """
-        end
-      },
-      parent: %{
-        module: BelongsTo,
-        label: "Parent",
-        display_field: :display_name,
-        searchable: true,
-        only: [:index, :show]
-      },
       status: %{
         module: Text,
         label: "Status",
