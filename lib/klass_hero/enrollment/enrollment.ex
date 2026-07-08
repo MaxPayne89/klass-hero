@@ -18,8 +18,6 @@ defmodule KlassHero.Enrollment.Enrollment do
 
   import Ecto.Changeset
 
-  alias KlassHero.Family.Child
-  alias KlassHero.Family.ParentProfile
   alias KlassHero.ProgramCatalog.Program
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -31,8 +29,8 @@ defmodule KlassHero.Enrollment.Enrollment do
 
   schema "enrollments" do
     belongs_to :program, Program
-    belongs_to :child, Child
-    belongs_to :parent, ParentProfile
+    field :child_id, :binary_id
+    field :parent_id, :binary_id
 
     field :status, Ecto.Enum, values: [:pending, :confirmed, :completed, :cancelled]
     field :enrolled_at, :utc_datetime
