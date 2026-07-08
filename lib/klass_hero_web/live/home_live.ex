@@ -110,22 +110,14 @@ defmodule KlassHeroWeb.HomeLive do
           <li>{gettext("Private lessons and tutoring")}</li>
         </ul>
         <p class="font-semibold mb-1 text-hero-black">{gettext("Pricing:")}</p>
-        <ul class="list-disc list-inside mb-3 space-y-1">
-          <li>
-            {gettext(
-              "Starter: Free to join — no registration fees, no monthly subscriptions. 18% commission per booking, up to 2 active programs"
-            )}
-          </li>
-          <li>
-            {gettext("Professional: €19/month + 12% per booking. Up to 5 programs")}
-          </li>
-          <li>
-            {gettext("Business Plus: €49/month + 8% per booking. Unlimited programs and team seats")}
-          </li>
-        </ul>
+        <p class="mb-3">
+          {gettext(
+            "Joining Klass Hero costs nothing — unlimited programs, your whole team, all media, and direct parent messaging are included for everyone. A simple success-based fee on bookings made through the platform is coming; we'll share the details transparently before it launches."
+          )}
+        </p>
         <p class="mt-3">
           {gettext(
-            "All plans include: Profile page, booking system, payment processing, messaging, and marketing to Berlin families."
+            "Every provider gets: Profile page, booking system, payment processing, messaging, and marketing to Berlin families."
           )}
         </p>
       </.mk_faq_item>
