@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.55.1](https://github.com/MaxPayne89/klass-hero/compare/v0.55.0...v0.55.1) (2026-07-08)
+
+
+### Bug Fixes
+
+* repoint seeds.exs schema aliases after context flattens ([#1045](https://github.com/MaxPayne89/klass-hero/issues/1045)) ([#1050](https://github.com/MaxPayne89/klass-hero/issues/1050)) ([43a1179](https://github.com/MaxPayne89/klass-hero/commit/43a1179657af09a0ec5be8afe9c2e4f28733a1f1))
+
+
+### Code Refactoring
+
+* route Enrollment parent reads through the Family ACL ([#1051](https://github.com/MaxPayne89/klass-hero/issues/1051)) ([046f4e0](https://github.com/MaxPayne89/klass-hero/commit/046f4e0a38dbf17cfb8454d3df48be15378db645)), closes [#1046](https://github.com/MaxPayne89/klass-hero/issues/1046)
+
 ## [0.55.0](https://github.com/MaxPayne89/klass-hero/compare/v0.54.7...v0.55.0) (2026-07-07)
 
 
