@@ -129,7 +129,7 @@ defmodule KlassHero.Provider do
   defdelegate create_staff_member(attrs), to: Staff
 
   @doc "Updates an existing staff member."
-  defdelegate update_staff_member(staff_id, attrs), to: Staff
+  defdelegate update_staff_member(provider_id, staff_id, attrs), to: Staff
 
   @doc "Deletes a staff member by ID."
   defdelegate delete_staff_member(staff_id), to: Staff

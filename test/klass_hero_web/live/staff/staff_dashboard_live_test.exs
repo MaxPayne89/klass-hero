@@ -48,7 +48,9 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
 
     test "shows the staff member's own hourly pay rate when set", %{conn: conn, staff: staff} do
       {:ok, pay_rate} = PayRate.hourly(Decimal.new("25.00"))
-      {:ok, _updated} = KlassHero.Provider.update_staff_member(staff.id, %{pay_rate: pay_rate})
+
+      {:ok, _updated} =
+        KlassHero.Provider.update_staff_member(staff.provider_id, staff.id, %{pay_rate: pay_rate})
 
       {:ok, _view, html} = live(conn, ~p"/staff/dashboard")
 

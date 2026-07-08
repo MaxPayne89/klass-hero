@@ -79,14 +79,26 @@ defmodule KlassHeroWeb.Provider.TeamLive do
 
   @impl true
   def handle_event("edit_member", %{"id" => staff_id}, socket) do
-    case Provider.get_staff_member(staff_id) do
-      {:ok, staff} ->
-        changeset = Provider.change_staff_member(staff)
+    provider_id = socket.assigns.current_scope.provider.id
 
-        {:noreply,
-         socket
-         |> assign(show_staff_form: true, editing_staff_id: staff_id, self_staffing?: false)
-         |> assign(staff_form: to_form(changeset, as: :staff_member_schema))}
+    # Verify ownership before loading into the form — staff_id is untrusted client
+    # input (IDOR guard). The shared getter is unscoped, so the guard lives here.
+    with {:ok, staff} <- Provider.get_staff_member(staff_id),
+         true <- staff.provider_id == provider_id do
+      changeset = Provider.change_staff_member(staff)
+
+      {:noreply,
+       socket
+       |> assign(show_staff_form: true, editing_staff_id: staff_id, self_staffing?: false)
+       |> assign(staff_form: to_form(changeset, as: :staff_member_schema))}
+    else
+      false ->
+        Logger.warning("[TeamLive] Unauthorized staff edit attempt",
+          staff_member_id: staff_id,
+          provider_id: provider_id
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
@@ -101,6 +113,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
   @impl true
   def handle_event("validate_staff", %{"staff_member_schema" => params}, socket) do
     params = normalize_staff_form_params(params)
+    provider_id = socket.assigns.current_scope.provider.id
 
     changeset =
       case socket.assigns.editing_staff_id do
@@ -108,12 +121,14 @@ defmodule KlassHeroWeb.Provider.TeamLive do
           Provider.new_staff_member_changeset(params)
 
         staff_id ->
-          # Member may have been deleted between form open and keystroke; fall back to new changeset.
+          # Member may have been deleted between form open and keystroke — fall back
+          # to a new changeset. Ownership is re-checked here too (defence in depth):
+          # a foreign row must never rehydrate into the form via a crafted event.
           case Provider.get_staff_member(staff_id) do
-            {:ok, staff} ->
+            {:ok, %{provider_id: ^provider_id} = staff} ->
               Provider.change_staff_member(staff, params)
 
-            {:error, :not_found} ->
+            _not_found_or_foreign ->
               Provider.new_staff_member_changeset(params)
           end
       end
@@ -136,9 +151,12 @@ defmodule KlassHeroWeb.Provider.TeamLive do
 
   @impl true
   def handle_event("delete_member", %{"id" => staff_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
     # Accounts orchestrates: it deletes the Provider row AND durably drops :staff
-    # when no other active linked row remains (#972), atomically.
-    case Accounts.remove_staff_member(staff_id) do
+    # when no other active linked row remains (#972), atomically. It also enforces
+    # provider ownership — a foreign staff_id comes back as :not_found.
+    case Accounts.remove_staff_member(provider_id, staff_id) do
       {:ok, deleted} ->
         {:noreply,
          socket
@@ -149,6 +167,13 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> put_flash(:info, gettext("Team member removed."))}
 
       {:error, :not_found} ->
+        # Foreign id is indistinguishable from a genuine miss here — log the
+        # attempt so an enumeration attack is visible (IDOR guard).
+        Logger.warning("[TeamLive] Staff delete returned not_found",
+          staff_member_id: staff_id,
+          provider_id: provider_id
+        )
+
         {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
     end
   end
@@ -341,12 +366,14 @@ defmodule KlassHeroWeb.Provider.TeamLive do
   end
 
   defp save_existing_staff(socket, params, staff_id, headshot_result) do
+    provider_id = socket.assigns.current_scope.provider.id
+
     {headshot_status, attrs} =
       params
       |> atomize_staff_params()
       |> maybe_add_headshot(headshot_result)
 
-    case Provider.update_staff_member(staff_id, attrs) do
+    case Provider.update_staff_member(provider_id, staff_id, attrs) do
       {:ok, staff} ->
         view = StaffMemberPresenter.to_admin_view(staff)
 
@@ -365,14 +392,26 @@ defmodule KlassHeroWeb.Provider.TeamLive do
       {:error, {:validation_error, _errors}} ->
         handle_staff_validation_error(socket, staff_id, params)
 
+      # Ownership mismatch or a row deleted mid-edit both surface as :not_found —
+      # an atom, not a changeset, so it must not fall through to the clause below
+      # (to_form(:not_found, ...) would raise). Mirrors handle_staff_validation_error.
+      {:error, :not_found} ->
+        {:noreply,
+         socket
+         |> assign(show_staff_form: false, editing_staff_id: nil)
+         |> put_flash(:error, gettext("Staff member no longer exists."))}
+
       {:error, changeset} ->
         {:noreply, assign(socket, staff_form: to_form(changeset, as: :staff_member_schema))}
     end
   end
 
   defp handle_staff_validation_error(socket, staff_id, params) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    # Ownership re-checked (defence in depth): a foreign row is treated as gone.
     case Provider.get_staff_member(staff_id) do
-      {:ok, staff} ->
+      {:ok, %{provider_id: ^provider_id} = staff} ->
         changeset =
           Provider.change_staff_member(staff, normalize_staff_form_params(params))
           |> Map.put(:action, :validate)
@@ -382,7 +421,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> assign(staff_form: to_form(changeset, as: :staff_member_schema))
          |> put_flash(:error, gettext("Please fix the errors below."))}
 
-      {:error, :not_found} ->
+      _not_found_or_foreign ->
         {:noreply,
          socket
          |> assign(show_staff_form: false, editing_staff_id: nil)

@@ -479,4 +479,26 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       refute html =~ "program limit"
     end
   end
+
+  describe "IDOR ownership guard" do
+    test "edit_program on a foreign program id is rejected and opens no form", %{conn: conn} do
+      victim = ProviderFixtures.provider_profile_fixture()
+
+      {:ok, victim_program} =
+        KlassHero.ProgramCatalog.create_program(%{
+          provider_id: victim.id,
+          title: "Victim Program",
+          description: "Owned by another provider",
+          category: "sports",
+          price: Decimal.new("100.00")
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      render_click(view, "edit_program", %{"id" => victim_program.id})
+
+      refute has_element?(view, "#program-form")
+      assert render(view) =~ "Program not found."
+    end
+  end
 end

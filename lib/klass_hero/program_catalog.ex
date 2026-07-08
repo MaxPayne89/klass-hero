@@ -88,15 +88,21 @@ defmodule KlassHero.ProgramCatalog do
   - `{:error, :stale_data}` if a concurrent modification was detected
   - `{:error, Ecto.Changeset.t()}` on validation failure
   """
-  @spec update_program(String.t(), map()) ::
+  @spec update_program(String.t(), String.t(), map()) ::
           {:ok, Program.t()} | {:error, :not_found | :stale_data | Ecto.Changeset.t()}
-  def update_program(id, changes) when is_binary(id) and is_map(changes) do
+  def update_program(provider_id, id, changes) when is_binary(provider_id) and is_binary(id) and is_map(changes) do
     context_span entity: "program" do
       attrs = flatten_instructor_attrs(changes)
 
+      # Ownership guard (IDOR): a program owned by another provider is
+      # indistinguishable from a missing one — both return :not_found so an
+      # attacker can't probe for existence by enumerating ids.
       case fetch_program(id) do
-        nil -> {:error, :not_found}
-        current -> do_update_program(current, attrs, Program.load_value_objects(current))
+        %Program{provider_id: ^provider_id} = current ->
+          do_update_program(current, attrs, Program.load_value_objects(current))
+
+        _nil_or_foreign ->
+          {:error, :not_found}
       end
     end
   end

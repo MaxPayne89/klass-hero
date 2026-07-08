@@ -90,17 +90,24 @@ defmodule KlassHero.Provider.Staff do
     end
   end
 
-  @doc "Updates an existing staff member."
-  def update_staff_member(staff_id, attrs) when is_binary(staff_id) and is_map(attrs) do
+  @doc """
+  Updates an existing staff member owned by `provider_id`.
+
+  A staff member owned by another provider is indistinguishable from a missing
+  one — both return `{:error, :not_found}` (IDOR guard, no existence leak).
+  """
+  def update_staff_member(provider_id, staff_id, attrs)
+      when is_binary(provider_id) and is_binary(staff_id) and is_map(attrs) do
     context_span entity: "staff_member" do
       attrs = Map.take(attrs, @staff_updatable_fields)
 
-      with {:ok, existing} <- get_staff_member(staff_id),
+      with {:ok, %StaffMember{provider_id: ^provider_id} = existing} <- get_staff_member(staff_id),
            merged = Map.merge(Map.from_struct(existing), attrs),
            {:ok, _validated} <- StaffMember.new(merged),
            {:ok, persisted} <- persist_staff_update(existing, attrs) do
         {:ok, persisted}
       else
+        {:ok, %StaffMember{}} -> {:error, :not_found}
         result -> CommandResult.wrap_validation_errors(result)
       end
     end

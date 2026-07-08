@@ -120,20 +120,33 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   @impl true
   def handle_event("edit_program", %{"id" => program_id}, socket) do
-    case ProgramCatalog.get_program_by_id(program_id) do
-      {:ok, program} ->
-        changeset = ProgramCatalog.new_program_changeset(program_to_form_params(program))
+    provider_id = socket.assigns.current_scope.provider.id
 
-        {:noreply,
-         socket
-         |> assign(
-           show_program_form: true,
-           editing_program_id: program_id,
-           program_form: to_form(changeset, as: :program_schema),
-           enrollment_form: load_enrollment_policy_form(program_id),
-           participant_policy_form: load_participant_policy_form(program_id),
-           instructor_options: build_instructor_options(socket.assigns.current_scope.provider.id)
-         )}
+    # Verify ownership before loading into the form — program_id is untrusted
+    # client input (IDOR guard). The shared getter is unscoped (7 callers), so the
+    # guard lives here, mirroring view_roster.
+    with {:ok, program} <- ProgramCatalog.get_program_by_id(program_id),
+         true <- program.provider_id == provider_id do
+      changeset = ProgramCatalog.new_program_changeset(program_to_form_params(program))
+
+      {:noreply,
+       socket
+       |> assign(
+         show_program_form: true,
+         editing_program_id: program_id,
+         program_form: to_form(changeset, as: :program_schema),
+         enrollment_form: load_enrollment_policy_form(program_id),
+         participant_policy_form: load_participant_policy_form(program_id),
+         instructor_options: build_instructor_options(provider_id)
+       )}
+    else
+      false ->
+        Logger.warning("[ProgramsLive] Unauthorized program edit attempt",
+          program_id: program_id,
+          provider_id: provider_id
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Program not found."))}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Program not found."))}
@@ -574,9 +587,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     program_params = all_params["program_schema"] || %{}
     enrollment_params = all_params["enrollment_policy"] || %{}
     participant_policy_params = all_params["participant_policy"] || %{}
+    provider_id = socket.assigns.current_scope.provider.id
 
     with {:ok, attrs} <- maybe_add_instructor(attrs, program_params["instructor_id"], socket),
-         {:ok, updated} <- ProgramCatalog.update_program(program_id, attrs) do
+         {:ok, updated} <- ProgramCatalog.update_program(provider_id, program_id, attrs) do
       policy_result = maybe_set_enrollment_policy(program_id, enrollment_params)
       set_participant_policy_on_update(program_id, participant_policy_params)
 

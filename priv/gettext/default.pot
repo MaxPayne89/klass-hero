@@ -1599,7 +1599,7 @@ msgid "Active"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:577
-#: lib/klass_hero_web/live/provider/team_live.ex:505
+#: lib/klass_hero_web/live/provider/team_live.ex:544
 #, elixir-autogen, elixir-format
 msgid "Add Team Member"
 msgstr ""
@@ -1631,7 +1631,7 @@ msgstr ""
 msgid "Business Registration"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:482
+#: lib/klass_hero_web/live/provider/team_live.ex:521
 #, elixir-autogen, elixir-format
 msgid "Create profiles for your staff. These will be visible to parents when assigned to programs."
 msgstr ""
@@ -1733,7 +1733,7 @@ msgstr ""
 msgid "Team & Profiles"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:479
+#: lib/klass_hero_web/live/provider/team_live.ex:518
 #, elixir-autogen, elixir-format
 msgid "Team & Provider Profiles"
 msgstr ""
@@ -2228,7 +2228,7 @@ msgstr ""
 msgid "Add Member"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:529
+#: lib/klass_hero_web/live/provider/team_live.ex:568
 #, elixir-autogen, elixir-format
 msgid "Add your first staff member to get started!"
 msgstr ""
@@ -2408,12 +2408,12 @@ msgstr ""
 msgid "Contact Provider"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:333
+#: lib/klass_hero_web/live/provider/programs_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "Could not read the uploaded file."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:301
+#: lib/klass_hero_web/live/provider/programs_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Could not remove invite."
 msgstr ""
@@ -2549,7 +2549,7 @@ msgstr ""
 msgid "Failed to reject document."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:283
+#: lib/klass_hero_web/live/provider/programs_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Failed to resend invite."
 msgstr ""
@@ -2641,17 +2641,17 @@ msgstr ""
 msgid "Insurance Certificate"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:298
+#: lib/klass_hero_web/live/provider/programs_live.ex:311
 #, elixir-autogen, elixir-format
 msgid "Invite not found."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:295
+#: lib/klass_hero_web/live/provider/programs_live.ex:308
 #, elixir-autogen, elixir-format
 msgid "Invite removed."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:272
+#: lib/klass_hero_web/live/provider/programs_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "Invite resent successfully."
 msgstr ""
@@ -2768,7 +2768,7 @@ msgstr ""
 msgid "No enrollments yet."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:329
+#: lib/klass_hero_web/live/provider/programs_live.ex:342
 #, elixir-autogen, elixir-format
 msgid "No file selected."
 msgstr ""
@@ -2808,7 +2808,7 @@ msgstr ""
 msgid "No rejected documents."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:528
+#: lib/klass_hero_web/live/provider/team_live.ex:567
 #, elixir-autogen, elixir-format
 msgid "No team members yet"
 msgstr ""
@@ -2866,11 +2866,11 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:121
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:127
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:103
-#: lib/klass_hero_web/live/provider/programs_live.ex:569
-#: lib/klass_hero_web/live/provider/programs_live.ex:627
-#: lib/klass_hero_web/live/provider/team_live.ex:227
-#: lib/klass_hero_web/live/provider/team_live.ex:278
-#: lib/klass_hero_web/live/provider/team_live.ex:383
+#: lib/klass_hero_web/live/provider/programs_live.ex:582
+#: lib/klass_hero_web/live/provider/programs_live.ex:641
+#: lib/klass_hero_web/live/provider/team_live.ex:252
+#: lib/klass_hero_web/live/provider/team_live.ex:303
+#: lib/klass_hero_web/live/provider/team_live.ex:422
 #, elixir-autogen, elixir-format
 msgid "Please fix the errors below."
 msgstr ""
@@ -2900,26 +2900,27 @@ msgstr ""
 msgid "Program Start"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:861
+#: lib/klass_hero_web/live/provider/programs_live.ex:875
 #, elixir-autogen, elixir-format
 msgid "Program created successfully."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:868
+#: lib/klass_hero_web/live/provider/programs_live.ex:882
 #, elixir-autogen, elixir-format
 msgid "Program created, but enrollment capacity could not be saved. Edit the program to retry."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/incident_reports_live.ex:53
-#: lib/klass_hero_web/live/provider/programs_live.ex:139
-#: lib/klass_hero_web/live/provider/programs_live.ex:175
-#: lib/klass_hero_web/live/provider/programs_live.ex:178
-#: lib/klass_hero_web/live/provider/programs_live.ex:602
+#: lib/klass_hero_web/live/provider/programs_live.ex:149
+#: lib/klass_hero_web/live/provider/programs_live.ex:152
+#: lib/klass_hero_web/live/provider/programs_live.ex:188
+#: lib/klass_hero_web/live/provider/programs_live.ex:191
+#: lib/klass_hero_web/live/provider/programs_live.ex:616
 #, elixir-autogen, elixir-format
 msgid "Program not found."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:591
+#: lib/klass_hero_web/live/provider/programs_live.ex:605
 #, elixir-autogen, elixir-format
 msgid "Program updated successfully."
 msgstr ""
@@ -3079,8 +3080,8 @@ msgstr ""
 msgid "Selected child does not meet the program requirements."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:559
-#: lib/klass_hero_web/live/provider/programs_live.ex:617
+#: lib/klass_hero_web/live/provider/programs_live.ex:572
+#: lib/klass_hero_web/live/provider/programs_live.ex:631
 #, elixir-autogen, elixir-format
 msgid "Selected instructor could not be found. Please try again."
 msgstr ""
@@ -3106,14 +3107,16 @@ msgstr ""
 msgid "Specialties"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:389
+#: lib/klass_hero_web/live/provider/team_live.ex:402
+#: lib/klass_hero_web/live/provider/team_live.ex:428
 #, elixir-autogen, elixir-format
 msgid "Staff member no longer exists."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:92
-#: lib/klass_hero_web/live/provider/team_live.ex:152
-#: lib/klass_hero_web/live/provider/team_live.ex:168
+#: lib/klass_hero_web/live/provider/team_live.ex:101
+#: lib/klass_hero_web/live/provider/team_live.ex:104
+#: lib/klass_hero_web/live/provider/team_live.ex:177
+#: lib/klass_hero_web/live/provider/team_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Staff member not found."
 msgstr ""
@@ -3144,27 +3147,27 @@ msgstr ""
 msgid "Tax Certificate"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:331
+#: lib/klass_hero_web/live/provider/team_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "Team member added, but headshot upload failed."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:332
+#: lib/klass_hero_web/live/provider/team_live.ex:357
 #, elixir-autogen, elixir-format
 msgid "Team member added."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:149
+#: lib/klass_hero_web/live/provider/team_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "Team member removed."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:355
+#: lib/klass_hero_web/live/provider/team_live.ex:382
 #, elixir-autogen, elixir-format
 msgid "Team member updated, but headshot upload failed."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:356
+#: lib/klass_hero_web/live/provider/team_live.ex:383
 #, elixir-autogen, elixir-format
 msgid "Team member updated."
 msgstr ""
@@ -3179,12 +3182,12 @@ msgstr ""
 msgid "The Klass Hero Story"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:275
+#: lib/klass_hero_web/live/provider/programs_live.ex:288
 #, elixir-autogen, elixir-format
 msgid "This invite cannot be resent."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:609
+#: lib/klass_hero_web/live/provider/programs_live.ex:623
 #, elixir-autogen, elixir-format
 msgid "This program was modified by someone else. Please close and try again."
 msgstr ""
@@ -3412,7 +3415,7 @@ msgstr ""
 msgid "Program fee:"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:709
+#: lib/klass_hero_web/live/provider/programs_live.ex:723
 #, elixir-autogen, elixir-format
 msgid "Program saved, but the cover image upload failed. You can re-upload it by editing the program."
 msgstr ""
@@ -3628,7 +3631,7 @@ msgstr ""
 msgid "Cannot check out without a check-in"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:247
+#: lib/klass_hero_web/live/provider/programs_live.ex:260
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "Cannot message this parent."
@@ -3693,7 +3696,7 @@ msgid "Correct"
 msgstr ""
 
 #: lib/klass_hero_web/live/dashboard_live.ex:258
-#: lib/klass_hero_web/live/provider/programs_live.ex:244
+#: lib/klass_hero_web/live/provider/programs_live.ex:257
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:200
 #, elixir-autogen, elixir-format
 msgid "Could not start conversation. Please try again."
@@ -4266,7 +4269,7 @@ msgstr ""
 msgid "Failed to mark email as unread"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:184
+#: lib/klass_hero_web/live/provider/team_live.ex:209
 #, elixir-autogen, elixir-format
 msgid "Failed to resend invitation. Please try again."
 msgstr ""
@@ -4334,7 +4337,7 @@ msgstr ""
 msgid "Invitation Sent"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:165
+#: lib/klass_hero_web/live/provider/team_live.ex:190
 #, elixir-autogen, elixir-format
 msgid "Invitation resent successfully."
 msgstr ""
@@ -4460,7 +4463,7 @@ msgstr ""
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:24
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:136
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:297
-#: lib/klass_hero_web/live/provider/programs_live.ex:210
+#: lib/klass_hero_web/live/provider/programs_live.ex:223
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:151
 #, elixir-autogen, elixir-format
 msgid "Program"
@@ -4581,7 +4584,7 @@ msgstr ""
 msgid "Staff Dashboard"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:234
+#: lib/klass_hero_web/live/provider/team_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Staff member created, but the invitation could not be sent. Try resending from the team list."
 msgstr ""
@@ -4612,7 +4615,7 @@ msgstr ""
 msgid "The business associated with your account could not be found."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:175
+#: lib/klass_hero_web/live/provider/team_live.ex:200
 #, elixir-autogen, elixir-format
 msgid "This invitation cannot be resent in its current state."
 msgstr ""
@@ -4674,7 +4677,7 @@ msgid "Update your observation..."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:138
-#: lib/klass_hero_web/live/provider/programs_live.ex:326
+#: lib/klass_hero_web/live/provider/programs_live.ex:339
 #, elixir-autogen, elixir-format
 msgid "Upload connection lost. Please try again."
 msgstr ""
@@ -4978,7 +4981,7 @@ msgstr ""
 msgid "View sessions"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:417
+#: lib/klass_hero_web/live/provider/programs_live.ex:430
 #, elixir-autogen, elixir-format
 msgid "Create a program before inviting participants."
 msgstr ""
@@ -5020,7 +5023,7 @@ msgstr ""
 msgid "Invite one person"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:413
+#: lib/klass_hero_web/live/provider/programs_live.ex:426
 #, elixir-autogen, elixir-format
 msgid "Invite sent."
 msgstr ""
@@ -5123,7 +5126,7 @@ msgstr ""
 msgid "Upload a list"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:424
+#: lib/klass_hero_web/live/provider/programs_live.ex:437
 #, elixir-autogen, elixir-format
 msgid "An invite for this child and program already exists."
 msgstr ""
@@ -5300,7 +5303,7 @@ msgstr ""
 msgid "Go to dashboard"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:369
+#: lib/klass_hero_web/live/provider/programs_live.ex:382
 #, elixir-autogen, elixir-format
 msgid "%{count} row could not be processed."
 msgid_plural "%{count} rows could not be processed."
@@ -5603,7 +5606,7 @@ msgstr ""
 msgid "Contact Us →"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:286
+#: lib/klass_hero_web/live/provider/team_live.ex:311
 #, elixir-autogen, elixir-format
 msgid "Could not add you to the team. Please try again."
 msgstr ""
@@ -5880,13 +5883,13 @@ msgstr ""
 msgid "How we vet providers"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:496
+#: lib/klass_hero_web/live/provider/team_live.ex:535
 #, elixir-autogen, elixir-format
 msgid "I'll be teaching"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:344
-#: lib/klass_hero_web/live/provider/programs_live.ex:366
+#: lib/klass_hero_web/live/provider/programs_live.ex:357
+#: lib/klass_hero_web/live/provider/programs_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "Imported %{count} family."
 msgid_plural "Imported %{count} families."
@@ -6174,7 +6177,7 @@ msgstr ""
 msgid "No registered children for this session."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:353
+#: lib/klass_hero_web/live/provider/programs_live.ex:366
 #, elixir-autogen, elixir-format
 msgid "No rows imported. %{count} row could not be processed."
 msgid_plural "No rows imported. %{count} rows could not be processed."
@@ -6849,7 +6852,7 @@ msgstr ""
 msgid "You'll get your own provider profile to fill in, and your account will open on your business dashboard from now on. You stay on %{business}'s team."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:266
+#: lib/klass_hero_web/live/provider/team_live.ex:291
 #, elixir-autogen, elixir-format
 msgid "You're already on your team."
 msgstr ""
@@ -6869,12 +6872,12 @@ msgstr ""
 msgid "You're now part of the team."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:314
+#: lib/klass_hero_web/live/provider/team_live.ex:339
 #, elixir-autogen, elixir-format
 msgid "You're on the team — you can now be assigned to programs."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/team_live.ex:313
+#: lib/klass_hero_web/live/provider/team_live.ex:338
 #, elixir-autogen, elixir-format
 msgid "You're on the team, but the headshot upload failed."
 msgstr ""

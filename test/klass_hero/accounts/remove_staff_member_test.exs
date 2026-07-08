@@ -34,7 +34,7 @@ defmodule KlassHero.Accounts.RemoveStaffMemberTest do
       user = user_fixture(intended_roles: [:staff])
       staff = linked_staff_row(user, "Only Employer")
 
-      assert {:ok, _deleted} = Accounts.remove_staff_member(staff.id)
+      assert {:ok, _deleted} = Accounts.remove_staff_member(staff.provider_id, staff.id)
 
       assert {:error, :not_found} = Provider.get_staff_member(staff.id)
       assert reload_roles(user.id) == []
@@ -44,7 +44,7 @@ defmodule KlassHero.Accounts.RemoveStaffMemberTest do
       user = user_fixture(intended_roles: [:provider, :staff])
       staff = linked_staff_row(user, "Their Business")
 
-      assert {:ok, _deleted} = Accounts.remove_staff_member(staff.id)
+      assert {:ok, _deleted} = Accounts.remove_staff_member(staff.provider_id, staff.id)
 
       assert reload_roles(user.id) == [:provider]
     end
@@ -56,7 +56,7 @@ defmodule KlassHero.Accounts.RemoveStaffMemberTest do
       staff_a = linked_staff_row(user, "Alpha Sports")
       _staff_b = linked_staff_row(user, "Beta Camps")
 
-      assert {:ok, _deleted} = Accounts.remove_staff_member(staff_a.id)
+      assert {:ok, _deleted} = Accounts.remove_staff_member(staff_a.provider_id, staff_a.id)
 
       assert {:error, :not_found} = Provider.get_staff_member(staff_a.id)
       assert reload_roles(user.id) == [:staff]
@@ -73,19 +73,35 @@ defmodule KlassHero.Accounts.RemoveStaffMemberTest do
       owner = user_fixture(intended_roles: [:provider, :staff])
       owner_roles_before = reload_roles(owner.id)
 
-      assert {:ok, _deleted} = Accounts.remove_staff_member(staff.id)
+      assert {:ok, _deleted} = Accounts.remove_staff_member(staff.provider_id, staff.id)
 
       assert {:error, :not_found} = Provider.get_staff_member(staff.id)
       assert reload_roles(owner.id) == owner_roles_before
     end
   end
 
-  describe "remove_staff_member/1 — not found" do
+  describe "remove_staff_member/2 — not found" do
     test "returns :not_found and changes no roles" do
       user = user_fixture(intended_roles: [:staff])
 
-      assert {:error, :not_found} = Accounts.remove_staff_member(Ecto.UUID.generate())
+      assert {:error, :not_found} =
+               Accounts.remove_staff_member(Ecto.UUID.generate(), Ecto.UUID.generate())
 
+      assert reload_roles(user.id) == [:staff]
+    end
+  end
+
+  describe "remove_staff_member/2 — foreign provider (IDOR guard)" do
+    test "returns :not_found, deletes nothing, and revokes no role" do
+      user = user_fixture(intended_roles: [:staff])
+      staff = linked_staff_row(user, "Victim Employer")
+      other = provider_profile_fixture(%{business_name: "Attacker"})
+
+      # A foreign provider_id must not delete the row — indistinguishable from a
+      # genuine miss (no existence leak), and the role stays intact.
+      assert {:error, :not_found} = Accounts.remove_staff_member(other.id, staff.id)
+
+      assert {:ok, _still_there} = Provider.get_staff_member(staff.id)
       assert reload_roles(user.id) == [:staff]
     end
   end
