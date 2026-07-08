@@ -8,23 +8,23 @@ alias KlassHero.Accounts.User
 alias KlassHero.Enrollment.Enrollment
 alias KlassHero.Enrollment.EnrollmentPolicy
 alias KlassHero.Enrollment.ParticipantPolicy
-alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildGuardianSchema
-alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ChildSchema
-alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ConsentSchema
-alias KlassHero.Family.Adapters.Driven.Persistence.Schemas.ParentProfileSchema
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ConversationSchema
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.MessageSchema
-alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.ParticipantSchema
+alias KlassHero.Family.Child
+alias KlassHero.Family.ChildGuardian
+alias KlassHero.Family.Consent
+alias KlassHero.Family.ParentProfile
 alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
-alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.BehavioralNoteSchema
-alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ParticipationRecordSchema
-alias KlassHero.Participation.Adapters.Driven.Persistence.Schemas.ProgramSessionSchema
+alias KlassHero.Messaging.Conversation
+alias KlassHero.Messaging.Message
+alias KlassHero.Messaging.Participant
+alias KlassHero.Participation.BehavioralNote
+alias KlassHero.Participation.ParticipationRecord
+alias KlassHero.Participation.ProgramSession
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
 alias KlassHero.ProgramCatalog.Program
-alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProfileSchema
-alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.StaffMemberSchema
-alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.VerificationDocumentSchema
+alias KlassHero.Provider.ProviderProfile
+alias KlassHero.Provider.StaffMember
+alias KlassHero.Provider.VerificationDocument
 alias KlassHero.Repo
 alias KlassHero.Shared.Storage
 
@@ -40,14 +40,14 @@ require Logger
 Logger.info("Clearing existing data...")
 
 # Messaging
-Repo.delete_all(MessageSchema)
-Repo.delete_all(ParticipantSchema)
-Repo.delete_all(ConversationSchema)
+Repo.delete_all(Message)
+Repo.delete_all(Participant)
+Repo.delete_all(Conversation)
 
 # Participation
-Repo.delete_all(BehavioralNoteSchema)
-Repo.delete_all(ParticipationRecordSchema)
-Repo.delete_all(ProgramSessionSchema)
+Repo.delete_all(BehavioralNote)
+Repo.delete_all(ParticipationRecord)
+Repo.delete_all(ProgramSession)
 
 # Enrollment + policies
 Repo.delete_all(Enrollment)
@@ -55,16 +55,16 @@ Repo.delete_all(EnrollmentPolicy)
 Repo.delete_all(ParticipantPolicy)
 
 # Family
-Repo.delete_all(ConsentSchema)
-Repo.delete_all(ChildGuardianSchema)
-Repo.delete_all(ChildSchema)
-Repo.delete_all(ParentProfileSchema)
+Repo.delete_all(Consent)
+Repo.delete_all(ChildGuardian)
+Repo.delete_all(Child)
+Repo.delete_all(ParentProfile)
 
 # Programs + staff
 Repo.delete_all(Program)
-Repo.delete_all(StaffMemberSchema)
-Repo.delete_all(VerificationDocumentSchema)
-Repo.delete_all(ProviderProfileSchema)
+Repo.delete_all(StaffMember)
+Repo.delete_all(VerificationDocument)
+Repo.delete_all(ProviderProfile)
 
 # Users last (everything else references them)
 Repo.delete_all(User)
@@ -167,8 +167,8 @@ parent_profile_data = [
 parent_profiles =
   Enum.zip(parent_users, parent_profile_data)
   |> Enum.map(fn {user, data} ->
-    %ParentProfileSchema{}
-    |> ParentProfileSchema.changeset(%{
+    %ParentProfile{}
+    |> ParentProfile.changeset(%{
       identity_id: user.id,
       display_name: data.display_name,
       phone: data.phone,
@@ -231,8 +231,8 @@ provider_profile_data = [
 provider_profiles =
   Enum.zip(provider_users, provider_profile_data)
   |> Enum.map(fn {user, data} ->
-    %ProviderProfileSchema{}
-    |> ProviderProfileSchema.changeset(%{
+    %ProviderProfile{}
+    |> ProviderProfile.changeset(%{
       identity_id: user.id,
       business_name: data.business_name,
       description: data.description,
@@ -308,8 +308,8 @@ child_counts = Enum.map(1..10, fn _ -> :rand.uniform(3) end)
           end
 
         child =
-          %ChildSchema{}
-          |> ChildSchema.changeset(%{
+          %Child{}
+          |> Child.changeset(%{
             first_name: first_name,
             last_name: last_name,
             date_of_birth: dob,
@@ -334,7 +334,7 @@ Logger.info("Created #{length(child_records)} children")
 Logger.info("Seeding child-guardian relationships...")
 
 Enum.each(children, fn {child, parent} ->
-  ChildGuardianSchema.changeset(%{
+  ChildGuardian.changeset(%{
     child_id: child.id,
     guardian_id: parent.id,
     relationship: "parent",
@@ -352,8 +352,8 @@ Logger.info("Created #{length(children)} child-guardian links")
 Logger.info("Seeding consents...")
 
 Enum.each(children, fn {child, parent} ->
-  %ConsentSchema{}
-  |> ConsentSchema.changeset(%{
+  %Consent{}
+  |> Consent.changeset(%{
     parent_id: parent.id,
     child_id: child.id,
     consent_type: "provider_data_sharing",
@@ -441,8 +441,8 @@ staff_data = [
 
 staff_members =
   Enum.map(staff_data, fn data ->
-    %StaffMemberSchema{}
-    |> StaffMemberSchema.create_changeset(%{
+    %StaffMember{}
+    |> StaffMember.create_changeset(%{
       provider_id: data.provider.id,
       first_name: data.first_name,
       last_name: data.last_name,
@@ -486,8 +486,8 @@ uitest_staff_user =
   |> Repo.insert!()
 
 uitest_staff_member =
-  %StaffMemberSchema{}
-  |> StaffMemberSchema.create_changeset(%{
+  %StaffMember{}
+  |> StaffMember.create_changeset(%{
     provider_id: pro_1.id,
     first_name: "UI",
     last_name: "TestStaff",
@@ -499,7 +499,7 @@ uitest_staff_member =
 
 # Link the user to the staff member via invitation acceptance
 uitest_staff_member
-|> StaffMemberSchema.invitation_changeset(%{
+|> StaffMember.invitation_changeset(%{
   user_id: uitest_staff_user.id,
   invitation_status: "accepted"
 })
@@ -611,13 +611,16 @@ Enum.each(verification_documents, fn doc_attrs ->
   filename = "#{doc_attrs.document_type}.pdf"
 
   full_attrs =
-    Map.merge(doc_attrs, %{
+    doc_attrs
+    |> Map.delete(:provider_id)
+    |> Map.merge(%{
+      provider_profile_id: doc_attrs.provider_id,
       file_url: seed_file_key.(doc_attrs.provider_id, filename),
       original_filename: filename
     })
 
-  %VerificationDocumentSchema{}
-  |> VerificationDocumentSchema.changeset(full_attrs)
+  %VerificationDocument{}
+  |> VerificationDocument.create_changeset(full_attrs)
   |> Repo.insert!()
 end)
 
@@ -1105,7 +1108,7 @@ Logger.info("Created #{length(enrollment_records)} enrollments")
 Logger.info("Seeding program sessions...")
 
 # Find programs with confirmed enrollments
-confirmed_enrollments = Enum.filter(enrollment_records, &(&1.status == "confirmed"))
+confirmed_enrollments = Enum.filter(enrollment_records, &(&1.status == :confirmed))
 confirmed_program_ids = Enum.map(confirmed_enrollments, & &1.program_id) |> Enum.uniq()
 
 session_records =
@@ -1125,7 +1128,7 @@ session_records =
     ]
 
     Enum.map(session_dates, fn {date, status} ->
-      ProgramSessionSchema.create_changeset(%{
+      ProgramSession.create_changeset(%{
         program_id: program_id,
         session_date: date,
         start_time: start_time,
@@ -1148,7 +1151,10 @@ staff_session_programs = [
 
 staff_session_records =
   Enum.flat_map(staff_session_programs, fn program ->
-    if program do
+    # Skip programs that already got sessions from the confirmed-enrollment loop
+    # above — their (program_id, session_date, start_time) rows would collide with
+    # the unique index. Staff sessions only fill the gap for un-enrolled programs.
+    if program && program.id not in confirmed_program_ids do
       start_time = program.meeting_start_time || ~T[15:00:00]
       end_time = program.meeting_end_time || ~T[17:00:00]
 
@@ -1158,7 +1164,7 @@ staff_session_records =
         {Date.add(today, 7), :scheduled}
       ]
       |> Enum.map(fn {date, status} ->
-        ProgramSessionSchema.create_changeset(%{
+        ProgramSession.create_changeset(%{
           program_id: program.id,
           session_date: date,
           start_time: start_time,
@@ -1237,7 +1243,7 @@ participation_records =
       attrs = if check_in_at, do: Map.put(attrs, :check_in_at, check_in_at), else: attrs
       attrs = if check_out_at, do: Map.put(attrs, :check_out_at, check_out_at), else: attrs
 
-      ParticipationRecordSchema.create_changeset(attrs)
+      ParticipationRecord.create_changeset(attrs)
       |> Repo.insert!()
     end)
   end)
@@ -1307,7 +1313,7 @@ behavioral_notes =
         attrs
       end
 
-    BehavioralNoteSchema.create_changeset(attrs)
+    BehavioralNote.create_changeset(attrs)
     |> Repo.insert!()
   end)
 
@@ -1345,7 +1351,7 @@ broadcast_conversations = [
 
 inserted_direct_convos =
   Enum.map(direct_conversations, fn data ->
-    ConversationSchema.create_changeset(%{
+    Conversation.create_changeset(%{
       type: "direct",
       provider_id: data.provider.id
     })
@@ -1354,7 +1360,7 @@ inserted_direct_convos =
 
 inserted_broadcast_convos =
   Enum.map(broadcast_conversations, fn data ->
-    ConversationSchema.create_changeset(%{
+    Conversation.create_changeset(%{
       type: "program_broadcast",
       provider_id: data.provider.id,
       program_id: data.program.id,
@@ -1389,14 +1395,14 @@ message_count = 0
       end
 
     # Add both participants
-    ParticipantSchema.create_changeset(%{
+    Participant.create_changeset(%{
       conversation_id: convo.id,
       user_id: provider_user.id,
       joined_at: now
     })
     |> Repo.insert!()
 
-    ParticipantSchema.create_changeset(%{
+    Participant.create_changeset(%{
       conversation_id: convo.id,
       user_id: data.parent_user.id,
       joined_at: now
@@ -1418,7 +1424,7 @@ message_count = 0
 
     msgs =
       Enum.map(0..(msg_count - 1), fn i ->
-        MessageSchema.create_changeset(%{
+        Message.create_changeset(%{
           conversation_id: convo.id,
           sender_id: Enum.at(senders, rem(i, 2)),
           content: Enum.at(direct_messages, rem(i, length(direct_messages))),
@@ -1442,7 +1448,7 @@ message_count = 0
       end
 
     # Provider is always a participant in broadcasts
-    ParticipantSchema.create_changeset(%{
+    Participant.create_changeset(%{
       conversation_id: convo.id,
       user_id: provider_user.id,
       joined_at: now
@@ -1454,7 +1460,7 @@ message_count = 0
 
     added_parents =
       Enum.map(broadcast_parent_users, fn parent_user ->
-        ParticipantSchema.create_changeset(%{
+        Participant.create_changeset(%{
           conversation_id: convo.id,
           user_id: parent_user.id,
           joined_at: now
@@ -1470,7 +1476,7 @@ message_count = 0
 
     msgs =
       Enum.map(broadcast_messages, fn content ->
-        MessageSchema.create_changeset(%{
+        Message.create_changeset(%{
           conversation_id: convo.id,
           sender_id: provider_user.id,
           content: content,
