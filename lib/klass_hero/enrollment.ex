@@ -29,7 +29,6 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.ParticipantPolicyForm
   alias KlassHero.Enrollment.SingleInviteForm
   alias KlassHero.Family
-  alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.EventDispatchHelper
@@ -575,10 +574,11 @@ defmodule KlassHero.Enrollment do
     EnrollmentQueries.base()
     |> EnrollmentQueries.by_program(program_id)
     |> EnrollmentQueries.active_only()
-    |> join(:inner, [e], p in ParentProfile, on: e.parent_id == p.id)
-    |> select([e, p], p.identity_id)
+    |> select([e], e.parent_id)
     |> distinct(true)
     |> Repo.all()
+    |> ParentInfoACL.get_parents_by_ids()
+    |> Enum.map(& &1.identity_id)
   end
 
   @doc """
@@ -588,12 +588,17 @@ defmodule KlassHero.Enrollment do
   """
   @spec enrolled?(String.t(), String.t()) :: boolean()
   def enrolled?(program_id, identity_id) when is_binary(program_id) and is_binary(identity_id) do
-    EnrollmentQueries.base()
-    |> EnrollmentQueries.by_program(program_id)
-    |> EnrollmentQueries.active_only()
-    |> join(:inner, [e], p in ParentProfile, on: e.parent_id == p.id)
-    |> where([e, p], p.identity_id == ^identity_id)
-    |> Repo.exists?()
+    case ParentInfoACL.resolve_identity_id(identity_id) do
+      nil ->
+        false
+
+      parent_id ->
+        EnrollmentQueries.base()
+        |> EnrollmentQueries.by_program(program_id)
+        |> EnrollmentQueries.active_only()
+        |> where([e], e.parent_id == ^parent_id)
+        |> Repo.exists?()
+    end
   end
 
   # Creates an enrollment with an atomic capacity check. Locks the enrollment policy row
