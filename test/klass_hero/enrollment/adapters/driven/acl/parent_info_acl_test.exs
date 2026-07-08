@@ -36,4 +36,16 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ParentInfoACLTest do
       assert hd(result).id == to_string(parent.id)
     end
   end
+
+  describe "resolve_identity_id/1" do
+    test "returns the parent_id for a known identity_id" do
+      parent = insert(:parent_profile_schema)
+
+      assert ParentInfoACL.resolve_identity_id(parent.identity_id) == to_string(parent.id)
+    end
+
+    test "returns nil when no parent profile exists for the identity_id" do
+      assert ParentInfoACL.resolve_identity_id(Ecto.UUID.generate()) == nil
+    end
+  end
 end

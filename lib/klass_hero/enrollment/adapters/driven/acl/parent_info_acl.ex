@@ -26,4 +26,17 @@ defmodule KlassHero.Enrollment.Adapters.Driven.ACL.ParentInfoACL do
       end)
     end
   end
+
+  @doc """
+  Resolves a Family parent's identity_id to their parent_id, or nil when no
+  parent profile exists for the identity.
+  """
+  def resolve_identity_id(identity_id) when is_binary(identity_id) do
+    acl_span source: "enrollment", target: "family" do
+      case Family.get_parent_by_identity(identity_id) do
+        {:ok, parent} -> parent.id
+        {:error, :not_found} -> nil
+      end
+    end
+  end
 end
