@@ -7,7 +7,7 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
   alias KlassHero.Repo
   alias KlassHero.Shared.DomainEventBus
 
-  describe "update_program/2" do
+  describe "update_program/3" do
     setup do
       provider = ProviderFixtures.provider_profile_fixture()
 
@@ -23,17 +23,17 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       %{program: program, provider: provider}
     end
 
-    test "updates title successfully", %{program: program} do
+    test "updates title successfully", %{program: program, provider: provider} do
       assert {:ok, updated} =
-               ProgramCatalog.update_program(program.id, %{title: "New Title"})
+               ProgramCatalog.update_program(provider.id, program.id, %{title: "New Title"})
 
       assert updated.title == "New Title"
       assert updated.description == "Original description"
     end
 
-    test "updates multiple fields", %{program: program} do
+    test "updates multiple fields", %{program: program, provider: provider} do
       assert {:ok, updated} =
-               ProgramCatalog.update_program(program.id, %{
+               ProgramCatalog.update_program(provider.id, program.id, %{
                  title: "Updated",
                  price: Decimal.new("200.00")
                })
@@ -42,17 +42,31 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       assert updated.price == Decimal.new("200.00")
     end
 
-    test "rejects invalid changes (empty title)", %{program: program} do
-      assert {:error, _} = ProgramCatalog.update_program(program.id, %{title: ""})
+    test "rejects invalid changes (empty title)", %{program: program, provider: provider} do
+      assert {:error, _} = ProgramCatalog.update_program(provider.id, program.id, %{title: ""})
 
       # Verify original unchanged
       assert {:ok, unchanged} = ProgramCatalog.get_program_by_id(program.id)
       assert unchanged.title == "Original Title"
     end
 
-    test "returns not_found for invalid ID" do
+    test "returns not_found for invalid ID", %{provider: provider} do
       assert {:error, :not_found} =
-               ProgramCatalog.update_program(Ecto.UUID.generate(), %{title: "New"})
+               ProgramCatalog.update_program(provider.id, Ecto.UUID.generate(), %{title: "New"})
+    end
+
+    test "returns not_found and leaves the row unchanged when another provider owns it", %{
+      program: program
+    } do
+      other = ProviderFixtures.provider_profile_fixture()
+
+      # IDOR guard: a foreign provider_id must not update — and must be
+      # indistinguishable from a genuine miss (no existence leak).
+      assert {:error, :not_found} =
+               ProgramCatalog.update_program(other.id, program.id, %{title: "Hijacked"})
+
+      assert {:ok, unchanged} = ProgramCatalog.get_program_by_id(program.id)
+      assert unchanged.title == "Original Title"
     end
 
     test "dispatches schedule event when scheduling fields change", %{
@@ -72,7 +86,7 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       )
 
       assert {:ok, _updated} =
-               ProgramCatalog.update_program(program.id, %{
+               ProgramCatalog.update_program(provider.id, program.id, %{
                  meeting_days: ["Monday", "Wednesday"]
                })
 
@@ -87,7 +101,10 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       assert Map.has_key?(event.payload, :end_date)
     end
 
-    test "does not dispatch schedule event for non-schedule changes", %{program: program} do
+    test "does not dispatch schedule event for non-schedule changes", %{
+      program: program,
+      provider: provider
+    } do
       test_pid = self()
 
       DomainEventBus.subscribe(
@@ -100,12 +117,15 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       )
 
       assert {:ok, _updated} =
-               ProgramCatalog.update_program(program.id, %{title: "New Title"})
+               ProgramCatalog.update_program(provider.id, program.id, %{title: "New Title"})
 
       refute_receive {:schedule_event, _}, 100
     end
 
-    test "dispatches single event for multiple schedule field changes", %{program: program} do
+    test "dispatches single event for multiple schedule field changes", %{
+      program: program,
+      provider: provider
+    } do
       test_pid = self()
 
       DomainEventBus.subscribe(
@@ -118,7 +138,7 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       )
 
       assert {:ok, _updated} =
-               ProgramCatalog.update_program(program.id, %{
+               ProgramCatalog.update_program(provider.id, program.id, %{
                  meeting_days: ["Tuesday", "Thursday"],
                  meeting_start_time: ~T[14:00:00],
                  meeting_end_time: ~T[15:30:00]

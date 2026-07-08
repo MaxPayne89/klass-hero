@@ -206,6 +206,46 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
     end
   end
 
+  describe "IDOR ownership guards" do
+    setup %{provider: _provider} do
+      # A second provider whose staff the logged-in provider must not touch.
+      victim = ProviderFixtures.provider_profile_fixture()
+
+      victim_staff =
+        ProviderFixtures.staff_member_fixture(
+          provider_id: victim.id,
+          first_name: "Victim",
+          last_name: "Member"
+        )
+
+      %{victim_staff: victim_staff}
+    end
+
+    test "edit_member on a foreign staff id is rejected and opens no form", %{
+      conn: conn,
+      victim_staff: victim_staff
+    } do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      render_click(view, "edit_member", %{"id" => victim_staff.id})
+
+      refute has_element?(view, "#staff-member-form")
+      assert render(view) =~ "Staff member not found."
+    end
+
+    test "delete_member on a foreign staff id is rejected and leaves the row intact", %{
+      conn: conn,
+      victim_staff: victim_staff
+    } do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      render_click(view, "delete_member", %{"id" => victim_staff.id})
+
+      assert render(view) =~ "Staff member not found."
+      assert {:ok, _still_there} = Provider.get_staff_member(victim_staff.id)
+    end
+  end
+
   describe "form validation" do
     test "validates on change and keeps form visible", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")

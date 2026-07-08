@@ -72,7 +72,7 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
         )
 
       # Deactivate the second staff member
-      {:ok, _} = Provider.update_staff_member(inactive.id, %{active: false})
+      {:ok, _} = Provider.update_staff_member(inactive.provider_id, inactive.id, %{active: false})
 
       assert {:ok, members} = Provider.list_active_staff_members(provider.id)
       assert length(members) == 1
@@ -88,17 +88,17 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
           first_name: "Inactive"
         )
 
-      {:ok, _} = Provider.update_staff_member(staff.id, %{active: false})
+      {:ok, _} = Provider.update_staff_member(staff.provider_id, staff.id, %{active: false})
 
       assert {:ok, []} = Provider.list_active_staff_members(provider.id)
     end
   end
 
-  describe "update_staff_member/2" do
+  describe "update_staff_member/3" do
     test "updates allowed fields" do
       staff = ProviderFixtures.staff_member_fixture(first_name: "Old", role: "Assistant")
 
-      assert {:ok, updated} = Provider.update_staff_member(staff.id, %{role: "Head Coach"})
+      assert {:ok, updated} = Provider.update_staff_member(staff.provider_id, staff.id, %{role: "Head Coach"})
       assert updated.role == "Head Coach"
       assert updated.first_name == "Old"
     end
@@ -107,14 +107,16 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
       staff = ProviderFixtures.staff_member_fixture(first_name: "Valid")
 
       assert {:error, {:validation_error, errors}} =
-               Provider.update_staff_member(staff.id, %{first_name: ""})
+               Provider.update_staff_member(staff.provider_id, staff.id, %{first_name: ""})
 
       assert "First name cannot be empty" in errors
     end
 
     test "returns not_found for non-existent staff member" do
       assert {:error, :not_found} =
-               Provider.update_staff_member(Ecto.UUID.generate(), %{role: "Coach"})
+               Provider.update_staff_member(Ecto.UUID.generate(), Ecto.UUID.generate(), %{
+                 role: "Coach"
+               })
     end
 
     test "cannot change provider_id through update" do
@@ -125,7 +127,7 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
       # Why: edit_changeset excludes provider_id from cast, so it should be ignored
       # Outcome: provider_id remains unchanged after update
       assert {:ok, updated} =
-               Provider.update_staff_member(staff.id, %{
+               Provider.update_staff_member(staff.provider_id, staff.id, %{
                  provider_id: other_provider.id,
                  role: "New Role"
                })
@@ -138,7 +140,7 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
       staff = ProviderFixtures.staff_member_fixture(first_name: "Photo")
 
       assert {:ok, updated} =
-               Provider.update_staff_member(staff.id, %{
+               Provider.update_staff_member(staff.provider_id, staff.id, %{
                  headshot_url: "headshots/providers/abc/new_photo.jpg"
                })
 
@@ -150,7 +152,7 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
       staff =
         ProviderFixtures.staff_member_fixture(headshot_url: "headshots/providers/abc/old_photo.jpg")
 
-      assert {:ok, updated} = Provider.update_staff_member(staff.id, %{headshot_url: nil})
+      assert {:ok, updated} = Provider.update_staff_member(staff.provider_id, staff.id, %{headshot_url: nil})
       assert updated.headshot_url == nil
     end
   end
