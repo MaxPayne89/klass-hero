@@ -5,6 +5,15 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.55.2](https://github.com/MaxPayne89/klass-hero/compare/v0.55.1...v0.55.2) (2026-07-08)
+
+
+### Bug Fixes
+
+* add provider-ownership (IDOR) guards to dashboard mutations ([#1059](https://github.com/MaxPayne89/klass-hero/issues/1059)) ([590f5fd](https://github.com/MaxPayne89/klass-hero/commit/590f5fd42329a10b07bab7c47acf0d74e4591c0e)), closes [#1048](https://github.com/MaxPayne89/klass-hero/issues/1048)
+* drop Enrollment schema's belongs_to into Family ([#1052](https://github.com/MaxPayne89/klass-hero/issues/1052)) ([#1057](https://github.com/MaxPayne89/klass-hero/issues/1057)) ([8182e02](https://github.com/MaxPayne89/klass-hero/commit/8182e02f785b19c6eed14de7f5847dbd8470cf0f))
+* replace stale provider tier pricing in home FAQ ([#1055](https://github.com/MaxPayne89/klass-hero/issues/1055)) ([#1056](https://github.com/MaxPayne89/klass-hero/issues/1056)) ([6b938d0](https://github.com/MaxPayne89/klass-hero/commit/6b938d01ec0ff90acdc6bbf69d7c11da392fd33b))
+
 ## [0.55.1](https://github.com/MaxPayne89/klass-hero/compare/v0.55.0...v0.55.1) (2026-07-08)
 
 
