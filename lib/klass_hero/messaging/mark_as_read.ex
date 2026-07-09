@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.MarkAsRead do
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Participant
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -53,7 +53,7 @@ defmodule KlassHero.Messaging.MarkAsRead do
 
   defp publish_event(conversation_id, user_id, read_at) do
     event = MessagingEvents.messages_read(conversation_id, user_id, read_at)
-    DomainEventBus.dispatch(@context, event)
+    EventDispatchHelper.dispatch(event, @context)
     :ok
   end
 end

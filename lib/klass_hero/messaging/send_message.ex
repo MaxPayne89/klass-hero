@@ -15,7 +15,7 @@ defmodule KlassHero.Messaging.SendMessage do
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Shared
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Storage
 
   require Logger
@@ -306,7 +306,7 @@ defmodule KlassHero.Messaging.SendMessage do
         message.attachments
       )
 
-    DomainEventBus.dispatch(@context, event)
+    EventDispatchHelper.dispatch(event, @context)
     :ok
   end
 end
