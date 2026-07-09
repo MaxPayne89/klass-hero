@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
   """
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -73,7 +73,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
 
   defp publish_event(conversation_ids, count) do
     event = MessagingEvents.conversations_archived(conversation_ids, :program_ended, count)
-    DomainEventBus.dispatch(@context, event)
+    EventDispatchHelper.dispatch(event, @context)
     :ok
   end
 

@@ -13,7 +13,7 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -60,7 +60,7 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
   defp tag_step(step, {:error, reason}), do: {:error, {step, reason}}
 
   defp handle_result({:ok, result}, user_id) do
-    DomainEventBus.dispatch(@context, MessagingEvents.user_data_anonymized(user_id))
+    EventDispatchHelper.dispatch(MessagingEvents.user_data_anonymized(user_id), @context)
 
     Logger.info("Anonymized messaging data for user",
       user_id: user_id,

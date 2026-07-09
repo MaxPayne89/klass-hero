@@ -19,7 +19,7 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicy do
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Storage
 
   require Logger
@@ -127,7 +127,7 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicy do
 
   defp publish_event(messages_deleted, conversations_deleted) do
     event = MessagingEvents.retention_enforced(messages_deleted, conversations_deleted)
-    DomainEventBus.dispatch(@context, event)
+    EventDispatchHelper.dispatch(event, @context)
     :ok
   end
 end

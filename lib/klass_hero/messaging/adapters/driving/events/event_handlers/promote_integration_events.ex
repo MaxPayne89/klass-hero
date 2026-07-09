@@ -43,7 +43,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
   end
 
   def handle(%DomainEvent{event_type: :message_sent} = event) do
-    # NOTE: SendMessage uses the lower-level bus (no Oban retry) until #849 lands.
     event.aggregate_id
     |> MessagingIntegrationEvents.message_sent(event.payload)
     |> IntegrationEventPublishing.publish_critical("message_sent",
