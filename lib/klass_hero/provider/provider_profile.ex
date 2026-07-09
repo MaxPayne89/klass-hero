@@ -32,9 +32,11 @@ defmodule KlassHero.Provider.ProviderProfile do
   @timestamps_opts [type: :utc_datetime]
 
   @profile_statuses [:draft, :active]
+  @entity_types [:individual, :business]
 
   schema "providers" do
     field :identity_id, :binary_id
+    field :entity_type, Ecto.Enum, values: @entity_types, default: :individual
     field :business_name, :string
     field :business_owner_email, :string
     field :description, :string
@@ -65,6 +67,7 @@ defmodule KlassHero.Provider.ProviderProfile do
     schema
     |> cast(attrs, [
       :identity_id,
+      :entity_type,
       :business_name,
       :business_owner_email,
       :description,
@@ -225,8 +228,8 @@ defmodule KlassHero.Provider.ProviderProfile do
   Records the admin who performed the verification and the timestamp.
   Idempotent — verifying an already-verified provider updates the audit trail.
   """
-  @spec verify(t(), String.t()) :: {:ok, t()}
-  def verify(%__MODULE__{} = profile, admin_id) when is_binary(admin_id) do
+  @spec verify(t(), String.t() | nil) :: {:ok, t()}
+  def verify(%__MODULE__{} = profile, admin_id) when is_binary(admin_id) or is_nil(admin_id) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     {:ok, %{profile | verified: true, verified_at: now, verified_by_id: admin_id, updated_at: now}}
