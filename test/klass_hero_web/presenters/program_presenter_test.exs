@@ -3,14 +3,13 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
 
   import ExUnit.CaptureLog
 
-  alias KlassHero.ProgramCatalog.Instructor
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Shared.Categories
   alias KlassHeroWeb.Presenters.ProgramPresenter
 
-  describe "to_table_view/1" do
-    test "program without instructor returns nil assigned_staff and nil enrollment fields" do
-      program = build_program(%{instructor: nil})
+  describe "to_table_view/3" do
+    test "no lead returns nil assigned_staff and nil enrollment fields" do
+      program = build_program(%{})
 
       result = ProgramPresenter.to_table_view(program)
 
@@ -30,16 +29,12 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result.capacity == 20
     end
 
-    test "program with instructor populates assigned_staff" do
-      instructor = %Instructor{
-        id: "instr-1",
-        name: "John Doe",
-        headshot_url: "https://example.com/photo.jpg"
-      }
+    test "the lead instructor (3rd arg) populates assigned_staff" do
+      lead = %{id: "instr-1", name: "John Doe", headshot_url: "https://example.com/photo.jpg"}
 
-      program = build_program(%{instructor: instructor})
+      program = build_program(%{})
 
-      result = ProgramPresenter.to_table_view(program)
+      result = ProgramPresenter.to_table_view(program, %{}, lead)
 
       assert result.assigned_staff.id == "instr-1"
       assert result.assigned_staff.name == "John Doe"
@@ -64,24 +59,24 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
     end
 
     test "builds two-letter initials from two-word name" do
-      instructor = %Instructor{id: "1", name: "John Doe", headshot_url: nil}
-      program = build_program(%{instructor: instructor})
+      lead = %{id: "1", name: "John Doe", headshot_url: nil}
+      program = build_program(%{})
 
-      assert ProgramPresenter.to_table_view(program).assigned_staff.initials == "JD"
+      assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == "JD"
     end
 
     test "builds single-letter initial from single-word name" do
-      instructor = %Instructor{id: "1", name: "Madonna", headshot_url: nil}
-      program = build_program(%{instructor: instructor})
+      lead = %{id: "1", name: "Madonna", headshot_url: nil}
+      program = build_program(%{})
 
-      assert ProgramPresenter.to_table_view(program).assigned_staff.initials == "M"
+      assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == "M"
     end
 
     test "takes only first two initials from three-word name" do
-      instructor = %Instructor{id: "1", name: "Mary Jane Watson", headshot_url: nil}
-      program = build_program(%{instructor: instructor})
+      lead = %{id: "1", name: "Mary Jane Watson", headshot_url: nil}
+      program = build_program(%{})
 
-      assert ProgramPresenter.to_table_view(program).assigned_staff.initials == "MJ"
+      assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == "MJ"
     end
 
     test "maps program id, name, category, and capacity" do
@@ -444,7 +439,6 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       description: "A test program",
       category: "arts",
       price: Decimal.new("50.00"),
-      instructor: nil,
       meeting_days: [],
       meeting_start_time: nil,
       meeting_end_time: nil,

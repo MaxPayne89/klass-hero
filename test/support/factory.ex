@@ -130,8 +130,6 @@ defmodule KlassHero.Factory do
       pricing_period: "per month",
       location: nil,
       cover_image_url: nil,
-      instructor_name: nil,
-      instructor_headshot_url: nil,
       start_date: nil,
       end_date: nil,
       meeting_days: ["Monday", "Wednesday", "Friday"],
