@@ -49,24 +49,20 @@ defmodule KlassHero.Provider.VettingCase do
 
   @doc """
   Insert changeset for a freshly built case (from `new_for_track/2`), persisting the
-  case and its frozen steps in one write via `cast_assoc`.
+  case and its frozen steps in one write. Uses `put_assoc` because the steps are
+  already-built structs, not param maps.
   """
   def create_changeset(%__MODULE__{} = case_) do
-    case_
-    |> change(%{})
-    |> cast_assoc(:steps, with: &VerificationStep.changeset/2)
-    |> foreign_key_constraint(:provider_id)
+    %__MODULE__{}
+    |> change(%{
+      id: case_.id,
+      provider_id: case_.provider_id,
+      entity_type: case_.entity_type,
+      lifecycle: case_.lifecycle
+    })
+    |> put_assoc(:steps, case_.steps)
     |> unique_constraint(:provider_id)
-  end
-
-  @doc """
-  Update changeset persisting the aggregate's current steps back to an already-loaded
-  case. `on_replace: :delete` + matching step ids make `cast_assoc` update in place.
-  """
-  def update_changeset(%__MODULE__{} = case_, %__MODULE__{} = updated) do
-    case_
-    |> change(%{lifecycle: updated.lifecycle})
-    |> put_assoc(:steps, updated.steps)
+    |> foreign_key_constraint(:provider_id)
   end
 
   @doc """

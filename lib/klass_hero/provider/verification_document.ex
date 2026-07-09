@@ -27,6 +27,7 @@ defmodule KlassHero.Provider.VerificationDocument do
   # flattened KlassHero.Provider.ProviderProfile in Slice 5.
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.Types.DocumentType
+  alias KlassHero.Provider.Vetting
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -71,6 +72,21 @@ defmodule KlassHero.Provider.VerificationDocument do
   @doc "Returns the list of valid document types."
   @spec valid_document_types() :: [atom()]
   def valid_document_types, do: @document_types
+
+  @doc """
+  Returns the document-type strings consumed by the given vetting track's document
+  steps, in track order. Single-sources the per-track whitelist from the engine
+  catalog so a new document step is picked up automatically.
+  """
+  @spec valid_document_types(:individual | :business) :: [String.t()]
+  def valid_document_types(entity_type) do
+    entity_type
+    |> Vetting.track()
+    |> Enum.flat_map(fn
+      %{completed_via: {:document, type}} -> [type]
+      _ -> []
+    end)
+  end
 
   @doc """
   Changeset for inserting a verification document.

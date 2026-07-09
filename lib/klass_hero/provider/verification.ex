@@ -218,7 +218,14 @@ defmodule KlassHero.Provider.Verification do
       event_name,
       doc.id,
       :verification_document,
-      %{provider_id: doc.provider_profile_id, reviewer_id: reviewer_id}
+      %{
+        provider_id: doc.provider_profile_id,
+        reviewer_id: reviewer_id,
+        # document_type as a string matches the step catalog's `{:document, type}`
+        # form; document_id becomes the approved step's evidence_ref.
+        document_type: to_string(doc.document_type),
+        document_id: doc.id
+      }
     )
     |> EventDispatchHelper.dispatch(KlassHero.Provider)
   end
