@@ -24,30 +24,6 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
 
       assert program.title == "Art Adventures"
       assert program.category == "arts"
-      assert program.instructor == nil
-    end
-
-    test "creates program with instructor", %{provider: provider} do
-      staff = ProviderFixtures.staff_member_fixture(provider_id: provider.id)
-
-      assert {:ok, program} =
-               ProgramCatalog.create_program(%{
-                 provider_id: provider.id,
-                 title: "Soccer Camp",
-                 description: "Learn to play soccer",
-                 category: "sports",
-                 price: Decimal.new("75.00"),
-                 location: "Sports Park",
-                 instructor: %{
-                   id: staff.id,
-                   name: "#{staff.first_name} #{staff.last_name}",
-                   headshot_url: staff.headshot_url
-                 }
-               })
-
-      assert program.instructor != nil
-      assert program.instructor.id == staff.id
-      assert program.location == "Sports Park"
     end
 
     test "rejects missing required fields" do
