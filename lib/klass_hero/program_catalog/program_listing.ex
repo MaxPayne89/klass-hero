@@ -23,8 +23,6 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
     field :pricing_period, :string
     field :location, :string
     field :cover_image_url, :string
-    field :instructor_name, :string
-    field :instructor_headshot_url, :string
     field :start_date, :date
     field :end_date, :date
     field :meeting_days, {:array, :string}, default: []
@@ -49,8 +47,6 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
           pricing_period: String.t() | nil,
           location: String.t() | nil,
           cover_image_url: String.t() | nil,
-          instructor_name: String.t() | nil,
-          instructor_headshot_url: String.t() | nil,
           start_date: Date.t() | nil,
           end_date: Date.t() | nil,
           meeting_days: [String.t()],

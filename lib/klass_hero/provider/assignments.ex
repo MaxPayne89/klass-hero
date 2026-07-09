@@ -11,6 +11,7 @@ defmodule KlassHero.Provider.Assignments do
 
   import Ecto.Query, warn: false
 
+  alias Ecto.Multi
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.ProgramStaffAssignment
@@ -135,6 +136,135 @@ defmodule KlassHero.Provider.Assignments do
     active_assignments_query()
     |> where([a], a.staff_member_id == ^staff_member_id)
     |> Repo.all()
+  end
+
+  @doc """
+  Promotes a staff member to the program's lead instructor — the single source
+  of truth for "the lead" (replaces the old `programs.instructor_*` snapshot).
+
+  Idempotent and transactional: any previous lead on the program is cleared and
+  the target assignment is flagged lead in one transaction, so the
+  `program_staff_assignments_single_lead` partial unique index is never violated
+  mid-flight. Creates an active assignment when the staff member has none yet.
+
+  Returns `{:ok, ProgramStaffAssignment.t()}` or `{:error, :not_found}` when the
+  staff member does not exist.
+  """
+  @spec set_lead_instructor(String.t(), String.t()) ::
+          {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | term()}
+  def set_lead_instructor(program_id, staff_member_id) when is_binary(program_id) and is_binary(staff_member_id) do
+    context_span entity: "program_staff_assignment" do
+      # Existence check up front so a missing staff member short-circuits before
+      # the transaction; provider_id is immutable so reusing it inside is safe.
+      with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id) do
+        Multi.new()
+        |> Multi.update_all(:clear_other_leads, other_active_leads_query(program_id, staff_member_id),
+          set: [is_lead_instructor: false]
+        )
+        |> Multi.run(:lead, fn repo, _ -> upsert_lead(repo, program_id, staff_member) end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{lead: lead}} -> {:ok, lead}
+          {:error, _step, reason, _changes} -> {:error, reason}
+        end
+      end
+    end
+  end
+
+  @doc """
+  Clears the program's lead instructor, leaving the assignment otherwise active.
+  No-op when the program has no lead.
+  """
+  @spec clear_lead_instructor(String.t()) :: :ok
+  def clear_lead_instructor(program_id) when is_binary(program_id) do
+    active_leads_query(program_id)
+    |> Repo.update_all(set: [is_lead_instructor: false])
+
+    :ok
+  end
+
+  @doc """
+  Returns the program's lead instructor as a display map
+  (`%{id, name, headshot_url}`), or `nil` when there is no lead.
+  """
+  @spec get_lead_instructor(String.t()) :: %{id: String.t(), name: String.t(), headshot_url: String.t() | nil} | nil
+  def get_lead_instructor(program_id) when is_binary(program_id) do
+    lead_staff_query()
+    |> where([_s, a], a.program_id == ^program_id)
+    |> select([s, _a], s)
+    |> Repo.one()
+    |> to_lead_map()
+  end
+
+  @doc """
+  Batch lead-instructor read keyed by `program_id`, for list views that would
+  otherwise N+1. Programs without a lead are omitted from the map.
+  """
+  @spec list_lead_instructors_for_programs([String.t()]) :: %{optional(String.t()) => map()}
+  def list_lead_instructors_for_programs([]), do: %{}
+
+  def list_lead_instructors_for_programs(program_ids) when is_list(program_ids) do
+    lead_staff_query()
+    |> where([_s, a], a.program_id in ^program_ids)
+    |> select([s, a], {a.program_id, s})
+    |> Repo.all()
+    |> Map.new(fn {program_id, staff} -> {program_id, to_lead_map(staff)} end)
+  end
+
+  # Active lead assignment(s) for a program (should be at most one via the index).
+  defp active_leads_query(program_id) do
+    from a in ProgramStaffAssignment,
+      where: a.program_id == ^program_id and a.is_lead_instructor and is_nil(a.unassigned_at)
+  end
+
+  # Active leads for the program EXCEPT the incoming staff member — cleared first
+  # so promoting a new lead never collides with the partial unique index.
+  defp other_active_leads_query(program_id, staff_member_id) do
+    from a in active_leads_query(program_id),
+      where: a.staff_member_id != ^staff_member_id
+  end
+
+  # Staff joined to their active lead assignment; callers narrow by program and
+  # add their own select (single-record vs {program_id, staff} batch).
+  defp lead_staff_query do
+    from s in StaffMember,
+      join: a in ProgramStaffAssignment,
+      on: a.staff_member_id == s.id,
+      where: a.is_lead_instructor and is_nil(a.unassigned_at)
+  end
+
+  defp upsert_lead(repo, program_id, staff_member) do
+    case repo.one(active_assignment_scope(program_id, staff_member.id)) do
+      nil ->
+        %ProgramStaffAssignment{}
+        |> ProgramStaffAssignment.create_changeset(%{
+          provider_id: staff_member.provider_id,
+          program_id: program_id,
+          staff_member_id: staff_member.id,
+          assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
+          is_lead_instructor: true
+        })
+        |> repo.insert()
+
+      assignment ->
+        assignment
+        |> ProgramStaffAssignment.lead_changeset(true)
+        |> repo.update()
+    end
+  end
+
+  # The single active (program, staff) assignment, if one exists.
+  defp active_assignment_scope(program_id, staff_member_id) do
+    from a in ProgramStaffAssignment,
+      where:
+        a.program_id == ^program_id and a.staff_member_id == ^staff_member_id and
+          is_nil(a.unassigned_at)
+  end
+
+  defp to_lead_map(nil), do: nil
+
+  defp to_lead_map(%StaffMember{} = staff) do
+    %{id: staff.id, name: StaffMember.full_name(staff), headshot_url: staff.headshot_url}
   end
 
   # Dispatches the domain event on the Provider bus. PromoteIntegrationEvents

@@ -60,8 +60,6 @@ defmodule KlassHero.ProgramCatalog do
   @spec create_program(map()) :: {:ok, Program.t()} | {:error, Ecto.Changeset.t()}
   def create_program(attrs) when is_map(attrs) do
     context_span entity: "program" do
-      attrs = flatten_instructor_attrs(attrs)
-
       %Program{}
       |> Program.create_changeset(attrs)
       |> Repo.insert()
@@ -92,14 +90,12 @@ defmodule KlassHero.ProgramCatalog do
           {:ok, Program.t()} | {:error, :not_found | :stale_data | Ecto.Changeset.t()}
   def update_program(provider_id, id, changes) when is_binary(provider_id) and is_binary(id) and is_map(changes) do
     context_span entity: "program" do
-      attrs = flatten_instructor_attrs(changes)
-
       # Ownership guard (IDOR): a program owned by another provider is
       # indistinguishable from a missing one — both return :not_found so an
       # attacker can't probe for existence by enumerating ids.
       case fetch_program(id) do
         %Program{provider_id: ^provider_id} = current ->
-          do_update_program(current, attrs, Program.load_value_objects(current))
+          do_update_program(current, changes, Program.load_value_objects(current))
 
         _nil_or_foreign ->
           {:error, :not_found}
@@ -345,37 +341,12 @@ defmodule KlassHero.ProgramCatalog do
     )
   end
 
-  # Nested instructor map (from the web form / staff lookup) → flat columns the
-  # changeset persists. Accepts atom- or string-keyed attrs.
-  defp flatten_instructor_attrs(%{instructor: %{} = instructor} = attrs) do
-    attrs
-    |> Map.delete(:instructor)
-    |> Map.put(:instructor_id, instructor_field(instructor, :id))
-    |> Map.put(:instructor_name, instructor_field(instructor, :name))
-    |> Map.put(:instructor_headshot_url, instructor_field(instructor, :headshot_url))
-  end
-
-  defp flatten_instructor_attrs(%{"instructor" => %{} = instructor} = attrs) do
-    attrs
-    |> Map.delete("instructor")
-    |> Map.put("instructor_id", instructor_field(instructor, :id))
-    |> Map.put("instructor_name", instructor_field(instructor, :name))
-    |> Map.put("instructor_headshot_url", instructor_field(instructor, :headshot_url))
-  end
-
-  defp flatten_instructor_attrs(attrs), do: attrs
-
-  defp instructor_field(instructor, key) do
-    Map.get(instructor, key) || Map.get(instructor, to_string(key))
-  end
-
   defp dispatch_program_created(program) do
     program.id
     |> ProgramEvents.program_created(%{
       provider_id: program.provider_id,
       title: program.title,
       category: program.category,
-      instructor_id: program.instructor_id,
       meeting_days: program.meeting_days,
       meeting_start_time: program.meeting_start_time,
       meeting_end_time: program.meeting_end_time,
@@ -403,8 +374,7 @@ defmodule KlassHero.ProgramCatalog do
       meeting_start_time: program.meeting_start_time,
       meeting_end_time: program.meeting_end_time,
       registration_start_date: program.registration_start_date,
-      registration_end_date: program.registration_end_date,
-      instructor: instructor_payload(program)
+      registration_end_date: program.registration_end_date
     })
     |> dispatch("program_updated", program.id)
   end
@@ -427,12 +397,6 @@ defmodule KlassHero.ProgramCatalog do
       })
       |> dispatch("program_schedule_updated", updated.id)
     end
-  end
-
-  defp instructor_payload(%{instructor_id: nil}), do: nil
-
-  defp instructor_payload(program) do
-    %{name: program.instructor_name, headshot_url: program.instructor_headshot_url}
   end
 
   # Fire-and-forget: dispatch failures are logged but never roll back the write.

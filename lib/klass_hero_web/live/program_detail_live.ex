@@ -41,8 +41,8 @@ defmodule KlassHeroWeb.ProgramDetailLive do
             load_provider_profile(program.provider_id)
           end)
 
-        staff_members =
-          TaskHelpers.safe_await(team_task, [], label: "ProgramDetailLive.staff_members")
+        team =
+          TaskHelpers.safe_await(team_task, %{staff: [], lead_id: nil}, label: "ProgramDetailLive.staff_members")
 
         participant_policy =
           TaskHelpers.safe_await(policy_task, nil, label: "ProgramDetailLive.participant_policy")
@@ -50,7 +50,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         provider_profile =
           TaskHelpers.safe_await(provider_task, nil, label: "ProgramDetailLive.provider_profile")
 
-        hero_cards = HeroCardsPresenter.for_program(program.instructor, staff_members)
+        hero_cards = HeroCardsPresenter.for_program(team.staff, team.lead_id)
 
         socket =
           socket
@@ -110,7 +110,15 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   end
 
   defp load_team_members(program_id) when is_binary(program_id) do
-    Provider.list_active_staff_for_program(program_id)
+    staff = Provider.list_active_staff_for_program(program_id)
+
+    lead_id =
+      case Provider.get_lead_instructor(program_id) do
+        %{id: id} -> id
+        nil -> nil
+      end
+
+    %{staff: staff, lead_id: lead_id}
   end
 
   defp load_provider_profile(nil), do: nil

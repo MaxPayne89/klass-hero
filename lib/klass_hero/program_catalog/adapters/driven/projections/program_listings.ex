@@ -48,8 +48,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     :pricing_period,
     :location,
     :cover_image_url,
-    :instructor_name,
-    :instructor_headshot_url,
     :start_date,
     :end_date,
     :meeting_days,
@@ -71,8 +69,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     :pricing_period,
     :location,
     :cover_image_url,
-    :instructor_name,
-    :instructor_headshot_url,
     :start_date,
     :end_date,
     :meeting_days,
@@ -139,8 +135,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       pricing_period: Map.get(payload, :pricing_period),
       location: Map.get(payload, :location),
       cover_image_url: Map.get(payload, :cover_image_url),
-      instructor_name: extract_instructor_name(payload),
-      instructor_headshot_url: extract_instructor_headshot_url(payload),
       start_date: Map.get(payload, :start_date),
       end_date: Map.get(payload, :end_date),
       meeting_days: Map.get(payload, :meeting_days, []),
@@ -178,8 +172,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       pricing_period: Map.get(payload, :pricing_period),
       location: Map.get(payload, :location),
       cover_image_url: Map.get(payload, :cover_image_url),
-      instructor_name: extract_instructor_name(payload),
-      instructor_headshot_url: extract_instructor_headshot_url(payload),
       start_date: Map.get(payload, :start_date),
       end_date: Map.get(payload, :end_date),
       meeting_days: Map.get(payload, :meeting_days, []),
@@ -222,22 +214,5 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       )
 
       false
-  end
-
-  # program_created uses flat fields; program_updated uses a nested instructor map.
-  defp extract_instructor_name(payload) do
-    case Map.get(payload, :instructor) do
-      %{name: name} -> name
-      nil -> Map.get(payload, :instructor_name)
-      _ -> nil
-    end
-  end
-
-  defp extract_instructor_headshot_url(payload) do
-    case Map.get(payload, :instructor) do
-      %{headshot_url: url} -> url
-      nil -> Map.get(payload, :instructor_headshot_url)
-      _ -> nil
-    end
   end
 end

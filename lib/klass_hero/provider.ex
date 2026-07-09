@@ -199,6 +199,18 @@ defmodule KlassHero.Provider do
   @doc "Lists all active program assignments for a staff member."
   defdelegate list_active_assignments_for_staff_member(staff_member_id), to: Assignments
 
+  @doc "Promotes a staff member to the program's lead instructor (single source of truth)."
+  defdelegate set_lead_instructor(program_id, staff_member_id), to: Assignments
+
+  @doc "Clears the program's lead instructor, leaving the assignment active."
+  defdelegate clear_lead_instructor(program_id), to: Assignments
+
+  @doc "Returns the program's lead instructor as a `%{id, name, headshot_url}` map, or nil."
+  defdelegate get_lead_instructor(program_id), to: Assignments
+
+  @doc "Batch lead-instructor read keyed by program_id (avoids N+1 in list views)."
+  defdelegate list_lead_instructors_for_programs(program_ids), to: Assignments
+
   # --- Programs & sessions -------------------------------------------------
 
   @doc "Returns the total completed session count across all programs for a provider."
