@@ -10,7 +10,7 @@ defmodule KlassHero.ProgramCatalog.Program do
   exposed as the nested `registration_period` value object (`%RegistrationPeriod{}`),
   populated by `load_value_objects/1` after a read. The lead instructor is NOT held
   here — it is the single source of truth on `program_staff_assignments`
-  (`is_lead_instructor`), read via the `Provider` facade (see ADR 0007).
+  (`is_lead_instructor`), read via the `Provider` facade (see ADR 0008).
   """
 
   use Ecto.Schema
