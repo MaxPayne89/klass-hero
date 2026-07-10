@@ -25,8 +25,11 @@ defmodule KlassHeroWeb.Presenters.HeroCardsPresenterTest do
   # their ids OR nil OR an id absent from the list — the three shapes the presenter
   # must handle.
   defp staff_and_lead do
+    # `integer(1..1_000)` (not `positive_integer()`): a bounded domain is size-independent, so
+    # `uniq_list_of` can always find up to 6 distinct values. `positive_integer()` draws from
+    # `1..size`, which on small early sizes starves uniqueness and raises TooManyDuplicatesError.
     gen all(
-          raw_ids <- uniq_list_of(positive_integer(), min_length: 1, max_length: 6),
+          raw_ids <- uniq_list_of(integer(1..1_000), min_length: 1, max_length: 6),
           lead <- member_of([nil, "absent-id" | Enum.map(raw_ids, &"staff-#{&1}")])
         ) do
       staff_members =
