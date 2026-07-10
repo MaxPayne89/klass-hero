@@ -263,7 +263,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       assert has_element?(view, "h3", "Meet the Heroes")
     end
 
-    test "program with assigned instructor (no staff assignments) renders Lead Instructor card",
+    test "lead-flagged assignment (only staff) renders Lead Instructor card",
          %{conn: conn} do
       provider = provider_profile_fixture()
 
@@ -275,42 +275,31 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
         )
 
       program =
-        insert(:program_schema,
-          provider_id: provider.id,
-          title: "Music for Kids",
-          instructor_id: instructor.id,
-          instructor_name: "Dr. Strange",
-          instructor_headshot_url: nil
-        )
+        insert(:program_schema, provider_id: provider.id, title: "Music for Kids")
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: instructor.id,
+        is_lead_instructor: true
+      )
 
       {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
 
-      assert has_element?(view, "#hero-card-instructor-#{instructor.id}")
+      assert has_element?(view, "#hero-card-staff-#{instructor.id}")
       assert html =~ "Dr. Strange"
       assert html =~ "Lead Instructor"
       assert has_element?(view, "h3", "Meet the Hero")
     end
 
-    test "program with instructor and staff renders instructor first", %{conn: conn} do
+    test "renders the lead card before other staff, regardless of assignment order",
+         %{conn: conn} do
       provider = provider_profile_fixture()
 
-      instructor =
-        staff_member_fixture(
-          provider_id: provider.id,
-          first_name: "Marie",
-          last_name: "Curie"
-        )
+      lead =
+        staff_member_fixture(provider_id: provider.id, first_name: "Marie", last_name: "Curie")
 
-      program =
-        insert(:program_schema,
-          provider_id: provider.id,
-          title: "Combined Camp",
-          instructor_id: instructor.id,
-          instructor_name: "Marie Curie",
-          instructor_headshot_url: nil
-        )
-
-      staff =
+      assistant =
         staff_member_fixture(
           provider_id: provider.id,
           first_name: "Coach",
@@ -318,25 +307,38 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
           role: "Assistant"
         )
 
+      program =
+        insert(:program_schema, provider_id: provider.id, title: "Combined Camp")
+
+      # Assign the assistant first (earlier assigned_at) to prove ordering is
+      # lead-first, not assignment order.
       insert(:program_staff_assignment_schema,
         provider_id: provider.id,
         program_id: program.id,
-        staff_member_id: staff.id
+        staff_member_id: assistant.id
+      )
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: lead.id,
+        is_lead_instructor: true
       )
 
       {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
 
-      assert has_element?(view, "#hero-card-instructor-#{instructor.id}")
-      assert has_element?(view, "#hero-card-staff-#{staff.id}")
+      assert has_element?(view, "#hero-card-staff-#{lead.id}")
+      assert has_element?(view, "#hero-card-staff-#{assistant.id}")
 
-      instructor_pos = :binary.match(html, "hero-card-instructor-#{instructor.id}") |> elem(0)
-      staff_pos = :binary.match(html, "hero-card-staff-#{staff.id}") |> elem(0)
+      lead_pos = :binary.match(html, "hero-card-staff-#{lead.id}") |> elem(0)
+      assistant_pos = :binary.match(html, "hero-card-staff-#{assistant.id}") |> elem(0)
 
-      assert instructor_pos < staff_pos,
-             "expected instructor card to render before staff card; got instructor at #{instructor_pos}, staff at #{staff_pos}"
+      assert lead_pos < assistant_pos,
+             "expected lead card to render before other staff; got lead at #{lead_pos}, assistant at #{assistant_pos}"
     end
 
-    test "instructor who is also an assigned staff renders one merged card", %{conn: conn} do
+    test "lead instructor card shows the staff member's rich fields with the badge",
+         %{conn: conn} do
       provider = provider_profile_fixture()
 
       lead =
@@ -348,29 +350,21 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
           bio: "10 years experience"
         )
 
-      program =
-        insert(:program_schema,
-          provider_id: provider.id,
-          instructor_id: lead.id,
-          instructor_name: "Alice Lead",
-          instructor_headshot_url: nil
-        )
+      program = insert(:program_schema, provider_id: provider.id)
 
       insert(:program_staff_assignment_schema,
         provider_id: provider.id,
         program_id: program.id,
-        staff_member_id: lead.id
+        staff_member_id: lead.id,
+        is_lead_instructor: true
       )
 
       {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
 
       assert has_element?(view, "#hero-card-staff-#{lead.id}")
-      refute has_element?(view, "#hero-card-instructor-#{lead.id}")
-
       assert html =~ "Head Coach"
       assert html =~ "10 years experience"
       assert html =~ "Lead Instructor"
-
       assert has_element?(view, "h3", "Meet the Hero")
     end
 

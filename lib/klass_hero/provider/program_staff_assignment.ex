@@ -26,6 +26,7 @@ defmodule KlassHero.Provider.ProgramStaffAssignment do
     field :program_id, :binary_id
     field :assigned_at, :utc_datetime_usec
     field :unassigned_at, :utc_datetime_usec
+    field :is_lead_instructor, :boolean, default: false
 
     timestamps()
   end
@@ -33,7 +34,7 @@ defmodule KlassHero.Provider.ProgramStaffAssignment do
   @type t :: %__MODULE__{}
 
   @castable_fields ~w(program_id assigned_at)a
-  @optional_fields ~w(unassigned_at)a
+  @optional_fields ~w(unassigned_at is_lead_instructor)a
 
   @doc """
   Changeset for creating a new program staff assignment.
@@ -66,8 +67,29 @@ defmodule KlassHero.Provider.ProgramStaffAssignment do
     change(schema, %{unassigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)})
   end
 
+  @doc """
+  Changeset toggling the lead-instructor flag on an existing assignment.
+
+  Carries the partial unique constraint so promoting a second staff member to
+  lead before the previous lead is cleared surfaces as a changeset error rather
+  than a raw DB exception.
+  """
+  def lead_changeset(schema, is_lead?) when is_boolean(is_lead?) do
+    schema
+    |> change(%{is_lead_instructor: is_lead?})
+    |> unique_constraint(:program_id,
+      name: :program_staff_assignments_single_lead,
+      message: "program already has a lead instructor"
+    )
+  end
+
   @doc "Returns true when the assignment is still active (never unassigned)."
   @spec active?(t()) :: boolean()
   def active?(%__MODULE__{unassigned_at: nil}), do: true
   def active?(%__MODULE__{}), do: false
+
+  @doc "Returns true when the assignment is the program's active lead instructor."
+  @spec lead?(t()) :: boolean()
+  def lead?(%__MODULE__{is_lead_instructor: true, unassigned_at: nil}), do: true
+  def lead?(%__MODULE__{}), do: false
 end

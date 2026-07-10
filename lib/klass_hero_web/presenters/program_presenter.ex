@@ -13,35 +13,33 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   @doc """
   Table view for the provider dashboard. `status` is a placeholder (tracking not yet implemented).
+
+  `lead` is the program's lead instructor as a `%{id, name, headshot_url}` map (or
+  `nil`), read by the caller from `Provider.get_lead_instructor/1` or the batch
+  `Provider.list_lead_instructors_for_programs/1` — the single source of truth now
+  lives on `program_staff_assignments`, not a denormalized program snapshot.
   """
-  @spec to_table_view(Program.t() | ProgramListing.t(), map()) :: map()
-  def to_table_view(program, enrollment_data \\ %{})
+  @spec to_table_view(Program.t() | ProgramListing.t(), map(), map() | nil) :: map()
+  def to_table_view(program, enrollment_data \\ %{}, lead \\ nil)
 
-  def to_table_view(%Program{} = program, enrollment_data) do
-    data = Map.get(enrollment_data, program.id, %{})
-
-    %{
-      id: program.id,
-      name: program.title,
-      category: humanize_category(program.category),
-      price: format_price(program.price),
-      assigned_staff: format_instructor(program.instructor),
-      status: :active,
-      enrolled: Map.get(data, :enrolled),
-      capacity: Map.get(data, :capacity)
-    }
+  def to_table_view(%Program{} = program, enrollment_data, lead) do
+    to_table_row(program.id, program.title, program.category, program.price, enrollment_data, lead)
   end
 
-  # ProgramListing is a flat read-model DTO (no nested instructor struct).
-  def to_table_view(%ProgramListing{} = listing, enrollment_data) do
-    data = Map.get(enrollment_data, listing.id, %{})
+  # ProgramListing is a flat read-model DTO used by other list surfaces.
+  def to_table_view(%ProgramListing{} = listing, enrollment_data, lead) do
+    to_table_row(listing.id, listing.title, listing.category, listing.price, enrollment_data, lead)
+  end
+
+  defp to_table_row(id, title, category, price, enrollment_data, lead) do
+    data = Map.get(enrollment_data, id, %{})
 
     %{
-      id: listing.id,
-      name: listing.title,
-      category: humanize_category(listing.category),
-      price: format_price(listing.price),
-      assigned_staff: format_listing_instructor(listing),
+      id: id,
+      name: title,
+      category: humanize_category(category),
+      price: format_price(price),
+      assigned_staff: format_lead(lead),
       status: :active,
       enrolled: Map.get(data, :enrolled),
       capacity: Map.get(data, :capacity)
@@ -247,26 +245,16 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   defp format_price(nil), do: "0.00"
   defp format_price(price), do: price |> Decimal.round(2) |> Decimal.to_string()
 
-  defp format_instructor(nil), do: nil
+  # Lead instructor (single source of truth on program_staff_assignments), shaped
+  # for the dashboard table avatar/name. `initials` is derived here for display.
+  defp format_lead(nil), do: nil
 
-  defp format_instructor(instructor) do
+  defp format_lead(%{id: id, name: name, headshot_url: headshot_url}) do
     %{
-      id: instructor.id,
-      name: instructor.name,
-      initials: NameUtils.initials_from_name(instructor.name),
-      headshot_url: instructor.headshot_url
-    }
-  end
-
-  # ProgramListing denormalizes instructor as flat fields; build same shape map for UI.
-  defp format_listing_instructor(%ProgramListing{instructor_name: nil}), do: nil
-
-  defp format_listing_instructor(%ProgramListing{} = listing) do
-    %{
-      id: nil,
-      name: listing.instructor_name,
-      initials: NameUtils.initials_from_name(listing.instructor_name),
-      headshot_url: listing.instructor_headshot_url
+      id: id,
+      name: name,
+      initials: NameUtils.initials_from_name(name),
+      headshot_url: headshot_url
     }
   end
 

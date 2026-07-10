@@ -234,11 +234,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
             meeting_end_time: ~T[18:00:00],
             season: "Spring 2026",
             registration_start_date: ~D[2026-02-01],
-            registration_end_date: ~D[2026-02-28],
-            instructor: %{
-              name: "Coach Smith",
-              headshot_url: "https://example.com/coach.jpg"
-            }
+            registration_end_date: ~D[2026-02-28]
           }
         )
 
@@ -268,8 +264,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing.season == "Spring 2026"
       assert listing.registration_start_date == ~D[2026-02-01]
       assert listing.registration_end_date == ~D[2026-02-28]
-      assert listing.instructor_name == "Coach Smith"
-      assert listing.instructor_headshot_url == "https://example.com/coach.jpg"
     end
 
     test "creates new listing when program_id has no pre-existing row (upsert)" do

@@ -103,6 +103,12 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
 
       refute has_element?(view, "#program-form")
       assert render(view) =~ "Program created successfully."
+
+      # The picked instructor is persisted as the lead on program_staff_assignments
+      # (single source of truth), not a program snapshot.
+      program = KlassHero.Repo.get_by!(Program, title: "Soccer Camp")
+      assert %{id: staff_id} = KlassHero.Provider.get_lead_instructor(program.id)
+      assert staff_id == staff.id
     end
 
     test "closes form on cancel", %{conn: conn} do

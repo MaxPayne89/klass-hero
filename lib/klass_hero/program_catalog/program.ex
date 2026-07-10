@@ -6,10 +6,11 @@ defmodule KlassHero.ProgramCatalog.Program do
   lives in the changesets (the single gatekeeper); pure, side-effect-free helpers
   make up the functional core. All persistence happens in `KlassHero.ProgramCatalog`.
 
-  Instructor and registration window are denormalized into flat columns
-  (`instructor_*`, `registration_*`). They are exposed to consumers as the nested
-  value objects `instructor` (`%Instructor{}`) and `registration_period`
-  (`%RegistrationPeriod{}`), populated by `load_value_objects/1` after a read.
+  The registration window is denormalized into flat columns (`registration_*`) and
+  exposed as the nested `registration_period` value object (`%RegistrationPeriod{}`),
+  populated by `load_value_objects/1` after a read. The lead instructor is NOT held
+  here — it is the single source of truth on `program_staff_assignments`
+  (`is_lead_instructor`), read via the `Provider` facade (see ADR 0008).
   """
 
   use Ecto.Schema
@@ -17,10 +18,7 @@ defmodule KlassHero.ProgramCatalog.Program do
   import Ecto.Changeset
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramCategories
-  alias KlassHero.ProgramCatalog.Instructor
   alias KlassHero.ProgramCatalog.RegistrationPeriod
-
-  require Logger
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -45,15 +43,11 @@ defmodule KlassHero.ProgramCatalog.Program do
     field :location, :string
     field :cover_image_url, :string
     field :origin, Ecto.Enum, values: [:self_posted, :business_assigned], default: :self_posted
-    field :instructor_id, :binary_id
-    field :instructor_name, :string
-    field :instructor_headshot_url, :string
     # Free-text label for academic season grouping (e.g. "School Name 24/25: Semester 2").
     field :season, :string
 
-    # Nested value objects assembled from the flat columns above by
+    # Nested value object assembled from the flat columns above by
     # load_value_objects/1; never persisted directly.
-    field :instructor, :any, virtual: true
     field :registration_period, :any, virtual: true
 
     timestamps()
@@ -79,11 +73,7 @@ defmodule KlassHero.ProgramCatalog.Program do
           location: String.t() | nil,
           cover_image_url: String.t() | nil,
           origin: :self_posted | :business_assigned | nil,
-          instructor_id: Ecto.UUID.t() | nil,
-          instructor_name: String.t() | nil,
-          instructor_headshot_url: String.t() | nil,
           season: String.t() | nil,
-          instructor: Instructor.t() | nil,
           registration_period: RegistrationPeriod.t() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
@@ -91,8 +81,8 @@ defmodule KlassHero.ProgramCatalog.Program do
 
   @doc """
   Changeset for creating a program. Schedule, age_range, and pricing_period are
-  optional; provider/instructor/origin fields are set server-side (bypassing
-  `cast`) to prevent form-param injection.
+  optional; provider/origin fields are set server-side (bypassing `cast`) to
+  prevent form-param injection.
   """
   @spec create_changeset(t(), map()) :: Ecto.Changeset.t()
   def create_changeset(program, attrs) do
@@ -114,16 +104,12 @@ defmodule KlassHero.ProgramCatalog.Program do
     ])
     |> maybe_put_change(:provider_id, attrs)
     |> maybe_put_change(:cover_image_url, attrs)
-    |> maybe_put_change(:instructor_id, attrs)
-    |> maybe_put_change(:instructor_name, attrs)
-    |> maybe_put_change(:instructor_headshot_url, attrs)
     |> maybe_put_change(:origin, attrs)
     |> validate_required([:title, :description, :category, :price, :provider_id])
     |> validate_length(:title, min: 1, max: 100)
     |> validate_length(:description, min: 1, max: 500)
     |> validate_length(:location, max: 255)
     |> validate_length(:cover_image_url, max: 500)
-    |> validate_length(:instructor_name, max: 200)
     |> validate_length(:season, max: 255)
     |> validate_inclusion(:category, ProgramCategories.program_categories())
     |> validate_number(:price, greater_than_or_equal_to: 0)
@@ -132,7 +118,6 @@ defmodule KlassHero.ProgramCatalog.Program do
     |> validate_date_range()
     |> validate_registration_date_range()
     |> foreign_key_constraint(:provider_id)
-    |> foreign_key_constraint(:instructor_id)
   end
 
   @doc """
@@ -152,9 +137,6 @@ defmodule KlassHero.ProgramCatalog.Program do
       :end_date,
       :location,
       :cover_image_url,
-      :instructor_id,
-      :instructor_name,
-      :instructor_headshot_url,
       :meeting_days,
       :meeting_start_time,
       :meeting_end_time,
@@ -179,16 +161,12 @@ defmodule KlassHero.ProgramCatalog.Program do
   end
 
   @doc """
-  Populates the nested `instructor` and `registration_period` value objects from
-  the flat columns of a freshly-loaded program. Pure — call after every read.
+  Populates the nested `registration_period` value object from the flat columns of
+  a freshly-loaded program. Pure — call after every read.
   """
   @spec load_value_objects(t()) :: t()
   def load_value_objects(%__MODULE__{} = program) do
-    %{
-      program
-      | instructor: build_instructor(program),
-        registration_period: build_registration_period(program)
-    }
+    %{program | registration_period: build_registration_period(program)}
   end
 
   @doc "Whether the program is free (price is 0)."
@@ -213,32 +191,6 @@ defmodule KlassHero.ProgramCatalog.Program do
       start_date: program.registration_start_date,
       end_date: program.registration_end_date
     }
-  end
-
-  defp build_instructor(%__MODULE__{instructor_id: nil}), do: nil
-
-  defp build_instructor(%__MODULE__{} = program) do
-    input = %{
-      id: program.instructor_id,
-      name: program.instructor_name,
-      headshot_url: program.instructor_headshot_url
-    }
-
-    # Denormalized instructor data should always be consistent; if it isn't, log
-    # and degrade to nil so one bad row doesn't crash a whole listing render.
-    case Instructor.from_persistence(input) do
-      {:ok, instructor} ->
-        instructor
-
-      {:error, reason} ->
-        Logger.error("[Program] Invalid instructor data, skipping",
-          instructor_id: program.instructor_id,
-          instructor_name: program.instructor_name,
-          reason: inspect(reason)
-        )
-
-        nil
-    end
   end
 
   @valid_weekdays ~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday)

@@ -3,40 +3,33 @@ defmodule KlassHeroWeb.Presenters.HeroCardsPresenter do
   Assembles the ordered list of hero-card prop maps rendered in the "Meet the Heroes"
   section of the program detail page.
 
-  Two data sources feed this list:
-
-    * The program's `Instructor` value object (denormalized snapshot of one
-      `staff_members` row — `programs.instructor_id` references `staff_members.id`).
-    * The program's assigned staff members (rows in `program_staff_assignments`).
-
-  When the same person appears in both sources (instructor.id == staff_member.id),
-  a single merged card is rendered: the staff member's richer view (role, bio,
-  tags, qualifications) is preserved and the "Lead Instructor" badge is applied
-  on top. Otherwise the instructor card is rendered first and staff follow.
+  There is a single data source: the program's assigned staff members (rows in
+  `program_staff_assignments`). The lead instructor is whichever assignment carries
+  `is_lead_instructor` — passed in as `lead_id`. That card is rendered first with a
+  "Lead Instructor" badge; the rest follow in their given order. No merge logic and
+  no denormalized `Instructor` snapshot: the flag on the assignment is the single
+  source of truth.
   """
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
-  alias KlassHero.ProgramCatalog.Instructor
   alias KlassHero.Provider.StaffMember
-  alias KlassHeroWeb.Presenters.InstructorPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
 
-  @spec for_program(Instructor.t() | nil, [StaffMember.t()]) :: [map()]
-  def for_program(nil, staff_members) when is_list(staff_members) do
-    StaffMemberPresenter.to_hero_card_list(staff_members)
+  @spec for_program([StaffMember.t()], String.t() | nil) :: [map()]
+  def for_program(staff_members, lead_id \\ nil) when is_list(staff_members) do
+    {leads, others} = Enum.split_with(staff_members, &lead?(&1, lead_id))
+
+    lead_cards =
+      Enum.map(leads, fn staff ->
+        staff
+        |> StaffMemberPresenter.to_hero_card()
+        |> Map.put(:badge, gettext("Lead Instructor"))
+      end)
+
+    lead_cards ++ StaffMemberPresenter.to_hero_card_list(others)
   end
 
-  def for_program(%Instructor{} = instructor, staff_members) when is_list(staff_members) do
-    {matching, others} = Enum.split_with(staff_members, &(&1.id == instructor.id))
-
-    lead_card =
-      case matching do
-        [lead | _] -> StaffMemberPresenter.to_hero_card(lead)
-        [] -> InstructorPresenter.to_hero_card(instructor)
-      end
-      |> Map.put(:badge, gettext("Lead Instructor"))
-
-    [lead_card | StaffMemberPresenter.to_hero_card_list(others)]
-  end
+  defp lead?(_staff, nil), do: false
+  defp lead?(%StaffMember{id: id}, lead_id), do: id == lead_id
 end

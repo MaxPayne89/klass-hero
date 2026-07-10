@@ -38,8 +38,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       pricing_period: program.pricing_period,
       location: program.location,
       cover_image_url: program.cover_image_url,
-      instructor_name: program.instructor_name,
-      instructor_headshot_url: program.instructor_headshot_url,
       start_date: program.start_date,
       end_date: program.end_date,
       meeting_days: program.meeting_days || [],

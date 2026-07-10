@@ -1,12 +1,14 @@
 defmodule KlassHeroWeb.Presenters.HeroCardsPresenterTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
-  alias KlassHero.ProgramCatalog.Instructor
   alias KlassHero.Provider.StaffMember
   alias KlassHeroWeb.Presenters.HeroCardsPresenter
 
+  @badge "Lead Instructor"
+
   defp staff(attrs) do
-    base = %StaffMember{
+    %StaffMember{
       id: attrs[:id] || Ecto.UUID.generate(),
       provider_id: "prov-1",
       first_name: attrs[:first_name] || "First",
@@ -17,67 +19,82 @@ defmodule KlassHeroWeb.Presenters.HeroCardsPresenterTest do
       tags: attrs[:tags] || [],
       qualifications: attrs[:qualifications] || []
     }
-
-    base
   end
 
-  defp instructor(id, name) do
-    %Instructor{id: id, name: name, headshot_url: nil}
+  # A list of distinct-id staff members plus a lead choice that is EITHER one of
+  # their ids OR nil OR an id absent from the list — the three shapes the presenter
+  # must handle.
+  defp staff_and_lead do
+    gen all(
+          raw_ids <- uniq_list_of(positive_integer(), min_length: 1, max_length: 6),
+          lead <- member_of([nil, "absent-id" | Enum.map(raw_ids, &"staff-#{&1}")])
+        ) do
+      staff_members =
+        Enum.map(raw_ids, fn n ->
+          staff(id: "staff-#{n}", first_name: "First#{n}", role: "Role#{n}")
+        end)
+
+      {staff_members, lead}
+    end
   end
 
-  describe "for_program/2" do
-    test "returns [] when instructor is nil and staff is empty" do
-      assert HeroCardsPresenter.for_program(nil, []) == []
+  describe "for_program/2 — properties" do
+    property "emits exactly one card per staff member, preserving the id set" do
+      check all({staff_members, lead} <- staff_and_lead()) do
+        cards = HeroCardsPresenter.for_program(staff_members, lead)
+
+        assert length(cards) == length(staff_members)
+
+        card_staff_ids = Enum.map(cards, &String.replace_prefix(&1.id, "hero-card-staff-", ""))
+        assert Enum.sort(card_staff_ids) == staff_members |> Enum.map(& &1.id) |> Enum.sort()
+      end
     end
 
-    test "returns plain staff hero cards when instructor is nil" do
-      s1 = staff(first_name: "Alice", last_name: "Smith")
-      s2 = staff(first_name: "Bob", last_name: "Jones")
+    property "badges exactly the lead — and only when the lead is in the list" do
+      check all({staff_members, lead} <- staff_and_lead()) do
+        cards = HeroCardsPresenter.for_program(staff_members, lead)
+        badged = Enum.filter(cards, &(&1.badge == @badge))
+        lead_present? = lead != nil and Enum.any?(staff_members, &(&1.id == lead))
 
-      result = HeroCardsPresenter.for_program(nil, [s1, s2])
-
-      assert length(result) == 2
-      assert Enum.map(result, & &1.name) == ["Alice Smith", "Bob Jones"]
-      assert Enum.all?(result, &is_nil(&1.badge))
+        if lead_present? do
+          assert [only] = badged
+          assert only.id == "hero-card-staff-#{lead}"
+          assert hd(cards).id == only.id, "the lead card must render first"
+        else
+          assert badged == []
+          assert Enum.all?(cards, &is_nil(&1.badge))
+        end
+      end
     end
 
-    test "returns single instructor card when no staff are assigned" do
-      i = instructor("inst-id-1", "Marie Curie")
+    property "non-lead cards keep their input order" do
+      check all({staff_members, lead} <- staff_and_lead()) do
+        cards = HeroCardsPresenter.for_program(staff_members, lead)
 
-      result = HeroCardsPresenter.for_program(i, [])
+        non_lead_ids =
+          cards
+          |> Enum.reject(&(&1.badge == @badge))
+          |> Enum.map(& &1.id)
 
-      assert [card] = result
-      assert card.id == "hero-card-instructor-inst-id-1"
-      assert card.name == "Marie Curie"
-      assert card.badge == "Lead Instructor"
+        expected =
+          staff_members
+          |> Enum.reject(&(&1.id == lead))
+          |> Enum.map(&"hero-card-staff-#{&1.id}")
+
+        assert non_lead_ids == expected
+      end
+    end
+  end
+
+  describe "for_program/2 — examples" do
+    test "returns [] when there are no staff members" do
+      assert HeroCardsPresenter.for_program([], nil) == []
     end
 
-    test "puts instructor card first when no staff id matches the instructor" do
-      i = instructor("inst-id-2", "Marie Curie")
-      s1 = staff(id: "staff-1", first_name: "Coach", last_name: "Smith", role: "Assistant")
-      s2 = staff(id: "staff-2", first_name: "Coach", last_name: "Brown")
-
-      result = HeroCardsPresenter.for_program(i, [s1, s2])
-
-      assert length(result) == 3
-
-      assert Enum.map(result, & &1.id) == [
-               "hero-card-instructor-inst-id-2",
-               "hero-card-staff-staff-1",
-               "hero-card-staff-staff-2"
-             ]
-
-      [instructor_card | _] = result
-      assert instructor_card.badge == "Lead Instructor"
-    end
-
-    test "merges into single card when instructor.id matches a staff member's id" do
-      shared_id = "shared-uuid-42"
-      i = instructor(shared_id, "Alice Lead")
-
+    test "the lead card renders first with the badge and the staff member's rich fields" do
       lead =
         staff(
-          id: shared_id,
+          id: "lead-1",
           first_name: "Alice",
           last_name: "Lead",
           role: "Head Coach",
@@ -88,25 +105,24 @@ defmodule KlassHeroWeb.Presenters.HeroCardsPresenterTest do
 
       other = staff(id: "staff-other", first_name: "Bob", last_name: "Helper", role: "Assistant")
 
-      result = HeroCardsPresenter.for_program(i, [lead, other])
+      # Pass the lead second to prove promotion to the front is by flag, not order.
+      assert [first, second] = HeroCardsPresenter.for_program([other, lead], "lead-1")
 
-      assert length(result) == 2
-
-      [first, second] = result
-
-      # First card: the merged "lead" — staff DOM id, badge attached, rich fields preserved
-      assert first.id == "hero-card-staff-#{shared_id}"
-      assert first.badge == "Lead Instructor"
+      assert first.id == "hero-card-staff-lead-1"
+      assert first.badge == @badge
+      assert first.name == "Alice Lead"
       assert first.role == "Head Coach"
       assert first.bio == "10 years experience"
       assert first.tags == ["sports", "youth"]
       assert first.qualifications == ["UEFA B"]
-      assert first.name == "Alice Lead"
 
-      # Second card: the other staff, unchanged
       assert second.id == "hero-card-staff-staff-other"
       assert is_nil(second.badge)
-      assert second.role == "Assistant"
+    end
+
+    test "defaults to no lead when the second argument is omitted" do
+      assert [card] = HeroCardsPresenter.for_program([staff(first_name: "Alice")])
+      assert is_nil(card.badge)
     end
   end
 end

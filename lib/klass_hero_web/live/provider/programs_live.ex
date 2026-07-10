@@ -35,7 +35,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     domain_programs = ProgramCatalog.list_programs_for_provider(provider.id)
     enrollment_data = build_enrollment_data(domain_programs)
-    programs = Enum.map(domain_programs, &ProgramPresenter.to_table_view(&1, enrollment_data))
+    programs = to_table_views(domain_programs, enrollment_data)
 
     staff_members = fetch_staff_members(provider.id)
     staff_views = StaffMemberPresenter.to_admin_view_list(staff_members)
@@ -539,8 +539,9 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     enrollment_params = all_params["enrollment_policy"] || %{}
     participant_policy_params = all_params["participant_policy"] || %{}
 
-    with {:ok, attrs} <- maybe_add_instructor(attrs, program_params["instructor_id"], socket),
+    with {:ok, instructor_id} <- resolve_instructor(program_params["instructor_id"], socket),
          {:ok, program} <- ProgramCatalog.create_program(attrs) do
+      :ok = apply_lead_instructor(program.id, instructor_id)
       policy_result = maybe_set_enrollment_policy(program.id, enrollment_params)
       set_participant_policy_on_create(program.id, participant_policy_params)
       capacity = resolve_capacity(policy_result, enrollment_params)
@@ -549,7 +550,12 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         program.id => %{enrolled: 0, capacity: capacity}
       }
 
-      view = ProgramPresenter.to_table_view(program, new_enrollment_data)
+      view =
+        ProgramPresenter.to_table_view(
+          program,
+          new_enrollment_data,
+          Provider.get_lead_instructor(program.id)
+        )
 
       {:noreply,
        socket
@@ -589,8 +595,9 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     participant_policy_params = all_params["participant_policy"] || %{}
     provider_id = socket.assigns.current_scope.provider.id
 
-    with {:ok, attrs} <- maybe_add_instructor(attrs, program_params["instructor_id"], socket),
+    with {:ok, instructor_id} <- resolve_instructor(program_params["instructor_id"], socket),
          {:ok, updated} <- ProgramCatalog.update_program(provider_id, program_id, attrs) do
+      :ok = apply_lead_instructor(program_id, instructor_id)
       policy_result = maybe_set_enrollment_policy(program_id, enrollment_params)
       set_participant_policy_on_update(program_id, participant_policy_params)
 
@@ -598,7 +605,13 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       active_counts = Enrollment.count_active_enrollments_batch([program_id])
       enrolled = Map.get(active_counts, program_id, 0)
       enrollment_data = %{program_id => %{enrolled: enrolled, capacity: capacity}}
-      view = ProgramPresenter.to_table_view(updated, enrollment_data)
+
+      view =
+        ProgramPresenter.to_table_view(
+          updated,
+          enrollment_data,
+          Provider.get_lead_instructor(program_id)
+        )
 
       {:noreply,
        socket
@@ -675,13 +688,28 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     programs =
       domain_programs
-      |> Enum.map(&ProgramPresenter.to_table_view(&1, enrollment_data))
+      |> to_table_views(enrollment_data)
       |> filter_by_search(socket.assigns.search_query)
       |> filter_by_staff(socket.assigns.selected_staff)
 
     socket
     |> stream(:programs, programs, reset: true)
     |> assign(programs_count: length(programs))
+  end
+
+  # Batch the lead-instructor read (single query) so the dashboard table avoids an
+  # N+1 across programs. The lead is the single source of truth on
+  # program_staff_assignments; ProgramCatalog no longer carries an instructor snapshot.
+  defp to_table_views(domain_programs, enrollment_data) do
+    leads =
+      domain_programs
+      |> Enum.map(& &1.id)
+      |> Provider.list_lead_instructors_for_programs()
+
+    Enum.map(
+      domain_programs,
+      &ProgramPresenter.to_table_view(&1, enrollment_data, Map.get(leads, &1.id))
+    )
   end
 
   defp build_enrollment_data(domain_programs) do
@@ -726,18 +754,14 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   defp maybe_flash_cover_warning(socket, _cover_result), do: socket
 
-  defp maybe_add_instructor(attrs, nil, _socket), do: {:ok, attrs}
-  defp maybe_add_instructor(attrs, "", _socket), do: {:ok, attrs}
+  # Validates the picked lead instructor exists before the program is written, so a
+  # bad id short-circuits with a flash rather than orphaning a lead assignment.
+  defp resolve_instructor(id, _socket) when id in [nil, ""], do: {:ok, nil}
 
-  defp maybe_add_instructor(attrs, instructor_id, socket) do
+  defp resolve_instructor(instructor_id, socket) do
     case Provider.get_staff_member(instructor_id) do
-      {:ok, staff} ->
-        {:ok,
-         Map.put(attrs, :instructor, %{
-           id: staff.id,
-           name: Provider.staff_member_full_name(staff),
-           headshot_url: staff.headshot_url
-         })}
+      {:ok, _staff} ->
+        {:ok, instructor_id}
 
       {:error, _reason} ->
         Logger.warning("Instructor not found during program creation",
@@ -747,6 +771,15 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
         {:error, :instructor_not_found}
     end
+  end
+
+  # Persists the lead choice on program_staff_assignments (single source of truth).
+  # A blank pick clears the lead; the id is already validated by resolve_instructor/2.
+  defp apply_lead_instructor(program_id, nil), do: Provider.clear_lead_instructor(program_id)
+
+  defp apply_lead_instructor(program_id, instructor_id) do
+    {:ok, _assignment} = Provider.set_lead_instructor(program_id, instructor_id)
+    :ok
   end
 
   # Builds instructor options from an already-fetched list of StaffMember domain structs.
@@ -883,6 +916,13 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     )
   end
 
+  defp lead_instructor_id(program_id) do
+    case Provider.get_lead_instructor(program_id) do
+      %{id: id} -> id
+      nil -> nil
+    end
+  end
+
   defp program_to_form_params(program) do
     %{
       "title" => program.title,
@@ -890,7 +930,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       "category" => program.category,
       "price" => nil_safe(program.price, &Decimal.to_string/1),
       "location" => program.location,
-      "instructor_id" => nil_safe(program.instructor, & &1.id),
+      "instructor_id" => lead_instructor_id(program.id),
       "meeting_days" => program.meeting_days || [],
       "meeting_start_time" => nil_safe(program.meeting_start_time, &Time.to_iso8601/1),
       "meeting_end_time" => nil_safe(program.meeting_end_time, &Time.to_iso8601/1),
