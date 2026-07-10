@@ -13,6 +13,8 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
   alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
   alias KlassHero.Family.Child
   alias KlassHero.Family.Consent
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
 
   describe "handle_event/1 for :user_anonymized" do
     setup do
@@ -132,6 +134,37 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
 
       event = build_user_confirmed_event(user, intended_roles: ["provider"])
       assert :ignore = FamilyEventHandler.handle_event(event)
+    end
+
+    # Regression for #1065. Unlike the "idempotent" test above (which calls the
+    # handler directly, exercising the safe out-of-transaction path), this drives
+    # the handler through the exactly-once wrapper the way production does
+    # (EventSubscriber / CriticalEventWorker → ProcessedEventRepository.execute_atomically),
+    # i.e. INSIDE a Repo.transaction. Before the `mode: :savepoint` fix, the
+    # duplicate-identity insert poisoned that transaction and execute_atomically
+    # returned {:error, :rollback}, so the dedup marker never committed and the
+    # Oban job was retried to discard.
+    test "is idempotent through execute_atomically when profile already exists (issue #1065)" do
+      user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:parent])
+
+      # :user_registered has already created the profile.
+      assert :ok = FamilyEventHandler.handle_event(build_user_registered_event(user))
+
+      # :user_confirmed compensation now runs inside the atomic transaction.
+      event_id = Ecto.UUID.generate()
+
+      handler_fn = fn ->
+        FamilyEventHandler.handle_event(build_user_confirmed_event(user))
+      end
+
+      result =
+        ProcessedEventRepository.execute_atomically(event_id, "FamilyEventHandler", handler_fn)
+
+      # 1. The duplicate is tolerated as idempotent success — not {:error, :rollback}.
+      assert result == :ok
+
+      # 2. The dedup marker committed, so Oban won't redeliver forever.
+      assert Repo.get_by(ProcessedEvent, event_id: event_id, handler_ref: "FamilyEventHandler")
     end
   end
 
