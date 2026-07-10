@@ -101,6 +101,12 @@ Runs a comprehensive 21-check review of conventional-Phoenix conventions by spaw
 
 **Use when:** `/review-architecture` or when reviewing a PR, checking architecture before merge, or after modifying bounded context code
 
+### analyze-prod-issue
+
+Diagnoses a production issue end-to-end: Honeycomb for the error shape, the prod DB `error_tracker` tables (via `bin/prod-db`) for the who + why, schema cross-referencing to scope impact honestly, then an optional PII-scrubbed issue. Read-only. Needs prod DB access set up (`docs/runbooks/prod-db-access.md`).
+
+**Use when:** `/analyze-prod-issue "<symptom>"`
+
 ## Custom Agents (in `.claude/agents/`)
 
 ### architecture-reviewer

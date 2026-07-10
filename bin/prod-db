@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+# prod-db — read-only SQL access to the klass-hero-live Managed Postgres cluster.
+#
+# Transport: `fly mpg connect`, which opens its own proxy AND resolves the
+# password for the `debug-ro` (reader / SELECT-only) role. Fly never exposes the
+# raw password, so this wrapper — not a standalone psql DSN — is the reliable path.
+#
+# Usage:
+#   bin/prod-db -c "select count(*) from error_tracker_errors;"   # one-shot query
+#   echo "select 1;" | bin/prod-db                                # SQL from stdin
+#   bin/prod-db                                                    # interactive psql
+#   bin/prod-db --check                                           # verify prereqs only
+#
+# See docs/runbooks/prod-db-access.md.
+
+set -euo pipefail
+
+CLUSTER_ID="${MPG_CLUSTER_ID:-ey5qn0y5d47o8zmw}"   # klass-hero-live-db (org klass-hero, fra)
+DB_NAME="${MPG_DB_NAME:-fly-db}"
+DB_USER="${MPG_DB_USER:-debug-ro}"                 # reader role — SELECT only
+
+err() { printf '\033[0;31m✗ %s\033[0m\n' "$1" >&2; }
+
+command -v fly >/dev/null 2>&1 || { err "fly CLI not found (brew install flyctl)"; exit 1; }
+fly auth whoami >/dev/null 2>&1 || { err "not logged in — run: fly auth login"; exit 1; }
+
+if [[ "${1:-}" == "--check" ]]; then
+  command -v psql >/dev/null 2>&1 || { err "psql not found — brew install libpq && brew link --force libpq"; exit 1; }
+  printf '\033[0;32m✓ ready — cluster=%s db=%s user=%s\033[0m\n' "$CLUSTER_ID" "$DB_NAME" "$DB_USER"
+  exit 0
+fi
+
+# The "Proxying localhost:... to remote ..." status line is stripped so callers get clean output.
+if [[ "${1:-}" == "-c" ]]; then
+  [[ $# -ge 2 ]] || { err 'usage: bin/prod-db -c "SQL"'; exit 1; }
+  printf '%s\n\\q\n' "$2" | fly mpg connect "$CLUSTER_ID" -u "$DB_USER" -d "$DB_NAME" 2>&1 | grep -v '^Proxying '
+elif [[ ! -t 0 ]]; then
+  { cat; printf '\n\\q\n'; } | fly mpg connect "$CLUSTER_ID" -u "$DB_USER" -d "$DB_NAME" 2>&1 | grep -v '^Proxying '
+else
+  exec fly mpg connect "$CLUSTER_ID" -u "$DB_USER" -d "$DB_NAME"
+fi
