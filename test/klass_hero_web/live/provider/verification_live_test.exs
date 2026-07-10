@@ -169,6 +169,49 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     end
   end
 
+  describe "community standards agreement" do
+    test "renders the guidelines, PDF link and agreement form for an individual provider", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#community-agreement-form")
+      assert has_element?(view, "#community-guidelines")
+      assert has_element?(view, "#submit-agreement-btn")
+
+      assert has_element?(
+               view,
+               ~s(a[href="/downloads/Klass_Hero_Community_Standards_Agreement_v1.0.pdf"])
+             )
+    end
+
+    test "the community-agreement checklist action anchors to the in-page form", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#vetting-action-community_agreement[href*='community-agreement-form']")
+    end
+
+    test "submitting with the box checked records the agreement and shows the signed confirmation", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      view
+      |> form("#community-agreement-form", %{agreement: %{agree: "true"}})
+      |> render_submit()
+
+      assert render(view) =~ "You have agreed to the Community Guidelines"
+      refute has_element?(view, "#community-agreement-form")
+    end
+
+    test "submitting without checking the box does not record agreement", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      view
+      |> form("#community-agreement-form", %{agreement: %{agree: "false"}})
+      |> render_submit()
+
+      assert has_element?(view, "#community-agreement-form")
+      refute render(view) =~ "You have agreed to the Community Guidelines"
+    end
+  end
+
   describe "heading hierarchy" do
     test "the checklist title is an h2, not a second h1", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/verification")

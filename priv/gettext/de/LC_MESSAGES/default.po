@@ -2478,7 +2478,7 @@ msgid "Document rejected."
 msgstr "Dokument abgelehnt."
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:145
-#: lib/klass_hero_web/live/provider/verification_live.ex:137
+#: lib/klass_hero_web/live/provider/verification_live.ex:165
 #, elixir-autogen, elixir-format
 msgid "Document uploaded successfully."
 msgstr "Dokument erfolgreich hochgeladen."
@@ -2559,7 +2559,7 @@ msgid "Failed to resend invite."
 msgstr "Einladung konnte nicht erneut gesendet werden."
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:154
-#: lib/klass_hero_web/live/provider/verification_live.ex:146
+#: lib/klass_hero_web/live/provider/verification_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "Failed to upload document."
 msgstr "Dokument konnte nicht hochgeladen werden."
@@ -3345,6 +3345,7 @@ msgstr "Bewerber absolvieren ein Video-Screening, um Kommunikationsfähigkeiten 
 msgid "Child Safeguarding Training"
 msgstr "Kinderschutzschulung"
 
+#: lib/klass_hero_web/components/provider_components.ex:2487
 #: lib/klass_hero_web/live/about_live.ex:77
 #: lib/klass_hero_web/live/trust_safety_live.ex:57
 #, elixir-autogen, elixir-format
@@ -4685,7 +4686,7 @@ msgstr "Aktualisieren Sie Ihre Beobachtung..."
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:138
 #: lib/klass_hero_web/live/provider/programs_live.ex:339
-#: lib/klass_hero_web/live/provider/verification_live.ex:132
+#: lib/klass_hero_web/live/provider/verification_live.ex:160
 #, elixir-autogen, elixir-format
 msgid "Upload connection lost. Please try again."
 msgstr "Upload-Verbindung unterbrochen. Bitte versuchen Sie es erneut."
@@ -5822,7 +5823,7 @@ msgstr "Wöchentlich bezahlt werden"
 
 #: lib/klass_hero_web/live/for_providers_live.ex:396
 #: lib/klass_hero_web/live/provider/verification_live.ex:38
-#: lib/klass_hero_web/live/provider/verification_live.ex:186
+#: lib/klass_hero_web/live/provider/verification_live.ex:217
 #, elixir-autogen, elixir-format
 msgid "Get verified"
 msgstr "Lassen Sie sich verifizieren"
@@ -7031,7 +7032,7 @@ msgstr "Vervollständige deine Verifizierungs-Checkliste, damit Eltern dich find
 msgid "Confirm who you are with our partner Stripe."
 msgstr "Bestätige deine Identität mit unserem Partner Stripe."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:66
+#: lib/klass_hero_web/live/provider/verification_live.ex:68
 #, elixir-autogen, elixir-format
 msgid "Couldn't start identity verification. Please try again."
 msgstr "Die Identitätsprüfung konnte nicht gestartet werden. Bitte versuche es erneut."
@@ -7056,12 +7057,12 @@ msgstr "Identitätsprüfungen"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:326
+#: lib/klass_hero_web/live/provider/verification_live.ex:366
 #, elixir-autogen, elixir-format
 msgid "Klass Hero is only open to providers aged 18 and over, so we can't approve this account."
 msgstr "Klass Hero steht nur Anbietern ab 18 Jahren offen, daher können wir dieses Konto nicht freigeben."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:336
+#: lib/klass_hero_web/live/provider/verification_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Looks like the check didn't finish. Pick up where you left off whenever you're ready."
 msgstr "Die Prüfung wurde offenbar nicht abgeschlossen. Mach weiter, wann immer du bereit bist."
@@ -7086,7 +7087,7 @@ msgstr "Nicht begonnen"
 msgid "Passed"
 msgstr "Bestanden"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:196
+#: lib/klass_hero_web/live/provider/verification_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Profile locked"
 msgstr "Profil gesperrt"
@@ -7101,7 +7102,7 @@ msgstr "Lies und unterschreibe die Vereinbarung zu den Gemeinschaftsstandards."
 msgid "Resubmit"
 msgstr "Erneut einreichen"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:315
+#: lib/klass_hero_web/live/provider/verification_live.ex:355
 #, elixir-autogen, elixir-format
 msgid "Retry verification"
 msgstr "Verifizierung erneut versuchen"
@@ -7121,12 +7122,12 @@ msgstr "Kinderschutz"
 msgid "Show relevant experience working with children."
 msgstr "Weise einschlägige Erfahrung in der Arbeit mit Kindern nach."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:333
+#: lib/klass_hero_web/live/provider/verification_live.ex:373
 #, elixir-autogen, elixir-format
 msgid "Something tripped up the check — usually a blurry photo. Give it another go."
 msgstr "Bei der Prüfung ist etwas schiefgelaufen – meist ein unscharfes Foto. Versuche es noch einmal."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:292
+#: lib/klass_hero_web/live/provider/verification_live.ex:332
 #, elixir-autogen, elixir-format
 msgid "Takes about 2 minutes. Once verified, your provider account can be approved."
 msgstr "Dauert etwa 2 Minuten. Nach der Verifizierung kann dein Anbieterkonto freigegeben werden."
@@ -7151,7 +7152,7 @@ msgstr "Lade ein aktuelles Führungszeugnis hoch."
 msgid "Upload your safeguarding certificate."
 msgstr "Lade dein Kinderschutz-Zertifikat hoch."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:289
+#: lib/klass_hero_web/live/provider/verification_live.ex:329
 #, elixir-autogen, elixir-format
 msgid "Verify identity"
 msgstr "Identität verifizieren"
@@ -7161,12 +7162,12 @@ msgstr "Identität verifizieren"
 msgid "Verify your identity to get approved"
 msgstr "Verifiziere deine Identität, um freigegeben zu werden"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:284
+#: lib/klass_hero_web/live/provider/verification_live.ex:324
 #, elixir-autogen, elixir-format
 msgid "Verify your identity with our partner Stripe to get approved. You'll be sent to a secure page and brought back here."
 msgstr "Verifiziere deine Identität mit unserem Partner Stripe, um freigegeben zu werden. Du wirst auf eine sichere Seite geleitet und danach hierher zurückgebracht."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:298
+#: lib/klass_hero_web/live/provider/verification_live.ex:338
 #, elixir-autogen, elixir-format
 msgid "Verifying your identity… this can take a moment."
 msgstr "Deine Identität wird überprüft … das kann einen Moment dauern."
@@ -7177,17 +7178,17 @@ msgstr "Deine Identität wird überprüft … das kann einen Moment dauern."
 msgid "Video screening"
 msgstr "Video-Screening"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:330
+#: lib/klass_hero_web/live/provider/verification_live.ex:370
 #, elixir-autogen, elixir-format
 msgid "We couldn't read your date of birth from your ID. A clearer photo of your document should do the trick."
 msgstr "Wir konnten dein Geburtsdatum nicht von deinem Ausweis lesen. Ein schärferes Foto deines Dokuments sollte helfen."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:338
+#: lib/klass_hero_web/live/provider/verification_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "We couldn't verify your identity. Please try again."
 msgstr "Wir konnten deine Identität nicht verifizieren. Bitte versuche es erneut."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:308
+#: lib/klass_hero_web/live/provider/verification_live.ex:348
 #, elixir-autogen, elixir-format
 msgid "Your identity is verified."
 msgstr "Deine Identität ist verifiziert."
@@ -7226,3 +7227,53 @@ msgstr "Video hochladen"
 #, elixir-autogen, elixir-format
 msgid "Your browser does not support video playback."
 msgstr "Dein Browser unterstützt keine Videowiedergabe."
+
+#: lib/klass_hero_web/components/provider_components.ex:2569
+#, elixir-autogen, elixir-format
+msgid "Confirm agreement"
+msgstr "Zustimmung bestätigen"
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:108
+#, elixir-autogen, elixir-format
+msgid "Couldn't record your agreement. Please try again."
+msgstr "Deine Zustimmung konnte nicht gespeichert werden. Bitte versuche es erneut."
+
+#: lib/klass_hero_web/components/provider_components.ex:2543
+#, elixir-autogen, elixir-format
+msgid "Download the agreement (PDF)"
+msgstr "Vereinbarung herunterladen (PDF)"
+
+#: lib/klass_hero_web/components/provider_components.ex:2556
+#, elixir-autogen, elixir-format
+msgid "I have read and agree to the Klass Hero Community Guidelines."
+msgstr "Ich habe die Klass Hero Community-Richtlinien gelesen und stimme ihnen zu."
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:114
+#, elixir-autogen, elixir-format
+msgid "Please confirm you have read and agree to the Community Guidelines."
+msgstr "Bitte bestätige, dass du die Community-Richtlinien gelesen hast und ihnen zustimmst."
+
+#: lib/klass_hero_web/components/provider_components.ex:2502
+#, elixir-autogen, elixir-format
+msgid "Signed by %{name} on %{date} (v%{version})."
+msgstr "Unterzeichnet von %{name} am %{date} (v%{version})."
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:100
+#, elixir-autogen, elixir-format
+msgid "Thanks — your agreement to the Community Guidelines has been recorded."
+msgstr "Danke – deine Zustimmung zu den Community-Richtlinien wurde gespeichert."
+
+#: lib/klass_hero_web/components/provider_components.ex:2519
+#, elixir-autogen, elixir-format
+msgid "The Community Guidelines have been updated since you last agreed (v%{old}). Please review and re-agree."
+msgstr "Die Community-Richtlinien wurden seit deiner letzten Zustimmung aktualisiert (v%{old}). Bitte lies sie erneut und stimme erneut zu."
+
+#: lib/klass_hero_web/components/provider_components.ex:2490
+#, elixir-autogen, elixir-format
+msgid "The final step: read and agree to the Klass Hero Community Guidelines."
+msgstr "Der letzte Schritt: Lies die Klass Hero Community-Richtlinien und stimme ihnen zu."
+
+#: lib/klass_hero_web/components/provider_components.ex:2500
+#, elixir-autogen, elixir-format
+msgid "You have agreed to the Community Guidelines."
+msgstr "Du hast den Community-Richtlinien zugestimmt."

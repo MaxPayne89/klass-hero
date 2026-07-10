@@ -18,8 +18,10 @@ defmodule KlassHero.Provider.Vetting do
 
   import Ecto.Query
 
+  alias KlassHero.Provider.CommunityGuidelines
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.SignedAgreement
   alias KlassHero.Provider.StepDefinition
   alias KlassHero.Provider.StripeIdentity
   alias KlassHero.Provider.Verification
@@ -297,6 +299,41 @@ defmodule KlassHero.Provider.Vetting do
       {:error, :not_found} -> nil
     end
   end
+
+  # ── Community agreement (Slice 5) ──────────────────────────────────────────
+
+  @doc "Returns the provider's most recent Community Standards Agreement, or `nil` if never signed."
+  @spec get_latest_community_agreement(String.t()) :: SignedAgreement.t() | nil
+  def get_latest_community_agreement(provider_id) when is_binary(provider_id) do
+    SignedAgreement
+    |> where([a], a.provider_id == ^provider_id and a.kind == :community_agreement)
+    |> order_by([a], desc: a.inserted_at)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc """
+  Returns `true` when the provider's latest Community Standards Agreement still satisfies the
+  current guidelines (no re-agreement required); `false` when never signed or out of date.
+  """
+  @spec community_agreement_satisfied?(String.t()) :: boolean()
+  def community_agreement_satisfied?(provider_id) when is_binary(provider_id) do
+    provider_id
+    |> get_latest_community_agreement()
+    |> CommunityGuidelines.agreement_satisfied?()
+  end
+
+  @doc "Returns `true` when the given entity type's track includes the community-agreement step."
+  @spec requires_community_agreement?(:individual | :business) :: boolean()
+  def requires_community_agreement?(entity_type) do
+    entity_type
+    |> track()
+    |> Enum.any?(&match?(%StepDefinition{completed_via: {:signed_agreement, :community_agreement}}, &1))
+  end
+
+  @doc "The Community Guidelines version currently in force."
+  @spec current_community_guidelines_version() :: String.t()
+  def current_community_guidelines_version, do: CommunityGuidelines.current_version()
 
   # ── Stripe Identity (Slice 1) ──────────────────────────────────────────────
 

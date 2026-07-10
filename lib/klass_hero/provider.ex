@@ -30,6 +30,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Programs
   alias KlassHero.Provider.Staff
   alias KlassHero.Provider.StaffMember
+  alias KlassHero.Provider.SubmitCommunityAgreement
   alias KlassHero.Provider.Verification
   alias KlassHero.Provider.Vetting
 
@@ -106,6 +107,21 @@ defmodule KlassHero.Provider do
 
   @doc "Lists identity verifications with provider business names for admin review (read-only)."
   defdelegate list_identity_verifications_for_admin(), to: Vetting
+
+  @doc "Signs the Community Standards Agreement, auto-approving the step and verifying if it was last."
+  defdelegate submit_community_agreement(params), to: SubmitCommunityAgreement, as: :execute
+
+  @doc "Returns the provider's most recent Community Standards Agreement, or `nil`."
+  defdelegate get_latest_community_agreement(provider_id), to: Vetting
+
+  @doc "Whether the provider's latest community agreement still satisfies the current guidelines."
+  defdelegate community_agreement_satisfied?(provider_id), to: Vetting
+
+  @doc "Whether the given entity type's vetting track includes the community-agreement step."
+  defdelegate requires_community_agreement?(entity_type), to: Vetting
+
+  @doc "The Community Guidelines version currently in force."
+  defdelegate current_community_guidelines_version(), to: Vetting
 
   @doc "Returns all verification documents for a provider."
   defdelegate get_provider_verification_documents(provider_profile_id), to: Verification

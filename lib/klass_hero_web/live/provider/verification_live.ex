@@ -43,6 +43,8 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       |> stream(:verification_docs, fetch_verification_docs(provider.id), dom_id: &"vdoc-#{&1.id}")
       |> allow_upload(:verification_doc, accept: ~w(.pdf .jpg .jpeg .png), max_entries: 1, max_file_size: 10_000_000)
       |> allow_upload(:verification_video, accept: ~w(.mp4 .mov .webm), max_entries: 1, max_file_size: 100_000_000)
+      |> assign(community_agreement?: Provider.requires_community_agreement?(provider.entity_type))
+      |> assign(agreement_form: to_form(%{"agree" => "false"}, as: :agreement))
       |> assign_verification_state(provider.id)
 
     {:ok, socket}
@@ -84,6 +86,32 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
 
   def handle_event("upload_verification_video", _params, socket) do
     {:noreply, consume_document(socket, :verification_video, "video_screening")}
+  end
+
+  def handle_event("submit_community_agreement", %{"agreement" => %{"agree" => "true"}}, socket) do
+    provider = socket.assigns.current_scope.provider
+    signed_by_name = socket.assigns.current_scope.user.name
+
+    case Provider.submit_community_agreement(%{provider_id: provider.id, signed_by_name: signed_by_name}) do
+      {:ok, _agreement} ->
+        {:noreply,
+         socket
+         |> assign_verification_state(provider.id)
+         |> put_flash(:info, gettext("Thanks — your agreement to the Community Guidelines has been recorded."))}
+
+      {:error, reason} ->
+        Logger.error("[VerificationLive.submit_community_agreement] failed",
+          provider_id: provider.id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Couldn't record your agreement. Please try again."))}
+    end
+  end
+
+  def handle_event("submit_community_agreement", _params, socket) do
+    {:noreply,
+     put_flash(socket, :error, gettext("Please confirm you have read and agree to the Community Guidelines."))}
   end
 
   @impl true
@@ -159,6 +187,9 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     socket
     |> assign(vetting_checklist: Provider.get_vetting_checklist(provider_id))
     |> assign(identity_state: state, identity_failure_reason: failure_reason)
+    |> assign(community_agreement: Provider.get_latest_community_agreement(provider_id))
+    |> assign(community_agreement_satisfied?: Provider.community_agreement_satisfied?(provider_id))
+    |> assign(community_guidelines_version: Provider.current_community_guidelines_version())
   end
 
   # Derives the 4-state widget status from the latest identity record. Once a session leaves
@@ -265,6 +296,15 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
           doc_type={@doc_type}
           document_types={@document_types}
           video_upload?={@video_upload?}
+        />
+      </div>
+
+      <div :if={@community_agreement?} class="max-w-xl mx-auto p-4 md:p-6 pt-0">
+        <.community_agreement_panel
+          agreement={@community_agreement}
+          satisfied?={@community_agreement_satisfied?}
+          version={@community_guidelines_version}
+          form={@agreement_form}
         />
       </div>
     </div>
