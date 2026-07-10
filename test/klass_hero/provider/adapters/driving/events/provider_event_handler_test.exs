@@ -4,6 +4,8 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandlerTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
 
   describe "handle_event/1 for :user_registered" do
     test "creates provider profile when 'provider' in intended_roles" do
@@ -98,6 +100,34 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandlerTest do
 
       assert {:ok, profile} = Provider.get_provider_by_identity(user.id)
       assert profile.business_owner_email == "confirmed@example.com"
+    end
+
+    # Regression for #1065. The idempotent test above calls the handler directly
+    # (safe out-of-transaction path); this drives it through the exactly-once
+    # wrapper production uses (execute_atomically → Repo.transaction). Before the
+    # `mode: :savepoint` fix, the duplicate-identity insert poisoned the txn and
+    # execute_atomically returned {:error, :rollback}, discarding the Oban job.
+    test "is idempotent through execute_atomically when profile already exists (issue #1065)" do
+      user = AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:provider])
+
+      # :user_registered has already created the profile.
+      assert :ok = ProviderEventHandler.handle_event(build_user_registered_event(user))
+
+      # :user_confirmed compensation now runs inside the atomic transaction.
+      event_id = Ecto.UUID.generate()
+
+      handler_fn = fn ->
+        ProviderEventHandler.handle_event(build_user_confirmed_event(user))
+      end
+
+      result =
+        ProcessedEventRepository.execute_atomically(event_id, "ProviderEventHandler", handler_fn)
+
+      # 1. The duplicate is tolerated as idempotent success — not {:error, :rollback}.
+      assert result == :ok
+
+      # 2. The dedup marker committed, so Oban won't redeliver forever.
+      assert Repo.get_by(ProcessedEvent, event_id: event_id, handler_ref: "ProviderEventHandler")
     end
   end
 

@@ -47,9 +47,13 @@ defmodule KlassHero.Family do
   """
   def create_parent_profile(attrs) when is_map(attrs) do
     context_span entity: "parent" do
+      # `mode: :savepoint` so a unique-constraint hit rolls back only to a savepoint
+      # instead of poisoning an outer transaction — this runs inside
+      # `ProcessedEventRepository.execute_atomically`'s txn on the
+      # `:user_registered`/`:user_confirmed` compensation path (issue #1065).
       %ParentProfile{}
       |> ParentProfile.changeset(attrs)
-      |> Repo.insert()
+      |> Repo.insert(mode: :savepoint)
       |> case do
         {:ok, parent} ->
           {:ok, parent}
