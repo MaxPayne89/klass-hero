@@ -49,6 +49,29 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp doc_status_style(_), do: {"bg-hero-grey-100", "text-hero-grey-600", gettext("Unknown")}
 
   @doc """
+  Read-only pill for a Stripe Identity verification's `(status, outcome)`. Admins never
+  override the outcome (ADR 0009), so this is display-only — there is no action affordance.
+  """
+  attr :status, :atom, required: true
+  attr :outcome, :atom, default: nil
+
+  def identity_status_badge(assigns) do
+    {badge_class, label} = identity_status_style(assigns.status, assigns.outcome)
+    assigns = assign(assigns, badge_class: badge_class, label: label)
+
+    ~H"""
+    <span class={["px-2.5 py-1 text-xs font-medium", Theme.rounded(:full), @badge_class]}>
+      {@label}
+    </span>
+    """
+  end
+
+  defp identity_status_style(_status, :pass), do: {Theme.status_badge(:available), gettext("Passed")}
+  defp identity_status_style(_status, :fail), do: {Theme.status_badge(:full), gettext("Failed")}
+  defp identity_status_style(:processing, _outcome), do: {Theme.status_badge(:limited), gettext("In progress")}
+  defp identity_status_style(_status, _outcome), do: {Theme.status_badge(:neutral), gettext("Pending")}
+
+  @doc """
   Renders the provider dashboard tab navigation.
 
   `current_tab` is the active tab as the *component* understands it

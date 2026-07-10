@@ -29,6 +29,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
          {:ok, updated} <- VettingCase.auto_approve_step(case_, step_key, evidence_ref),
          {:ok, _} <- Vetting.save_case(updated) do
       if VettingCase.verified?(updated), do: VettingVerificationSync.verify(provider_id, nil)
+      VettingVerificationSync.broadcast_updated(provider_id)
       :ok
     else
       nil ->
@@ -51,6 +52,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
          {:ok, updated} <- VettingCase.reset_step(case_, step_key),
          {:ok, _} <- Vetting.save_case(updated) do
       VettingVerificationSync.maybe_unverify(provider_id, nil)
+      VettingVerificationSync.broadcast_updated(provider_id)
       :ok
     else
       nil ->

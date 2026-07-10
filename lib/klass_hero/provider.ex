@@ -95,6 +95,18 @@ defmodule KlassHero.Provider do
   @doc "Records a Stripe Identity webhook outcome against its session (idempotent)."
   defdelegate record_identity_verification_outcome(outcome), to: Vetting
 
+  @doc "Returns the provider's onboarding checklist read model (case lazily created on first read)."
+  defdelegate get_vetting_checklist(provider_id), to: Vetting, as: :checklist_for_provider
+
+  @doc "Returns the provider's latest Stripe Identity verification record, or `{:error, :not_found}`."
+  defdelegate get_latest_identity_verification(provider_id), to: Vetting
+
+  @doc "Whether the provider's identity step is engine-approved (drives the overview CTA banner)."
+  defdelegate identity_step_approved?(provider_id), to: Vetting
+
+  @doc "Lists identity verifications with provider business names for admin review (read-only)."
+  defdelegate list_identity_verifications_for_admin(), to: Vetting
+
   @doc "Returns all verification documents for a provider."
   defdelegate get_provider_verification_documents(provider_profile_id), to: Verification
 
@@ -112,6 +124,9 @@ defmodule KlassHero.Provider do
 
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types, to: Verification
+
+  @doc "Returns the valid verification document types for a track (`:individual` | `:business`)."
+  defdelegate valid_document_types(entity_type), to: Verification
 
   # --- Incident reports ----------------------------------------------------
 

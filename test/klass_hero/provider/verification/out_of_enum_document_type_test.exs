@@ -20,7 +20,7 @@ defmodule KlassHero.Provider.Verification.OutOfEnumDocumentTypeTest do
         INSERT INTO verification_documents
           (id, provider_id, document_type, file_url, original_filename, status, inserted_at, updated_at)
         VALUES
-          (gen_random_uuid(), $1, 'safeguarding_certificate', 'verification-docs/legacy.pdf',
+          (gen_random_uuid(), $1, 'medical_clearance', 'verification-docs/legacy.pdf',
            'legacy.pdf', 'pending', now(), now())
         """,
         [Ecto.UUID.dump!(provider.id)]

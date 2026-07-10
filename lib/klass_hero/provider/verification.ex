@@ -147,6 +147,7 @@ defmodule KlassHero.Provider.Verification do
 
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types, to: VerificationDocument
+  defdelegate valid_document_types(entity_type), to: VerificationDocument
 
   defp validate_verification_submission(params) do
     errors =

@@ -14,6 +14,22 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerifi
 
   require Logger
 
+  @doc """
+  Fire-and-forget nudge to any mounted `VerificationLive` for this provider to re-fetch.
+  Provider-scoped topic; carries no payload (the DB row is the source of truth). Broadcast
+  last, after the case is saved — never let a PubSub hiccup break the engine advance.
+  """
+  @spec broadcast_updated(String.t()) :: :ok
+  def broadcast_updated(provider_id) do
+    Phoenix.PubSub.broadcast(
+      KlassHero.PubSub,
+      "provider:#{provider_id}:verification_updated",
+      :verification_updated
+    )
+
+    :ok
+  end
+
   @doc "Verifies the provider; logs and swallows a verify failure (the step is already saved)."
   @spec verify(String.t(), String.t() | nil) :: :ok
   def verify(provider_id, reviewer_id) do

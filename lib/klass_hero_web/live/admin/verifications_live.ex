@@ -35,11 +35,13 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
     status = parse_status_filter(params)
 
     {:ok, results} = Provider.list_verification_documents_for_admin(status)
+    {:ok, identity_verifications} = Provider.list_identity_verifications_for_admin()
 
     socket
     |> assign(:page_title, gettext("Verifications"))
     |> assign(:current_status, status)
     |> assign(:document_count, length(results))
+    |> assign(:identity_verifications, identity_verifications)
     |> stream(:documents, results,
       reset: true,
       dom_id: fn %{document: doc} -> "doc-#{doc.id}" end
@@ -261,6 +263,39 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
           </div>
         </.link>
       </div>
+
+      <%!-- Identity verifications (read-only — Stripe Identity outcomes, no manual review) --%>
+      <section id="identity-verifications-section" class="mt-10">
+        <h2 class={[Theme.typography(:card_title), Theme.text_color(:heading), "mb-3"]}>
+          {gettext("Identity verifications")}
+        </h2>
+
+        <div :if={@identity_verifications == []} class={["p-4 text-sm", Theme.text_color(:muted)]}>
+          {gettext("No identity verifications yet.")}
+        </div>
+
+        <div class="space-y-3">
+          <div
+            :for={entry <- @identity_verifications}
+            id={"identity-verification-#{entry.identity_verification.id}"}
+            class={[Theme.card_variant(:default), "p-4"]}
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-sm truncate">{entry.provider_business_name}</span>
+              <.identity_status_badge
+                status={entry.identity_verification.status}
+                outcome={entry.identity_verification.outcome}
+              />
+            </div>
+            <p
+              :if={entry.identity_verification.failure_reason}
+              class={["mt-1 text-xs", Theme.text_color(:muted)]}
+            >
+              {entry.identity_verification.failure_reason}
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
     """
   end

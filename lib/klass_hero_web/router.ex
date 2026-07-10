@@ -127,6 +127,8 @@ defmodule KlassHeroWeb.Router do
 
         live "/complete-profile", ProfileCompletionLive, :complete
 
+        live "/verification", VerificationLive, :index
+
         live "/incidents/new", IncidentReportLive, :new
         live "/programs/:program_id/incidents", IncidentReportsLive, :index
 

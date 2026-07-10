@@ -19,6 +19,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
+  alias KlassHeroWeb.Theme
 
   require Logger
 
@@ -58,6 +59,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
       |> assign(page_title: gettext("Provider Dashboard"))
       |> assign(active_nav: :home)
       |> assign(business: business)
+      |> assign(identity_verified?: Provider.identity_step_approved?(provider.id))
       |> assign(programs_count: length(program_listings))
       |> assign(total_sessions_completed: total_sessions)
       |> assign(enrolled_total: enrolled_total)
@@ -213,6 +215,29 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
       dual_role?={@dual_role?}
     >
       <div class="space-y-6">
+        <.link
+          :if={not @identity_verified?}
+          id="identity-verify-cta"
+          navigate={~p"/provider/verification"}
+          class={[
+            "flex items-center justify-between gap-3 p-4 border-2 border-amber-300 bg-amber-50",
+            Theme.rounded(:xl)
+          ]}
+        >
+          <div class="flex items-start gap-3">
+            <.icon name="hero-identification" class="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p class={["font-semibold", Theme.typography(:card_title)]}>
+                {gettext("Verify your identity to get approved")}
+              </p>
+              <p class="text-sm text-gray-500 mt-0.5">
+                {gettext("Complete your verification checklist so parents can find and book you.")}
+              </p>
+            </div>
+          </div>
+          <.icon name="hero-chevron-right" class="w-5 h-5 text-amber-500 shrink-0" />
+        </.link>
+
         <%!-- 4-up KPI grid. Revenue + Rating disabled until Stripe transactions
               and a review/rating model land. --%>
         <section id="provider-dashboard-stats" class="grid grid-cols-2 lg:grid-cols-4 gap-4">

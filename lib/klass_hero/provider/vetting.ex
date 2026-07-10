@@ -22,8 +22,12 @@ defmodule KlassHero.Provider.Vetting do
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StepDefinition
   alias KlassHero.Provider.StripeIdentity
+  alias KlassHero.Provider.Verification
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Provider.VerificationStep
   alias KlassHero.Provider.VettingCase
+  alias KlassHero.Provider.VettingChecklist
+  alias KlassHero.Provider.VettingStepView
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.EventDispatchHelper
@@ -153,6 +157,146 @@ defmodule KlassHero.Provider.Vetting do
   end
 
   defp step_order, do: from(s in VerificationStep, order_by: s.inserted_at)
+
+  # ── Onboarding checklist read model (Slice 2) ──────────────────────────────
+
+  @doc """
+  Assembles a provider's onboarding checklist: the vetting case lifecycle plus an ordered
+  per-step view whose status re-surfaces `:rejected` from the latest evidence record.
+
+  The engine resets document/identity steps to `:not_started` on rejection (clearing the
+  step's own reason — see `VettingCase.reset_step/2`), so a step's *displayed* status and
+  reason are a merge of the engine step and its evidence (`VerificationDocument`,
+  `IdentityVerification`). This is the single read entry point, so the LiveView never
+  orchestrates several reads. The case is lazily created on first read — never `:not_found`.
+  """
+  @spec checklist_for_provider(String.t()) :: VettingChecklist.t()
+  def checklist_for_provider(provider_id) when is_binary(provider_id) do
+    {:ok, case_} = get_case_for_provider(provider_id)
+    {:ok, documents} = Verification.get_provider_verification_documents(provider_id)
+    identity = latest_identity(provider_id)
+
+    evidence = %{documents: documents, identity: identity}
+    step_views = Enum.map(case_.steps, &derive_step_view(&1, evidence))
+
+    build_checklist(case_, step_views)
+  end
+
+  @doc """
+  Returns the provider's latest Stripe Identity verification record, or `{:error, :not_found}`.
+  Newest by insertion — retries append new records.
+  """
+  @spec get_latest_identity_verification(String.t()) ::
+          {:ok, IdentityVerification.t()} | {:error, :not_found}
+  def get_latest_identity_verification(provider_id) when is_binary(provider_id) do
+    IdentityVerification
+    |> where([i], i.provider_id == ^provider_id)
+    |> order_by([i], desc: i.inserted_at)
+    |> limit(1)
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      iv -> {:ok, iv}
+    end
+  end
+
+  @doc """
+  Lists all identity verifications with their provider's business name for admin review,
+  newest first. Read-only — admins never override a Stripe Identity outcome (ADR 0009).
+  """
+  @spec list_identity_verifications_for_admin() ::
+          {:ok, [%{identity_verification: IdentityVerification.t(), provider_business_name: String.t()}]}
+  def list_identity_verifications_for_admin do
+    results =
+      from(i in IdentityVerification,
+        join: p in ProviderProfile,
+        on: p.id == i.provider_id,
+        order_by: [desc: i.inserted_at],
+        select: %{identity_verification: i, provider_business_name: p.business_name}
+      )
+      |> Repo.all()
+
+    {:ok, results}
+  end
+
+  @doc "Whether the provider's identity step is engine-approved (drives the overview CTA banner)."
+  @spec identity_step_approved?(String.t()) :: boolean()
+  def identity_step_approved?(provider_id) when is_binary(provider_id) do
+    case get_case_for_provider(provider_id) do
+      {:ok, case_} -> Enum.any?(case_.steps, &(&1.key == :identity and VerificationStep.approved?(&1)))
+      {:error, :not_found} -> false
+    end
+  end
+
+  # Builds a step's *displayed* status + reason by merging the engine step with its evidence.
+  # `step.status` is authoritative for `:approved`; for everything else the evidence record
+  # wins, because the engine resets document/identity steps to `:not_started` on rejection and
+  # discards the reason. Each `step_status/2` clause covers every shape its evidence can take,
+  # including absent evidence (`nil`), which falls back to the step.
+  defp derive_step_view(%VerificationStep{} = step, evidence) do
+    {ui_status, reason} = step_status(step, evidence)
+
+    %VettingStepView{
+      key: step.key,
+      ui_status: ui_status,
+      rejection_reason: reason,
+      admin_review: step.admin_review,
+      completed_via: step.completed_via
+    }
+  end
+
+  defp step_status(%VerificationStep{status: :approved}, _evidence), do: {:approved, nil}
+
+  defp step_status(%VerificationStep{completed_via: {:document, type}} = step, %{documents: documents}) do
+    # `get_provider_verification_documents/1` returns documents newest-first, so the first
+    # match is the latest of its type.
+    documents
+    |> Enum.find(&(&1.document_type == String.to_existing_atom(type)))
+    |> document_status(step)
+  end
+
+  defp step_status(%VerificationStep{completed_via: {:stripe_identity}} = step, %{identity: identity}) do
+    identity_status(identity, step)
+  end
+
+  # Agreements auto-approve with no reject path, so the engine step is the whole story.
+  defp step_status(%VerificationStep{completed_via: {:signed_agreement, _kind}} = step, _evidence) do
+    {step.status, nil}
+  end
+
+  defp document_status(%VerificationDocument{status: :rejected, rejection_reason: reason}, _step) do
+    {:rejected, reason}
+  end
+
+  defp document_status(%VerificationDocument{status: :pending}, _step), do: {:submitted, nil}
+  defp document_status(_doc_or_nil, step), do: {step.status, nil}
+
+  defp identity_status(%IdentityVerification{outcome: :fail, failure_reason: reason}, _step) do
+    {:rejected, reason}
+  end
+
+  defp identity_status(%IdentityVerification{status: :processing}, _step), do: {:submitted, nil}
+  defp identity_status(_identity_or_nil, step), do: {step.status, nil}
+
+  defp build_checklist(%VettingCase{} = case_, step_views) do
+    approved = Enum.count(step_views, &(&1.ui_status == :approved))
+
+    %VettingChecklist{
+      lifecycle: case_.lifecycle,
+      entity_type: case_.entity_type,
+      verified?: VettingCase.verified?(case_),
+      approved_count: approved,
+      total_count: length(step_views),
+      steps: step_views
+    }
+  end
+
+  defp latest_identity(provider_id) do
+    case get_latest_identity_verification(provider_id) do
+      {:ok, identity} -> identity
+      {:error, :not_found} -> nil
+    end
+  end
 
   # ── Stripe Identity (Slice 1) ──────────────────────────────────────────────
 
