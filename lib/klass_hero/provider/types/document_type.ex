@@ -16,7 +16,17 @@ defmodule KlassHero.Provider.Types.DocumentType do
 
   use Ecto.Type
 
-  @valid [:business_registration, :insurance_certificate, :id_document, :tax_certificate, :other]
+  @valid [
+    :business_registration,
+    :insurance_certificate,
+    :id_document,
+    :tax_certificate,
+    :experience_validation,
+    :background_check,
+    :video_screening,
+    :safeguarding_certificate,
+    :other
+  ]
 
   @doc "Canonical document types accepted on write (excludes the `:unknown` load sentinel)."
   @spec valid_values() :: [atom()]

@@ -90,7 +90,8 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
 
     test "accepts all valid document types", %{provider: provider, storage: storage} do
       valid_types =
-        ~w(business_registration insurance_certificate id_document tax_certificate other)
+        ~w(business_registration insurance_certificate id_document tax_certificate other
+           experience_validation background_check video_screening safeguarding_certificate)
 
       for doc_type <- valid_types do
         params = %{

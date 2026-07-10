@@ -49,6 +49,29 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp doc_status_style(_), do: {"bg-hero-grey-100", "text-hero-grey-600", gettext("Unknown")}
 
   @doc """
+  Read-only pill for a Stripe Identity verification's `(status, outcome)`. Admins never
+  override the outcome (ADR 0009), so this is display-only — there is no action affordance.
+  """
+  attr :status, :atom, required: true
+  attr :outcome, :atom, default: nil
+
+  def identity_status_badge(assigns) do
+    {badge_class, label} = identity_status_style(assigns.status, assigns.outcome)
+    assigns = assign(assigns, badge_class: badge_class, label: label)
+
+    ~H"""
+    <span class={["px-2.5 py-1 text-xs font-medium", Theme.rounded(:full), @badge_class]}>
+      {@label}
+    </span>
+    """
+  end
+
+  defp identity_status_style(_status, :pass), do: {Theme.status_badge(:available), gettext("Passed")}
+  defp identity_status_style(_status, :fail), do: {Theme.status_badge(:full), gettext("Failed")}
+  defp identity_status_style(:processing, _outcome), do: {Theme.status_badge(:limited), gettext("In progress")}
+  defp identity_status_style(_status, _outcome), do: {Theme.status_badge(:neutral), gettext("Pending")}
+
+  @doc """
   Renders the provider dashboard tab navigation.
 
   `current_tab` is the active tab as the *component* understands it
@@ -2227,6 +2250,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :uploads, :map, required: true, doc: "The @uploads assign from the parent LiveView"
   attr :doc_type, :string, required: true, doc: "Currently selected document type"
   attr :document_types, :list, required: true, doc: "List of valid document types"
+  attr :video_upload?, :boolean, default: false, doc: "Whether the track includes a video-screening step"
 
   def verification_documents_panel(assigns) do
     ~H"""
@@ -2362,7 +2386,360 @@ defmodule KlassHeroWeb.ProviderComponents do
           </button>
         </form>
       </div>
+
+      <div :if={@video_upload?} class="border-t border-hero-grey-200 pt-6 mt-6">
+        <h3 class="text-sm font-semibold text-hero-charcoal mb-1">
+          {gettext("Video Screening")}
+        </h3>
+        <p class="text-sm text-hero-grey-500 mb-3">
+          {gettext(
+            "Record a short video introducing yourself. Our team reviews it to assess communication skills and alignment with our values."
+          )}
+        </p>
+
+        <form
+          id="video-upload-form"
+          phx-submit="upload_verification_video"
+          phx-change="validate_upload"
+          class="space-y-4"
+        >
+          <div>
+            <.live_file_input upload={@uploads.verification_video} class="hidden" />
+            <label
+              for={@uploads.verification_video.ref}
+              class={[
+                "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
+                "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium cursor-pointer",
+                Theme.rounded(:lg),
+                Theme.transition(:normal)
+              ]}
+            >
+              <.icon name="hero-video-camera-mini" class="w-4 h-4" />
+              {gettext("Select Video")}
+            </label>
+            <p class="text-xs text-hero-grey-400 mt-2">
+              {gettext("MP4, MOV or WEBM. Max 100MB.")}
+            </p>
+            <div
+              :for={entry <- @uploads.verification_video.entries}
+              class={[
+                "flex items-center gap-3 mt-3 px-3 py-2 border border-hero-grey-200",
+                "bg-hero-grey-50",
+                Theme.rounded(:lg)
+              ]}
+            >
+              <.icon name="hero-film-mini" class="w-5 h-5 text-hero-grey-500 shrink-0" />
+              <span class="text-sm text-hero-charcoal truncate flex-1">{entry.client_name}</span>
+              <button
+                type="button"
+                phx-click="cancel_upload"
+                phx-value-ref={entry.ref}
+                phx-value-upload="verification_video"
+                class="text-xs text-red-500 hover:text-red-700 shrink-0"
+              >
+                {gettext("Remove")}
+              </button>
+              <div
+                :for={err <- upload_errors(@uploads.verification_video, entry)}
+                class="text-xs text-red-500"
+              >
+                {upload_error_to_string(err)}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="upload-video-btn"
+            disabled={@uploads.verification_video.entries == []}
+            class={[
+              "flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
+              "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              Theme.rounded(:lg),
+              Theme.transition(:normal)
+            ]}
+          >
+            <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
+            {gettext("Upload Video")}
+          </button>
+        </form>
+      </div>
     </div>
+    """
+  end
+
+  @doc """
+  Renders the Community Standards Agreement step: the scrollable guidelines, a PDF download
+  link and a checkbox to confirm agreement. When the provider has already agreed to the current
+  version, it shows a signed confirmation instead; when they agreed to an older version, it
+  prompts a re-agreement.
+  """
+  attr :agreement, :any, required: true, doc: "The provider's latest SignedAgreement, or nil"
+  attr :satisfied?, :boolean, required: true, doc: "Whether the latest agreement meets the current version"
+  attr :version, :string, required: true, doc: "The current guidelines version"
+  attr :form, :any, required: true, doc: "The agreement checkbox form"
+
+  def community_agreement_panel(assigns) do
+    ~H"""
+    <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
+      <h2 class={[Theme.typography(:card_title), Theme.text_color(:heading), "mb-1"]}>
+        {gettext("Community Standards Agreement")}
+      </h2>
+      <p class={[Theme.typography(:body_small), Theme.text_color(:muted), "mb-4"]}>
+        {gettext("The final step: read and agree to the Klass Hero Community Guidelines.")}
+      </p>
+
+      <%= if @satisfied? do %>
+        <div class={[
+          "flex items-start gap-3 p-4 border border-green-200 bg-green-50",
+          Theme.rounded(:lg)
+        ]}>
+          <.icon name="hero-check-circle-mini" class="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+          <div class={[Theme.typography(:body_small), Theme.text_color(:body)]}>
+            <p class="font-medium">{gettext("You have agreed to the Community Guidelines.")}</p>
+            <p :if={@agreement} class={[Theme.text_color(:muted), "mt-1"]}>
+              {gettext("Signed by %{name} on %{date} (v%{version}).",
+                name: @agreement.signed_by_name,
+                date: Calendar.strftime(@agreement.signed_at, "%d %B %Y"),
+                version: @agreement.version
+              )}
+            </p>
+          </div>
+        </div>
+      <% else %>
+        <div
+          :if={@agreement}
+          class={[
+            "mb-4 p-3 border border-amber-200 bg-amber-50 text-amber-800",
+            Theme.rounded(:lg),
+            Theme.typography(:body_small)
+          ]}
+        >
+          {gettext(
+            "The Community Guidelines have been updated since you last agreed (v%{old}). Please review and re-agree.",
+            old: @agreement.version
+          )}
+        </div>
+
+        <div
+          id="community-guidelines"
+          class={[
+            "max-h-80 overflow-y-auto p-4 border border-hero-grey-200 bg-hero-grey-50",
+            Theme.rounded(:lg)
+          ]}
+        >
+          {guidelines_body(assigns)}
+        </div>
+
+        <div class="mt-3">
+          <.link
+            href={community_guidelines_pdf_path(@version)}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-2 text-sm font-medium text-hero-cyan hover:underline"
+          >
+            <.icon name="hero-arrow-down-tray-mini" class="w-4 h-4" />
+            {gettext("Download the agreement (PDF)")}
+          </.link>
+        </div>
+
+        <.form
+          for={@form}
+          id="community-agreement-form"
+          phx-submit="submit_community_agreement"
+          class="mt-4 space-y-4"
+        >
+          <.input
+            field={@form[:agree]}
+            type="checkbox"
+            label={gettext("I have read and agree to the Klass Hero Community Guidelines.")}
+          />
+          <button
+            type="submit"
+            id="submit-agreement-btn"
+            class={[
+              "inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold",
+              Theme.rounded(:lg),
+              Theme.button_variant(:primary),
+              Theme.transition(:normal)
+            ]}
+          >
+            <.icon name="hero-check-mini" class="w-4 h-4" />
+            {gettext("Confirm agreement")}
+          </button>
+        </.form>
+      <% end %>
+    </div>
+    """
+  end
+
+  # The public download path for a given guidelines `version`'s immutable PDF.
+  defp community_guidelines_pdf_path(version), do: "/downloads/Klass_Hero_Community_Standards_Agreement_v#{version}.pdf"
+
+  # The verbatim Community Guidelines body (v1.0). Not translated — it is a legal artifact tied to
+  # a specific `version`; a localized agreement would be its own versioned text + PDF.
+  defp guidelines_body(assigns) do
+    ~H"""
+    <div class={["space-y-5 leading-relaxed", Theme.typography(:body_small), Theme.text_color(:body)]}>
+      <p>
+        This Community Standards Agreement ("Agreement") is entered into between the provider named
+        below ("Provider") and Klass Hero ("Klass Hero"), a marketplace platform connecting families
+        with vetted youth activity providers in Berlin and beyond. By registering as a provider on
+        the Klass Hero platform, Provider agrees to be bound by the terms of this Agreement,
+        including the Community Guidelines set out herein.
+      </p>
+
+      <.guidelines_section title="1. Platform Overview">
+        <p>
+          Klass Hero is a trusted marketplace for youth activities, including sports, arts, tutoring,
+          and enrichment, designed to help families discover high-quality, vetted providers. The
+          standards in this Agreement protect children, families, and the integrity of every provider
+          on the platform.
+        </p>
+      </.guidelines_section>
+
+      <.guidelines_section title="2. Provider Eligibility">
+        <p>Providers must meet the following baseline requirements to list on Klass Hero:</p>
+        <.guidelines_bullets items={[
+          "Be 18 years of age or older",
+          "Hold any required certifications, qualifications, or licences relevant to their activity",
+          "Agree to and pass Klass Hero's background verification process",
+          "Maintain valid public liability insurance where applicable",
+          "Operate in compliance with all applicable German law and local regulations"
+        ]} />
+      </.guidelines_section>
+
+      <.guidelines_section title="3. Community Guidelines">
+        <h4 class="font-semibold mt-3">3.1 Professionalism</h4>
+        <p>
+          Providers are representatives of the Klass Hero community and are expected to maintain a
+          high standard of professional conduct at all times:
+        </p>
+        <.guidelines_bullets items={[
+          "Arrive punctually and prepared for every session",
+          "Communicate clearly and respectfully with families and Klass Hero staff",
+          "Present sessions and listings accurately, no misleading descriptions, qualifications, or pricing",
+          "Maintain appropriate dress, language, and behaviour when working with children",
+          "Respond to messages and booking requests within 48 hours"
+        ]} />
+
+        <h4 class="font-semibold mt-3">3.2 Child Safety</h4>
+        <p>
+          The safety and wellbeing of children is the highest priority on the Klass Hero platform. Providers must:
+        </p>
+        <.guidelines_bullets items={[
+          "Never engage in physical, verbal, emotional, or any other form of abuse towards a minor",
+          "Never be alone with a child in a closed, unobserved space without parental consent",
+          "Report any safeguarding concerns immediately to a parent/guardian and, where required, relevant authorities",
+          "Comply with Klass Hero's Child Safety Policy at all times",
+          "Hold relevant child protection training where required by their activity or jurisdiction"
+        ]} />
+
+        <h4 class="font-semibold mt-3">3.3 Inclusivity & Non-Discrimination</h4>
+        <p>
+          Klass Hero is committed to being a welcoming platform for all families. Providers must not
+          discriminate against any participant or family on the basis of:
+        </p>
+        <.guidelines_bullets items={[
+          "Race, ethnicity, or national origin",
+          "Gender identity or sexual orientation",
+          "Disability or health condition",
+          "Religion or belief",
+          "Socioeconomic background"
+        ]} />
+        <p>
+          Reasonable accommodations for participants with additional needs should be offered wherever possible.
+        </p>
+
+        <h4 class="font-semibold mt-3">3.4 Accurate Listings & Honest Representation</h4>
+        <.guidelines_bullets items={[
+          "All activity listings must accurately reflect the content, duration, age range, and pricing of sessions",
+          "Qualifications, certifications, and experience listed must be truthful and verifiable",
+          "Promotional materials must not contain false or exaggerated claims",
+          "Providers must promptly update listings if details change"
+        ]} />
+
+        <h4 class="font-semibold mt-3">3.5 Payment & Booking Integrity</h4>
+        <.guidelines_bullets items={[
+          "Providers must not solicit or accept payments from families outside the Klass Hero platform for bookings made through the platform",
+          "Cancellations must be made in accordance with Klass Hero's Cancellation Policy",
+          "Providers must not no-show without advance notice; repeated no-shows may result in suspension"
+        ]} />
+
+        <h4 class="font-semibold mt-3">3.6 Data & Privacy</h4>
+        <.guidelines_bullets items={[
+          "Provider must treat any personal data of families and children accessed via Klass Hero with strict confidentiality",
+          "Data may only be used for the purpose of delivering the booked activity",
+          "Providers must comply with all applicable data protection laws, including the GDPR"
+        ]} />
+      </.guidelines_section>
+
+      <.guidelines_section title="4. Reviews & Feedback">
+        <p>Klass Hero operates a transparent review system. Providers agree that:</p>
+        <.guidelines_bullets items={[
+          "Families may leave honest reviews following sessions",
+          "Providers must not solicit, manipulate, or misrepresent reviews",
+          "Klass Hero may publish reviews on provider profile pages",
+          "Providers may respond to reviews professionally and constructively"
+        ]} />
+      </.guidelines_section>
+
+      <.guidelines_section title="5. Enforcement & Consequences">
+        <p>
+          Klass Hero reserves the right to investigate complaints and take action proportionate to
+          any breach of this Agreement. Potential consequences include:
+        </p>
+        <.guidelines_bullets items={[
+          "Warning notice issued to the Provider",
+          "Temporary suspension from the platform",
+          "Permanent removal and deactivation of the provider account",
+          "Referral to relevant authorities where required by law"
+        ]} />
+        <p>
+          Klass Hero will make reasonable efforts to notify the Provider of any investigation and to
+          allow a right of response, except where immediate action is required to protect the safety
+          of children or families.
+        </p>
+      </.guidelines_section>
+
+      <.guidelines_section title="6. Amendments">
+        <p>
+          Klass Hero may update these Community Standards from time to time. Providers will be
+          notified of material changes via email and/or the platform dashboard. Continued use of the
+          platform following notice of changes constitutes acceptance of the updated terms.
+        </p>
+      </.guidelines_section>
+
+      <.guidelines_section title="7. Governing Law">
+        <p>
+          This Agreement is governed by the laws of the Federal Republic of Germany. Any disputes
+          shall be subject to the exclusive jurisdiction of the courts of Berlin.
+        </p>
+      </.guidelines_section>
+    </div>
+    """
+  end
+
+  attr :title, :string, required: true
+  slot :inner_block, required: true
+
+  defp guidelines_section(assigns) do
+    ~H"""
+    <section class="space-y-2">
+      <h3 class={[Theme.typography(:card_title), Theme.text_color(:heading)]}>{@title}</h3>
+      {render_slot(@inner_block)}
+    </section>
+    """
+  end
+
+  attr :items, :list, required: true
+
+  defp guidelines_bullets(assigns) do
+    ~H"""
+    <ul class="list-disc pl-5 space-y-1">
+      <li :for={item <- @items}>{item}</li>
+    </ul>
     """
   end
 end

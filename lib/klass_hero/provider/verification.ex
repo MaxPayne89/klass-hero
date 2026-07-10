@@ -147,6 +147,7 @@ defmodule KlassHero.Provider.Verification do
 
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types, to: VerificationDocument
+  defdelegate valid_document_types(entity_type), to: VerificationDocument
 
   defp validate_verification_submission(params) do
     errors =
@@ -218,7 +219,14 @@ defmodule KlassHero.Provider.Verification do
       event_name,
       doc.id,
       :verification_document,
-      %{provider_id: doc.provider_profile_id, reviewer_id: reviewer_id}
+      %{
+        provider_id: doc.provider_profile_id,
+        reviewer_id: reviewer_id,
+        # document_type as a string matches the step catalog's `{:document, type}`
+        # form; document_id becomes the approved step's evidence_ref.
+        document_type: to_string(doc.document_type),
+        document_id: doc.id
+      }
     )
     |> EventDispatchHelper.dispatch(KlassHero.Provider)
   end
@@ -276,6 +284,7 @@ defmodule KlassHero.Provider.Verification do
     |> case do
       ext when ext in ~w(.jpg .jpeg .png .gif .webp) -> :image
       ".pdf" -> :pdf
+      ext when ext in ~w(.mp4 .mov .webm) -> :video
       _ -> :other
     end
   end

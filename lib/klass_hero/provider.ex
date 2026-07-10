@@ -30,7 +30,9 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Programs
   alias KlassHero.Provider.Staff
   alias KlassHero.Provider.StaffMember
+  alias KlassHero.Provider.SubmitCommunityAgreement
   alias KlassHero.Provider.Verification
+  alias KlassHero.Provider.Vetting
 
   # --- Provider profiles ---------------------------------------------------
 
@@ -88,6 +90,39 @@ defmodule KlassHero.Provider do
   @doc "Rejects a verification document with reason (admin only)."
   defdelegate reject_verification_document(document_id, reviewer_id, reason), to: Verification
 
+  @doc "Starts a Stripe Identity session for a provider; returns the hosted redirect URL."
+  defdelegate create_identity_verification_session(provider_id, return_url), to: Vetting
+
+  @doc "Records a Stripe Identity webhook outcome against its session (idempotent)."
+  defdelegate record_identity_verification_outcome(outcome), to: Vetting
+
+  @doc "Returns the provider's onboarding checklist read model (case lazily created on first read)."
+  defdelegate get_vetting_checklist(provider_id), to: Vetting, as: :checklist_for_provider
+
+  @doc "Returns the provider's latest Stripe Identity verification record, or `{:error, :not_found}`."
+  defdelegate get_latest_identity_verification(provider_id), to: Vetting
+
+  @doc "Whether the provider's identity step is engine-approved (drives the overview CTA banner)."
+  defdelegate identity_step_approved?(provider_id), to: Vetting
+
+  @doc "Lists identity verifications with provider business names for admin review (read-only)."
+  defdelegate list_identity_verifications_for_admin(), to: Vetting
+
+  @doc "Signs the Community Standards Agreement, auto-approving the step and verifying if it was last."
+  defdelegate submit_community_agreement(params), to: SubmitCommunityAgreement, as: :execute
+
+  @doc "Returns the provider's most recent Community Standards Agreement, or `nil`."
+  defdelegate get_latest_community_agreement(provider_id), to: Vetting
+
+  @doc "Whether the provider's latest community agreement still satisfies the current guidelines."
+  defdelegate community_agreement_satisfied?(provider_id), to: Vetting
+
+  @doc "Whether the given entity type's vetting track includes the community-agreement step."
+  defdelegate requires_community_agreement?(entity_type), to: Vetting
+
+  @doc "The Community Guidelines version currently in force."
+  defdelegate current_community_guidelines_version(), to: Vetting
+
   @doc "Returns all verification documents for a provider."
   defdelegate get_provider_verification_documents(provider_profile_id), to: Verification
 
@@ -105,6 +140,9 @@ defmodule KlassHero.Provider do
 
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types, to: Verification
+
+  @doc "Returns the valid verification document types for a track (`:individual` | `:business`)."
+  defdelegate valid_document_types(entity_type), to: Verification
 
   # --- Incident reports ----------------------------------------------------
 

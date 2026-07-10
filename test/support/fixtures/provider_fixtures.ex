@@ -4,10 +4,12 @@ defmodule KlassHero.ProviderFixtures do
   """
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
+  alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
+  alias KlassHero.Provider.Vetting
   alias KlassHero.Repo
 
   @doc """
@@ -168,6 +170,47 @@ defmodule KlassHero.ProviderFixtures do
       Map.take(updated, [:status, :rejection_reason, :reviewed_by_id, :reviewed_at])
     )
     |> Repo.update()
+  end
+
+  @doc """
+  Seeds a vetting case for a provider (defaults to the `:individual` track).
+
+  Accepts optional `provider_id` and `entity_type`. Returns the case with steps preloaded.
+  """
+  def vetting_case_fixture(attrs \\ %{}) do
+    attrs_map = Map.new(attrs)
+    provider_id = attrs_map[:provider_id] || provider_profile_fixture().id
+    entity_type = attrs_map[:entity_type] || :individual
+
+    {:ok, case_} = Vetting.create_case(provider_id, entity_type)
+    case_
+  end
+
+  @doc """
+  Creates an `IdentityVerification` (Stripe Identity evidence) for a provider.
+
+  Defaults to a `:processing` in-flight session. Pass `:status`, `:outcome`, and
+  `:failure_reason` to model a terminal outcome, e.g.
+  `identity_verification_fixture(provider_id: id, status: :verified, outcome: :pass)`.
+  """
+  def identity_verification_fixture(attrs \\ %{}) do
+    attrs_map = Map.new(attrs)
+    provider_id = attrs_map[:provider_id] || provider_profile_fixture().id
+
+    {:ok, persisted} =
+      %IdentityVerification{}
+      |> IdentityVerification.create_changeset(%{
+        id: Ecto.UUID.generate(),
+        provider_id: provider_id,
+        stripe_session_id: attrs_map[:stripe_session_id] || "vs_test_#{System.unique_integer([:positive])}",
+        status: attrs_map[:status] || :processing,
+        outcome: attrs_map[:outcome],
+        failure_reason: attrs_map[:failure_reason],
+        verified_at: attrs_map[:verified_at]
+      })
+      |> Repo.insert()
+
+    persisted
   end
 
   @doc """

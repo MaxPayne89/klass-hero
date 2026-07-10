@@ -95,6 +95,10 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   def document_type_label(:id_document), do: gettext("ID Document")
   def document_type_label(:tax_certificate), do: gettext("Tax Certificate")
   def document_type_label(:other), do: gettext("Other")
+  def document_type_label(:experience_validation), do: gettext("Experience validation")
+  def document_type_label(:background_check), do: gettext("Background check")
+  def document_type_label(:video_screening), do: gettext("Video screening")
+  def document_type_label(:safeguarding_certificate), do: gettext("Safeguarding certificate")
   # Legacy/out-of-enum values load as the :unknown sentinel (#1026).
   def document_type_label(:unknown), do: gettext("Unknown")
   def document_type_label(type), do: to_string(type)
