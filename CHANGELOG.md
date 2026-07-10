@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.55.3](https://github.com/MaxPayne89/klass-hero/compare/v0.55.2...v0.55.3) (2026-07-10)
+
+
+### Code Refactoring
+
+* lead instructor single source of truth on program_staff_assignments ([#840](https://github.com/MaxPayne89/klass-hero/issues/840)) ([#1063](https://github.com/MaxPayne89/klass-hero/issues/1063)) ([ccaf9a7](https://github.com/MaxPayne89/klass-hero/commit/ccaf9a752a6b433b3aa297e22bd4a71b58738989))
+* unify Messaging event dispatch on EventDispatchHelper ([#1061](https://github.com/MaxPayne89/klass-hero/issues/1061)) ([ced7dfc](https://github.com/MaxPayne89/klass-hero/commit/ced7dfc2e98f887b47b54f3c4469927168b1ee7b)), closes [#849](https://github.com/MaxPayne89/klass-hero/issues/849)
+
 ## [0.55.2](https://github.com/MaxPayne89/klass-hero/compare/v0.55.1...v0.55.2) (2026-07-08)
 
 
