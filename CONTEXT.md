@@ -155,6 +155,26 @@ _Avoid_: Permission, Agreement, Opt-in
 A document a **Provider** uploads for **Admin** review to establish trust — `business_registration`, `insurance_certificate`, `id_document`, `tax_certificate`. Lifecycle `pending → approved / rejected`.
 _Avoid_: Credential, Proof; "Certificate"/"Registration" name *document types*, not the concept
 
+**Vetting**:
+The process that gates whether a **Provider** is trusted enough to be listed. A composable, ordered step engine (not a single boolean) selected by the provider's entity type. See [ADR-0008](adr/0008-provider-vetting-is-a-composable-step-engine.md) and `docs/6-step-verification-process.md`.
+_Avoid_: Onboarding (broader), Approval (an outcome, not the process)
+
+**Vetting Case**:
+The aggregate holding one **Provider**'s vetting: a `not_started → in_progress → verified` lifecycle over a frozen set of **Verification Step**s. A provider is verified exactly when every step is approved; that transition emits the frozen `provider_verified` fact other contexts consume.
+
+**Track**:
+The ordered set of **Verification Step**s a provider must complete, chosen by entity type. The `:individual` track is the six-step spine (identity, experience, background, video, safeguarding, community agreement); `:business` is a follow-up. Track composition lives in code, not data.
+
+**Verification Step**:
+One requirement inside a **Vetting Case** — `not_started → submitted → approved / rejected`. Completed via one of three evidence kinds: a **Verification Document** (admin-reviewed), an **Identity Verification** (Stripe), or a **Signed Agreement** (auto-approved). A rejection resets the step and its transitive dependents.
+
+**Identity Verification**:
+The outcome of one Stripe Identity session run against a person, backing the identity **Verification Step**. Append-only; stores only the session id and pass/fail outcome — never the date of birth or document images. The webhook is the source of truth; the age gate is fail-closed (18+). See [ADR-0009](adr/0009-stripe-identity-step-webhook-is-truth-age-gate-fail-closed.md).
+
+**Signed Agreement** (incl. **Community Agreement**):
+A **Provider**'s explicit, recorded consent to a versioned agreement, backing an auto-approving **Verification Step** (no admin review). The individual track's final step is the **Community Agreement** to the versioned Community Guidelines. Append-only: a re-agreement (e.g. after a version bump) is a fresh record, so consent history stays auditable.
+_Avoid_: Consent (reserved for **Guardian** permissions above)
+
 ## Parked (not modelled)
 
 **Referral**:

@@ -152,3 +152,12 @@ if config_env() == :prod do
     access_key_id: System.get_env("AWS_ACCESS_KEY_ID") || raise("AWS_ACCESS_KEY_ID not set"),
     secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY") || raise("AWS_SECRET_ACCESS_KEY not set")
 end
+
+if config_env() == :dev do
+  # Stripe Identity (provider vetting) for local development. Boot-tolerant, mirroring prod: a
+  # missing key never crashes boot — the client returns {:error, :stripe_not_configured} and the
+  # webhook plug rejects until provisioned. Export STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET
+  # (e.g. from `stripe listen`) to drive the real flow at /provider/verification locally.
+  config :klass_hero, :stripe, secret_key: System.get_env("STRIPE_SECRET_KEY")
+  config :klass_hero, :stripe_webhook_secret, System.get_env("STRIPE_WEBHOOK_SECRET")
+end
