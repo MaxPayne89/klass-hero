@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.56.0](https://github.com/MaxPayne89/klass-hero/compare/v0.55.3...v0.56.0) (2026-07-10)
+
+
+### Features
+
+* provider vetting engine (individual track) ([#1064](https://github.com/MaxPayne89/klass-hero/issues/1064)) ([24543e6](https://github.com/MaxPayne89/klass-hero/commit/24543e675ec94f5cebed8961de0229f2eba974ab))
+
+
+### Bug Fixes
+
+* make parent/provider profile creation idempotent inside critical event transaction ([#1070](https://github.com/MaxPayne89/klass-hero/issues/1070)) ([c41437c](https://github.com/MaxPayne89/klass-hero/commit/c41437c8dc8815cab9db2d74471d857e7dbb27ee)), closes [#1065](https://github.com/MaxPayne89/klass-hero/issues/1065)
+
 ## [0.55.3](https://github.com/MaxPayne89/klass-hero/compare/v0.55.2...v0.55.3) (2026-07-10)
 
 
