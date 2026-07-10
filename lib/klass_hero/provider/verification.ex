@@ -284,6 +284,7 @@ defmodule KlassHero.Provider.Verification do
     |> case do
       ext when ext in ~w(.jpg .jpeg .png .gif .webp) -> :image
       ".pdf" -> :pdf
+      ext when ext in ~w(.mp4 .mov .webm) -> :video
       _ -> :other
     end
   end

@@ -1754,7 +1754,7 @@ msgstr "Nicht zugewiesen"
 #: lib/klass_hero_web/components/provider_components.ex:49
 #: lib/klass_hero_web/components/provider_components.ex:1472
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:433
-#: lib/klass_hero_web/presenters/provider_presenter.ex:99
+#: lib/klass_hero_web/presenters/provider_presenter.ex:103
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr "Unbekannt"
@@ -2449,7 +2449,7 @@ msgstr "Beschreibung"
 msgid "Diverse"
 msgstr "Divers"
 
-#: lib/klass_hero_web/components/provider_components.ex:2304
+#: lib/klass_hero_web/components/provider_components.ex:2305
 #, elixir-autogen, elixir-format
 msgid "Document Type"
 msgstr "Dokumenttyp"
@@ -2478,6 +2478,7 @@ msgid "Document rejected."
 msgstr "Dokument abgelehnt."
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:145
+#: lib/klass_hero_web/live/provider/verification_live.ex:137
 #, elixir-autogen, elixir-format
 msgid "Document uploaded successfully."
 msgstr "Dokument erfolgreich hochgeladen."
@@ -2558,6 +2559,7 @@ msgid "Failed to resend invite."
 msgstr "Einladung konnte nicht erneut gesendet werden."
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:154
+#: lib/klass_hero_web/live/provider/verification_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "Failed to upload document."
 msgstr "Dokument konnte nicht hochgeladen werden."
@@ -2755,12 +2757,12 @@ msgstr "Minimale Anmeldekapazität"
 msgid "Minimum Grade"
 msgstr "Niedrigste Klassenstufe"
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:531
+#: lib/klass_hero_web/live/admin/verifications_live.ex:539
 #, elixir-autogen, elixir-format
 msgid "No approved documents."
 msgstr "Keine genehmigten Dokumente."
 
-#: lib/klass_hero_web/components/provider_components.ex:2266
+#: lib/klass_hero_web/components/provider_components.ex:2267
 #, elixir-autogen, elixir-format
 msgid "No documents uploaded yet."
 msgstr "Noch keine Dokumente hochgeladen."
@@ -2796,7 +2798,7 @@ msgstr "Kein Maximum"
 msgid "No minimum"
 msgstr "Kein Minimum"
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:530
+#: lib/klass_hero_web/live/admin/verifications_live.ex:538
 #, elixir-autogen, elixir-format
 msgid "No pending documents to review."
 msgstr "Keine ausstehenden Dokumente zur Überprüfung."
@@ -2806,7 +2808,7 @@ msgstr "Keine ausstehenden Dokumente zur Überprüfung."
 msgid "No programs booked yet"
 msgstr "Noch keine Programme gebucht"
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:532
+#: lib/klass_hero_web/live/admin/verifications_live.ex:540
 #, elixir-autogen, elixir-format
 msgid "No rejected documents."
 msgstr "Keine abgelehnten Dokumente."
@@ -2816,8 +2818,8 @@ msgstr "Keine abgelehnten Dokumente."
 msgid "No team members yet"
 msgstr "Noch keine Teammitglieder"
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:529
-#: lib/klass_hero_web/live/admin/verifications_live.ex:533
+#: lib/klass_hero_web/live/admin/verifications_live.ex:537
+#: lib/klass_hero_web/live/admin/verifications_live.ex:541
 #, elixir-autogen, elixir-format
 msgid "No verification documents found."
 msgstr "Keine Verifizierungsdokumente gefunden."
@@ -2844,7 +2846,7 @@ msgstr "Nicht angegeben"
 msgid "Our Story"
 msgstr "Unsere Geschichte"
 
-#: lib/klass_hero_web/components/provider_components.ex:2341
+#: lib/klass_hero_web/components/provider_components.ex:2342
 #, elixir-autogen, elixir-format
 msgid "PDF, JPG or PNG. Max 10MB."
 msgstr "PDF, JPG oder PNG. Max. 10 MB."
@@ -2883,7 +2885,7 @@ msgstr "Bitte korrigieren Sie die Fehler unten."
 msgid "Please provide a rejection reason."
 msgstr "Bitte geben Sie einen Ablehnungsgrund an."
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:520
+#: lib/klass_hero_web/live/admin/verifications_live.ex:528
 #, elixir-autogen, elixir-format
 msgid "Preview not available for this file type."
 msgstr "Vorschau für diesen Dateityp nicht verfügbar."
@@ -3024,7 +3026,8 @@ msgstr "Ablehnungsgrund"
 #: lib/klass_hero_web/components/provider_components.ex:767
 #: lib/klass_hero_web/components/provider_components.ex:1166
 #: lib/klass_hero_web/components/provider_components.ex:2009
-#: lib/klass_hero_web/components/provider_components.ex:2360
+#: lib/klass_hero_web/components/provider_components.ex:2361
+#: lib/klass_hero_web/components/provider_components.ex:2440
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:253
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:318
 #, elixir-autogen, elixir-format
@@ -3072,7 +3075,7 @@ msgstr "Zeitplan noch offen"
 msgid "School Grade (optional)"
 msgstr "Klassenstufe (optional)"
 
-#: lib/klass_hero_web/components/provider_components.ex:2338
+#: lib/klass_hero_web/components/provider_components.ex:2339
 #, elixir-autogen, elixir-format
 msgid "Select File"
 msgstr "Datei auswählen"
@@ -3225,17 +3228,17 @@ msgstr "Bis Klassenstufe %{max}"
 msgid "Upload CSV"
 msgstr "CSV hochladen"
 
-#: lib/klass_hero_web/components/provider_components.ex:2384
+#: lib/klass_hero_web/components/provider_components.ex:2385
 #, elixir-autogen, elixir-format
 msgid "Upload Document"
 msgstr "Dokument hochladen"
 
-#: lib/klass_hero_web/components/provider_components.ex:2293
+#: lib/klass_hero_web/components/provider_components.ex:2294
 #, elixir-autogen, elixir-format
 msgid "Upload New Document"
 msgstr "Neues Dokument hochladen"
 
-#: lib/klass_hero_web/components/provider_components.ex:2261
+#: lib/klass_hero_web/components/provider_components.ex:2262
 #, elixir-autogen, elixir-format
 msgid "Upload documents to verify your business. Documents are reviewed by our team."
 msgstr "Laden Sie Dokumente hoch, um Ihr Unternehmen zu verifizieren. Die Dokumente werden von unserem Team überprüft."
@@ -3245,7 +3248,7 @@ msgstr "Laden Sie Dokumente hoch, um Ihr Unternehmen zu verifizieren. Die Dokume
 msgid "Upload error."
 msgstr "Upload-Fehler."
 
-#: lib/klass_hero_web/components/provider_components.ex:2258
+#: lib/klass_hero_web/components/provider_components.ex:2259
 #, elixir-autogen, elixir-format
 msgid "Verification Documents"
 msgstr "Verifizierungsdokumente"
@@ -3497,6 +3500,7 @@ msgstr "Professionelle und ethische Lehrpraktiken einhalten"
 msgid "Vetted with Care"
 msgstr "Mit Sorgfalt geprüft"
 
+#: lib/klass_hero_web/components/provider_components.ex:2392
 #: lib/klass_hero_web/live/about_live.ex:63
 #: lib/klass_hero_web/live/trust_safety_live.ex:43
 #, elixir-autogen, elixir-format
@@ -4681,6 +4685,7 @@ msgstr "Aktualisieren Sie Ihre Beobachtung..."
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:138
 #: lib/klass_hero_web/live/provider/programs_live.ex:339
+#: lib/klass_hero_web/live/provider/verification_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "Upload connection lost. Please try again."
 msgstr "Upload-Verbindung unterbrochen. Bitte versuchen Sie es erneut."
@@ -5816,8 +5821,8 @@ msgid "Get paid weekly"
 msgstr "Wöchentlich bezahlt werden"
 
 #: lib/klass_hero_web/live/for_providers_live.ex:396
-#: lib/klass_hero_web/live/provider/verification_live.ex:32
-#: lib/klass_hero_web/live/provider/verification_live.ex:95
+#: lib/klass_hero_web/live/provider/verification_live.ex:38
+#: lib/klass_hero_web/live/provider/verification_live.ex:186
 #, elixir-autogen, elixir-format
 msgid "Get verified"
 msgstr "Lassen Sie sich verifizieren"
@@ -7000,6 +7005,7 @@ msgstr "Jeder Anbieter erhält: Profilseite, Buchungssystem, Zahlungsabwicklung,
 msgid "A short video so we can meet you."
 msgstr "Ein kurzes Video, damit wir dich kennenlernen können."
 
+#: lib/klass_hero_web/presenters/provider_presenter.ex:99
 #: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:66
 #, elixir-autogen, elixir-format
 msgid "Background check"
@@ -7025,7 +7031,7 @@ msgstr "Vervollständige deine Verifizierungs-Checkliste, damit Eltern dich find
 msgid "Confirm who you are with our partner Stripe."
 msgstr "Bestätige deine Identität mit unserem Partner Stripe."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:54
+#: lib/klass_hero_web/live/provider/verification_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "Couldn't start identity verification. Please try again."
 msgstr "Die Identitätsprüfung konnte nicht gestartet werden. Bitte versuche es erneut."
@@ -7050,12 +7056,12 @@ msgstr "Identitätsprüfungen"
 msgid "In progress"
 msgstr "In Bearbeitung"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:225
+#: lib/klass_hero_web/live/provider/verification_live.ex:326
 #, elixir-autogen, elixir-format
 msgid "Klass Hero is only open to providers aged 18 and over, so we can't approve this account."
 msgstr "Klass Hero steht nur Anbietern ab 18 Jahren offen, daher können wir dieses Konto nicht freigeben."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:235
+#: lib/klass_hero_web/live/provider/verification_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "Looks like the check didn't finish. Pick up where you left off whenever you're ready."
 msgstr "Die Prüfung wurde offenbar nicht abgeschlossen. Mach weiter, wann immer du bereit bist."
@@ -7080,7 +7086,7 @@ msgstr "Nicht begonnen"
 msgid "Passed"
 msgstr "Bestanden"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:105
+#: lib/klass_hero_web/live/provider/verification_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Profile locked"
 msgstr "Profil gesperrt"
@@ -7095,7 +7101,7 @@ msgstr "Lies und unterschreibe die Vereinbarung zu den Gemeinschaftsstandards."
 msgid "Resubmit"
 msgstr "Erneut einreichen"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:214
+#: lib/klass_hero_web/live/provider/verification_live.ex:315
 #, elixir-autogen, elixir-format
 msgid "Retry verification"
 msgstr "Verifizierung erneut versuchen"
@@ -7115,12 +7121,12 @@ msgstr "Kinderschutz"
 msgid "Show relevant experience working with children."
 msgstr "Weise einschlägige Erfahrung in der Arbeit mit Kindern nach."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:232
+#: lib/klass_hero_web/live/provider/verification_live.ex:333
 #, elixir-autogen, elixir-format
 msgid "Something tripped up the check — usually a blurry photo. Give it another go."
 msgstr "Bei der Prüfung ist etwas schiefgelaufen – meist ein unscharfes Foto. Versuche es noch einmal."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:191
+#: lib/klass_hero_web/live/provider/verification_live.ex:292
 #, elixir-autogen, elixir-format
 msgid "Takes about 2 minutes. Once verified, your provider account can be approved."
 msgstr "Dauert etwa 2 Minuten. Nach der Verifizierung kann dein Anbieterkonto freigegeben werden."
@@ -7145,7 +7151,7 @@ msgstr "Lade ein aktuelles Führungszeugnis hoch."
 msgid "Upload your safeguarding certificate."
 msgstr "Lade dein Kinderschutz-Zertifikat hoch."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:188
+#: lib/klass_hero_web/live/provider/verification_live.ex:289
 #, elixir-autogen, elixir-format
 msgid "Verify identity"
 msgstr "Identität verifizieren"
@@ -7155,32 +7161,68 @@ msgstr "Identität verifizieren"
 msgid "Verify your identity to get approved"
 msgstr "Verifiziere deine Identität, um freigegeben zu werden"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:183
+#: lib/klass_hero_web/live/provider/verification_live.ex:284
 #, elixir-autogen, elixir-format
 msgid "Verify your identity with our partner Stripe to get approved. You'll be sent to a secure page and brought back here."
 msgstr "Verifiziere deine Identität mit unserem Partner Stripe, um freigegeben zu werden. Du wirst auf eine sichere Seite geleitet und danach hierher zurückgebracht."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:197
+#: lib/klass_hero_web/live/provider/verification_live.ex:298
 #, elixir-autogen, elixir-format
 msgid "Verifying your identity… this can take a moment."
 msgstr "Deine Identität wird überprüft … das kann einen Moment dauern."
 
+#: lib/klass_hero_web/presenters/provider_presenter.ex:100
 #: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:74
 #, elixir-autogen, elixir-format
 msgid "Video screening"
 msgstr "Video-Screening"
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:229
+#: lib/klass_hero_web/live/provider/verification_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "We couldn't read your date of birth from your ID. A clearer photo of your document should do the trick."
 msgstr "Wir konnten dein Geburtsdatum nicht von deinem Ausweis lesen. Ein schärferes Foto deines Dokuments sollte helfen."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:237
+#: lib/klass_hero_web/live/provider/verification_live.ex:338
 #, elixir-autogen, elixir-format
 msgid "We couldn't verify your identity. Please try again."
 msgstr "Wir konnten deine Identität nicht verifizieren. Bitte versuche es erneut."
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:207
+#: lib/klass_hero_web/live/provider/verification_live.ex:308
 #, elixir-autogen, elixir-format
 msgid "Your identity is verified."
 msgstr "Deine Identität ist verifiziert."
+
+#: lib/klass_hero_web/presenters/provider_presenter.ex:98
+#, elixir-autogen, elixir-format
+msgid "Experience validation"
+msgstr "Erfahrungsnachweis"
+
+#: lib/klass_hero_web/components/provider_components.ex:2421
+#, elixir-autogen, elixir-format
+msgid "MP4, MOV or WEBM. Max 100MB."
+msgstr "MP4, MOV oder WEBM. Max. 100 MB."
+
+#: lib/klass_hero_web/components/provider_components.ex:2395
+#, elixir-autogen, elixir-format
+msgid "Record a short video introducing yourself. Our team reviews it to assess communication skills and alignment with our values."
+msgstr "Nimm ein kurzes Video auf, in dem du dich vorstellst. Unser Team prüft es, um Kommunikationsfähigkeit und Übereinstimmung mit unseren Werten einzuschätzen."
+
+#: lib/klass_hero_web/presenters/provider_presenter.ex:101
+#, elixir-autogen, elixir-format
+msgid "Safeguarding certificate"
+msgstr "Kinderschutz-Zertifikat"
+
+#: lib/klass_hero_web/components/provider_components.ex:2418
+#, elixir-autogen, elixir-format
+msgid "Select Video"
+msgstr "Video auswählen"
+
+#: lib/klass_hero_web/components/provider_components.ex:2464
+#, elixir-autogen, elixir-format
+msgid "Upload Video"
+msgstr "Video hochladen"
+
+#: lib/klass_hero_web/live/admin/verifications_live.ex:518
+#, elixir-autogen, elixir-format
+msgid "Your browser does not support video playback."
+msgstr "Dein Browser unterstützt keine Videowiedergabe."

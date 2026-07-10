@@ -179,6 +179,18 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
       assert has_element?(view, "#document-preview")
     end
 
+    test "renders an inline video player for a video-screening document", %{conn: conn} do
+      doc =
+        insert(:verification_document_schema,
+          document_type: "video_screening",
+          original_filename: "screening.mp4"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
+
+      assert has_element?(view, "#document-preview video")
+    end
+
     test "renders action buttons for pending documents", %{conn: conn} do
       doc = insert(:verification_document_schema, status: :pending)
 

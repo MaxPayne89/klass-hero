@@ -11,9 +11,12 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   """
   use KlassHeroWeb, :live_view
 
+  import KlassHeroWeb.ProviderComponents
+
   alias KlassHero.Provider
   alias KlassHeroWeb.Presenters.VettingChecklistPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
+  alias KlassHeroWeb.Provider.Dashboard.Uploads
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -26,11 +29,20 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       Phoenix.PubSub.subscribe(KlassHero.PubSub, verification_topic(provider.id))
     end
 
+    all_types = Provider.valid_document_types(provider.entity_type)
+    doc_types = all_types |> Enum.reject(&(&1 == "video_screening")) |> Enum.map(&String.to_existing_atom/1)
+
     socket =
       socket
       |> Chrome.assign()
       |> assign(page_title: gettext("Get verified"))
       |> assign(active_nav: :home)
+      |> assign(document_types: doc_types)
+      |> assign(doc_type: doc_types |> List.first() |> to_string())
+      |> assign(video_upload?: "video_screening" in all_types)
+      |> stream(:verification_docs, fetch_verification_docs(provider.id), dom_id: &"vdoc-#{&1.id}")
+      |> allow_upload(:verification_doc, accept: ~w(.pdf .jpg .jpeg .png), max_entries: 1, max_file_size: 10_000_000)
+      |> allow_upload(:verification_video, accept: ~w(.mp4 .mov .webm), max_entries: 1, max_file_size: 100_000_000)
       |> assign_verification_state(provider.id)
 
     {:ok, socket}
@@ -56,9 +68,88 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   end
 
   @impl true
+  def handle_event("validate_upload", _params, socket), do: {:noreply, socket}
+
+  def handle_event("select_doc_type", %{"doc_type" => doc_type}, socket) do
+    {:noreply, assign(socket, doc_type: doc_type)}
+  end
+
+  def handle_event("cancel_upload", %{"ref" => ref, "upload" => upload_name}, socket) do
+    {:noreply, cancel_upload(socket, String.to_existing_atom(upload_name), ref)}
+  end
+
+  def handle_event("upload_verification_doc", _params, socket) do
+    {:noreply, consume_document(socket, :verification_doc, socket.assigns.doc_type)}
+  end
+
+  def handle_event("upload_verification_video", _params, socket) do
+    {:noreply, consume_document(socket, :verification_video, "video_screening")}
+  end
+
+  @impl true
   def handle_info(:verification_updated, socket) do
     provider_id = socket.assigns.current_scope.provider.id
     {:noreply, assign_verification_state(socket, provider_id)}
+  end
+
+  # Consumes one uploaded entry, submits it as a verification document, and streams the
+  # new row into the checklist page. Shared by the generic doc uploader and the dedicated
+  # video uploader (which pins document_type to "video_screening").
+  defp consume_document(socket, upload_key, document_type) do
+    provider = socket.assigns.current_scope.provider
+
+    result =
+      Uploads.safe_consume_uploaded_entries(socket, upload_key, fn %{path: path}, entry ->
+        try do
+          # sobelow_skip ["Traversal.FileModule"]
+          file_binary = File.read!(path)
+
+          case Provider.submit_verification_document(%{
+                 provider_profile_id: provider.id,
+                 document_type: document_type,
+                 file_binary: file_binary,
+                 original_filename: entry.client_name,
+                 content_type: entry.client_type
+               }) do
+            {:ok, doc} -> {:ok, doc}
+            {:error, reason} -> {:postpone, reason}
+          end
+        catch
+          kind, reason ->
+            Logger.error("[VerificationLive] document upload failed",
+              provider_id: provider.id,
+              doc_type: document_type,
+              kind: kind,
+              error: inspect(reason)
+            )
+
+            {:error, :upload_exception}
+        end
+      end)
+
+    case result do
+      {:error, :upload_channel_died} ->
+        put_flash(socket, :error, gettext("Upload connection lost. Please try again."))
+
+      {:ok, [%{} = doc]} ->
+        socket
+        |> stream_insert(:verification_docs, doc, dom_id: &"vdoc-#{&1.id}")
+        |> put_flash(:info, gettext("Document uploaded successfully."))
+
+      {:ok, other} ->
+        Logger.error("[VerificationLive] document upload failed",
+          provider_id: provider.id,
+          doc_type: document_type,
+          errors: inspect(other)
+        )
+
+        put_flash(socket, :error, gettext("Failed to upload document."))
+    end
+  end
+
+  defp fetch_verification_docs(provider_id) do
+    {:ok, docs} = Provider.get_provider_verification_documents(provider_id)
+    docs
   end
 
   # Assembles the checklist + identity widget state in one read pass.
@@ -165,6 +256,16 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
             </.kh_list_row>
           </li>
         </ul>
+      </div>
+
+      <div class="max-w-xl mx-auto p-4 md:p-6 pt-0">
+        <.verification_documents_panel
+          verification_docs={@streams.verification_docs}
+          uploads={@uploads}
+          doc_type={@doc_type}
+          document_types={@document_types}
+          video_upload?={@video_upload?}
+        />
       </div>
     </div>
     """

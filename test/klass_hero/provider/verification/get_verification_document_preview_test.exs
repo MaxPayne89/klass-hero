@@ -81,6 +81,30 @@ defmodule KlassHero.Provider.Verification.GetVerificationDocumentPreviewTest do
       assert result.preview_type == :pdf
     end
 
+    test "detects :video preview type for mp4", %{provider: provider} do
+      doc =
+        Factory.insert(:verification_document_schema,
+          provider_profile_id: provider.id,
+          document_type: "video_screening",
+          original_filename: "screening.mp4"
+        )
+
+      assert {:ok, result} = KlassHero.Provider.get_verification_document_preview(doc.id)
+      assert result.preview_type == :video
+    end
+
+    test "detects :video preview type for mov", %{provider: provider} do
+      doc =
+        Factory.insert(:verification_document_schema,
+          provider_profile_id: provider.id,
+          document_type: "video_screening",
+          original_filename: "screening.mov"
+        )
+
+      assert {:ok, result} = KlassHero.Provider.get_verification_document_preview(doc.id)
+      assert result.preview_type == :video
+    end
+
     test "detects :other preview type for unknown extension", %{provider: provider} do
       doc =
         Factory.insert(:verification_document_schema,

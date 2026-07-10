@@ -137,6 +137,38 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     end
   end
 
+  describe "document upload (self-contained panel)" do
+    test "uploading a document streams it into the panel", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      entry =
+        file_input(view, "#doc-upload-form", :verification_doc, [
+          %{name: "experience.pdf", content: "pdf-bytes", type: "application/pdf"}
+        ])
+
+      render_upload(entry, "experience.pdf")
+      view |> form("#doc-upload-form") |> render_submit()
+
+      assert has_element?(view, "#verification-docs", "experience.pdf")
+    end
+
+    test "the individual track offers the dedicated video uploader", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#video-upload-form")
+
+      entry =
+        file_input(view, "#video-upload-form", :verification_video, [
+          %{name: "screening.mp4", content: "video-bytes", type: "video/mp4"}
+        ])
+
+      render_upload(entry, "screening.mp4")
+      view |> form("#video-upload-form") |> render_submit()
+
+      assert has_element?(view, "#verification-docs", "screening.mp4")
+    end
+  end
+
   describe "heading hierarchy" do
     test "the checklist title is an h2, not a second h1", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/verification")

@@ -512,6 +512,14 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
     """
   end
 
+  defp document_viewer(%{preview_type: :video} = assigns) do
+    ~H"""
+    <video src={@signed_url} controls class="w-full max-h-[600px] rounded-lg border border-gray-200">
+      {gettext("Your browser does not support video playback.")}
+    </video>
+    """
+  end
+
   defp document_viewer(assigns) do
     ~H"""
     <div class="text-center py-8">

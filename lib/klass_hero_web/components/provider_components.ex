@@ -2250,6 +2250,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :uploads, :map, required: true, doc: "The @uploads assign from the parent LiveView"
   attr :doc_type, :string, required: true, doc: "Currently selected document type"
   attr :document_types, :list, required: true, doc: "List of valid document types"
+  attr :video_upload?, :boolean, default: false, doc: "Whether the track includes a video-screening step"
 
   def verification_documents_panel(assigns) do
     ~H"""
@@ -2382,6 +2383,85 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
             {gettext("Upload Document")}
+          </button>
+        </form>
+      </div>
+
+      <div :if={@video_upload?} class="border-t border-hero-grey-200 pt-6 mt-6">
+        <h3 class="text-sm font-semibold text-hero-charcoal mb-1">
+          {gettext("Video Screening")}
+        </h3>
+        <p class="text-sm text-hero-grey-500 mb-3">
+          {gettext(
+            "Record a short video introducing yourself. Our team reviews it to assess communication skills and alignment with our values."
+          )}
+        </p>
+
+        <form
+          id="video-upload-form"
+          phx-submit="upload_verification_video"
+          phx-change="validate_upload"
+          class="space-y-4"
+        >
+          <div>
+            <.live_file_input upload={@uploads.verification_video} class="hidden" />
+            <label
+              for={@uploads.verification_video.ref}
+              class={[
+                "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
+                "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium cursor-pointer",
+                Theme.rounded(:lg),
+                Theme.transition(:normal)
+              ]}
+            >
+              <.icon name="hero-video-camera-mini" class="w-4 h-4" />
+              {gettext("Select Video")}
+            </label>
+            <p class="text-xs text-hero-grey-400 mt-2">
+              {gettext("MP4, MOV or WEBM. Max 100MB.")}
+            </p>
+            <div
+              :for={entry <- @uploads.verification_video.entries}
+              class={[
+                "flex items-center gap-3 mt-3 px-3 py-2 border border-hero-grey-200",
+                "bg-hero-grey-50",
+                Theme.rounded(:lg)
+              ]}
+            >
+              <.icon name="hero-film-mini" class="w-5 h-5 text-hero-grey-500 shrink-0" />
+              <span class="text-sm text-hero-charcoal truncate flex-1">{entry.client_name}</span>
+              <button
+                type="button"
+                phx-click="cancel_upload"
+                phx-value-ref={entry.ref}
+                phx-value-upload="verification_video"
+                class="text-xs text-red-500 hover:text-red-700 shrink-0"
+              >
+                {gettext("Remove")}
+              </button>
+              <div
+                :for={err <- upload_errors(@uploads.verification_video, entry)}
+                class="text-xs text-red-500"
+              >
+                {upload_error_to_string(err)}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="upload-video-btn"
+            disabled={@uploads.verification_video.entries == []}
+            class={[
+              "flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
+              "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              Theme.rounded(:lg),
+              Theme.transition(:normal)
+            ]}
+          >
+            <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
+            {gettext("Upload Video")}
           </button>
         </form>
       </div>
