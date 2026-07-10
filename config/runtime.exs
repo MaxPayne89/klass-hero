@@ -129,6 +129,12 @@ if config_env() == :prod do
   config :klass_hero, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
   config :klass_hero, :resend_webhook_secret, System.get_env("RESEND_WEBHOOK_SECRET")
 
+  # Stripe Identity (provider vetting). Read lazily and boot-tolerant: a missing key
+  # never crashes boot — the client returns {:error, :stripe_not_configured} and the
+  # webhook plug rejects until provisioned.
+  config :klass_hero, :stripe, secret_key: System.get_env("STRIPE_SECRET_KEY")
+  config :klass_hero, :stripe_webhook_secret, System.get_env("STRIPE_WEBHOOK_SECRET")
+
   # Trigger: dev Fly.io instance needs to receive test webhook payloads via curl
   # Why: Svix signature verification requires a live webhook secret and real headers
   # Outcome: set VERIFY_WEBHOOK_SIGNATURE=false on dev instance to skip verification
