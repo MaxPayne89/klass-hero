@@ -18,11 +18,17 @@ defmodule KlassHero.Provider.Vetting do
 
   import Ecto.Query
 
+  alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StepDefinition
+  alias KlassHero.Provider.StripeIdentity
   alias KlassHero.Provider.VerificationStep
   alias KlassHero.Provider.VettingCase
   alias KlassHero.Repo
+  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.EventDispatchHelper
+
+  require Logger
 
   @individual_track [
     %StepDefinition{key: :identity, completed_via: {:stripe_identity}, admin_review: false},
@@ -147,4 +153,125 @@ defmodule KlassHero.Provider.Vetting do
   end
 
   defp step_order, do: from(s in VerificationStep, order_by: s.inserted_at)
+
+  # ── Stripe Identity (Slice 1) ──────────────────────────────────────────────
+
+  @doc """
+  Starts a Stripe Identity verification for a provider: creates a hosted session, records
+  an `IdentityVerification` (`:processing`) keyed by the session id, and submits the
+  provider's `:identity` step so the case reflects work in progress. Returns the hosted
+  `redirect_url`; the pass/fail outcome arrives later by webhook (ADR-0009).
+  """
+  @spec create_identity_verification_session(String.t(), String.t()) ::
+          {:ok, %{redirect_url: String.t()}} | {:error, term()}
+  def create_identity_verification_session(provider_id, return_url)
+      when is_binary(provider_id) and is_binary(return_url) do
+    with {:ok, %{session_id: session_id, url: url}} <-
+           StripeIdentity.create_session(%{provider_id: provider_id, return_url: return_url}),
+         {:ok, _iv} <-
+           create_identity_verification(
+             IdentityVerification.new(%{provider_id: provider_id, stripe_session_id: session_id})
+           ),
+         {:ok, case_} <- get_case_for_provider(provider_id),
+         {:ok, key} <- fetch_identity_step_key(case_),
+         {:ok, updated} <- VettingCase.submit_step(case_, key),
+         {:ok, _} <- save_case(updated) do
+      {:ok, %{redirect_url: url}}
+    end
+  end
+
+  @doc """
+  Records the outcome of a Stripe Identity session (delivered by webhook) against its
+  `IdentityVerification`, applying the fail-closed age gate, and emits the domain event that
+  advances the `:identity` step. Idempotent: an unknown session id is `{:ok, :ignored}`, a
+  record already terminal is `{:ok, :already_recorded}`.
+
+  Input (normalised by the webhook controller):
+  `%{session_id, stripe_status: :verified | :requires_input | :canceled, dob, today}`.
+  """
+  @spec record_identity_verification_outcome(map()) ::
+          {:ok, IdentityVerification.t() | :ignored | :already_recorded} | {:error, term()}
+  def record_identity_verification_outcome(%{session_id: session_id} = outcome) do
+    case get_identity_verification_by_session(session_id) do
+      {:error, :not_found} -> {:ok, :ignored}
+      {:ok, %IdentityVerification{status: :processing} = iv} -> apply_identity_outcome(iv, outcome)
+      {:ok, %IdentityVerification{}} -> {:ok, :already_recorded}
+    end
+  end
+
+  defp fetch_identity_step_key(case_) do
+    case VettingCase.step_key_for_identity(case_) do
+      nil -> {:error, :no_identity_step}
+      key -> {:ok, key}
+    end
+  end
+
+  defp apply_identity_outcome(iv, outcome) do
+    case resolve_identity_outcome(iv, outcome) do
+      :ignore ->
+        {:ok, :ignored}
+
+      {updated, event_type} ->
+        with {:ok, persisted} <- update_identity_verification(updated) do
+          dispatch_identity_event(event_type, persisted)
+          {:ok, persisted}
+        end
+    end
+  end
+
+  # A Stripe `:verified` status is NOT automatically a pass — the age gate can still fail
+  # it, so we read the resulting record's `outcome`. An unmapped status fails closed:
+  # log and no-op (`:ignore`), never fabricating a pass/fail.
+  defp resolve_identity_outcome(%IdentityVerification{} = iv, %{stripe_status: :verified, dob: dob, today: today}) do
+    updated = IdentityVerification.mark_verified(iv, dob, today)
+    {updated, identity_event_for(updated.outcome)}
+  end
+
+  defp resolve_identity_outcome(%IdentityVerification{} = iv, %{stripe_status: :requires_input}) do
+    {IdentityVerification.mark_requires_input(iv), :identity_verification_failed}
+  end
+
+  defp resolve_identity_outcome(%IdentityVerification{} = iv, %{stripe_status: :canceled}) do
+    {IdentityVerification.mark_canceled(iv), :identity_verification_failed}
+  end
+
+  defp resolve_identity_outcome(%IdentityVerification{}, %{stripe_status: stripe_status}) do
+    Logger.warning("Ignoring unmapped Stripe identity status: #{inspect(stripe_status)}")
+    :ignore
+  end
+
+  defp identity_event_for(:pass), do: :identity_verification_passed
+  defp identity_event_for(:fail), do: :identity_verification_failed
+
+  defp dispatch_identity_event(event_type, iv) do
+    DomainEvent.new(event_type, iv.id, :identity_verification, %{
+      provider_id: iv.provider_id,
+      identity_verification_id: iv.id,
+      stripe_session_id: iv.stripe_session_id,
+      failure_reason: iv.failure_reason
+    })
+    |> EventDispatchHelper.dispatch(KlassHero.Provider)
+  end
+
+  defp create_identity_verification(%IdentityVerification{} = iv) do
+    attrs = Map.take(iv, ~w(id provider_id stripe_session_id status outcome failure_reason verified_at)a)
+
+    %IdentityVerification{}
+    |> IdentityVerification.create_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  defp get_identity_verification_by_session(session_id) do
+    case Repo.one(from(i in IdentityVerification, where: i.stripe_session_id == ^session_id)) do
+      nil -> {:error, :not_found}
+      iv -> {:ok, iv}
+    end
+  end
+
+  defp update_identity_verification(%IdentityVerification{id: id} = iv) do
+    IdentityVerification
+    |> Repo.get!(id)
+    |> IdentityVerification.review_changeset(Map.take(iv, ~w(status outcome failure_reason verified_at)a))
+    |> Repo.update()
+  end
 end

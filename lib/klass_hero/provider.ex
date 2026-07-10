@@ -31,6 +31,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Staff
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.Verification
+  alias KlassHero.Provider.Vetting
 
   # --- Provider profiles ---------------------------------------------------
 
@@ -87,6 +88,12 @@ defmodule KlassHero.Provider do
 
   @doc "Rejects a verification document with reason (admin only)."
   defdelegate reject_verification_document(document_id, reviewer_id, reason), to: Verification
+
+  @doc "Starts a Stripe Identity session for a provider; returns the hosted redirect URL."
+  defdelegate create_identity_verification_session(provider_id, return_url), to: Vetting
+
+  @doc "Records a Stripe Identity webhook outcome against its session (idempotent)."
+  defdelegate record_identity_verification_outcome(outcome), to: Vetting
 
   @doc "Returns all verification documents for a provider."
   defdelegate get_provider_verification_documents(provider_profile_id), to: Verification
