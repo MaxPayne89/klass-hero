@@ -28,7 +28,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
          step_key when not is_nil(step_key) <- VettingCase.step_key_for_identity(case_),
          {:ok, updated} <- VettingCase.auto_approve_step(case_, step_key, evidence_ref),
          {:ok, _} <- Vetting.save_case(updated) do
-      if VettingCase.verified?(updated), do: VettingVerificationSync.verify(provider_id, nil)
+      VettingVerificationSync.verify_if_complete(updated, provider_id, nil)
       VettingVerificationSync.broadcast_updated(provider_id)
       :ok
     else

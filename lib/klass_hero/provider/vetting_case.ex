@@ -157,10 +157,8 @@ defmodule KlassHero.Provider.VettingCase do
 
   @doc "Finds the step whose `completed_via` consumes the given document type, if any."
   @spec step_key_for_document(t(), String.t()) :: atom() | nil
-  def step_key_for_document(%__MODULE__{steps: steps}, document_type) do
-    Enum.find_value(steps, fn step ->
-      if step.completed_via == {:document, document_type}, do: step.key
-    end)
+  def step_key_for_document(%__MODULE__{} = case_, document_type) do
+    find_step_key(case_, {:document, document_type})
   end
 
   @doc """
@@ -179,26 +177,14 @@ defmodule KlassHero.Provider.VettingCase do
 
   @doc "Finds the step completed via Stripe Identity, if the track has one."
   @spec step_key_for_identity(t()) :: atom() | nil
-  def step_key_for_identity(%__MODULE__{steps: steps}) do
-    Enum.find_value(steps, fn step ->
-      if step.completed_via == {:stripe_identity}, do: step.key
-    end)
+  def step_key_for_identity(%__MODULE__{} = case_) do
+    find_step_key(case_, {:stripe_identity})
   end
 
   @doc "Finds the step completed by signing an agreement of the given `kind`, if any."
   @spec step_key_for_signed_agreement(t(), atom()) :: atom() | nil
-  def step_key_for_signed_agreement(%__MODULE__{steps: steps}, kind) do
-    Enum.find_value(steps, fn step ->
-      if step.completed_via == {:signed_agreement, kind}, do: step.key
-    end)
-  end
-
-  @doc "Returns `true` when the track's Stripe Identity step exists and is approved."
-  @spec identity_step_approved?(t()) :: boolean()
-  def identity_step_approved?(%__MODULE__{steps: steps}) do
-    Enum.any?(steps, fn step ->
-      step.completed_via == {:stripe_identity} and step.status == :approved
-    end)
+  def step_key_for_signed_agreement(%__MODULE__{} = case_, kind) do
+    find_step_key(case_, {:signed_agreement, kind})
   end
 
   @doc """
@@ -235,6 +221,14 @@ defmodule KlassHero.Provider.VettingCase do
       nil -> {:error, :step_not_found}
       step -> {:ok, step}
     end
+  end
+
+  # Returns the key of the step frozen with the given `completed_via` tuple, or nil. The single
+  # finder behind step_key_for_document/identity/signed_agreement.
+  defp find_step_key(%__MODULE__{steps: steps}, completed_via) do
+    Enum.find_value(steps, fn step ->
+      if step.completed_via == completed_via, do: step.key
+    end)
   end
 
   # Returns the set of step keys that transitively require `key` — every step that must

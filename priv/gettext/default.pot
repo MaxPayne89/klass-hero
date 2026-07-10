@@ -5823,7 +5823,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/for_providers_live.ex:396
 #: lib/klass_hero_web/live/provider/verification_live.ex:38
-#: lib/klass_hero_web/live/provider/verification_live.ex:217
+#: lib/klass_hero_web/live/provider/verification_live.ex:218
 #, elixir-autogen, elixir-format
 msgid "Get verified"
 msgstr ""
@@ -7057,12 +7057,12 @@ msgstr ""
 msgid "In progress"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:366
+#: lib/klass_hero_web/live/provider/verification_live.ex:367
 #, elixir-autogen, elixir-format
 msgid "Klass Hero is only open to providers aged 18 and over, so we can't approve this account."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:376
+#: lib/klass_hero_web/live/provider/verification_live.ex:377
 #, elixir-autogen, elixir-format
 msgid "Looks like the check didn't finish. Pick up where you left off whenever you're ready."
 msgstr ""
@@ -7087,7 +7087,7 @@ msgstr ""
 msgid "Passed"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:227
+#: lib/klass_hero_web/live/provider/verification_live.ex:228
 #, elixir-autogen, elixir-format
 msgid "Profile locked"
 msgstr ""
@@ -7102,7 +7102,7 @@ msgstr ""
 msgid "Resubmit"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:355
+#: lib/klass_hero_web/live/provider/verification_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "Retry verification"
 msgstr ""
@@ -7122,12 +7122,12 @@ msgstr ""
 msgid "Show relevant experience working with children."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:373
+#: lib/klass_hero_web/live/provider/verification_live.ex:374
 #, elixir-autogen, elixir-format
 msgid "Something tripped up the check — usually a blurry photo. Give it another go."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:332
+#: lib/klass_hero_web/live/provider/verification_live.ex:333
 #, elixir-autogen, elixir-format
 msgid "Takes about 2 minutes. Once verified, your provider account can be approved."
 msgstr ""
@@ -7152,7 +7152,7 @@ msgstr ""
 msgid "Upload your safeguarding certificate."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:329
+#: lib/klass_hero_web/live/provider/verification_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "Verify identity"
 msgstr ""
@@ -7162,12 +7162,12 @@ msgstr ""
 msgid "Verify your identity to get approved"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:324
+#: lib/klass_hero_web/live/provider/verification_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Verify your identity with our partner Stripe to get approved. You'll be sent to a secure page and brought back here."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:338
+#: lib/klass_hero_web/live/provider/verification_live.ex:339
 #, elixir-autogen, elixir-format
 msgid "Verifying your identity… this can take a moment."
 msgstr ""
@@ -7178,17 +7178,17 @@ msgstr ""
 msgid "Video screening"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:370
+#: lib/klass_hero_web/live/provider/verification_live.ex:371
 #, elixir-autogen, elixir-format
 msgid "We couldn't read your date of birth from your ID. A clearer photo of your document should do the trick."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:378
+#: lib/klass_hero_web/live/provider/verification_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "We couldn't verify your identity. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:348
+#: lib/klass_hero_web/live/provider/verification_live.ex:349
 #, elixir-autogen, elixir-format
 msgid "Your identity is verified."
 msgstr ""

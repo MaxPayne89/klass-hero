@@ -183,12 +183,13 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   # Assembles the checklist + identity widget state in one read pass.
   defp assign_verification_state(socket, provider_id) do
     {state, failure_reason} = identity_state(provider_id)
+    agreement = Provider.get_latest_community_agreement(provider_id)
 
     socket
     |> assign(vetting_checklist: Provider.get_vetting_checklist(provider_id))
     |> assign(identity_state: state, identity_failure_reason: failure_reason)
-    |> assign(community_agreement: Provider.get_latest_community_agreement(provider_id))
-    |> assign(community_agreement_satisfied?: Provider.community_agreement_satisfied?(provider_id))
+    |> assign(community_agreement: agreement)
+    |> assign(community_agreement_satisfied?: Provider.community_agreement_satisfied?(agreement))
     |> assign(community_guidelines_version: Provider.current_community_guidelines_version())
   end
 

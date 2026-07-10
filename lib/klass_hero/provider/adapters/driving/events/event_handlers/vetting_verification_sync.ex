@@ -11,6 +11,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerifi
   """
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.VettingCase
 
   require Logger
 
@@ -28,6 +29,15 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerifi
     )
 
     :ok
+  end
+
+  @doc """
+  Verifies the provider iff the case is now fully approved; otherwise a no-op. Lets each step
+  handler hand over the recomputed case without repeating the `verified?` gate at every call site.
+  """
+  @spec verify_if_complete(VettingCase.t(), String.t(), String.t() | nil) :: :ok
+  def verify_if_complete(%VettingCase{} = case_, provider_id, reviewer_id) do
+    if VettingCase.verified?(case_), do: verify(provider_id, reviewer_id), else: :ok
   end
 
   @doc "Verifies the provider; logs and swallows a verify failure (the step is already saved)."

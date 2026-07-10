@@ -45,7 +45,7 @@ defmodule KlassHero.Provider.SubmitCommunityAgreement do
          {:ok, stored} <- insert_agreement(agreement),
          {:ok, updated} <- VettingCase.auto_approve_step(case_, key, stored.id),
          {:ok, saved} <- Vetting.save_case(updated) do
-      maybe_verify(provider_id, saved)
+      VettingVerificationSync.verify_if_complete(saved, provider_id, nil)
       # Broadcast last: a PubSub hiccup must never undo an already-saved advance.
       VettingVerificationSync.broadcast_updated(provider_id)
       {:ok, stored}
@@ -65,13 +65,5 @@ defmodule KlassHero.Provider.SubmitCommunityAgreement do
     %SignedAgreement{}
     |> SignedAgreement.changeset(attrs)
     |> Repo.insert()
-  end
-
-  defp maybe_verify(provider_id, %VettingCase{} = case_) do
-    if VettingCase.verified?(case_) do
-      VettingVerificationSync.verify(provider_id, nil)
-    else
-      :ok
-    end
   end
 end

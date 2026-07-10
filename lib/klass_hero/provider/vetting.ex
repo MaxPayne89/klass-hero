@@ -315,12 +315,19 @@ defmodule KlassHero.Provider.Vetting do
   @doc """
   Returns `true` when the provider's latest Community Standards Agreement still satisfies the
   current guidelines (no re-agreement required); `false` when never signed or out of date.
+
+  Accepts a `provider_id` (fetches the latest agreement) or an already-fetched
+  `SignedAgreement`/`nil` (no query) — the caller already holding the record avoids a re-read.
   """
-  @spec community_agreement_satisfied?(String.t()) :: boolean()
+  @spec community_agreement_satisfied?(String.t() | SignedAgreement.t() | nil) :: boolean()
   def community_agreement_satisfied?(provider_id) when is_binary(provider_id) do
     provider_id
     |> get_latest_community_agreement()
     |> CommunityGuidelines.agreement_satisfied?()
+  end
+
+  def community_agreement_satisfied?(agreement) do
+    CommunityGuidelines.agreement_satisfied?(agreement)
   end
 
   @doc "Returns `true` when the given entity type's track includes the community-agreement step."
