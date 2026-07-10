@@ -8,6 +8,7 @@ defmodule KlassHeroWeb.Router do
   alias KlassHero.Shared.Tracing.LiveViewHook
   alias KlassHeroWeb.Hooks.RestoreLocale
   alias KlassHeroWeb.Plugs.SetLocale
+  alias KlassHeroWeb.Plugs.VerifyStripeWebhookSignature
   alias KlassHeroWeb.Plugs.VerifyWebhookSignature
   alias Plug.Swoosh.MailboxPreview
 
@@ -32,10 +33,21 @@ defmodule KlassHeroWeb.Router do
     plug VerifyWebhookSignature
   end
 
+  # Stripe uses a distinct signature scheme (t=,v1= HMAC-SHA256), so it gets its own plug.
+  pipeline :stripe_webhook do
+    plug VerifyStripeWebhookSignature
+  end
+
   scope "/webhooks", KlassHeroWeb do
     pipe_through [:api, :webhook]
 
     post "/resend", ResendWebhookController, :handle
+  end
+
+  scope "/webhooks", KlassHeroWeb do
+    pipe_through [:api, :stripe_webhook]
+
+    post "/stripe", StripeWebhookController, :handle
   end
 
   # Only Backpex layout templates use @theme; skip the session read on non-admin routes.
