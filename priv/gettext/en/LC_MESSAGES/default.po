@@ -1418,7 +1418,7 @@ msgstr ""
 msgid "Arts"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:145
+#: lib/klass_hero_web/live/about_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "Built for Berlin Families"
 msgstr ""
@@ -1444,7 +1444,7 @@ msgstr ""
 msgid "For Providers"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:150
+#: lib/klass_hero_web/live/about_live.ex:152
 #, elixir-autogen, elixir-format
 msgid "From sports to arts, technology to languages, we make it easy to discover enriching activities that fit your family's schedule and budget."
 msgstr ""
@@ -1471,7 +1471,7 @@ msgstr ""
 msgid "Qualifications"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:206
+#: lib/klass_hero_web/live/about_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Ready to join the movement?"
 msgstr ""
@@ -1502,7 +1502,7 @@ msgstr ""
 msgid "Trending in Berlin:"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:147
+#: lib/klass_hero_web/live/about_live.ex:149
 #, elixir-autogen, elixir-format
 msgid "We understand the unique needs of Berlin's diverse families. Our platform connects you with vetted, high-quality programs that match your values and your children's interests."
 msgstr ""
@@ -2678,7 +2678,7 @@ msgstr ""
 msgid "JPG, PNG or WebP. Max 2MB."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:189
+#: lib/klass_hero_web/live/about_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "Klass Hero was built to solve exactly that. A comprehensive operational platform that empowers educators to spend less time on paperwork and more time inspiring children."
 msgstr ""
@@ -3183,7 +3183,7 @@ msgstr ""
 msgid "Tell parents about your organization..."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:170
+#: lib/klass_hero_web/live/about_live.ex:172
 #, elixir-autogen, elixir-format
 msgid "The Klass Hero Story"
 msgstr ""
@@ -3276,7 +3276,7 @@ msgstr ""
 msgid "Verified"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:155
+#: lib/klass_hero_web/live/about_live.ex:157
 #, elixir-autogen, elixir-format
 msgid "We are Klass Hero — parents, brothers, and partners of educators — building the infrastructure that helps every child learn and thrive."
 msgstr ""
@@ -3316,8 +3316,8 @@ msgstr ""
 msgid "e.g., Community Center, Main St"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:71
-#: lib/klass_hero_web/live/trust_safety_live.ex:51
+#: lib/klass_hero_web/live/about_live.ex:73
+#: lib/klass_hero_web/live/trust_safety_live.ex:53
 #, elixir-autogen, elixir-format
 msgid "All Heroes must hold or complete a recognized child safeguarding course, ensuring up-to-date knowledge."
 msgstr ""
@@ -3328,31 +3328,25 @@ msgstr ""
 msgid "All providers must be 18 years or older, ensuring legal accountability and professional responsibility."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:161
+#: lib/klass_hero_web/live/trust_safety_live.ex:163
 #, elixir-autogen, elixir-format
 msgid "And at Klass Hero, both come standard."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:65
-#: lib/klass_hero_web/live/trust_safety_live.ex:45
-#, elixir-autogen, elixir-format
-msgid "Applicants complete a video screening to assess communication skills and alignment with our values."
-msgstr ""
-
-#: lib/klass_hero_web/live/about_live.ex:69
-#: lib/klass_hero_web/live/trust_safety_live.ex:49
+#: lib/klass_hero_web/live/about_live.ex:71
+#: lib/klass_hero_web/live/trust_safety_live.ex:51
 #, elixir-autogen, elixir-format
 msgid "Child Safeguarding Training"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2487
-#: lib/klass_hero_web/live/about_live.ex:77
-#: lib/klass_hero_web/live/trust_safety_live.ex:57
+#: lib/klass_hero_web/live/about_live.ex:79
+#: lib/klass_hero_web/live/trust_safety_live.ex:59
 #, elixir-autogen, elixir-format
 msgid "Community Standards Agreement"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:71
+#: lib/klass_hero_web/live/trust_safety_live.ex:73
 #, elixir-autogen, elixir-format
 msgid "Create long-term trust across our community"
 msgstr ""
@@ -3363,13 +3357,13 @@ msgstr ""
 msgid "Each provider submits an extended police background check, confirming their eligibility to work safely with minors."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:78
+#: lib/klass_hero_web/live/trust_safety_live.ex:80
 #, elixir-autogen, elixir-format
 msgid "Enforcing platform standards and guidelines"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:79
-#: lib/klass_hero_web/live/trust_safety_live.ex:59
+#: lib/klass_hero_web/live/about_live.ex:81
+#: lib/klass_hero_web/live/trust_safety_live.ex:61
 #, elixir-autogen, elixir-format
 msgid "Every provider agrees to follow our Community Guidelines, defining expectations around professionalism."
 msgstr ""
@@ -3386,7 +3380,7 @@ msgstr ""
 msgid "Extended Background Checks"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:120
+#: lib/klass_hero_web/live/trust_safety_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "From academic tutoring to sports, arts, and enrichment programs, every provider on Klass Hero is carefully reviewed to ensure they meet our high standards for child safety, professionalism, and educational quality."
 msgstr ""
@@ -3402,12 +3396,12 @@ msgstr ""
 msgid "Identity & Age Verification"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:156
+#: lib/klass_hero_web/live/trust_safety_live.ex:158
 #, elixir-autogen, elixir-format
 msgid "If you'd like to learn more about our Trust & Safety standards or provider verification process, we're happy to help."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:77
+#: lib/klass_hero_web/live/trust_safety_live.ex:79
 #, elixir-autogen, elixir-format
 msgid "Monitoring provider activity and feedback"
 msgstr ""
@@ -3427,7 +3421,7 @@ msgstr ""
 msgid "Program saved, but the cover image upload failed. You can re-upload it by editing the program."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:68
+#: lib/klass_hero_web/live/trust_safety_live.ex:70
 #, elixir-autogen, elixir-format
 msgid "Protect children and families"
 msgstr ""
@@ -3438,12 +3432,12 @@ msgstr ""
 msgid "Providers must demonstrate at least one year of experience working with children in their area of expertise."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:146
+#: lib/klass_hero_web/live/trust_safety_live.ex:148
 #, elixir-autogen, elixir-format
 msgid "Providers who fail to uphold our expectations may be suspended or removed from the platform."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:79
+#: lib/klass_hero_web/live/trust_safety_live.ex:81
 #, elixir-autogen, elixir-format
 msgid "Reviewing concerns or reports promptly and seriously"
 msgstr ""
@@ -3453,12 +3447,12 @@ msgstr ""
 msgid "Something went wrong. Please try again or contact support."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:69
+#: lib/klass_hero_web/live/trust_safety_live.ex:71
 #, elixir-autogen, elixir-format
 msgid "Support schools and institutions with reliable providers"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:80
+#: lib/klass_hero_web/live/trust_safety_live.ex:82
 #, elixir-autogen, elixir-format
 msgid "Taking action when standards are not met"
 msgstr ""
@@ -3481,17 +3475,17 @@ msgstr ""
 msgid "Trust & Safety"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:140
+#: lib/klass_hero_web/live/trust_safety_live.ex:142
 #, elixir-autogen, elixir-format
 msgid "Trust doesn't stop at onboarding. Klass Hero continuously works to maintain a safe and high-quality ecosystem by:"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:160
+#: lib/klass_hero_web/live/trust_safety_live.ex:162
 #, elixir-autogen, elixir-format
 msgid "Trust is earned. Safety is non-negotiable."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:70
+#: lib/klass_hero_web/live/trust_safety_live.ex:72
 #, elixir-autogen, elixir-format
 msgid "Uphold professional and ethical teaching practices"
 msgstr ""
@@ -3518,7 +3512,7 @@ msgstr ""
 msgid "How does the 6-step provider vetting process work?"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:163
+#: lib/klass_hero_web/live/about_live.ex:165
 #, elixir-autogen, elixir-format
 msgid "Our 6-Step Vetting Process"
 msgstr ""
@@ -5324,12 +5318,12 @@ msgstr[1] ""
 msgid "%{done} of %{goal} sessions attended"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:195
+#: lib/klass_hero_web/live/about_live.ex:197
 #, elixir-autogen, elixir-format, fuzzy
 msgid ", Max's brother, joined as CFO, bringing the financial rigour and strategic planning needed to navigate the German market and ensure long-term stability for every provider on the platform. To lead trust and quality,"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:184
+#: lib/klass_hero_web/live/about_live.ex:186
 #, elixir-autogen, elixir-format
 msgid ", a full-stack developer who shared a unique perspective. Both Shane and Max are partners of teachers who wanted to extend their expertise beyond the classroom — but without the time to manage the operational side on their own."
 msgstr ""
@@ -5344,7 +5338,7 @@ msgstr ""
 msgid "18+, government-ID verified before listing."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:93
+#: lib/klass_hero_web/live/about_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "A decade-plus coaching and running youth activity programs in Berlin. Built Prime Youth before founding Klass Hero."
 msgstr ""
@@ -5411,7 +5405,7 @@ msgstr ""
 msgid "Are you an educator, coach, or artist?"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:104
+#: lib/klass_hero_web/live/trust_safety_live.ex:106
 #, elixir-autogen, elixir-format, fuzzy
 msgid "At Klass Hero, trust isn't a feature — it's the foundation of everything we do. We connect families, schools, and organizations with qualified, vetted, and safety-verified educators."
 msgstr ""
@@ -5472,7 +5466,7 @@ msgstr ""
 msgid "Bookings, rosters, schedules, attendance, parent comms — all in one place. No more spreadsheets."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:111
+#: lib/klass_hero_web/live/about_live.ex:113
 #, elixir-autogen, elixir-format
 msgid "Brings the financial rigour and strategic planning needed for the German market and long-term provider stability."
 msgstr ""
@@ -5501,12 +5495,12 @@ msgstr ""
 msgid "Building connections between families and local instructors."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:171
+#: lib/klass_hero_web/live/about_live.ex:173
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Built by parents and educators for more learning opportunities."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:144
+#: lib/klass_hero_web/live/about_live.ex:146
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Built for Berlin"
 msgstr ""
@@ -5521,7 +5515,7 @@ msgstr ""
 msgid "Built-in trust"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:109
+#: lib/klass_hero_web/live/about_live.ex:111
 #, elixir-autogen, elixir-format
 msgid "CFO"
 msgstr ""
@@ -5556,7 +5550,7 @@ msgstr ""
 msgid "Click below to log in."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:100
+#: lib/klass_hero_web/live/about_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Co-founder & CTO"
 msgstr ""
@@ -5610,7 +5604,7 @@ msgstr ""
 msgid "Connecting Families with"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:165
+#: lib/klass_hero_web/live/trust_safety_live.ex:167
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Contact Us →"
 msgstr ""
@@ -5715,17 +5709,17 @@ msgstr ""
 msgid "Every Hero clears the same checks. Here's what that means."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:118
+#: lib/klass_hero_web/live/trust_safety_live.ex:120
 #, elixir-autogen, elixir-format
 msgid "Every Hero, carefully reviewed."
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:164
+#: lib/klass_hero_web/live/about_live.ex:166
 #, elixir-autogen, elixir-format
 msgid "Every Hero. Every step."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:130
+#: lib/klass_hero_web/live/trust_safety_live.ex:132
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Every educator and enrichment professional completes a 6-step verification process before being approved."
 msgstr ""
@@ -5776,7 +5770,7 @@ msgstr ""
 msgid "Footer mobile"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:91
+#: lib/klass_hero_web/live/about_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "Founder & CEO"
 msgstr ""
@@ -5796,7 +5790,7 @@ msgstr ""
 msgid "From listing to first payout in under a week"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:102
+#: lib/klass_hero_web/live/about_live.ex:104
 #, elixir-autogen, elixir-format
 msgid "Full-stack developer. Partner of a teacher who saw the gap between great educators and good infrastructure."
 msgstr ""
@@ -5806,7 +5800,7 @@ msgstr ""
 msgid "Get Bookings"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:211
+#: lib/klass_hero_web/live/about_live.ex:213
 #, elixir-autogen, elixir-format
 msgid "Get Started Today →"
 msgstr ""
@@ -5843,12 +5837,12 @@ msgstr ""
 msgid "Hand-picked, vetted programs across Berlin — filter by category, age, or schedule."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:154
+#: lib/klass_hero_web/live/trust_safety_live.ex:156
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Have questions?"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:118
+#: lib/klass_hero_web/live/about_live.ex:120
 #, elixir-autogen, elixir-format
 msgid "Head of Trust & Quality (joining)"
 msgstr ""
@@ -5907,7 +5901,7 @@ msgid_plural "Imported %{count} families."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/live/about_live.ex:182
+#: lib/klass_hero_web/live/about_live.ex:184
 #, elixir-autogen, elixir-format
 msgid "In 2025, Shane connected with his friend"
 msgstr ""
@@ -6123,7 +6117,7 @@ msgstr ""
 msgid "Month"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:120
+#: lib/klass_hero_web/live/about_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "Mother and child-safety specialist with 10+ years in quality assurance. Architecting our Safety-First Verification engine."
 msgstr ""
@@ -6250,12 +6244,12 @@ msgstr ""
 msgid "Our Commitment"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:130
+#: lib/klass_hero_web/live/about_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "Our Mission"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:111
+#: lib/klass_hero_web/live/trust_safety_live.ex:113
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Our commitment to child safety"
 msgstr ""
@@ -6344,7 +6338,7 @@ msgstr ""
 msgid "Pro tip"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:87
+#: lib/klass_hero_web/live/trust_safety_live.ex:89
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Process"
 msgstr ""
@@ -6364,7 +6358,7 @@ msgstr ""
 msgid "Provider questions, answered"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:138
+#: lib/klass_hero_web/live/trust_safety_live.ex:140
 #, elixir-autogen, elixir-format
 msgid "Quality & accountability — always on."
 msgstr ""
@@ -6411,7 +6405,7 @@ msgstr ""
 msgid "Recommended"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:91
+#: lib/klass_hero_web/live/trust_safety_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "Reporting"
 msgstr ""
@@ -6426,7 +6420,7 @@ msgstr ""
 msgid "Revenue (this week)"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:165
+#: lib/klass_hero_web/live/about_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "Rigorous screening so families never wonder who's leading the room."
 msgstr ""
@@ -6451,7 +6445,7 @@ msgstr ""
 msgid "Safeguarding Training"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:101
+#: lib/klass_hero_web/live/trust_safety_live.ex:103
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Safety"
 msgstr ""
@@ -6551,7 +6545,7 @@ msgstr ""
 msgid "Signed in as"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:128
+#: lib/klass_hero_web/live/trust_safety_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "Six checks. No shortcuts."
 msgstr ""
@@ -6613,7 +6607,7 @@ msgid "Talk to our team →"
 msgstr ""
 
 #: lib/klass_hero_web/components/marketing_components.ex:880
-#: lib/klass_hero_web/live/about_live.ex:215
+#: lib/klass_hero_web/live/about_live.ex:217
 #: lib/klass_hero_web/live/for_providers_live.ex:269
 #, elixir-autogen, elixir-format
 msgid "Talk to us"
@@ -6671,7 +6665,7 @@ msgstr ""
 msgid "This week"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:132
+#: lib/klass_hero_web/live/about_live.ex:134
 #, elixir-autogen, elixir-format
 msgid "To modernize how Berlin"
 msgstr ""
@@ -6686,7 +6680,7 @@ msgstr ""
 msgid "Track signups, retention, no-shows, and revenue. Identify what's working and double down."
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:100
+#: lib/klass_hero_web/live/trust_safety_live.ex:102
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Trust &"
 msgstr ""
@@ -6726,7 +6720,7 @@ msgstr ""
 msgid "Upcoming this week"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:86
+#: lib/klass_hero_web/live/trust_safety_live.ex:88
 #, elixir-autogen, elixir-format
 msgid "Vetted"
 msgstr ""
@@ -6751,7 +6745,7 @@ msgstr ""
 msgid "Visit FAQ →"
 msgstr ""
 
-#: lib/klass_hero_web/live/trust_safety_live.ex:113
+#: lib/klass_hero_web/live/trust_safety_live.ex:115
 #, elixir-autogen, elixir-format, fuzzy
 msgid "We believe children thrive best in environments that are safe, respectful, and professionally led. That's why Klass Hero applies a multi-layered safety and verification framework before any provider can offer sessions on our platform."
 msgstr ""
@@ -6776,7 +6770,7 @@ msgstr ""
 msgid "We're here to"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:137
+#: lib/klass_hero_web/live/about_live.ex:139
 #, elixir-autogen, elixir-format, fuzzy
 msgid "We're parents, brothers, and partners of educators — building the infrastructure that helps every child learn and thrive."
 msgstr ""
@@ -6923,12 +6917,12 @@ msgstr ""
 msgid "complete"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:134
+#: lib/klass_hero_web/live/about_live.ex:136
 #, elixir-autogen, elixir-format
 msgid "discover & engage with children's programs"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:133
+#: lib/klass_hero_web/live/about_live.ex:135
 #, elixir-autogen, elixir-format, fuzzy
 msgid "families"
 msgstr ""
@@ -6971,7 +6965,7 @@ msgstr[1] ""
 msgid "settings"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:177
+#: lib/klass_hero_web/live/about_live.ex:179
 #, elixir-autogen, elixir-format
 msgid "spent over a decade as a coach and youth activity provider in Berlin, building Prime Youth — a community of providers, schools, and parents dedicated to giving children the best possible experiences. But one pattern kept emerging: the administrative burden of managing bookings, payments, and compliance was getting in everyone's way."
 msgstr ""
@@ -6986,7 +6980,7 @@ msgstr ""
 msgid "to go"
 msgstr ""
 
-#: lib/klass_hero_web/live/about_live.ex:199
+#: lib/klass_hero_web/live/about_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "— a mother with over a decade of experience in child safety and quality assurance — will join to architect our Safety-First Verification engine."
 msgstr ""
@@ -7276,4 +7270,10 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:2500
 #, elixir-autogen, elixir-format
 msgid "You have agreed to the Community Guidelines."
+msgstr ""
+
+#: lib/klass_hero_web/live/about_live.ex:65
+#: lib/klass_hero_web/live/trust_safety_live.ex:45
+#, elixir-autogen, elixir-format
+msgid "Applicants submit a short recorded video (max 2 minutes) so we can assess communication skills and alignment with our values before approving their profile."
 msgstr ""
