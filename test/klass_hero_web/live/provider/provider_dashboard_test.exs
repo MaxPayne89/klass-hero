@@ -1570,6 +1570,77 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
     end
 
+    test "in-memory dedup drops the confirmed card without re-querying the DB",
+         %{conn: conn, provider: provider} do
+      program = insert_program_with_listing(provider_id: provider.id)
+      {child, parent} = KlassHero.Factory.insert_child_with_guardian()
+
+      enrollment =
+        KlassHero.Factory.insert(:enrollment_schema,
+          program_id: program.id,
+          parent_id: parent.id,
+          child_id: child.id,
+          status: :pending
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+      assert has_element?(view, "#pending-enrollment-#{enrollment.id}")
+
+      # DB row deliberately left :pending. Only in-memory removal can drop the
+      # card — a refresh would re-query and the still-pending row would reappear.
+      event =
+        DomainEvent.new(
+          :enrollment_confirmed,
+          enrollment.id,
+          :enrollment,
+          %{provider_id: provider.id, enrollment_id: enrollment.id}
+        )
+
+      send(view.pid, {:domain_event, event})
+      _ = render(view)
+
+      refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
+
+      {:ok, reloaded} = KlassHero.Enrollment.get_enrollment(enrollment.id)
+      assert reloaded.status == :pending
+    end
+
+    test "falls back to a refresh when the confirmed id is not in local assigns",
+         %{conn: conn, provider: provider} do
+      program = insert_program_with_listing(provider_id: provider.id)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
+      assert render(view) =~ "No pending enrollments right now."
+
+      # A pending enrollment created after mount is absent from this tab's assigns
+      # (simulates another tab acting before this one loaded).
+      {child, parent} = KlassHero.Factory.insert_child_with_guardian()
+
+      unseen =
+        KlassHero.Factory.insert(:enrollment_schema,
+          program_id: program.id,
+          parent_id: parent.id,
+          child_id: child.id,
+          status: :pending
+        )
+
+      refute has_element?(view, "#pending-enrollment-#{unseen.id}")
+
+      # Event carries an id NOT in assigns → miss → fallback refresh re-queries.
+      event =
+        DomainEvent.new(
+          :enrollment_confirmed,
+          Ecto.UUID.generate(),
+          :enrollment,
+          %{provider_id: provider.id, enrollment_id: Ecto.UUID.generate()}
+        )
+
+      send(view.pid, {:domain_event, event})
+      _ = render(view)
+
+      assert has_element?(view, "#pending-enrollment-#{unseen.id}")
+    end
+
     test "approving an enrollment for another provider's program flashes an error",
          %{conn: conn} do
       other_provider = KlassHero.Factory.insert(:provider_profile_schema)

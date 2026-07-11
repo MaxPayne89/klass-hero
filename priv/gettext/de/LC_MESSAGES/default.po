@@ -5359,7 +5359,7 @@ msgstr "Konto"
 msgid "Account settings"
 msgstr "Kontoeinstellungen"
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:255
+#: lib/klass_hero_web/live/provider/overview_live.ex:269
 #, elixir-autogen, elixir-format
 msgid "Across all programs"
 msgstr "Über alle Programme hinweg"
@@ -5370,7 +5370,7 @@ msgid "Active policy required to teach."
 msgstr "Aktive Versicherungspolice erforderlich, um zu unterrichten."
 
 #: lib/klass_hero_web/live/dashboard_live.ex:278
-#: lib/klass_hero_web/live/provider/overview_live.ex:245
+#: lib/klass_hero_web/live/provider/overview_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Active programs"
 msgstr "Aktive Programme"
@@ -5558,8 +5558,8 @@ msgstr "Mitgründer & CTO"
 #: lib/klass_hero_web/components/parent_components.ex:143
 #: lib/klass_hero_web/components/parent_components.ex:322
 #: lib/klass_hero_web/components/provider_layout_components.ex:147
-#: lib/klass_hero_web/live/provider/overview_live.ex:263
-#: lib/klass_hero_web/live/provider/overview_live.ex:271
+#: lib/klass_hero_web/live/provider/overview_live.ex:277
+#: lib/klass_hero_web/live/provider/overview_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "Coming soon"
 msgstr "Demnächst verfügbar"
@@ -5679,7 +5679,7 @@ msgstr "Programm bearbeiten"
 msgid "Email the provider and us (support@mail.klasshero.com) as soon as you can — we'll help you and the provider work it out."
 msgstr "Schreiben Sie dem Anbieter und uns (support@mail.klasshero.com) so schnell wie möglich eine E-Mail — wir helfen Ihnen und dem Anbieter, eine Lösung zu finden."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:251
+#: lib/klass_hero_web/live/provider/overview_live.ex:265
 #, elixir-autogen, elixir-format
 msgid "Enrolled kids"
 msgstr "Angemeldete Kinder"
@@ -6067,7 +6067,7 @@ msgstr "Suchen Sie Programme für Ihr Kind?"
 msgid "Looking for quick answers?"
 msgstr "Suchen Sie schnelle Antworten?"
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:287
+#: lib/klass_hero_web/live/provider/overview_live.ex:301
 #, elixir-autogen, elixir-format
 msgid "Manage"
 msgstr "Verwalten"
@@ -6162,17 +6162,17 @@ msgstr "Noch keine Vorfallberichte"
 msgid "No messages yet."
 msgstr "Noch keine Nachrichten."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:321
+#: lib/klass_hero_web/live/provider/overview_live.ex:335
 #, elixir-autogen, elixir-format
 msgid "No pending enrollments right now."
 msgstr "Derzeit keine ausstehenden Anmeldungen."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:306
+#: lib/klass_hero_web/live/provider/overview_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "No pending requests right now."
 msgstr "Derzeit keine ausstehenden Anfragen."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:291
+#: lib/klass_hero_web/live/provider/overview_live.ex:305
 #, elixir-autogen, elixir-format
 msgid "No programs yet — add your first one from the Programs tab."
 msgstr "Noch keine Programme — fügen Sie Ihr erstes über den Tab „Programme“ hinzu."
@@ -6290,12 +6290,12 @@ msgstr "Teilnahme"
 msgid "Pedagogical Interview"
 msgstr "Pädagogisches Interview"
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:300
+#: lib/klass_hero_web/live/provider/overview_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Pending booking requests"
 msgstr "Ausstehende Buchungsanfragen"
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:315
+#: lib/klass_hero_web/live/provider/overview_live.ex:329
 #, elixir-autogen, elixir-format
 msgid "Pending enrollments"
 msgstr "Ausstehende Anmeldungen"
@@ -6373,7 +6373,7 @@ msgstr "Fragen zu Programmen, Buchungen oder wie Sie ein Hero werden — wir les
 msgid "Questions, answered."
 msgstr "Fragen, beantwortet."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:266
+#: lib/klass_hero_web/live/provider/overview_live.ex:280
 #, elixir-autogen, elixir-format
 msgid "Rating"
 msgstr "Bewertung"
@@ -6415,7 +6415,7 @@ msgstr "Berichte"
 msgid "Reports filed for this program will appear here."
 msgstr "Für dieses Programm eingereichte Berichte werden hier angezeigt."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:258
+#: lib/klass_hero_web/live/provider/overview_live.ex:272
 #, elixir-autogen, elixir-format
 msgid "Revenue (this week)"
 msgstr "Umsatz (diese Woche)"
@@ -6887,7 +6887,7 @@ msgstr "Sie sind im Team — Sie können nun Programmen zugewiesen werden."
 msgid "You're on the team, but the headshot upload failed."
 msgstr "Sie sind im Team, aber der Upload des Profilfotos ist fehlgeschlagen."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:282
+#: lib/klass_hero_web/live/provider/overview_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Your top programs"
 msgstr "Ihre Top-Programme"
@@ -6947,8 +6947,8 @@ msgstr "in"
 msgid "matching"
 msgstr "Passend"
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:302
-#: lib/klass_hero_web/live/provider/overview_live.ex:317
+#: lib/klass_hero_web/live/provider/overview_live.ex:316
+#: lib/klass_hero_web/live/provider/overview_live.ex:331
 #, elixir-autogen, elixir-format
 msgid "pending"
 msgstr "Ausstehend"
@@ -7016,7 +7016,7 @@ msgstr "Gemeinschaftsstandards"
 msgid "Complete all steps to publish programs. %{approved} of %{total} approved."
 msgstr "Schließe alle Schritte ab, um Programme zu veröffentlichen. %{approved} von %{total} genehmigt."
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:234
+#: lib/klass_hero_web/live/provider/overview_live.ex:248
 #, elixir-autogen, elixir-format
 msgid "Complete your verification checklist so parents can find and book you."
 msgstr "Vervollständige deine Verifizierungs-Checkliste, damit Eltern dich finden und buchen können."
@@ -7151,7 +7151,7 @@ msgstr "Lade dein Kinderschutz-Zertifikat hoch."
 msgid "Verify identity"
 msgstr "Identität verifizieren"
 
-#: lib/klass_hero_web/live/provider/overview_live.ex:231
+#: lib/klass_hero_web/live/provider/overview_live.ex:245
 #, elixir-autogen, elixir-format
 msgid "Verify your identity to get approved"
 msgstr "Verifiziere deine Identität, um freigegeben zu werden"
