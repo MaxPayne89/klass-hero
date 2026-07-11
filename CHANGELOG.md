@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.56.1](https://github.com/MaxPayne89/klass-hero/compare/v0.56.0...v0.56.1) (2026-07-11)
+
+
+### Bug Fixes
+
+* update video screening description on About and Trust & Safety pages ([#1076](https://github.com/MaxPayne89/klass-hero/issues/1076)) ([02dcc47](https://github.com/MaxPayne89/klass-hero/commit/02dcc4760ec79d1b8ccec32120abde0d57a432a9)), closes [#557](https://github.com/MaxPayne89/klass-hero/issues/557)
+
+
+### Code Refactoring
+
+* route TeamLive pay rate through Provider facade ([#1060](https://github.com/MaxPayne89/klass-hero/issues/1060)) ([#1078](https://github.com/MaxPayne89/klass-hero/issues/1078)) ([41b423b](https://github.com/MaxPayne89/klass-hero/commit/41b423b776c3841d9c5e82cd8e1d0449db4d71ab))
+
 ## [0.56.0](https://github.com/MaxPayne89/klass-hero/compare/v0.55.3...v0.56.0) (2026-07-10)
 
 
