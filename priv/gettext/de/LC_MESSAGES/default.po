@@ -1599,7 +1599,7 @@ msgid "Active"
 msgstr "Aktiv"
 
 #: lib/klass_hero_web/components/provider_components.ex:600
-#: lib/klass_hero_web/live/provider/team_live.ex:544
+#: lib/klass_hero_web/live/provider/team_live.ex:532
 #, elixir-autogen, elixir-format
 msgid "Add Team Member"
 msgstr "Teammitglied hinzufügen"
@@ -1631,7 +1631,7 @@ msgstr "Geschäftsprofil"
 msgid "Business Registration"
 msgstr "Gewerbeanmeldung"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:521
+#: lib/klass_hero_web/live/provider/team_live.ex:509
 #, elixir-autogen, elixir-format
 msgid "Create profiles for your staff. These will be visible to parents when assigned to programs."
 msgstr "Erstellen Sie Profile für Ihr Personal. Diese werden für Eltern sichtbar sein, wenn sie Programmen zugewiesen werden."
@@ -1729,12 +1729,12 @@ msgid "Status"
 msgstr "Status"
 
 #: lib/klass_hero_web/components/provider_components.ex:105
-#: lib/klass_hero_web/live/provider/team_live.ex:37
+#: lib/klass_hero_web/live/provider/team_live.ex:36
 #, elixir-autogen, elixir-format
 msgid "Team & Profiles"
 msgstr "Team & Profile"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:518
+#: lib/klass_hero_web/live/provider/team_live.ex:506
 #, elixir-autogen, elixir-format
 msgid "Team & Provider Profiles"
 msgstr "Team- & Anbieterprofile"
@@ -2229,7 +2229,7 @@ msgstr "Aktion erforderlich"
 msgid "Add Member"
 msgstr "Mitglied hinzufügen"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:568
+#: lib/klass_hero_web/live/provider/team_live.ex:556
 #, elixir-autogen, elixir-format
 msgid "Add your first staff member to get started!"
 msgstr "Fügen Sie Ihren ersten Mitarbeiter hinzu, um loszulegen!"
@@ -2813,7 +2813,7 @@ msgstr "Noch keine Programme gebucht"
 msgid "No rejected documents."
 msgstr "Keine abgelehnten Dokumente."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:567
+#: lib/klass_hero_web/live/provider/team_live.ex:555
 #, elixir-autogen, elixir-format
 msgid "No team members yet"
 msgstr "Noch keine Teammitglieder"
@@ -2873,9 +2873,9 @@ msgstr "Ausstehende Überprüfung"
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:103
 #: lib/klass_hero_web/live/provider/programs_live.ex:588
 #: lib/klass_hero_web/live/provider/programs_live.ex:654
-#: lib/klass_hero_web/live/provider/team_live.ex:252
-#: lib/klass_hero_web/live/provider/team_live.ex:303
-#: lib/klass_hero_web/live/provider/team_live.ex:422
+#: lib/klass_hero_web/live/provider/team_live.ex:251
+#: lib/klass_hero_web/live/provider/team_live.ex:302
+#: lib/klass_hero_web/live/provider/team_live.ex:421
 #, elixir-autogen, elixir-format
 msgid "Please fix the errors below."
 msgstr "Bitte korrigieren Sie die Fehler unten."
@@ -3113,16 +3113,16 @@ msgstr "Legen Sie die minimale und maximale Anmeldekapazität für dieses Progra
 msgid "Specialties"
 msgstr "Spezialisierungen"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:402
-#: lib/klass_hero_web/live/provider/team_live.ex:428
+#: lib/klass_hero_web/live/provider/team_live.ex:401
+#: lib/klass_hero_web/live/provider/team_live.ex:427
 #, elixir-autogen, elixir-format
 msgid "Staff member no longer exists."
 msgstr "Der Mitarbeiter existiert nicht mehr."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:101
-#: lib/klass_hero_web/live/provider/team_live.ex:104
-#: lib/klass_hero_web/live/provider/team_live.ex:177
-#: lib/klass_hero_web/live/provider/team_live.ex:193
+#: lib/klass_hero_web/live/provider/team_live.ex:100
+#: lib/klass_hero_web/live/provider/team_live.ex:103
+#: lib/klass_hero_web/live/provider/team_live.ex:176
+#: lib/klass_hero_web/live/provider/team_live.ex:192
 #, elixir-autogen, elixir-format
 msgid "Staff member not found."
 msgstr "Mitarbeiter nicht gefunden."
@@ -3153,27 +3153,27 @@ msgstr "Noch offen"
 msgid "Tax Certificate"
 msgstr "Steuerbescheinigung"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:356
+#: lib/klass_hero_web/live/provider/team_live.ex:355
 #, elixir-autogen, elixir-format
 msgid "Team member added, but headshot upload failed."
 msgstr "Teammitglied hinzugefügt, aber der Upload des Profilfotos ist fehlgeschlagen."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:357
+#: lib/klass_hero_web/live/provider/team_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "Team member added."
 msgstr "Teammitglied hinzugefügt."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:167
+#: lib/klass_hero_web/live/provider/team_live.ex:166
 #, elixir-autogen, elixir-format
 msgid "Team member removed."
 msgstr "Teammitglied entfernt."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:382
+#: lib/klass_hero_web/live/provider/team_live.ex:381
 #, elixir-autogen, elixir-format
 msgid "Team member updated, but headshot upload failed."
 msgstr "Teammitglied aktualisiert, aber der Upload des Profilfotos ist fehlgeschlagen."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:383
+#: lib/klass_hero_web/live/provider/team_live.ex:382
 #, elixir-autogen, elixir-format
 msgid "Team member updated."
 msgstr "Teammitglied aktualisiert."
@@ -4271,7 +4271,7 @@ msgstr "E-Mail-Inhalt konnte nicht abgerufen werden."
 msgid "Failed to mark email as unread"
 msgstr "E-Mail konnte nicht als ungelesen markiert werden"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:209
+#: lib/klass_hero_web/live/provider/team_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Failed to resend invitation. Please try again."
 msgstr "Einladung konnte nicht erneut gesendet werden. Bitte versuchen Sie es erneut."
@@ -4339,7 +4339,7 @@ msgstr "Einladung ausstehend"
 msgid "Invitation Sent"
 msgstr "Einladung gesendet"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:190
+#: lib/klass_hero_web/live/provider/team_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "Invitation resent successfully."
 msgstr "Einladung erfolgreich erneut gesendet."
@@ -4586,7 +4586,7 @@ msgstr "Sitzung erfolgreich erstellt"
 msgid "Staff Dashboard"
 msgstr "Mitarbeiter-Dashboard"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:259
+#: lib/klass_hero_web/live/provider/team_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "Staff member created, but the invitation could not be sent. Try resending from the team list."
 msgstr "Mitarbeiter wurde erstellt, aber die Einladung konnte nicht gesendet werden. Versuchen Sie es erneut über die Team-Liste."
@@ -4617,7 +4617,7 @@ msgstr "Unterstützung: %{details}"
 msgid "The business associated with your account could not be found."
 msgstr "Das mit Ihrem Konto verknüpfte Unternehmen konnte nicht gefunden werden."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:200
+#: lib/klass_hero_web/live/provider/team_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "This invitation cannot be resent in its current state."
 msgstr "Diese Einladung kann in ihrem aktuellen Status nicht erneut gesendet werden."
@@ -5609,7 +5609,7 @@ msgstr "Familien verbinden mit"
 msgid "Contact Us →"
 msgstr "Kontakt →"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:311
+#: lib/klass_hero_web/live/provider/team_live.ex:310
 #, elixir-autogen, elixir-format
 msgid "Could not add you to the team. Please try again."
 msgstr "Sie konnten nicht zum Team hinzugefügt werden. Bitte versuchen Sie es erneut."
@@ -5888,7 +5888,7 @@ msgstr "So bringen Sie Ihr Jugendprogramm zum Wachsen"
 msgid "How we vet providers"
 msgstr "Wie wir Anbieter überprüfen"
 
-#: lib/klass_hero_web/live/provider/team_live.ex:535
+#: lib/klass_hero_web/live/provider/team_live.ex:523
 #, elixir-autogen, elixir-format
 msgid "I'll be teaching"
 msgstr "Ich werde unterrichten"
@@ -6857,7 +6857,7 @@ msgstr "Sie haben bereits ein Konto für %{email}."
 msgid "You'll get your own provider profile to fill in, and your account will open on your business dashboard from now on. You stay on %{business}'s team."
 msgstr "Sie erhalten Ihr eigenes Anbieterprofil zum Ausfüllen, und Ihr Konto öffnet sich ab sofort auf Ihrem Geschäfts-Dashboard. Sie bleiben im Team von %{business}."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:291
+#: lib/klass_hero_web/live/provider/team_live.ex:290
 #, elixir-autogen, elixir-format
 msgid "You're already on your team."
 msgstr "Sie sind bereits in Ihrem Team."
@@ -6877,12 +6877,12 @@ msgstr "Sie sind nicht mehr in diesem Team."
 msgid "You're now part of the team."
 msgstr "Sie sind jetzt Teil des Teams."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:339
+#: lib/klass_hero_web/live/provider/team_live.ex:338
 #, elixir-autogen, elixir-format
 msgid "You're on the team — you can now be assigned to programs."
 msgstr "Sie sind im Team — Sie können nun Programmen zugewiesen werden."
 
-#: lib/klass_hero_web/live/provider/team_live.ex:338
+#: lib/klass_hero_web/live/provider/team_live.ex:337
 #, elixir-autogen, elixir-format
 msgid "You're on the team, but the headshot upload failed."
 msgstr "Sie sind im Team, aber der Upload des Profilfotos ist fehlgeschlagen."

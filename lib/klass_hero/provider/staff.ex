@@ -38,7 +38,8 @@ defmodule KlassHero.Provider.Staff do
     "invitation_sent_at"
   ]
 
-  @staff_updatable_fields ~w(first_name last_name role email bio headshot_url tags qualifications active pay_rate)a
+  @staff_updatable_fields ~w(first_name last_name role email bio headshot_url tags qualifications active
+                             pay_rate rate_type rate_amount rate_currency)a
 
   @doc """
   Creates the provider's OWN staff row — pre-linked, `:accepted`, no

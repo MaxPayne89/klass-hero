@@ -14,7 +14,6 @@ defmodule KlassHeroWeb.Provider.TeamLive do
   alias KlassHero.Accounts
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Provider.PayRate
   alias KlassHero.Shared.NameUtils
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
@@ -443,43 +442,32 @@ defmodule KlassHeroWeb.Provider.TeamLive do
   end
 
   defp atomize_staff_params(params) do
-    %{
+    base = %{
       first_name: params["first_name"],
       last_name: params["last_name"],
       role: Params.presence(params["role"]),
       email: Params.presence(params["email"]),
       bio: Params.presence(params["bio"]),
       tags: (params["tags"] || []) |> Enum.reject(&(&1 == "")),
-      qualifications: parse_qualifications(params["qualifications"]),
-      pay_rate: build_pay_rate_from_params(params)
+      qualifications: parse_qualifications(params["qualifications"])
+    }
+
+    Map.merge(base, flat_rate_params(params))
+  end
+
+  # Pass raw rate_* params straight to the Provider facade — StaffMember's changeset is
+  # the pay-rate validation gatekeeper (#1060). The rate_currency field is a hidden EUR
+  # input that is always submitted, so the three columns are gated on an actual rate_type
+  # selection; otherwise a rate-less staff member would trip the all-or-none constraint.
+  defp flat_rate_params(%{"rate_type" => type} = params) when type in ["hourly", "per_session"] do
+    %{
+      rate_type: type,
+      rate_amount: Params.presence(params["rate_amount"]),
+      rate_currency: Params.presence(params["rate_currency"]) || "EUR"
     }
   end
 
-  defp build_pay_rate_from_params(%{"rate_type" => "hourly"} = params) do
-    build_pay_rate(&PayRate.hourly/2, params)
-  end
-
-  defp build_pay_rate_from_params(%{"rate_type" => "per_session"} = params) do
-    build_pay_rate(&PayRate.per_session/2, params)
-  end
-
-  defp build_pay_rate_from_params(_params), do: nil
-
-  # When rate_type is present but construction fails (bad amount, unknown currency, etc.),
-  # return the `:invalid` sentinel rather than `nil`. Domain validation via
-  # `StaffMember.validate_pay_rate/2` rejects non-PayRate non-nil values, which surfaces
-  # an `{:error, {:validation_error, _}}` tuple from the use case. The LiveView's
-  # existing error branch then re-renders the form via the schema's changeset, which
-  # flags bad `rate_amount` strings (Decimal cast failure) directly on the field.
-  defp build_pay_rate(constructor, params) do
-    amount = Params.presence(params["rate_amount"])
-    currency = Params.presence(params["rate_currency"]) || "EUR"
-
-    case amount && constructor.(amount, currency) do
-      {:ok, pay_rate} -> pay_rate
-      _ -> :invalid
-    end
-  end
+  defp flat_rate_params(_params), do: %{rate_type: nil, rate_amount: nil, rate_currency: nil}
 
   defp parse_qualifications(nil), do: []
   defp parse_qualifications(""), do: []

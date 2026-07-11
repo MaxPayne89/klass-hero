@@ -136,5 +136,34 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberTest do
       assert {:ok, staff} = Provider.create_staff_member(attrs)
       assert is_nil(staff.pay_rate)
     end
+
+    test "creates a staff member from flat rate_* params", %{provider_id: provider_id} do
+      attrs = %{
+        provider_id: provider_id,
+        first_name: "Fern",
+        last_name: "Flat",
+        rate_type: "hourly",
+        rate_amount: "25.00",
+        rate_currency: "EUR"
+      }
+
+      assert {:ok, staff} = Provider.create_staff_member(attrs)
+      assert staff.pay_rate.type == :hourly
+      assert Decimal.equal?(staff.pay_rate.money.amount, Decimal.new("25.00"))
+      assert staff.pay_rate.money.currency == :EUR
+    end
+
+    test "returns an error for an invalid flat rate_amount", %{provider_id: provider_id} do
+      attrs = %{
+        provider_id: provider_id,
+        first_name: "Nora",
+        last_name: "Negative",
+        rate_type: "hourly",
+        rate_amount: "-5.00",
+        rate_currency: "EUR"
+      }
+
+      assert {:error, _} = Provider.create_staff_member(attrs)
+    end
   end
 end
