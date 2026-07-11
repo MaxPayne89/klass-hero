@@ -328,7 +328,6 @@ defmodule KlassHero.Provider.StaffMember do
     |> validate_headshot_url(staff.headshot_url)
     |> validate_tags(staff.tags)
     |> validate_qualifications(staff.qualifications)
-    |> validate_pay_rate(staff.pay_rate)
   end
 
   defp validate_provider_id(errors, id) when is_binary(id) do
@@ -424,16 +423,6 @@ defmodule KlassHero.Provider.StaffMember do
   end
 
   defp validate_qualifications(errors, _), do: ["Qualifications must be a list" | errors]
-
-  defp validate_pay_rate(errors, nil), do: errors
-
-  defp validate_pay_rate(errors, %PayRate{} = pay_rate) do
-    if PayRate.valid?(pay_rate),
-      do: errors,
-      else: ["Pay rate is invalid" | errors]
-  end
-
-  defp validate_pay_rate(errors, _), do: ["Pay rate must be a %PayRate{} struct or nil" | errors]
 
   @doc """
   Generates a URL-safe invitation token and its SHA-256 hash.

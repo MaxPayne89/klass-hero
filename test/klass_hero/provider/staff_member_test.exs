@@ -104,6 +104,20 @@ defmodule KlassHero.Provider.StaffMemberTest do
 
       assert Enum.any?(errors, &String.contains?(&1, "Invalid tags"))
     end
+
+    test "does not gatekeep pay rate — the changeset owns flat rate_* validation (#1060)" do
+      # new/1 is the pure core; pay-rate validity depends on Ecto casting rate_type/
+      # rate_amount, so it lives in the changeset. A garbage flat rate is therefore not
+      # rejected here — it is caught downstream by create_changeset/edit_changeset.
+      assert {:ok, %StaffMember{}} =
+               StaffMember.new(%{
+                 provider_id: "p",
+                 first_name: "Alice",
+                 last_name: "Smith",
+                 rate_type: "not-a-real-type",
+                 rate_amount: "-5.00"
+               })
+    end
   end
 
   describe "pay_rate round-trip (virtual field + flat columns)" do

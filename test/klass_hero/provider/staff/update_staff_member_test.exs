@@ -132,5 +132,24 @@ defmodule KlassHero.Provider.Staff.UpdateStaffMemberTest do
       assert {:ok, cleared} = Provider.update_staff_member(staff.provider_id, staff.id, %{pay_rate: nil})
       assert is_nil(cleared.pay_rate)
     end
+
+    test "sets an hourly pay_rate from flat rate_* params", %{staff: staff} do
+      attrs = %{rate_type: "hourly", rate_amount: "30.00", rate_currency: "EUR"}
+
+      assert {:ok, updated} = Provider.update_staff_member(staff.provider_id, staff.id, attrs)
+      assert updated.pay_rate.type == :hourly
+      assert Decimal.equal?(updated.pay_rate.money.amount, Decimal.new("30.00"))
+      assert updated.pay_rate.money.currency == :EUR
+    end
+
+    test "clears pay_rate from empty flat params", %{staff: staff} do
+      {:ok, pay_rate} = PayRate.hourly(Decimal.new("25.00"))
+      {:ok, seeded} = Provider.update_staff_member(staff.provider_id, staff.id, %{pay_rate: pay_rate})
+      assert seeded.pay_rate
+
+      attrs = %{rate_type: nil, rate_amount: nil, rate_currency: nil}
+      assert {:ok, cleared} = Provider.update_staff_member(staff.provider_id, staff.id, attrs)
+      assert is_nil(cleared.pay_rate)
+    end
   end
 end
