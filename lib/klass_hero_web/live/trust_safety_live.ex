@@ -42,7 +42,9 @@ defmodule KlassHeroWeb.TrustSafetyLive do
         icon: "hero-video-camera",
         title: gettext("Video Screening"),
         description:
-          gettext("Applicants complete a video screening to assess communication skills and alignment with our values.")
+          gettext(
+            "Applicants submit a short recorded video (max 2 minutes) so we can assess communication skills and alignment with our values before approving their profile."
+          )
       },
       %{
         icon: "hero-heart",
