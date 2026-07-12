@@ -1413,6 +1413,68 @@ defmodule KlassHeroWeb.MarketingComponents do
   end
 
   @doc """
+  The canonical 6-step provider vetting list, shared by the `/about`
+  (`mk_about_vetting/1`) and `/trust-safety` (`mk_trust_verification/1`) pages.
+
+  Single source of truth for the static marketing copy — edit here once and both
+  public pages update. Each step is `%{icon:, title:, description:}`. Distinct from
+  the `verification_steps` DB table and `VettingChecklistPresenter`, which model
+  per-provider onboarding state.
+  """
+  def vetting_steps do
+    [
+      %{
+        icon: "hero-identification",
+        title: gettext("Identity & Age Verification"),
+        description:
+          gettext(
+            "All providers must be 18 years or older, ensuring legal accountability and professional responsibility."
+          )
+      },
+      %{
+        icon: "hero-academic-cap",
+        title: gettext("Experience Validation"),
+        description:
+          gettext(
+            "Providers must demonstrate at least one year of experience working with children in their area of expertise."
+          )
+      },
+      %{
+        icon: "hero-shield-check",
+        title: gettext("Extended Background Checks"),
+        description:
+          gettext(
+            "Each provider submits an extended police background check, confirming their eligibility to work safely with minors."
+          )
+      },
+      %{
+        icon: "hero-video-camera",
+        title: gettext("Video Screening"),
+        description:
+          gettext(
+            "Applicants submit a short recorded video (max 2 minutes) so we can assess communication skills and alignment with our values before approving their profile."
+          )
+      },
+      %{
+        icon: "hero-heart",
+        title: gettext("Child Safeguarding Training"),
+        description:
+          gettext(
+            "All Heroes must hold or complete a recognized child safeguarding course, ensuring up-to-date knowledge."
+          )
+      },
+      %{
+        icon: "hero-check-circle",
+        title: gettext("Community Standards Agreement"),
+        description:
+          gettext(
+            "Every provider agrees to follow our Community Guidelines, defining expectations around professionalism."
+          )
+      }
+    ]
+  end
+
+  @doc """
   6-step verification grid. Maps to MkTrustSafety's verification block
   (Sections.jsx:784). Each step is `%{icon:, title:, description:}`.
   """

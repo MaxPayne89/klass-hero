@@ -59,6 +59,30 @@ defmodule KlassHeroWeb.MarketingComponentsTest do
     end
   end
 
+  describe "vetting_steps/0" do
+    @expected_titles [
+      "Identity & Age Verification",
+      "Experience Validation",
+      "Extended Background Checks",
+      "Video Screening",
+      "Child Safeguarding Training",
+      "Community Standards Agreement"
+    ]
+
+    test "returns the six vetting steps in order, each a full icon/title/description map" do
+      steps = MarketingComponents.vetting_steps()
+
+      assert length(steps) == 6
+      assert Enum.map(steps, & &1.title) == @expected_titles
+
+      for step <- steps do
+        assert %{icon: "hero-" <> _, title: title, description: desc} = step
+        assert is_binary(title) and title != ""
+        assert is_binary(desc) and desc != ""
+      end
+    end
+  end
+
   defp render_mk_header(opts) do
     assigns = %{
       current_scope: Keyword.get(opts, :current_scope),
