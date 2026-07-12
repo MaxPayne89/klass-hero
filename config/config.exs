@@ -360,7 +360,11 @@ config :opentelemetry, :resource,
 config :opentelemetry,
   span_processor: :batch,
   traces_exporter: :otlp,
-  sampler: {:parent_based, %{root: {:trace_id_ratio_based, 0.5}}}
+  # Keep every root trace (1.0). At current volume, 50% sampling discarded half the
+  # data for no benefit — the Honeycomb free tier allows 20M events/month and we are
+  # orders of magnitude under it. Reintroduce a ratio (e.g. 0.25) only once trace
+  # volume approaches that budget.
+  sampler: {:parent_based, %{root: {:trace_id_ratio_based, 1.0}}}
 
 # GDPR: Filter sensitive parameters from logs
 config :phoenix, :filter_parameters, [
