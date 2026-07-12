@@ -102,27 +102,29 @@ defmodule KlassHero.Provider.Vetting do
 
   @doc """
   Persists the aggregate's current steps and lifecycle back to an already-persisted
-  case, in one transaction. Each step is updated from its stored row so Ecto sees the
-  real field changes (a `put_assoc` of already-persisted structs diffs to nothing).
+  case, in one transaction. Each row is written unconditionally with `Repo.update_all`
+  keyed by id: the mutable attrs are already in hand, so no read-before-write is needed
+  and `updated_at` is bumped explicitly (update_all does not touch timestamps). Returns
+  the passed-in case unchanged — callers already hold the post-mutation aggregate with
+  its steps loaded, so a re-fetch would be pure waste.
   """
   @spec save_case(VettingCase.t()) :: {:ok, VettingCase.t()} | {:error, term()}
-  def save_case(%VettingCase{id: id, steps: steps, lifecycle: lifecycle}) do
-    Repo.transaction(fn ->
-      VettingCase
-      |> Repo.get!(id)
-      |> Ecto.Changeset.change(lifecycle: lifecycle)
-      |> Repo.update!()
+  def save_case(%VettingCase{id: id, steps: steps, lifecycle: lifecycle} = case_) do
+    now = DateTime.utc_now()
 
-      Enum.each(steps, &save_step!/1)
-      VettingCase |> Repo.get!(id) |> Repo.preload(steps: step_order())
+    Repo.transaction(fn ->
+      Repo.update_all(from(c in VettingCase, where: c.id == ^id),
+        set: [lifecycle: lifecycle, updated_at: now]
+      )
+
+      Enum.each(steps, &save_step!(&1, now))
+      case_
     end)
   end
 
-  defp save_step!(%VerificationStep{id: step_id} = step) do
-    VerificationStep
-    |> Repo.get!(step_id)
-    |> VerificationStep.changeset(step_mutable_attrs(step))
-    |> Repo.update!()
+  defp save_step!(%VerificationStep{id: step_id} = step, now) do
+    set = step |> step_mutable_attrs() |> Map.to_list() |> Keyword.put(:updated_at, now)
+    Repo.update_all(from(s in VerificationStep, where: s.id == ^step_id), set: set)
   end
 
   defp step_mutable_attrs(%VerificationStep{} = step) do
