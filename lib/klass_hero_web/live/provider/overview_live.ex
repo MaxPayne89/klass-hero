@@ -124,7 +124,21 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     end
   end
 
+  # The confirmed enrollment's id is on the event payload and on each pending
+  # read-model entry, so the loopback can drop the row from assigns without a DB
+  # round-trip. Fall back to a refresh only on a cross-tab miss (another tab
+  # approved before this one loaded, so the id isn't in local assigns yet).
   @impl true
+  def handle_info(
+        {:domain_event, %DomainEvent{event_type: :enrollment_confirmed, payload: %{enrollment_id: id}}},
+        socket
+      ) do
+    case Enum.split_with(socket.assigns.pending_enrollments, &(&1.enrollment_id == id)) do
+      {[_hit], rest} -> {:noreply, assign(socket, :pending_enrollments, rest)}
+      {[], _} -> {:noreply, refresh_pending_enrollments(socket)}
+    end
+  end
+
   def handle_info({:domain_event, %DomainEvent{event_type: :enrollment_confirmed}}, socket) do
     {:noreply, refresh_pending_enrollments(socket)}
   end
