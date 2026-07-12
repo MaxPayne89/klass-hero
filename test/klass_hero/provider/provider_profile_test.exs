@@ -88,6 +88,18 @@ defmodule KlassHero.Provider.ProviderProfileTest do
       assert {:error, errors} = ProviderProfile.new(attrs)
       assert "Categories must be a list" in errors
     end
+
+    test "returns error when entity_type is not one of the known tracks" do
+      attrs = %{
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        identity_id: "uuid-123",
+        business_name: "My Business",
+        entity_type: :charity
+      }
+
+      assert {:error, errors} = ProviderProfile.new(attrs)
+      assert "entity_type must be :individual or :business" in errors
+    end
   end
 
   describe "valid?/1" do

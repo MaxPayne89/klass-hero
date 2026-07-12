@@ -292,6 +292,7 @@ defmodule KlassHero.Provider.ProviderProfile do
     |> validate_verified_at(profile.verified_at)
     |> validate_categories(profile.categories)
     |> validate_profile_status(profile.profile_status)
+    |> validate_entity_type(profile.entity_type)
     |> validate_business_owner_email(profile.business_owner_email)
   end
 
@@ -429,4 +430,7 @@ defmodule KlassHero.Provider.ProviderProfile do
 
   defp validate_profile_status(errors, status) when status in @profile_statuses, do: errors
   defp validate_profile_status(errors, _), do: ["profile_status must be :draft or :active" | errors]
+
+  defp validate_entity_type(errors, entity_type) when entity_type in @entity_types, do: errors
+  defp validate_entity_type(errors, _), do: ["entity_type must be :individual or :business" | errors]
 end
