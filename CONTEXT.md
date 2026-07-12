@@ -175,6 +175,14 @@ The outcome of one Stripe Identity session run against a person, backing the ide
 A **Provider**'s explicit, recorded consent to a versioned agreement, backing an auto-approving **Verification Step** (no admin review). The individual track's final step is the **Community Agreement** to the versioned Community Guidelines. Append-only: a re-agreement (e.g. after a version bump) is a fresh record, so consent history stays auditable.
 _Avoid_: Consent (reserved for **Guardian** permissions above)
 
+**Staff Attestation**:
+A `:business` **Provider**'s final vetting step (B5): a versioned **Signed Agreement** (`kind: :staff_attestation`) in which the **Responsible Person** declares, on the business's authority, that every instructor has been background-checked to the German legal standard (erweitertes Führungszeugnis, § 72a SGB VIII), and accepts the associated indemnity and penalty terms. Auto-approves on signing. **Data-minimisation is definitional**: Klass Hero stores only the contractual declaration (who signed, when, which version) — never certificate contents or criminal-record data — which keeps the platform outside GDPR Art. 10 scope. Distinct from an **Identity Verification**: no third party, no file, a pure recorded commitment.
+_Avoid_: Background check (that is the instructor-level act the business attests *to*, not held by Klass Hero); Certificate
+
+**Responsible Person**:
+On a `:business` **Provider**, the named owner/director legally accountable for the business on Klass Hero. Carried as a value on the **Provider** (name + role), not a separate entity. **Vetting** is tied to this person, not the business entity: the **Identity Verification** (B1) runs against them, and the business **Community Agreement** and **Staff Attestation** are signed on their authority. Changing the responsible person is an explicit act — a dedicated command is the *only* mutator, and it (not an incidental profile edit) resets the identity step, cascading to the agreements that require it. A typo correction is not a change.
+_Avoid_: Owner, Director (those are *roles* the person may hold, not the concept); Contact
+
 ## Parked (not modelled)
 
 **Referral**:
