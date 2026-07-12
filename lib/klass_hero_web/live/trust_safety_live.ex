@@ -12,59 +12,6 @@ defmodule KlassHeroWeb.TrustSafetyLive do
      )}
   end
 
-  defp verification_steps do
-    [
-      %{
-        icon: "hero-identification",
-        title: gettext("Identity & Age Verification"),
-        description:
-          gettext(
-            "All providers must be 18 years or older, ensuring legal accountability and professional responsibility."
-          )
-      },
-      %{
-        icon: "hero-academic-cap",
-        title: gettext("Experience Validation"),
-        description:
-          gettext(
-            "Providers must demonstrate at least one year of experience working with children in their area of expertise."
-          )
-      },
-      %{
-        icon: "hero-shield-check",
-        title: gettext("Extended Background Checks"),
-        description:
-          gettext(
-            "Each provider submits an extended police background check, confirming their eligibility to work safely with minors."
-          )
-      },
-      %{
-        icon: "hero-video-camera",
-        title: gettext("Video Screening"),
-        description:
-          gettext(
-            "Applicants submit a short recorded video (max 2 minutes) so we can assess communication skills and alignment with our values before approving their profile."
-          )
-      },
-      %{
-        icon: "hero-heart",
-        title: gettext("Child Safeguarding Training"),
-        description:
-          gettext(
-            "All Heroes must hold or complete a recognized child safeguarding course, ensuring up-to-date knowledge."
-          )
-      },
-      %{
-        icon: "hero-check-circle",
-        title: gettext("Community Standards Agreement"),
-        description:
-          gettext(
-            "Every provider agrees to follow our Community Guidelines, defining expectations around professionalism."
-          )
-      }
-    ]
-  end
-
   defp commitment_items do
     [
       gettext("Protect children and families"),
@@ -133,7 +80,7 @@ defmodule KlassHeroWeb.TrustSafetyLive do
           "Every educator and enrichment professional completes a 6-step verification process before being approved."
         )
       }
-      steps={verification_steps()}
+      steps={vetting_steps()}
     />
 
     <.mk_trust_accountability
