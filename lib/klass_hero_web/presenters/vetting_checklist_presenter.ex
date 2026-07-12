@@ -93,6 +93,38 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
       gradient: :comic
     }
 
+  def step_meta(:responsible_person_identity),
+    do: %{
+      title: gettext("Responsible person"),
+      description: gettext("Verify the owner or director accountable for the business."),
+      icon: "hero-identification",
+      gradient: :primary
+    }
+
+  def step_meta(:business_registration),
+    do: %{
+      title: gettext("Business registration"),
+      description: gettext("Upload your business registration document."),
+      icon: "hero-building-office-2",
+      gradient: :cool
+    }
+
+  def step_meta(:insurance),
+    do: %{
+      title: gettext("Insurance"),
+      description: gettext("Upload your liability insurance certificate."),
+      icon: "hero-shield-check",
+      gradient: :safety
+    }
+
+  def step_meta(:staff_attestation),
+    do: %{
+      title: gettext("Staff attestation"),
+      description: gettext("Attest that your staff meet child-safety requirements."),
+      icon: "hero-user-group",
+      gradient: :comic
+    }
+
   @doc "Badge tone + label for a step's displayed status."
   @spec badge(VettingStepView.ui_status()) :: badge()
   def badge(:approved), do: %{tone: :success, label: gettext("Approved")}

@@ -1,7 +1,6 @@
 defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcomeTest do
   use KlassHero.DataCase, async: true
 
-  import ExUnit.CaptureLog
   import KlassHero.EventTestHelper
 
   alias KlassHero.AccountsFixtures
@@ -81,18 +80,17 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
     end
   end
 
-  describe "handle/1 when the track has no identity step" do
-    test "ignores and logs an identity outcome for a business provider", %{provider: _provider} do
+  describe "handle/1 for a business provider" do
+    test "approves the responsible-person identity step on a passed outcome" do
       business = ProviderFixtures.provider_profile_fixture(entity_type: "business")
       clear_integration_events()
 
-      log =
-        capture_log(fn ->
-          assert :ok = AdvanceVettingStepOnIdentityOutcome.handle(passed_event(business.id))
-        end)
+      assert :ok = AdvanceVettingStepOnIdentityOutcome.handle(passed_event(business.id))
 
-      assert log =~ "No Stripe Identity step in track for provider #{business.id}"
-      assert_no_integration_events_published()
+      {:ok, case_} = Vetting.get_case_for_provider(business.id)
+      identity = Enum.find(case_.steps, &(&1.key == :responsible_person_identity))
+      assert identity.status == :approved
+      assert identity.reviewed_by_id == nil
     end
   end
 

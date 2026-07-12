@@ -50,12 +50,25 @@ defmodule KlassHero.Provider.Vetting do
   ]
 
   @business_track [
+    %StepDefinition{key: :responsible_person_identity, completed_via: {:stripe_identity}, admin_review: false},
     %StepDefinition{
       key: :business_registration,
       completed_via: {:document, "business_registration"},
       admin_review: true
     },
-    %StepDefinition{key: :insurance, completed_via: {:document, "insurance_certificate"}, admin_review: true}
+    %StepDefinition{key: :insurance, completed_via: {:document, "insurance_certificate"}, admin_review: true},
+    %StepDefinition{
+      key: :community_agreement,
+      completed_via: {:signed_agreement, :community_agreement},
+      requires: [:responsible_person_identity],
+      admin_review: false
+    },
+    %StepDefinition{
+      key: :staff_attestation,
+      completed_via: {:signed_agreement, :staff_attestation},
+      requires: [:responsible_person_identity],
+      admin_review: false
+    }
   ]
 
   @doc """

@@ -111,4 +111,24 @@ defmodule KlassHero.Provider.VettingCaseResetTest do
       assert {:error, :step_not_found} = VettingCase.reset_step(business_case(), :nope)
     end
   end
+
+  # Binds ADR-0010's blast radius to the ACTUAL @business_track composition, not a
+  # synthetic fixture: a responsible-person change resets identity, which cascades to
+  # both agreements, while the business-entity document steps stand untouched.
+  describe "reset_step/2 on the real business track (ADR-0010)" do
+    test "resetting responsible_person_identity cascades to both agreements only" do
+      case_ = approve_all(VettingCase.new_for_track(Ecto.UUID.generate(), :business))
+      assert VettingCase.verified?(case_)
+
+      {:ok, reset} = VettingCase.reset_step(case_, :responsible_person_identity)
+
+      assert status(reset, :responsible_person_identity) == :not_started
+      assert status(reset, :community_agreement) == :not_started
+      assert status(reset, :staff_attestation) == :not_started
+
+      assert status(reset, :business_registration) == :approved
+      assert status(reset, :insurance) == :approved
+      refute VettingCase.verified?(reset)
+    end
+  end
 end

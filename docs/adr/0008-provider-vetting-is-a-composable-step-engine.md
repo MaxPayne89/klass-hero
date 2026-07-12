@@ -20,7 +20,7 @@ Building either track on that engine would bolt per-step booleans onto the profi
   on `ProviderProfile`). `entity_type` lands as a standalone foundation change before either track,
   because the step model reads it and both tracks gate on it.
   - `:individual` → `[identity, experience, background, video, safeguarding, community_agreement]`
-  - `:business`   → `[identity_responsible_person, business_registration, insurance, community_agreement, staff_attestation]`
+  - `:business`   → `[responsible_person_identity, business_registration, insurance, community_agreement, staff_attestation]`
 - **A step definition** declares its `key`, how it completes (`completed_via` ∈ {document approval,
   Stripe webhook, agreement, attestation}, whether admin review is needed), and an optional
   `requires: [step_key]` prerequisite list. **A step instance** (per provider) carries `status`
@@ -47,7 +47,7 @@ Building either track on that engine would bolt per-step booleans onto the profi
 - **Ordering is hybrid (gated groups), not a strict chain.** Most steps have no prerequisite and run
   in parallel; a few declare a real dependency. A step is startable only when all its `requires`
   steps are `:approved`. This models the business reset cascade directly: `community_agreement` and
-  `staff_attestation` both `require` `identity_responsible_person`, so a responsible-person change
+  `staff_attestation` both `require` `responsible_person_identity`, so a responsible-person change
   that resets identity cascades to reset them too. The prerequisite graph must be acyclic.
 - **Verified = every step in the provider's track is `:approved`.** Documents become *one way a step
   passes*, not the unit of verification. The `provider.verified` fact other contexts already consume

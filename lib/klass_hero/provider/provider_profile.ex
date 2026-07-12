@@ -109,7 +109,7 @@ defmodule KlassHero.Provider.ProviderProfile do
   business_name, description, phone, website, address, categories.
   Logo URL is set programmatically after upload (not in this changeset).
   """
-  @completion_cast_fields ~w(business_name description phone website address categories)a
+  @completion_cast_fields ~w(business_name description phone website address categories entity_type)a
 
   def completion_changeset(schema, attrs) do
     schema
@@ -257,7 +257,7 @@ defmodule KlassHero.Provider.ProviderProfile do
   - `{:error, :already_active}` if profile_status is not :draft
   - `{:error, [message]}` if validation fails
   """
-  @completion_fields ~w(business_name description phone website address logo_url categories)a
+  @completion_fields ~w(business_name description phone website address logo_url categories entity_type)a
 
   @spec complete_profile(t(), map()) :: {:ok, t()} | {:error, :already_active | [String.t()]}
   def complete_profile(%__MODULE__{profile_status: :draft} = profile, attrs) when is_map(attrs) do
