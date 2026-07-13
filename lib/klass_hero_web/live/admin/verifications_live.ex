@@ -224,6 +224,8 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
             "block p-4 hover:bg-gray-50 transition-colors"
           ]}
         >
+          <% reg_no? =
+            entry.document.document_type == :business_registration and entry.registration_number %>
           <%!-- Mobile: stacked card layout --%>
           <div class="md:hidden space-y-2">
             <div class="flex items-center justify-between">
@@ -235,12 +237,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
             <p class={["text-sm", Theme.text_color(:body)]}>
               {ProviderPresenter.document_type_label(entry.document.document_type)}
             </p>
-            <p
-              :if={
-                entry.document.document_type == :business_registration and entry.registration_number
-              }
-              class={["text-xs", Theme.text_color(:muted)]}
-            >
+            <p :if={reg_no?} class={["text-xs", Theme.text_color(:muted)]}>
               {gettext("Reg. no.")}: {entry.registration_number}
             </p>
             <div class="flex items-center justify-between">
@@ -259,12 +256,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
               <span class="font-semibold text-sm truncate block">
                 {entry.provider_business_name}
               </span>
-              <span
-                :if={
-                  entry.document.document_type == :business_registration and entry.registration_number
-                }
-                class={["text-xs truncate block", Theme.text_color(:muted)]}
-              >
+              <span :if={reg_no?} class={["text-xs truncate block", Theme.text_color(:muted)]}>
                 {gettext("Reg. no.")}: {entry.registration_number}
               </span>
             </div>
@@ -346,18 +338,19 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
 
       <%!-- Info grid --%>
       <div id="document-info" class={[Theme.card_variant(:default), "p-4 md:p-6 mb-6"]}>
+        <% business_reg? = @document.document_type == :business_registration %>
         <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>{gettext("Business")}</dt>
             <dd class="mt-1 text-sm">{@provider_business_name}</dd>
           </div>
-          <div :if={@document.document_type == :business_registration}>
+          <div :if={business_reg?}>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
               {gettext("Legal business name")}
             </dt>
             <dd class="mt-1 text-sm">{@legal_business_name}</dd>
           </div>
-          <div :if={@document.document_type == :business_registration}>
+          <div :if={business_reg?}>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
               {gettext("Registration number")}
             </dt>

@@ -202,8 +202,8 @@ defmodule KlassHero.Provider.ProviderProfile do
   def responsible_person_changeset(schema, attrs) do
     schema
     |> cast(attrs, @responsible_person_fields)
-    |> update_change(:responsible_person_name, &normalize_person_field/1)
-    |> update_change(:responsible_person_role, &normalize_person_field/1)
+    |> update_change(:responsible_person_name, &normalize_field/1)
+    |> update_change(:responsible_person_role, &normalize_field/1)
     |> validate_required(@responsible_person_fields)
   end
 
@@ -223,8 +223,8 @@ defmodule KlassHero.Provider.ProviderProfile do
   def business_registration_changeset(schema, attrs) do
     schema
     |> cast(attrs, @business_registration_fields)
-    |> update_change(:legal_business_name, &normalize_person_field/1)
-    |> update_change(:registration_number, &String.trim/1)
+    |> update_change(:legal_business_name, &normalize_field/1)
+    |> update_change(:registration_number, &normalize_field/1)
     |> validate_required(@business_registration_fields)
     |> validate_inclusion(:registration_country, @registration_countries)
   end
@@ -247,10 +247,10 @@ defmodule KlassHero.Provider.ProviderProfile do
   @spec responsible_person_change(t(), String.t() | nil, String.t() | nil) ::
           :unchanged | :set | :changed
   def responsible_person_change(%__MODULE__{} = profile, name, role) do
-    stored_name = normalize_person_field(profile.responsible_person_name)
-    stored_role = normalize_person_field(profile.responsible_person_role)
+    stored_name = normalize_field(profile.responsible_person_name)
+    stored_role = normalize_field(profile.responsible_person_role)
     stored = {stored_name, stored_role}
-    submitted = {normalize_person_field(name), normalize_person_field(role)}
+    submitted = {normalize_field(name), normalize_field(role)}
 
     cond do
       stored == {"", ""} -> :set
@@ -260,9 +260,9 @@ defmodule KlassHero.Provider.ProviderProfile do
   end
 
   # Trims ends and collapses internal whitespace runs to a single space. nil → "".
-  defp normalize_person_field(nil), do: ""
+  defp normalize_field(nil), do: ""
 
-  defp normalize_person_field(value) when is_binary(value) do
+  defp normalize_field(value) when is_binary(value) do
     value |> String.trim() |> String.replace(~r/\s+/, " ")
   end
 

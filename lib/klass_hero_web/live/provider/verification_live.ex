@@ -167,39 +167,45 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     {:noreply, assign_verification_state(socket, provider_id)}
   end
 
+  # Reads the single uploaded entry under `upload_key` and hands its bytes to
+  # `submit_fun.(file_binary, entry)` (which returns `{:ok, doc} | {:error, reason}`). Owns the
+  # File.read!/try-catch/postpone plumbing shared by every upload handler; callers keep their own
+  # result `case` (stream/flash/form-echo differ per command). `log_meta` is merged into the
+  # failure log for context. Returns the raw `safe_consume_uploaded_entries` result.
+  defp consume_single_upload(socket, upload_key, log_meta, submit_fun) do
+    Uploads.safe_consume_uploaded_entries(socket, upload_key, fn %{path: path}, entry ->
+      try do
+        # sobelow_skip ["Traversal.FileModule"]
+        file_binary = File.read!(path)
+
+        case submit_fun.(file_binary, entry) do
+          {:ok, doc} -> {:ok, doc}
+          {:error, reason} -> {:postpone, reason}
+        end
+      catch
+        kind, reason ->
+          Logger.error("[VerificationLive] upload failed", log_meta ++ [kind: kind, error: inspect(reason)])
+          {:error, :upload_exception}
+      end
+    end)
+  end
+
   # Consumes one uploaded entry, submits it as a verification document, and streams the
   # new row into the checklist page. Shared by the generic doc uploader and the dedicated
   # video uploader (which pins document_type to "video_screening").
   defp consume_document(socket, upload_key, document_type) do
     provider = socket.assigns.current_scope.provider
+    meta = [provider_id: provider.id, doc_type: document_type]
 
     result =
-      Uploads.safe_consume_uploaded_entries(socket, upload_key, fn %{path: path}, entry ->
-        try do
-          # sobelow_skip ["Traversal.FileModule"]
-          file_binary = File.read!(path)
-
-          case Provider.submit_verification_document(%{
-                 provider_profile_id: provider.id,
-                 document_type: document_type,
-                 file_binary: file_binary,
-                 original_filename: entry.client_name,
-                 content_type: entry.client_type
-               }) do
-            {:ok, doc} -> {:ok, doc}
-            {:error, reason} -> {:postpone, reason}
-          end
-        catch
-          kind, reason ->
-            Logger.error("[VerificationLive] document upload failed",
-              provider_id: provider.id,
-              doc_type: document_type,
-              kind: kind,
-              error: inspect(reason)
-            )
-
-            {:error, :upload_exception}
-        end
+      consume_single_upload(socket, upload_key, meta, fn file_binary, entry ->
+        Provider.submit_verification_document(%{
+          provider_profile_id: provider.id,
+          document_type: document_type,
+          file_binary: file_binary,
+          original_filename: entry.client_name,
+          content_type: entry.client_type
+        })
       end)
 
     case result do
@@ -462,33 +468,18 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       registration_country: Map.get(params, "registration_country", "")
     }
 
+    meta = [provider_id: provider.id, doc_type: "business_registration"]
+
     result =
-      Uploads.safe_consume_uploaded_entries(socket, :business_registration_doc, fn %{path: path}, entry ->
-        try do
-          # sobelow_skip ["Traversal.FileModule"]
-          file_binary = File.read!(path)
+      consume_single_upload(socket, :business_registration_doc, meta, fn file_binary, entry ->
+        attrs =
+          Map.merge(fields, %{
+            file_binary: file_binary,
+            original_filename: entry.client_name,
+            content_type: entry.client_type
+          })
 
-          attrs =
-            Map.merge(fields, %{
-              file_binary: file_binary,
-              original_filename: entry.client_name,
-              content_type: entry.client_type
-            })
-
-          case Provider.submit_business_registration(provider.id, attrs) do
-            {:ok, doc} -> {:ok, doc}
-            {:error, reason} -> {:postpone, reason}
-          end
-        catch
-          kind, reason ->
-            Logger.error("[VerificationLive] business registration submit failed",
-              provider_id: provider.id,
-              kind: kind,
-              error: inspect(reason)
-            )
-
-            {:error, :upload_exception}
-        end
+        Provider.submit_business_registration(provider.id, attrs)
       end)
 
     socket = assign(socket, business_registration_form: to_form(params, as: :business_registration))

@@ -199,9 +199,17 @@ defmodule KlassHero.Provider.Vetting do
   @spec set_responsible_person(String.t(), String.t() | nil, String.t() | nil) ::
           {:ok, :unchanged | :set | :changed} | {:error, term()}
   def set_responsible_person(provider_id, name, role) when is_binary(provider_id) do
+    with {:ok, profile} <- fetch_profile(provider_id) do
+      apply_responsible_person_change(profile, name, role)
+    end
+  end
+
+  # The shared "load the profile or 404" open of every Vetting command that mutates
+  # a provider row (set_responsible_person, submit_business_registration).
+  defp fetch_profile(provider_id) do
     case Repo.get(ProviderProfile, provider_id) do
       nil -> {:error, :not_found}
-      profile -> apply_responsible_person_change(profile, name, role)
+      profile -> {:ok, profile}
     end
   end
 
@@ -285,9 +293,8 @@ defmodule KlassHero.Provider.Vetting do
   @spec submit_business_registration(String.t(), map()) ::
           {:ok, VerificationDocument.t()} | {:error, Ecto.Changeset.t() | term()}
   def submit_business_registration(provider_id, attrs) when is_binary(provider_id) and is_map(attrs) do
-    case Repo.get(ProviderProfile, provider_id) do
-      nil -> {:error, :not_found}
-      profile -> persist_business_registration(profile, attrs)
+    with {:ok, profile} <- fetch_profile(provider_id) do
+      persist_business_registration(profile, attrs)
     end
   end
 
@@ -302,25 +309,16 @@ defmodule KlassHero.Provider.Vetting do
   end
 
   defp persist_registration_in_transaction(changeset, provider_id, attrs, file_url) do
+    doc_params = Map.merge(attrs, %{provider_profile_id: provider_id, document_type: "business_registration"})
+
     Repo.transaction(fn ->
       with {:ok, _profile} <- Repo.update(changeset),
-           {:ok, doc} <- insert_registration_document(provider_id, attrs, file_url) do
+           {:ok, doc} <- Verification.insert_verification_document(doc_params, file_url) do
         doc
       else
         {:error, reason} -> Repo.rollback(reason)
       end
     end)
-  end
-
-  defp insert_registration_document(provider_id, attrs, file_url) do
-    %{
-      provider_profile_id: provider_id,
-      document_type: "business_registration",
-      file_url: file_url,
-      original_filename: attrs[:original_filename]
-    }
-    |> VerificationDocument.create_changeset()
-    |> Repo.insert()
   end
 
   # ── Onboarding checklist read model (Slice 2) ──────────────────────────────

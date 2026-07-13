@@ -194,7 +194,17 @@ defmodule KlassHero.Provider.Verification do
     end
   end
 
-  defp insert_verification_document(params, file_url) do
+  @doc """
+  Inserts a verification-document row from `params` and a stored `file_url`.
+
+  Exposed alongside `upload_document_file/1` so composite commands (e.g. business
+  registration, which writes provider fields and the document row in one transaction)
+  reuse the single document-row shape instead of re-implementing it. `params` supplies
+  `:provider_profile_id`, `:document_type`, and `:original_filename`.
+  """
+  @spec insert_verification_document(map(), String.t()) ::
+          {:ok, VerificationDocument.t()} | {:error, Ecto.Changeset.t()}
+  def insert_verification_document(params, file_url) do
     %{
       provider_profile_id: params[:provider_profile_id],
       document_type: params[:document_type],
