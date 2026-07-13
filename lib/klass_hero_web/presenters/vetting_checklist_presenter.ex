@@ -15,7 +15,13 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
 
   @type badge :: %{tone: atom(), label: String.t()}
   @type action :: %{
-          kind: :identity | :responsible_person | :navigate_documents | :navigate_agreement | :none,
+          kind:
+            :identity
+            | :responsible_person
+            | :business_registration
+            | :navigate_documents
+            | :navigate_agreement
+            | :none,
           label: String.t() | nil
         }
 
@@ -144,6 +150,10 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   # The business identity step captures a Responsible Person first (ADR-0010) — its own widget,
   # distinct from the individual bare-identity widget. Keyed above the generic stripe_identity clause.
   def action(%VettingStepView{key: :responsible_person_identity}), do: %{kind: :responsible_person, label: nil}
+
+  # Business registration (B2) captures structured fields + document in a dedicated widget that
+  # renders in every state, so it forks above the generic document and :none clauses.
+  def action(%VettingStepView{key: :business_registration}), do: %{kind: :business_registration, label: nil}
 
   def action(%VettingStepView{completed_via: {:stripe_identity}}), do: %{kind: :identity, label: nil}
 

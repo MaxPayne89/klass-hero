@@ -41,6 +41,9 @@ defmodule KlassHero.Provider.ProviderProfile do
     field :business_owner_email, :string
     field :responsible_person_name, :string
     field :responsible_person_role, :string
+    field :legal_business_name, :string
+    field :registration_number, :string
+    field :registration_country, :string
     field :description, :string
     field :phone, :string
     field :website, :string
@@ -203,6 +206,32 @@ defmodule KlassHero.Provider.ProviderProfile do
     |> update_change(:responsible_person_role, &normalize_person_field/1)
     |> validate_required(@responsible_person_fields)
   end
+
+  @doc """
+  Narrow changeset for business registration (B2, issue #956) — the ONLY path that may
+  write `legal_business_name`/`registration_number`/`registration_country`.
+
+  Like the responsible-person fields, these are deliberately absent from every other
+  changeset and whitelist, so the `submit_business_registration` command is their sole
+  mutator. `registration_country` is a curated string (`"DE" | "GB" | "OTHER"`, ADR-0011);
+  the legal name and number are trimmed. Unlike B1, a registration change carries no
+  `requires` edge and never resets vetting (ADR-0010).
+  """
+  @business_registration_fields ~w(legal_business_name registration_number registration_country)a
+  @registration_countries ~w(DE GB OTHER)
+
+  def business_registration_changeset(schema, attrs) do
+    schema
+    |> cast(attrs, @business_registration_fields)
+    |> update_change(:legal_business_name, &normalize_person_field/1)
+    |> update_change(:registration_number, &String.trim/1)
+    |> validate_required(@business_registration_fields)
+    |> validate_inclusion(:registration_country, @registration_countries)
+  end
+
+  @doc "The curated set of registration-country codes B2 accepts."
+  @spec registration_countries() :: [String.t()]
+  def registration_countries, do: @registration_countries
 
   # ── Functional core (pure domain rules) ────────────────────────────────────
 

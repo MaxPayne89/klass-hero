@@ -59,8 +59,16 @@ defmodule KlassHero.Provider.VerificationDocument do
   @type t :: %__MODULE__{}
   @type status :: :pending | :approved | :rejected
 
-  @typedoc "Pairs a document with its provider's business name for admin review screens."
-  @type admin_review_result :: %{document: t(), provider_business_name: String.t()}
+  @typedoc """
+  Pairs a document with its provider's display name plus the structured business-registration
+  facts (legal name + registration number, nil for non-business docs) for admin review screens.
+  """
+  @type admin_review_result :: %{
+          document: t(),
+          provider_business_name: String.t(),
+          legal_business_name: String.t() | nil,
+          registration_number: String.t() | nil
+        }
 
   @required_fields ~w(provider_profile_id document_type file_url original_filename)a
   @optional_fields ~w(id status rejection_reason reviewed_by_id reviewed_at)a

@@ -31,7 +31,10 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     end
 
     all_types = Provider.valid_document_types(provider.entity_type)
-    doc_types = all_types |> Enum.reject(&(&1 == "video_screening")) |> Enum.map(&String.to_existing_atom/1)
+    # video_screening and business_registration have dedicated widgets, so they are excluded from
+    # the generic document-upload select (a step must be submittable via exactly one surface).
+    generic_excluded = ~w(video_screening business_registration)
+    doc_types = all_types |> Enum.reject(&(&1 in generic_excluded)) |> Enum.map(&String.to_existing_atom/1)
 
     socket =
       socket
@@ -44,9 +47,15 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       |> stream(:verification_docs, fetch_verification_docs(provider.id), dom_id: &"vdoc-#{&1.id}")
       |> allow_upload(:verification_doc, accept: ~w(.pdf .jpg .jpeg .png), max_entries: 1, max_file_size: 10_000_000)
       |> allow_upload(:verification_video, accept: ~w(.mp4 .mov .webm), max_entries: 1, max_file_size: 100_000_000)
+      |> allow_upload(:business_registration_doc,
+        accept: ~w(.pdf .jpg .jpeg .png),
+        max_entries: 1,
+        max_file_size: 10_000_000
+      )
       |> assign(community_agreement?: Provider.requires_community_agreement?(provider.entity_type))
       |> assign(agreement_form: to_form(%{"agree" => "false"}, as: :agreement))
       |> assign(responsible_person_form: responsible_person_form(provider))
+      |> assign(business_registration_form: business_registration_form(provider))
       |> assign_verification_state(provider.id)
 
     {:ok, socket}
@@ -91,6 +100,19 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
         )
 
         {:noreply, put_flash(socket, :error, gettext("Couldn't start identity verification. Please try again."))}
+    end
+  end
+
+  def handle_event("submit_business_registration", %{"business_registration" => params}, socket) do
+    provider = socket.assigns.current_scope.provider
+
+    if Enum.empty?(socket.assigns.uploads.business_registration_doc.entries) do
+      {:noreply,
+       socket
+       |> assign(business_registration_form: to_form(params, as: :business_registration))
+       |> put_flash(:error, gettext("Please attach your registration document."))}
+    else
+      {:noreply, consume_business_registration(socket, provider, params)}
     end
   end
 
@@ -304,6 +326,13 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
                       failure_reason={@identity_failure_reason}
                       form={@responsible_person_form}
                     />
+                  <% row.action_kind == :business_registration -> %>
+                    <.business_registration_widget
+                      form={@business_registration_form}
+                      uploads={@uploads}
+                      ui_status={row.ui_status}
+                      rejection_reason={row.rejection_reason}
+                    />
                   <% row.action_kind == :identity -> %>
                     <.identity_state_widget
                       identity_state={@identity_state}
@@ -410,6 +439,165 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
 
   defp responsible_person_button_label(:not_started), do: gettext("Verify identity")
   defp responsible_person_button_label(_state), do: gettext("Update & re-verify")
+
+  # Pre-fills the registration form from the provider's stored values (blank on first visit).
+  defp business_registration_form(provider) do
+    to_form(
+      %{
+        "legal_business_name" => provider.legal_business_name || "",
+        "registration_number" => provider.registration_number || "",
+        "registration_country" => provider.registration_country || ""
+      },
+      as: :business_registration
+    )
+  end
+
+  # Consumes the uploaded registration document and submits it with the three structured fields in
+  # one atomic command (Provider.submit_business_registration/2). On success re-derives the checklist
+  # so the step badge flips to "Under review"; the typed values are echoed back into the form.
+  defp consume_business_registration(socket, provider, params) do
+    fields = %{
+      legal_business_name: Map.get(params, "legal_business_name", ""),
+      registration_number: Map.get(params, "registration_number", ""),
+      registration_country: Map.get(params, "registration_country", "")
+    }
+
+    result =
+      Uploads.safe_consume_uploaded_entries(socket, :business_registration_doc, fn %{path: path}, entry ->
+        try do
+          # sobelow_skip ["Traversal.FileModule"]
+          file_binary = File.read!(path)
+
+          attrs =
+            Map.merge(fields, %{
+              file_binary: file_binary,
+              original_filename: entry.client_name,
+              content_type: entry.client_type
+            })
+
+          case Provider.submit_business_registration(provider.id, attrs) do
+            {:ok, doc} -> {:ok, doc}
+            {:error, reason} -> {:postpone, reason}
+          end
+        catch
+          kind, reason ->
+            Logger.error("[VerificationLive] business registration submit failed",
+              provider_id: provider.id,
+              kind: kind,
+              error: inspect(reason)
+            )
+
+            {:error, :upload_exception}
+        end
+      end)
+
+    socket = assign(socket, business_registration_form: to_form(params, as: :business_registration))
+
+    case result do
+      {:error, :upload_channel_died} ->
+        put_flash(socket, :error, gettext("Upload connection lost. Please try again."))
+
+      {:ok, [%{} = doc]} ->
+        socket
+        |> stream_insert(:verification_docs, doc, dom_id: &"vdoc-#{&1.id}")
+        |> assign_verification_state(provider.id)
+        |> put_flash(:info, gettext("Business registration submitted for review."))
+
+      # A non-empty upload that produced no document was postponed by the command — the
+      # structured fields failed validation (empty-upload is handled before we get here).
+      {:ok, _} ->
+        put_flash(socket, :error, gettext("Please enter your legal business name, registration number and country."))
+    end
+  end
+
+  # Curated country options for the <select>. The set of codes is single-sourced from the domain
+  # (Provider.registration_countries/0, the same list business_registration_changeset validates
+  # against, ADR-0011), so the UI and the changeset can never desync; only the labels live here.
+  defp country_options do
+    Enum.map(Provider.registration_countries(), &{country_label(&1), &1})
+  end
+
+  defp country_label("DE"), do: gettext("Germany")
+  defp country_label("GB"), do: gettext("United Kingdom")
+  defp country_label("OTHER"), do: gettext("Other")
+
+  defp registration_guidance("DE"), do: gettext("Germany: your Gewerbeanmeldung or Handelsregisterauszug.")
+  defp registration_guidance("GB"), do: gettext("United Kingdom: your Companies House certificate.")
+
+  defp registration_guidance("OTHER"), do: gettext("Other: your equivalent national business registration document.")
+
+  defp registration_guidance(_), do: gettext("Select your country to see which document to upload.")
+
+  attr :form, Form, required: true
+  attr :uploads, :map, required: true
+  attr :ui_status, :atom, required: true
+  attr :rejection_reason, :string, default: nil
+
+  # The single business-registration surface (B2): captures the structured registration facts and
+  # the document in one submit. The form stays available in every state (the banner shows progress),
+  # so a business can resubmit a corrected document after a rejection.
+  defp business_registration_widget(assigns) do
+    ~H"""
+    <div id="business-registration" class={[Theme.card_variant(:default), "p-4 md:p-6"]}>
+      <%= case @ui_status do %>
+        <% :submitted -> %>
+          <p id="business-registration-submitted" class={["mb-4 text-sm", Theme.text_color(:body)]}>
+            {gettext("Your registration document is under review.")}
+          </p>
+        <% :approved -> %>
+          <div id="business-registration-approved" class="mb-4 flex items-center gap-2">
+            <.icon name="hero-check-circle-solid" class="w-6 h-6 text-green-600" />
+            <p class={["text-sm font-medium", Theme.text_color(:body)]}>
+              {gettext("Your business registration is verified.")}
+            </p>
+          </div>
+        <% :rejected -> %>
+          <p id="business-registration-rejected" class="mb-4 text-sm text-red-700">
+            {@rejection_reason}
+          </p>
+        <% _ -> %>
+      <% end %>
+
+      <p class={["mb-4 text-sm", Theme.text_color(:muted)]}>
+        {gettext(
+          "Upload proof that your business is legally registered. Choose your country of registration for guidance on which document we need."
+        )}
+      </p>
+
+      <.form
+        for={@form}
+        id="business-registration-form"
+        phx-submit="submit_business_registration"
+        phx-change="validate_upload"
+      >
+        <.input
+          field={@form[:registration_country]}
+          type="select"
+          label={gettext("Country of registration")}
+          options={country_options()}
+        />
+        <p class={["mt-1 mb-3", Theme.typography(:caption)]}>
+          {registration_guidance(@form[:registration_country].value)}
+        </p>
+        <.input
+          field={@form[:legal_business_name]}
+          type="text"
+          label={gettext("Legal business name")}
+        />
+        <.input
+          field={@form[:registration_number]}
+          type="text"
+          label={gettext("Registration number")}
+        />
+
+        <.live_file_input upload={@uploads.business_registration_doc} class="mt-2 block" />
+        <p class={["mt-1", Theme.typography(:caption)]}>{gettext("PDF, JPG or PNG. Max 10MB.")}</p>
+
+        <.button id="business-registration-submit" class="mt-3">{gettext("Submit for review")}</.button>
+      </.form>
+    </div>
+    """
+  end
 
   attr :identity_state, :atom, required: true
   attr :failure_reason, :string, default: nil

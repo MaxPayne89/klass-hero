@@ -803,6 +803,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/contact_live.ex:94
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:241
+#: lib/klass_hero_web/live/provider/verification_live.ex:522
 #: lib/klass_hero_web/presenters/provider_presenter.ex:97
 #, elixir-autogen, elixir-format
 msgid "Other"
@@ -1406,7 +1407,7 @@ msgid "Participation History"
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:24
-#: lib/klass_hero_web/live/admin/verifications_live.ex:189
+#: lib/klass_hero_web/live/admin/verifications_live.ex:191
 #: lib/klass_hero_web/live/programs_live.ex:19
 #, elixir-autogen, elixir-format
 msgid "All"
@@ -1682,7 +1683,7 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:2167
 #: lib/klass_hero_web/components/provider_components.ex:2185
 #: lib/klass_hero_web/live/admin/sessions_live.ex:297
-#: lib/klass_hero_web/live/admin/verifications_live.ex:194
+#: lib/klass_hero_web/live/admin/verifications_live.ex:196
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr ""
@@ -1833,7 +1834,7 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:1214
 #: lib/klass_hero_web/components/provider_components.ex:1919
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:241
-#: lib/klass_hero_web/live/admin/verifications_live.ex:442
+#: lib/klass_hero_web/live/admin/verifications_live.ex:474
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:111
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:218
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:356
@@ -2191,7 +2192,7 @@ msgstr ""
 msgid "optional"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:177
+#: lib/klass_hero_web/live/admin/verifications_live.ex:179
 #, elixir-autogen, elixir-format
 msgid "%{count} document"
 msgid_plural "%{count} documents"
@@ -2255,7 +2256,7 @@ msgid "An unexpected error occurred during import."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_layout_components.ex:640
-#: lib/klass_hero_web/live/admin/verifications_live.ex:402
+#: lib/klass_hero_web/live/admin/verifications_live.ex:434
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:53
 #, elixir-autogen, elixir-format
 msgid "Approve"
@@ -2264,13 +2265,13 @@ msgstr ""
 #: lib/klass_hero_web/components/participation_components.ex:802
 #: lib/klass_hero_web/components/provider_components.ex:47
 #: lib/klass_hero_web/live/admin/sessions_live.ex:294
-#: lib/klass_hero_web/live/admin/verifications_live.ex:199
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:133
+#: lib/klass_hero_web/live/admin/verifications_live.ex:201
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:139
 #, elixir-autogen, elixir-format
 msgid "Approved"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:398
+#: lib/klass_hero_web/live/admin/verifications_live.ex:430
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Are you sure you want to approve this document?"
 msgstr ""
@@ -2297,7 +2298,7 @@ msgstr ""
 msgid "Back to Dashboard"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:316
+#: lib/klass_hero_web/live/admin/verifications_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "Back to verifications"
 msgstr ""
@@ -2322,7 +2323,7 @@ msgstr ""
 msgid "Built by Parents to Empower Educators."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:331
+#: lib/klass_hero_web/live/admin/verifications_live.ex:351
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Business"
 msgstr ""
@@ -2395,7 +2396,7 @@ msgstr ""
 msgid "Complete business verification to create programs."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:431
+#: lib/klass_hero_web/live/admin/verifications_live.ex:463
 #, elixir-autogen, elixir-format
 msgid "Confirm rejection"
 msgstr ""
@@ -2454,31 +2455,31 @@ msgstr ""
 msgid "Document Type"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:102
+#: lib/klass_hero_web/live/admin/verifications_live.ex:104
 #, elixir-autogen, elixir-format
 msgid "Document approved successfully."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:105
-#: lib/klass_hero_web/live/admin/verifications_live.ex:145
+#: lib/klass_hero_web/live/admin/verifications_live.ex:107
+#: lib/klass_hero_web/live/admin/verifications_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "Document has already been reviewed."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:362
-#: lib/klass_hero_web/live/admin/verifications_live.ex:498
-#: lib/klass_hero_web/live/admin/verifications_live.ex:510
+#: lib/klass_hero_web/live/admin/verifications_live.ex:394
+#: lib/klass_hero_web/live/admin/verifications_live.ex:530
+#: lib/klass_hero_web/live/admin/verifications_live.ex:542
 #, elixir-autogen, elixir-format
 msgid "Document preview"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:139
+#: lib/klass_hero_web/live/admin/verifications_live.ex:141
 #, elixir-autogen, elixir-format
 msgid "Document rejected."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:145
-#: lib/klass_hero_web/live/provider/verification_live.ex:190
+#: lib/klass_hero_web/live/provider/verification_live.ex:212
 #, elixir-autogen, elixir-format
 msgid "Document uploaded successfully."
 msgstr ""
@@ -2488,7 +2489,7 @@ msgstr ""
 msgid "Download Template"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:375
+#: lib/klass_hero_web/live/admin/verifications_live.ex:407
 #, elixir-autogen, elixir-format
 msgid "Download document"
 msgstr ""
@@ -2531,7 +2532,7 @@ msgstr ""
 msgid "Enrollment Capacity (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:423
+#: lib/klass_hero_web/live/admin/verifications_live.ex:455
 #, elixir-autogen, elixir-format
 msgid "Explain why this document is being rejected..."
 msgstr ""
@@ -2543,12 +2544,12 @@ msgstr ""
 msgid "Failed"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:119
+#: lib/klass_hero_web/live/admin/verifications_live.ex:121
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Failed to approve document."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:159
+#: lib/klass_hero_web/live/admin/verifications_live.ex:161
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Failed to reject document."
 msgstr ""
@@ -2559,7 +2560,7 @@ msgid "Failed to resend invite."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:154
-#: lib/klass_hero_web/live/provider/verification_live.ex:199
+#: lib/klass_hero_web/live/provider/verification_live.ex:221
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Failed to upload document."
 msgstr ""
@@ -2576,7 +2577,7 @@ msgstr ""
 msgid "Female"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:335
+#: lib/klass_hero_web/live/admin/verifications_live.ex:367
 #, elixir-autogen, elixir-format
 msgid "File"
 msgstr ""
@@ -2757,7 +2758,7 @@ msgstr ""
 msgid "Minimum Grade"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:539
+#: lib/klass_hero_web/live/admin/verifications_live.ex:571
 #, elixir-autogen, elixir-format
 msgid "No approved documents."
 msgstr ""
@@ -2798,7 +2799,7 @@ msgstr ""
 msgid "No minimum"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:538
+#: lib/klass_hero_web/live/admin/verifications_live.ex:570
 #, elixir-autogen, elixir-format
 msgid "No pending documents to review."
 msgstr ""
@@ -2808,7 +2809,7 @@ msgstr ""
 msgid "No programs booked yet"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:540
+#: lib/klass_hero_web/live/admin/verifications_live.ex:572
 #, elixir-autogen, elixir-format
 msgid "No rejected documents."
 msgstr ""
@@ -2818,8 +2819,8 @@ msgstr ""
 msgid "No team members yet"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:537
-#: lib/klass_hero_web/live/admin/verifications_live.ex:541
+#: lib/klass_hero_web/live/admin/verifications_live.ex:569
+#: lib/klass_hero_web/live/admin/verifications_live.ex:573
 #, elixir-autogen, elixir-format
 msgid "No verification documents found."
 msgstr ""
@@ -2847,6 +2848,7 @@ msgid "Our Story"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2342
+#: lib/klass_hero_web/live/provider/verification_live.ex:594
 #, elixir-autogen, elixir-format
 msgid "PDF, JPG or PNG. Max 10MB."
 msgstr ""
@@ -2880,12 +2882,12 @@ msgstr ""
 msgid "Please fix the errors below."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:142
+#: lib/klass_hero_web/live/admin/verifications_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Please provide a rejection reason."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:528
+#: lib/klass_hero_web/live/admin/verifications_live.ex:560
 #, elixir-autogen, elixir-format
 msgid "Preview not available for this file type."
 msgstr ""
@@ -3004,7 +3006,7 @@ msgstr ""
 msgid "Registration opens %{date}"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:410
+#: lib/klass_hero_web/live/admin/verifications_live.ex:442
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:67
 #, elixir-autogen, elixir-format
 msgid "Reject"
@@ -3012,13 +3014,13 @@ msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:803
 #: lib/klass_hero_web/components/provider_components.ex:48
-#: lib/klass_hero_web/live/admin/verifications_live.ex:204
+#: lib/klass_hero_web/live/admin/verifications_live.ex:206
 #, elixir-autogen, elixir-format
 msgid "Rejected"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:353
-#: lib/klass_hero_web/live/admin/verifications_live.ex:420
+#: lib/klass_hero_web/live/admin/verifications_live.ex:385
+#: lib/klass_hero_web/live/admin/verifications_live.ex:452
 #, elixir-autogen, elixir-format
 msgid "Rejection reason"
 msgstr ""
@@ -3039,7 +3041,7 @@ msgstr ""
 msgid "Resend Invite"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:344
+#: lib/klass_hero_web/live/admin/verifications_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Reviewed"
 msgstr ""
@@ -3138,7 +3140,7 @@ msgstr ""
 msgid "Start Time"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:339
+#: lib/klass_hero_web/live/admin/verifications_live.ex:371
 #, elixir-autogen, elixir-format
 msgid "Submitted"
 msgstr ""
@@ -3208,7 +3210,7 @@ msgstr ""
 msgid "Too many files."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:385
+#: lib/klass_hero_web/live/admin/verifications_live.ex:417
 #, elixir-autogen, elixir-format
 msgid "Unable to load document preview."
 msgstr ""
@@ -3254,9 +3256,9 @@ msgid "Verification Documents"
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/verifications_live.ex:59
-#: lib/klass_hero_web/live/admin/verifications_live.ex:81
-#: lib/klass_hero_web/live/admin/verifications_live.ex:110
-#: lib/klass_hero_web/live/admin/verifications_live.ex:150
+#: lib/klass_hero_web/live/admin/verifications_live.ex:83
+#: lib/klass_hero_web/live/admin/verifications_live.ex:112
+#: lib/klass_hero_web/live/admin/verifications_live.ex:152
 #, elixir-autogen, elixir-format
 msgid "Verification document not found."
 msgstr ""
@@ -3265,7 +3267,7 @@ msgstr ""
 #: lib/klass_hero_web/components/layouts/app.html.heex:232
 #: lib/klass_hero_web/components/ui_components.ex:271
 #: lib/klass_hero_web/live/admin/verifications_live.ex:41
-#: lib/klass_hero_web/live/admin/verifications_live.ex:174
+#: lib/klass_hero_web/live/admin/verifications_live.ex:176
 #, elixir-autogen, elixir-format
 msgid "Verifications"
 msgstr ""
@@ -4669,7 +4671,8 @@ msgstr ""
 
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:138
 #: lib/klass_hero_web/live/provider/programs_live.ex:339
-#: lib/klass_hero_web/live/provider/verification_live.ex:185
+#: lib/klass_hero_web/live/provider/verification_live.ex:207
+#: lib/klass_hero_web/live/provider/verification_live.ex:498
 #, elixir-autogen, elixir-format
 msgid "Upload connection lost. Please try again."
 msgstr ""
@@ -5805,8 +5808,8 @@ msgid "Get paid weekly"
 msgstr ""
 
 #: lib/klass_hero_web/live/for_providers_live.ex:396
-#: lib/klass_hero_web/live/provider/verification_live.ex:39
-#: lib/klass_hero_web/live/provider/verification_live.ex:243
+#: lib/klass_hero_web/live/provider/verification_live.ex:42
+#: lib/klass_hero_web/live/provider/verification_live.ex:265
 #, elixir-autogen, elixir-format
 msgid "Get verified"
 msgstr ""
@@ -6984,23 +6987,23 @@ msgstr ""
 msgid "Every provider gets: Profile page, booking system, payment processing, messaging, and marketing to Berlin families."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:78
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:84
 #, elixir-autogen, elixir-format
 msgid "A short video so we can meet you."
 msgstr ""
 
 #: lib/klass_hero_web/presenters/provider_presenter.ex:99
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:69
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:75
 #, elixir-autogen, elixir-format
 msgid "Background check"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:93
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:99
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Community standards"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:161
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:171
 #, elixir-autogen, elixir-format
 msgid "Complete all steps to publish programs. %{approved} of %{total} approved."
 msgstr ""
@@ -7010,28 +7013,28 @@ msgstr ""
 msgid "Complete your verification checklist so parents can find and book you."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:54
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:60
 #, elixir-autogen, elixir-format
 msgid "Confirm who you are with our partner Stripe."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:70
-#: lib/klass_hero_web/live/provider/verification_live.ex:93
+#: lib/klass_hero_web/live/provider/verification_live.ex:79
+#: lib/klass_hero_web/live/provider/verification_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Couldn't start identity verification. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:61
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:67
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Experience"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:53
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:59
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Identity & age verification"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:270
+#: lib/klass_hero_web/live/admin/verifications_live.ex:290
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Identity verifications"
 msgstr ""
@@ -7041,27 +7044,27 @@ msgstr ""
 msgid "In progress"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:466
+#: lib/klass_hero_web/live/provider/verification_live.ex:654
 #, elixir-autogen, elixir-format
 msgid "Klass Hero is only open to providers aged 18 and over, so we can't approve this account."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:476
+#: lib/klass_hero_web/live/provider/verification_live.ex:664
 #, elixir-autogen, elixir-format
 msgid "Looks like the check didn't finish. Pick up where you left off whenever you're ready."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:135
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:141
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Needs changes"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:274
+#: lib/klass_hero_web/live/admin/verifications_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "No identity verifications yet."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:136
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:142
 #, elixir-autogen, elixir-format
 msgid "Not started"
 msgstr ""
@@ -7071,73 +7074,73 @@ msgstr ""
 msgid "Passed"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:253
+#: lib/klass_hero_web/live/provider/verification_live.ex:275
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Profile locked"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:94
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:100
 #, elixir-autogen, elixir-format
 msgid "Read and sign the community standards agreement."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:167
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:177
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Resubmit"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:455
+#: lib/klass_hero_web/live/provider/verification_live.ex:643
 #, elixir-autogen, elixir-format
 msgid "Retry verification"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:170
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:180
 #, elixir-autogen, elixir-format
 msgid "Review & sign"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:85
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:91
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Safeguarding"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:62
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:68
 #, elixir-autogen, elixir-format
 msgid "Show relevant experience working with children."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:473
+#: lib/klass_hero_web/live/provider/verification_live.ex:661
 #, elixir-autogen, elixir-format
 msgid "Something tripped up the check — usually a blurry photo. Give it another go."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:432
+#: lib/klass_hero_web/live/provider/verification_live.ex:620
 #, elixir-autogen, elixir-format
 msgid "Takes about 2 minutes. Once verified, your provider account can be approved."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:134
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:140
 #, elixir-autogen, elixir-format
 msgid "Under review"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:168
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:178
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Upload"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:70
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:76
 #, elixir-autogen, elixir-format
 msgid "Upload a current background check."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:86
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:92
 #, elixir-autogen, elixir-format
 msgid "Upload your safeguarding certificate."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:411
-#: lib/klass_hero_web/live/provider/verification_live.ex:429
+#: lib/klass_hero_web/live/provider/verification_live.ex:440
+#: lib/klass_hero_web/live/provider/verification_live.ex:617
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Verify identity"
 msgstr ""
@@ -7147,33 +7150,33 @@ msgstr ""
 msgid "Verify your identity to get approved"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:424
+#: lib/klass_hero_web/live/provider/verification_live.ex:612
 #, elixir-autogen, elixir-format
 msgid "Verify your identity with our partner Stripe to get approved. You'll be sent to a secure page and brought back here."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:438
+#: lib/klass_hero_web/live/provider/verification_live.ex:626
 #, elixir-autogen, elixir-format
 msgid "Verifying your identity… this can take a moment."
 msgstr ""
 
 #: lib/klass_hero_web/presenters/provider_presenter.ex:100
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:77
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:83
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Video screening"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:470
+#: lib/klass_hero_web/live/provider/verification_live.ex:658
 #, elixir-autogen, elixir-format
 msgid "We couldn't read your date of birth from your ID. A clearer photo of your document should do the trick."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:478
+#: lib/klass_hero_web/live/provider/verification_live.ex:666
 #, elixir-autogen, elixir-format
 msgid "We couldn't verify your identity. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:448
+#: lib/klass_hero_web/live/provider/verification_live.ex:636
 #, elixir-autogen, elixir-format
 msgid "Your identity is verified."
 msgstr ""
@@ -7208,7 +7211,7 @@ msgstr ""
 msgid "Upload Video"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/verifications_live.ex:518
+#: lib/klass_hero_web/live/admin/verifications_live.ex:550
 #, elixir-autogen, elixir-format
 msgid "Your browser does not support video playback."
 msgstr ""
@@ -7218,7 +7221,7 @@ msgstr ""
 msgid "Confirm agreement"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:133
+#: lib/klass_hero_web/live/provider/verification_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Couldn't record your agreement. Please try again."
 msgstr ""
@@ -7233,7 +7236,7 @@ msgstr ""
 msgid "I have read and agree to the Klass Hero Community Guidelines."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:139
+#: lib/klass_hero_web/live/provider/verification_live.ex:161
 #, elixir-autogen, elixir-format
 msgid "Please confirm you have read and agree to the Community Guidelines."
 msgstr ""
@@ -7243,7 +7246,7 @@ msgstr ""
 msgid "Signed by %{name} on %{date} (v%{version})."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:125
+#: lib/klass_hero_web/live/provider/verification_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "Thanks — your agreement to the Community Guidelines has been recorded."
 msgstr ""
@@ -7278,42 +7281,42 @@ msgstr ""
 msgid "An individual"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:126
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:132
 #, elixir-autogen, elixir-format
 msgid "Attest that your staff meet child-safety requirements."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:109
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:115
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Business registration"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:117
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:123
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Insurance"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:101
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:107
 #, elixir-autogen, elixir-format
 msgid "Responsible person"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:125
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:131
 #, elixir-autogen, elixir-format
 msgid "Staff attestation"
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:110
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:116
 #, elixir-autogen, elixir-format
 msgid "Upload your business registration document."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:118
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:124
 #, elixir-autogen, elixir-format
 msgid "Upload your liability insurance certificate."
 msgstr ""
 
-#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:102
+#: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:108
 #, elixir-autogen, elixir-format
 msgid "Verify the owner or director accountable for the business."
 msgstr ""
@@ -7333,42 +7336,130 @@ msgstr ""
 msgid "Your business and its responsible person will be vetted."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:391
+#: lib/klass_hero_web/live/provider/verification_live.ex:420
 #, elixir-autogen, elixir-format
 msgid "Enter the owner or director legally accountable for the business. They verify their identity with our partner Stripe. Changing this person restarts the identity and agreement steps."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:85
+#: lib/klass_hero_web/live/provider/verification_live.ex:94
 #, elixir-autogen, elixir-format
 msgid "Please enter the responsible person's full name and role."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:356
+#: lib/klass_hero_web/live/provider/verification_live.ex:385
 #, elixir-autogen, elixir-format
 msgid "Responsible person updated — please re-verify their identity."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:401
+#: lib/klass_hero_web/live/provider/verification_live.ex:430
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Responsible person's full name"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:402
+#: lib/klass_hero_web/live/provider/verification_live.ex:431
 #, elixir-autogen, elixir-format
 msgid "Role (e.g. Owner, Director)"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:380
+#: lib/klass_hero_web/live/provider/verification_live.ex:409
 #, elixir-autogen, elixir-format
 msgid "The responsible person's identity is verified."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:412
+#: lib/klass_hero_web/live/provider/verification_live.ex:441
 #, elixir-autogen, elixir-format
 msgid "Update & re-verify"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/verification_live.ex:374
+#: lib/klass_hero_web/live/provider/verification_live.ex:403
 #, elixir-autogen, elixir-format
 msgid "Verifying the responsible person's identity… this can take a moment."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:504
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Business registration submitted for review."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:576
+#, elixir-autogen, elixir-format
+msgid "Country of registration"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:520
+#, elixir-autogen, elixir-format
+msgid "Germany"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:524
+#, elixir-autogen, elixir-format
+msgid "Germany: your Gewerbeanmeldung or Handelsregisterauszug."
+msgstr ""
+
+#: lib/klass_hero_web/live/admin/verifications_live.ex:356
+#: lib/klass_hero_web/live/provider/verification_live.ex:585
+#, elixir-autogen, elixir-format
+msgid "Legal business name"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:527
+#, elixir-autogen, elixir-format
+msgid "Other: your equivalent national business registration document."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:113
+#, elixir-autogen, elixir-format
+msgid "Please attach your registration document."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:509
+#, elixir-autogen, elixir-format
+msgid "Please enter your legal business name, registration number and country."
+msgstr ""
+
+#: lib/klass_hero_web/live/admin/verifications_live.ex:244
+#: lib/klass_hero_web/live/admin/verifications_live.ex:268
+#, elixir-autogen, elixir-format
+msgid "Reg. no."
+msgstr ""
+
+#: lib/klass_hero_web/live/admin/verifications_live.ex:362
+#: lib/klass_hero_web/live/provider/verification_live.ex:590
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Registration number"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:529
+#, elixir-autogen, elixir-format
+msgid "Select your country to see which document to upload."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:596
+#, elixir-autogen, elixir-format
+msgid "Submit for review"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:521
+#, elixir-autogen, elixir-format
+msgid "United Kingdom"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:525
+#, elixir-autogen, elixir-format
+msgid "United Kingdom: your Companies House certificate."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:562
+#, elixir-autogen, elixir-format
+msgid "Upload proof that your business is legally registered. Choose your country of registration for guidance on which document we need."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:551
+#, elixir-autogen, elixir-format
+msgid "Your business registration is verified."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/verification_live.ex:545
+#, elixir-autogen, elixir-format
+msgid "Your registration document is under review."
 msgstr ""

@@ -28,6 +28,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Incidents
   alias KlassHero.Provider.Profiles
   alias KlassHero.Provider.Programs
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.Staff
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.SubmitCommunityAgreement
@@ -99,6 +100,9 @@ defmodule KlassHero.Provider do
   @doc "Sets the Responsible Person, then starts their Stripe Identity session (one UI surface)."
   defdelegate start_responsible_person_verification(provider_id, name, role, return_url), to: Vetting
 
+  @doc "Captures a business's registration facts + document in one transaction (B2, issue #956)."
+  defdelegate submit_business_registration(provider_id, attrs), to: Vetting
+
   @doc "Records a Stripe Identity webhook outcome against its session (idempotent)."
   defdelegate record_identity_verification_outcome(outcome), to: Vetting
 
@@ -149,6 +153,9 @@ defmodule KlassHero.Provider do
 
   @doc "Returns the valid verification document types for a track (`:individual` | `:business`)."
   defdelegate valid_document_types(entity_type), to: Verification
+
+  @doc "Returns the curated set of business registration-country codes (B2, ADR-0011)."
+  defdelegate registration_countries, to: ProviderProfile
 
   # --- Incident reports ----------------------------------------------------
 

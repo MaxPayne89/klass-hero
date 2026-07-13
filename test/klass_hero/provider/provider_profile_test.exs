@@ -163,6 +163,69 @@ defmodule KlassHero.Provider.ProviderProfileTest do
     end
   end
 
+  describe "business_registration_changeset/2 (B2, sole mutator)" do
+    @valid_registration %{
+      legal_business_name: "Acme Kids GmbH",
+      registration_number: "HRB 12345",
+      registration_country: "DE"
+    }
+
+    test "casts only the three registration fields, ignoring anything else" do
+      changeset =
+        ProviderProfile.business_registration_changeset(
+          %ProviderProfile{},
+          Map.put(@valid_registration, :business_name, "should be ignored")
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :legal_business_name) == "Acme Kids GmbH"
+      assert Ecto.Changeset.get_change(changeset, :registration_number) == "HRB 12345"
+      assert Ecto.Changeset.get_change(changeset, :registration_country) == "DE"
+      assert Ecto.Changeset.get_change(changeset, :business_name) == nil
+    end
+
+    test "trims the legal name (collapsing internal runs) and the registration number" do
+      changeset =
+        ProviderProfile.business_registration_changeset(%ProviderProfile{}, %{
+          legal_business_name: "  Acme   Kids  GmbH ",
+          registration_number: "  HRB 12345 ",
+          registration_country: "DE"
+        })
+
+      assert Ecto.Changeset.get_change(changeset, :legal_business_name) == "Acme Kids GmbH"
+      assert Ecto.Changeset.get_change(changeset, :registration_number) == "HRB 12345"
+    end
+
+    test "requires all three fields" do
+      changeset = ProviderProfile.business_registration_changeset(%ProviderProfile{}, %{})
+
+      refute changeset.valid?
+      errors = errors_on(changeset)
+      assert "can't be blank" in errors.legal_business_name
+      assert "can't be blank" in errors.registration_number
+      assert "can't be blank" in errors.registration_country
+    end
+
+    # {country, valid?}
+    @country_cases [{"DE", true}, {"GB", true}, {"OTHER", true}, {"de", false}, {"US", false}, {"", false}]
+
+    for {country, valid?} <- @country_cases do
+      test "registration_country #{inspect(country)} valid?: #{valid?}" do
+        changeset =
+          ProviderProfile.business_registration_changeset(
+            %ProviderProfile{},
+            %{@valid_registration | registration_country: unquote(country)}
+          )
+
+        assert changeset.valid? == unquote(valid?)
+
+        if !unquote(valid?) do
+          assert Keyword.has_key?(changeset.errors, :registration_country)
+        end
+      end
+    end
+  end
+
   describe "valid?/1" do
     test "returns true for valid provider profile" do
       {:ok, profile} =

@@ -53,4 +53,30 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenterTest do
       assert %{kind: :identity} = Presenter.action(step)
     end
   end
+
+  describe "action/1 forks the business-registration step to its own widget" do
+    # The dedicated widget must render in every state (it shows the stored fields when
+    # submitted/approved), so the fork wins even over the :none (approved/submitted) clause.
+    for status <- [:not_started, :submitted, :approved, :rejected] do
+      test "business_registration keeps its :business_registration action when #{status}" do
+        step = %VettingStepView{
+          key: :business_registration,
+          completed_via: {:document, "business_registration"},
+          ui_status: unquote(status)
+        }
+
+        assert %{kind: :business_registration} = Presenter.action(step)
+      end
+    end
+
+    test "a different document step still routes to the generic :navigate_documents action" do
+      step = %VettingStepView{
+        key: :insurance,
+        completed_via: {:document, "insurance_certificate"},
+        ui_status: :not_started
+      }
+
+      assert %{kind: :navigate_documents} = Presenter.action(step)
+    end
+  end
 end

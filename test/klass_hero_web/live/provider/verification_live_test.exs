@@ -83,8 +83,10 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
       {:ok, view, _html} = live(conn, ~p"/provider/verification")
 
       assert has_element?(view, "#identity-verify-start")
-      # The individual track gets the bare button, never the business responsible-person form.
+      # The individual track gets the bare button, never the business responsible-person or
+      # registration forms.
       refute has_element?(view, "#responsible-person-form")
+      refute has_element?(view, "#business-registration-form")
     end
 
     test "shows a duration hint so the lone CTA card has supporting context", %{conn: conn} do
@@ -246,6 +248,65 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
 
       assert has_element?(view, "#responsible-person-form input[value='Jane Smith']")
       assert has_element?(view, "#responsible-person-form input[value='Owner']")
+    end
+  end
+
+  describe "business registration (business track)" do
+    setup :log_in_business_provider
+
+    test "renders the dedicated registration form with a country selector, in place of the generic upload",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#vetting-step-business_registration")
+      assert has_element?(view, "#business-registration-form")
+      assert has_element?(view, "#business-registration-form select")
+      assert has_element?(view, "#business-registration-submit")
+
+      # The business_registration step is submitted only via the dedicated widget, so the
+      # generic document panel must not also offer it.
+      refute has_element?(view, "#doc-type-select option[value='business_registration']")
+    end
+
+    test "submitting the form with a file records the document and flips the step to review",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      entry =
+        file_input(view, "#business-registration-form", :business_registration_doc, [
+          %{name: "registration.pdf", content: "pdf-bytes", type: "application/pdf"}
+        ])
+
+      render_upload(entry, "registration.pdf")
+
+      view
+      |> form("#business-registration-form", %{
+        business_registration: %{
+          registration_country: "DE",
+          legal_business_name: "Acme Kids GmbH",
+          registration_number: "HRB 12345"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(view, "#vetting-step-business_registration", "Under review")
+    end
+
+    test "pre-fills the form with previously submitted registration details", %{conn: conn, provider: provider} do
+      {:ok, _doc} =
+        Provider.submit_business_registration(provider.id, %{
+          legal_business_name: "Acme Kids GmbH",
+          registration_number: "HRB 12345",
+          registration_country: "DE",
+          file_binary: "pdf-bytes",
+          original_filename: "registration.pdf",
+          content_type: "application/pdf"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#business-registration-form input[value='Acme Kids GmbH']")
+      assert has_element?(view, "#business-registration-form input[value='HRB 12345']")
     end
   end
 

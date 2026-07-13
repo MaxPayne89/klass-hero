@@ -36,10 +36,35 @@ defmodule KlassHero.Provider.Verification do
   def submit_verification_document(params) do
     context_span entity: "verification_document" do
       with :ok <- validate_verification_submission(params),
-           {:ok, file_url} <- upload_verification_file(params) do
+           {:ok, file_url} <- upload_document_file(params) do
         insert_verification_document(params, file_url)
       end
     end
+  end
+
+  @doc """
+  Uploads a document's binary to private storage and returns its stored `file_url`.
+
+  Exposed so composite commands (e.g. business registration, which writes provider fields
+  and the document row in one transaction) can perform the non-transactional storage upload
+  *before* opening their DB transaction — storage is not transactional, so it must never sit
+  inside `Repo.transaction`.
+  """
+  @spec upload_document_file(map()) :: {:ok, String.t()} | {:error, term()}
+  def upload_document_file(params) do
+    path =
+      Storage.build_timestamped_path(
+        "verification-docs/providers",
+        params[:provider_profile_id],
+        params[:original_filename],
+        "document.pdf"
+      )
+
+    opts =
+      [content_type: params[:content_type] || "application/octet-stream"]
+      |> Keyword.merge(Map.get(params, :storage_opts, []))
+
+    Storage.upload(:private, path, params[:file_binary], opts)
   end
 
   @doc "Approves a verification document (admin only)."
@@ -133,6 +158,8 @@ defmodule KlassHero.Provider.Verification do
            %{
              document: VerificationDocument.t(),
              provider_business_name: String.t(),
+             legal_business_name: String.t() | nil,
+             registration_number: String.t() | nil,
              signed_url: String.t() | nil,
              preview_type: :image | :pdf | :other
            }}
@@ -165,22 +192,6 @@ defmodule KlassHero.Provider.Verification do
       [] -> :ok
       _ -> {:error, errors}
     end
-  end
-
-  defp upload_verification_file(params) do
-    path =
-      Storage.build_timestamped_path(
-        "verification-docs/providers",
-        params[:provider_profile_id],
-        params[:original_filename],
-        "document.pdf"
-      )
-
-    opts =
-      [content_type: params[:content_type] || "application/octet-stream"]
-      |> Keyword.merge(Map.get(params, :storage_opts, []))
-
-    Storage.upload(:private, path, params[:file_binary], opts)
   end
 
   defp insert_verification_document(params, file_url) do
@@ -235,7 +246,7 @@ defmodule KlassHero.Provider.Verification do
     from d in VerificationDocument,
       join: p in ProviderProfile,
       on: d.provider_profile_id == p.id,
-      select: {d, p.business_name}
+      select: {d, p.business_name, p.legal_business_name, p.registration_number}
   end
 
   # :pending orders oldest-first (FIFO); nil and other statuses order newest-first.
@@ -253,8 +264,13 @@ defmodule KlassHero.Provider.Verification do
     |> order_by([d], desc: d.inserted_at)
   end
 
-  defp to_admin_review_result({%VerificationDocument{} = doc, business_name}) do
-    %{document: doc, provider_business_name: business_name}
+  defp to_admin_review_result({%VerificationDocument{} = doc, business_name, legal_business_name, registration_number}) do
+    %{
+      document: doc,
+      provider_business_name: business_name,
+      legal_business_name: legal_business_name,
+      registration_number: registration_number
+    }
   end
 
   # Checks existence before signing: signed_url/3 is URL math and succeeds even

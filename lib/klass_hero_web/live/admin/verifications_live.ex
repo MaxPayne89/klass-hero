@@ -71,6 +71,8 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
         )
         |> assign(:document, result.document)
         |> assign(:provider_business_name, result.provider_business_name)
+        |> assign(:legal_business_name, result.legal_business_name)
+        |> assign(:registration_number, result.registration_number)
         |> assign(:signed_url, result.signed_url)
         |> assign(:preview_type, result.preview_type)
         |> assign(:show_reject_form, false)
@@ -233,6 +235,14 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
             <p class={["text-sm", Theme.text_color(:body)]}>
               {ProviderPresenter.document_type_label(entry.document.document_type)}
             </p>
+            <p
+              :if={
+                entry.document.document_type == :business_registration and entry.registration_number
+              }
+              class={["text-xs", Theme.text_color(:muted)]}
+            >
+              {gettext("Reg. no.")}: {entry.registration_number}
+            </p>
             <div class="flex items-center justify-between">
               <span class={["text-xs truncate mr-2", Theme.text_color(:muted)]}>
                 {entry.document.original_filename}
@@ -245,9 +255,19 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
 
           <%!-- Desktop: row layout --%>
           <div class="hidden md:grid md:grid-cols-12 md:gap-4 md:items-center">
-            <span class="col-span-3 font-semibold text-sm truncate">
-              {entry.provider_business_name}
-            </span>
+            <div class="col-span-3 min-w-0">
+              <span class="font-semibold text-sm truncate block">
+                {entry.provider_business_name}
+              </span>
+              <span
+                :if={
+                  entry.document.document_type == :business_registration and entry.registration_number
+                }
+                class={["text-xs truncate block", Theme.text_color(:muted)]}
+              >
+                {gettext("Reg. no.")}: {entry.registration_number}
+              </span>
+            </div>
             <span class={["col-span-3 text-sm", Theme.text_color(:body)]}>
               {ProviderPresenter.document_type_label(entry.document.document_type)}
             </span>
@@ -330,6 +350,18 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
           <div>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>{gettext("Business")}</dt>
             <dd class="mt-1 text-sm">{@provider_business_name}</dd>
+          </div>
+          <div :if={@document.document_type == :business_registration}>
+            <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
+              {gettext("Legal business name")}
+            </dt>
+            <dd class="mt-1 text-sm">{@legal_business_name}</dd>
+          </div>
+          <div :if={@document.document_type == :business_registration}>
+            <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
+              {gettext("Registration number")}
+            </dt>
+            <dd class="mt-1 text-sm">{@registration_number}</dd>
           </div>
           <div>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>{gettext("File")}</dt>

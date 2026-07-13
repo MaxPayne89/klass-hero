@@ -268,6 +268,61 @@ defmodule KlassHero.Provider.Vetting do
     end
   end
 
+  # ── Business Registration (Slice B2) ───────────────────────────────────────
+
+  @doc """
+  Captures a business provider's registration facts (legal name, number, country — ADR-0011)
+  and inserts the registration document in one transaction (issue #956). The storage upload
+  runs first, outside the transaction (storage is not transactional); the field changeset is
+  validated before the upload so invalid input never orphans a file.
+
+  Unlike the Responsible Person, registration is a fact about the entity: it carries no
+  `requires` edge and never resets vetting (ADR-0010). The `:business_registration` step
+  advances only when an admin later approves the document (the generic
+  `AdvanceVettingStepOnDocumentReview` path); submission alone just makes the pending document
+  exist, which the checklist read merge surfaces as "Under review".
+  """
+  @spec submit_business_registration(String.t(), map()) ::
+          {:ok, VerificationDocument.t()} | {:error, Ecto.Changeset.t() | term()}
+  def submit_business_registration(provider_id, attrs) when is_binary(provider_id) and is_map(attrs) do
+    case Repo.get(ProviderProfile, provider_id) do
+      nil -> {:error, :not_found}
+      profile -> persist_business_registration(profile, attrs)
+    end
+  end
+
+  defp persist_business_registration(profile, attrs) do
+    fields = Map.take(attrs, [:legal_business_name, :registration_number, :registration_country])
+    changeset = ProviderProfile.business_registration_changeset(profile, fields)
+
+    with {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update),
+         {:ok, file_url} <- Verification.upload_document_file(Map.put(attrs, :provider_profile_id, profile.id)) do
+      persist_registration_in_transaction(changeset, profile.id, attrs, file_url)
+    end
+  end
+
+  defp persist_registration_in_transaction(changeset, provider_id, attrs, file_url) do
+    Repo.transaction(fn ->
+      with {:ok, _profile} <- Repo.update(changeset),
+           {:ok, doc} <- insert_registration_document(provider_id, attrs, file_url) do
+        doc
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp insert_registration_document(provider_id, attrs, file_url) do
+    %{
+      provider_profile_id: provider_id,
+      document_type: "business_registration",
+      file_url: file_url,
+      original_filename: attrs[:original_filename]
+    }
+    |> VerificationDocument.create_changeset()
+    |> Repo.insert()
+  end
+
   # ── Onboarding checklist read model (Slice 2) ──────────────────────────────
 
   @doc """

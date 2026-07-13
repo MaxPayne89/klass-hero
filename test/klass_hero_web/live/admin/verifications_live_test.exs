@@ -91,6 +91,26 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
       assert has_element?(view, "a[href='/admin/verifications/#{doc.id}']")
     end
 
+    test "surfaces the registration number on a business-registration row without opening the file",
+         %{conn: conn} do
+      provider =
+        insert(:provider_profile_schema,
+          entity_type: :business,
+          legal_business_name: "Acme Trading GmbH",
+          registration_number: "HRB 98765"
+        )
+
+      doc =
+        insert(:verification_document_schema,
+          provider_profile_id: provider.id,
+          document_type: :business_registration
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/admin/verifications")
+
+      assert has_element?(view, "#doc-#{doc.id}", "HRB 98765")
+    end
+
     test "filters by pending status", %{conn: conn} do
       pending = insert(:verification_document_schema, status: :pending)
       approved = insert(:approved_verification_document_schema)
@@ -177,6 +197,36 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 
       assert has_element?(view, "#document-preview")
+    end
+
+    test "surfaces the legal name and registration number for a business-registration document",
+         %{conn: conn} do
+      provider =
+        insert(:provider_profile_schema,
+          entity_type: :business,
+          business_name: "Acme Trading",
+          legal_business_name: "Acme Trading GmbH",
+          registration_number: "HRB 98765"
+        )
+
+      doc =
+        insert(:verification_document_schema,
+          provider_profile_id: provider.id,
+          document_type: :business_registration
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
+
+      assert has_element?(view, "#document-info", "Acme Trading GmbH")
+      assert has_element?(view, "#document-info", "HRB 98765")
+    end
+
+    test "omits the registration fields for a non-business document", %{conn: conn} do
+      doc = insert(:verification_document_schema, document_type: :insurance_certificate)
+
+      {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
+
+      refute has_element?(view, "#document-info dt", "Registration number")
     end
 
     test "renders an inline video player for a video-screening document", %{conn: conn} do
