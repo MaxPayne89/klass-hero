@@ -93,6 +93,12 @@ defmodule KlassHero.Provider do
   @doc "Starts a Stripe Identity session for a provider; returns the hosted redirect URL."
   defdelegate create_identity_verification_session(provider_id, return_url), to: Vetting
 
+  @doc "Sets a business's Responsible Person (ADR-0010); the sole mutator and vetting-reset trigger."
+  defdelegate set_responsible_person(provider_id, name, role), to: Vetting
+
+  @doc "Sets the Responsible Person, then starts their Stripe Identity session (one UI surface)."
+  defdelegate start_responsible_person_verification(provider_id, name, role, return_url), to: Vetting
+
   @doc "Records a Stripe Identity webhook outcome against its session (idempotent)."
   defdelegate record_identity_verification_outcome(outcome), to: Vetting
 

@@ -18,6 +18,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   alias KlassHeroWeb.Provider.Dashboard.Chrome
   alias KlassHeroWeb.Provider.Dashboard.Uploads
   alias KlassHeroWeb.Theme
+  alias Phoenix.HTML.Form
 
   require Logger
 
@@ -45,6 +46,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       |> allow_upload(:verification_video, accept: ~w(.mp4 .mov .webm), max_entries: 1, max_file_size: 100_000_000)
       |> assign(community_agreement?: Provider.requires_community_agreement?(provider.entity_type))
       |> assign(agreement_form: to_form(%{"agree" => "false"}, as: :agreement))
+      |> assign(responsible_person_form: responsible_person_form(provider))
       |> assign_verification_state(provider.id)
 
     {:ok, socket}
@@ -61,6 +63,29 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
 
       {:error, reason} ->
         Logger.error("[VerificationLive.start_identity_verification] failed",
+          provider_id: provider_id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Couldn't start identity verification. Please try again."))}
+    end
+  end
+
+  def handle_event("start_responsible_person_verification", %{"responsible_person" => params}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+    return_url = url(~p"/provider/verification")
+    name = Map.get(params, "name", "")
+    role = Map.get(params, "role", "")
+
+    case Provider.start_responsible_person_verification(provider_id, name, role, return_url) do
+      {:ok, %{redirect_url: redirect_url, change: change}} ->
+        {:noreply, socket |> maybe_flash_reset(change) |> redirect(external: redirect_url)}
+
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply, put_flash(socket, :error, gettext("Please enter the responsible person's full name and role."))}
+
+      {:error, reason} ->
+        Logger.error("[VerificationLive.start_responsible_person_verification] failed",
           provider_id: provider_id,
           reason: inspect(reason)
         )
@@ -273,6 +298,12 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
               </:actions>
               <:footer>
                 <%= cond do %>
+                  <% row.action_kind == :responsible_person -> %>
+                    <.responsible_person_widget
+                      identity_state={@identity_state}
+                      failure_reason={@identity_failure_reason}
+                      form={@responsible_person_form}
+                    />
                   <% row.action_kind == :identity -> %>
                     <.identity_state_widget
                       identity_state={@identity_state}
@@ -311,6 +342,74 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     </div>
     """
   end
+
+  # Pre-fills the responsible-person form from the provider's stored value (blank on first visit).
+  defp responsible_person_form(provider) do
+    to_form(
+      %{"name" => provider.responsible_person_name || "", "role" => provider.responsible_person_role || ""},
+      as: :responsible_person
+    )
+  end
+
+  # A genuine change reset identity + the two agreements, so tell the provider to re-verify.
+  defp maybe_flash_reset(socket, :changed) do
+    put_flash(socket, :info, gettext("Responsible person updated — please re-verify their identity."))
+  end
+
+  defp maybe_flash_reset(socket, _change), do: socket
+
+  attr :identity_state, :atom, required: true
+  attr :failure_reason, :string, default: nil
+  attr :form, Form, required: true
+
+  # The single business-identity surface (ADR-0010): captures the Responsible Person's name/role
+  # and starts their Stripe session. Editing the name and resubmitting IS the change flow — always
+  # available, in any lifecycle, so a director who leaves after approval can be replaced.
+  defp responsible_person_widget(assigns) do
+    ~H"""
+    <div id="responsible-person" class={[Theme.card_variant(:default), "p-4 md:p-6"]}>
+      <%= case @identity_state do %>
+        <% :in_progress -> %>
+          <p id="responsible-person-in-progress" class={["mb-4 text-sm", Theme.text_color(:body)]}>
+            {gettext("Verifying the responsible person's identity… this can take a moment.")}
+          </p>
+        <% :approved -> %>
+          <div id="responsible-person-approved" class="mb-4 flex items-center gap-2">
+            <.icon name="hero-check-circle-solid" class="w-6 h-6 text-green-600" />
+            <p class={["text-sm font-medium", Theme.text_color(:body)]}>
+              {gettext("The responsible person's identity is verified.")}
+            </p>
+          </div>
+        <% :failed -> %>
+          <p id="responsible-person-failed" class="mb-4 text-sm text-red-700">
+            {failure_reason_message(@failure_reason)}
+          </p>
+        <% _ -> %>
+      <% end %>
+
+      <p class={["mb-4 text-sm", Theme.text_color(:muted)]}>
+        {gettext(
+          "Enter the owner or director legally accountable for the business. They verify their identity with our partner Stripe. Changing this person restarts the identity and agreement steps."
+        )}
+      </p>
+
+      <.form
+        for={@form}
+        id="responsible-person-form"
+        phx-submit="start_responsible_person_verification"
+      >
+        <.input field={@form[:name]} type="text" label={gettext("Responsible person's full name")} />
+        <.input field={@form[:role]} type="text" label={gettext("Role (e.g. Owner, Director)")} />
+        <.button id="responsible-person-start" class="mt-2">
+          {responsible_person_button_label(@identity_state)}
+        </.button>
+      </.form>
+    </div>
+    """
+  end
+
+  defp responsible_person_button_label(:not_started), do: gettext("Verify identity")
+  defp responsible_person_button_label(_state), do: gettext("Update & re-verify")
 
   attr :identity_state, :atom, required: true
   attr :failure_reason, :string, default: nil

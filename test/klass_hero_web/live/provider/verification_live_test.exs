@@ -3,10 +3,23 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
 
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Accounts.Scope
+  alias KlassHero.AccountsFixtures
+  alias KlassHero.Factory
+  alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.ProviderFixtures
 
   setup :register_and_log_in_provider
+
+  # Logs in a fresh *business* provider, overriding the module-level individual setup for the
+  # business-track describe block below.
+  defp log_in_business_provider(%{conn: conn}) do
+    user = AccountsFixtures.user_fixture(%{intended_roles: [:provider]})
+    provider = Factory.insert(:provider_profile_schema, identity_id: user.id, entity_type: :business)
+    scope = Scope.for_user(user) |> Scope.resolve_roles()
+    %{conn: log_in_user(conn, user), user: user, scope: scope, provider: provider}
+  end
 
   describe "onboarding checklist" do
     test "renders all individual-track steps in order", %{conn: conn} do
@@ -70,6 +83,8 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
       {:ok, view, _html} = live(conn, ~p"/provider/verification")
 
       assert has_element?(view, "#identity-verify-start")
+      # The individual track gets the bare button, never the business responsible-person form.
+      refute has_element?(view, "#responsible-person-form")
     end
 
     test "shows a duration hint so the lone CTA card has supporting context", %{conn: conn} do
@@ -209,6 +224,28 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
 
       assert has_element?(view, "#community-agreement-form")
       refute render(view) =~ "You have agreed to the Community Guidelines"
+    end
+  end
+
+  describe "responsible person (business track)" do
+    setup :log_in_business_provider
+
+    test "renders the responsible-person form in place of the bare identity button", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#vetting-step-responsible_person_identity")
+      assert has_element?(view, "#responsible-person-form")
+      assert has_element?(view, "#responsible-person-start")
+      refute has_element?(view, "#identity-verify-start")
+    end
+
+    test "pre-fills the form with a previously set responsible person", %{conn: conn, provider: provider} do
+      {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#responsible-person-form input[value='Jane Smith']")
+      assert has_element?(view, "#responsible-person-form input[value='Owner']")
     end
   end
 

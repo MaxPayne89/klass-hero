@@ -39,6 +39,8 @@ defmodule KlassHero.Provider.ProviderProfile do
     field :entity_type, Ecto.Enum, values: @entity_types, default: :individual
     field :business_name, :string
     field :business_owner_email, :string
+    field :responsible_person_name, :string
+    field :responsible_person_role, :string
     field :description, :string
     field :phone, :string
     field :website, :string
@@ -183,7 +185,57 @@ defmodule KlassHero.Provider.ProviderProfile do
     end
   end
 
+  @doc """
+  Narrow changeset for the Responsible Person (ADR-0010) — the ONLY path that may
+  write `responsible_person_name`/`responsible_person_role`.
+
+  These two fields are deliberately absent from every other changeset and from the
+  `@profile_persist_fields`/`@completion_fields` whitelists, so the dedicated
+  `set_responsible_person` command is their sole mutator. Values are normalized
+  (trimmed, internal whitespace collapsed) so a stray space never reads as a change.
+  """
+  @responsible_person_fields ~w(responsible_person_name responsible_person_role)a
+
+  def responsible_person_changeset(schema, attrs) do
+    schema
+    |> cast(attrs, @responsible_person_fields)
+    |> update_change(:responsible_person_name, &normalize_person_field/1)
+    |> update_change(:responsible_person_role, &normalize_person_field/1)
+    |> validate_required(@responsible_person_fields)
+  end
+
   # ── Functional core (pure domain rules) ────────────────────────────────────
+
+  @doc """
+  Classifies a submitted `(name, role)` against the stored Responsible Person by
+  normalized exact match (ADR-0010). Pure — no persistence.
+
+  - both stored fields blank → `:set` (first capture)
+  - normalized-equal to stored → `:unchanged` (the typo-guard: a trailing/double
+    space must not nuke a passed identity check)
+  - otherwise → `:changed` (resets identity + cascades, per the command)
+  """
+  @spec responsible_person_change(t(), String.t() | nil, String.t() | nil) ::
+          :unchanged | :set | :changed
+  def responsible_person_change(%__MODULE__{} = profile, name, role) do
+    stored_name = normalize_person_field(profile.responsible_person_name)
+    stored_role = normalize_person_field(profile.responsible_person_role)
+    stored = {stored_name, stored_role}
+    submitted = {normalize_person_field(name), normalize_person_field(role)}
+
+    cond do
+      stored == {"", ""} -> :set
+      stored == submitted -> :unchanged
+      true -> :changed
+    end
+  end
+
+  # Trims ends and collapses internal whitespace runs to a single space. nil → "".
+  defp normalize_person_field(nil), do: ""
+
+  defp normalize_person_field(value) when is_binary(value) do
+    value |> String.trim() |> String.replace(~r/\s+/, " ")
+  end
 
   @doc """
   Builds and validates a provider profile struct from attrs.

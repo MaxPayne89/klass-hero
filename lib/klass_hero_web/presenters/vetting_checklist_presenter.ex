@@ -14,7 +14,10 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   alias KlassHero.Provider.VettingStepView
 
   @type badge :: %{tone: atom(), label: String.t()}
-  @type action :: %{kind: :identity | :navigate_documents | :navigate_agreement | :none, label: String.t() | nil}
+  @type action :: %{
+          kind: :identity | :responsible_person | :navigate_documents | :navigate_agreement | :none,
+          label: String.t() | nil
+        }
 
   @doc """
   Flattens a checklist into a list of display rows ready for the template — copy, icon, badge,
@@ -138,6 +141,10 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   awaiting review).
   """
   @spec action(VettingStepView.t()) :: action()
+  # The business identity step captures a Responsible Person first (ADR-0010) — its own widget,
+  # distinct from the individual bare-identity widget. Keyed above the generic stripe_identity clause.
+  def action(%VettingStepView{key: :responsible_person_identity}), do: %{kind: :responsible_person, label: nil}
+
   def action(%VettingStepView{completed_via: {:stripe_identity}}), do: %{kind: :identity, label: nil}
 
   def action(%VettingStepView{ui_status: status}) when status in [:approved, :submitted], do: %{kind: :none, label: nil}

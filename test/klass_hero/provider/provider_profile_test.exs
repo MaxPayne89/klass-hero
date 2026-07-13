@@ -102,6 +102,67 @@ defmodule KlassHero.Provider.ProviderProfileTest do
     end
   end
 
+  describe "responsible_person_change/3" do
+    # {stored_name, stored_role, submitted_name, submitted_role, expected}
+    @change_cases [
+      {nil, nil, "Jane Smith", "Owner", :set},
+      {"", "", "Jane Smith", "Owner", :set},
+      {"Jane Smith", "Owner", "Jane Smith", "Owner", :unchanged},
+      {"Jane Smith", "Owner", "Jane Smith ", "Owner", :unchanged},
+      {"Jane Smith", "Owner", " Jane  Smith ", "Owner", :unchanged},
+      {"Jane Smith", "Owner", "Jane Smtih", "Owner", :changed},
+      {"Jane Smith", "Owner", "Jane Smith", "Director", :changed}
+    ]
+
+    for {stored_name, stored_role, name, role, expected} <- @change_cases do
+      test "#{inspect({stored_name, stored_role})} vs #{inspect({name, role})} -> #{expected}" do
+        profile = %ProviderProfile{
+          responsible_person_name: unquote(stored_name),
+          responsible_person_role: unquote(stored_role)
+        }
+
+        assert ProviderProfile.responsible_person_change(profile, unquote(name), unquote(role)) ==
+                 unquote(expected)
+      end
+    end
+  end
+
+  describe "responsible_person_changeset/2" do
+    test "casts only the two responsible-person fields and requires both" do
+      changeset =
+        ProviderProfile.responsible_person_changeset(%ProviderProfile{}, %{
+          responsible_person_name: "Jane Smith",
+          responsible_person_role: "Owner",
+          business_name: "should be ignored"
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_name) == "Jane Smith"
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_role) == "Owner"
+      assert Ecto.Changeset.get_change(changeset, :business_name) == nil
+    end
+
+    test "normalizes stored whitespace" do
+      changeset =
+        ProviderProfile.responsible_person_changeset(%ProviderProfile{}, %{
+          responsible_person_name: " Jane  Smith ",
+          responsible_person_role: "  Owner "
+        })
+
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_name) == "Jane Smith"
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_role) == "Owner"
+    end
+
+    test "requires both fields" do
+      changeset = ProviderProfile.responsible_person_changeset(%ProviderProfile{}, %{})
+
+      refute changeset.valid?
+      errors = errors_on(changeset)
+      assert "can't be blank" in errors.responsible_person_name
+      assert "can't be blank" in errors.responsible_person_role
+    end
+  end
+
   describe "valid?/1" do
     test "returns true for valid provider profile" do
       {:ok, profile} =

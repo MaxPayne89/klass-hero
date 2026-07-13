@@ -18,6 +18,7 @@ defmodule KlassHero.Provider.Vetting do
 
   import Ecto.Query
 
+  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.Provider.CommunityGuidelines
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.ProviderProfile
@@ -122,17 +123,20 @@ defmodule KlassHero.Provider.Vetting do
   its steps loaded, so a re-fetch would be pure waste.
   """
   @spec save_case(VettingCase.t()) :: {:ok, VettingCase.t()} | {:error, term()}
-  def save_case(%VettingCase{id: id, steps: steps, lifecycle: lifecycle} = case_) do
-    now = DateTime.utc_now()
+  def save_case(%VettingCase{} = case_) do
+    Repo.transaction(fn -> write_case!(case_, DateTime.utc_now()) end)
+  end
 
-    Repo.transaction(fn ->
-      Repo.update_all(from(c in VettingCase, where: c.id == ^id),
-        set: [lifecycle: lifecycle, updated_at: now]
-      )
+  # The non-transactional core of save_case: unconditional row writes, no BEGIN/COMMIT of its
+  # own. Callers that already hold a transaction (e.g. the responsible-person change) compose
+  # this directly instead of nesting a second `Repo.transaction`.
+  defp write_case!(%VettingCase{id: id, steps: steps, lifecycle: lifecycle} = case_, now) do
+    Repo.update_all(from(c in VettingCase, where: c.id == ^id),
+      set: [lifecycle: lifecycle, updated_at: now]
+    )
 
-      Enum.each(steps, &save_step!(&1, now))
-      case_
-    end)
+    Enum.each(steps, &save_step!(&1, now))
+    case_
   end
 
   defp save_step!(%VerificationStep{id: step_id} = step, now) do
@@ -174,6 +178,95 @@ defmodule KlassHero.Provider.Vetting do
   end
 
   defp step_order, do: from(s in VerificationStep, order_by: s.inserted_at)
+
+  # ── Responsible Person (Slice B1) ──────────────────────────────────────────
+
+  @doc """
+  Sets a business provider's Responsible Person (ADR-0010) — the sole mutator of
+  `responsible_person_name`/`responsible_person_role` and the only business vetting
+  reset trigger. Compares the submitted `(name, role)` to the stored values by
+  normalized exact match:
+
+  - `:unchanged` — a no-op (the typo-guard): no write, no reset.
+  - `:set` — first capture: persist only.
+  - `:changed` — persist the new person, reset the `:responsible_person_identity`
+    step (cascading to the community-agreement and staff-attestation steps via the
+    `requires` graph), and unverify the provider if it was verified.
+
+  The person-write and the case reset land in one transaction; the unverify publishes
+  `provider_unverified`, so it runs after the commit (never inside the transaction).
+  """
+  @spec set_responsible_person(String.t(), String.t() | nil, String.t() | nil) ::
+          {:ok, :unchanged | :set | :changed} | {:error, term()}
+  def set_responsible_person(provider_id, name, role) when is_binary(provider_id) do
+    case Repo.get(ProviderProfile, provider_id) do
+      nil -> {:error, :not_found}
+      profile -> apply_responsible_person_change(profile, name, role)
+    end
+  end
+
+  defp apply_responsible_person_change(profile, name, role) do
+    case ProviderProfile.responsible_person_change(profile, name, role) do
+      :unchanged -> {:ok, :unchanged}
+      :set -> with {:ok, _} <- persist_responsible_person(profile, name, role), do: {:ok, :set}
+      :changed -> change_responsible_person(profile, name, role)
+    end
+  end
+
+  defp persist_responsible_person(profile, name, role) do
+    profile
+    |> ProviderProfile.responsible_person_changeset(%{
+      responsible_person_name: name,
+      responsible_person_role: role
+    })
+    |> Repo.update()
+  end
+
+  defp change_responsible_person(profile, name, role) do
+    # Load and reset the case OUTSIDE the transaction. `get_case_for_provider` may lazily
+    # backfill via a bare insert guarded by the `provider_id` unique index; nesting that
+    # inside the transaction would let a lost concurrent-insert race poison the whole
+    # transaction (the #1065 class of bug). Only the two pure writes go in the txn.
+    with {:ok, case_} <- get_case_for_provider(profile.id),
+         {:ok, key} <- fetch_identity_step_key(case_),
+         {:ok, reset} <- VettingCase.reset_step(case_, key),
+         {:ok, :ok} <- persist_change_in_transaction(profile, name, role, reset) do
+      VettingVerificationSync.maybe_unverify(profile.id, nil)
+      VettingVerificationSync.broadcast_updated(profile.id)
+      {:ok, :changed}
+    end
+  end
+
+  defp persist_change_in_transaction(profile, name, role, reset_case) do
+    Repo.transaction(fn ->
+      case persist_responsible_person(profile, name, role) do
+        {:ok, _} ->
+          write_case!(reset_case, DateTime.utc_now())
+          :ok
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Sets the Responsible Person, then starts their Stripe Identity verification — the one
+  UI surface for the business identity step (ADR-0010). Wrapping set-then-start means the
+  LiveView never holds the torn state where the person is saved but no session is in flight.
+
+  Returns the hosted `redirect_url` plus the `change` outcome from the set, so the caller
+  can surface "Identity reset — please re-verify" only when `change == :changed`.
+  """
+  @spec start_responsible_person_verification(String.t(), String.t() | nil, String.t() | nil, String.t()) ::
+          {:ok, %{redirect_url: String.t(), change: :unchanged | :set | :changed}} | {:error, term()}
+  def start_responsible_person_verification(provider_id, name, role, return_url)
+      when is_binary(provider_id) and is_binary(return_url) do
+    with {:ok, change} <- set_responsible_person(provider_id, name, role),
+         {:ok, %{redirect_url: url}} <- create_identity_verification_session(provider_id, return_url) do
+      {:ok, %{redirect_url: url, change: change}}
+    end
+  end
 
   # ── Onboarding checklist read model (Slice 2) ──────────────────────────────
 

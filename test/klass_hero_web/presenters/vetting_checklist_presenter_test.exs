@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenterTest do
 
   use ExUnit.Case, async: true
 
+  alias KlassHero.Provider.VettingStepView
   alias KlassHeroWeb.Presenters.VettingChecklistPresenter, as: Presenter
 
   # Every step key the business track can surface. community_agreement is shared with the
@@ -32,6 +33,24 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenterTest do
         assert String.starts_with?(icon, "hero-")
         assert is_atom(gradient)
       end
+    end
+  end
+
+  describe "action/1 forks the two stripe-identity steps" do
+    test "the business responsible-person step gets its own :responsible_person action" do
+      step = %VettingStepView{
+        key: :responsible_person_identity,
+        completed_via: {:stripe_identity},
+        ui_status: :not_started
+      }
+
+      assert %{kind: :responsible_person} = Presenter.action(step)
+    end
+
+    test "the individual identity step keeps the bare :identity action" do
+      step = %VettingStepView{key: :identity, completed_via: {:stripe_identity}, ui_status: :not_started}
+
+      assert %{kind: :identity} = Presenter.action(step)
     end
   end
 end
