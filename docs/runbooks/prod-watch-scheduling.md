@@ -40,7 +40,8 @@ runs `bin/prod-db --check` as a fast-fail preflight so this surfaces clearly in 
      <key>EnvironmentVariables</key>
      <dict>
        <key>HOME</key><string>/Users/maximilianpergl</string>
-       <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+       <!-- ~/.local/bin holds `claude`; /opt/homebrew/bin holds gh/fly/psql -->
+       <key>PATH</key><string>/Users/maximilianpergl/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
      </dict>
      <key>StartInterval</key>    <integer>43200</integer> <!-- 12h -->
      <key>RunAtLoad</key>        <false/>

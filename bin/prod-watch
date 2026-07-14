@@ -15,7 +15,8 @@ set -euo pipefail
 
 # --- env plumbing (launchd gives us almost nothing) ---
 export HOME="${HOME:-/Users/maximilianpergl}"
-export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
+# $HOME/.local/bin holds `claude`; /opt/homebrew/bin holds gh/fly/psql. launchd gives us neither.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG_DIR="$REPO_DIR/.prod-watch/log"
