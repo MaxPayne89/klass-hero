@@ -9,19 +9,42 @@ the Honeycomb MCP session — both authenticated interactively in *your* login. 
 as you and inherits `~/.fly/config.yml`, so **no headless token is needed**. See
 `docs/runbooks/prod-db-access.md` for the prod-DB half.
 
-## The one real gotcha: launchd's stripped environment
+## Two gotchas the setup is built around
 
-launchd starts jobs with almost no environment — no `PATH`, no guaranteed `HOME`. A run that works
-in your terminal fails under launchd as `fly: command not found` or "can't find `~/.fly/config.yml`",
-which *reads* like an auth failure but is an env failure. `bin/prod-watch` sets `HOME`/`PATH` and
-runs `bin/prod-db --check` as a fast-fail preflight so this surfaces clearly in the log.
+1. **launchd's stripped environment** — jobs start with almost no environment (no `PATH`, no
+   guaranteed `HOME`, cwd `/`). A run that works in your terminal fails under launchd as
+   `fly: command not found`, "can't find `~/.fly/config.yml`", or a skill-not-found — all of which
+   *read* like other failures but are env failures. `bin/prod-watch` sets `HOME`/`PATH`, `cd`s into
+   its repo (so `claude` discovers `.claude/skills/`), and runs `bin/prod-db --check` as a fast-fail
+   preflight so this surfaces clearly in the log.
+2. **Branch coupling** — launchd runs whatever is *checked out* at the wrapper's path when the
+   timer fires. Pointed at your primary working tree (which branch-switches), a scheduled sweep
+   could run stale or unrelated code. Fix: a **dedicated worktree pinned to `main`** that
+   self-updates each run.
+
+## Pinned worktree (the stable checkout the scheduler runs from)
+
+The scheduler runs from its own source-only worktree, never your primary tree:
+
+```bash
+git worktree add --detach ~/Projects/klass-hero-prod-watch origin/main
+```
+
+- `--detach` because `main` is already checked out in your primary tree (git forbids the same
+  branch in two worktrees). The wrapper's self-update (`fetch` + `reset --hard FETCH_HEAD`, gated on
+  `PROD_WATCH_SELF_UPDATE=1` set only in the plist) advances this detached HEAD to canonical `main`
+  every run — so scheduled sweeps are independent of whatever your primary tree is doing.
+- **Source-only — no `mix deps.get`/compile/test DB.** `/prod-watch` runs SQL via `bin/prod-db`
+  (a `fly` proxy, no mix) + Honeycomb + `gh`; none need the app compiled.
+- **Machine-owned — never edit this tree by hand.** The self-update `reset --hard`s it every run;
+  local edits would be wiped. `.prod-watch/` (watermark + logs) is gitignored, so it survives.
 
 ## Install
 
-1. Preflight by hand first (proves auth + PATH before scheduling):
+1. Preflight by hand first (proves auth + PATH + cwd before scheduling):
 
    ```bash
-   bin/prod-watch --check
+   ~/Projects/klass-hero-prod-watch/bin/prod-watch --check
    ```
 
 2. Create `~/Library/LaunchAgents/com.klasshero.prod-watch.plist`:
@@ -35,18 +58,20 @@ runs `bin/prod-db --check` as a fast-fail preflight so this surfaces clearly in 
      <key>Label</key>            <string>com.klasshero.prod-watch</string>
      <key>ProgramArguments</key>
      <array>
-       <string>/Users/maximilianpergl/Projects/klass-hero/bin/prod-watch</string>
+       <string>/Users/maximilianpergl/Projects/klass-hero-prod-watch/bin/prod-watch</string>
      </array>
      <key>EnvironmentVariables</key>
      <dict>
        <key>HOME</key><string>/Users/maximilianpergl</string>
        <!-- ~/.local/bin holds `claude`; /opt/homebrew/bin holds gh/fly/psql -->
        <key>PATH</key><string>/Users/maximilianpergl/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+       <!-- authorizes the wrapper's self-update; set ONLY here, never in the primary tree -->
+       <key>PROD_WATCH_SELF_UPDATE</key><string>1</string>
      </dict>
      <key>StartInterval</key>    <integer>43200</integer> <!-- 12h -->
      <key>RunAtLoad</key>        <false/>
-     <key>StandardOutPath</key>  <string>/Users/maximilianpergl/Projects/klass-hero/.prod-watch/log/out.log</string>
-     <key>StandardErrorPath</key><string>/Users/maximilianpergl/Projects/klass-hero/.prod-watch/log/err.log</string>
+     <key>StandardOutPath</key>  <string>/Users/maximilianpergl/Projects/klass-hero-prod-watch/.prod-watch/log/out.log</string>
+     <key>StandardErrorPath</key><string>/Users/maximilianpergl/Projects/klass-hero-prod-watch/.prod-watch/log/err.log</string>
    </dict>
    </plist>
    ```
@@ -65,10 +90,13 @@ launchd's stripped env, not just in your shell:
 
 ```bash
 launchctl start com.klasshero.prod-watch
-tail -f .prod-watch/log/out.log .prod-watch/log/err.log
+tail -f ~/Projects/klass-hero-prod-watch/.prod-watch/log/out.log \
+        ~/Projects/klass-hero-prod-watch/.prod-watch/log/err.log
 ```
 
-A clean run ends with the preflight `✓` and either filed-issue notifications or a clean sweep.
+A clean run ends with the preflight `✓` and either filed-issue notifications or a clean sweep. To
+prove branch-independence, check out any old branch in your *primary* tree first — the run still
+executes `main`'s skill from the pinned worktree.
 
 ## Manage
 
