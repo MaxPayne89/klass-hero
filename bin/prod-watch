@@ -24,6 +24,16 @@ mkdir -p "$LOG_DIR"
 
 err() { printf '\033[0;31m✗ %s\033[0m\n' "$1" >&2; }
 
+# --- self-update (pinned worktree only) ---
+# The scheduler runs from a dedicated worktree that must always execute canonical main.
+# Guarded by PROD_WATCH_SELF_UPDATE (set only in the launchd plist) so a manual run from the
+# primary tree — likely on a feature branch — never `reset --hard`s away uncommitted work.
+# .prod-watch/ (watermark + logs) is gitignored/untracked, so it survives the reset.
+if [[ "${PROD_WATCH_SELF_UPDATE:-}" == 1 ]]; then
+  git -C "$REPO_DIR" fetch origin main -q
+  git -C "$REPO_DIR" reset --hard FETCH_HEAD -q
+fi
+
 # --- preflight: the two things that silently break a scheduled run ---
 command -v claude >/dev/null 2>&1 || { err "claude CLI not on PATH"; exit 1; }
 command -v gh     >/dev/null 2>&1 || { err "gh CLI not on PATH"; exit 1; }
@@ -35,4 +45,7 @@ if [[ "${1:-}" == "--check" ]]; then
   exit 0
 fi
 
+# cd into the repo so `claude -p` discovers the project's .claude/skills/ — launchd starts jobs
+# with cwd=/, where the prod-watch skill is invisible.
+cd "$REPO_DIR"
 exec claude -p "/prod-watch"
