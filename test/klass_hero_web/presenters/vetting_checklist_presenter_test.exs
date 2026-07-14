@@ -69,10 +69,24 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenterTest do
       end
     end
 
-    test "a different document step still routes to the generic :navigate_documents action" do
+    # Insurance (B3) also forks to a dedicated widget — same reasoning: it renders in every
+    # state to carry the expiry date and its warning.
+    for status <- [:not_started, :submitted, :approved, :rejected] do
+      test "insurance keeps its :insurance action when #{status}" do
+        step = %VettingStepView{
+          key: :insurance,
+          completed_via: {:document, "insurance_certificate"},
+          ui_status: unquote(status)
+        }
+
+        assert %{kind: :insurance} = Presenter.action(step)
+      end
+    end
+
+    test "a plain document step still routes to the generic :navigate_documents action" do
       step = %VettingStepView{
-        key: :insurance,
-        completed_via: {:document, "insurance_certificate"},
+        key: :background,
+        completed_via: {:document, "background_check"},
         ui_status: :not_started
       }
 

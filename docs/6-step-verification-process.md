@@ -116,8 +116,15 @@ entity — **if the responsible person changes, B1 resets, and B4 + B5 reset wit
 - _Issue #956._
 
 ### B3 — Public liability insurance certificate upload
-- Document upload, admin review.
-- _Issue #957._
+- Document upload, admin review, via a dedicated widget that also captures the policy **expiry date**
+  (nullable `expiry_date` on `verification_documents`; required for this type, enforced in the submit
+  command, not the shared changeset).
+- **Expiry warning (synchronous):** `VerificationDocument.expiry_status/2` classifies the date as
+  `:expired | :expiring_soon` (within 30 days) `| :valid`; the provider sees a live warning as they
+  pick the date, and admin review shows an expiry badge (AC "policy is current").
+- **Deferred:** the *ongoing* obligation — a cert approved today lapsing later — is a separate
+  scheduled (Oban) re-flag job with its own delisting-severity decision. Not in this milestone.
+- _Issue #957 (synchronous half); expiry re-flag follow-on relates #957 + #558._
 
 ### B4 — Community Standards Agreement (business)
 - Identical flow to Step 6, signed by the responsible person on behalf of the business.

@@ -310,6 +310,65 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     end
   end
 
+  describe "insurance (business track)" do
+    setup :log_in_business_provider
+
+    test "renders the dedicated insurance form with an expiry date input, not the generic upload",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#vetting-step-insurance")
+      assert has_element?(view, "#insurance-form")
+      assert has_element?(view, "#insurance-form input[type='date']")
+      assert has_element?(view, "#insurance-submit")
+
+      # Insurance is submitted only via the dedicated widget, so the generic panel must not offer it.
+      refute has_element?(view, "#doc-type-select option[value='insurance_certificate']")
+    end
+
+    test "submitting with a file and expiry date records the document and flips the step to review",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      entry =
+        file_input(view, "#insurance-form", :insurance_doc, [
+          %{name: "insurance.pdf", content: "pdf-bytes", type: "application/pdf"}
+        ])
+
+      render_upload(entry, "insurance.pdf")
+
+      view
+      |> form("#insurance-form", %{insurance: %{expiry_date: "2027-01-01"}})
+      |> render_submit()
+
+      assert has_element?(view, "#vetting-step-insurance", "Under review")
+    end
+
+    test "shows a live expired warning when the typed date is in the past", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      past = Date.utc_today() |> Date.add(-1) |> Date.to_iso8601()
+
+      view
+      |> form("#insurance-form", %{insurance: %{expiry_date: past}})
+      |> render_change()
+
+      assert has_element?(view, "#insurance-expiry-warning", "expired")
+    end
+
+    test "shows a live expiring-soon warning when the typed date is within 30 days", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      soon = Date.utc_today() |> Date.add(10) |> Date.to_iso8601()
+
+      view
+      |> form("#insurance-form", %{insurance: %{expiry_date: soon}})
+      |> render_change()
+
+      assert has_element?(view, "#insurance-expiry-warning", "30 days")
+    end
+  end
+
   describe "heading hierarchy" do
     test "the checklist title is an h2, not a second h1", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/verification")

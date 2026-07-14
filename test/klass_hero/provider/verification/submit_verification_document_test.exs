@@ -44,6 +44,7 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
       params = %{
         provider_profile_id: provider.id,
         document_type: "insurance_certificate",
+        expiry_date: ~D[2027-01-01],
         file_binary: file_content,
         original_filename: "insurance.pdf",
         content_type: "application/pdf",
@@ -97,6 +98,8 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
         params = %{
           provider_profile_id: provider.id,
           document_type: doc_type,
+          # Harmless for non-expiring types (optional); satisfies insurance's required expiry.
+          expiry_date: ~D[2027-01-01],
           file_binary: "content for #{doc_type}",
           original_filename: "#{doc_type}.pdf",
           content_type: "application/pdf",
@@ -163,6 +166,54 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
 
       # Verify no document was persisted
       assert {:ok, []} = KlassHero.Provider.get_provider_verification_documents(provider.id)
+    end
+  end
+
+  describe "expiry_date (B3, #957)" do
+    test "persists expiry_date for an insurance certificate", %{provider: provider, storage: storage} do
+      params = %{
+        provider_profile_id: provider.id,
+        document_type: "insurance_certificate",
+        expiry_date: ~D[2027-03-15],
+        file_binary: "content",
+        original_filename: "insurance.pdf",
+        content_type: "application/pdf",
+        storage_opts: [adapter: StubStorageAdapter, agent: storage]
+      }
+
+      assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
+      assert doc.expiry_date == ~D[2027-03-15]
+    end
+
+    test "requires expiry_date for an insurance certificate", %{provider: provider, storage: storage} do
+      params = %{
+        provider_profile_id: provider.id,
+        document_type: "insurance_certificate",
+        file_binary: "content",
+        original_filename: "insurance.pdf",
+        content_type: "application/pdf",
+        storage_opts: [adapter: StubStorageAdapter, agent: storage]
+      }
+
+      assert {:error, errors} = KlassHero.Provider.submit_verification_document(params)
+      assert :expiry_date in Keyword.keys(errors)
+
+      # And nothing was persisted — the missing date is caught before the storage upload.
+      assert {:ok, []} = KlassHero.Provider.get_provider_verification_documents(provider.id)
+    end
+
+    test "does not require expiry_date for non-expiring types", %{provider: provider, storage: storage} do
+      params = %{
+        provider_profile_id: provider.id,
+        document_type: "background_check",
+        file_binary: "content",
+        original_filename: "bg.pdf",
+        content_type: "application/pdf",
+        storage_opts: [adapter: StubStorageAdapter, agent: storage]
+      }
+
+      assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
+      assert doc.expiry_date == nil
     end
   end
 end

@@ -34,6 +34,8 @@ defmodule KlassHero.Provider.VerificationDocument do
   @timestamps_opts [type: :utc_datetime_usec]
 
   @statuses [:pending, :approved, :rejected]
+  # An expiry within this many days of today is "expiring soon" (vetting step B3, #957).
+  @warning_window_days 30
   # Canonical write-side values are owned by the custom `DocumentType` type, which
   # also tolerates unknown legacy values on load (maps them to `:unknown`, #1026).
   @document_types DocumentType.valid_values()
@@ -45,6 +47,8 @@ defmodule KlassHero.Provider.VerificationDocument do
     field :status, Ecto.Enum, values: @statuses, default: :pending
     field :rejection_reason, :string
     field :reviewed_at, :utc_datetime_usec
+    # Nullable policy expiry — only documents that expire (insurance, safeguarding) populate it.
+    field :expiry_date, :date
 
     belongs_to :provider, ProviderProfile,
       foreign_key: :provider_profile_id,
@@ -71,7 +75,7 @@ defmodule KlassHero.Provider.VerificationDocument do
         }
 
   @required_fields ~w(provider_profile_id document_type file_url original_filename)a
-  @optional_fields ~w(id status rejection_reason reviewed_by_id reviewed_at)a
+  @optional_fields ~w(id status rejection_reason reviewed_by_id reviewed_at expiry_date)a
 
   @doc "Returns the list of valid document statuses."
   @spec valid_statuses() :: [status()]
@@ -94,6 +98,40 @@ defmodule KlassHero.Provider.VerificationDocument do
       %{completed_via: {:document, type}} -> [type]
       _ -> []
     end)
+  end
+
+  @doc """
+  Whether the given document type must carry an `expiry_date` at submission.
+
+  Insurance certificates expire and drive the expiry warning (B3, #957); every other
+  type is one-time evidence with no expiry. Consulted by the submit command so the
+  required-ness lives here in the domain, not hardcoded in the shared changeset.
+  """
+  @spec expiry_required?(String.t()) :: boolean()
+  def expiry_required?("insurance_certificate"), do: true
+  def expiry_required?(_type), do: false
+
+  @doc """
+  Classifies a policy expiry date relative to `today` for the expiry warning (B3, #957):
+
+  - `:none` — no expiry date recorded
+  - `:expired` — the certificate has lapsed
+  - `:expiring_soon` — within #{@warning_window_days} days of lapsing
+  - `:valid` — comfortably in date
+
+  Accepts a bare `Date`, a `%VerificationDocument{}` (reads its `expiry_date`), or `nil`,
+  so the provider widget, admin review, and the future scheduled scan share one classifier.
+  """
+  @spec expiry_status(Date.t() | t() | nil, Date.t()) :: :none | :expired | :expiring_soon | :valid
+  def expiry_status(%__MODULE__{expiry_date: date}, today), do: expiry_status(date, today)
+  def expiry_status(nil, _today), do: :none
+
+  def expiry_status(%Date{} = date, %Date{} = today) do
+    cond do
+      Date.before?(date, today) -> :expired
+      Date.diff(date, today) <= @warning_window_days -> :expiring_soon
+      true -> :valid
+    end
   end
 
   @doc """

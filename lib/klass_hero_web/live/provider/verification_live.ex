@@ -14,6 +14,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHeroWeb.Presenters.VettingChecklistPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
   alias KlassHeroWeb.Provider.Dashboard.Uploads
@@ -31,9 +32,10 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     end
 
     all_types = Provider.valid_document_types(provider.entity_type)
-    # video_screening and business_registration have dedicated widgets, so they are excluded from
-    # the generic document-upload select (a step must be submittable via exactly one surface).
-    generic_excluded = ~w(video_screening business_registration)
+    # video_screening, business_registration and insurance_certificate have dedicated widgets, so
+    # they are excluded from the generic document-upload select (a step must be submittable via
+    # exactly one surface).
+    generic_excluded = ~w(video_screening business_registration insurance_certificate)
     doc_types = all_types |> Enum.reject(&(&1 in generic_excluded)) |> Enum.map(&String.to_existing_atom/1)
 
     socket =
@@ -52,10 +54,12 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
         max_entries: 1,
         max_file_size: 10_000_000
       )
+      |> allow_upload(:insurance_doc, accept: ~w(.pdf .jpg .jpeg .png), max_entries: 1, max_file_size: 10_000_000)
       |> assign(community_agreement?: Provider.requires_community_agreement?(provider.entity_type))
       |> assign(agreement_form: to_form(%{"agree" => "false"}, as: :agreement))
       |> assign(responsible_person_form: responsible_person_form(provider))
       |> assign(business_registration_form: business_registration_form(provider))
+      |> assign(insurance_form: to_form(%{"expiry_date" => ""}, as: :insurance))
       |> assign_verification_state(provider.id)
 
     {:ok, socket}
@@ -113,6 +117,24 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
        |> put_flash(:error, gettext("Please attach your registration document."))}
     else
       {:noreply, consume_business_registration(socket, provider, params)}
+    end
+  end
+
+  # Syncs the typed date into the form so the widget re-derives its live expiry warning on every change.
+  def handle_event("validate_insurance", %{"insurance" => %{"expiry_date" => date_str}}, socket) do
+    {:noreply, assign(socket, insurance_form: to_form(%{"expiry_date" => date_str}, as: :insurance))}
+  end
+
+  def handle_event("submit_insurance", %{"insurance" => %{"expiry_date" => date_str} = params}, socket) do
+    provider = socket.assigns.current_scope.provider
+
+    if Enum.empty?(socket.assigns.uploads.insurance_doc.entries) do
+      {:noreply,
+       socket
+       |> assign(insurance_form: to_form(params, as: :insurance))
+       |> put_flash(:error, gettext("Please attach your insurance certificate."))}
+    else
+      {:noreply, consume_insurance(socket, provider, date_str)}
     end
   end
 
@@ -339,6 +361,13 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
                       ui_status={row.ui_status}
                       rejection_reason={row.rejection_reason}
                     />
+                  <% row.action_kind == :insurance -> %>
+                    <.insurance_widget
+                      form={@insurance_form}
+                      uploads={@uploads}
+                      ui_status={row.ui_status}
+                      rejection_reason={row.rejection_reason}
+                    />
                   <% row.action_kind == :identity -> %>
                     <.identity_state_widget
                       identity_state={@identity_state}
@@ -501,6 +530,52 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     end
   end
 
+  # Consumes the uploaded insurance certificate and submits it with its policy expiry date in one
+  # command (the generic Provider.submit_verification_document/1, which enforces the required expiry
+  # for this type). On success re-derives the checklist so the badge flips to "Under review".
+  defp consume_insurance(socket, provider, date_str) do
+    expiry_date = parse_date(date_str)
+    meta = [provider_id: provider.id, doc_type: "insurance_certificate"]
+
+    result =
+      consume_single_upload(socket, :insurance_doc, meta, fn file_binary, entry ->
+        Provider.submit_verification_document(%{
+          provider_profile_id: provider.id,
+          document_type: "insurance_certificate",
+          expiry_date: expiry_date,
+          file_binary: file_binary,
+          original_filename: entry.client_name,
+          content_type: entry.client_type
+        })
+      end)
+
+    # No form reassign needed here: validate_insurance already synced insurance_form to this date
+    # on the phx-change that preceded submit.
+    case result do
+      {:error, :upload_channel_died} ->
+        put_flash(socket, :error, gettext("Upload connection lost. Please try again."))
+
+      {:ok, [%{} = doc]} ->
+        socket
+        |> stream_insert(:verification_docs, doc, dom_id: &"vdoc-#{&1.id}")
+        |> assign_verification_state(provider.id)
+        |> put_flash(:info, gettext("Insurance certificate submitted for review."))
+
+      # A non-empty upload that produced no document was postponed by the command — the required
+      # expiry date was missing or unparseable (the empty-upload case is handled before we get here).
+      {:ok, _} ->
+        put_flash(socket, :error, gettext("Please enter the certificate's expiry date."))
+    end
+  end
+
+  # Parses an <input type="date"> value ("YYYY-MM-DD") to a Date, or nil when blank/invalid.
+  defp parse_date(str) do
+    case Date.from_iso8601(str) do
+      {:ok, date} -> date
+      _ -> nil
+    end
+  end
+
   # Curated country options for the <select>. The set of codes is single-sourced from the domain
   # (Provider.registration_countries/0, the same list business_registration_changeset validates
   # against, ADR-0011), so the UI and the changeset can never desync; only the labels live here.
@@ -585,6 +660,78 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
         <p class={["mt-1", Theme.typography(:caption)]}>{gettext("PDF, JPG or PNG. Max 10MB.")}</p>
 
         <.button id="business-registration-submit" class="mt-3">{gettext("Submit for review")}</.button>
+      </.form>
+    </div>
+    """
+  end
+
+  attr :form, Form, required: true
+  attr :uploads, :map, required: true
+  attr :ui_status, :atom, required: true
+  attr :rejection_reason, :string, default: nil
+
+  # The single insurance surface (B3): captures the certificate + its policy expiry date in one
+  # submit, with a live expiry warning derived from the form's own date (kept current by
+  # `validate_insurance`'s phx-change). Available in every state so a business can upload a renewed
+  # certificate after a rejection or before the old one lapses.
+  defp insurance_widget(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :expiry_status,
+        VerificationDocument.expiry_status(parse_date(assigns.form[:expiry_date].value), Date.utc_today())
+      )
+
+    ~H"""
+    <div id="insurance" class={[Theme.card_variant(:default), "p-4 md:p-6"]}>
+      <%= case @ui_status do %>
+        <% :submitted -> %>
+          <p id="insurance-submitted" class={["mb-4 text-sm", Theme.text_color(:body)]}>
+            {gettext("Your insurance certificate is under review.")}
+          </p>
+        <% :approved -> %>
+          <div id="insurance-approved" class="mb-4 flex items-center gap-2">
+            <.icon name="hero-check-circle-solid" class="w-6 h-6 text-green-600" />
+            <p class={["text-sm font-medium", Theme.text_color(:body)]}>
+              {gettext("Your insurance is verified.")}
+            </p>
+          </div>
+        <% :rejected -> %>
+          <p id="insurance-rejected" class="mb-4 text-sm text-red-700">
+            {@rejection_reason}
+          </p>
+        <% _ -> %>
+      <% end %>
+
+      <p class={["mb-4 text-sm", Theme.text_color(:muted)]}>
+        {gettext(
+          "Upload your public liability insurance certificate and enter its policy expiry date so we can confirm cover is current."
+        )}
+      </p>
+
+      <.form
+        for={@form}
+        id="insurance-form"
+        phx-submit="submit_insurance"
+        phx-change="validate_insurance"
+      >
+        <.input field={@form[:expiry_date]} type="date" label={gettext("Policy expiry date")} />
+        <%= case @expiry_status do %>
+          <% :expired -> %>
+            <p id="insurance-expiry-warning" class="mt-1 mb-3 text-sm text-red-700">
+              {gettext("This certificate has already expired. Please upload a current policy.")}
+            </p>
+          <% :expiring_soon -> %>
+            <p id="insurance-expiry-warning" class="mt-1 mb-3 text-sm text-amber-700">
+              {gettext("This certificate expires within 30 days. Please renew it soon.")}
+            </p>
+          <% _ -> %>
+        <% end %>
+
+        <.live_file_input upload={@uploads.insurance_doc} class="mt-2 block" />
+        <p class={["mt-1", Theme.typography(:caption)]}>{gettext("PDF, JPG or PNG. Max 10MB.")}</p>
+
+        <.button id="insurance-submit" class="mt-3">{gettext("Submit for review")}</.button>
       </.form>
     </div>
     """

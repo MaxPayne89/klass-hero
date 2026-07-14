@@ -188,6 +188,15 @@ defmodule KlassHero.Provider.Verification do
     errors =
       if is_nil(params[:file_binary]), do: [{:file_binary, "is required"} | errors], else: errors
 
+    # Insurance certificates must carry an expiry date (B3, #957); the domain owns which types
+    # require one, so this stays a per-type rule rather than a blanket changeset validation.
+    errors =
+      if VerificationDocument.expiry_required?(params[:document_type]) and is_nil(params[:expiry_date]) do
+        [{:expiry_date, "is required"} | errors]
+      else
+        errors
+      end
+
     case errors do
       [] -> :ok
       _ -> {:error, errors}
@@ -209,7 +218,8 @@ defmodule KlassHero.Provider.Verification do
       provider_profile_id: params[:provider_profile_id],
       document_type: params[:document_type],
       file_url: file_url,
-      original_filename: params[:original_filename]
+      original_filename: params[:original_filename],
+      expiry_date: params[:expiry_date]
     }
     |> VerificationDocument.create_changeset()
     |> Repo.insert()

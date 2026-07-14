@@ -19,6 +19,7 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
             :identity
             | :responsible_person
             | :business_registration
+            | :insurance
             | :navigate_documents
             | :navigate_agreement
             | :none,
@@ -154,6 +155,11 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   # Business registration (B2) captures structured fields + document in a dedicated widget that
   # renders in every state, so it forks above the generic document and :none clauses.
   def action(%VettingStepView{key: :business_registration}), do: %{kind: :business_registration, label: nil}
+
+  # Insurance (B3) captures the certificate + its policy expiry date in a dedicated widget that
+  # renders in every state (like business registration), so it forks above the generic document
+  # clause that would otherwise deep-link it to the shared documents panel.
+  def action(%VettingStepView{key: :insurance}), do: %{kind: :insurance, label: nil}
 
   def action(%VettingStepView{completed_via: {:stripe_identity}}), do: %{kind: :identity, label: nil}
 

@@ -229,6 +229,26 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
       refute has_element?(view, "#document-info dt", "Registration number")
     end
 
+    test "shows the policy expiry with an Expired badge for a lapsed insurance certificate", %{conn: conn} do
+      doc =
+        insert(:verification_document_schema,
+          document_type: :insurance_certificate,
+          expiry_date: Date.add(Date.utc_today(), -1)
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
+
+      assert has_element?(view, "#document-expiry", "Expired")
+    end
+
+    test "omits the expiry row when the document has no expiry date", %{conn: conn} do
+      doc = insert(:verification_document_schema, document_type: :background_check, expiry_date: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
+
+      refute has_element?(view, "#document-expiry")
+    end
+
     test "renders an inline video player for a video-screening document", %{conn: conn} do
       doc =
         insert(:verification_document_schema,

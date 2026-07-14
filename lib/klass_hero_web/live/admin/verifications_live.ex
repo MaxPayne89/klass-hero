@@ -14,6 +14,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
@@ -356,6 +357,16 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
             </dt>
             <dd class="mt-1 text-sm">{@registration_number}</dd>
           </div>
+          <div :if={@document.expiry_date} id="document-expiry">
+            <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
+              {gettext("Policy expiry")}
+            </dt>
+            <dd class="mt-1 text-sm flex items-center gap-2">
+              {format_date(@document.expiry_date)}
+              <% exp = VerificationDocument.expiry_status(@document, Date.utc_today()) %>
+              <.kh_pill tone={expiry_tone(exp)}>{expiry_badge_label(exp)}</.kh_pill>
+            </dd>
+          </div>
           <div>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>{gettext("File")}</dt>
             <dd class="mt-1 text-sm truncate">{@document.original_filename}</dd>
@@ -566,8 +577,15 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
   defp empty_message(_), do: gettext("No verification documents found.")
 
   defp format_date(nil), do: ""
+  defp format_date(%mod{} = date) when mod in [Date, DateTime], do: Calendar.strftime(date, "%b %d, %Y")
 
-  defp format_date(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%b %d, %Y")
-  end
+  # Admin-facing insurance-currency badge (AC item 3: "policy is current"). Maps the expiry status to a
+  # design-token kh_pill tone — green when valid, amber (:warning) when expiring soon, red when lapsed.
+  defp expiry_badge_label(:expired), do: gettext("Expired")
+  defp expiry_badge_label(:expiring_soon), do: gettext("Expiring soon")
+  defp expiry_badge_label(_), do: gettext("Valid")
+
+  defp expiry_tone(:expired), do: :error
+  defp expiry_tone(:expiring_soon), do: :warning
+  defp expiry_tone(_), do: :success
 end
