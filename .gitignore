@@ -65,6 +65,9 @@ npm-debug.log
 # Local-only test-drive reports
 .test-drive-reports/
 
+# prod-watch runtime state (watermark + filed fingerprints + logs)
+.prod-watch/
+
 # Local debug artefacts (do not commit)
 /*.png
 .playwright-mcp/

@@ -107,6 +107,12 @@ Diagnoses a production issue end-to-end: Honeycomb for the error shape, the prod
 
 **Use when:** `/analyze-prod-issue "<symptom>"`
 
+### prod-watch
+
+Proactive counterpart to `analyze-prod-issue`. Sweeps the prod `error_tracker` (via `bin/prod-db`) + Honeycomb for issues newly active since a stored watermark, dedups on error_tracker's native `fingerprint`, diagnoses survivors through `/analyze-prod-issue`, then **auto-files** a `bug` + `priority:high` issue per real user-blocker and notifies. Runs unattended on a 12h launchd schedule (`docs/runbooks/prod-watch-scheduling.md`) or by hand.
+
+**Use when:** `/prod-watch`
+
 ## Custom Agents (in `.claude/agents/`)
 
 ### architecture-reviewer

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#
+# prod-watch — scheduler entrypoint for the proactive prod-issue sweep.
+#
+# launchd starts jobs with a stripped environment (no PATH, no HOME), so `fly`,
+# `psql`, `gh`, and `claude` won't resolve unless we set them here. This wrapper
+# isolates that env plumbing + a fast-fail auth preflight, then hands off to the
+# /prod-watch skill. See docs/runbooks/prod-watch-scheduling.md.
+#
+# Usage:
+#   bin/prod-watch            # preflight, then run the sweep via claude -p
+#   bin/prod-watch --check    # verify prereqs only (no sweep)
+
+set -euo pipefail
+
+# --- env plumbing (launchd gives us almost nothing) ---
+export HOME="${HOME:-/Users/maximilianpergl}"
+# $HOME/.local/bin holds `claude`; /opt/homebrew/bin holds gh/fly/psql. launchd gives us neither.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LOG_DIR="$REPO_DIR/.prod-watch/log"
+mkdir -p "$LOG_DIR"
+
+err() { printf '\033[0;31m✗ %s\033[0m\n' "$1" >&2; }
+
+# --- preflight: the two things that silently break a scheduled run ---
+command -v claude >/dev/null 2>&1 || { err "claude CLI not on PATH"; exit 1; }
+command -v gh     >/dev/null 2>&1 || { err "gh CLI not on PATH"; exit 1; }
+# bin/prod-db --check verifies fly auth + psql; its message tells you to re-run fly auth login.
+"$REPO_DIR/bin/prod-db" --check
+
+if [[ "${1:-}" == "--check" ]]; then
+  printf '\033[0;32m✓ prod-watch ready\033[0m\n'
+  exit 0
+fi
+
+exec claude -p "/prod-watch"
