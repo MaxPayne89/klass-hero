@@ -13,6 +13,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Categories
+  alias KlassHero.Shared.FeatureFlags
   alias KlassHero.Shared.Storage
   alias KlassHeroWeb.Theme
 
@@ -40,6 +41,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
           |> assign(page_title: gettext("Complete Your Profile"))
           |> assign(active_nav: :onboarding)
           |> assign(provider: provider)
+          |> assign(business_vetting?: business_vetting_enabled?())
           |> assign(form: to_form(changeset, as: :provider_profile_schema))
           |> assign(categories: Categories.categories())
           |> allow_upload(:logo,
@@ -87,6 +89,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             categories: parse_categories(params["categories"])
           }
           |> maybe_put_logo(logo_result)
+          |> maybe_put_entity_type(socket.assigns.business_vetting?, params)
 
         case Provider.complete_provider_profile(provider.id, attrs) do
           {:ok, _completed} ->
@@ -147,6 +150,26 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
 
   defp maybe_put_logo(attrs, :no_upload), do: attrs
   defp maybe_put_logo(attrs, {:ok, url}), do: Map.put(attrs, :logo_url, url)
+
+  # Fail-safe flag read: any error (adapter down, agent absent) collapses to "off", so the
+  # business track can never leak on by accident. First production consumer of FeatureFlags.
+  defp business_vetting_enabled? do
+    case FeatureFlags.enabled?(:business_vetting) do
+      {:ok, enabled?} -> enabled?
+      {:error, _} -> false
+    end
+  end
+
+  # Default-deny gate for the business-vetting entity_type choice, the trust boundary between a
+  # raw form param and a persisted vetting-track switch (complete_provider_profile/2 copies
+  # :entity_type straight onto the struct). Writes the field only when the flag is on AND the
+  # value is a known choice; the catch-all clause leaves attrs untouched for every other case
+  # (flag off, key absent, unknown value), so a hand-crafted POST can never flip the track.
+  defp maybe_put_entity_type(attrs, true, %{"entity_type" => type}) when type in ["individual", "business"] do
+    Map.put(attrs, :entity_type, String.to_existing_atom(type))
+  end
+
+  defp maybe_put_entity_type(attrs, _business_vetting?, _params), do: attrs
 
   defp upload_logo(socket, provider_id) do
     case safe_consume_uploaded_entries(socket, fn %{path: path}, entry ->
@@ -215,6 +238,40 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             phx-submit="save"
             class="space-y-6"
           >
+            <div :if={@business_vetting?}>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">
+                {gettext("What are you registering as?")}
+              </label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  :for={
+                    {value, title, hint} <- [
+                      {"individual", gettext("An individual"),
+                       gettext("You'll be vetted personally.")},
+                      {"business", gettext("A business"),
+                       gettext("Your business and its responsible person will be vetted.")}
+                    ]
+                  }
+                  class={[
+                    "flex items-start gap-3 p-3 border cursor-pointer hover:bg-gray-50 transition-colors",
+                    Theme.rounded(:lg)
+                  ]}
+                >
+                  <input
+                    type="radio"
+                    name="provider_profile_schema[entity_type]"
+                    value={value}
+                    checked={to_string(@form[:entity_type].value) == value}
+                    class="mt-1 border-gray-300 text-brand focus:ring-brand"
+                  />
+                  <span class="flex flex-col">
+                    <span class="text-sm font-medium text-gray-900">{title}</span>
+                    <span class="text-xs text-gray-500">{hint}</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <.input
               field={@form[:business_name]}
               type="text"

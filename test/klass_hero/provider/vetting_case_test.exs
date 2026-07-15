@@ -31,6 +31,28 @@ defmodule KlassHero.Provider.VettingCaseTest do
       assert Enum.all?(case_.steps, &(&1.status == :not_started))
       assert Enum.all?(case_.steps, &(&1.vetting_case_id == case_.id))
     end
+
+    test "freezes the five business steps with their prerequisite edges copied" do
+      case_ = VettingCase.new_for_track(provider_id(), :business)
+
+      assert case_.entity_type == :business
+      assert case_.lifecycle == :not_started
+
+      assert Enum.map(case_.steps, & &1.key) == [
+               :responsible_person_identity,
+               :business_registration,
+               :insurance,
+               :community_agreement,
+               :staff_attestation
+             ]
+
+      assert Enum.all?(case_.steps, &(&1.status == :not_started))
+
+      requires = Map.new(case_.steps, &{&1.key, &1.requires})
+      assert requires[:community_agreement] == [:responsible_person_identity]
+      assert requires[:staff_attestation] == [:responsible_person_identity]
+      assert requires[:business_registration] == []
+    end
   end
 
   describe "step_key_for_identity/1" do
@@ -39,9 +61,9 @@ defmodule KlassHero.Provider.VettingCaseTest do
       assert VettingCase.step_key_for_identity(case_) == :identity
     end
 
-    test "returns nil when the track has no Stripe identity step" do
+    test "finds the responsible-person Stripe step in the business track" do
       case_ = VettingCase.new_for_track(provider_id(), :business)
-      assert VettingCase.step_key_for_identity(case_) == nil
+      assert VettingCase.step_key_for_identity(case_) == :responsible_person_identity
     end
   end
 
@@ -51,9 +73,10 @@ defmodule KlassHero.Provider.VettingCaseTest do
       assert VettingCase.step_key_for_signed_agreement(case_, :community_agreement) == :community_agreement
     end
 
-    test "returns nil when the track has no signed-agreement step of that kind" do
+    test "finds the community-agreement and staff-attestation steps in the business track" do
       case_ = VettingCase.new_for_track(provider_id(), :business)
-      assert VettingCase.step_key_for_signed_agreement(case_, :community_agreement) == nil
+      assert VettingCase.step_key_for_signed_agreement(case_, :community_agreement) == :community_agreement
+      assert VettingCase.step_key_for_signed_agreement(case_, :staff_attestation) == :staff_attestation
     end
   end
 

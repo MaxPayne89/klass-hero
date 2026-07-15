@@ -116,14 +116,28 @@ entity — **if the responsible person changes, B1 resets, and B4 + B5 reset wit
 - _Issue #956._
 
 ### B3 — Public liability insurance certificate upload
-- Document upload, admin review.
-- _Issue #957._
+- Document upload, admin review, via a dedicated widget that also captures the policy **expiry date**
+  (nullable `expiry_date` on `verification_documents`; required for this type, enforced in the submit
+  command, not the shared changeset).
+- **Expiry warning (synchronous):** `VerificationDocument.expiry_status/2` classifies the date as
+  `:expired | :expiring_soon` (within 30 days) `| :valid`; the provider sees a live warning as they
+  pick the date, and admin review shows an expiry badge (AC "policy is current").
+- **Deferred:** the *ongoing* obligation — a cert approved today lapsing later — is a separate
+  scheduled (Oban) re-flag job with its own delisting-severity decision. Not in this milestone.
+- _Issue #957 (synchronous half); expiry re-flag follow-on relates #957 + #558._
 
 ### B4 — Community Standards Agreement (business)
-- Identical flow to Step 6, signed by the responsible person on behalf of the business.
-- **Data:** reuses `community_standards_agreements` with `agreed_by_name` (responsible person) and an
-  `entity_type` column so individual vs business agreements are distinguishable in reporting.
-- Resets if the responsible person changes.
+- Identical flow to Step 6, but signed **by the named responsible person** (captured in B1) on behalf
+  of the business — not by whoever is logged in. The signer rule is enforced in
+  `SubmitCommunityAgreement`, which fails closed if a business has no responsible person on record;
+  the agreement panel shows "Signing as {name} on behalf of the business" before confirmation.
+- **Data:** reuses the shared `signed_agreements` table (`kind: :community_agreement`,
+  `signed_by_name`), per ADR-0008's one-model-two-`kind`s decision — **not** a separate
+  `community_standards_agreements` table (that was the pre-engine spec). A nullable `entity_type`
+  column is snapshotted at sign time so individual vs business agreements are distinguishable in
+  reporting without a join to the (potentially drifting) live provider.
+- Resets if the responsible person changes — already wired: `community_agreement`
+  `requires: [:responsible_person_identity]`, so `set_responsible_person/3`'s reset cascade clears it.
 - _Issue #958._
 
 ### B5 — Staff vetting liability attestation
@@ -134,9 +148,16 @@ entity — **if the responsible person changes, B1 resets, and B4 + B5 reset wit
   contents. The attestation is a contractual declaration only — this keeps the platform outside
   GDPR Article 10 (criminal-record data) scope entirely. The provider inspects certificates itself
   and records only inspection date + pass/fail.
-- **Auto-approves** on submission. One-time; re-attestation only when the responsible person changes.
-- **Data:** new `staff_liability_attestations` table — `provider_id`, `attested_at` (UTC),
-  `attested_by_name`, `attestation_version`.
+- **Auto-approves** on submission (like B4 — no admin review). Re-attestation is triggered when the
+  responsible person changes (reset cascade, ADR-0010) **or** when the declaration version is bumped.
+- **Data:** reuses the shared `signed_agreements` table (`kind: :staff_attestation`, `signed_by_name`,
+  `entity_type`), per ADR-0008's one-model-two-`kind`s decision — **not** a separate
+  `staff_liability_attestations` table (that was the pre-engine spec). The command is the generalized
+  `SubmitSignedAgreement`; the version/text policy lives in `StaffAttestationPolicy`.
+- **Shipped provisional:** the declaration text is a working draft at version `"1.0-provisional"` with
+  the Vertragsstrafe amount left as `€[TODO]`. The mechanism is complete, but the wording + amount
+  **must be replaced with lawyer-approved text (and a bumped version, which auto-forces re-attestation)
+  before go-live** — tracked as #1097, which gates production.
 - **Downstream:** when a business assigns a new instructor, a contextual reminder is shown ("By
   assigning this person as an instructor you confirm they hold a valid erweitertes Führungszeugnis
   and have been vetted per your platform agreement"). Hooks into the instructor role flag (#840).

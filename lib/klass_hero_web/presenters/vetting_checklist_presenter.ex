@@ -14,7 +14,17 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   alias KlassHero.Provider.VettingStepView
 
   @type badge :: %{tone: atom(), label: String.t()}
-  @type action :: %{kind: :identity | :navigate_documents | :navigate_agreement | :none, label: String.t() | nil}
+  @type action :: %{
+          kind:
+            :identity
+            | :responsible_person
+            | :business_registration
+            | :insurance
+            | :navigate_documents
+            | :navigate_agreement
+            | :none,
+          label: String.t() | nil
+        }
 
   @doc """
   Flattens a checklist into a list of display rows ready for the template — copy, icon, badge,
@@ -37,6 +47,7 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
         badge_label: badge.label,
         action_kind: action.kind,
         action_label: action.label,
+        action_anchor: action[:anchor],
         ui_status: step.ui_status,
         rejection_reason: step.rejection_reason
       }
@@ -93,6 +104,38 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
       gradient: :comic
     }
 
+  def step_meta(:responsible_person_identity),
+    do: %{
+      title: gettext("Responsible person"),
+      description: gettext("Verify the owner or director accountable for the business."),
+      icon: "hero-identification",
+      gradient: :primary
+    }
+
+  def step_meta(:business_registration),
+    do: %{
+      title: gettext("Business registration"),
+      description: gettext("Upload your business registration document."),
+      icon: "hero-building-office-2",
+      gradient: :cool
+    }
+
+  def step_meta(:insurance),
+    do: %{
+      title: gettext("Insurance"),
+      description: gettext("Upload your liability insurance certificate."),
+      icon: "hero-shield-check",
+      gradient: :safety
+    }
+
+  def step_meta(:staff_attestation),
+    do: %{
+      title: gettext("Staff attestation"),
+      description: gettext("Attest that your staff meet child-safety requirements."),
+      icon: "hero-user-group",
+      gradient: :comic
+    }
+
   @doc "Badge tone + label for a step's displayed status."
   @spec badge(VettingStepView.ui_status()) :: badge()
   def badge(:approved), do: %{tone: :success, label: gettext("Approved")}
@@ -106,6 +149,19 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   awaiting review).
   """
   @spec action(VettingStepView.t()) :: action()
+  # The business identity step captures a Responsible Person first (ADR-0010) — its own widget,
+  # distinct from the individual bare-identity widget. Keyed above the generic stripe_identity clause.
+  def action(%VettingStepView{key: :responsible_person_identity}), do: %{kind: :responsible_person, label: nil}
+
+  # Business registration (B2) captures structured fields + document in a dedicated widget that
+  # renders in every state, so it forks above the generic document and :none clauses.
+  def action(%VettingStepView{key: :business_registration}), do: %{kind: :business_registration, label: nil}
+
+  # Insurance (B3) captures the certificate + its policy expiry date in a dedicated widget that
+  # renders in every state (like business registration), so it forks above the generic document
+  # clause that would otherwise deep-link it to the shared documents panel.
+  def action(%VettingStepView{key: :insurance}), do: %{kind: :insurance, label: nil}
+
   def action(%VettingStepView{completed_via: {:stripe_identity}}), do: %{kind: :identity, label: nil}
 
   def action(%VettingStepView{ui_status: status}) when status in [:approved, :submitted], do: %{kind: :none, label: nil}
@@ -113,8 +169,8 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   def action(%VettingStepView{completed_via: {:document, _type}, ui_status: status}),
     do: %{kind: :navigate_documents, label: document_label(status)}
 
-  def action(%VettingStepView{completed_via: {:signed_agreement, _kind}, ui_status: status}),
-    do: %{kind: :navigate_agreement, label: agreement_label(status)}
+  def action(%VettingStepView{completed_via: {:signed_agreement, kind}, ui_status: status}),
+    do: %{kind: :navigate_agreement, label: agreement_label(status), anchor: agreement_anchor(kind)}
 
   @doc "The headline copy for the profile-locked banner."
   @spec locked_summary(VettingChecklist.t()) :: String.t()
@@ -129,4 +185,10 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   defp document_label(_), do: gettext("Upload")
 
   defp agreement_label(_), do: gettext("Review & sign")
+
+  # Deep-link target for each signed-agreement checklist row — each agreement step has its own
+  # in-page panel, so the two must not share one anchor. Kept here (not the LiveView) so the
+  # step -> UI-target mapping lives in one place, alongside the rest of the row's action metadata.
+  defp agreement_anchor(:community_agreement), do: "#community-agreement-form"
+  defp agreement_anchor(:staff_attestation), do: "#staff-attestation-form"
 end

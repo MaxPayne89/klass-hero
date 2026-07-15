@@ -14,6 +14,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.VerificationDocument
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
@@ -71,6 +72,8 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
         )
         |> assign(:document, result.document)
         |> assign(:provider_business_name, result.provider_business_name)
+        |> assign(:legal_business_name, result.legal_business_name)
+        |> assign(:registration_number, result.registration_number)
         |> assign(:signed_url, result.signed_url)
         |> assign(:preview_type, result.preview_type)
         |> assign(:show_reject_form, false)
@@ -222,6 +225,8 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
             "block p-4 hover:bg-gray-50 transition-colors"
           ]}
         >
+          <% reg_no? =
+            entry.document.document_type == :business_registration and entry.registration_number %>
           <%!-- Mobile: stacked card layout --%>
           <div class="md:hidden space-y-2">
             <div class="flex items-center justify-between">
@@ -232,6 +237,9 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
             </div>
             <p class={["text-sm", Theme.text_color(:body)]}>
               {ProviderPresenter.document_type_label(entry.document.document_type)}
+            </p>
+            <p :if={reg_no?} class={["text-xs", Theme.text_color(:muted)]}>
+              {gettext("Reg. no.")}: {entry.registration_number}
             </p>
             <div class="flex items-center justify-between">
               <span class={["text-xs truncate mr-2", Theme.text_color(:muted)]}>
@@ -245,9 +253,14 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
 
           <%!-- Desktop: row layout --%>
           <div class="hidden md:grid md:grid-cols-12 md:gap-4 md:items-center">
-            <span class="col-span-3 font-semibold text-sm truncate">
-              {entry.provider_business_name}
-            </span>
+            <div class="col-span-3 min-w-0">
+              <span class="font-semibold text-sm truncate block">
+                {entry.provider_business_name}
+              </span>
+              <span :if={reg_no?} class={["text-xs truncate block", Theme.text_color(:muted)]}>
+                {gettext("Reg. no.")}: {entry.registration_number}
+              </span>
+            </div>
             <span class={["col-span-3 text-sm", Theme.text_color(:body)]}>
               {ProviderPresenter.document_type_label(entry.document.document_type)}
             </span>
@@ -326,10 +339,33 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
 
       <%!-- Info grid --%>
       <div id="document-info" class={[Theme.card_variant(:default), "p-4 md:p-6 mb-6"]}>
+        <% business_reg? = @document.document_type == :business_registration %>
         <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>{gettext("Business")}</dt>
             <dd class="mt-1 text-sm">{@provider_business_name}</dd>
+          </div>
+          <div :if={business_reg?}>
+            <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
+              {gettext("Legal business name")}
+            </dt>
+            <dd class="mt-1 text-sm">{@legal_business_name}</dd>
+          </div>
+          <div :if={business_reg?}>
+            <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
+              {gettext("Registration number")}
+            </dt>
+            <dd class="mt-1 text-sm">{@registration_number}</dd>
+          </div>
+          <div :if={@document.expiry_date} id="document-expiry">
+            <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>
+              {gettext("Policy expiry")}
+            </dt>
+            <dd class="mt-1 text-sm flex items-center gap-2">
+              {format_date(@document.expiry_date)}
+              <% exp = VerificationDocument.expiry_status(@document, Date.utc_today()) %>
+              <.kh_pill tone={expiry_tone(exp)}>{expiry_badge_label(exp)}</.kh_pill>
+            </dd>
           </div>
           <div>
             <dt class={["text-sm font-medium", Theme.text_color(:muted)]}>{gettext("File")}</dt>
@@ -541,8 +577,15 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
   defp empty_message(_), do: gettext("No verification documents found.")
 
   defp format_date(nil), do: ""
+  defp format_date(%mod{} = date) when mod in [Date, DateTime], do: Calendar.strftime(date, "%b %d, %Y")
 
-  defp format_date(%DateTime{} = dt) do
-    Calendar.strftime(dt, "%b %d, %Y")
-  end
+  # Admin-facing insurance-currency badge (AC item 3: "policy is current"). Maps the expiry status to a
+  # design-token kh_pill tone — green when valid, amber (:warning) when expiring soon, red when lapsed.
+  defp expiry_badge_label(:expired), do: gettext("Expired")
+  defp expiry_badge_label(:expiring_soon), do: gettext("Expiring soon")
+  defp expiry_badge_label(_), do: gettext("Valid")
+
+  defp expiry_tone(:expired), do: :error
+  defp expiry_tone(:expiring_soon), do: :warning
+  defp expiry_tone(_), do: :success
 end

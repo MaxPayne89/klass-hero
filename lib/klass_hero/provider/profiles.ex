@@ -23,7 +23,7 @@ defmodule KlassHero.Provider.Profiles do
 
   # Scalar fields re-cast when persisting a transitioned profile struct. identity_id
   # and id never change, so they stay out; Ecto only stages actual diffs.
-  @profile_persist_fields ~w(business_name business_owner_email description phone website address logo_url verified verified_at verified_by_id categories profile_status)a
+  @profile_persist_fields ~w(business_name business_owner_email description phone website address logo_url verified verified_at verified_by_id categories profile_status entity_type)a
 
   @doc """
   Creates a new provider profile.

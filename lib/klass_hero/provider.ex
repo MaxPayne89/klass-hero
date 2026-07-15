@@ -28,9 +28,10 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.Incidents
   alias KlassHero.Provider.Profiles
   alias KlassHero.Provider.Programs
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.Staff
   alias KlassHero.Provider.StaffMember
-  alias KlassHero.Provider.SubmitCommunityAgreement
+  alias KlassHero.Provider.SubmitSignedAgreement
   alias KlassHero.Provider.Verification
   alias KlassHero.Provider.Vetting
 
@@ -93,6 +94,15 @@ defmodule KlassHero.Provider do
   @doc "Starts a Stripe Identity session for a provider; returns the hosted redirect URL."
   defdelegate create_identity_verification_session(provider_id, return_url), to: Vetting
 
+  @doc "Sets a business's Responsible Person (ADR-0010); the sole mutator and vetting-reset trigger."
+  defdelegate set_responsible_person(provider_id, name, role), to: Vetting
+
+  @doc "Sets the Responsible Person, then starts their Stripe Identity session (one UI surface)."
+  defdelegate start_responsible_person_verification(provider_id, name, role, return_url), to: Vetting
+
+  @doc "Captures a business's registration facts + document in one transaction (B2, issue #956)."
+  defdelegate submit_business_registration(provider_id, attrs), to: Vetting
+
   @doc "Records a Stripe Identity webhook outcome against its session (idempotent)."
   defdelegate record_identity_verification_outcome(outcome), to: Vetting
 
@@ -109,16 +119,29 @@ defmodule KlassHero.Provider do
   defdelegate list_identity_verifications_for_admin(), to: Vetting
 
   @doc "Signs the Community Standards Agreement, auto-approving the step and verifying if it was last."
-  defdelegate submit_community_agreement(params), to: SubmitCommunityAgreement, as: :execute
+  def submit_community_agreement(params),
+    do: SubmitSignedAgreement.execute(Map.put(params, :kind, :community_agreement))
+
+  @doc "Signs the Staff Compliance Declaration, auto-approving the step and verifying if it was last."
+  def submit_staff_attestation(params), do: SubmitSignedAgreement.execute(Map.put(params, :kind, :staff_attestation))
 
   @doc "Returns the provider's most recent Community Standards Agreement, or `nil`."
   defdelegate get_latest_community_agreement(provider_id), to: Vetting
 
+  @doc "Returns the provider's most recent Staff Compliance Declaration, or `nil`."
+  defdelegate get_latest_staff_attestation(provider_id), to: Vetting
+
   @doc "Whether the provider's latest community agreement still satisfies the current guidelines."
   defdelegate community_agreement_satisfied?(provider_id), to: Vetting
 
+  @doc "Whether the provider's latest staff attestation still satisfies the current declaration."
+  defdelegate staff_attestation_satisfied?(provider_id), to: Vetting
+
   @doc "Whether the given entity type's vetting track includes the community-agreement step."
   defdelegate requires_community_agreement?(entity_type), to: Vetting
+
+  @doc "Whether the given entity type's vetting track includes the staff-attestation step."
+  defdelegate requires_staff_attestation?(entity_type), to: Vetting
 
   @doc "The Community Guidelines version currently in force."
   defdelegate current_community_guidelines_version(), to: Vetting
@@ -143,6 +166,9 @@ defmodule KlassHero.Provider do
 
   @doc "Returns the valid verification document types for a track (`:individual` | `:business`)."
   defdelegate valid_document_types(entity_type), to: Verification
+
+  @doc "Returns the curated set of business registration-country codes (B2, ADR-0011)."
+  defdelegate registration_countries, to: ProviderProfile
 
   # --- Incident reports ----------------------------------------------------
 

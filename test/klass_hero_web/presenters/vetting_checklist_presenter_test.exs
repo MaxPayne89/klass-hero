@@ -1,0 +1,96 @@
+defmodule KlassHeroWeb.Presenters.VettingChecklistPresenterTest do
+  @moduledoc """
+  Tests for the per-step display metadata the checklist presenter emits. Focused on the
+  business-track step keys (Slice 0) — the presenter has no fallback clause, so an
+  unhandled key raises, which is exactly what these pin down.
+  """
+
+  use ExUnit.Case, async: true
+
+  alias KlassHero.Provider.VettingStepView
+  alias KlassHeroWeb.Presenters.VettingChecklistPresenter, as: Presenter
+
+  # Every step key the business track can surface. community_agreement is shared with the
+  # individual track and already had a clause; the other four are new in Slice 0.
+  @business_keys [
+    :responsible_person_identity,
+    :business_registration,
+    :insurance,
+    :community_agreement,
+    :staff_attestation
+  ]
+
+  describe "step_meta/1 for business-track keys" do
+    test "returns a complete 4-key display map for every business step key" do
+      for key <- @business_keys do
+        meta = Presenter.step_meta(key)
+
+        assert %{title: title, description: description, icon: icon, gradient: gradient} = meta,
+               "step_meta(#{inspect(key)}) must return the full display map"
+
+        assert is_binary(title) and title != ""
+        assert is_binary(description) and description != ""
+        assert String.starts_with?(icon, "hero-")
+        assert is_atom(gradient)
+      end
+    end
+  end
+
+  describe "action/1 forks the two stripe-identity steps" do
+    test "the business responsible-person step gets its own :responsible_person action" do
+      step = %VettingStepView{
+        key: :responsible_person_identity,
+        completed_via: {:stripe_identity},
+        ui_status: :not_started
+      }
+
+      assert %{kind: :responsible_person} = Presenter.action(step)
+    end
+
+    test "the individual identity step keeps the bare :identity action" do
+      step = %VettingStepView{key: :identity, completed_via: {:stripe_identity}, ui_status: :not_started}
+
+      assert %{kind: :identity} = Presenter.action(step)
+    end
+  end
+
+  describe "action/1 forks the business-registration step to its own widget" do
+    # The dedicated widget must render in every state (it shows the stored fields when
+    # submitted/approved), so the fork wins even over the :none (approved/submitted) clause.
+    for status <- [:not_started, :submitted, :approved, :rejected] do
+      test "business_registration keeps its :business_registration action when #{status}" do
+        step = %VettingStepView{
+          key: :business_registration,
+          completed_via: {:document, "business_registration"},
+          ui_status: unquote(status)
+        }
+
+        assert %{kind: :business_registration} = Presenter.action(step)
+      end
+    end
+
+    # Insurance (B3) also forks to a dedicated widget — same reasoning: it renders in every
+    # state to carry the expiry date and its warning.
+    for status <- [:not_started, :submitted, :approved, :rejected] do
+      test "insurance keeps its :insurance action when #{status}" do
+        step = %VettingStepView{
+          key: :insurance,
+          completed_via: {:document, "insurance_certificate"},
+          ui_status: unquote(status)
+        }
+
+        assert %{kind: :insurance} = Presenter.action(step)
+      end
+    end
+
+    test "a plain document step still routes to the generic :navigate_documents action" do
+      step = %VettingStepView{
+        key: :background,
+        completed_via: {:document, "background_check"},
+        ui_status: :not_started
+      }
+
+      assert %{kind: :navigate_documents} = Presenter.action(step)
+    end
+  end
+end

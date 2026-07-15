@@ -18,10 +18,12 @@ defmodule KlassHero.Provider.Vetting do
 
   import Ecto.Query
 
+  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.Provider.CommunityGuidelines
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.SignedAgreement
+  alias KlassHero.Provider.StaffAttestationPolicy
   alias KlassHero.Provider.StepDefinition
   alias KlassHero.Provider.StripeIdentity
   alias KlassHero.Provider.Verification
@@ -50,12 +52,25 @@ defmodule KlassHero.Provider.Vetting do
   ]
 
   @business_track [
+    %StepDefinition{key: :responsible_person_identity, completed_via: {:stripe_identity}, admin_review: false},
     %StepDefinition{
       key: :business_registration,
       completed_via: {:document, "business_registration"},
       admin_review: true
     },
-    %StepDefinition{key: :insurance, completed_via: {:document, "insurance_certificate"}, admin_review: true}
+    %StepDefinition{key: :insurance, completed_via: {:document, "insurance_certificate"}, admin_review: true},
+    %StepDefinition{
+      key: :community_agreement,
+      completed_via: {:signed_agreement, :community_agreement},
+      requires: [:responsible_person_identity],
+      admin_review: false
+    },
+    %StepDefinition{
+      key: :staff_attestation,
+      completed_via: {:signed_agreement, :staff_attestation},
+      requires: [:responsible_person_identity],
+      admin_review: false
+    }
   ]
 
   @doc """
@@ -109,17 +124,20 @@ defmodule KlassHero.Provider.Vetting do
   its steps loaded, so a re-fetch would be pure waste.
   """
   @spec save_case(VettingCase.t()) :: {:ok, VettingCase.t()} | {:error, term()}
-  def save_case(%VettingCase{id: id, steps: steps, lifecycle: lifecycle} = case_) do
-    now = DateTime.utc_now()
+  def save_case(%VettingCase{} = case_) do
+    Repo.transaction(fn -> write_case!(case_, DateTime.utc_now()) end)
+  end
 
-    Repo.transaction(fn ->
-      Repo.update_all(from(c in VettingCase, where: c.id == ^id),
-        set: [lifecycle: lifecycle, updated_at: now]
-      )
+  # The non-transactional core of save_case: unconditional row writes, no BEGIN/COMMIT of its
+  # own. Callers that already hold a transaction (e.g. the responsible-person change) compose
+  # this directly instead of nesting a second `Repo.transaction`.
+  defp write_case!(%VettingCase{id: id, steps: steps, lifecycle: lifecycle} = case_, now) do
+    Repo.update_all(from(c in VettingCase, where: c.id == ^id),
+      set: [lifecycle: lifecycle, updated_at: now]
+    )
 
-      Enum.each(steps, &save_step!(&1, now))
-      case_
-    end)
+    Enum.each(steps, &save_step!(&1, now))
+    case_
   end
 
   defp save_step!(%VerificationStep{id: step_id} = step, now) do
@@ -161,6 +179,148 @@ defmodule KlassHero.Provider.Vetting do
   end
 
   defp step_order, do: from(s in VerificationStep, order_by: s.inserted_at)
+
+  # ── Responsible Person (Slice B1) ──────────────────────────────────────────
+
+  @doc """
+  Sets a business provider's Responsible Person (ADR-0010) — the sole mutator of
+  `responsible_person_name`/`responsible_person_role` and the only business vetting
+  reset trigger. Compares the submitted `(name, role)` to the stored values by
+  normalized exact match:
+
+  - `:unchanged` — a no-op (the typo-guard): no write, no reset.
+  - `:set` — first capture: persist only.
+  - `:changed` — persist the new person, reset the `:responsible_person_identity`
+    step (cascading to the community-agreement and staff-attestation steps via the
+    `requires` graph), and unverify the provider if it was verified.
+
+  The person-write and the case reset land in one transaction; the unverify publishes
+  `provider_unverified`, so it runs after the commit (never inside the transaction).
+  """
+  @spec set_responsible_person(String.t(), String.t() | nil, String.t() | nil) ::
+          {:ok, :unchanged | :set | :changed} | {:error, term()}
+  def set_responsible_person(provider_id, name, role) when is_binary(provider_id) do
+    with {:ok, profile} <- fetch_profile(provider_id) do
+      apply_responsible_person_change(profile, name, role)
+    end
+  end
+
+  # The shared "load the profile or 404" open of every Vetting command that mutates
+  # a provider row (set_responsible_person, submit_business_registration).
+  defp fetch_profile(provider_id) do
+    case Repo.get(ProviderProfile, provider_id) do
+      nil -> {:error, :not_found}
+      profile -> {:ok, profile}
+    end
+  end
+
+  defp apply_responsible_person_change(profile, name, role) do
+    case ProviderProfile.responsible_person_change(profile, name, role) do
+      :unchanged -> {:ok, :unchanged}
+      :set -> with {:ok, _} <- persist_responsible_person(profile, name, role), do: {:ok, :set}
+      :changed -> change_responsible_person(profile, name, role)
+    end
+  end
+
+  defp persist_responsible_person(profile, name, role) do
+    profile
+    |> ProviderProfile.responsible_person_changeset(%{
+      responsible_person_name: name,
+      responsible_person_role: role
+    })
+    |> Repo.update()
+  end
+
+  defp change_responsible_person(profile, name, role) do
+    # Load and reset the case OUTSIDE the transaction. `get_case_for_provider` may lazily
+    # backfill via a bare insert guarded by the `provider_id` unique index; nesting that
+    # inside the transaction would let a lost concurrent-insert race poison the whole
+    # transaction (the #1065 class of bug). Only the two pure writes go in the txn.
+    with {:ok, case_} <- get_case_for_provider(profile.id),
+         {:ok, key} <- fetch_identity_step_key(case_),
+         {:ok, reset} <- VettingCase.reset_step(case_, key),
+         {:ok, :ok} <- persist_change_in_transaction(profile, name, role, reset) do
+      VettingVerificationSync.maybe_unverify(profile.id, nil)
+      VettingVerificationSync.broadcast_updated(profile.id)
+      {:ok, :changed}
+    end
+  end
+
+  defp persist_change_in_transaction(profile, name, role, reset_case) do
+    Repo.transaction(fn ->
+      case persist_responsible_person(profile, name, role) do
+        {:ok, _} ->
+          write_case!(reset_case, DateTime.utc_now())
+          :ok
+
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
+  end
+
+  @doc """
+  Sets the Responsible Person, then starts their Stripe Identity verification — the one
+  UI surface for the business identity step (ADR-0010). Wrapping set-then-start means the
+  LiveView never holds the torn state where the person is saved but no session is in flight.
+
+  Returns the hosted `redirect_url` plus the `change` outcome from the set, so the caller
+  can surface "Identity reset — please re-verify" only when `change == :changed`.
+  """
+  @spec start_responsible_person_verification(String.t(), String.t() | nil, String.t() | nil, String.t()) ::
+          {:ok, %{redirect_url: String.t(), change: :unchanged | :set | :changed}} | {:error, term()}
+  def start_responsible_person_verification(provider_id, name, role, return_url)
+      when is_binary(provider_id) and is_binary(return_url) do
+    with {:ok, change} <- set_responsible_person(provider_id, name, role),
+         {:ok, %{redirect_url: url}} <- create_identity_verification_session(provider_id, return_url) do
+      {:ok, %{redirect_url: url, change: change}}
+    end
+  end
+
+  # ── Business Registration (Slice B2) ───────────────────────────────────────
+
+  @doc """
+  Captures a business provider's registration facts (legal name, number, country — ADR-0011)
+  and inserts the registration document in one transaction (issue #956). The storage upload
+  runs first, outside the transaction (storage is not transactional); the field changeset is
+  validated before the upload so invalid input never orphans a file.
+
+  Unlike the Responsible Person, registration is a fact about the entity: it carries no
+  `requires` edge and never resets vetting (ADR-0010). The `:business_registration` step
+  advances only when an admin later approves the document (the generic
+  `AdvanceVettingStepOnDocumentReview` path); submission alone just makes the pending document
+  exist, which the checklist read merge surfaces as "Under review".
+  """
+  @spec submit_business_registration(String.t(), map()) ::
+          {:ok, VerificationDocument.t()} | {:error, Ecto.Changeset.t() | term()}
+  def submit_business_registration(provider_id, attrs) when is_binary(provider_id) and is_map(attrs) do
+    with {:ok, profile} <- fetch_profile(provider_id) do
+      persist_business_registration(profile, attrs)
+    end
+  end
+
+  defp persist_business_registration(profile, attrs) do
+    fields = Map.take(attrs, [:legal_business_name, :registration_number, :registration_country])
+    changeset = ProviderProfile.business_registration_changeset(profile, fields)
+
+    with {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update),
+         {:ok, file_url} <- Verification.upload_document_file(Map.put(attrs, :provider_profile_id, profile.id)) do
+      persist_registration_in_transaction(changeset, profile.id, attrs, file_url)
+    end
+  end
+
+  defp persist_registration_in_transaction(changeset, provider_id, attrs, file_url) do
+    doc_params = Map.merge(attrs, %{provider_profile_id: provider_id, document_type: "business_registration"})
+
+    Repo.transaction(fn ->
+      with {:ok, _profile} <- Repo.update(changeset),
+           {:ok, doc} <- Verification.insert_verification_document(doc_params, file_url) do
+        doc
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
 
   # ── Onboarding checklist read model (Slice 2) ──────────────────────────────
 
@@ -302,13 +462,26 @@ defmodule KlassHero.Provider.Vetting do
     end
   end
 
-  # ── Community agreement (Slice 5) ──────────────────────────────────────────
+  # ── Signed agreements (community agreement B4 / staff attestation B5) ───────
+  #
+  # Both business-track signed-agreement steps share one query/policy shape, differing only by
+  # `kind` and the policy module that owns the version. The public per-kind functions are readable
+  # names over the shared internals; the `kind -> policy` dispatch lives here (the engine hub), so
+  # the submit command stays ignorant of which concrete policy modules exist.
 
   @doc "Returns the provider's most recent Community Standards Agreement, or `nil` if never signed."
   @spec get_latest_community_agreement(String.t()) :: SignedAgreement.t() | nil
-  def get_latest_community_agreement(provider_id) when is_binary(provider_id) do
+  def get_latest_community_agreement(provider_id), do: get_latest_signed_agreement(provider_id, :community_agreement)
+
+  @doc "Returns the provider's most recent staff attestation, or `nil` if never signed."
+  @spec get_latest_staff_attestation(String.t()) :: SignedAgreement.t() | nil
+  def get_latest_staff_attestation(provider_id), do: get_latest_signed_agreement(provider_id, :staff_attestation)
+
+  @doc "Returns the provider's most recent signed agreement of `kind`, or `nil` if never signed."
+  @spec get_latest_signed_agreement(String.t(), SignedAgreement.kind()) :: SignedAgreement.t() | nil
+  def get_latest_signed_agreement(provider_id, kind) when is_binary(provider_id) do
     SignedAgreement
-    |> where([a], a.provider_id == ^provider_id and a.kind == :community_agreement)
+    |> where([a], a.provider_id == ^provider_id and a.kind == ^kind)
     |> order_by([a], desc: a.inserted_at)
     |> limit(1)
     |> Repo.one()
@@ -322,27 +495,41 @@ defmodule KlassHero.Provider.Vetting do
   `SignedAgreement`/`nil` (no query) — the caller already holding the record avoids a re-read.
   """
   @spec community_agreement_satisfied?(String.t() | SignedAgreement.t() | nil) :: boolean()
-  def community_agreement_satisfied?(provider_id) when is_binary(provider_id) do
-    provider_id
-    |> get_latest_community_agreement()
-    |> CommunityGuidelines.agreement_satisfied?()
-  end
+  def community_agreement_satisfied?(provider_id) when is_binary(provider_id),
+    do: provider_id |> get_latest_community_agreement() |> CommunityGuidelines.agreement_satisfied?()
 
-  def community_agreement_satisfied?(agreement) do
-    CommunityGuidelines.agreement_satisfied?(agreement)
-  end
+  def community_agreement_satisfied?(agreement), do: CommunityGuidelines.agreement_satisfied?(agreement)
+
+  @doc "As `community_agreement_satisfied?/1`, for the staff Compliance Declaration (B5)."
+  @spec staff_attestation_satisfied?(String.t() | SignedAgreement.t() | nil) :: boolean()
+  def staff_attestation_satisfied?(provider_id) when is_binary(provider_id),
+    do: provider_id |> get_latest_staff_attestation() |> StaffAttestationPolicy.attestation_satisfied?()
+
+  def staff_attestation_satisfied?(agreement), do: StaffAttestationPolicy.attestation_satisfied?(agreement)
 
   @doc "Returns `true` when the given entity type's track includes the community-agreement step."
   @spec requires_community_agreement?(:individual | :business) :: boolean()
-  def requires_community_agreement?(entity_type) do
+  def requires_community_agreement?(entity_type), do: requires_signed_agreement?(entity_type, :community_agreement)
+
+  @doc "Returns `true` when the given entity type's track includes the staff-attestation step."
+  @spec requires_staff_attestation?(:individual | :business) :: boolean()
+  def requires_staff_attestation?(entity_type), do: requires_signed_agreement?(entity_type, :staff_attestation)
+
+  @spec requires_signed_agreement?(:individual | :business, SignedAgreement.kind()) :: boolean()
+  def requires_signed_agreement?(entity_type, kind) do
     entity_type
     |> track()
-    |> Enum.any?(&match?(%StepDefinition{completed_via: {:signed_agreement, :community_agreement}}, &1))
+    |> Enum.any?(&match?(%StepDefinition{completed_via: {:signed_agreement, ^kind}}, &1))
   end
 
   @doc "The Community Guidelines version currently in force."
   @spec current_community_guidelines_version() :: String.t()
-  def current_community_guidelines_version, do: CommunityGuidelines.current_version()
+  def current_community_guidelines_version, do: current_signed_agreement_version(:community_agreement)
+
+  @doc "The published version of the signed-agreement policy for `kind` (used at sign time)."
+  @spec current_signed_agreement_version(SignedAgreement.kind()) :: String.t()
+  def current_signed_agreement_version(:community_agreement), do: CommunityGuidelines.current_version()
+  def current_signed_agreement_version(:staff_attestation), do: StaffAttestationPolicy.current_version()
 
   # ── Stripe Identity (Slice 1) ──────────────────────────────────────────────
 

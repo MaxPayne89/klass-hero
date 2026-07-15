@@ -58,9 +58,44 @@ defmodule KlassHero.Provider.VettingTest do
   end
 
   describe "track/1 for :business" do
-    test "returns the business document steps in order" do
+    test "returns the five business steps in order: identity, docs, then the two agreements" do
       steps = Vetting.track(:business)
-      assert Enum.map(steps, & &1.key) == [:business_registration, :insurance]
+
+      assert Enum.map(steps, & &1.key) == [
+               :responsible_person_identity,
+               :business_registration,
+               :insurance,
+               :community_agreement,
+               :staff_attestation
+             ]
+    end
+
+    test "the responsible-person step is a Stripe step that auto-approves with no prerequisites" do
+      identity = Enum.find(Vetting.track(:business), &(&1.key == :responsible_person_identity))
+
+      assert identity.completed_via == {:stripe_identity}
+      assert identity.admin_review == false
+      assert identity.requires == []
+    end
+
+    test "registration and insurance are admin-reviewed document steps with no prerequisites" do
+      for key <- [:business_registration, :insurance] do
+        step = Enum.find(Vetting.track(:business), &(&1.key == key))
+
+        assert match?({:document, _}, step.completed_via)
+        assert step.admin_review == true
+        assert step.requires == []
+      end
+    end
+
+    test "both agreements auto-approve and require the responsible-person identity (ADR-0010)" do
+      for kind <- [:community_agreement, :staff_attestation] do
+        step = Enum.find(Vetting.track(:business), &(&1.key == kind))
+
+        assert step.completed_via == {:signed_agreement, kind}
+        assert step.admin_review == false
+        assert step.requires == [:responsible_person_identity]
+      end
     end
   end
 

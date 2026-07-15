@@ -88,6 +88,142 @@ defmodule KlassHero.Provider.ProviderProfileTest do
       assert {:error, errors} = ProviderProfile.new(attrs)
       assert "Categories must be a list" in errors
     end
+
+    test "returns error when entity_type is not one of the known tracks" do
+      attrs = %{
+        id: "550e8400-e29b-41d4-a716-446655440000",
+        identity_id: "uuid-123",
+        business_name: "My Business",
+        entity_type: :charity
+      }
+
+      assert {:error, errors} = ProviderProfile.new(attrs)
+      assert "entity_type must be :individual or :business" in errors
+    end
+  end
+
+  describe "responsible_person_change/3" do
+    # {stored_name, stored_role, submitted_name, submitted_role, expected}
+    @change_cases [
+      {nil, nil, "Jane Smith", "Owner", :set},
+      {"", "", "Jane Smith", "Owner", :set},
+      {"Jane Smith", "Owner", "Jane Smith", "Owner", :unchanged},
+      {"Jane Smith", "Owner", "Jane Smith ", "Owner", :unchanged},
+      {"Jane Smith", "Owner", " Jane  Smith ", "Owner", :unchanged},
+      {"Jane Smith", "Owner", "Jane Smtih", "Owner", :changed},
+      {"Jane Smith", "Owner", "Jane Smith", "Director", :changed}
+    ]
+
+    for {stored_name, stored_role, name, role, expected} <- @change_cases do
+      test "#{inspect({stored_name, stored_role})} vs #{inspect({name, role})} -> #{expected}" do
+        profile = %ProviderProfile{
+          responsible_person_name: unquote(stored_name),
+          responsible_person_role: unquote(stored_role)
+        }
+
+        assert ProviderProfile.responsible_person_change(profile, unquote(name), unquote(role)) ==
+                 unquote(expected)
+      end
+    end
+  end
+
+  describe "responsible_person_changeset/2" do
+    test "casts only the two responsible-person fields and requires both" do
+      changeset =
+        ProviderProfile.responsible_person_changeset(%ProviderProfile{}, %{
+          responsible_person_name: "Jane Smith",
+          responsible_person_role: "Owner",
+          business_name: "should be ignored"
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_name) == "Jane Smith"
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_role) == "Owner"
+      assert Ecto.Changeset.get_change(changeset, :business_name) == nil
+    end
+
+    test "normalizes stored whitespace" do
+      changeset =
+        ProviderProfile.responsible_person_changeset(%ProviderProfile{}, %{
+          responsible_person_name: " Jane  Smith ",
+          responsible_person_role: "  Owner "
+        })
+
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_name) == "Jane Smith"
+      assert Ecto.Changeset.get_change(changeset, :responsible_person_role) == "Owner"
+    end
+
+    test "requires both fields" do
+      changeset = ProviderProfile.responsible_person_changeset(%ProviderProfile{}, %{})
+
+      refute changeset.valid?
+      errors = errors_on(changeset)
+      assert "can't be blank" in errors.responsible_person_name
+      assert "can't be blank" in errors.responsible_person_role
+    end
+  end
+
+  describe "business_registration_changeset/2 (B2, sole mutator)" do
+    @valid_registration %{
+      legal_business_name: "Acme Kids GmbH",
+      registration_number: "HRB 12345",
+      registration_country: "DE"
+    }
+
+    test "casts only the three registration fields, ignoring anything else" do
+      changeset =
+        ProviderProfile.business_registration_changeset(
+          %ProviderProfile{},
+          Map.put(@valid_registration, :business_name, "should be ignored")
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :legal_business_name) == "Acme Kids GmbH"
+      assert Ecto.Changeset.get_change(changeset, :registration_number) == "HRB 12345"
+      assert Ecto.Changeset.get_change(changeset, :registration_country) == "DE"
+      assert Ecto.Changeset.get_change(changeset, :business_name) == nil
+    end
+
+    test "trims the legal name (collapsing internal runs) and the registration number" do
+      changeset =
+        ProviderProfile.business_registration_changeset(%ProviderProfile{}, %{
+          legal_business_name: "  Acme   Kids  GmbH ",
+          registration_number: "  HRB 12345 ",
+          registration_country: "DE"
+        })
+
+      assert Ecto.Changeset.get_change(changeset, :legal_business_name) == "Acme Kids GmbH"
+      assert Ecto.Changeset.get_change(changeset, :registration_number) == "HRB 12345"
+    end
+
+    test "requires all three fields" do
+      changeset = ProviderProfile.business_registration_changeset(%ProviderProfile{}, %{})
+
+      refute changeset.valid?
+      errors = errors_on(changeset)
+      assert "can't be blank" in errors.legal_business_name
+      assert "can't be blank" in errors.registration_number
+      assert "can't be blank" in errors.registration_country
+    end
+
+    # {country, valid?}
+    @country_cases [{"DE", true}, {"GB", true}, {"OTHER", true}, {"de", false}, {"US", false}, {"", false}]
+
+    for {country, valid?} <- @country_cases do
+      test "registration_country #{inspect(country)} valid?: #{valid?}" do
+        changeset =
+          ProviderProfile.business_registration_changeset(
+            %ProviderProfile{},
+            %{@valid_registration | registration_country: unquote(country)}
+          )
+
+        assert changeset.valid? == unquote(valid?)
+
+        if !unquote(valid?) do
+          assert Keyword.has_key?(changeset.errors, :registration_country)
+        end
+      end
+    end
   end
 
   describe "valid?/1" do

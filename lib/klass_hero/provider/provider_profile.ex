@@ -39,6 +39,11 @@ defmodule KlassHero.Provider.ProviderProfile do
     field :entity_type, Ecto.Enum, values: @entity_types, default: :individual
     field :business_name, :string
     field :business_owner_email, :string
+    field :responsible_person_name, :string
+    field :responsible_person_role, :string
+    field :legal_business_name, :string
+    field :registration_number, :string
+    field :registration_country, :string
     field :description, :string
     field :phone, :string
     field :website, :string
@@ -109,7 +114,7 @@ defmodule KlassHero.Provider.ProviderProfile do
   business_name, description, phone, website, address, categories.
   Logo URL is set programmatically after upload (not in this changeset).
   """
-  @completion_cast_fields ~w(business_name description phone website address categories)a
+  @completion_cast_fields ~w(business_name description phone website address categories entity_type)a
 
   def completion_changeset(schema, attrs) do
     schema
@@ -183,7 +188,99 @@ defmodule KlassHero.Provider.ProviderProfile do
     end
   end
 
+  @doc """
+  Narrow changeset for the Responsible Person (ADR-0010) — the ONLY path that may
+  write `responsible_person_name`/`responsible_person_role`.
+
+  These two fields are deliberately absent from every other changeset and from the
+  `@profile_persist_fields`/`@completion_fields` whitelists, so the dedicated
+  `set_responsible_person` command is their sole mutator. Values are normalized
+  (trimmed, internal whitespace collapsed) so a stray space never reads as a change.
+  """
+  @responsible_person_fields ~w(responsible_person_name responsible_person_role)a
+
+  def responsible_person_changeset(schema, attrs) do
+    schema
+    |> cast(attrs, @responsible_person_fields)
+    |> update_change(:responsible_person_name, &normalize_field/1)
+    |> update_change(:responsible_person_role, &normalize_field/1)
+    |> validate_required(@responsible_person_fields)
+  end
+
+  @doc """
+  Narrow changeset for business registration (B2, issue #956) — the ONLY path that may
+  write `legal_business_name`/`registration_number`/`registration_country`.
+
+  Like the responsible-person fields, these are deliberately absent from every other
+  changeset and whitelist, so the `submit_business_registration` command is their sole
+  mutator. `registration_country` is a curated string (`"DE" | "GB" | "OTHER"`, ADR-0011);
+  the legal name and number are trimmed. Unlike B1, a registration change carries no
+  `requires` edge and never resets vetting (ADR-0010).
+  """
+  @business_registration_fields ~w(legal_business_name registration_number registration_country)a
+  @registration_countries ~w(DE GB OTHER)
+
+  def business_registration_changeset(schema, attrs) do
+    schema
+    |> cast(attrs, @business_registration_fields)
+    |> update_change(:legal_business_name, &normalize_field/1)
+    |> update_change(:registration_number, &normalize_field/1)
+    |> validate_required(@business_registration_fields)
+    |> validate_inclusion(:registration_country, @registration_countries)
+  end
+
+  @doc "The curated set of registration-country codes B2 accepts."
+  @spec registration_countries() :: [String.t()]
+  def registration_countries, do: @registration_countries
+
   # ── Functional core (pure domain rules) ────────────────────────────────────
+
+  @doc """
+  Classifies a submitted `(name, role)` against the stored Responsible Person by
+  normalized exact match (ADR-0010). Pure — no persistence.
+
+  - both stored fields blank → `:set` (first capture)
+  - normalized-equal to stored → `:unchanged` (the typo-guard: a trailing/double
+    space must not nuke a passed identity check)
+  - otherwise → `:changed` (resets identity + cascades, per the command)
+  """
+  @spec responsible_person_change(t(), String.t() | nil, String.t() | nil) ::
+          :unchanged | :set | :changed
+  def responsible_person_change(%__MODULE__{} = profile, name, role) do
+    stored_name = normalize_field(profile.responsible_person_name)
+    stored_role = normalize_field(profile.responsible_person_role)
+    stored = {stored_name, stored_role}
+    submitted = {normalize_field(name), normalize_field(role)}
+
+    cond do
+      stored == {"", ""} -> :set
+      stored == submitted -> :unchanged
+      true -> :changed
+    end
+  end
+
+  @doc """
+  The natural person who signs an agreement on this profile's behalf. For a `:business`, the named
+  responsible person (legally accountable), or `nil` when none is on record; for an individual,
+  `nil` — they sign as themselves. Blank/whitespace-only names normalize to `nil` so callers can
+  treat "no signer on record" uniformly (the write path fails closed, the read path shows nothing).
+
+  Single source of truth for the "who signs" rule, consumed by both `SubmitSignedAgreement`
+  (enforcement) and the verification LiveView (display).
+  """
+  @spec agreement_signer_name(t()) :: String.t() | nil
+  def agreement_signer_name(%__MODULE__{entity_type: :business, responsible_person_name: name}) do
+    if normalize_field(name) != "", do: name
+  end
+
+  def agreement_signer_name(%__MODULE__{}), do: nil
+
+  # Trims ends and collapses internal whitespace runs to a single space. nil → "".
+  defp normalize_field(nil), do: ""
+
+  defp normalize_field(value) when is_binary(value) do
+    value |> String.trim() |> String.replace(~r/\s+/, " ")
+  end
 
   @doc """
   Builds and validates a provider profile struct from attrs.
@@ -257,7 +354,7 @@ defmodule KlassHero.Provider.ProviderProfile do
   - `{:error, :already_active}` if profile_status is not :draft
   - `{:error, [message]}` if validation fails
   """
-  @completion_fields ~w(business_name description phone website address logo_url categories)a
+  @completion_fields ~w(business_name description phone website address logo_url categories entity_type)a
 
   @spec complete_profile(t(), map()) :: {:ok, t()} | {:error, :already_active | [String.t()]}
   def complete_profile(%__MODULE__{profile_status: :draft} = profile, attrs) when is_map(attrs) do
@@ -292,6 +389,7 @@ defmodule KlassHero.Provider.ProviderProfile do
     |> validate_verified_at(profile.verified_at)
     |> validate_categories(profile.categories)
     |> validate_profile_status(profile.profile_status)
+    |> validate_entity_type(profile.entity_type)
     |> validate_business_owner_email(profile.business_owner_email)
   end
 
@@ -429,4 +527,7 @@ defmodule KlassHero.Provider.ProviderProfile do
 
   defp validate_profile_status(errors, status) when status in @profile_statuses, do: errors
   defp validate_profile_status(errors, _), do: ["profile_status must be :draft or :active" | errors]
+
+  defp validate_entity_type(errors, entity_type) when entity_type in @entity_types, do: errors
+  defp validate_entity_type(errors, _), do: ["entity_type must be :individual or :business" | errors]
 end
