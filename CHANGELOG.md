@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.0](https://github.com/MaxPayne89/klass-hero/compare/v0.57.0...v0.58.0) (2026-07-15)
+
+
+### Features
+
+* enforce one submission surface per vetting step in the domain ([#1099](https://github.com/MaxPayne89/klass-hero/issues/1099)) ([ca80225](https://github.com/MaxPayne89/klass-hero/commit/ca802251aaaa5180ff95519a409da3a9c8223410)), closes [#1091](https://github.com/MaxPayne89/klass-hero/issues/1091)
+
 ## [0.57.0](https://github.com/MaxPayne89/klass-hero/compare/v0.56.1...v0.57.0) (2026-07-15)
 
 
