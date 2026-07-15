@@ -21,6 +21,12 @@ as you and inherits `~/.fly/config.yml`, so **no headless token is needed**. See
    timer fires. Pointed at your primary working tree (which branch-switches), a scheduled sweep
    could run stale or unrelated code. Fix: a **dedicated worktree pinned to `main`** that
    self-updates each run.
+3. **No approver for tool prompts** — a headless `claude -p` can't ask a human to approve tools, so
+   every tool the loop touches must be pre-granted or it dead-ends mid-sweep. Inherited *credentials*
+   are not inherited *permissions*. The wrapper passes a **least-privilege `--allowedTools`** list —
+   exactly the loop's surface (`bin/prod-db` reads, `mcp__honeycomb__*`, `Read/Grep/Glob`,
+   `gh issue list`/`create`, `Write(.prod-watch/**)`, `PushNotification`). Anything else fails
+   closed by design; add to `ALLOWED_TOOLS` in `bin/prod-watch` only when the skill grows a new tool.
 
 ## Pinned worktree (the stable checkout the scheduler runs from)
 

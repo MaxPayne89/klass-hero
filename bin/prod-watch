@@ -45,7 +45,13 @@ if [[ "${1:-}" == "--check" ]]; then
   exit 0
 fi
 
+# Least-privilege allowlist: a headless `claude -p` has no human to approve tool prompts, so every
+# tool the loop uses must be pre-granted or it dead-ends. This is exactly the loop's surface — prod
+# reads (bin/prod-db), Honeycomb reads, code anchoring (Read/Grep/Glob), issue dedup+file (gh), the
+# watermark write (.prod-watch/), and the notify. Anything outside this list still fails closed.
+ALLOWED_TOOLS="Bash(bin/prod-db:*),Bash(./bin/prod-db:*),Bash(gh issue list:*),Bash(gh issue create:*),mcp__honeycomb__*,Read,Grep,Glob,Write(.prod-watch/**),PushNotification"
+
 # cd into the repo so `claude -p` discovers the project's .claude/skills/ — launchd starts jobs
 # with cwd=/, where the prod-watch skill is invisible.
 cd "$REPO_DIR"
-exec claude -p "/prod-watch"
+exec claude -p --allowedTools "$ALLOWED_TOOLS" "/prod-watch"
