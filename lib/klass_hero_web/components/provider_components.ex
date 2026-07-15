@@ -2480,6 +2480,10 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :version, :string, required: true, doc: "The current guidelines version"
   attr :form, :any, required: true, doc: "The agreement checkbox form"
 
+  attr :signer_name, :string,
+    default: nil,
+    doc: "For a business, the responsible person who signs on its behalf (B4); nil for an individual"
+
   def community_agreement_panel(assigns) do
     ~H"""
     <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
@@ -2543,6 +2547,19 @@ defmodule KlassHeroWeb.ProviderComponents do
             {gettext("Download the agreement (PDF)")}
           </.link>
         </div>
+
+        <p
+          :if={@signer_name}
+          id="agreement-signer"
+          class={[
+            "mt-4 p-3 border border-hero-grey-200 bg-hero-grey-50",
+            Theme.rounded(:lg),
+            Theme.typography(:body_small),
+            Theme.text_color(:body)
+          ]}
+        >
+          {gettext("Signing as %{name} on behalf of the business.", name: @signer_name)}
+        </p>
 
         <.form
           for={@form}

@@ -14,6 +14,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.VerificationDocument
   alias KlassHeroWeb.Presenters.VettingChecklistPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
@@ -401,6 +402,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
           satisfied?={@community_agreement_satisfied?}
           version={@community_guidelines_version}
           form={@agreement_form}
+          signer_name={ProviderProfile.agreement_signer_name(@current_scope.provider)}
         />
       </div>
     </div>

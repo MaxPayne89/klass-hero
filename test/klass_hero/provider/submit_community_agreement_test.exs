@@ -99,5 +99,44 @@ defmodule KlassHero.Provider.SubmitCommunityAgreementTest do
       assert Keyword.has_key?(errors, :signed_by_name)
       assert :not_started = agreement_step_status(provider.id)
     end
+
+    test "stamps the individual's entity_type on the agreement", %{provider: provider} do
+      assert {:ok, agreement} =
+               SubmitCommunityAgreement.execute(%{provider_id: provider.id, signed_by_name: "Lena"})
+
+      assert agreement.entity_type == :individual
+    end
+  end
+
+  describe "execute/1 — business track (B4)" do
+    setup do
+      provider = ProviderFixtures.provider_profile_fixture(entity_type: :business)
+      {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+      %{provider: provider}
+    end
+
+    test "signs as the responsible person, not the logged-in user, and stamps :business", %{provider: provider} do
+      assert {:ok, agreement} =
+               SubmitCommunityAgreement.execute(%{
+                 provider_id: provider.id,
+                 signed_by_name: "Logged-In Bystander"
+               })
+
+      assert agreement.signed_by_name == "Jane Smith"
+      assert agreement.entity_type == :business
+      assert :approved = agreement_step_status(provider.id)
+    end
+
+    test "fails closed when the business has no responsible person" do
+      provider = ProviderFixtures.provider_profile_fixture(entity_type: :business)
+
+      assert {:error, :missing_responsible_person} =
+               SubmitCommunityAgreement.execute(%{
+                 provider_id: provider.id,
+                 signed_by_name: "Anyone"
+               })
+
+      assert :not_started = agreement_step_status(provider.id)
+    end
   end
 end

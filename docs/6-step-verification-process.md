@@ -127,10 +127,17 @@ entity — **if the responsible person changes, B1 resets, and B4 + B5 reset wit
 - _Issue #957 (synchronous half); expiry re-flag follow-on relates #957 + #558._
 
 ### B4 — Community Standards Agreement (business)
-- Identical flow to Step 6, signed by the responsible person on behalf of the business.
-- **Data:** reuses `community_standards_agreements` with `agreed_by_name` (responsible person) and an
-  `entity_type` column so individual vs business agreements are distinguishable in reporting.
-- Resets if the responsible person changes.
+- Identical flow to Step 6, but signed **by the named responsible person** (captured in B1) on behalf
+  of the business — not by whoever is logged in. The signer rule is enforced in
+  `SubmitCommunityAgreement`, which fails closed if a business has no responsible person on record;
+  the agreement panel shows "Signing as {name} on behalf of the business" before confirmation.
+- **Data:** reuses the shared `signed_agreements` table (`kind: :community_agreement`,
+  `signed_by_name`), per ADR-0008's one-model-two-`kind`s decision — **not** a separate
+  `community_standards_agreements` table (that was the pre-engine spec). A nullable `entity_type`
+  column is snapshotted at sign time so individual vs business agreements are distinguishable in
+  reporting without a join to the (potentially drifting) live provider.
+- Resets if the responsible person changes — already wired: `community_agreement`
+  `requires: [:responsible_person_identity]`, so `set_responsible_person/3`'s reset cascade clears it.
 - _Issue #958._
 
 ### B5 — Staff vetting liability attestation

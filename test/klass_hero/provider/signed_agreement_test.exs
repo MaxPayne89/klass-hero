@@ -36,6 +36,15 @@ defmodule KlassHero.Provider.SignedAgreementTest do
                SignedAgreement.new(Map.put(base, :kind, :staff_attestation))
     end
 
+    test "leaves entity_type nil by default but stamps it when supplied" do
+      base = %{provider_id: Ecto.UUID.generate(), signed_by_name: "X", version: "1.0"}
+
+      assert {:ok, %{entity_type: nil}} = SignedAgreement.new(base)
+
+      assert {:ok, %{entity_type: :business}} =
+               SignedAgreement.new(Map.put(base, :entity_type, :business))
+    end
+
     test "rejects a missing or blank required field, one error keyed per field" do
       base = %{provider_id: Ecto.UUID.generate(), signed_by_name: "Lena", version: "1.0"}
 

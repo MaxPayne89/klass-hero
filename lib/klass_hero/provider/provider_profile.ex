@@ -259,6 +259,22 @@ defmodule KlassHero.Provider.ProviderProfile do
     end
   end
 
+  @doc """
+  The natural person who signs an agreement on this profile's behalf. For a `:business`, the named
+  responsible person (legally accountable), or `nil` when none is on record; for an individual,
+  `nil` — they sign as themselves. Blank/whitespace-only names normalize to `nil` so callers can
+  treat "no signer on record" uniformly (the write path fails closed, the read path shows nothing).
+
+  Single source of truth for the "who signs" rule, consumed by both `SubmitCommunityAgreement`
+  (enforcement) and the verification LiveView (display).
+  """
+  @spec agreement_signer_name(t()) :: String.t() | nil
+  def agreement_signer_name(%__MODULE__{entity_type: :business, responsible_person_name: name}) do
+    if normalize_field(name) != "", do: name
+  end
+
+  def agreement_signer_name(%__MODULE__{}), do: nil
+
   # Trims ends and collapses internal whitespace runs to a single space. nil → "".
   defp normalize_field(nil), do: ""
 

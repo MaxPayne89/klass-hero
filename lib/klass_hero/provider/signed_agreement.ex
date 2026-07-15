@@ -25,9 +25,11 @@ defmodule KlassHero.Provider.SignedAgreement do
   @timestamps_opts [type: :utc_datetime_usec]
 
   @kinds [:community_agreement, :staff_attestation]
+  @entity_types [:individual, :business]
 
   schema "signed_agreements" do
     field :kind, Ecto.Enum, values: @kinds, default: :community_agreement
+    field :entity_type, Ecto.Enum, values: @entity_types
     field :signed_by_name, :string
     field :signed_at, :utc_datetime_usec
     field :version, :string
@@ -41,12 +43,16 @@ defmodule KlassHero.Provider.SignedAgreement do
   end
 
   @type kind :: :community_agreement | :staff_attestation
+  @type entity_type :: :individual | :business
   @type t :: %__MODULE__{}
 
-  @doc "Insert changeset. `:id` and `:signed_at` are domain-provided by `new/1`."
+  @doc """
+  Insert changeset. `:id` and `:signed_at` are domain-provided by `new/1`. `:entity_type` is
+  optional — historical rows predate the column and stay valid with a null value.
+  """
   def changeset(%__MODULE__{} = agreement, attrs) do
     agreement
-    |> cast(attrs, ~w(id provider_id kind signed_by_name signed_at version)a)
+    |> cast(attrs, ~w(id provider_id kind entity_type signed_by_name signed_at version)a)
     |> validate_required(~w(provider_id kind signed_by_name signed_at version)a)
     |> foreign_key_constraint(:provider_id)
   end
@@ -67,6 +73,7 @@ defmodule KlassHero.Provider.SignedAgreement do
            id: Ecto.UUID.generate(),
            provider_id: attrs.provider_id,
            kind: Map.get(attrs, :kind, :community_agreement),
+           entity_type: Map.get(attrs, :entity_type),
            signed_by_name: String.trim(attrs.signed_by_name),
            signed_at: DateTime.utc_now() |> DateTime.truncate(:second),
            version: attrs.version

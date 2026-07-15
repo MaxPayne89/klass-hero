@@ -229,6 +229,32 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     end
   end
 
+  describe "community standards agreement (business track)" do
+    setup :log_in_business_provider
+
+    test "shows the responsible person as the signer on the panel", %{conn: conn, provider: provider} do
+      {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#agreement-signer", "Jane Smith")
+    end
+
+    test "signing records the responsible person, not the logged-in user, as the signatory",
+         %{conn: conn, provider: provider} do
+      {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      view
+      |> form("#community-agreement-form", %{agreement: %{agree: "true"}})
+      |> render_submit()
+
+      agreement = Provider.get_latest_community_agreement(provider.id)
+      assert agreement.signed_by_name == "Jane Smith"
+      assert agreement.entity_type == :business
+    end
+  end
+
   describe "responsible person (business track)" do
     setup :log_in_business_provider
 
