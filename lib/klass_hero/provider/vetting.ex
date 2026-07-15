@@ -42,7 +42,7 @@ defmodule KlassHero.Provider.Vetting do
     %StepDefinition{key: :identity, completed_via: {:stripe_identity}, admin_review: false},
     %StepDefinition{key: :experience, completed_via: {:document, "experience_validation"}, admin_review: true},
     %StepDefinition{key: :background, completed_via: {:document, "background_check"}, admin_review: true},
-    %StepDefinition{key: :video, completed_via: {:document, "video_screening"}, admin_review: true},
+    %StepDefinition{key: :video, completed_via: {:document, "video_screening"}, admin_review: true, dedicated: :widget},
     %StepDefinition{key: :safeguarding, completed_via: {:document, "safeguarding_certificate"}, admin_review: true},
     %StepDefinition{
       key: :community_agreement,
@@ -52,13 +52,24 @@ defmodule KlassHero.Provider.Vetting do
   ]
 
   @business_track [
-    %StepDefinition{key: :responsible_person_identity, completed_via: {:stripe_identity}, admin_review: false},
+    %StepDefinition{
+      key: :responsible_person_identity,
+      completed_via: {:stripe_identity},
+      admin_review: false,
+      dedicated: :widget
+    },
     %StepDefinition{
       key: :business_registration,
       completed_via: {:document, "business_registration"},
-      admin_review: true
+      admin_review: true,
+      dedicated: :command
     },
-    %StepDefinition{key: :insurance, completed_via: {:document, "insurance_certificate"}, admin_review: true},
+    %StepDefinition{
+      key: :insurance,
+      completed_via: {:document, "insurance_certificate"},
+      admin_review: true,
+      dedicated: :widget
+    },
     %StepDefinition{
       key: :community_agreement,
       completed_via: {:signed_agreement, :community_agreement},
@@ -341,7 +352,7 @@ defmodule KlassHero.Provider.Vetting do
     identity = latest_identity(provider_id)
 
     evidence = %{documents: documents, identity: identity}
-    step_views = Enum.map(case_.steps, &derive_step_view(&1, evidence))
+    step_views = Enum.map(case_.steps, &derive_step_view(&1, evidence, case_.entity_type))
 
     build_checklist(case_, step_views)
   end
@@ -397,7 +408,7 @@ defmodule KlassHero.Provider.Vetting do
   # wins, because the engine resets document/identity steps to `:not_started` on rejection and
   # discards the reason. Each `step_status/2` clause covers every shape its evidence can take,
   # including absent evidence (`nil`), which falls back to the step.
-  defp derive_step_view(%VerificationStep{} = step, evidence) do
+  defp derive_step_view(%VerificationStep{} = step, evidence, entity_type) do
     {ui_status, reason} = step_status(step, evidence)
 
     %VettingStepView{
@@ -405,8 +416,19 @@ defmodule KlassHero.Provider.Vetting do
       ui_status: ui_status,
       rejection_reason: reason,
       admin_review: step.admin_review,
-      completed_via: step.completed_via
+      completed_via: step.completed_via,
+      dedicated: dedicated_for_step_key(entity_type, step.key)
     }
+  end
+
+  # A step's `dedicated` marker, read from the current track catalog by key — static policy, so it
+  # is resolved at display time rather than frozen into the step (no migration). Drives the
+  # presenter's single dedicated-widget clause; defaults to false for a key absent from the track.
+  defp dedicated_for_step_key(entity_type, key) do
+    case Enum.find(track(entity_type), &(&1.key == key)) do
+      %StepDefinition{dedicated: dedicated} -> dedicated
+      nil -> false
+    end
   end
 
   defp step_status(%VerificationStep{status: :approved}, _evidence), do: {:approved, nil}
@@ -543,17 +565,35 @@ defmodule KlassHero.Provider.Vetting do
           {:ok, %{redirect_url: String.t()}} | {:error, term()}
   def create_identity_verification_session(provider_id, return_url)
       when is_binary(provider_id) and is_binary(return_url) do
-    with {:ok, %{session_id: session_id, url: url}} <-
+    # Fetch the case (and gate a business on its captured responsible person) BEFORE minting the
+    # Stripe session, so a rejected bypass never leaves an orphan session or IdentityVerification row.
+    with {:ok, case_} <- get_case_for_provider(provider_id),
+         :ok <- ensure_business_responsible_person(provider_id, case_),
+         {:ok, %{session_id: session_id, url: url}} <-
            StripeIdentity.create_session(%{provider_id: provider_id, return_url: return_url}),
          {:ok, _iv} <-
            create_identity_verification(
              IdentityVerification.new(%{provider_id: provider_id, stripe_session_id: session_id})
            ),
-         {:ok, case_} <- get_case_for_provider(provider_id),
          {:ok, key} <- fetch_identity_step_key(case_),
          {:ok, updated} <- VettingCase.submit_step(case_, key),
          {:ok, _} <- save_case(updated) do
       {:ok, %{redirect_url: url}}
+    end
+  end
+
+  # ADR-0010: a business's identity step verifies its Responsible Person, whose name must be
+  # captured (via set_responsible_person) first. The one legit surface,
+  # start_responsible_person_verification/4, sets the person before calling this; a direct
+  # "start_identity_verification" event on a business bypasses that — this gate fails it closed.
+  # Individuals verify themselves, so no responsible person is required.
+  defp ensure_business_responsible_person(_provider_id, %VettingCase{entity_type: :individual}), do: :ok
+
+  defp ensure_business_responsible_person(provider_id, %VettingCase{entity_type: :business}) do
+    with {:ok, profile} <- fetch_profile(provider_id) do
+      if ProviderProfile.responsible_person_captured?(profile),
+        do: :ok,
+        else: {:error, :responsible_person_required}
     end
   end
 

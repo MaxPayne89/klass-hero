@@ -126,6 +126,41 @@ defmodule KlassHero.Provider.VettingCaseTest do
     end
   end
 
+  describe "prerequisite gate (requires) — forward transitions" do
+    test "auto_approve_step refuses a step whose prerequisite is not approved" do
+      case_ = VettingCase.new_for_track(provider_id(), :business)
+
+      # staff_attestation requires :responsible_person_identity, which is still :not_started.
+      assert {:error, {:prerequisites_unmet, [:responsible_person_identity]}} =
+               VettingCase.auto_approve_step(case_, :staff_attestation, evidence_ref())
+    end
+
+    test "submit_step and approve_step are gated by the same prerequisite" do
+      case_ = VettingCase.new_for_track(provider_id(), :business)
+
+      assert {:error, {:prerequisites_unmet, [:responsible_person_identity]}} =
+               VettingCase.submit_step(case_, :community_agreement)
+
+      assert {:error, {:prerequisites_unmet, [:responsible_person_identity]}} =
+               VettingCase.approve_step(case_, :staff_attestation, reviewer_id(), evidence_ref())
+    end
+
+    test "the step advances once its prerequisite is approved" do
+      case0 = VettingCase.new_for_track(provider_id(), :business)
+      {:ok, case1} = VettingCase.auto_approve_step(case0, :responsible_person_identity, evidence_ref())
+
+      assert {:ok, case2} = VettingCase.auto_approve_step(case1, :staff_attestation, evidence_ref())
+      staff = Enum.find(case2.steps, &(&1.key == :staff_attestation))
+      assert staff.status == :approved
+    end
+
+    test "a step with no prerequisites is unaffected" do
+      case_ = VettingCase.new_for_track(provider_id(), :business)
+
+      assert {:ok, _} = VettingCase.auto_approve_step(case_, :responsible_person_identity, evidence_ref())
+    end
+  end
+
   defp approve_all(case_) do
     Enum.reduce(case_.steps, case_, fn step, acc ->
       {:ok, advanced} = VettingCase.approve_step(acc, step.key, reviewer_id(), evidence_ref())

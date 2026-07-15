@@ -108,7 +108,7 @@ defmodule KlassHero.ProviderTest do
     } do
       params = %{
         provider_profile_id: provider.id,
-        document_type: "business_registration",
+        document_type: "background_check",
         file_binary: "content",
         original_filename: "doc.pdf",
         storage_opts: [adapter: StubStorageAdapter, agent: storage]

@@ -24,6 +24,27 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
     test "uploads document and creates record", %{provider: provider, storage: storage} do
       params = %{
         provider_profile_id: provider.id,
+        document_type: "background_check",
+        file_binary: "pdf content here",
+        original_filename: "check.pdf",
+        content_type: "application/pdf",
+        storage_opts: [adapter: StubStorageAdapter, agent: storage]
+      }
+
+      assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
+      assert doc.provider_profile_id == provider.id
+      assert doc.document_type == :background_check
+      assert doc.status == :pending
+      assert doc.file_url =~ "verification-docs/providers/#{provider.id}"
+    end
+
+    test "rejects a command-dedicated type submitted via the generic path",
+         %{provider: provider, storage: storage} do
+      # business_registration must go through submit_business_registration/2, which captures the
+      # structured legal facts. The generic path would create a pending doc with none of them, so
+      # the domain rejects it before any storage upload — the invariant is no longer UI-only.
+      params = %{
+        provider_profile_id: provider.id,
         document_type: "business_registration",
         file_binary: "pdf content here",
         original_filename: "registration.pdf",
@@ -31,11 +52,10 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
       }
 
-      assert {:ok, doc} = KlassHero.Provider.submit_verification_document(params)
-      assert doc.provider_profile_id == provider.id
-      assert doc.document_type == :business_registration
-      assert doc.status == :pending
-      assert doc.file_url =~ "verification-docs/providers/#{provider.id}"
+      assert {:error, :dedicated_submission_required} =
+               KlassHero.Provider.submit_verification_document(params)
+
+      assert {:ok, []} = KlassHero.Provider.get_provider_verification_documents(provider.id)
     end
 
     test "stores file content in storage", %{provider: provider, storage: storage} do
@@ -89,9 +109,11 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
       assert :document_type in Keyword.keys(changeset.errors)
     end
 
-    test "accepts all valid document types", %{provider: provider, storage: storage} do
+    test "accepts all generic-submittable document types", %{provider: provider, storage: storage} do
+      # business_registration is command-dedicated — it has its own path and is rejected here
+      # (covered by the dedicated-command test above), so it is absent from this list.
       valid_types =
-        ~w(business_registration insurance_certificate id_document tax_certificate other
+        ~w(insurance_certificate id_document tax_certificate other
            experience_validation background_check video_screening safeguarding_certificate)
 
       for doc_type <- valid_types do
@@ -113,7 +135,7 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
 
     test "requires provider_profile_id", %{storage: storage} do
       params = %{
-        document_type: "business_registration",
+        document_type: "background_check",
         file_binary: "content",
         original_filename: "doc.pdf",
         content_type: "application/pdf",
@@ -127,7 +149,7 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
     test "requires file_binary", %{provider: provider, storage: storage} do
       params = %{
         provider_profile_id: provider.id,
-        document_type: "business_registration",
+        document_type: "background_check",
         original_filename: "doc.pdf",
         content_type: "application/pdf",
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
@@ -140,7 +162,7 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
     test "requires original_filename", %{provider: provider, storage: storage} do
       params = %{
         provider_profile_id: provider.id,
-        document_type: "business_registration",
+        document_type: "background_check",
         file_binary: "content",
         content_type: "application/pdf",
         storage_opts: [adapter: StubStorageAdapter, agent: storage]
@@ -153,7 +175,7 @@ defmodule KlassHero.Provider.Verification.SubmitVerificationDocumentTest do
     test "returns error when storage upload fails", %{provider: provider} do
       params = %{
         provider_profile_id: provider.id,
-        document_type: "business_registration",
+        document_type: "background_check",
         file_binary: "content",
         original_filename: "doc.pdf",
         storage_opts: [adapter: FailingStorageAdapter]

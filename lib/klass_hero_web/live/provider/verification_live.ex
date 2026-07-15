@@ -33,11 +33,10 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     end
 
     all_types = Provider.valid_document_types(provider.entity_type)
-    # video_screening, business_registration and insurance_certificate have dedicated widgets, so
-    # they are excluded from the generic document-upload select (a step must be submittable via
-    # exactly one surface).
-    generic_excluded = ~w(video_screening business_registration insurance_certificate)
-    doc_types = all_types |> Enum.reject(&(&1 in generic_excluded)) |> Enum.map(&String.to_existing_atom/1)
+    # The generic document-upload select offers only the steps with no dedicated surface. The
+    # exclusion is now single-sourced from the domain (StepDefinition's `dedicated` marker), so a
+    # step is submittable via exactly one surface as a domain fact, not a hand-maintained UI list.
+    doc_types = provider.entity_type |> Provider.generic_document_types() |> Enum.map(&String.to_existing_atom/1)
 
     socket =
       socket
@@ -377,7 +376,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
               </:actions>
               <:footer>
                 <%= cond do %>
-                  <% row.action_kind == :responsible_person -> %>
+                  <% row.action_kind == :responsible_person_identity -> %>
                     <.responsible_person_widget
                       identity_state={@identity_state}
                       failure_reason={@identity_failure_reason}

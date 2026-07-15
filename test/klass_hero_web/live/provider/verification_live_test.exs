@@ -8,6 +8,8 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
   alias KlassHero.Factory
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
+  alias KlassHero.Provider.Vetting
+  alias KlassHero.Provider.VettingCase
   alias KlassHero.ProviderFixtures
 
   setup :register_and_log_in_provider
@@ -19,6 +21,17 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     provider = Factory.insert(:provider_profile_schema, identity_id: user.id, entity_type: :business)
     scope = Scope.for_user(user) |> Scope.resolve_roles()
     %{conn: log_in_user(conn, user), user: user, scope: scope, provider: provider}
+  end
+
+  # Approves the responsible-person identity step — the domain prerequisite the business
+  # signed-agreement steps require before they can be signed.
+  defp approve_responsible_person_identity(provider_id) do
+    {:ok, case_} = Vetting.get_case_for_provider(provider_id)
+
+    {:ok, approved} =
+      VettingCase.auto_approve_step(case_, :responsible_person_identity, Ecto.UUID.generate())
+
+    {:ok, _} = Vetting.save_case(approved)
   end
 
   describe "onboarding checklist" do
@@ -169,6 +182,21 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
       assert has_element?(view, "#verification-docs", "experience.pdf")
     end
 
+    test "the generic doc-type select omits steps that have a dedicated surface", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      # The individual track's generic-submittable steps are offered...
+      for type <- ~w(experience_validation background_check safeguarding_certificate) do
+        assert has_element?(view, "#doc-type-select option[value=#{type}]")
+      end
+
+      # ...but video (dedicated video widget) and the business-only dedicated docs are not,
+      # driven now by the domain's `dedicated` marker rather than a hardcoded UI exclusion list.
+      for type <- ~w(video_screening business_registration insurance_certificate) do
+        refute has_element?(view, "#doc-type-select option[value=#{type}]")
+      end
+    end
+
     test "the individual track offers the dedicated video uploader", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/verification")
 
@@ -243,6 +271,8 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     test "signing records the responsible person, not the logged-in user, as the signatory",
          %{conn: conn, provider: provider} do
       {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+      # community_agreement requires :responsible_person_identity approved first (domain-enforced).
+      approve_responsible_person_identity(provider.id)
       {:ok, view, _html} = live(conn, ~p"/provider/verification")
 
       view
@@ -287,6 +317,8 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     test "signing records the responsible person and stamps the staff-attestation kind + :business",
          %{conn: conn, provider: provider} do
       {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+      # staff_attestation requires :responsible_person_identity approved first (domain-enforced).
+      approve_responsible_person_identity(provider.id)
       {:ok, view, _html} = live(conn, ~p"/provider/verification")
 
       view

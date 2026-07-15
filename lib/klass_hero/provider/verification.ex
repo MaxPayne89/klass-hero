@@ -35,11 +35,21 @@ defmodule KlassHero.Provider.Verification do
   """
   def submit_verification_document(params) do
     context_span entity: "verification_document" do
-      with :ok <- validate_verification_submission(params),
+      with :ok <- reject_dedicated_command(params[:document_type]),
+           :ok <- validate_verification_submission(params),
            {:ok, file_url} <- upload_document_file(params) do
         insert_verification_document(params, file_url)
       end
     end
+  end
+
+  # A type with a dedicated command (business registration) captures structured facts the generic
+  # path can't, so it must never be submitted here — enforced in the domain, not just the picker UI.
+  # The dedicated command itself calls insert_verification_document/2 directly, bypassing this guard.
+  defp reject_dedicated_command(document_type) do
+    if VerificationDocument.dedicated_command?(document_type),
+      do: {:error, :dedicated_submission_required},
+      else: :ok
   end
 
   @doc """
@@ -175,6 +185,9 @@ defmodule KlassHero.Provider.Verification do
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types, to: VerificationDocument
   defdelegate valid_document_types(entity_type), to: VerificationDocument
+
+  @doc "Returns the document types submittable through the generic picker for a track."
+  defdelegate generic_document_types(entity_type), to: VerificationDocument
 
   defp validate_verification_submission(params) do
     errors =

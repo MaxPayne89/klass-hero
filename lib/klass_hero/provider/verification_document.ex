@@ -91,13 +91,38 @@ defmodule KlassHero.Provider.VerificationDocument do
   catalog so a new document step is picked up automatically.
   """
   @spec valid_document_types(:individual | :business) :: [String.t()]
-  def valid_document_types(entity_type) do
-    entity_type
-    |> Vetting.track()
-    |> Enum.flat_map(fn
-      %{completed_via: {:document, type}} -> [type]
-      _ -> []
-    end)
+  def valid_document_types(entity_type), do: document_step_types(entity_type, fn _ -> true end)
+
+  @doc """
+  Returns the document types submittable through the generic document picker for the given
+  track — the document steps with no dedicated submission surface (`dedicated: false`), in
+  track order. The single source of truth for the picker, replacing the LiveView's former
+  hardcoded exclusion list.
+  """
+  @spec generic_document_types(:individual | :business) :: [String.t()]
+  def generic_document_types(entity_type), do: document_step_types(entity_type, &(&1.dedicated == false))
+
+  # Every document step's type for a track, in track order, kept by `keep?`. Single-sources the
+  # `Vetting.track/1 |> walk` shape shared by valid_document_types/1 and generic_document_types/1;
+  # the generator pattern skips non-document steps.
+  defp document_step_types(entity_type, keep?) do
+    for %{completed_via: {:document, type}} = step <- Vetting.track(entity_type),
+        keep?.(step),
+        do: type
+  end
+
+  @doc """
+  Whether the given document type has a dedicated *command* that captures extra structured
+  facts (e.g. business registration), so it must never be submitted through the generic
+  `Verification.submit_verification_document/1` path. Pure lookup across both tracks — no DB.
+  A `:widget`-dedicated type (insurance, video) returns `false`: it legitimately reuses the
+  generic command, it is merely absent from the picker.
+  """
+  @spec dedicated_command?(String.t()) :: boolean()
+  def dedicated_command?(document_type) do
+    [:individual, :business]
+    |> Enum.flat_map(&Vetting.track/1)
+    |> Enum.any?(&match?(%{completed_via: {:document, ^document_type}, dedicated: :command}, &1))
   end
 
   @doc """

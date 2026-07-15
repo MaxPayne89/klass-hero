@@ -167,6 +167,9 @@ defmodule KlassHero.Provider do
   @doc "Returns the valid verification document types for a track (`:individual` | `:business`)."
   defdelegate valid_document_types(entity_type), to: Verification
 
+  @doc "Returns the document types submittable through the generic picker for a track."
+  defdelegate generic_document_types(entity_type), to: Verification
+
   @doc "Returns the curated set of business registration-country codes (B2, ADR-0011)."
   defdelegate registration_countries, to: ProviderProfile
 

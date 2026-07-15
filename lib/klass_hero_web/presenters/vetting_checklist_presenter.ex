@@ -17,9 +17,9 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   @type action :: %{
           kind:
             :identity
-            | :responsible_person
-            | :business_registration
-            | :insurance
+            # a dedicated step's kind is its own step key (e.g. :responsible_person_identity,
+            # :business_registration, :insurance) — the LiveView renders the matching widget
+            | atom()
             | :navigate_documents
             | :navigate_agreement
             | :none,
@@ -149,18 +149,14 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   awaiting review).
   """
   @spec action(VettingStepView.t()) :: action()
-  # The business identity step captures a Responsible Person first (ADR-0010) — its own widget,
-  # distinct from the individual bare-identity widget. Keyed above the generic stripe_identity clause.
-  def action(%VettingStepView{key: :responsible_person_identity}), do: %{kind: :responsible_person, label: nil}
-
-  # Business registration (B2) captures structured fields + document in a dedicated widget that
-  # renders in every state, so it forks above the generic document and :none clauses.
-  def action(%VettingStepView{key: :business_registration}), do: %{kind: :business_registration, label: nil}
-
-  # Insurance (B3) captures the certificate + its policy expiry date in a dedicated widget that
-  # renders in every state (like business registration), so it forks above the generic document
-  # clause that would otherwise deep-link it to the shared documents panel.
-  def action(%VettingStepView{key: :insurance}), do: %{kind: :insurance, label: nil}
+  # A step with a dedicated submission surface (`dedicated: :widget | :command`) renders its own
+  # inline widget in EVERY state, keyed by its step key. One marker-driven clause replaces the former
+  # per-key forks (responsible-person, business registration, insurance): the `dedicated` marker is
+  # single-sourced from the track (StepDefinition), so a new dedicated step needs no clause here —
+  # only the marker and its LiveView widget branch. Kept above the generic :none / :navigate_* clauses.
+  def action(%VettingStepView{key: key, dedicated: dedicated}) when dedicated != false do
+    %{kind: key, label: nil}
+  end
 
   def action(%VettingStepView{completed_via: {:stripe_identity}}), do: %{kind: :identity, label: nil}
 

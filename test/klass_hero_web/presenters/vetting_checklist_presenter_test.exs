@@ -36,61 +36,50 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenterTest do
     end
   end
 
-  describe "action/1 forks the two stripe-identity steps" do
-    test "the business responsible-person step gets its own :responsible_person action" do
-      step = %VettingStepView{
-        key: :responsible_person_identity,
-        completed_via: {:stripe_identity},
-        ui_status: :not_started
-      }
+  describe "action/1 — a dedicated step uses its step key as the action kind" do
+    # {key, completed_via, dedicated}. One marker-driven clause replaces the former per-key forks:
+    # any step with a dedicated surface renders its own inline widget (keyed by step key) in EVERY
+    # state, ahead of the generic :none / :navigate_* clauses.
+    @dedicated_cases [
+      {:responsible_person_identity, {:stripe_identity}, :widget},
+      {:business_registration, {:document, "business_registration"}, :command},
+      {:insurance, {:document, "insurance_certificate"}, :widget}
+    ]
 
-      assert %{kind: :responsible_person} = Presenter.action(step)
-    end
+    for {key, completed_via, dedicated} <- @dedicated_cases,
+        status <- [:not_started, :submitted, :approved, :rejected] do
+      test "#{key} (dedicated #{dedicated}) keeps its :#{key} action when #{status}" do
+        step = %VettingStepView{
+          key: unquote(key),
+          completed_via: unquote(Macro.escape(completed_via)),
+          dedicated: unquote(dedicated),
+          ui_status: unquote(status)
+        }
 
-    test "the individual identity step keeps the bare :identity action" do
-      step = %VettingStepView{key: :identity, completed_via: {:stripe_identity}, ui_status: :not_started}
-
-      assert %{kind: :identity} = Presenter.action(step)
+        assert %{kind: unquote(key)} = Presenter.action(step),
+               "dedicated #{unquote(key)} when #{unquote(status)} should key its own widget"
+      end
     end
   end
 
-  describe "action/1 forks the business-registration step to its own widget" do
-    # The dedicated widget must render in every state (it shows the stored fields when
-    # submitted/approved), so the fork wins even over the :none (approved/submitted) clause.
-    for status <- [:not_started, :submitted, :approved, :rejected] do
-      test "business_registration keeps its :business_registration action when #{status}" do
+  describe "action/1 — a non-dedicated step uses the generic clauses" do
+    # {key, completed_via, expected_kind}
+    @generic_cases [
+      {:identity, {:stripe_identity}, :identity},
+      {:background, {:document, "background_check"}, :navigate_documents},
+      {:community_agreement, {:signed_agreement, :community_agreement}, :navigate_agreement}
+    ]
+
+    for {key, completed_via, expected} <- @generic_cases do
+      test "#{key} (not dedicated) routes to :#{expected}" do
         step = %VettingStepView{
-          key: :business_registration,
-          completed_via: {:document, "business_registration"},
-          ui_status: unquote(status)
+          key: unquote(key),
+          completed_via: unquote(Macro.escape(completed_via)),
+          ui_status: :not_started
         }
 
-        assert %{kind: :business_registration} = Presenter.action(step)
+        assert %{kind: unquote(expected)} = Presenter.action(step)
       end
-    end
-
-    # Insurance (B3) also forks to a dedicated widget — same reasoning: it renders in every
-    # state to carry the expiry date and its warning.
-    for status <- [:not_started, :submitted, :approved, :rejected] do
-      test "insurance keeps its :insurance action when #{status}" do
-        step = %VettingStepView{
-          key: :insurance,
-          completed_via: {:document, "insurance_certificate"},
-          ui_status: unquote(status)
-        }
-
-        assert %{kind: :insurance} = Presenter.action(step)
-      end
-    end
-
-    test "a plain document step still routes to the generic :navigate_documents action" do
-      step = %VettingStepView{
-        key: :background,
-        completed_via: {:document, "background_check"},
-        ui_status: :not_started
-      }
-
-      assert %{kind: :navigate_documents} = Presenter.action(step)
     end
   end
 end
