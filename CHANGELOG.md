@@ -5,6 +5,29 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.57.0](https://github.com/MaxPayne89/klass-hero/compare/v0.56.1...v0.57.0) (2026-07-15)
+
+
+### Features
+
+* add prod-watch proactive prod-issue loop ([#1092](https://github.com/MaxPayne89/klass-hero/issues/1092)) ([d06d238](https://github.com/MaxPayne89/klass-hero/commit/d06d238f565e1375081dafd279ee9c9f23f02086))
+* capture all traces (sampling 1.0) and add Fly host-metrics runbook ([#1090](https://github.com/MaxPayne89/klass-hero/issues/1090)) ([667eb98](https://github.com/MaxPayne89/klass-hero/commit/667eb9886af60efcc3981f7d525854e9f81f1270))
+* grant prod-watch a least-privilege headless allowlist ([#1094](https://github.com/MaxPayne89/klass-hero/issues/1094)) ([aa7c4e0](https://github.com/MaxPayne89/klass-hero/commit/aa7c4e0182a67d2e8639c36f6695fbff5da4365d))
+
+
+### Bug Fixes
+
+* feed prod-watch prompt via stdin so --allowedTools doesn't eat it ([#1095](https://github.com/MaxPayne89/klass-hero/issues/1095)) ([ad03b3a](https://github.com/MaxPayne89/klass-hero/commit/ad03b3aa8b5185d063bc947d39e60613f21401d5))
+* pin prod-watch scheduler to a self-updating worktree ([#1093](https://github.com/MaxPayne89/klass-hero/issues/1093)) ([505c5d0](https://github.com/MaxPayne89/klass-hero/commit/505c5d0e2cc8827482e8b1ba1318927cceb509dd))
+
+
+### Code Refactoring
+
+* cut vetting save_case/1 to N+1 writes, 0 reads ([#1068](https://github.com/MaxPayne89/klass-hero/issues/1068)) ([#1088](https://github.com/MaxPayne89/klass-hero/issues/1088)) ([ffb0ca7](https://github.com/MaxPayne89/klass-hero/commit/ffb0ca77f736bb7e62f351a29d23554766a07bfb))
+* deduplicate provider vetting step list ([#1079](https://github.com/MaxPayne89/klass-hero/issues/1079)) ([#1087](https://github.com/MaxPayne89/klass-hero/issues/1087)) ([972270d](https://github.com/MaxPayne89/klass-hero/commit/972270dec32f409346099b8d2be66856e8bcfd0a))
+* in-memory dedup of confirmed enrollment in provider dashboard ([#1081](https://github.com/MaxPayne89/klass-hero/issues/1081)) ([59b33a3](https://github.com/MaxPayne89/klass-hero/commit/59b33a34c5876645a3854f9bc82fa6efda216e99)), closes [#871](https://github.com/MaxPayne89/klass-hero/issues/871)
+* prod-watch wrapper owns state I/O, agent is pure compute ([#1096](https://github.com/MaxPayne89/klass-hero/issues/1096)) ([7c7356b](https://github.com/MaxPayne89/klass-hero/commit/7c7356b564a8e709a6cde40b6a52dfa420670134))
+
 ## [0.56.1](https://github.com/MaxPayne89/klass-hero/compare/v0.56.0...v0.56.1) (2026-07-11)
 
 
