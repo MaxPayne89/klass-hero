@@ -17,9 +17,10 @@ defmodule KlassHero.Provider.VettingStepView do
           ui_status: ui_status(),
           rejection_reason: String.t() | nil,
           admin_review: boolean(),
-          completed_via: tuple()
+          completed_via: tuple(),
+          dedicated: false | :widget | :command
         }
 
   @enforce_keys [:key, :ui_status, :completed_via]
-  defstruct [:key, :ui_status, :rejection_reason, :completed_via, admin_review: false]
+  defstruct [:key, :ui_status, :rejection_reason, :completed_via, admin_review: false, dedicated: false]
 end

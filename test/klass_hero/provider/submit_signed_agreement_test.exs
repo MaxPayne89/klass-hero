@@ -41,6 +41,15 @@ defmodule KlassHero.Provider.SubmitSignedAgreementTest do
     Enum.find(case_.steps, &(&1.key == step_key)).status
   end
 
+  # Approves the responsible-person identity step and persists the case — the prerequisite both
+  # business signed-agreement steps declare (`requires: [:responsible_person_identity]`), now
+  # enforced in the domain, so a business agreement can only be signed once identity has passed.
+  defp approve_responsible_person_identity(provider_id) do
+    {:ok, case_} = Vetting.get_case_for_provider(provider_id)
+    {:ok, approved} = VettingCase.auto_approve_step(case_, :responsible_person_identity, Ecto.UUID.generate())
+    {:ok, _} = Vetting.save_case(approved)
+  end
+
   # Approves every individual-track step except community_agreement (the four document steps and
   # identity), leaving the agreement as the last step to verify.
   defp approve_all_but_agreement(provider_id) do
@@ -143,6 +152,9 @@ defmodule KlassHero.Provider.SubmitSignedAgreementTest do
 
     test "signs each business agreement as the responsible person, stamping kind + version + :business",
          %{provider: provider} do
+      # Both agreements require the responsible-person identity step to be approved first.
+      approve_responsible_person_identity(provider.id)
+
       for {kind, version} <- @business_kinds do
         assert {:ok, agreement} =
                  SubmitSignedAgreement.execute(%{
@@ -157,6 +169,25 @@ defmodule KlassHero.Provider.SubmitSignedAgreementTest do
         assert agreement.signed_by_name == "Jane Smith", "signer for #{kind}"
         assert agreement.entity_type == :business, "entity_type for #{kind}"
         assert :approved = step_status(provider.id, kind)
+      end
+    end
+
+    test "refuses to sign before the responsible-person identity is approved, persisting no evidence",
+         %{provider: provider} do
+      # Responsible person is captured (setup) but identity is NOT yet approved — the prerequisite
+      # both business agreements declare. The gate must reject BEFORE any SignedAgreement is written,
+      # so no orphan consent row is left behind.
+      for {kind, _version} <- @business_kinds do
+        assert {:error, {:prerequisites_unmet, [:responsible_person_identity]}} =
+                 SubmitSignedAgreement.execute(%{
+                   kind: kind,
+                   provider_id: provider.id,
+                   signed_by_name: "Jane Smith"
+                 }),
+               "expected #{kind} to be blocked by its prerequisite"
+
+        assert Vetting.get_latest_signed_agreement(provider.id, kind) == nil, "no #{kind} row persisted"
+        assert :not_started = step_status(provider.id, kind)
       end
     end
 

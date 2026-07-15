@@ -260,6 +260,18 @@ defmodule KlassHero.Provider.ProviderProfile do
   end
 
   @doc """
+  Whether this profile has a Responsible Person on record — the domain precondition for starting a
+  business's Stripe Identity session (ADR-0010: "name capture is mandatory before identity"). Pure,
+  normalized (whitespace-only counts as blank). Consumed by
+  `Vetting.create_identity_verification_session/2`'s business gate.
+  """
+  @spec responsible_person_captured?(t()) :: boolean()
+  def responsible_person_captured?(%__MODULE__{} = profile) do
+    normalize_field(profile.responsible_person_name) != "" and
+      normalize_field(profile.responsible_person_role) != ""
+  end
+
+  @doc """
   The natural person who signs an agreement on this profile's behalf. For a `:business`, the named
   responsible person (legally accountable), or `nil` when none is on record; for an individual,
   `nil` — they sign as themselves. Blank/whitespace-only names normalize to `nil` so callers can

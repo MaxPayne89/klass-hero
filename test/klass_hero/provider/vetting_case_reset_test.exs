@@ -26,10 +26,20 @@ defmodule KlassHero.Provider.VettingCaseResetTest do
     %VettingCase{id: case_id, provider_id: Ecto.UUID.generate(), entity_type: :business, steps: steps}
   end
 
+  # Approves every step, respecting the forward `requires` gate: one pass per step is enough
+  # passes to satisfy any prerequisite chain regardless of the fixtures' listing order (some
+  # tests deliberately list dependents before their prerequisites). Already-approved steps
+  # re-approve idempotently; steps still blocked this pass are picked up on a later one.
   defp approve_all(case_) do
+    Enum.reduce(case_.steps, case_, fn _pass, acc -> approve_eligible(acc) end)
+  end
+
+  defp approve_eligible(case_) do
     Enum.reduce(case_.steps, case_, fn step, acc ->
-      {:ok, advanced} = VettingCase.approve_step(acc, step.key, Ecto.UUID.generate(), Ecto.UUID.generate())
-      advanced
+      case VettingCase.approve_step(acc, step.key, Ecto.UUID.generate(), Ecto.UUID.generate()) do
+        {:ok, advanced} -> advanced
+        {:error, {:prerequisites_unmet, _}} -> acc
+      end
     end)
   end
 

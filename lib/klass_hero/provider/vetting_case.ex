@@ -102,7 +102,8 @@ defmodule KlassHero.Provider.VettingCase do
     if VerificationStep.approved?(step) do
       {:ok, case_}
     else
-      with {:ok, submitted} <- ensure_submitted(step),
+      with :ok <- ensure_prerequisites_met(case_, step),
+           {:ok, submitted} <- ensure_submitted(step),
            {:ok, approved} <- VerificationStep.approve(submitted, reviewer_id, evidence_ref) do
         {:ok, case_ |> replace_step(approved) |> recompute()}
       end
@@ -128,7 +129,8 @@ defmodule KlassHero.Provider.VettingCase do
   end
 
   defp apply_auto_approve(case_, step, evidence_ref) do
-    with {:ok, approved} <- VerificationStep.auto_approve(step, evidence_ref) do
+    with :ok <- ensure_prerequisites_met(case_, step),
+         {:ok, approved} <- VerificationStep.auto_approve(step, evidence_ref) do
       {:ok, case_ |> replace_step(approved) |> recompute()}
     end
   end
@@ -170,6 +172,7 @@ defmodule KlassHero.Provider.VettingCase do
   @spec submit_step(t(), atom()) :: {:ok, t()} | {:error, term()}
   def submit_step(%__MODULE__{} = case_, key) do
     with {:ok, step} <- fetch_step(case_, key),
+         :ok <- ensure_prerequisites_met(case_, step),
          {:ok, submitted} <- VerificationStep.submit(step) do
       {:ok, case_ |> replace_step(submitted) |> recompute()}
     end
@@ -258,6 +261,25 @@ defmodule KlassHero.Provider.VettingCase do
 
   defp ensure_submitted(%VerificationStep{status: :submitted} = step), do: {:ok, step}
   defp ensure_submitted(%VerificationStep{} = step), do: VerificationStep.submit(step)
+
+  # A step may only move forward (submit/approve/auto-approve) once every key in its `requires` is
+  # approved. This is the forward-direction enforcement of the prerequisite graph — the mirror of
+  # reset_step/2's reverse closure — so UI ordering (hide the widget until the prerequisite passes)
+  # becomes a domain guarantee rather than a UI-only fact. An already-approved step short-circuits
+  # before this guard, so idempotent re-approval is never blocked.
+  defp ensure_prerequisites_met(%__MODULE__{} = case_, %VerificationStep{requires: requires}) do
+    case Enum.reject(requires, &prerequisite_approved?(case_, &1)) do
+      [] -> :ok
+      unmet -> {:error, {:prerequisites_unmet, unmet}}
+    end
+  end
+
+  defp prerequisite_approved?(case_, key) do
+    case fetch_step(case_, key) do
+      {:ok, step} -> VerificationStep.approved?(step)
+      {:error, _} -> false
+    end
+  end
 
   defp replace_step(%__MODULE__{steps: steps} = case_, %VerificationStep{key: key} = updated) do
     %{case_ | steps: Enum.map(steps, fn step -> if step.key == key, do: updated, else: step end)}

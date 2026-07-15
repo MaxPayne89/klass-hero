@@ -147,4 +147,47 @@ defmodule KlassHero.Provider.SetResponsiblePersonTest do
       assert :submitted = step_status(provider.id, :responsible_person_identity)
     end
   end
+
+  describe "create_identity_verification_session/2 business gate (ADR-0010)" do
+    setup do
+      Req.Test.stub(StripeIdentity, fn conn ->
+        Req.Test.json(conn, %{
+          "id" => "vs_gate",
+          "url" => "https://verify.stripe.com/start/vs_gate",
+          "status" => "requires_input"
+        })
+      end)
+
+      :ok
+    end
+
+    test "rejects a business with no responsible person, minting no session or record",
+         %{provider: provider} do
+      # The direct "start_identity_verification" bypass: no set_responsible_person first.
+      assert {:error, :responsible_person_required} =
+               Provider.create_identity_verification_session(provider.id, @return_url)
+
+      # Fails closed BEFORE Stripe — no orphan IdentityVerification, step untouched.
+      assert {:error, :not_found} = Provider.get_latest_identity_verification(provider.id)
+      assert :not_started = step_status(provider.id, :responsible_person_identity)
+    end
+
+    test "starts once the responsible person is captured", %{provider: provider} do
+      {:ok, :set} = Vetting.set_responsible_person(provider.id, "Jane Smith", "Owner")
+
+      assert {:ok, %{redirect_url: "https://verify.stripe.com/start/vs_gate"}} =
+               Provider.create_identity_verification_session(provider.id, @return_url)
+
+      assert :submitted = step_status(provider.id, :responsible_person_identity)
+    end
+
+    test "an individual needs no responsible person", %{} do
+      individual = ProviderFixtures.provider_profile_fixture(entity_type: "individual")
+
+      assert {:ok, %{redirect_url: "https://verify.stripe.com/start/vs_gate"}} =
+               Provider.create_identity_verification_session(individual.id, @return_url)
+
+      assert :submitted = step_status(individual.id, :identity)
+    end
+  end
 end

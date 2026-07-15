@@ -127,6 +127,33 @@ defmodule KlassHero.Provider.ProviderProfileTest do
     end
   end
 
+  describe "responsible_person_captured?/1" do
+    # {name, role, expected} — "captured" gates the business identity session (ADR-0010):
+    # name capture is mandatory before identity. Whitespace-only normalizes to blank.
+    @captured_cases [
+      {"Jane Smith", "Owner", true},
+      {nil, nil, false},
+      {"", "", false},
+      {"Jane Smith", nil, false},
+      {"Jane Smith", "", false},
+      {nil, "Owner", false},
+      {"   ", "Owner", false},
+      {"Jane Smith", "   ", false}
+    ]
+
+    for {name, role, expected} <- @captured_cases do
+      test "#{inspect({name, role})} -> #{expected}" do
+        profile = %ProviderProfile{
+          responsible_person_name: unquote(name),
+          responsible_person_role: unquote(role)
+        }
+
+        assert ProviderProfile.responsible_person_captured?(profile) == unquote(expected),
+               "responsible_person_captured? for #{inspect({unquote(name), unquote(role)})}"
+      end
+    end
+  end
+
   describe "responsible_person_changeset/2" do
     test "casts only the two responsible-person fields and requires both" do
       changeset =
