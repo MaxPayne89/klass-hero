@@ -255,6 +255,52 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
     end
   end
 
+  describe "staff compliance declaration (business track)" do
+    setup :log_in_business_provider
+
+    test "renders the provisional declaration and attestation form for a business", %{conn: conn, provider: provider} do
+      {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#staff-attestation-form")
+      assert has_element?(view, "#staff-attestation-declaration")
+      assert has_element?(view, "#submit-attestation-btn")
+      assert render(view) =~ "Provisional text"
+    end
+
+    test "each agreement checklist action anchors to its own in-page form", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#vetting-action-community_agreement[href*='community-agreement-form']")
+      assert has_element?(view, "#vetting-action-staff_attestation[href*='staff-attestation-form']")
+    end
+
+    test "shows the responsible person as the signer on the panel", %{conn: conn, provider: provider} do
+      {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      assert has_element?(view, "#attestation-signer", "Jane Smith")
+    end
+
+    test "signing records the responsible person and stamps the staff-attestation kind + :business",
+         %{conn: conn, provider: provider} do
+      {:ok, :set} = Provider.set_responsible_person(provider.id, "Jane Smith", "Owner")
+      {:ok, view, _html} = live(conn, ~p"/provider/verification")
+
+      view
+      |> form("#staff-attestation-form", %{attestation: %{agree: "true"}})
+      |> render_submit()
+
+      attestation = Provider.get_latest_staff_attestation(provider.id)
+      assert attestation.kind == :staff_attestation
+      assert attestation.signed_by_name == "Jane Smith"
+      assert attestation.entity_type == :business
+      assert render(view) =~ "You have signed the Staff Compliance Declaration"
+    end
+  end
+
   describe "responsible person (business track)" do
     setup :log_in_business_provider
 

@@ -58,6 +58,8 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       |> allow_upload(:insurance_doc, accept: ~w(.pdf .jpg .jpeg .png), max_entries: 1, max_file_size: 10_000_000)
       |> assign(community_agreement?: Provider.requires_community_agreement?(provider.entity_type))
       |> assign(agreement_form: to_form(%{"agree" => "false"}, as: :agreement))
+      |> assign(staff_attestation?: Provider.requires_staff_attestation?(provider.entity_type))
+      |> assign(attestation_form: to_form(%{"agree" => "false"}, as: :attestation))
       |> assign(responsible_person_form: responsible_person_form(provider))
       |> assign(business_registration_form: business_registration_form(provider))
       |> assign(insurance_form: to_form(%{"expiry_date" => ""}, as: :insurance))
@@ -159,29 +161,32 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   end
 
   def handle_event("submit_community_agreement", %{"agreement" => %{"agree" => "true"}}, socket) do
-    provider = socket.assigns.current_scope.provider
-    signed_by_name = socket.assigns.current_scope.user.name
-
-    case Provider.submit_community_agreement(%{provider_id: provider.id, signed_by_name: signed_by_name}) do
-      {:ok, _agreement} ->
-        {:noreply,
-         socket
-         |> assign_verification_state(provider.id)
-         |> put_flash(:info, gettext("Thanks — your agreement to the Community Guidelines has been recorded."))}
-
-      {:error, reason} ->
-        Logger.error("[VerificationLive.submit_community_agreement] failed",
-          provider_id: provider.id,
-          reason: inspect(reason)
-        )
-
-        {:noreply, put_flash(socket, :error, gettext("Couldn't record your agreement. Please try again."))}
-    end
+    submit_signed_agreement(
+      socket,
+      &Provider.submit_community_agreement/1,
+      gettext("Thanks — your agreement to the Community Guidelines has been recorded."),
+      gettext("Couldn't record your agreement. Please try again."),
+      "submit_community_agreement"
+    )
   end
 
   def handle_event("submit_community_agreement", _params, socket) do
     {:noreply,
      put_flash(socket, :error, gettext("Please confirm you have read and agree to the Community Guidelines."))}
+  end
+
+  def handle_event("submit_staff_attestation", %{"attestation" => %{"agree" => "true"}}, socket) do
+    submit_signed_agreement(
+      socket,
+      &Provider.submit_staff_attestation/1,
+      gettext("Thanks — your Staff Compliance Declaration has been recorded."),
+      gettext("Couldn't record your declaration. Please try again."),
+      "submit_staff_attestation"
+    )
+  end
+
+  def handle_event("submit_staff_attestation", _params, socket) do
+    {:noreply, put_flash(socket, :error, gettext("Please confirm the declaration before signing."))}
   end
 
   @impl true
@@ -256,10 +261,31 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     docs
   end
 
+  # Shared body for the two signed-agreement submit handlers (community agreement, staff
+  # attestation): sign via the kind-specific command, then refresh state + flash. Only the command,
+  # the two messages, and the log tag differ between them.
+  defp submit_signed_agreement(socket, submit_fun, success_msg, failure_msg, log_tag) do
+    provider = socket.assigns.current_scope.provider
+    signed_by_name = socket.assigns.current_scope.user.name
+
+    case submit_fun.(%{provider_id: provider.id, signed_by_name: signed_by_name}) do
+      {:ok, _} ->
+        {:noreply,
+         socket
+         |> assign_verification_state(provider.id)
+         |> put_flash(:info, success_msg)}
+
+      {:error, reason} ->
+        Logger.error("[VerificationLive.#{log_tag}] failed", provider_id: provider.id, reason: inspect(reason))
+        {:noreply, put_flash(socket, :error, failure_msg)}
+    end
+  end
+
   # Assembles the checklist + identity widget state in one read pass.
   defp assign_verification_state(socket, provider_id) do
     {state, failure_reason} = identity_state(provider_id)
     agreement = Provider.get_latest_community_agreement(provider_id)
+    attestation = Provider.get_latest_staff_attestation(provider_id)
 
     socket
     |> assign(vetting_checklist: Provider.get_vetting_checklist(provider_id))
@@ -267,6 +293,8 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
     |> assign(community_agreement: agreement)
     |> assign(community_agreement_satisfied?: Provider.community_agreement_satisfied?(agreement))
     |> assign(community_guidelines_version: Provider.current_community_guidelines_version())
+    |> assign(staff_attestation: attestation)
+    |> assign(staff_attestation_satisfied?: Provider.staff_attestation_satisfied?(attestation))
   end
 
   # Derives the 4-state widget status from the latest identity record. Once a session leaves
@@ -335,7 +363,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
                   <% :navigate_agreement -> %>
                     <.link
                       id={"vetting-action-#{row.key}"}
-                      href="#community-agreement-form"
+                      href={row.action_anchor}
                       class={[
                         "inline-flex items-center px-3 py-1.5 text-sm font-semibold",
                         Theme.rounded(:md),
@@ -402,6 +430,15 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
           satisfied?={@community_agreement_satisfied?}
           version={@community_guidelines_version}
           form={@agreement_form}
+          signer_name={ProviderProfile.agreement_signer_name(@current_scope.provider)}
+        />
+      </div>
+
+      <div :if={@staff_attestation?} class="max-w-xl mx-auto p-4 md:p-6 pt-0">
+        <.staff_attestation_panel
+          attestation={@staff_attestation}
+          satisfied?={@staff_attestation_satisfied?}
+          form={@attestation_form}
           signer_name={ProviderProfile.agreement_signer_name(@current_scope.provider)}
         />
       </div>

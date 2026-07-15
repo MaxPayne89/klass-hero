@@ -148,9 +148,16 @@ entity — **if the responsible person changes, B1 resets, and B4 + B5 reset wit
   contents. The attestation is a contractual declaration only — this keeps the platform outside
   GDPR Article 10 (criminal-record data) scope entirely. The provider inspects certificates itself
   and records only inspection date + pass/fail.
-- **Auto-approves** on submission. One-time; re-attestation only when the responsible person changes.
-- **Data:** new `staff_liability_attestations` table — `provider_id`, `attested_at` (UTC),
-  `attested_by_name`, `attestation_version`.
+- **Auto-approves** on submission (like B4 — no admin review). Re-attestation is triggered when the
+  responsible person changes (reset cascade, ADR-0010) **or** when the declaration version is bumped.
+- **Data:** reuses the shared `signed_agreements` table (`kind: :staff_attestation`, `signed_by_name`,
+  `entity_type`), per ADR-0008's one-model-two-`kind`s decision — **not** a separate
+  `staff_liability_attestations` table (that was the pre-engine spec). The command is the generalized
+  `SubmitSignedAgreement`; the version/text policy lives in `StaffAttestationPolicy`.
+- **Shipped provisional:** the declaration text is a working draft at version `"1.0-provisional"` with
+  the Vertragsstrafe amount left as `€[TODO]`. The mechanism is complete, but the wording + amount
+  **must be replaced with lawyer-approved text (and a bumped version, which auto-forces re-attestation)
+  before go-live** — tracked as #1097, which gates production.
 - **Downstream:** when a business assigns a new instructor, a contextual reminder is shown ("By
   assigning this person as an instructor you confirm they hold a valid erweitertes Führungszeugnis
   and have been vetted per your platform agreement"). Hooks into the instructor role flag (#840).

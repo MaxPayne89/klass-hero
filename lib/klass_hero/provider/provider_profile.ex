@@ -265,7 +265,7 @@ defmodule KlassHero.Provider.ProviderProfile do
   `nil` — they sign as themselves. Blank/whitespace-only names normalize to `nil` so callers can
   treat "no signer on record" uniformly (the write path fails closed, the read path shows nothing).
 
-  Single source of truth for the "who signs" rule, consumed by both `SubmitCommunityAgreement`
+  Single source of truth for the "who signs" rule, consumed by both `SubmitSignedAgreement`
   (enforcement) and the verification LiveView (display).
   """
   @spec agreement_signer_name(t()) :: String.t() | nil

@@ -2470,28 +2470,41 @@ defmodule KlassHeroWeb.ProviderComponents do
   end
 
   @doc """
-  Renders the Community Standards Agreement step: the scrollable guidelines, a PDF download
-  link and a checkbox to confirm agreement. When the provider has already agreed to the current
-  version, it shows a signed confirmation instead; when they agreed to an older version, it
-  prompts a re-agreement.
+  Renders a signed-agreement vetting step (the Community Standards Agreement B4, or the Staff
+  Compliance Declaration B5) — the shared card chrome: header, the already-signed confirmation
+  (when `@satisfied?`), or the else branch with an optional stale-version notice, the scrollable
+  legal body, an optional attachment (e.g. a PDF link), the business signer line, and the
+  checkbox + submit form. The per-kind legal text, copy, and DOM ids come from the caller; the two
+  panels below are thin wrappers over this one skeleton.
   """
-  attr :agreement, :any, required: true, doc: "The provider's latest SignedAgreement, or nil"
-  attr :satisfied?, :boolean, required: true, doc: "Whether the latest agreement meets the current version"
-  attr :version, :string, required: true, doc: "The current guidelines version"
-  attr :form, :any, required: true, doc: "The agreement checkbox form"
+  attr :record, :any, required: true, doc: "The provider's latest SignedAgreement of this kind, or nil"
+  attr :satisfied?, :boolean, required: true, doc: "Whether the latest record meets the current version"
+  attr :form, :any, required: true, doc: "The checkbox form"
+  attr :signer_name, :string, default: nil, doc: "Business responsible-person signer; nil for an individual"
+  attr :title, :string, required: true
+  attr :description, :string, required: true
+  attr :signed_label, :string, required: true, doc: "Headline shown once signed"
+  attr :checkbox_label, :string, required: true
+  attr :submit_label, :string, required: true
+  attr :form_id, :string, required: true
+  attr :signer_id, :string, required: true
+  attr :submit_btn_id, :string, required: true
+  attr :body_id, :string, required: true
+  attr :submit_event, :string, required: true
 
-  attr :signer_name, :string,
-    default: nil,
-    doc: "For a business, the responsible person who signs on its behalf (B4); nil for an individual"
+  slot :updated_notice, doc: "Amber re-sign copy, shown only when a stale `@record` exists"
+  slot :notice, doc: "Optional banner rendered before the body (e.g. a provisional-text warning)"
+  slot :body, required: true, doc: "The legal text body"
+  slot :attachment, doc: "Optional block after the body (e.g. a PDF download link)"
 
-  def community_agreement_panel(assigns) do
+  def signed_agreement_panel(assigns) do
     ~H"""
     <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
       <h2 class={[Theme.typography(:card_title), Theme.text_color(:heading), "mb-1"]}>
-        {gettext("Community Standards Agreement")}
+        {@title}
       </h2>
       <p class={[Theme.typography(:body_small), Theme.text_color(:muted), "mb-4"]}>
-        {gettext("The final step: read and agree to the Klass Hero Community Guidelines.")}
+        {@description}
       </p>
 
       <%= if @satisfied? do %>
@@ -2501,41 +2514,115 @@ defmodule KlassHeroWeb.ProviderComponents do
         ]}>
           <.icon name="hero-check-circle-mini" class="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
           <div class={[Theme.typography(:body_small), Theme.text_color(:body)]}>
-            <p class="font-medium">{gettext("You have agreed to the Community Guidelines.")}</p>
-            <p :if={@agreement} class={[Theme.text_color(:muted), "mt-1"]}>
+            <p class="font-medium">{@signed_label}</p>
+            <p :if={@record} class={[Theme.text_color(:muted), "mt-1"]}>
               {gettext("Signed by %{name} on %{date} (v%{version}).",
-                name: @agreement.signed_by_name,
-                date: Calendar.strftime(@agreement.signed_at, "%d %B %Y"),
-                version: @agreement.version
+                name: @record.signed_by_name,
+                date: Calendar.strftime(@record.signed_at, "%d %B %Y"),
+                version: @record.version
               )}
             </p>
           </div>
         </div>
       <% else %>
         <div
-          :if={@agreement}
+          :if={@record}
           class={[
             "mb-4 p-3 border border-amber-200 bg-amber-50 text-amber-800",
             Theme.rounded(:lg),
             Theme.typography(:body_small)
           ]}
         >
-          {gettext(
-            "The Community Guidelines have been updated since you last agreed (v%{old}). Please review and re-agree.",
-            old: @agreement.version
-          )}
+          {render_slot(@updated_notice)}
         </div>
 
+        {render_slot(@notice)}
+
         <div
-          id="community-guidelines"
+          id={@body_id}
           class={[
             "max-h-80 overflow-y-auto p-4 border border-hero-grey-200 bg-hero-grey-50",
             Theme.rounded(:lg)
           ]}
         >
-          {guidelines_body(assigns)}
+          {render_slot(@body)}
         </div>
 
+        {render_slot(@attachment)}
+
+        <p
+          :if={@signer_name}
+          id={@signer_id}
+          class={[
+            "mt-4 p-3 border border-hero-grey-200 bg-hero-grey-50",
+            Theme.rounded(:lg),
+            Theme.typography(:body_small),
+            Theme.text_color(:body)
+          ]}
+        >
+          {gettext("Signing as %{name} on behalf of the business.", name: @signer_name)}
+        </p>
+
+        <.form for={@form} id={@form_id} phx-submit={@submit_event} class="mt-4 space-y-4">
+          <.input field={@form[:agree]} type="checkbox" label={@checkbox_label} />
+          <button
+            type="submit"
+            id={@submit_btn_id}
+            class={[
+              "inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold",
+              Theme.rounded(:lg),
+              Theme.button_variant(:primary),
+              Theme.transition(:normal)
+            ]}
+          >
+            <.icon name="hero-check-mini" class="w-4 h-4" />
+            {@submit_label}
+          </button>
+        </.form>
+      <% end %>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the Community Standards Agreement step (B4): a `signed_agreement_panel` with the
+  Community Guidelines body and a PDF download link.
+  """
+  attr :agreement, :any, required: true, doc: "The provider's latest SignedAgreement, or nil"
+  attr :satisfied?, :boolean, required: true, doc: "Whether the latest agreement meets the current version"
+  attr :version, :string, required: true, doc: "The current guidelines version (drives the PDF link)"
+  attr :form, :any, required: true, doc: "The agreement checkbox form"
+
+  attr :signer_name, :string,
+    default: nil,
+    doc: "For a business, the responsible person who signs on its behalf (B4); nil for an individual"
+
+  def community_agreement_panel(assigns) do
+    ~H"""
+    <.signed_agreement_panel
+      record={@agreement}
+      satisfied?={@satisfied?}
+      form={@form}
+      signer_name={@signer_name}
+      title={gettext("Community Standards Agreement")}
+      description={gettext("The final step: read and agree to the Klass Hero Community Guidelines.")}
+      signed_label={gettext("You have agreed to the Community Guidelines.")}
+      checkbox_label={gettext("I have read and agree to the Klass Hero Community Guidelines.")}
+      submit_label={gettext("Confirm agreement")}
+      form_id="community-agreement-form"
+      signer_id="agreement-signer"
+      submit_btn_id="submit-agreement-btn"
+      body_id="community-guidelines"
+      submit_event="submit_community_agreement"
+    >
+      <:updated_notice>
+        {gettext(
+          "The Community Guidelines have been updated since you last agreed (v%{old}). Please review and re-agree.",
+          old: @agreement.version
+        )}
+      </:updated_notice>
+      <:body>{guidelines_body(assigns)}</:body>
+      <:attachment>
         <div class="mt-3">
           <.link
             href={community_guidelines_pdf_path(@version)}
@@ -2547,46 +2634,126 @@ defmodule KlassHeroWeb.ProviderComponents do
             {gettext("Download the agreement (PDF)")}
           </.link>
         </div>
+      </:attachment>
+    </.signed_agreement_panel>
+    """
+  end
 
-        <p
-          :if={@signer_name}
-          id="agreement-signer"
-          class={[
-            "mt-4 p-3 border border-hero-grey-200 bg-hero-grey-50",
-            Theme.rounded(:lg),
-            Theme.typography(:body_small),
-            Theme.text_color(:body)
-          ]}
-        >
-          {gettext("Signing as %{name} on behalf of the business.", name: @signer_name)}
+  @doc """
+  Renders the Staff Compliance Declaration step (B5): a `signed_agreement_panel` with the German
+  declaration body and a "provisional / pending legal review" notice. No PDF — the declaration is a
+  contractual statement, not a downloadable artifact.
+
+  The declaration text is **provisional** pending legal review; the panel says so explicitly.
+  """
+  attr :attestation, :any, required: true, doc: "The provider's latest staff-attestation SignedAgreement, or nil"
+  attr :satisfied?, :boolean, required: true, doc: "Whether the latest attestation meets the current version"
+  attr :form, :any, required: true, doc: "The attestation checkbox form"
+
+  attr :signer_name, :string,
+    default: nil,
+    doc: "The responsible person who attests on the business's behalf (B5); nil if none on record"
+
+  def staff_attestation_panel(assigns) do
+    ~H"""
+    <.signed_agreement_panel
+      record={@attestation}
+      satisfied?={@satisfied?}
+      form={@form}
+      signer_name={@signer_name}
+      title={gettext("Staff Compliance Declaration")}
+      description={
+        gettext(
+          "Confirm, on behalf of your business, that all staff are vetted per German child-safety law."
+        )
+      }
+      signed_label={gettext("You have signed the Staff Compliance Declaration.")}
+      checkbox_label={
+        gettext(
+          "I confirm, on behalf of the business, that the above declaration is true and I am authorised to sign it."
+        )
+      }
+      submit_label={gettext("Sign the declaration")}
+      form_id="staff-attestation-form"
+      signer_id="attestation-signer"
+      submit_btn_id="submit-attestation-btn"
+      body_id="staff-attestation-declaration"
+      submit_event="submit_staff_attestation"
+    >
+      <:updated_notice>
+        {gettext(
+          "The Staff Compliance Declaration has been updated since you last signed (v%{old}). Please review and re-sign.",
+          old: @attestation.version
+        )}
+      </:updated_notice>
+      <:notice>
+        <div class={[
+          "mb-4 flex items-start gap-3 p-3 border border-amber-300 bg-amber-50 text-amber-900",
+          Theme.rounded(:lg),
+          Theme.typography(:body_small)
+        ]}>
+          <.icon name="hero-exclamation-triangle-mini" class="w-5 h-5 shrink-0 mt-0.5" />
+          <span>
+            {gettext("Provisional text — pending review by a German-qualified lawyer before go-live.")}
+          </span>
+        </div>
+      </:notice>
+      <:body>{attestation_body(assigns)}</:body>
+    </.signed_agreement_panel>
+    """
+  end
+
+  # The Provider Child Safety Compliance Declaration body (PROVISIONAL, v1.0-provisional). Not
+  # translated — it is a legal artifact tied to a specific `version`. The clauses below are a
+  # working draft of the § 72a SGB VIII / § 278 BGB obligations; the Vertragsstrafe (§ 339 BGB)
+  # amount is a placeholder pending legal counsel. Must be replaced with lawyer-approved text (and
+  # a bumped version, which auto-forces re-attestation) before go-live.
+  defp attestation_body(assigns) do
+    ~H"""
+    <div class={["space-y-5 leading-relaxed", Theme.typography(:body_small), Theme.text_color(:body)]}>
+      <p class="font-medium">
+        Provider Child Safety Compliance Declaration — Erklärung zur Einhaltung des Kinderschutzes
+      </p>
+      <p>
+        Der Provider erklärt gegenüber Klass Hero, dass alle Personen, die im Auftrag des Providers
+        mit Kindern oder Jugendlichen arbeiten (Betreuer:innen, Kursleiter:innen und sonstiges
+        Personal), vor ihrem Einsatz und fortlaufend gemäß § 72a SGB VIII sowie § 30a BZRG durch
+        Einsichtnahme in ein gültiges erweitertes Führungszeugnis überprüft wurden.
+      </p>
+
+      <.guidelines_section title="1. Prüfpflicht (§ 72a SGB VIII, § 30a BZRG)">
+        <.guidelines_bullets items={[
+          "Der Provider nimmt vor Aufnahme der Tätigkeit Einsicht in ein erweitertes Führungszeugnis jeder mit Minderjährigen betrauten Person.",
+          "Die Einsichtnahme wird in regelmäßigen Abständen wiederholt.",
+          "Klass Hero erhält oder speichert zu keinem Zeitpunkt den Inhalt eines Führungszeugnisses — erfasst werden ausschließlich Prüfdatum und Prüfergebnis (Datenminimierung, Art. 10 DSGVO / § 26 BDSG)."
+        ]} />
+      </.guidelines_section>
+
+      <.guidelines_section title="2. Haftung für Erfüllungsgehilfen (§ 278, § 823 BGB)">
+        <p>
+          Der Provider haftet für das Verhalten der von ihm eingesetzten Personen wie für eigenes
+          Verhalten. Das Unterlassen der Prüfung nach § 72a SGB VIII stellt eine
+          Sorgfaltspflichtverletzung dar.
         </p>
+      </.guidelines_section>
 
-        <.form
-          for={@form}
-          id="community-agreement-form"
-          phx-submit="submit_community_agreement"
-          class="mt-4 space-y-4"
-        >
-          <.input
-            field={@form[:agree]}
-            type="checkbox"
-            label={gettext("I have read and agree to the Klass Hero Community Guidelines.")}
-          />
-          <button
-            type="submit"
-            id="submit-agreement-btn"
-            class={[
-              "inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold",
-              Theme.rounded(:lg),
-              Theme.button_variant(:primary),
-              Theme.transition(:normal)
-            ]}
-          >
-            <.icon name="hero-check-mini" class="w-4 h-4" />
-            {gettext("Confirm agreement")}
-          </button>
-        </.form>
-      <% end %>
+      <.guidelines_section title="3. Meldepflicht (48 Stunden)">
+        <p>
+          Der Provider verpflichtet sich, Klass Hero innerhalb von 48 Stunden zu benachrichtigen,
+          sobald gegen eine mit Minderjährigen betraute Person wegen einer Straftat gegen Kinder
+          ermittelt wird.
+        </p>
+      </.guidelines_section>
+
+      <.guidelines_section title="4. Freistellung und Vertragsstrafe (§ 339 BGB)">
+        <p>
+          Der Provider stellt Klass Hero von Ansprüchen frei, die aus einer Verletzung dieser
+          Erklärung entstehen. Bei schuldhaftem Verstoß gegen die Prüfpflicht wird eine
+          Vertragsstrafe in Höhe von
+          <span class="font-semibold">€[TODO — pending legal counsel]</span>
+          fällig (der Höhe nach angemessen im Sinne des § 343 BGB).
+        </p>
+      </.guidelines_section>
     </div>
     """
   end

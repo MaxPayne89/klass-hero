@@ -47,6 +47,7 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
         badge_label: badge.label,
         action_kind: action.kind,
         action_label: action.label,
+        action_anchor: action[:anchor],
         ui_status: step.ui_status,
         rejection_reason: step.rejection_reason
       }
@@ -168,8 +169,8 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   def action(%VettingStepView{completed_via: {:document, _type}, ui_status: status}),
     do: %{kind: :navigate_documents, label: document_label(status)}
 
-  def action(%VettingStepView{completed_via: {:signed_agreement, _kind}, ui_status: status}),
-    do: %{kind: :navigate_agreement, label: agreement_label(status)}
+  def action(%VettingStepView{completed_via: {:signed_agreement, kind}, ui_status: status}),
+    do: %{kind: :navigate_agreement, label: agreement_label(status), anchor: agreement_anchor(kind)}
 
   @doc "The headline copy for the profile-locked banner."
   @spec locked_summary(VettingChecklist.t()) :: String.t()
@@ -184,4 +185,10 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenter do
   defp document_label(_), do: gettext("Upload")
 
   defp agreement_label(_), do: gettext("Review & sign")
+
+  # Deep-link target for each signed-agreement checklist row — each agreement step has its own
+  # in-page panel, so the two must not share one anchor. Kept here (not the LiveView) so the
+  # step -> UI-target mapping lives in one place, alongside the rest of the row's action metadata.
+  defp agreement_anchor(:community_agreement), do: "#community-agreement-form"
+  defp agreement_anchor(:staff_attestation), do: "#staff-attestation-form"
 end

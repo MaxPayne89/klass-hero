@@ -23,6 +23,7 @@ defmodule KlassHero.Provider.Vetting do
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.SignedAgreement
+  alias KlassHero.Provider.StaffAttestationPolicy
   alias KlassHero.Provider.StepDefinition
   alias KlassHero.Provider.StripeIdentity
   alias KlassHero.Provider.Verification
@@ -461,13 +462,26 @@ defmodule KlassHero.Provider.Vetting do
     end
   end
 
-  # ── Community agreement (Slice 5) ──────────────────────────────────────────
+  # ── Signed agreements (community agreement B4 / staff attestation B5) ───────
+  #
+  # Both business-track signed-agreement steps share one query/policy shape, differing only by
+  # `kind` and the policy module that owns the version. The public per-kind functions are readable
+  # names over the shared internals; the `kind -> policy` dispatch lives here (the engine hub), so
+  # the submit command stays ignorant of which concrete policy modules exist.
 
   @doc "Returns the provider's most recent Community Standards Agreement, or `nil` if never signed."
   @spec get_latest_community_agreement(String.t()) :: SignedAgreement.t() | nil
-  def get_latest_community_agreement(provider_id) when is_binary(provider_id) do
+  def get_latest_community_agreement(provider_id), do: get_latest_signed_agreement(provider_id, :community_agreement)
+
+  @doc "Returns the provider's most recent staff attestation, or `nil` if never signed."
+  @spec get_latest_staff_attestation(String.t()) :: SignedAgreement.t() | nil
+  def get_latest_staff_attestation(provider_id), do: get_latest_signed_agreement(provider_id, :staff_attestation)
+
+  @doc "Returns the provider's most recent signed agreement of `kind`, or `nil` if never signed."
+  @spec get_latest_signed_agreement(String.t(), SignedAgreement.kind()) :: SignedAgreement.t() | nil
+  def get_latest_signed_agreement(provider_id, kind) when is_binary(provider_id) do
     SignedAgreement
-    |> where([a], a.provider_id == ^provider_id and a.kind == :community_agreement)
+    |> where([a], a.provider_id == ^provider_id and a.kind == ^kind)
     |> order_by([a], desc: a.inserted_at)
     |> limit(1)
     |> Repo.one()
@@ -481,27 +495,41 @@ defmodule KlassHero.Provider.Vetting do
   `SignedAgreement`/`nil` (no query) — the caller already holding the record avoids a re-read.
   """
   @spec community_agreement_satisfied?(String.t() | SignedAgreement.t() | nil) :: boolean()
-  def community_agreement_satisfied?(provider_id) when is_binary(provider_id) do
-    provider_id
-    |> get_latest_community_agreement()
-    |> CommunityGuidelines.agreement_satisfied?()
-  end
+  def community_agreement_satisfied?(provider_id) when is_binary(provider_id),
+    do: provider_id |> get_latest_community_agreement() |> CommunityGuidelines.agreement_satisfied?()
 
-  def community_agreement_satisfied?(agreement) do
-    CommunityGuidelines.agreement_satisfied?(agreement)
-  end
+  def community_agreement_satisfied?(agreement), do: CommunityGuidelines.agreement_satisfied?(agreement)
+
+  @doc "As `community_agreement_satisfied?/1`, for the staff Compliance Declaration (B5)."
+  @spec staff_attestation_satisfied?(String.t() | SignedAgreement.t() | nil) :: boolean()
+  def staff_attestation_satisfied?(provider_id) when is_binary(provider_id),
+    do: provider_id |> get_latest_staff_attestation() |> StaffAttestationPolicy.attestation_satisfied?()
+
+  def staff_attestation_satisfied?(agreement), do: StaffAttestationPolicy.attestation_satisfied?(agreement)
 
   @doc "Returns `true` when the given entity type's track includes the community-agreement step."
   @spec requires_community_agreement?(:individual | :business) :: boolean()
-  def requires_community_agreement?(entity_type) do
+  def requires_community_agreement?(entity_type), do: requires_signed_agreement?(entity_type, :community_agreement)
+
+  @doc "Returns `true` when the given entity type's track includes the staff-attestation step."
+  @spec requires_staff_attestation?(:individual | :business) :: boolean()
+  def requires_staff_attestation?(entity_type), do: requires_signed_agreement?(entity_type, :staff_attestation)
+
+  @spec requires_signed_agreement?(:individual | :business, SignedAgreement.kind()) :: boolean()
+  def requires_signed_agreement?(entity_type, kind) do
     entity_type
     |> track()
-    |> Enum.any?(&match?(%StepDefinition{completed_via: {:signed_agreement, :community_agreement}}, &1))
+    |> Enum.any?(&match?(%StepDefinition{completed_via: {:signed_agreement, ^kind}}, &1))
   end
 
   @doc "The Community Guidelines version currently in force."
   @spec current_community_guidelines_version() :: String.t()
-  def current_community_guidelines_version, do: CommunityGuidelines.current_version()
+  def current_community_guidelines_version, do: current_signed_agreement_version(:community_agreement)
+
+  @doc "The published version of the signed-agreement policy for `kind` (used at sign time)."
+  @spec current_signed_agreement_version(SignedAgreement.kind()) :: String.t()
+  def current_signed_agreement_version(:community_agreement), do: CommunityGuidelines.current_version()
+  def current_signed_agreement_version(:staff_attestation), do: StaffAttestationPolicy.current_version()
 
   # ── Stripe Identity (Slice 1) ──────────────────────────────────────────────
 

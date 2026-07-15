@@ -31,7 +31,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.Staff
   alias KlassHero.Provider.StaffMember
-  alias KlassHero.Provider.SubmitCommunityAgreement
+  alias KlassHero.Provider.SubmitSignedAgreement
   alias KlassHero.Provider.Verification
   alias KlassHero.Provider.Vetting
 
@@ -119,16 +119,29 @@ defmodule KlassHero.Provider do
   defdelegate list_identity_verifications_for_admin(), to: Vetting
 
   @doc "Signs the Community Standards Agreement, auto-approving the step and verifying if it was last."
-  defdelegate submit_community_agreement(params), to: SubmitCommunityAgreement, as: :execute
+  def submit_community_agreement(params),
+    do: SubmitSignedAgreement.execute(Map.put(params, :kind, :community_agreement))
+
+  @doc "Signs the Staff Compliance Declaration, auto-approving the step and verifying if it was last."
+  def submit_staff_attestation(params), do: SubmitSignedAgreement.execute(Map.put(params, :kind, :staff_attestation))
 
   @doc "Returns the provider's most recent Community Standards Agreement, or `nil`."
   defdelegate get_latest_community_agreement(provider_id), to: Vetting
 
+  @doc "Returns the provider's most recent Staff Compliance Declaration, or `nil`."
+  defdelegate get_latest_staff_attestation(provider_id), to: Vetting
+
   @doc "Whether the provider's latest community agreement still satisfies the current guidelines."
   defdelegate community_agreement_satisfied?(provider_id), to: Vetting
 
+  @doc "Whether the provider's latest staff attestation still satisfies the current declaration."
+  defdelegate staff_attestation_satisfied?(provider_id), to: Vetting
+
   @doc "Whether the given entity type's vetting track includes the community-agreement step."
   defdelegate requires_community_agreement?(entity_type), to: Vetting
+
+  @doc "Whether the given entity type's vetting track includes the staff-attestation step."
+  defdelegate requires_staff_attestation?(entity_type), to: Vetting
 
   @doc "The Community Guidelines version currently in force."
   defdelegate current_community_guidelines_version(), to: Vetting
