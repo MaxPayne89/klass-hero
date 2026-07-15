@@ -9,7 +9,7 @@ the Honeycomb MCP session — both authenticated interactively in *your* login. 
 as you and inherits `~/.fly/config.yml`, so **no headless token is needed**. See
 `docs/runbooks/prod-db-access.md` for the prod-DB half.
 
-## Two gotchas the setup is built around
+## The gotchas the setup is built around
 
 1. **launchd's stripped environment** — jobs start with almost no environment (no `PATH`, no
    guaranteed `HOME`, cwd `/`). A run that works in your terminal fails under launchd as
@@ -25,8 +25,14 @@ as you and inherits `~/.fly/config.yml`, so **no headless token is needed**. See
    every tool the loop touches must be pre-granted or it dead-ends mid-sweep. Inherited *credentials*
    are not inherited *permissions*. The wrapper passes a **least-privilege `--allowedTools`** list —
    exactly the loop's surface (`bin/prod-db` reads, `mcp__honeycomb__*`, `Read/Grep/Glob`,
-   `gh issue list`/`create`, `Write(.prod-watch/**)`, `PushNotification`). Anything else fails
-   closed by design; add to `ALLOWED_TOOLS` in `bin/prod-watch` only when the skill grows a new tool.
+   `gh issue list`/`create`, `PushNotification`). Anything else fails closed by design; add to
+   `ALLOWED_TOOLS` in `bin/prod-watch` only when the skill grows a new tool. **File writes are
+   deliberately absent** — `-p` won't reliably grant them, so the wrapper owns state I/O (next point).
+4. **State I/O lives in the wrapper, not the agent** (functional core / imperative shell). The
+   wrapper reads the watermark + filed fingerprints from `.prod-watch/state.json`, injects them into
+   the prompt, and — after the run — stamps the new watermark and unions the fingerprints the agent
+   *reports* (a `PROD_WATCH_FILED_BEGIN/END` block) back into `state.json`. The agent never touches
+   the file. A missing/garbled block leaves prior state intact. Needs `jq` (`brew install jq`).
 
 ## Pinned worktree (the stable checkout the scheduler runs from)
 

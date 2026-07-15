@@ -37,6 +37,7 @@ fi
 # --- preflight: the two things that silently break a scheduled run ---
 command -v claude >/dev/null 2>&1 || { err "claude CLI not on PATH"; exit 1; }
 command -v gh     >/dev/null 2>&1 || { err "gh CLI not on PATH"; exit 1; }
+command -v jq     >/dev/null 2>&1 || { err "jq not found — brew install jq"; exit 1; }
 # bin/prod-db --check verifies fly auth + psql; its message tells you to re-run fly auth login.
 "$REPO_DIR/bin/prod-db" --check
 
@@ -47,14 +48,58 @@ fi
 
 # Least-privilege allowlist: a headless `claude -p` has no human to approve tool prompts, so every
 # tool the loop uses must be pre-granted or it dead-ends. This is exactly the loop's surface — prod
-# reads (bin/prod-db), Honeycomb reads, code anchoring (Read/Grep/Glob), issue dedup+file (gh), the
-# watermark write (.prod-watch/), and the notify. Anything outside this list still fails closed.
-ALLOWED_TOOLS="Bash(bin/prod-db:*),Bash(./bin/prod-db:*),Bash(gh issue list:*),Bash(gh issue create:*),mcp__honeycomb__*,Read,Grep,Glob,Write(.prod-watch/**),PushNotification"
+# reads (bin/prod-db), Honeycomb reads, code anchoring (Read/Grep/Glob), issue dedup+file (gh), and
+# the notify. State I/O is NOT here: the wrapper owns it (below), so Write stays off the grant.
+ALLOWED_TOOLS="Bash(bin/prod-db:*),Bash(./bin/prod-db:*),Bash(gh issue list:*),Bash(gh issue create:*),mcp__honeycomb__*,Read,Grep,Glob,PushNotification"
 
-# cd into the repo so `claude -p` discovers the project's .claude/skills/ — launchd starts jobs
-# with cwd=/, where the prod-watch skill is invisible.
+# --- imperative shell: the wrapper owns all state I/O; the agent is pure compute ---
+# A headless `claude -p` can't be granted file writes reliably, and a permission-gated agent is the
+# wrong place for filesystem I/O anyway. So the wrapper reads the watermark, injects it into the
+# prompt, and persists the result the agent reports. Functional core / imperative shell.
+STATE_FILE="$REPO_DIR/.prod-watch/state.json"
+
+# Read prior state → watermark + already-filed fingerprints. First run: watermark = now − 12h.
+if [[ -f "$STATE_FILE" ]]; then
+  WATERMARK="$(jq -r '.last_run_at' "$STATE_FILE")"
+  FILED_FP="$(jq -c '.filed_fingerprints // []' "$STATE_FILE")"
+else
+  WATERMARK="$(date -u -v-12H +%Y-%m-%dT%H:%M:%SZ)"
+  FILED_FP='[]'
+fi
+
+# Inject the state into the prompt; instruct the agent to report (not persist) what it filed.
+PROMPT="/prod-watch
+
+Wrapper-supplied state for Step 1 — use these; do NOT read .prod-watch/state.json:
+  watermark: $WATERMARK
+  filed_fingerprints: $FILED_FP
+
+For Step 6 — do NOT write state.json. Emit the error_tracker fingerprints you filed an issue for
+THIS run (a JSON array, possibly empty) between these exact markers, then finish:
+PROD_WATCH_FILED_BEGIN
+[\"fp1\", \"fp2\"]
+PROD_WATCH_FILED_END
+The wrapper stamps the new watermark and persists state."
+
+# cd so `claude -p` discovers .claude/skills/ (launchd starts jobs with cwd=/). Prompt via stdin so
+# the variadic --allowedTools can't swallow it. Capture output to parse; don't exec (we post-process).
 cd "$REPO_DIR"
-# The prompt goes via stdin, not as a positional arg: --allowedTools is variadic (<tools...>) and
-# would otherwise swallow "/prod-watch" as another tool name, leaving no prompt ("Input must be
-# provided"). stdin is unambiguous.
-exec claude -p --allowedTools "$ALLOWED_TOOLS" <<< "/prod-watch"
+if ! OUTPUT="$(claude -p --allowedTools "$ALLOWED_TOOLS" <<< "$PROMPT")"; then
+  printf '%s\n' "$OUTPUT"
+  err "claude run failed — leaving watermark unchanged so the next run re-covers the window"
+  exit 1
+fi
+printf '%s\n' "$OUTPUT"   # still surface the agent's report to the launchd log
+
+# Extract the filed-fingerprints block; default to empty. Validate it parses as a JSON array.
+FILED_NEW="$(printf '%s\n' "$OUTPUT" | sed -n '/PROD_WATCH_FILED_BEGIN/,/PROD_WATCH_FILED_END/p' | sed '1d;$d')"
+if ! printf '%s' "$FILED_NEW" | jq -e 'type == "array"' >/dev/null 2>&1; then
+  FILED_NEW='[]'
+fi
+
+# Persist: stamp now as the new watermark, union old + newly-filed fingerprints.
+NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+MERGED="$(jq -cn --argjson old "$FILED_FP" --argjson new "$FILED_NEW" '($old + $new) | unique')"
+jq -n --arg ts "$NOW" --argjson fp "$MERGED" '{last_run_at: $ts, filed_fingerprints: $fp}' > "$STATE_FILE"
+printf '\033[0;32m✓ state persisted — watermark %s, %s fingerprint(s) tracked\033[0m\n' \
+  "$NOW" "$(printf '%s' "$MERGED" | jq 'length')"

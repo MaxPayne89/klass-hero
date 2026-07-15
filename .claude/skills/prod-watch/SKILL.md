@@ -25,13 +25,14 @@ The exact sweep SQL, the Honeycomb scan, and the issue-body template are in
 
 ---
 
-## Step 1 — Read the watermark
+## Step 1 — Take the watermark from the wrapper
 
-Read `.prod-watch/state.json` for `last_run_at` (the **watermark**) and `filed_fingerprints` (the
-error_tracker `fingerprint`s already filed). If the file is absent (first run), set the watermark
-to now − 12h and treat `filed_fingerprints` as empty.
+The wrapper (`bin/prod-watch`) owns state I/O and supplies it in the invocation: a `watermark`
+timestamp and the `filed_fingerprints` array already filed. **Use those — do not read
+`.prod-watch/state.json` yourself** (a headless run can't reliably write it back, so the wrapper
+handles both ends). The wrapper defaults the watermark to now − 12h on the first run.
 
-**Done when:** you hold a watermark timestamp and the set of already-filed fingerprints.
+**Done when:** you hold the wrapper-supplied watermark and the set of already-filed fingerprints.
 
 ## Step 2 — Sweep for candidates
 
@@ -86,15 +87,23 @@ inherit the PII rule from `/analyze-prod-issue`).
 
 **Done when:** each real blocker has an issue URL, or is recorded as dropped-noise.
 
-## Step 6 — Notify + advance the watermark
+## Step 6 — Notify + report what you filed
 
 Send one `PushNotification` per filed issue: `prod-watch filed #NNN: <one-line>`. If nothing was
-filed, send none. Then write `.prod-watch/state.json` with `last_run_at = now` and
-`filed_fingerprints` extended by every fingerprint filed this run. Advance the watermark even on a
-clean sweep, so the next run starts from now.
+filed, send none. Then **report** the error_tracker fingerprints you filed this run (a JSON array,
+possibly empty) between these exact markers, and finish:
 
-**Done when:** notifications sent (or none needed) and `state.json` is written with the advanced
-watermark.
+```
+PROD_WATCH_FILED_BEGIN
+["<fingerprint>", ...]
+PROD_WATCH_FILED_END
+```
+
+Do **not** write `.prod-watch/state.json` — the wrapper stamps the new watermark and unions these
+fingerprints into state. Emit the block even on a clean sweep (`[]`), so the wrapper always advances
+the watermark.
+
+**Done when:** notifications sent (or none needed) and the `PROD_WATCH_FILED` block is emitted.
 
 ---
 

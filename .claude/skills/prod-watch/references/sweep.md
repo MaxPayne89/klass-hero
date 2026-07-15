@@ -12,8 +12,8 @@ prod-watch dedups on it, never invents one.
 
 ## Sweep SQL (Step 2)
 
-Ranked list of errors newly active since the watermark. `$WATERMARK` is `last_run_at` from
-`state.json` (ISO-8601). Run via `bin/prod-db -c "<SQL>"`.
+Ranked list of errors newly active since the watermark. `$WATERMARK` is the ISO-8601 timestamp the
+wrapper supplies in Step 1 (it reads `last_run_at` from `state.json`). Run via `bin/prod-db -c "<SQL>"`.
 
 ```sql
 select e.fingerprint,
