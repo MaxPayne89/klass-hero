@@ -14,6 +14,21 @@ the stash stack is shared across every checkout, so a bare `git stash pop` can
 swallow another session's changes. See `git stash` guidance in the environment
 preamble.
 
+## Default: one worktree + branch per task
+
+Unless the user says otherwise, **start every task in a fresh harness-native
+worktree on its own branch** — use the `EnterWorktree` tool (branches from
+`origin/main` under `.claude/worktrees/<slug>/`). This keeps parallel tasks from
+colliding on the shared working tree and gives each unit of work an isolated,
+squash-mergeable branch by default.
+
+Skip the worktree only when the user explicitly asks to work in the current
+checkout, or for read-only / throwaway actions (answering a question, a quick
+`git log`, inspecting a file) where no branch or edit is produced.
+
+After entering a native worktree, hydrate it once and set `MIX_TEST_PARTITION`
+per the sections below before running any format/credo/test hook.
+
 ## First-run setup (fresh checkout has no deps/_build)
 
 A native worktree starts empty of build artifacts, so the format/credo/test hooks
