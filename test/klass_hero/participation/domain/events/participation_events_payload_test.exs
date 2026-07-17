@@ -1,10 +1,10 @@
 defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.SessionNote
 
   @program_id Ecto.UUID.generate()
 
@@ -32,7 +32,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
   end
 
   defp build_note do
-    %BehavioralNote{
+    %SessionNote{
       id: Ecto.UUID.generate(),
       participation_record_id: Ecto.UUID.generate(),
       child_id: Ecto.UUID.generate(),
@@ -126,21 +126,21 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     end
   end
 
-  describe "behavioral_note_submitted/2" do
-    test "sets event_type, aggregate_id as note id, and aggregate_type as :behavioral_note" do
+  describe "session_note_submitted/2" do
+    test "sets event_type, aggregate_id as note id, and aggregate_type as :session_note" do
       note = build_note()
 
-      event = ParticipationEvents.behavioral_note_submitted(note)
+      event = ParticipationEvents.session_note_submitted(note)
 
-      assert event.event_type == :behavioral_note_submitted
+      assert event.event_type == :session_note_submitted
       assert event.aggregate_id == note.id
-      assert event.aggregate_type == :behavioral_note
+      assert event.aggregate_type == :session_note
     end
 
-    test "payload contains all behavioral note fields" do
+    test "payload contains all session note fields" do
       note = build_note()
 
-      event = ParticipationEvents.behavioral_note_submitted(note)
+      event = ParticipationEvents.session_note_submitted(note)
 
       assert event.payload.note_id == note.id
       assert event.payload.participation_record_id == note.participation_record_id
@@ -150,26 +150,26 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     end
   end
 
-  describe "behavioral_note_approved/2" do
-    test "sets event_type :behavioral_note_approved with correct payload" do
+  describe "session_note_approved/2" do
+    test "sets event_type :session_note_approved with correct payload" do
       note = %{build_note() | status: :approved}
 
-      event = ParticipationEvents.behavioral_note_approved(note)
+      event = ParticipationEvents.session_note_approved(note)
 
-      assert event.event_type == :behavioral_note_approved
+      assert event.event_type == :session_note_approved
       assert event.aggregate_id == note.id
       assert event.payload.note_id == note.id
       assert event.payload.provider_id == note.provider_id
     end
   end
 
-  describe "behavioral_note_rejected/2" do
-    test "sets event_type :behavioral_note_rejected with correct payload" do
+  describe "session_note_rejected/2" do
+    test "sets event_type :session_note_rejected with correct payload" do
       note = %{build_note() | status: :rejected}
 
-      event = ParticipationEvents.behavioral_note_rejected(note)
+      event = ParticipationEvents.session_note_rejected(note)
 
-      assert event.event_type == :behavioral_note_rejected
+      assert event.event_type == :session_note_rejected
       assert event.aggregate_id == note.id
       assert event.payload.note_id == note.id
       assert event.payload.provider_id == note.provider_id

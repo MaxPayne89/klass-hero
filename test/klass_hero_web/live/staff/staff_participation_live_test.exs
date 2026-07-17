@@ -4,8 +4,8 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.SessionNote
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do
@@ -290,7 +290,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
 
       assert_flash(view, :error, "Record not found")
 
-      refute KlassHero.Repo.get_by(BehavioralNote,
+      refute KlassHero.Repo.get_by(SessionNote,
                participation_record_id: foreign_record.id
              )
     end

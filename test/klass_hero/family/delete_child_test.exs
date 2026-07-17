@@ -1,7 +1,7 @@
 defmodule KlassHero.Family.DeleteChildTest do
   @moduledoc """
   Cross-context cascade behaviour for `Family.delete_child/1`: consents,
-  enrollments, participation records, and behavioral notes.
+  enrollments, participation records, and session notes.
   """
 
   use KlassHero.DataCase, async: true
@@ -11,8 +11,8 @@ defmodule KlassHero.Family.DeleteChildTest do
   alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Family
   alias KlassHero.Family.Consent
-  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.SessionNote
   alias KlassHero.Repo
 
   describe "delete_child/1" do
@@ -74,11 +74,11 @@ defmodule KlassHero.Family.DeleteChildTest do
       assert [] = Repo.all(from(r in ParticipationRecord, where: r.child_id == ^child.id))
     end
 
-    test "deletes child with behavioral notes and participation records" do
+    test "deletes child with session notes and participation records" do
       {child, parent} = insert_child_with_guardian()
       record = insert(:participation_record_schema, child_id: child.id, parent_id: parent.id)
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         parent_id: parent.id
@@ -86,7 +86,7 @@ defmodule KlassHero.Family.DeleteChildTest do
 
       assert :ok = Family.delete_child(child.id)
 
-      assert [] = Repo.all(from(n in BehavioralNote, where: n.child_id == ^child.id))
+      assert [] = Repo.all(from(n in SessionNote, where: n.child_id == ^child.id))
       assert [] = Repo.all(from(r in ParticipationRecord, where: r.child_id == ^child.id))
     end
 

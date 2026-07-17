@@ -48,10 +48,10 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
         "participation:provider:#{staff_member.provider_id}"
       )
 
-      # Behavioral note events use global topics; no provider-scoped version exists.
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_submitted")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_approved")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_rejected")
+      # Session note events use global topics; no provider-scoped version exists.
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_submitted")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_approved")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_rejected")
     end
 
     {:ok, load_session_data(socket)}
@@ -187,7 +187,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
 
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
-      when event_type in [:behavioral_note_submitted, :behavioral_note_approved, :behavioral_note_rejected] do
+      when event_type in [:session_note_submitted, :session_note_approved, :session_note_rejected] do
     {:noreply, load_session_data(socket)}
   end
 
@@ -256,7 +256,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     record_ids = Enum.map(records, & &1.id)
 
     notes =
-      Participation.list_behavioral_notes_by_records_and_provider(record_ids, provider_id)
+      Participation.list_session_notes_by_records_and_provider(record_ids, provider_id)
 
     notes_by_record =
       Map.new(notes, fn note -> {to_string(note.participation_record_id), note} end)

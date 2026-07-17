@@ -302,15 +302,15 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
   end
 
   # ---------------------------------------------------------------------------
-  # Behavioral note events (aggregate_type: :behavioral_note)
+  # Session note events (aggregate_type: :session_note)
   # ---------------------------------------------------------------------------
 
-  describe "handle/1 — :behavioral_note_submitted" do
-    test "promotes to behavioral_note_submitted integration event" do
+  describe "handle/1 — :session_note_submitted" do
+    test "promotes to session_note_submitted integration event" do
       note_id = Ecto.UUID.generate()
 
       domain_event =
-        DomainEvent.new(:behavioral_note_submitted, note_id, :behavioral_note, %{
+        DomainEvent.new(:session_note_submitted, note_id, :session_note, %{
           note_id: note_id,
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -320,7 +320,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
 
       assert :ok = PromoteIntegrationEvents.handle(domain_event)
 
-      event = assert_integration_event_published(:behavioral_note_submitted)
+      event = assert_integration_event_published(:session_note_submitted)
       assert event.entity_id == note_id
       assert event.source_context == :participation
     end
@@ -329,7 +329,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
       note_id = Ecto.UUID.generate()
 
       domain_event =
-        DomainEvent.new(:behavioral_note_submitted, note_id, :behavioral_note, %{
+        DomainEvent.new(:session_note_submitted, note_id, :session_note, %{
           note_id: note_id,
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -344,12 +344,12 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
     end
   end
 
-  describe "handle/1 — :behavioral_note_approved" do
-    test "promotes to behavioral_note_approved integration event" do
+  describe "handle/1 — :session_note_approved" do
+    test "promotes to session_note_approved integration event" do
       note_id = Ecto.UUID.generate()
 
       domain_event =
-        DomainEvent.new(:behavioral_note_approved, note_id, :behavioral_note, %{
+        DomainEvent.new(:session_note_approved, note_id, :session_note, %{
           note_id: note_id,
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -359,7 +359,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
 
       assert :ok = PromoteIntegrationEvents.handle(domain_event)
 
-      event = assert_integration_event_published(:behavioral_note_approved)
+      event = assert_integration_event_published(:session_note_approved)
       assert event.entity_id == note_id
       assert event.source_context == :participation
     end
@@ -368,7 +368,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
       note_id = Ecto.UUID.generate()
 
       domain_event =
-        DomainEvent.new(:behavioral_note_approved, note_id, :behavioral_note, %{
+        DomainEvent.new(:session_note_approved, note_id, :session_note, %{
           note_id: note_id,
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -419,12 +419,12 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
     end
   end
 
-  describe "handle/1 — :behavioral_note_rejected" do
-    test "promotes to behavioral_note_rejected integration event" do
+  describe "handle/1 — :session_note_rejected" do
+    test "promotes to session_note_rejected integration event" do
       note_id = Ecto.UUID.generate()
 
       domain_event =
-        DomainEvent.new(:behavioral_note_rejected, note_id, :behavioral_note, %{
+        DomainEvent.new(:session_note_rejected, note_id, :session_note, %{
           note_id: note_id,
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -434,7 +434,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
 
       assert :ok = PromoteIntegrationEvents.handle(domain_event)
 
-      event = assert_integration_event_published(:behavioral_note_rejected)
+      event = assert_integration_event_published(:session_note_rejected)
       assert event.entity_id == note_id
       assert event.source_context == :participation
     end
@@ -443,7 +443,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
       note_id = Ecto.UUID.generate()
 
       domain_event =
-        DomainEvent.new(:behavioral_note_rejected, note_id, :behavioral_note, %{
+        DomainEvent.new(:session_note_rejected, note_id, :session_note, %{
           note_id: note_id,
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),

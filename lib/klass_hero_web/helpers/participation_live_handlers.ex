@@ -86,7 +86,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
     end
   end
 
-  @doc "Submits a behavioral note for the given record, clearing its note form, then reloads."
+  @doc "Submits a session note for the given record, clearing its note form, then reloads."
   @spec submit_note(Socket.t(), String.t(), map(), reload_fn()) :: {:noreply, Socket.t()}
   def submit_note(socket, record_id, params, reload_fn) do
     case ParticipationEditHelpers.find_participation_record(socket, record_id) do
@@ -96,7 +96,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
       _record ->
         content = Map.get(params, "content", "")
 
-        case KlassHero.Participation.submit_behavioral_note(%{
+        case KlassHero.Participation.submit_session_note(%{
                participation_record_id: record_id,
                provider_id: socket.assigns.provider_id,
                content: content
@@ -104,7 +104,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
           {:ok, _note} ->
             {:noreply,
              socket
-             |> put_flash(:info, gettext("Behavioral note submitted for review"))
+             |> put_flash(:info, gettext("Session note submitted for review"))
              |> assign(:note_form_expanded, nil)
              |> assign(:note_forms, Map.delete(socket.assigns.note_forms, record_id))
              |> reload_fn.()}

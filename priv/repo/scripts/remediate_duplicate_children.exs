@@ -163,16 +163,16 @@ else
 
                IO.puts("  Re-pointed participation records")
 
-               # 5. Re-point behavioral notes (no unique constraint;
+               # 5. Re-point session notes (no unique constraint;
                #    if duplicates had notes on different participation records, both are preserved)
                {notes, _} =
-                 from(b in "behavioral_notes", where: b.child_id in ^duplicate_ids)
+                 from(b in "session_notes", where: b.child_id in ^duplicate_ids)
                  |> Repo.update_all(set: [child_id: survivor.id])
 
-               IO.puts("  Re-pointed #{notes} behavioral note(s)")
+               IO.puts("  Re-pointed #{notes} session note(s)")
 
                # 6. Delete duplicate guardian links and child records
-               # Note: covers enrollments, consents, participation_records, behavioral_notes.
+               # Note: covers enrollments, consents, participation_records, session_notes.
                # If a new FK to children.id is added later, the transaction will roll back
                # with a constraint error (visible in the summary below).
                from(cg in "children_guardians", where: cg.child_id in ^duplicate_ids)

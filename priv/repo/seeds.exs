@@ -16,9 +16,9 @@ alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Messaging.Conversation
 alias KlassHero.Messaging.Message
 alias KlassHero.Messaging.Participant
-alias KlassHero.Participation.BehavioralNote
 alias KlassHero.Participation.ParticipationRecord
 alias KlassHero.Participation.ProgramSession
+alias KlassHero.Participation.SessionNote
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
 alias KlassHero.ProgramCatalog.Program
@@ -45,7 +45,7 @@ Repo.delete_all(Participant)
 Repo.delete_all(Conversation)
 
 # Participation
-Repo.delete_all(BehavioralNote)
+Repo.delete_all(SessionNote)
 Repo.delete_all(ParticipationRecord)
 Repo.delete_all(ProgramSession)
 
@@ -1251,10 +1251,10 @@ participation_records =
 Logger.info("Created #{length(participation_records)} participation records")
 
 # ==============================================================================
-# S15: BEHAVIORAL NOTES (~30% of checked_out records)
+# S15: SESSION NOTES (~30% of checked_out records)
 # ==============================================================================
 
-Logger.info("Seeding behavioral notes...")
+Logger.info("Seeding session notes...")
 
 checked_out_records = Enum.filter(participation_records, &(&1.status == :checked_out))
 
@@ -1276,7 +1276,7 @@ note_status_pool =
   List.duplicate(:approved, 6) ++
     List.duplicate(:pending_approval, 2) ++ List.duplicate(:rejected, 2)
 
-behavioral_notes =
+session_notes =
   checked_out_records
   |> Enum.filter(fn _ -> :rand.uniform(100) <= 30 end)
   |> Enum.with_index()
@@ -1313,11 +1313,11 @@ behavioral_notes =
         attrs
       end
 
-    BehavioralNote.create_changeset(attrs)
+    SessionNote.create_changeset(attrs)
     |> Repo.insert!()
   end)
 
-Logger.info("Created #{length(behavioral_notes)} behavioral notes")
+Logger.info("Created #{length(session_notes)} session notes")
 
 # ==============================================================================
 # S16: CONVERSATIONS (5 total)
@@ -1533,7 +1533,7 @@ Logger.info("  Participant policies: #{length(participant_policy_data)}")
 Logger.info("  Enrollments: #{length(enrollment_records)}")
 Logger.info("  Program sessions: #{length(session_records)}")
 Logger.info("  Participation records: #{length(participation_records)}")
-Logger.info("  Behavioral notes: #{length(behavioral_notes)}")
+Logger.info("  Session notes: #{length(session_notes)}")
 Logger.info("  Conversations: #{length(all_conversations)}")
 Logger.info("  Conversation participants: #{participant_count}")
 Logger.info("  Messages: #{message_count}")

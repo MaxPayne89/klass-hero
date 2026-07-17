@@ -10,7 +10,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
   If resolution fails, the provider-specific publish is skipped (best-effort).
 
   Provider-specific routing applies only to session and attendance events (which carry
-  `program_id` in their payload). Behavioral note events use a different aggregate type
+  `program_id` in their payload). Session note events use a different aggregate type
   and carry `provider_id` directly — they skip provider-specific routing and are delivered
   only via the generic topic.
   """

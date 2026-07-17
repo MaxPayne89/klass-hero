@@ -1811,11 +1811,6 @@ msgstr ""
 msgid "Back to Settings"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:107
-#, elixir-autogen, elixir-format
-msgid "Behavioral note submitted for review"
-msgstr ""
-
 #: lib/klass_hero_web/components/messaging_components.ex:150
 #, elixir-autogen, elixir-format
 msgid "Broadcast"
@@ -4073,11 +4068,6 @@ msgstr ""
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:105
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Back to emails"
-msgstr ""
-
-#: lib/klass_hero_web/components/participation_components.ex:495
-#, elixir-autogen, elixir-format
-msgid "Behavioral Note"
 msgstr ""
 
 #: lib/klass_hero_web/components/messaging_components.ex:688
@@ -7585,4 +7575,14 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:2670
 #, elixir-autogen, elixir-format
 msgid "You have signed the Staff Compliance Declaration."
+msgstr ""
+
+#: lib/klass_hero_web/components/participation_components.ex:495
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Session Note"
+msgstr ""
+
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:107
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Session note submitted for review"
 msgstr ""

@@ -1,6 +1,6 @@
-defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.BehavioralNoteQueriesTest do
+defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueriesTest do
   @moduledoc """
-  Tests for BehavioralNoteQueries composable query functions.
+  Tests for SessionNoteQueries composable query functions.
 
   Tests verify the query builder pattern where each function returns
   an Ecto.Query that can be piped into other query functions.
@@ -8,15 +8,15 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
 
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.BehavioralNoteQueries
-  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
+  alias KlassHero.Participation.SessionNote
 
   describe "base/0" do
-    test "returns base query for BehavioralNote" do
-      query = BehavioralNoteQueries.base()
+    test "returns base query for SessionNote" do
+      query = SessionNoteQueries.base()
 
       assert %Ecto.Query{} = query
-      assert query.from.source == {"behavioral_notes", BehavioralNote}
+      assert query.from.source == {"session_notes", SessionNote}
     end
   end
 
@@ -25,8 +25,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       record_id = Ecto.UUID.generate()
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_participation_record(record_id)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_participation_record(record_id)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -38,8 +38,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       child_id = Ecto.UUID.generate()
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_child(child_id)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_child(child_id)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -51,8 +51,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       parent_id = Ecto.UUID.generate()
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_parent(parent_id)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_parent(parent_id)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -62,8 +62,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
   describe "by_status/2" do
     test "adds WHERE clause for pending_approval status" do
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_status(:pending_approval)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_status(:pending_approval)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -71,8 +71,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
 
     test "adds WHERE clause for approved status" do
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_status(:approved)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_status(:approved)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -80,8 +80,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
 
     test "adds WHERE clause for rejected status" do
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_status(:rejected)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_status(:rejected)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -91,8 +91,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
   describe "approved/1" do
     test "adds WHERE clause filtering for approved notes" do
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.approved()
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.approved()
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -102,8 +102,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
   describe "pending/1" do
     test "adds WHERE clause filtering for pending_approval notes" do
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.pending()
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.pending()
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -113,8 +113,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
   describe "order_by_submitted_desc/1" do
     test "adds ORDER BY submitted_at descending" do
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.order_by_submitted_desc()
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.order_by_submitted_desc()
 
       assert %Ecto.Query{} = query
       assert length(query.order_bys) == 1
@@ -126,8 +126,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       provider_id = Ecto.UUID.generate()
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_provider(provider_id)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_provider(provider_id)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -139,8 +139,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       record_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_participation_records(record_ids)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_participation_records(record_ids)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -150,8 +150,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       record_ids = [Ecto.UUID.generate()]
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_participation_records(record_ids)
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_participation_records(record_ids)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -159,8 +159,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
 
     test "works with empty list" do
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_participation_records([])
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_participation_records([])
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
@@ -172,10 +172,10 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       child_id = Ecto.UUID.generate()
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_child(child_id)
-        |> BehavioralNoteQueries.approved()
-        |> BehavioralNoteQueries.order_by_submitted_desc()
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_child(child_id)
+        |> SessionNoteQueries.approved()
+        |> SessionNoteQueries.order_by_submitted_desc()
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 2
@@ -186,10 +186,10 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       provider_id = Ecto.UUID.generate()
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_provider(provider_id)
-        |> BehavioralNoteQueries.pending()
-        |> BehavioralNoteQueries.order_by_submitted_desc()
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_provider(provider_id)
+        |> SessionNoteQueries.pending()
+        |> SessionNoteQueries.order_by_submitted_desc()
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 2
@@ -202,11 +202,11 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       record_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_child(child_id)
-        |> BehavioralNoteQueries.by_provider(provider_id)
-        |> BehavioralNoteQueries.by_participation_records(record_ids)
-        |> BehavioralNoteQueries.order_by_submitted_desc()
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_child(child_id)
+        |> SessionNoteQueries.by_provider(provider_id)
+        |> SessionNoteQueries.by_participation_records(record_ids)
+        |> SessionNoteQueries.order_by_submitted_desc()
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 3
@@ -217,9 +217,9 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
       parent_id = Ecto.UUID.generate()
 
       query =
-        BehavioralNoteQueries.base()
-        |> BehavioralNoteQueries.by_parent(parent_id)
-        |> BehavioralNoteQueries.approved()
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_parent(parent_id)
+        |> SessionNoteQueries.approved()
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 2

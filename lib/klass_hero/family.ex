@@ -141,7 +141,7 @@ defmodule KlassHero.Family do
   Transaction order satisfies FK constraints:
   1. Delete consents (Family-owned, FK RESTRICT on child_id)
   2. Cancel active enrollments (cross-context via ACL)
-  3. Delete behavioral notes + participation records (cross-context via ACL)
+  3. Delete session notes + participation records (cross-context via ACL)
   4. Delete the child
 
   Returns `:ok`, or `{:error, :not_found}` if the child doesn't exist.
@@ -187,8 +187,8 @@ defmodule KlassHero.Family do
           message: "has associated consents"
         )
         |> Ecto.Changeset.foreign_key_constraint(:id,
-          name: "behavioral_notes_child_id_fkey",
-          message: "has associated behavioral notes"
+          name: "session_notes_child_id_fkey",
+          message: "has associated session notes"
         )
         |> Repo.delete()
         |> case do

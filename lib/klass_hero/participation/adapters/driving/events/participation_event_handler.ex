@@ -7,7 +7,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
   ## Subscribed Events
 
-  - `:child_data_anonymized` - Anonymizes behavioral notes for the child:
+  - `:child_data_anonymized` - Anonymizes session notes for the child:
     - Replaces note content with anonymized placeholder
     - Sets status to :rejected
     - Clears rejection reasons
@@ -37,11 +37,11 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
   defp anonymize_notes_with_retry(child_id) do
     operation = fn ->
-      Participation.anonymize_behavioral_notes_for_child(child_id)
+      Participation.anonymize_session_notes_for_child(child_id)
     end
 
     context = %{
-      operation_name: "anonymize behavioral notes",
+      operation_name: "anonymize session notes",
       # RetryHelpers API requires :aggregate_id — maps to entity_id in integration event context
       aggregate_id: child_id,
       backoff_ms: 100

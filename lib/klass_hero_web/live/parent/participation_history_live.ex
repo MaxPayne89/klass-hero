@@ -33,7 +33,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
         "participation_record:participation_marked_absent"
       )
 
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_submitted")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_submitted")
     end
 
     {:ok, load_participation_history(socket)}
@@ -41,7 +41,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
 
   @impl true
   def handle_event("approve_note", %{"id" => note_id}, socket) do
-    case Participation.review_behavioral_note(%{
+    case Participation.review_session_note(%{
            note_id: note_id,
            parent_id: socket.assigns.parent_id,
            decision: :approve
@@ -89,7 +89,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
     reason = Map.get(params, "reason")
     reason = if reason != "", do: reason
 
-    case Participation.review_behavioral_note(%{
+    case Participation.review_session_note(%{
            note_id: note_id,
            parent_id: socket.assigns.parent_id,
            decision: :reject,
@@ -132,7 +132,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
 
   @impl true
   def handle_info(
-        {:domain_event, %DomainEvent{event_type: :behavioral_note_submitted, payload: %{child_id: child_id}}},
+        {:domain_event, %DomainEvent{event_type: :session_note_submitted, payload: %{child_id: child_id}}},
         socket
       ) do
     socket =
@@ -187,7 +187,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
   end
 
   defp load_pending_notes(socket) do
-    {:ok, notes} = Participation.list_pending_behavioral_notes(socket.assigns.parent_id)
+    {:ok, notes} = Participation.list_pending_session_notes(socket.assigns.parent_id)
     assign(socket, :pending_notes, notes)
   end
 

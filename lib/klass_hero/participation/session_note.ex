@@ -1,6 +1,6 @@
-defmodule KlassHero.Participation.BehavioralNote do
+defmodule KlassHero.Participation.SessionNote do
   @moduledoc """
-  A behavioral note about a child's participation: the Ecto schema and the
+  A session note about a child's participation: the Ecto schema and the
   struct other code pattern-matches on, plus the approval state machine.
 
   ## Status Lifecycle
@@ -23,7 +23,7 @@ defmodule KlassHero.Participation.BehavioralNote do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  schema "behavioral_notes" do
+  schema "session_notes" do
     field :child_id, :binary_id
     field :parent_id, :binary_id
     field :provider_id, :binary_id
@@ -47,7 +47,7 @@ defmodule KlassHero.Participation.BehavioralNote do
   @required_fields [:participation_record_id, :child_id, :provider_id, :content, :status, :submitted_at]
   @optional_fields [:parent_id, :rejection_reason, :reviewed_at]
 
-  @doc "Creates a changeset for inserting a new behavioral note."
+  @doc "Creates a changeset for inserting a new session note."
   def create_changeset(attrs) do
     %__MODULE__{}
     |> cast(attrs, @required_fields ++ @optional_fields)
@@ -55,14 +55,14 @@ defmodule KlassHero.Participation.BehavioralNote do
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_length(:content, max: @max_content_length)
     |> unique_constraint([:participation_record_id, :provider_id],
-      name: :behavioral_notes_participation_record_id_provider_id_index,
+      name: :session_notes_participation_record_id_provider_id_index,
       message: "note already exists for this provider and record"
     )
     |> foreign_key_constraint(:participation_record_id)
     |> foreign_key_constraint(:child_id)
   end
 
-  @doc "Creates a changeset for updating an existing behavioral note."
+  @doc "Creates a changeset for updating an existing session note."
   def update_changeset(note, attrs) do
     note
     |> cast(attrs, [:content, :status, :rejection_reason, :submitted_at, :reviewed_at])

@@ -284,7 +284,7 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
   defp format_datetime_local(%DateTime{} = dt), do: Calendar.strftime(dt, "%Y-%m-%dT%H:%M")
 
   defp note_badge(record) do
-    notes = Map.get(record, :behavioral_notes, [])
+    notes = Map.get(record, :session_notes, [])
 
     cond do
       notes == [] ->

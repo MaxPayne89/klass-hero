@@ -440,9 +440,9 @@ defmodule KlassHeroWeb.ParticipationComponents do
   end
 
   @doc """
-  Renders a behavioral note status badge.
+  Renders a session note status badge.
 
-  Shows the current status of a behavioral note (pending, approved, rejected)
+  Shows the current status of a session note (pending, approved, rejected)
   with appropriate color coding.
 
   ## Examples
@@ -474,11 +474,11 @@ defmodule KlassHeroWeb.ParticipationComponents do
   end
 
   @doc """
-  Renders an inline form for submitting a behavioral note.
+  Renders an inline form for submitting a session note.
 
   ## Examples
 
-      <.behavioral_note_form
+      <.session_note_form
         form={@note_forms["record-id"]}
         record_id="record-id"
       />
@@ -486,13 +486,13 @@ defmodule KlassHeroWeb.ParticipationComponents do
   attr :form, Form, required: true, doc: "Form struct from to_form/2"
   attr :record_id, :string, required: true, doc: "Participation record ID"
 
-  def behavioral_note_form(assigns) do
+  def session_note_form(assigns) do
     assigns =
       assign(assigns,
         entity_id: assigns.record_id,
-        id_prefix: "behavioral-note-form",
+        id_prefix: "session-note-form",
         wrapper_id_prefix: "note-form",
-        label: gettext("Behavioral Note"),
+        label: gettext("Session Note"),
         placeholder: gettext("Observation about the child's participation..."),
         submit_label: gettext("Submit Note"),
         submit_event: "submit_note",
@@ -500,23 +500,23 @@ defmodule KlassHeroWeb.ParticipationComponents do
         cancel_event: "cancel_note"
       )
 
-    behavioral_note_inline_form(assigns)
+    session_note_inline_form(assigns)
   end
 
   @doc """
-  Renders an inline form for revising a rejected behavioral note.
+  Renders an inline form for revising a rejected session note.
 
   ## Examples
 
-      <.behavioral_note_revision_form
+      <.session_note_revision_form
         form={@revision_forms["note-id"]}
         note_id="note-id"
       />
   """
   attr :form, Form, required: true, doc: "Form struct from to_form/2"
-  attr :note_id, :string, required: true, doc: "Behavioral note ID"
+  attr :note_id, :string, required: true, doc: "Session note ID"
 
-  def behavioral_note_revision_form(assigns) do
+  def session_note_revision_form(assigns) do
     assigns =
       assign(assigns,
         entity_id: assigns.note_id,
@@ -530,7 +530,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
         cancel_event: "cancel_revision"
       )
 
-    behavioral_note_inline_form(assigns)
+    session_note_inline_form(assigns)
   end
 
   @doc """
@@ -614,13 +614,13 @@ defmodule KlassHeroWeb.ParticipationComponents do
   end
 
   @doc """
-  Renders a list of approved behavioral notes for a child.
+  Renders a list of approved session notes for a child.
 
   ## Examples
 
-      <.approved_notes_list notes={record.behavioral_notes} record_id={record.id} />
+      <.approved_notes_list notes={record.session_notes} record_id={record.id} />
   """
-  attr :notes, :list, required: true, doc: "List of approved behavioral note domain models"
+  attr :notes, :list, required: true, doc: "List of approved session note domain models"
   attr :record_id, :string, required: true, doc: "Participation record ID for DOM ids"
 
   def approved_notes_list(assigns) do
@@ -649,7 +649,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
   attr :change_event, :string, required: true
   attr :cancel_event, :string, required: true
 
-  defp behavioral_note_inline_form(assigns) do
+  defp session_note_inline_form(assigns) do
     ~H"""
     <div class="mt-3 border-t border-hero-grey-200 pt-3" id={"#{@wrapper_id_prefix}-#{@entity_id}"}>
       <.form

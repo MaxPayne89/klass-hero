@@ -1,8 +1,8 @@
-defmodule KlassHero.Participation.AnonymizeBehavioralNotesForChildTest do
+defmodule KlassHero.Participation.AnonymizeSessionNotesForChildTest do
   @moduledoc """
-  Tests for Participation.anonymize_behavioral_notes_for_child/1.
+  Tests for Participation.anonymize_session_notes_for_child/1.
 
-  Verifies that behavioral notes are bulk-anonymized for GDPR account deletion:
+  Verifies that session notes are bulk-anonymized for GDPR account deletion:
   content replaced, status set to rejected, rejection_reason cleared.
   """
 
@@ -11,12 +11,12 @@ defmodule KlassHero.Participation.AnonymizeBehavioralNotesForChildTest do
   import KlassHero.Factory
 
   alias KlassHero.Participation
-  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.SessionNote
 
-  describe "anonymize_behavioral_notes_for_child/1" do
+  describe "anonymize_session_notes_for_child/1" do
     test "anonymizes all notes for a child" do
       note_a =
-        insert(:behavioral_note_schema,
+        insert(:session_note_schema,
           content: "Very engaged today",
           status: :approved
         )
@@ -24,18 +24,18 @@ defmodule KlassHero.Participation.AnonymizeBehavioralNotesForChildTest do
       child_id = note_a.child_id
 
       note_b =
-        insert(:behavioral_note_schema,
+        insert(:session_note_schema,
           child_id: child_id,
           content: "Needs more focus",
           status: :pending_approval
         )
 
-      {:ok, count} = Participation.anonymize_behavioral_notes_for_child(child_id)
+      {:ok, count} = Participation.anonymize_session_notes_for_child(child_id)
 
       assert count == 2
 
-      reloaded_a = Repo.get!(BehavioralNote, note_a.id)
-      reloaded_b = Repo.get!(BehavioralNote, note_b.id)
+      reloaded_a = Repo.get!(SessionNote, note_a.id)
+      reloaded_b = Repo.get!(SessionNote, note_b.id)
 
       assert reloaded_a.content == "[Removed - account deleted]"
       assert reloaded_a.status == :rejected
@@ -47,9 +47,9 @@ defmodule KlassHero.Participation.AnonymizeBehavioralNotesForChildTest do
     end
 
     test "returns count of anonymized notes" do
-      note = insert(:behavioral_note_schema)
+      note = insert(:session_note_schema)
 
-      {:ok, count} = Participation.anonymize_behavioral_notes_for_child(note.child_id)
+      {:ok, count} = Participation.anonymize_session_notes_for_child(note.child_id)
 
       assert count == 1
     end
@@ -57,7 +57,7 @@ defmodule KlassHero.Participation.AnonymizeBehavioralNotesForChildTest do
     test "returns zero when no notes exist for child" do
       child_id = Ecto.UUID.generate()
 
-      {:ok, count} = Participation.anonymize_behavioral_notes_for_child(child_id)
+      {:ok, count} = Participation.anonymize_session_notes_for_child(child_id)
 
       assert count == 0
     end

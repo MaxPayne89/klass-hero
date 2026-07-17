@@ -1,6 +1,6 @@
-defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.BehavioralNoteQueries do
+defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries do
   @moduledoc """
-  Composable Ecto query functions for behavioral notes.
+  Composable Ecto query functions for session notes.
 
   Follows Pattern 2: Query Builders - Compose Queries with Functions.
   Each function returns an Ecto query that can be piped into others.
@@ -8,12 +8,12 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Behavioral
 
   import Ecto.Query
 
-  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.SessionNote
 
-  @doc "Base query for behavioral notes."
+  @doc "Base query for session notes."
   @spec base() :: Ecto.Query.t()
   def base do
-    from(n in BehavioralNote, as: :note)
+    from(n in SessionNote, as: :note)
   end
 
   @doc "Filters by participation record ID."

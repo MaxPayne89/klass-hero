@@ -2,10 +2,10 @@ defmodule KlassHero.Participation do
   @moduledoc """
   Public API for the Participation bounded context.
 
-  Covers session lifecycle, check-in/check-out, attendance, and behavioral notes.
+  Covers session lifecycle, check-in/check-out, attendance, and session notes.
   Conventional Phoenix context: orchestration and persistence live here; the
   state machines live on the schema structs (`ProgramSession`,
-  `ParticipationRecord`, `BehavioralNote`). Cross-context reads route through the
+  `ParticipationRecord`, `SessionNote`). Cross-context reads route through the
   owning contexts' public facades (`ProgramCatalog`, `Provider`) and the local
   `*Resolver` ACL adapters.
 
@@ -20,12 +20,12 @@ defmodule KlassHero.Participation do
   alias KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver
   alias KlassHero.Participation.Adapters.Driven.ACL.EnrolledChildrenResolver
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.BehavioralNoteQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
-  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.SessionNote
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Repo
@@ -481,25 +481,25 @@ defmodule KlassHero.Participation do
   def record_statuses, do: ParticipationRecord.valid_statuses()
 
   # ============================================================================
-  # Behavioral notes
+  # Session notes
   # ============================================================================
 
   @doc """
-  Submits a behavioral note for a participation record.
+  Submits a session note for a participation record.
 
   Required params: `participation_record_id`, `provider_id`, `content` (max 1000 chars).
   """
-  def submit_behavioral_note(%{participation_record_id: record_id, provider_id: provider_id, content: content}) do
-    context_span entity: "behavioral_note" do
+  def submit_session_note(%{participation_record_id: record_id, provider_id: provider_id, content: content}) do
+    context_span entity: "session_note" do
       normalized_content = normalize_notes(content)
 
       with {:content, content} when content != nil <- {:content, normalized_content},
            {:ok, record} <- fetch_record(record_id),
-           true <- ParticipationRecord.allows_behavioral_note?(record),
+           true <- ParticipationRecord.allows_session_note?(record),
            {:ok, note} <- build_note(record, provider_id, content),
            {:ok, persisted} <- insert_note(note) do
         log_publish_result(
-          DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_submitted(persisted)),
+          DomainEventBus.dispatch(@context, ParticipationEvents.session_note_submitted(persisted)),
           persisted.id
         )
 
@@ -513,13 +513,13 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Reviews a behavioral note (approve or reject).
+  Reviews a session note (approve or reject).
 
   Required params: `note_id`, `parent_id` (ownership enforced at DB level),
   `decision` (`:approve` or `:reject`). Optional: `reason`.
   """
-  def review_behavioral_note(%{note_id: note_id, parent_id: parent_id, decision: decision} = params) do
-    context_span entity: "behavioral_note" do
+  def review_session_note(%{note_id: note_id, parent_id: parent_id, decision: decision} = params) do
+    context_span entity: "session_note" do
       reason = Map.get(params, :reason)
 
       # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to parent.
@@ -533,21 +533,21 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Revises a rejected behavioral note with new content.
+  Revises a rejected session note with new content.
 
   Required params: `note_id`, `provider_id` (ownership enforced at DB level), `content`.
   """
-  def revise_behavioral_note(%{note_id: note_id, provider_id: provider_id, content: content}) do
-    context_span entity: "behavioral_note" do
+  def revise_session_note(%{note_id: note_id, provider_id: provider_id, content: content}) do
+    context_span entity: "session_note" do
       normalized_content = normalize_notes(content)
 
       # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to provider.
       with {:content, content} when content != nil <- {:content, normalized_content},
            {:ok, note} <- fetch_note_by_provider(note_id, provider_id),
-           {:ok, revised} <- BehavioralNote.revise(note, content),
+           {:ok, revised} <- SessionNote.revise(note, content),
            {:ok, persisted} <- update_note(revised) do
         log_publish_result(
-          DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_submitted(persisted)),
+          DomainEventBus.dispatch(@context, ParticipationEvents.session_note_submitted(persisted)),
           persisted.id
         )
 
@@ -560,42 +560,42 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Anonymizes all behavioral notes for a child during GDPR account deletion.
+  Anonymizes all session notes for a child during GDPR account deletion.
 
   Replaces note content with "[Removed - account deleted]", clears rejection
   reasons, and sets status to :rejected. Uses bulk update_all for efficiency.
 
   Returns `{:ok, count}` with the number of notes anonymized.
   """
-  def anonymize_behavioral_notes_for_child(child_id) when is_binary(child_id) do
-    context_span entity: "behavioral_note" do
-      anonymize_notes_for_child(child_id, BehavioralNote.anonymized_attrs())
+  def anonymize_session_notes_for_child(child_id) when is_binary(child_id) do
+    context_span entity: "session_note" do
+      anonymize_notes_for_child(child_id, SessionNote.anonymized_attrs())
     end
   end
 
-  @doc "Lists pending behavioral notes for a parent awaiting review."
-  def list_pending_behavioral_notes(parent_id) when is_binary(parent_id) do
+  @doc "Lists pending session notes for a parent awaiting review."
+  def list_pending_session_notes(parent_id) when is_binary(parent_id) do
     {:ok, list_notes_pending_by_parent(parent_id)}
   end
 
-  @doc "Gets approved behavioral notes for a child."
-  def get_approved_behavioral_notes(child_id) when is_binary(child_id) do
+  @doc "Gets approved session notes for a child."
+  def get_approved_session_notes(child_id) when is_binary(child_id) do
     {:ok, list_notes_approved_by_child(child_id)}
   end
 
-  @doc "Gets a behavioral note by participation record and provider. Returns `{:ok, note}` or `{:error, :not_found}`."
-  def get_behavioral_note_by_record_and_provider(record_id, provider_id)
+  @doc "Gets a session note by participation record and provider. Returns `{:ok, note}` or `{:error, :not_found}`."
+  def get_session_note_by_record_and_provider(record_id, provider_id)
       when is_binary(record_id) and is_binary(provider_id) do
     fetch_note_by_record_and_provider(record_id, provider_id)
   end
 
   @doc """
-  Lists behavioral notes for multiple participation records by a single provider.
+  Lists session notes for multiple participation records by a single provider.
 
   Returns a flat list of notes. Use this instead of calling
-  `get_behavioral_note_by_record_and_provider/2` per record to avoid N+1 queries.
+  `get_session_note_by_record_and_provider/2` per record to avoid N+1 queries.
   """
-  def list_behavioral_notes_by_records_and_provider(record_ids, provider_id)
+  def list_session_notes_by_records_and_provider(record_ids, provider_id)
       when is_list(record_ids) and is_binary(provider_id) do
     list_notes_by_records_and_provider(record_ids, provider_id)
   end
@@ -743,7 +743,7 @@ defmodule KlassHero.Participation do
   end
 
   defp build_note(record, provider_id, content) do
-    BehavioralNote.new(%{
+    SessionNote.new(%{
       id: Ecto.UUID.generate(),
       participation_record_id: record.id,
       child_id: record.child_id,
@@ -753,15 +753,15 @@ defmodule KlassHero.Participation do
     })
   end
 
-  defp apply_review_decision(note, :approve, _reason), do: BehavioralNote.approve(note)
-  defp apply_review_decision(note, :reject, reason), do: BehavioralNote.reject(note, reason)
+  defp apply_review_decision(note, :approve, _reason), do: SessionNote.approve(note)
+  defp apply_review_decision(note, :reject, reason), do: SessionNote.reject(note, reason)
   defp apply_review_decision(_note, _decision, _reason), do: {:error, :invalid_decision}
 
   defp batch_resolve_roster(records) do
     child_ids = records |> Enum.map(& &1.child_id) |> Enum.uniq()
     child_info_map = ChildInfoResolver.resolve_children_info(child_ids)
 
-    # Behavioral notes are only visible when parent has consented — filter before fetching.
+    # Session notes are only visible when parent has consented — filter before fetching.
     consented_child_ids =
       child_info_map
       |> Enum.filter(fn {_id, info} -> info.has_consent? end)
@@ -785,7 +785,7 @@ defmodule KlassHero.Participation do
       allergies: child_info.allergies,
       support_needs: child_info.support_needs,
       emergency_contact: child_info.emergency_contact,
-      behavioral_notes: notes
+      session_notes: notes
     }
   end
 
@@ -844,11 +844,11 @@ defmodule KlassHero.Participation do
   end
 
   defp publish_review_event(note, :approve) do
-    DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_approved(note))
+    DomainEventBus.dispatch(@context, ParticipationEvents.session_note_approved(note))
   end
 
   defp publish_review_event(note, :reject) do
-    DomainEventBus.dispatch(@context, ParticipationEvents.behavioral_note_rejected(note))
+    DomainEventBus.dispatch(@context, ParticipationEvents.session_note_rejected(note))
   end
 
   defp safe_publish_roster_seeded(session_id, program_id, count) do
@@ -1058,19 +1058,19 @@ defmodule KlassHero.Participation do
   end
 
   # ============================================================================
-  # Persistence — behavioral notes
+  # Persistence — session notes
   # ============================================================================
 
-  defp insert_note(%BehavioralNote{} = note) do
+  defp insert_note(%SessionNote{} = note) do
     note
     |> Map.from_struct()
-    |> BehavioralNote.create_changeset()
+    |> SessionNote.create_changeset()
     |> Repo.insert()
     |> handle_note_insert()
   end
 
-  defp update_note(%BehavioralNote{} = note) do
-    case Repo.get(BehavioralNote, note.id) do
+  defp update_note(%SessionNote{} = note) do
+    case Repo.get(SessionNote, note.id) do
       nil ->
         {:error, :not_found}
 
@@ -1078,47 +1078,47 @@ defmodule KlassHero.Participation do
         attrs = Map.take(note, @note_update_fields)
 
         schema
-        |> BehavioralNote.update_changeset(attrs)
+        |> SessionNote.update_changeset(attrs)
         |> Repo.update()
         |> handle_note_update()
     end
   end
 
   defp list_notes_pending_by_parent(parent_id) do
-    BehavioralNoteQueries.base()
-    |> BehavioralNoteQueries.by_parent(parent_id)
-    |> BehavioralNoteQueries.pending()
-    |> BehavioralNoteQueries.order_by_submitted_desc()
+    SessionNoteQueries.base()
+    |> SessionNoteQueries.by_parent(parent_id)
+    |> SessionNoteQueries.pending()
+    |> SessionNoteQueries.order_by_submitted_desc()
     |> Repo.all()
   end
 
   defp list_notes_approved_by_child(child_id) do
-    BehavioralNoteQueries.base()
-    |> BehavioralNoteQueries.by_child(child_id)
-    |> BehavioralNoteQueries.approved()
-    |> BehavioralNoteQueries.order_by_submitted_desc()
+    SessionNoteQueries.base()
+    |> SessionNoteQueries.by_child(child_id)
+    |> SessionNoteQueries.approved()
+    |> SessionNoteQueries.order_by_submitted_desc()
     |> Repo.all()
   end
 
   defp list_notes_approved_by_children(child_ids) do
-    BehavioralNoteQueries.base()
-    |> BehavioralNoteQueries.approved()
+    SessionNoteQueries.base()
+    |> SessionNoteQueries.approved()
     |> where([note: n], n.child_id in ^child_ids)
-    |> BehavioralNoteQueries.order_by_submitted_desc()
+    |> SessionNoteQueries.order_by_submitted_desc()
     |> Repo.all()
     |> Enum.group_by(& &1.child_id)
   end
 
   defp list_notes_by_records_and_provider(record_ids, provider_id) do
-    BehavioralNoteQueries.base()
-    |> BehavioralNoteQueries.by_participation_records(record_ids)
-    |> BehavioralNoteQueries.by_provider(provider_id)
+    SessionNoteQueries.base()
+    |> SessionNoteQueries.by_participation_records(record_ids)
+    |> SessionNoteQueries.by_provider(provider_id)
     |> Repo.all()
   end
 
   defp fetch_note_by_parent(id, parent_id) do
-    BehavioralNoteQueries.base()
-    |> BehavioralNoteQueries.by_parent(parent_id)
+    SessionNoteQueries.base()
+    |> SessionNoteQueries.by_parent(parent_id)
     |> where([note: n], n.id == ^id)
     |> Repo.one()
     |> case do
@@ -1128,8 +1128,8 @@ defmodule KlassHero.Participation do
   end
 
   defp fetch_note_by_provider(id, provider_id) do
-    BehavioralNoteQueries.base()
-    |> BehavioralNoteQueries.by_provider(provider_id)
+    SessionNoteQueries.base()
+    |> SessionNoteQueries.by_provider(provider_id)
     |> where([note: n], n.id == ^id)
     |> Repo.one()
     |> case do
@@ -1139,9 +1139,9 @@ defmodule KlassHero.Participation do
   end
 
   defp fetch_note_by_record_and_provider(record_id, provider_id) do
-    BehavioralNoteQueries.base()
-    |> BehavioralNoteQueries.by_participation_record(record_id)
-    |> BehavioralNoteQueries.by_provider(provider_id)
+    SessionNoteQueries.base()
+    |> SessionNoteQueries.by_participation_record(record_id)
+    |> SessionNoteQueries.by_provider(provider_id)
     |> Repo.one()
     |> case do
       nil -> {:error, :not_found}
@@ -1161,7 +1161,7 @@ defmodule KlassHero.Participation do
       |> Keyword.put(:updated_at, now)
 
     {count, _} =
-      BehavioralNote
+      SessionNote
       |> where([n], n.child_id == ^child_id)
       |> Repo.update_all(set: set_fields)
 
@@ -1174,7 +1174,7 @@ defmodule KlassHero.Participation do
     if EctoErrorHelpers.any_unique_constraint_violation?(errors) do
       {:error, :duplicate_note}
     else
-      Logger.warning("[Participation] Behavioral note validation failed on insert",
+      Logger.warning("[Participation] Session note validation failed on insert",
         errors: inspect(changeset.errors)
       )
 
@@ -1185,7 +1185,7 @@ defmodule KlassHero.Participation do
   defp handle_note_update({:ok, schema}), do: {:ok, schema}
 
   defp handle_note_update({:error, %Ecto.Changeset{} = changeset}) do
-    Logger.warning("[Participation] Behavioral note validation failed on update",
+    Logger.warning("[Participation] Session note validation failed on update",
       errors: inspect(changeset.errors)
     )
 

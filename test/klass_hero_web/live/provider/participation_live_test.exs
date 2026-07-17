@@ -4,8 +4,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.SessionNote
 
   setup :register_and_log_in_provider
 
@@ -168,7 +168,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     end
   end
 
-  describe "behavioral notes" do
+  describe "session notes" do
     setup [:create_session_with_child]
 
     # Trigger: check_in_by references users table via FK constraint
@@ -207,7 +207,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       refute has_element?(view, "#add-note-btn-#{record.id}")
     end
 
-    test "expand and submit behavioral note form", %{
+    test "expand and submit session note form", %{
       conn: conn,
       session: session,
       record: record,
@@ -222,15 +222,15 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       |> element("#add-note-btn-#{record.id}")
       |> render_click()
 
-      assert has_element?(view, "#behavioral-note-form-#{record.id}")
+      assert has_element?(view, "#session-note-form-#{record.id}")
 
       # Submit the note
       view
-      |> form("#behavioral-note-form-#{record.id}", %{note: %{content: "Great participation"}})
+      |> form("#session-note-form-#{record.id}", %{note: %{content: "Great participation"}})
       |> render_submit()
 
       # Form should collapse and badge should appear
-      refute has_element?(view, "#behavioral-note-form-#{record.id}")
+      refute has_element?(view, "#session-note-form-#{record.id}")
     end
 
     test "shows note status badge after submission", %{
@@ -244,7 +244,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       # Submit a note first
       {:ok, _note} =
-        KlassHero.Participation.submit_behavioral_note(%{
+        KlassHero.Participation.submit_session_note(%{
           participation_record_id: record.id,
           provider_id: provider.id,
           content: "Good session"
@@ -268,14 +268,14 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       # Submit and reject a note
       {:ok, note} =
-        KlassHero.Participation.submit_behavioral_note(%{
+        KlassHero.Participation.submit_session_note(%{
           participation_record_id: record.id,
           provider_id: provider.id,
           content: "Some observation"
         })
 
       {:ok, _rejected} =
-        KlassHero.Participation.review_behavioral_note(%{
+        KlassHero.Participation.review_session_note(%{
           note_id: note.id,
           parent_id: parent.id,
           decision: :reject,
@@ -298,14 +298,14 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       check_in_record(%{record: record, user: user})
 
       {:ok, note} =
-        KlassHero.Participation.submit_behavioral_note(%{
+        KlassHero.Participation.submit_session_note(%{
           participation_record_id: record.id,
           provider_id: provider.id,
           content: "Some observation"
         })
 
       {:ok, _rejected} =
-        KlassHero.Participation.review_behavioral_note(%{
+        KlassHero.Participation.review_session_note(%{
           note_id: note.id,
           parent_id: parent.id,
           decision: :reject,
@@ -334,7 +334,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       )
 
       # Create an approved note for this child
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         parent_id: parent.id,
@@ -373,14 +373,14 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       # Submit and reject a note
       {:ok, note} =
-        KlassHero.Participation.submit_behavioral_note(%{
+        KlassHero.Participation.submit_session_note(%{
           participation_record_id: record.id,
           provider_id: provider.id,
           content: "Initial observation"
         })
 
       {:ok, _rejected} =
-        KlassHero.Participation.review_behavioral_note(%{
+        KlassHero.Participation.review_session_note(%{
           note_id: note.id,
           parent_id: parent.id,
           decision: :reject,
@@ -424,7 +424,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       # Submit with empty content
       view
-      |> form("#behavioral-note-form-#{record.id}", %{note: %{content: ""}})
+      |> form("#session-note-form-#{record.id}", %{note: %{content: ""}})
       |> render_submit()
 
       assert has_element?(view, "#flash-error")
@@ -441,7 +441,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       # Submit a note first via the API
       {:ok, _note} =
-        KlassHero.Participation.submit_behavioral_note(%{
+        KlassHero.Participation.submit_session_note(%{
           participation_record_id: record.id,
           provider_id: provider.id,
           content: "First note"
@@ -473,7 +473,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
       assert_flash(view, :error, "Record not found")
 
-      refute KlassHero.Repo.get_by(BehavioralNote,
+      refute KlassHero.Repo.get_by(SessionNote,
                participation_record_id: foreign_record.id
              )
     end

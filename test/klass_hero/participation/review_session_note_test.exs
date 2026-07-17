@@ -1,6 +1,6 @@
-defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
+defmodule KlassHero.Participation.ReviewSessionNoteTest do
   @moduledoc """
-  Integration tests for ReviewBehavioralNote use case.
+  Integration tests for ReviewSessionNote use case.
   """
 
   use KlassHero.DataCase, async: true
@@ -8,11 +8,11 @@ defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
   import KlassHero.Factory
 
   describe "execute/1 - approve" do
-    test "approves a pending behavioral note" do
-      schema = insert(:behavioral_note_schema, status: :pending_approval)
+    test "approves a pending session note" do
+      schema = insert(:session_note_schema, status: :pending_approval)
 
       assert {:ok, note} =
-               KlassHero.Participation.review_behavioral_note(%{
+               KlassHero.Participation.review_session_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :approve
@@ -24,7 +24,7 @@ defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
 
     test "returns error for non-existent note" do
       assert {:error, :not_found} =
-               KlassHero.Participation.review_behavioral_note(%{
+               KlassHero.Participation.review_session_note(%{
                  note_id: Ecto.UUID.generate(),
                  parent_id: Ecto.UUID.generate(),
                  decision: :approve
@@ -33,13 +33,13 @@ defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
 
     test "returns error for already approved note" do
       schema =
-        insert(:behavioral_note_schema,
+        insert(:session_note_schema,
           status: :approved,
           reviewed_at: DateTime.utc_now() |> DateTime.truncate(:second)
         )
 
       assert {:error, :invalid_status_transition} =
-               KlassHero.Participation.review_behavioral_note(%{
+               KlassHero.Participation.review_session_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :approve
@@ -47,11 +47,11 @@ defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
     end
 
     test "returns not_found when parent_id does not match note owner" do
-      schema = insert(:behavioral_note_schema, status: :pending_approval)
+      schema = insert(:session_note_schema, status: :pending_approval)
       wrong_parent_id = Ecto.UUID.generate()
 
       assert {:error, :not_found} =
-               KlassHero.Participation.review_behavioral_note(%{
+               KlassHero.Participation.review_session_note(%{
                  note_id: schema.id,
                  parent_id: wrong_parent_id,
                  decision: :approve
@@ -60,11 +60,11 @@ defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
   end
 
   describe "execute/1 - reject" do
-    test "rejects a pending behavioral note with reason" do
-      schema = insert(:behavioral_note_schema, status: :pending_approval)
+    test "rejects a pending session note with reason" do
+      schema = insert(:session_note_schema, status: :pending_approval)
 
       assert {:ok, note} =
-               KlassHero.Participation.review_behavioral_note(%{
+               KlassHero.Participation.review_session_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :reject,
@@ -76,11 +76,11 @@ defmodule KlassHero.Participation.ReviewBehavioralNoteTest do
       assert note.reviewed_at != nil
     end
 
-    test "rejects a pending behavioral note without reason" do
-      schema = insert(:behavioral_note_schema, status: :pending_approval)
+    test "rejects a pending session note without reason" do
+      schema = insert(:session_note_schema, status: :pending_approval)
 
       assert {:ok, note} =
-               KlassHero.Participation.review_behavioral_note(%{
+               KlassHero.Participation.review_session_note(%{
                  note_id: schema.id,
                  parent_id: schema.parent_id,
                  decision: :reject

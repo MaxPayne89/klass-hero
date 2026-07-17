@@ -131,16 +131,16 @@
 
           <%!-- Inline note form (full-width below record row) --%>
           <%= if @note_form_expanded == to_string(record.id) do %>
-            <.behavioral_note_form
+            <.session_note_form
               form={Map.get(@note_forms, to_string(record.id))}
               record_id={to_string(record.id)}
             />
           <% end %>
 
-          <%!-- Approved behavioral notes from past sessions (consent-gated) --%>
-          <%= if Map.get(record, :behavioral_notes) do %>
+          <%!-- Approved session notes from past sessions (consent-gated) --%>
+          <%= if Map.get(record, :session_notes) do %>
             <.approved_notes_list
-              notes={Map.get(record, :behavioral_notes, [])}
+              notes={Map.get(record, :session_notes, [])}
               record_id={to_string(record.id)}
             />
           <% end %>
