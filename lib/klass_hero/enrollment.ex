@@ -504,12 +504,9 @@ defmodule KlassHero.Enrollment do
   # ProgramCatalog↔Enrollment dependency cycle (ProgramCatalog already depends on
   # Enrollment for capacity ACL).
   #
-  # LEFT join, and the two arities filter on deliberately different sides: the
-  # program_ids arity filters the *enrollment's* program_id, so an enrollment whose
-  # program was deleted still surfaces with a nil title → "Unknown". The provider_id
-  # arity must filter the *program's* provider_id — the only place that link lives —
-  # so such orphans fall out of the provider-scoped view (the program_id FK is
-  # :restrict, so they cannot occur outside tests anyway).
+  # The two arities filter deliberately different sides of the join: the program_ids
+  # arity filters the enrollment's program_id, the provider_id arity the program's
+  # provider_id — the only place that link lives.
   defp list_pending(filter_fun) do
     query =
       Enrollment
@@ -543,7 +540,7 @@ defmodule KlassHero.Enrollment do
     %{
       enrollment_id: enrollment.id,
       program_id: enrollment.program_id,
-      program_title: program_title || "Unknown",
+      program_title: program_title,
       child_id: enrollment.child_id,
       child_name: child_name,
       parent_id: enrollment.parent_id,

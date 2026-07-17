@@ -46,40 +46,6 @@ defmodule KlassHero.Enrollment.ListPendingEnrollmentsForProviderTest do
 
       assert KlassHero.Enrollment.list_pending_enrollments_for_provider([program.id]) == []
     end
-
-    test "gracefully handles missing child and program metadata" do
-      # Trigger: enrollment exists but its program has been deleted (simulate orphan via FK bypass)
-      # Why: program_id FK is :restrict so we insert real records then delete the program to orphan
-      # Outcome: entry.program_title falls back to "Unknown"; child_name falls back to "Unknown"
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      {child, parent} = insert_child_with_guardian()
-
-      enrollment =
-        insert(:enrollment_schema,
-          program_id: program.id,
-          child_id: child.id,
-          parent_id: parent.id,
-          status: :pending
-        )
-
-      program_id = program.id
-      program_id_bin = Ecto.UUID.dump!(program.id)
-      child_id_bin = Ecto.UUID.dump!(child.id)
-
-      # Disable FK checks so we can orphan the enrollment
-      KlassHero.Repo.query!("SET session_replication_role = 'replica'")
-      KlassHero.Repo.query!("DELETE FROM children_guardians WHERE child_id = $1", [child_id_bin])
-      KlassHero.Repo.query!("DELETE FROM children WHERE id = $1", [child_id_bin])
-      KlassHero.Repo.query!("DELETE FROM programs WHERE id = $1", [program_id_bin])
-      KlassHero.Repo.query!("SET session_replication_role = 'origin'")
-
-      [entry] = KlassHero.Enrollment.list_pending_enrollments_for_provider([program_id])
-
-      assert entry.enrollment_id == enrollment.id
-      assert entry.child_name == "Unknown"
-      assert entry.program_title == "Unknown"
-    end
   end
 
   describe "execute/1 with provider_id (binary)" do
