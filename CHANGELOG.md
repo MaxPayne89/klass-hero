@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.58.1](https://github.com/MaxPayne89/klass-hero/compare/v0.58.0...v0.58.1) (2026-07-17)
+
+
+### Performance Improvements
+
+* consolidate provider pending-enrollments into one join ([#1103](https://github.com/MaxPayne89/klass-hero/issues/1103)) ([5213849](https://github.com/MaxPayne89/klass-hero/commit/52138490b985ec347c4ec79df899e67853ef5290))
+
+
+### Code Refactoring
+
+* extract emit_domain_event LiveView test helper ([#1104](https://github.com/MaxPayne89/klass-hero/issues/1104)) ([58477ce](https://github.com/MaxPayne89/klass-hero/commit/58477ce7117ea4c8a0287fb69dce7c99f4a30409)), closes [#869](https://github.com/MaxPayne89/klass-hero/issues/869)
+
 ## [0.58.0](https://github.com/MaxPayne89/klass-hero/compare/v0.57.0...v0.58.0) (2026-07-15)
 
 
