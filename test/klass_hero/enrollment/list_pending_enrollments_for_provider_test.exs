@@ -81,4 +81,79 @@ defmodule KlassHero.Enrollment.ListPendingEnrollmentsForProviderTest do
       assert entry.program_title == "Unknown"
     end
   end
+
+  describe "execute/1 with provider_id (binary)" do
+    @non_pending_statuses [:confirmed, :cancelled, :completed]
+
+    test "returns enriched entries for the provider's pending enrollments" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id, title: "Soccer Camp")
+      {child, parent} = insert_child_with_guardian(first_name: "Ada", last_name: "Lovelace")
+
+      enrollment =
+        insert(:enrollment_schema,
+          program_id: program.id,
+          parent_id: parent.id,
+          child_id: child.id,
+          status: :pending
+        )
+
+      [entry] = KlassHero.Enrollment.list_pending_enrollments_for_provider(provider.id)
+
+      assert entry.enrollment_id == enrollment.id
+      assert entry.program_id == program.id
+      assert entry.program_title == "Soccer Camp"
+      assert entry.child_name == "Ada Lovelace"
+    end
+
+    test "excludes non-pending enrollments" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      for status <- @non_pending_statuses do
+        {child, parent} = insert_child_with_guardian()
+
+        insert(:enrollment_schema,
+          program_id: program.id,
+          child_id: child.id,
+          parent_id: parent.id,
+          status: status
+        )
+      end
+
+      assert KlassHero.Enrollment.list_pending_enrollments_for_provider(provider.id) == []
+    end
+
+    test "excludes other providers' pending enrollments (provider isolation)" do
+      provider_a = insert(:provider_profile_schema)
+      provider_b = insert(:provider_profile_schema)
+      program_a = insert(:program_schema, provider_id: provider_a.id)
+      program_b = insert(:program_schema, provider_id: provider_b.id)
+      {child_a, parent_a} = insert_child_with_guardian()
+      {child_b, parent_b} = insert_child_with_guardian()
+
+      enrollment_a =
+        insert(:enrollment_schema,
+          program_id: program_a.id,
+          child_id: child_a.id,
+          parent_id: parent_a.id,
+          status: :pending
+        )
+
+      # provider_b's pending enrollment — must NOT leak into provider_a's result
+      insert(:enrollment_schema,
+        program_id: program_b.id,
+        child_id: child_b.id,
+        parent_id: parent_b.id,
+        status: :pending
+      )
+
+      entries = KlassHero.Enrollment.list_pending_enrollments_for_provider(provider_a.id)
+
+      # Exactly one row, and it is provider_a's — a bare length check would pass
+      # even if the single row were provider_b's leaked in, so pin the identity.
+      assert [%{enrollment_id: id}] = entries
+      assert id == enrollment_a.id
+    end
+  end
 end

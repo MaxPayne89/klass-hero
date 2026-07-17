@@ -215,8 +215,8 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
 
   defp refresh_pending_enrollments(socket) do
     provider = socket.assigns.current_scope.provider
-    program_ids = ProgramCatalog.list_programs_for_provider(provider.id) |> Enum.map(& &1.id)
-    assign(socket, :pending_enrollments, Enrollment.list_pending_enrollments_for_provider(program_ids))
+
+    assign(socket, :pending_enrollments, Enrollment.list_pending_enrollments_for_provider(provider.id))
   end
 
   @impl true
