@@ -9,6 +9,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   """
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.EventTestHelper
   import Phoenix.LiveViewTest
 
   alias Ecto.Adapters.SQL.Sandbox
@@ -249,8 +250,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       conn: conn,
       provider: provider
     } do
-      import KlassHero.EventTestHelper
-
       setup_test_integration_events()
 
       _staff =
@@ -1564,7 +1563,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
           %{provider_id: provider.id}
         )
 
-      send(view.pid, {:domain_event, event})
+      emit_domain_event(view, event)
       _ = render(view)
 
       refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
@@ -1596,7 +1595,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
           %{provider_id: provider.id, enrollment_id: enrollment.id}
         )
 
-      send(view.pid, {:domain_event, event})
+      emit_domain_event(view, event)
       _ = render(view)
 
       refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
@@ -1635,7 +1634,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
           %{provider_id: provider.id, enrollment_id: Ecto.UUID.generate()}
         )
 
-      send(view.pid, {:domain_event, event})
+      emit_domain_event(view, event)
       _ = render(view)
 
       assert has_element?(view, "#pending-enrollment-#{unseen.id}")

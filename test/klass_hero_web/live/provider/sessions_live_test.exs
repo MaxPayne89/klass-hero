@@ -1,6 +1,7 @@
 defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
@@ -178,7 +179,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       # Transition the session in DB so the re-fetch picks it up
       {:ok, _} = Participation.start_session(session.id)
 
-      send(view.pid, {:domain_event, event})
+      emit_domain_event(view, event)
 
       # After PubSub update, should show in_progress actions
       assert has_element?(view, "a", "Manage Participation")
@@ -210,7 +211,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
           1
         )
 
-      send(view.pid, {:domain_event, event})
+      emit_domain_event(view, event)
 
       # Session still present in stream after roster_seeded event (no crash)
       assert has_element?(view, "button", "Start Session")
@@ -476,7 +477,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
           })
         )
 
-      send(view.pid, {:domain_event, event})
+      emit_domain_event(view, event)
 
       # Session for today should appear in stream
       assert has_element?(view, "button", "Start Session")
@@ -517,7 +518,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
           })
         )
 
-      send(view.pid, {:domain_event, event})
+      emit_domain_event(view, event)
 
       # Session is for tomorrow but we're viewing today — should NOT appear
       refute has_element?(view, "button", "Start Session")

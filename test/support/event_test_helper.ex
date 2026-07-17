@@ -58,6 +58,23 @@ defmodule KlassHero.EventTestHelper do
   alias KlassHero.TestableIntegrationEventHandler
 
   @doc """
+  Simulates PubSub fan-out by delivering `event` straight to a LiveView's
+  `handle_info/2`.
+
+  Bypasses the real publisher: use when a test needs to drive the LiveView's
+  event-handling branch directly rather than exercise publish → subscribe.
+  Owns the `{:domain_event, _}` envelope so tests don't repeat it.
+
+      event = ParticipationEvents.roster_seeded(session.id, program.id, 1)
+      emit_domain_event(view, event)
+  """
+  @spec emit_domain_event(%{pid: pid()}, DomainEvent.t()) :: :ok
+  def emit_domain_event(%{pid: pid}, %DomainEvent{} = event) when is_pid(pid) do
+    send(pid, {:domain_event, event})
+    :ok
+  end
+
+  @doc """
   Initializes event collection for the current test.
 
   Call this in your test setup block.
