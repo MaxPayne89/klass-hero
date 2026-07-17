@@ -479,7 +479,11 @@ defmodule KlassHero.Enrollment do
   end
 
   @doc """
-  Lists enriched pending enrollment entries across the given program IDs.
+  Lists enriched pending enrollment entries for a provider.
+
+  Accepts either the provider's own id (preferred — resolves the provider's
+  programs in the same query) or an explicit list of program IDs (for callers
+  that already hold them, e.g. the dashboard's mount).
 
   Used by the provider dashboard's "Pending enrollments" inbox card to
   surface enrollments awaiting provider approval.
@@ -487,43 +491,46 @@ defmodule KlassHero.Enrollment do
   def list_pending_enrollments_for_provider([]), do: []
 
   def list_pending_enrollments_for_provider(program_ids) when is_list(program_ids) do
-    case list_pending_by_programs(program_ids) do
+    list_pending(fn query -> where(query, [e], e.program_id in ^program_ids) end)
+  end
+
+  def list_pending_enrollments_for_provider(provider_id) when is_binary(provider_id) do
+    list_pending(fn query ->
+      where(query, [_e, p], p.provider_id == ^Ecto.UUID.dump!(provider_id))
+    end)
+  end
+
+  # One trip for enrollments + program titles. Querying `programs` directly avoids a
+  # ProgramCatalog↔Enrollment dependency cycle (ProgramCatalog already depends on
+  # Enrollment for capacity ACL).
+  #
+  # The two arities filter deliberately different sides of the join: the program_ids
+  # arity filters the enrollment's program_id, the provider_id arity the program's
+  # provider_id — the only place that link lives.
+  defp list_pending(filter_fun) do
+    query =
+      Enrollment
+      |> join(:left, [e], p in "programs", on: type(p.id, :binary_id) == e.program_id)
+      |> where([e], e.status == :pending)
+      |> select([e, p], {e, p.title})
+
+    query
+    |> filter_fun.()
+    |> Repo.all()
+    |> case do
       [] ->
         []
 
-      enrollments ->
-        child_map = child_map_for(enrollments)
-        program_map = program_titles_map(program_ids)
-        Enum.map(enrollments, &build_pending_entry(&1, child_map, program_map))
+      rows ->
+        child_map = rows |> Enum.map(fn {enrollment, _title} -> enrollment end) |> child_map_for()
+
+        Enum.map(rows, fn {enrollment, title} ->
+          build_pending_entry(enrollment, title, child_map)
+        end)
     end
   end
 
-  defp list_pending_by_programs(program_ids) do
-    Enrollment
-    |> where([e], e.status == :pending and e.program_id in ^program_ids)
-    |> Repo.all()
-  end
-
-  defp program_titles_map(program_ids) do
-    # Querying `programs` directly avoids a ProgramCatalog↔Enrollment dependency cycle
-    # (ProgramCatalog already depends on Enrollment for capacity ACL).
-    valid_ids = Enum.filter(program_ids, fn id -> match?({:ok, _}, Ecto.UUID.cast(id)) end)
-
-    case valid_ids do
-      [] ->
-        %{}
-
-      ids ->
-        from(p in "programs",
-          where: p.id in ^Enum.map(ids, &Ecto.UUID.dump!/1),
-          select: {type(p.id, :binary_id), p.title}
-        )
-        |> Repo.all()
-        |> Map.new()
-    end
-  end
-
-  defp build_pending_entry(enrollment, child_map, program_map) do
+  defp build_pending_entry(enrollment, program_title, child_map) do
     child_name =
       case Map.get(child_map, enrollment.child_id) do
         nil -> "Unknown"
@@ -533,7 +540,7 @@ defmodule KlassHero.Enrollment do
     %{
       enrollment_id: enrollment.id,
       program_id: enrollment.program_id,
-      program_title: Map.get(program_map, enrollment.program_id, "Unknown"),
+      program_title: program_title,
       child_id: enrollment.child_id,
       child_name: child_name,
       parent_id: enrollment.parent_id,
