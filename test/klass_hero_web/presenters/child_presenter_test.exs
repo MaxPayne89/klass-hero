@@ -11,9 +11,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
   alias KlassHero.Family.Child
   alias KlassHeroWeb.Presenters.ChildPresenter
 
-  # ---------------------------------------------------------------------------
   # Helpers
-  # ---------------------------------------------------------------------------
 
   defp build_child(overrides \\ %{}) do
     defaults = %{
@@ -38,9 +36,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
     Date.new!(today.year - n, today.month, today.day)
   end
 
-  # ---------------------------------------------------------------------------
   # to_simple_view/1
-  # ---------------------------------------------------------------------------
 
   describe "to_simple_view/1" do
     test "returns map with id, name, and age" do
@@ -77,9 +73,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # to_extended_view/2
-  # ---------------------------------------------------------------------------
 
   describe "to_extended_view/2" do
     test "without enrichment returns the same fields as to_simple_view" do
@@ -107,9 +101,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # to_profile_view/1
-  # ---------------------------------------------------------------------------
 
   describe "to_profile_view/1" do
     test "returns id, name, age, and initials" do
@@ -146,9 +138,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # children_summary/1
-  # ---------------------------------------------------------------------------
 
   describe "children_summary/1" do
     setup do

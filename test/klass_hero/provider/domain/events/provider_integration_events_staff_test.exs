@@ -1,6 +1,6 @@
-defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsStaffTest do
+defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsTest do
   @moduledoc """
-  Tests for staff-related factory functions in ProviderIntegrationEvents.
+  Tests for the ProviderIntegrationEvents factory module.
   """
 
   use ExUnit.Case, async: true
@@ -8,75 +8,92 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsStaffTest do
   alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  describe "staff_member_invited/3" do
-    setup do
-      %{
-        staff_member_id: Ecto.UUID.generate(),
-        provider_id: Ecto.UUID.generate()
-      }
+  # Both provider integration-event factories share one contract: build a
+  # critical event with stable identity fields, let the base payload's id win
+  # over any caller-supplied id (while preserving extras), allow criticality
+  # to be lowered via opts, and raise on a blank id. The table drives that
+  # shape; rows vary only by the factory function, id field name, and
+  # entity_type. Factory-specific payload passthrough — including
+  # incident_reported's atom-to-string scalarization — is covered by the
+  # hand-written tests below.
+  @factories [
+    %{fun: :staff_member_invited, id: :staff_member_id, entity: :staff_member},
+    %{fun: :incident_reported, id: :incident_report_id, entity: :incident_report}
+  ]
+
+  for %{fun: fun, id: id, entity: entity} <- @factories do
+    describe "#{fun}/3" do
+      @fun fun
+      @id id
+      @entity entity
+
+      test "creates event with correct type, source_context, and entity_type" do
+        event = apply(ProviderIntegrationEvents, @fun, ["id-1"])
+
+        assert %IntegrationEvent{} = event
+        assert event.event_type == @fun
+        assert event.source_context == :provider
+        assert event.entity_type == @entity
+        assert event.entity_id == "id-1"
+      end
+
+      test "base_payload id wins over caller-supplied and preserves extras" do
+        payload = %{@id => "overridden", extra: "data"}
+        event = apply(ProviderIntegrationEvents, @fun, ["real-id", payload])
+
+        assert Map.get(event.payload, @id) == "real-id"
+        assert event.payload.extra == "data"
+      end
+
+      test "marks event as critical by default" do
+        event = apply(ProviderIntegrationEvents, @fun, ["id-1"])
+
+        assert IntegrationEvent.critical?(event)
+      end
+
+      test "allows overriding criticality via opts" do
+        event = apply(ProviderIntegrationEvents, @fun, ["id-1", %{}, [criticality: :normal]])
+
+        refute IntegrationEvent.critical?(event)
+      end
+
+      test "raises for a nil or blank id" do
+        for bad_id <- [nil, ""] do
+          assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
+            apply(ProviderIntegrationEvents, @fun, [bad_id])
+          end
+        end
+      end
     end
+  end
 
-    test "creates event with correct type, source_context, and entity_type", %{
-      staff_member_id: staff_member_id
-    } do
-      event = ProviderIntegrationEvents.staff_member_invited(staff_member_id)
-
-      assert %IntegrationEvent{} = event
-      assert event.event_type == :staff_member_invited
-      assert event.source_context == :provider
-      assert event.entity_type == :staff_member
-      assert event.entity_id == staff_member_id
-    end
-
-    test "includes staff_member_id in payload", %{
-      staff_member_id: staff_member_id,
-      provider_id: provider_id
-    } do
+  describe "staff_member_invited/3 payload passthrough" do
+    test "includes staff_member_id, provider_id, and email in payload" do
       event =
-        ProviderIntegrationEvents.staff_member_invited(staff_member_id, %{
-          provider_id: provider_id,
+        ProviderIntegrationEvents.staff_member_invited("staff-1", %{
+          provider_id: "provider-1",
           email: "staff@example.com"
         })
 
-      assert event.payload.staff_member_id == staff_member_id
-      assert event.payload.provider_id == provider_id
+      assert event.payload.staff_member_id == "staff-1"
+      assert event.payload.provider_id == "provider-1"
       assert event.payload.email == "staff@example.com"
     end
+  end
 
-    test "base_payload staff_member_id wins over caller-supplied staff_member_id", %{
-      staff_member_id: real_id
-    } do
-      conflicting_payload = %{staff_member_id: "should-be-overridden", extra: "data"}
-
-      event = ProviderIntegrationEvents.staff_member_invited(real_id, conflicting_payload)
-
-      assert event.payload.staff_member_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "marks event as critical by default", %{staff_member_id: staff_member_id} do
-      event = ProviderIntegrationEvents.staff_member_invited(staff_member_id)
-
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "allows overriding criticality via opts", %{staff_member_id: staff_member_id} do
+  describe "incident_reported/3 payload passthrough" do
+    test "scalarizes category and severity atoms to strings" do
       event =
-        ProviderIntegrationEvents.staff_member_invited(staff_member_id, %{}, criticality: :normal)
+        ProviderIntegrationEvents.incident_reported("incident-1", %{
+          provider_id: "provider-1",
+          category: :injury,
+          severity: :high
+        })
 
-      refute IntegrationEvent.critical?(event)
-    end
-
-    test "raises for nil staff_member_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty staff_member_id string/,
-                   fn -> ProviderIntegrationEvents.staff_member_invited(nil) end
-    end
-
-    test "raises for empty string staff_member_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty staff_member_id string/,
-                   fn -> ProviderIntegrationEvents.staff_member_invited("") end
+      assert event.payload.incident_report_id == "incident-1"
+      assert event.payload.provider_id == "provider-1"
+      assert event.payload.category == "injury"
+      assert event.payload.severity == "high"
     end
   end
 end

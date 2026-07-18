@@ -11,9 +11,7 @@ defmodule KlassHero.FamilyTest do
   alias KlassHero.Family.Child
   alias KlassHero.Family.ParentProfile
 
-  # ============================================================================
   # Parent Profile Functions
-  # ============================================================================
 
   describe "create_parent_profile/1" do
     test "creates parent profile through public API" do
@@ -69,9 +67,7 @@ defmodule KlassHero.FamilyTest do
     end
   end
 
-  # ============================================================================
   # Children Functions
-  # ============================================================================
 
   defp create_parent_for_children do
     user = KlassHero.AccountsFixtures.unconfirmed_user_fixture(intended_roles: [:parent])

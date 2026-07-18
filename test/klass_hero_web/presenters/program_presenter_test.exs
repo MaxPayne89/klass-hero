@@ -42,41 +42,40 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result.assigned_staff.headshot_url == "https://example.com/photo.jpg"
     end
 
-    test "formats integer Decimal price as string" do
-      program = build_program(%{price: Decimal.new("99.00")})
+    # {price, expected string} — integer and fractional Decimal values.
+    @price_cases [
+      {Decimal.new("99.00"), "99.00"},
+      {Decimal.new("29.99"), "29.99"}
+    ]
 
-      result = ProgramPresenter.to_table_view(program)
+    for {price, expected} <- @price_cases do
+      @price price
+      @expected expected
+      test "formats Decimal price #{inspect(price)} as #{inspect(expected)}" do
+        program = build_program(%{price: @price})
 
-      assert result.price == "99.00"
+        result = ProgramPresenter.to_table_view(program)
+
+        assert result.price == @expected
+      end
     end
 
-    test "formats fractional Decimal price as string" do
-      program = build_program(%{price: Decimal.new("29.99")})
+    # {name, expected initials} — exercises NameUtils.initials_from_name via the lead map.
+    @initials_cases [
+      {"John Doe", "JD"},
+      {"Madonna", "M"},
+      {"Mary Jane Watson", "MJ"}
+    ]
 
-      result = ProgramPresenter.to_table_view(program)
+    for {name, expected} <- @initials_cases do
+      @name name
+      @expected expected
+      test "#{inspect(name)} -> initials #{inspect(expected)}" do
+        lead = %{id: "1", name: @name, headshot_url: nil}
+        program = build_program(%{})
 
-      assert result.price == "29.99"
-    end
-
-    test "builds two-letter initials from two-word name" do
-      lead = %{id: "1", name: "John Doe", headshot_url: nil}
-      program = build_program(%{})
-
-      assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == "JD"
-    end
-
-    test "builds single-letter initial from single-word name" do
-      lead = %{id: "1", name: "Madonna", headshot_url: nil}
-      program = build_program(%{})
-
-      assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == "M"
-    end
-
-    test "takes only first two initials from three-word name" do
-      lead = %{id: "1", name: "Mary Jane Watson", headshot_url: nil}
-      program = build_program(%{})
-
-      assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == "MJ"
+        assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == @expected
+      end
     end
 
     test "maps program id, name, category, and capacity" do
@@ -97,70 +96,66 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
   end
 
   describe "humanize_category/1" do
-    test "explicit category mappings" do
-      assert ProgramPresenter.humanize_category("arts") == "Arts"
-      assert ProgramPresenter.humanize_category("education") == "Education"
-      assert ProgramPresenter.humanize_category("sports") == "Sports"
-      assert ProgramPresenter.humanize_category("music") == "Music"
-    end
+    # {category, expected label} — explicit mappings, capitalize fallback, and nil.
+    @category_cases [
+      {nil, "General"},
+      {"arts", "Arts"},
+      {"education", "Education"},
+      {"sports", "Sports"},
+      {"music", "Music"},
+      {"life-skills", "Life-skills"},
+      {"camps", "Camps"},
+      {"workshops", "Workshops"}
+    ]
 
-    test "fallback capitalizes unknown categories" do
-      assert ProgramPresenter.humanize_category("life-skills") == "Life-skills"
-      assert ProgramPresenter.humanize_category("camps") == "Camps"
-      assert ProgramPresenter.humanize_category("workshops") == "Workshops"
-    end
-
-    test "nil returns General" do
-      assert ProgramPresenter.humanize_category(nil) == "General"
+    for {category, expected} <- @category_cases do
+      @category category
+      @expected expected
+      test "#{inspect(category)} -> #{inspect(expected)}" do
+        assert ProgramPresenter.humanize_category(@category) == @expected
+      end
     end
   end
 
   describe "icon_name/1" do
-    test "returns heroicon name for each valid category" do
-      assert ProgramPresenter.icon_name("sports") == "hero-trophy"
-      assert ProgramPresenter.icon_name("arts") == "hero-paint-brush"
-      assert ProgramPresenter.icon_name("music") == "hero-musical-note"
-      assert ProgramPresenter.icon_name("education") == "hero-academic-cap"
-      assert ProgramPresenter.icon_name("life-skills") == "hero-light-bulb"
-      assert ProgramPresenter.icon_name("camps") == "hero-fire"
-      assert ProgramPresenter.icon_name("workshops") == "hero-wrench-screwdriver"
+    # {category, expected icon} — every category in the shared Categories list.
+    @icon_cases [
+      {"sports", "hero-trophy"},
+      {"arts", "hero-paint-brush"},
+      {"music", "hero-musical-note"},
+      {"education", "hero-academic-cap"},
+      {"life-skills", "hero-light-bulb"},
+      {"camps", "hero-fire"},
+      {"workshops", "hero-wrench-screwdriver"}
+    ]
+
+    for {category, icon} <- @icon_cases do
+      @category category
+      @icon icon
+      test "#{inspect(category)} -> #{inspect(icon)}" do
+        assert ProgramPresenter.icon_name(@category) == @icon
+      end
+    end
+
+    test "table covers every category in the shared Categories list" do
+      table_categories = @icon_cases |> Enum.map(&elem(&1, 0)) |> Enum.sort()
+      assert table_categories == Enum.sort(Categories.categories())
     end
 
     test "returns fallback for nil" do
       assert ProgramPresenter.icon_name(nil) == "hero-academic-cap"
     end
 
-    test "returns fallback for empty string and logs warning" do
-      log =
-        capture_log(fn ->
-          assert ProgramPresenter.icon_name("") == "hero-academic-cap"
-        end)
-
-      assert log =~ "[ProgramPresenter] Unrecognized category"
-    end
-
-    test "returns fallback for unknown category and logs warning" do
-      log =
-        capture_log(fn ->
-          assert ProgramPresenter.icon_name("unknown") == "hero-academic-cap"
-        end)
-
-      assert log =~ "[ProgramPresenter] Unrecognized category"
-      assert log =~ "unknown"
-    end
-
-    test "covers all valid categories" do
-      for category <- Categories.categories() do
+    for unrecognized <- ["", "unknown"] do
+      @unrecognized unrecognized
+      test "#{inspect(unrecognized)} falls back to hero-academic-cap and logs a warning" do
         log =
           capture_log(fn ->
-            icon = ProgramPresenter.icon_name(category)
-
-            assert String.starts_with?(icon, "hero-"),
-                   "icon_name/1 missing clause for category #{inspect(category)}"
+            assert ProgramPresenter.icon_name(@unrecognized) == "hero-academic-cap"
           end)
 
-        refute log =~ "[ProgramPresenter] Unrecognized category",
-               "icon_name/1 fell back to default for category #{inspect(category)}"
+        assert log =~ "[ProgramPresenter] Unrecognized category"
+        assert log =~ @unrecognized
       end
     end
   end
@@ -188,16 +183,21 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert ProgramPresenter.format_schedule(program) == nil
     end
 
-    test "formats single day" do
-      program = build_program(%{meeting_days: ["Saturday"]})
-      result = ProgramPresenter.format_schedule(program)
-      assert result.days == "Sat"
-    end
+    # {meeting_days, expected days string} — single day, two days ("&"), three+ days (", " + "&").
+    @day_cases [
+      {["Saturday"], "Sat"},
+      {["Monday", "Wednesday"], "Mon & Wed"},
+      {["Monday", "Wednesday", "Friday"], "Mon, Wed & Fri"}
+    ]
 
-    test "formats three days with ampersand" do
-      program = build_program(%{meeting_days: ["Monday", "Wednesday", "Friday"]})
-      result = ProgramPresenter.format_schedule(program)
-      assert result.days == "Mon, Wed & Fri"
+    for {days, expected} <- @day_cases do
+      @days days
+      @expected expected
+      test "#{inspect(days)} -> #{inspect(expected)}" do
+        program = build_program(%{meeting_days: @days})
+        result = ProgramPresenter.format_schedule(program)
+        assert result.days == @expected
+      end
     end
 
     test "formats days only when no times set" do
@@ -213,52 +213,22 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result.times == nil
     end
 
-    test "shows both years for cross-year date range" do
-      program =
-        build_program(%{
-          meeting_days: ["Monday"],
-          start_date: ~D[2026-11-01],
-          end_date: ~D[2027-03-15]
-        })
+    # {start_date, end_date, expected date_range} — cross-year, same-year, open-ended.
+    @date_range_cases [
+      {~D[2026-11-01], ~D[2027-03-15], "Nov 1, 2026 - Mar 15, 2027"},
+      {~D[2026-03-01], ~D[2026-06-30], "Mar 1 - Jun 30, 2026"},
+      {~D[2026-09-01], nil, "From Sep 1, 2026"}
+    ]
 
-      result = ProgramPresenter.format_schedule(program)
-      assert result.date_range == "Nov 1, 2026 - Mar 15, 2027"
-    end
-
-    test "shows only end year for same-year date range" do
-      program =
-        build_program(%{
-          meeting_days: ["Monday"],
-          start_date: ~D[2026-03-01],
-          end_date: ~D[2026-06-30]
-        })
-
-      result = ProgramPresenter.format_schedule(program)
-      assert result.date_range == "Mar 1 - Jun 30, 2026"
-    end
-
-    test "shows start date when end date is nil" do
-      program =
-        build_program(%{
-          meeting_days: ["Monday"],
-          start_date: ~D[2026-09-01],
-          end_date: nil
-        })
-
-      result = ProgramPresenter.format_schedule(program)
-      assert result.date_range == "From Sep 1, 2026"
-    end
-
-    test "formats times crossing AM/PM" do
-      program =
-        build_program(%{
-          meeting_days: ["Saturday"],
-          meeting_start_time: ~T[11:00:00],
-          meeting_end_time: ~T[13:30:00]
-        })
-
-      result = ProgramPresenter.format_schedule(program)
-      assert result.times == "11:00 AM - 1:30 PM"
+    for {start_date, end_date, expected} <- @date_range_cases do
+      @start_date start_date
+      @end_date end_date
+      @expected expected
+      test "#{inspect(start_date)}..#{inspect(end_date)} -> #{inspect(expected)}" do
+        program = build_program(%{meeting_days: ["Monday"], start_date: @start_date, end_date: @end_date})
+        result = ProgramPresenter.format_schedule(program)
+        assert result.date_range == @expected
+      end
     end
   end
 
@@ -382,41 +352,29 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result == "Sat"
     end
 
-    test "formats times only when no days" do
-      program = %{
-        meeting_start_time: ~T[09:00:00],
-        meeting_end_time: ~T[11:00:00]
-      }
-
-      result = ProgramPresenter.format_schedule_brief(program)
-      assert result == "9:00 - 11:00 AM"
-    end
-
     test "returns empty string when no scheduling data" do
       result = ProgramPresenter.format_schedule_brief(%{})
       assert result == ""
     end
 
-    test "formats midnight time correctly" do
-      program = %{
-        meeting_start_time: ~T[00:00:00],
-        meeting_end_time: ~T[01:00:00]
-      }
+    # {start_time, end_time, expected} — times-only maps (no days), exercising the
+    # shared time formatter: plain AM range, midnight/noon 12-hour rollover, AM/PM crossing.
+    @time_cases [
+      {~T[09:00:00], ~T[11:00:00], "9:00 - 11:00 AM"},
+      {~T[00:00:00], ~T[01:00:00], "12:00 - 1:00 AM"},
+      {~T[12:00:00], ~T[13:30:00], "12:00 - 1:30 PM"},
+      {~T[11:00:00], ~T[13:30:00], "11:00 AM - 1:30 PM"}
+    ]
 
-      result = ProgramPresenter.format_schedule_brief(program)
-      # Midnight renders as "12:00" (12-hour format), not "0:00"
-      assert result == "12:00 - 1:00 AM"
-    end
-
-    test "formats noon time correctly" do
-      program = %{
-        meeting_start_time: ~T[12:00:00],
-        meeting_end_time: ~T[13:30:00]
-      }
-
-      result = ProgramPresenter.format_schedule_brief(program)
-      # Noon renders as "12:00" (12-hour format), with PM suffix
-      assert result == "12:00 - 1:30 PM"
+    for {start_time, end_time, expected} <- @time_cases do
+      @start_time start_time
+      @end_time end_time
+      @expected expected
+      test "#{inspect(start_time)}..#{inspect(end_time)} -> #{inspect(expected)}" do
+        program = %{meeting_start_time: @start_time, meeting_end_time: @end_time}
+        result = ProgramPresenter.format_schedule_brief(program)
+        assert result == @expected
+      end
     end
 
     test "works with domain struct" do

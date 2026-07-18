@@ -11,13 +11,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
 
   describe "execute/4" do
     test "sends message successfully for participant" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-
-      insert(:participant_schema,
-        conversation_id: conversation.id,
-        user_id: user.id
-      )
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       assert {:ok, message} =
                SendMessage.execute(conversation.id, user.id, "Hello, world!")
@@ -30,13 +24,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "trims whitespace from content" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-
-      insert(:participant_schema,
-        conversation_id: conversation.id,
-        user_id: user.id
-      )
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       assert {:ok, message} =
                SendMessage.execute(conversation.id, user.id, "  Hello, world!  ")
@@ -45,16 +33,9 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "updates sender's last_read_at" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
+      %{conversation: conversation, user: user} = conversation_with_participant(last_read_at: nil)
 
-      insert(:participant_schema,
-        conversation_id: conversation.id,
-        user_id: user.id,
-        last_read_at: nil
-      )
-
-      # Truncate to second since utc_datetime fields don't have microsecond precision
+      # Truncate to second since utc_datetime fields don't have microsecond precision.
       before = DateTime.utc_now() |> DateTime.truncate(:second)
       {:ok, _message} = SendMessage.execute(conversation.id, user.id, "Hello!")
 
@@ -72,13 +53,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "allows system message type" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-
-      insert(:participant_schema,
-        conversation_id: conversation.id,
-        user_id: user.id
-      )
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       assert {:ok, message} =
                SendMessage.execute(
@@ -92,42 +67,22 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "returns error for participant who has left" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-
-      insert(:participant_schema,
-        conversation_id: conversation.id,
-        user_id: user.id,
-        left_at: DateTime.utc_now()
-      )
+      %{conversation: conversation, user: user} =
+        conversation_with_participant(left_at: DateTime.utc_now())
 
       assert {:error, :not_participant} =
                SendMessage.execute(conversation.id, user.id, "Hello!")
     end
 
     test "rejects message from parent in broadcast conversation" do
-      # Create provider with a known user
       provider_user = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema, identity_id: provider_user.id)
-
-      # Create broadcast conversation owned by provider
       program = insert(:program_schema)
+      broadcast = insert_broadcast(provider, program)
 
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider.id,
-          program_id: program.id,
-          subject: "Announcement"
-        )
-
-      # Parent is a participant but should not be able to send
+      # Parent is a participant but should not be able to send.
       parent_user = AccountsFixtures.user_fixture()
-
-      insert(:participant_schema,
-        conversation_id: broadcast.id,
-        user_id: parent_user.id
-      )
+      insert(:participant_schema, conversation_id: broadcast.id, user_id: parent_user.id)
 
       assert {:error, :broadcast_reply_not_allowed} =
                SendMessage.execute(broadcast.id, parent_user.id, "My reply")
@@ -137,19 +92,9 @@ defmodule KlassHero.Messaging.SendMessageTest do
       provider_user = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema, identity_id: provider_user.id)
       program = insert(:program_schema)
+      broadcast = insert_broadcast(provider, program)
 
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider.id,
-          program_id: program.id,
-          subject: "Announcement"
-        )
-
-      insert(:participant_schema,
-        conversation_id: broadcast.id,
-        user_id: provider_user.id
-      )
+      insert(:participant_schema, conversation_id: broadcast.id, user_id: provider_user.id)
 
       assert {:ok, message} =
                SendMessage.execute(broadcast.id, provider_user.id, "Follow-up!")
@@ -161,19 +106,9 @@ defmodule KlassHero.Messaging.SendMessageTest do
       provider_user = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema, identity_id: provider_user.id)
       program = insert(:program_schema)
+      broadcast = insert_broadcast(provider, program)
 
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider.id,
-          program_id: program.id,
-          subject: "Announcement"
-        )
-
-      insert(:participant_schema,
-        conversation_id: broadcast.id,
-        user_id: provider_user.id
-      )
+      insert(:participant_schema, conversation_id: broadcast.id, user_id: provider_user.id)
 
       domain_conversation = broadcast
       assert %Conversation{} = domain_conversation
@@ -188,23 +123,12 @@ defmodule KlassHero.Messaging.SendMessageTest do
       provider_user = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema, identity_id: provider_user.id)
       program = insert(:program_schema)
-
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider.id,
-          program_id: program.id,
-          subject: "Announcement"
-        )
+      broadcast = insert_broadcast(provider, program)
 
       parent_user = AccountsFixtures.user_fixture()
+      insert(:participant_schema, conversation_id: broadcast.id, user_id: parent_user.id)
 
-      insert(:participant_schema,
-        conversation_id: broadcast.id,
-        user_id: parent_user.id
-      )
-
-      # Build a direct conversation domain struct with a different ID
+      # Build a direct conversation domain struct with a different ID.
       direct = insert(:conversation_schema, type: "direct", provider_id: provider.id)
       mismatched_conversation = direct
 
@@ -221,14 +145,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
       staff_user = AccountsFixtures.user_fixture()
-
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider.id,
-          program_id: program.id,
-          subject: "Announcement"
-        )
+      broadcast = insert_broadcast(provider, program)
 
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
@@ -249,14 +166,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
       provider = insert(:provider_profile_schema, identity_id: provider_user.id)
       program = insert(:program_schema, provider_id: provider.id)
       non_staff_user = AccountsFixtures.user_fixture()
-
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider.id,
-          program_id: program.id,
-          subject: "Announcement"
-        )
+      broadcast = insert_broadcast(provider, program)
 
       insert(:participant_schema, conversation_id: broadcast.id, user_id: non_staff_user.id)
 
@@ -281,14 +191,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
         active: true
       )
 
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider.id,
-          program_id: program.id,
-          subject: "Announcement"
-        )
-
+      broadcast = insert_broadcast(provider, program)
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
       # Note: NO call to ProgramStaffParticipantRepository.upsert_active/1 — the
@@ -310,7 +213,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
     test "allows staff active at multiple providers to send in non-latest provider's broadcast" do
       staff_user = AccountsFixtures.user_fixture()
 
-      # Older active staff_member at provider A
+      # Older active staff_member at provider A.
       provider_a = insert(:provider_profile_schema)
       program_a = insert(:program_schema, provider_id: provider_a.id)
 
@@ -321,7 +224,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
       )
 
       # Newer active staff_member at provider B (the scope-resolved row here:
-      # no selection and both are employer rows, so newest wins)
+      # no selection and both are employer rows, so newest wins).
       provider_b = insert(:provider_profile_schema)
 
       insert(:staff_member_schema,
@@ -330,14 +233,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
         active: true
       )
 
-      broadcast =
-        insert(:conversation_schema,
-          type: "program_broadcast",
-          provider_id: provider_a.id,
-          program_id: program_a.id,
-          subject: "Announcement"
-        )
-
+      broadcast = insert_broadcast(provider_a, program_a)
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
       assert {:ok, message} =
@@ -353,9 +249,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
 
   describe "execute/4 with attachments" do
     test "sends message with text and attachments" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-      insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       file_data = [
         %{binary: "fake-image-bytes", filename: "photo.jpg", content_type: "image/jpeg", size: 1_000}
@@ -370,9 +264,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "sends photo-only message (nil content)" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-      insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       file_data = [
         %{binary: "fake-image-bytes", filename: "photo.jpg", content_type: "image/jpeg", size: 1_000}
@@ -386,18 +278,14 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "rejects empty message — no content and no attachments" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-      insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       assert {:error, :empty_message} =
                SendMessage.execute(conversation.id, user.id, nil, attachments: [])
     end
 
     test "rejects invalid attachment content type" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-      insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       file_data = [
         %{binary: "fake-bytes", filename: "doc.pdf", content_type: "application/pdf", size: 1_000}
@@ -408,9 +296,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "rejects oversized attachment" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-      insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       file_data = [
         %{binary: "fake-bytes", filename: "huge.jpg", content_type: "image/jpeg", size: 11_000_000}
@@ -421,9 +307,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "rejects more than 5 attachments" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-      insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
       file_data =
         for i <- 1..6 do
@@ -435,11 +319,8 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     test "message and attachments are persisted atomically" do
-      conversation = insert(:conversation_schema)
-      user = AccountsFixtures.user_fixture()
-      insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
+      %{conversation: conversation, user: user} = conversation_with_participant()
 
-      # Send a message with a valid attachment
       file_data = [
         %{binary: "fake-image-bytes", filename: "photo.jpg", content_type: "image/jpeg", size: 1_000}
       ]
@@ -447,14 +328,36 @@ defmodule KlassHero.Messaging.SendMessageTest do
       assert {:ok, message} =
                SendMessage.execute(conversation.id, user.id, "With photo", attachments: file_data)
 
-      # Verify both message and attachment are persisted
       assert message.content == "With photo"
       assert length(message.attachments) == 1
 
-      # Verify attachment is actually in the DB
+      # Attachment is actually in the DB.
       attachments = KlassHero.Messaging.list_attachments_for_message(message.id)
       assert length(attachments) == 1
       assert hd(attachments).original_filename == "photo.jpg"
     end
+  end
+
+  # A direct conversation with one enrolled participant (backed by a real user).
+  # Extra participant attrs (e.g. last_read_at:, left_at:) override the defaults.
+  defp conversation_with_participant(participant_attrs \\ []) do
+    conversation = insert(:conversation_schema)
+    user = AccountsFixtures.user_fixture()
+
+    insert(
+      :participant_schema,
+      Keyword.merge([conversation_id: conversation.id, user_id: user.id], participant_attrs)
+    )
+
+    %{conversation: conversation, user: user}
+  end
+
+  defp insert_broadcast(provider, program) do
+    insert(:conversation_schema,
+      type: "program_broadcast",
+      provider_id: provider.id,
+      program_id: program.id,
+      subject: "Announcement"
+    )
   end
 end

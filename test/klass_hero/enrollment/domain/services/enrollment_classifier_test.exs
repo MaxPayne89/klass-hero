@@ -1,5 +1,6 @@
 defmodule KlassHero.Enrollment.Domain.Services.EnrollmentClassifierTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
   alias KlassHero.Enrollment.Enrollment
@@ -39,74 +40,59 @@ defmodule KlassHero.Enrollment.Domain.Services.EnrollmentClassifierTest do
     )
   end
 
-  describe "classify/2" do
+  defp enrollment_program_generator do
+    gen all(
+          status <- member_of([:confirmed, :pending, :completed, :cancelled]),
+          end_date <- one_of([constant(nil), map(integer(-30..30), &Date.add(@today, &1))]),
+          start_date <- one_of([constant(nil), map(integer(-30..30), &Date.add(@today, &1))])
+        ) do
+      {build_enrollment(status: status), build_program(end_date: end_date, start_date: start_date)}
+    end
+  end
+
+  # Ascending/descending check that tolerates nils, as long as they're
+  # clustered at the end — avoids reimplementing Enum.sort_by/2 in the test.
+  defp sorted_nils_last?(dates, in_order?) do
+    dates
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.all?(fn
+      [nil, next] -> is_nil(next)
+      [_prev, nil] -> true
+      [prev, next] -> in_order?.(prev, next)
+    end)
+  end
+
+  describe "classify/2 - empty input" do
     test "returns empty tuple for empty list" do
       assert {[], []} = EnrollmentClassifier.classify([], @today)
     end
+  end
 
-    test "confirmed enrollment with future end_date is active" do
-      pair = {build_enrollment(status: :confirmed), build_program(end_date: ~D[2026-06-30])}
+  # Every row exercises the same contract: a single enrollment+program pair
+  # is either active or expired based on status and end_date relative to @today.
+  @classification_cases [
+    {:confirmed, ~D[2026-06-30], :active, "confirmed + future end_date"},
+    {:pending, ~D[2026-06-30], :active, "pending + future end_date"},
+    {:completed, ~D[2027-12-31], :expired, "completed overrides future end_date"},
+    {:cancelled, ~D[2027-12-31], :expired, "cancelled overrides future end_date"},
+    {:confirmed, ~D[2026-01-01], :expired, "confirmed + past end_date"},
+    {:confirmed, nil, :active, "confirmed + nil end_date"},
+    {:confirmed, @today, :active, "end_date == today is not expired (boundary)"}
+  ]
 
-      {active, expired} = EnrollmentClassifier.classify([pair], @today)
+  describe "classify/2 - status/end_date truth table" do
+    test "each combination classifies as active or expired" do
+      for {status, end_date, expected, label} <- @classification_cases do
+        pair = {build_enrollment(status: status), build_program(end_date: end_date)}
+        {active, _expired} = EnrollmentClassifier.classify([pair], @today)
 
-      assert length(active) == 1
-      assert expired == []
+        actual = if active == [pair], do: :active, else: :expired
+        assert actual == expected, label
+      end
     end
+  end
 
-    test "pending enrollment with future end_date is active" do
-      pair = {build_enrollment(status: :pending), build_program(end_date: ~D[2026-06-30])}
-
-      {active, expired} = EnrollmentClassifier.classify([pair], @today)
-
-      assert length(active) == 1
-      assert expired == []
-    end
-
-    test "completed enrollment is expired regardless of end_date" do
-      pair = {build_enrollment(status: :completed), build_program(end_date: ~D[2027-12-31])}
-
-      {active, expired} = EnrollmentClassifier.classify([pair], @today)
-
-      assert active == []
-      assert length(expired) == 1
-    end
-
-    test "cancelled enrollment is expired regardless of end_date" do
-      pair = {build_enrollment(status: :cancelled), build_program(end_date: ~D[2027-12-31])}
-
-      {active, expired} = EnrollmentClassifier.classify([pair], @today)
-
-      assert active == []
-      assert length(expired) == 1
-    end
-
-    test "confirmed enrollment with past end_date is expired" do
-      pair = {build_enrollment(status: :confirmed), build_program(end_date: ~D[2026-01-01])}
-
-      {active, expired} = EnrollmentClassifier.classify([pair], @today)
-
-      assert active == []
-      assert length(expired) == 1
-    end
-
-    test "enrollment with nil end_date is active" do
-      pair = {build_enrollment(status: :confirmed), build_program(end_date: nil)}
-
-      {active, expired} = EnrollmentClassifier.classify([pair], @today)
-
-      assert length(active) == 1
-      assert expired == []
-    end
-
-    test "end_date equal to today is not expired" do
-      pair = {build_enrollment(status: :confirmed), build_program(end_date: @today)}
-
-      {active, expired} = EnrollmentClassifier.classify([pair], @today)
-
-      assert length(active) == 1
-      assert expired == []
-    end
-
+  describe "classify/2 - sort order examples" do
     test "active programs sorted by start_date ascending" do
       early = {build_enrollment(), build_program(start_date: ~D[2026-04-01])}
       late = {build_enrollment(), build_program(start_date: ~D[2026-08-01])}
@@ -137,6 +123,28 @@ defmodule KlassHero.Enrollment.Domain.Services.EnrollmentClassifierTest do
 
       dates = Enum.map(expired, fn {_e, p} -> p.end_date end)
       assert dates == [~D[2026-02-01], ~D[2025-06-01], ~D[2025-01-01]]
+    end
+  end
+
+  describe "classify/2 - properties" do
+    property "partitions every pair exactly once, sorting active ascending and expired descending, nils last" do
+      check all(pairs <- list_of(enrollment_program_generator(), max_length: 20)) do
+        {active, expired} = EnrollmentClassifier.classify(pairs, @today)
+
+        # partition completeness: every input pair lands in exactly one bucket
+        assert length(active) + length(expired) == length(pairs)
+
+        input_ids = MapSet.new(pairs, fn {e, _p} -> e.id end)
+        output_ids = MapSet.new(active ++ expired, fn {e, _p} -> e.id end)
+        assert output_ids == input_ids
+
+        # sort-order invariants
+        active_dates = Enum.map(active, fn {_e, p} -> p.start_date end)
+        assert sorted_nils_last?(active_dates, &(not Date.after?(&1, &2)))
+
+        expired_dates = Enum.map(expired, fn {_e, p} -> p.end_date end)
+        assert sorted_nils_last?(expired_dates, &(not Date.before?(&1, &2)))
+      end
     end
   end
 end

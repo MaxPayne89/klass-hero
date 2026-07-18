@@ -16,9 +16,7 @@ defmodule KlassHero.ProviderTest do
   alias KlassHero.ProviderFixtures
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
-  # ============================================================================
   # Provider Profile Functions
-  # ============================================================================
 
   describe "create_provider_profile/1" do
     test "creates provider profile through public API" do
@@ -90,9 +88,7 @@ defmodule KlassHero.ProviderTest do
     end
   end
 
-  # ============================================================================
   # Verification Document Functions
-  # ============================================================================
 
   describe "submit_verification_document/1" do
     setup do
@@ -186,9 +182,7 @@ defmodule KlassHero.ProviderTest do
     end
   end
 
-  # ============================================================================
   # Admin Verification Review Functions
-  # ============================================================================
 
   describe "list_verification_documents_for_admin/1" do
     setup do
@@ -271,9 +265,7 @@ defmodule KlassHero.ProviderTest do
     end
   end
 
-  # ============================================================================
   # Provider Verification Functions
-  # ============================================================================
 
   describe "verify_provider/2" do
     setup do
@@ -324,9 +316,7 @@ defmodule KlassHero.ProviderTest do
     end
   end
 
-  # ============================================================================
   # Test Helpers
-  # ============================================================================
 
   defp create_pending_document(provider_id) do
     %{

@@ -556,10 +556,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     end
   end
 
-  # ===========================================================================
-  # Issue #546: manual single-invite form
-  # ===========================================================================
-
   describe "single invite form" do
     setup %{provider: provider} do
       program =
@@ -702,10 +698,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     end
   end
 
-  # ===========================================================================
-  # T3: close_roster handler
-  # ===========================================================================
-
   describe "close roster" do
     setup %{provider: provider} do
       program =
@@ -748,10 +740,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       refute has_element?(view, "#sessions-modal")
     end
   end
-
-  # ===========================================================================
-  # T4/T6: invite error paths
-  # ===========================================================================
 
   describe "invite error paths" do
     setup %{provider: provider} do
@@ -866,10 +854,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     end
   end
 
-  # ===========================================================================
-  # T1/T2: CSV import handler + error rendering
-  # ===========================================================================
-
   describe "CSV import" do
     @csv_defaults %{
       first: "Alice",
@@ -954,8 +938,8 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     defp navigate_to_invites_tab(view, program) do
       view |> element("#view-roster-#{program.id}") |> render_click()
       view |> element("#roster-tab-invites") |> render_click()
-      # Issue #546: Invites tab now defaults to the single-invite form; switch to
-      # CSV mode so the upload form is present for these CSV-specific tests.
+      # Invites tab now defaults to the single-invite form; switch to CSV mode
+      # so the upload form is present for these CSV-specific tests.
       view |> element("#invite-mode-csv") |> render_click()
     end
 
@@ -1086,10 +1070,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       assert_flash(view, :error, "No file selected.")
     end
   end
-
-  # ===========================================================================
-  # Program start/end time parsing (#282)
-  # ===========================================================================
 
   describe "program time parsing on save" do
     setup %{provider: provider} do
@@ -1314,10 +1294,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       assert policy.max_grade == nil
     end
   end
-
-  # ===========================================================================
-  # T4: roster send message button
-  # ===========================================================================
 
   describe "roster send message button" do
     setup %{provider: provider} do

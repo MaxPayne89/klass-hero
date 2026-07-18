@@ -1,189 +1,64 @@
 defmodule KlassHero.Accounts.Domain.Events.AccountsIntegrationEventsTest do
-  @moduledoc """
-  Tests for AccountsIntegrationEvents factory module.
-  """
+  @moduledoc "Tests for the AccountsIntegrationEvents factory module."
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
+  alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents, as: Events
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  describe "user_registered/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      user_id = Ecto.UUID.generate()
+  # Every accounts integration-event factory shares one contract: build a critical
+  # event with stable identity fields, let the base payload's id win over any
+  # caller-supplied id (while preserving extras), allow criticality to be lowered
+  # via opts, and raise on a blank id. The table drives that shape; rows vary only
+  # by the id field name and entity_type.
+  @factories [
+    %{fun: :user_registered, id: :user_id, entity: :user},
+    %{fun: :user_anonymized, id: :user_id, entity: :user},
+    %{fun: :user_confirmed, id: :user_id, entity: :user},
+    %{fun: :staff_invitation_sent, id: :staff_member_id, entity: :staff_member},
+    %{fun: :staff_invitation_failed, id: :staff_member_id, entity: :staff_member},
+    %{fun: :staff_user_registered, id: :user_id, entity: :user}
+  ]
 
-      event = AccountsIntegrationEvents.user_registered(user_id)
+  for %{fun: fun, id: id, entity: entity} <- @factories do
+    describe "#{fun}/3" do
+      @fun fun
+      @id id
+      @entity entity
 
-      assert %IntegrationEvent{} = event
-      assert event.event_type == :user_registered
-      assert event.source_context == :accounts
-      assert event.entity_type == :user
-      assert event.entity_id == user_id
-    end
+      test "builds a critical event with stable identity fields" do
+        event = apply(Events, @fun, ["id-1"])
 
-    test "includes user_id in payload" do
-      user_id = Ecto.UUID.generate()
+        assert %IntegrationEvent{} = event
+        assert event.event_type == @fun
+        assert event.source_context == :accounts
+        assert event.entity_type == @entity
+        assert event.entity_id == "id-1"
+        assert Map.get(event.payload, @id) == "id-1"
+        assert IntegrationEvent.critical?(event)
+      end
 
-      event = AccountsIntegrationEvents.user_registered(user_id, %{registration_source: "web"})
+      test "base payload id wins over caller-supplied and preserves extras" do
+        payload = %{@id => "overridden", :extra => "data"}
+        event = apply(Events, @fun, ["real-id", payload])
 
-      assert event.payload.user_id == user_id
-      assert event.payload.registration_source == "web"
-    end
+        assert Map.get(event.payload, @id) == "real-id"
+        assert event.payload.extra == "data"
+      end
 
-    test "base_payload user_id wins over caller-supplied user_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{user_id: "should-be-overridden", extra: "data"}
+      test "allows overriding criticality via opts" do
+        event = apply(Events, @fun, ["id-1", %{}, [criticality: :normal]])
 
-      event = AccountsIntegrationEvents.user_registered(real_id, conflicting_payload)
+        refute IntegrationEvent.critical?(event)
+      end
 
-      assert event.payload.user_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "marks event as critical by default" do
-      user_id = Ecto.UUID.generate()
-
-      event = AccountsIntegrationEvents.user_registered(user_id)
-
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "allows overriding criticality via opts" do
-      user_id = Ecto.UUID.generate()
-
-      event = AccountsIntegrationEvents.user_registered(user_id, %{}, criticality: :normal)
-
-      refute IntegrationEvent.critical?(event)
-    end
-
-    test "raises for nil user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> AccountsIntegrationEvents.user_registered(nil) end
-    end
-
-    test "raises for empty string user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> AccountsIntegrationEvents.user_registered("") end
-    end
-  end
-
-  describe "user_anonymized/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      user_id = Ecto.UUID.generate()
-
-      event = AccountsIntegrationEvents.user_anonymized(user_id)
-
-      assert %IntegrationEvent{} = event
-      assert event.event_type == :user_anonymized
-      assert event.source_context == :accounts
-      assert event.entity_type == :user
-      assert event.entity_id == user_id
-    end
-
-    test "includes user_id in payload alongside caller data" do
-      user_id = Ecto.UUID.generate()
-
-      event =
-        AccountsIntegrationEvents.user_anonymized(user_id, %{previous_email: "old@test.com"})
-
-      assert event.payload.user_id == user_id
-      assert event.payload.previous_email == "old@test.com"
-    end
-
-    test "base_payload user_id wins over caller-supplied user_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{user_id: "should-be-overridden", extra: "data"}
-
-      event = AccountsIntegrationEvents.user_anonymized(real_id, conflicting_payload)
-
-      assert event.payload.user_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "marks event as critical by default" do
-      user_id = Ecto.UUID.generate()
-
-      event = AccountsIntegrationEvents.user_anonymized(user_id)
-
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "allows overriding criticality via opts" do
-      user_id = Ecto.UUID.generate()
-
-      event = AccountsIntegrationEvents.user_anonymized(user_id, %{}, criticality: :normal)
-
-      refute IntegrationEvent.critical?(event)
-    end
-
-    test "raises for nil user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> AccountsIntegrationEvents.user_anonymized(nil) end
-    end
-
-    test "raises for empty string user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> AccountsIntegrationEvents.user_anonymized("") end
-    end
-  end
-
-  describe "user_confirmed/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      user_id = Ecto.UUID.generate()
-
-      event = AccountsIntegrationEvents.user_confirmed(user_id)
-
-      assert %IntegrationEvent{} = event
-      assert event.event_type == :user_confirmed
-      assert event.source_context == :accounts
-      assert event.entity_type == :user
-      assert event.entity_id == user_id
-    end
-
-    test "includes user_id in payload alongside caller data" do
-      user_id = Ecto.UUID.generate()
-
-      event =
-        AccountsIntegrationEvents.user_confirmed(user_id, %{
-          intended_roles: ["provider"]
-        })
-
-      assert event.payload.user_id == user_id
-      assert event.payload.intended_roles == ["provider"]
-    end
-
-    test "base_payload user_id wins over caller-supplied user_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{user_id: "should-be-overridden", extra: "data"}
-
-      event = AccountsIntegrationEvents.user_confirmed(real_id, conflicting_payload)
-
-      assert event.payload.user_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "marks event as critical by default" do
-      user_id = Ecto.UUID.generate()
-
-      event = AccountsIntegrationEvents.user_confirmed(user_id)
-
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "raises for nil user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> AccountsIntegrationEvents.user_confirmed(nil) end
-    end
-
-    test "raises for empty string user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> AccountsIntegrationEvents.user_confirmed("") end
+      test "raises for a nil or blank id" do
+        for bad_id <- [nil, ""] do
+          assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
+            apply(Events, @fun, [bad_id])
+          end
+        end
+      end
     end
   end
 end

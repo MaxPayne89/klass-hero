@@ -13,114 +13,70 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegr
     :ok
   end
 
-  describe "handle/1 — :user_registered" do
-    test "promotes to user_registered integration event" do
-      user_id = Ecto.UUID.generate()
+  # Each accounts domain event promotes to a critical integration event carrying
+  # user_id, and publish failures propagate as {:error, reason}. The table drives
+  # that shared contract; user_confirmed's intended_roles passthrough is the one
+  # factory-specific assertion, kept below the table.
+  @cases [
+    %{type: :user_registered, payload: %{email: "test@example.com", name: "Test User", intended_roles: ["parent"]}},
+    %{
+      type: :user_anonymized,
+      payload: %{
+        anonymized_email: "deleted@anonymized.local",
+        previous_email: "old@example.com",
+        anonymized_at: "2024-01-01T12:00:00Z"
+      }
+    },
+    %{
+      type: :user_confirmed,
+      payload: %{
+        email: "test@example.com",
+        name: "Test User",
+        confirmed_at: "2024-01-01T12:00:00Z",
+        intended_roles: ["provider"]
+      }
+    }
+  ]
 
-      domain_event =
-        DomainEvent.new(:user_registered, user_id, :user, %{
-          email: "test@example.com",
-          name: "Test User",
-          intended_roles: ["parent"]
-        })
+  for %{type: type, payload: payload} <- @cases do
+    describe "handle/1 — #{type}" do
+      @type_ type
+      @payload payload
 
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+      test "promotes to the #{type} critical integration event" do
+        domain_event = DomainEvent.new(@type_, "user-1", :user, @payload)
 
-      event = assert_integration_event_published(:user_registered)
-      assert event.entity_id == user_id
-      assert event.source_context == :accounts
-      assert event.payload.user_id == user_id
-      assert IntegrationEvent.critical?(event)
-    end
+        assert :ok = PromoteIntegrationEvents.handle(domain_event)
 
-    test "propagates publish failures" do
-      user_id = Ecto.UUID.generate()
+        event = assert_integration_event_published(@type_)
+        assert event.entity_id == "user-1"
+        assert event.source_context == :accounts
+        assert event.payload.user_id == "user-1"
+        assert IntegrationEvent.critical?(event)
+      end
 
-      domain_event =
-        DomainEvent.new(:user_registered, user_id, :user, %{
-          email: "test@example.com",
-          name: "Test User",
-          intended_roles: ["parent"]
-        })
+      test "propagates publish failures" do
+        domain_event = DomainEvent.new(@type_, "user-1", :user, @payload)
+        TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
 
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
-    end
-  end
-
-  describe "handle/1 — :user_anonymized" do
-    test "promotes to user_anonymized integration event" do
-      user_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:user_anonymized, user_id, :user, %{
-          anonymized_email: "deleted_#{user_id}@anonymized.local",
-          previous_email: "old@example.com",
-          anonymized_at: DateTime.to_iso8601(DateTime.utc_now())
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:user_anonymized)
-      assert event.entity_id == user_id
-      assert event.source_context == :accounts
-      assert event.payload.user_id == user_id
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "propagates publish failures" do
-      user_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:user_anonymized, user_id, :user, %{
-          anonymized_email: "deleted_#{user_id}@anonymized.local",
-          previous_email: "old@example.com",
-          anonymized_at: DateTime.to_iso8601(DateTime.utc_now())
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+        assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+      end
     end
   end
 
-  describe "handle/1 — :user_confirmed" do
-    test "promotes to user_confirmed integration event" do
-      user_id = Ecto.UUID.generate()
+  describe "handle/1 — :user_confirmed payload" do
+    test "carries intended_roles through to the integration event" do
+      payload = %{
+        email: "test@example.com",
+        name: "Test Provider",
+        confirmed_at: "2024-01-01T12:00:00Z",
+        intended_roles: ["provider"]
+      }
 
-      domain_event =
-        DomainEvent.new(:user_confirmed, user_id, :user, %{
-          email: "test@example.com",
-          name: "Test Provider",
-          confirmed_at: DateTime.to_iso8601(~U[2024-01-01 12:00:00Z]),
-          intended_roles: ["provider"]
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+      assert :ok = PromoteIntegrationEvents.handle(DomainEvent.new(:user_confirmed, "user-1", :user, payload))
 
       event = assert_integration_event_published(:user_confirmed)
-      assert event.entity_id == user_id
-      assert event.source_context == :accounts
-      assert event.payload.user_id == user_id
       assert event.payload.intended_roles == ["provider"]
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "propagates publish failures" do
-      user_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:user_confirmed, user_id, :user, %{
-          email: "test@example.com",
-          name: "Test User",
-          confirmed_at: DateTime.to_iso8601(~U[2024-01-01 12:00:00Z]),
-          intended_roles: ["parent"]
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
     end
   end
 end

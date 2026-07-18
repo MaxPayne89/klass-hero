@@ -43,9 +43,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
     DomainEvent.new(event_type, "entity-1", :test, payload)
   end
 
-  # ===========================================================================
   # Handler result tests
-  # ===========================================================================
 
   describe "dispatch/2 handler results" do
     test "returns :ok when all handlers succeed" do
@@ -116,9 +114,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
     end
   end
 
-  # ===========================================================================
   # Caller-side execution
-  # ===========================================================================
 
   describe "caller-side execution" do
     test "handler runs in the caller's process, not the GenServer" do
@@ -140,9 +136,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
     end
   end
 
-  # ===========================================================================
   # Priority ordering
-  # ===========================================================================
 
   describe "priority ordering" do
     test "lower priority number runs first" do
@@ -249,9 +243,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
     end
   end
 
-  # ===========================================================================
   # Init-time {Module, :function} handler registration
-  # ===========================================================================
 
   describe "init-time handler registration" do
     test "registers {Module, :function} handlers at init" do
@@ -371,9 +363,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
     end
   end
 
-  # ===========================================================================
   # subscribe/3 backward compatibility
-  # ===========================================================================
 
   describe "subscribe/3 backward compatibility" do
     test "subscribe/3 works without opts argument" do
@@ -382,9 +372,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
     end
   end
 
-  # ===========================================================================
   # dispatch_critical/2
-  # ===========================================================================
 
   defmodule TestCriticalHandler do
     @moduledoc false

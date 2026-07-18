@@ -7,7 +7,6 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
   alias KlassHero.Repo
 
   describe "ProgramsLive - Integration with Database (User Story 1)" do
-    # T052: Write LiveView test - displays all programs from database
     test "displays all programs from database", %{conn: conn} do
       program1 =
         insert_program(%{
@@ -38,37 +37,18 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Verify all programs are visible using element-based assertions
       assert_program_visible(view, program1)
       assert_program_visible(view, program2)
       assert_program_visible(view, program3)
     end
 
-    # T053: Write LiveView test - shows empty state when no programs exist
     test "shows empty state when no programs exist", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Verify empty state is displayed
       assert has_element?(view, "[data-testid='empty-state']")
-      # Verify no program cards are present
       refute has_element?(view, "[data-program-id]")
     end
 
-    # T054: Write LiveView test - displays error message on database failure
-    test "displays error message on database failure", %{conn: _conn} do
-      # Note: This test verifies error handling in the LiveView layer
-      # We need to stub the use case to return an error
-
-      # For now, we'll test that the LiveView can handle errors gracefully
-      # When the actual implementation is done, we can use Mox to stub the repository
-
-      # This test will be fully implemented when T057-T061 add error handling to ProgramsLive
-
-      # Placeholder: Mark as pending until error handling is implemented in LiveView
-      # The implementation in T057-T061 will add proper error handling
-    end
-
-    # T055: Write LiveView test - displays "Free" for €0 programs
     test "displays 'Free' for €0 programs", %{conn: conn} do
       free_program =
         insert_program(%{
@@ -90,15 +70,13 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Verify both free and paid programs are visible
       assert_program_visible(view, free_program)
       assert_program_visible(view, paid_program)
 
-      # Note: Price display logic ("Free" vs "€150.00") is tested in component unit tests
-      # LiveView integration tests verify programs are rendered, not price formatting details
+      # Price display ("Free" vs "€150.00") is covered by component unit tests;
+      # this integration test only verifies the programs render.
     end
 
-    # T056: Write LiveView test - programs load within 2 seconds (performance requirement)
     test "programs load within 2 seconds performance requirement", %{conn: conn} do
       base_time = DateTime.utc_now()
 
@@ -123,20 +101,16 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       assert load_time_ms < 2000,
              "Page load time #{load_time_ms}ms exceeds 2000ms performance requirement"
 
-      # With pagination, only first 20 programs are loaded (Programs 100 down to 81, DESC order)
-      # Look up the actual program records to verify presence by ID
+      # With pagination only the first 20 (Programs 100..81, DESC) load.
       programs = Repo.all(ProgramListing)
       program_100 = Enum.find(programs, &(&1.title == "Program 100"))
       program_81 = Enum.find(programs, &(&1.title == "Program 81"))
       program_1 = Enum.find(programs, &(&1.title == "Program 1"))
 
-      # Verify most recent programs are visible (DESC order)
       assert_program_visible(view, program_100)
       assert_program_visible(view, program_81)
-      # Older programs should not be loaded yet (on page 2)
       refute_program_visible(view, program_1)
 
-      # Verify Load More button is present since we have 100 programs total
       assert has_element?(view, "button[phx-click='load_more']")
     end
 
@@ -156,109 +130,11 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # No cover image should be rendered inside this program's card
       refute has_element?(view, "[data-program-id='#{program.id}'] img[src]")
     end
   end
 
-  # T057: Filter behavior validation tests
   describe "ProgramsLive - Filter Behaviors" do
-    # T059: Test price filter sorts programs by price (lowest first)
-    @tag :skip
-    test "price filter sorts programs by price lowest first", %{conn: conn} do
-      free_program =
-        insert_program(%{
-          title: "Free Community Event",
-          price: Decimal.new("0"),
-          pricing_period: "free"
-        })
-
-      mid_price =
-        insert_program(%{
-          title: "Mid Price Program",
-          price: Decimal.new("50.00")
-        })
-
-      high_price =
-        insert_program(%{
-          title: "Premium Program",
-          price: Decimal.new("200.00")
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/programs?filter=price")
-
-      # Verify all programs are present (sorted by price in filter_by_category/2)
-      assert_program_visible(view, free_program)
-      assert_program_visible(view, mid_price)
-      assert_program_visible(view, high_price)
-
-      # Note: Order verification relies on the filter_by_category/2 sorting logic
-      # which sorts by price (lowest first). DOM position testing is brittle and tests
-      # implementation details. LiveView tests focus on integration behavior.
-    end
-
-    # T060: Test age filter sorts programs by age (youngest first)
-    @tag :skip
-    test "age filter sorts programs by age youngest first", %{conn: conn} do
-      youngest =
-        insert_program(%{
-          title: "Toddler Time",
-          age_range: "2-4 years"
-        })
-
-      middle =
-        insert_program(%{
-          title: "Kids Club",
-          age_range: "8-10 years"
-        })
-
-      oldest =
-        insert_program(%{
-          title: "Teen Workshop",
-          age_range: "14-16 years"
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/programs?filter=ages")
-
-      # Verify all programs are present (sorted by age in filter_by_category/2)
-      assert_program_visible(view, youngest)
-      assert_program_visible(view, middle)
-      assert_program_visible(view, oldest)
-
-      # Note: Order verification relies on the filter_by_category/2 sorting logic
-      # which sorts by minimum age (youngest first). DOM position testing is brittle.
-    end
-
-    # T061: Test age filter handles unparseable age ranges gracefully
-    @tag :skip
-    test "age filter handles unparseable age ranges gracefully", %{conn: conn} do
-      normal =
-        insert_program(%{
-          title: "Normal Age Range",
-          age_range: "6-10 years"
-        })
-
-      unparseable =
-        insert_program(%{
-          title: "All Ages Welcome",
-          age_range: "All ages"
-        })
-
-      {:ok, view, _html} = live(conn, ~p"/programs?filter=ages")
-
-      # Verify both programs are present (unparseable ages sorted to end)
-      assert_program_visible(view, normal)
-      assert_program_visible(view, unparseable)
-
-      # Note: The extract_min_age/1 helper returns 999 for unparseable ranges,
-      # ensuring they sort to the end. This is tested at the unit level.
-      # LiveView integration test verifies graceful handling without errors.
-
-      # Verify no error flash is shown
-      refute has_element?(view, ".flash-error")
-    end
-
-    # T062: Test search functionality is case-insensitive (word-boundary matching)
     test "search is case-insensitive using word-boundary matching on titles", %{conn: conn} do
       soccer =
         insert_program(%{
@@ -280,26 +156,21 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view1, _html} = live(conn, ~p"/programs?q=SOCCER")
 
-      # Verify case-insensitive search for "SOCCER"
       assert_program_visible(view1, soccer)
       refute_program_visible(view1, art)
       refute_program_visible(view1, chess)
 
       {:ok, view2, _html} = live(conn, ~p"/programs?q=art")
 
-      # Verify case-insensitive search for "art"
       assert_program_visible(view2, art)
       refute_program_visible(view2, soccer)
       refute_program_visible(view2, chess)
 
-      # Verify search input reflects query
       assert has_element?(view2, "input[name='search'][value='art']")
     end
   end
 
-  # T032-T034: User Story 1 specific integration tests
   describe "ProgramsLive - User Story 1: Instant Program Title Search" do
-    # T032: filters programs by search query
     test "filters programs by search query using word-boundary matching", %{conn: conn} do
       soccer =
         insert_program(%{
@@ -315,12 +186,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs?q=so")
 
-      # Search for "so" should match "Soccer" (word-boundary match)
       assert_program_visible(view, soccer)
       refute_program_visible(view, dance)
     end
 
-    # T033: shows all programs for empty query
     test "shows all programs when search query is empty", %{conn: conn} do
       program1 = insert_program(%{title: "Soccer Camp"})
       program2 = insert_program(%{title: "Art Class"})
@@ -328,13 +197,11 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Verify all programs are visible when no search query
       assert_program_visible(view, program1)
       assert_program_visible(view, program2)
       assert_program_visible(view, program3)
     end
 
-    # T034: updates URL with query param
     test "updates URL with search query parameter", %{conn: conn} do
       _program = insert_program(%{title: "Soccer Training"})
 
@@ -348,111 +215,64 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
     end
   end
 
-  # T077: Empty state behavioral differentiation tests
   describe "ProgramsLive - Empty State Differentiation" do
-    # T078: Empty state when no programs exist in database
     test "shows 'No programs available' when database is empty", %{conn: conn} do
-      # Given: Database has no programs (clean state from test sandbox)
-
-      # When: User navigates to /programs
       {:ok, _view, html} = live(conn, ~p"/programs")
 
-      # Then: Empty state message indicates no programs exist
       assert html =~ "No programs found"
-
-      # Note: Current implementation shows generic message
-      # Future enhancement: differentiate "No programs available" vs "No matches"
     end
 
-    # T080: Empty state when search yields no results
     test "shows helpful message when search returns no matches", %{conn: conn} do
-      # Given: Database has programs but none match search
       _program =
         insert_program(%{
           title: "Art Class",
           description: "Creative painting"
         })
 
-      # When: User searches for something that doesn't exist
       {:ok, _view, html} = live(conn, ~p"/programs?q=robotics")
 
-      # Then: Empty state is shown with search context
       assert html =~ "No programs found"
       assert html =~ "Try adjusting your search or filter criteria"
     end
   end
 
-  # T084: Negative interaction tests for error handling
   describe "ProgramsLive - Error Handling and Edge Cases" do
-    # T085: Invalid filter parameter defaults to "all"
     test "invalid filter parameter defaults to 'all' filter", %{conn: conn} do
-      # Given: Database has programs
-      program =
-        insert_program(%{
-          title: "Test Program"
-        })
+      program = insert_program(%{title: "Test Program"})
 
-      # When: User navigates with invalid filter parameter
       {:ok, view, _html} = live(conn, ~p"/programs?filter=invalid_filter_xyz")
 
-      # Then: Page loads without crashing
       assert_program_visible(view, program)
-
-      # And: Filter defaults to "all" ("All Programs" filter is marked as active)
       assert has_element?(view, "[data-filter='all'][data-active='true']")
-
-      # And: No error message is shown
       refute has_element?(view, ".flash-error")
     end
 
-    # T086: Program click navigates to detail page (error handling happens on detail page)
-    # Note: The program_click handler navigates directly to the detail page using the program ID.
-    # Error handling for non-existent programs is done by the ProgramDetailLive, not ProgramsLive.
+    # program_click navigates straight to the detail page by ID; error handling
+    # for non-existent programs lives in ProgramDetailLive, not here.
     test "program click navigates to detail page with program ID", %{conn: conn} do
-      # Given: Database has a program
-      program =
-        insert_program(%{
-          title: "Existing Program"
-        })
+      program = insert_program(%{title: "Existing Program"})
 
-      # When: LiveView is mounted
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # And: User clicks the program card
       view
       |> element("[phx-click='program_click']")
       |> render_click()
 
-      # Then: User is navigated to the detail page
       assert_redirect(view, "/programs/#{program.id}")
     end
 
-    # T087: Malformed search query is handled gracefully
     test "malformed or extremely long search query is handled gracefully", %{conn: conn} do
-      # Given: Database has programs
-      _program =
-        insert_program(%{
-          title: "Normal Program"
-        })
+      _program = insert_program(%{title: "Normal Program"})
 
-      # When: User submits extremely long search query (>100 chars, should be truncated)
       long_query = String.duplicate("a", 150)
       {:ok, view, html} = live(conn, ~p"/programs?q=#{long_query}")
 
-      # Then: Page loads without crashing (empty result is acceptable)
-      # The search doesn't match "Normal Program", so empty state is shown
       assert html =~ "No programs found"
-
-      # And: Search still functions — empty-state container renders for the no-match query.
       assert has_element?(view, "#mk-empty")
-
-      # And: No error is shown
       refute has_element?(view, ".flash-error")
     end
 
-    # T088: Search with special characters doesn't break the query
     test "search with special characters is handled safely", %{conn: conn} do
-      # Given: Database has programs with special characters in titles
       _soccer_art =
         insert_program(%{
           title: "Soccer & Art",
@@ -465,105 +285,67 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
           description: "Learn painting"
         })
 
-      # When: User searches for "soccer" (word-boundary match at start)
       {:ok, _view, html} = live(conn, ~p"/programs?q=soccer")
 
-      # Then: Page loads without crashing and "Soccer & Art" is found
       assert html =~ "Soccer &amp; Art"
       refute html =~ "Art Class"
 
-      # When: User searches for "art" (word-boundary match)
       {:ok, _view, html} = live(conn, ~p"/programs?q=art")
 
-      # Then: Both "Soccer & Art" and "Art Class" are found (both have words starting with "art")
       assert html =~ "Soccer &amp; Art"
       assert html =~ "Art Class"
     end
 
-    # T089: Combining invalid filter with valid search
     test "combining invalid filter with valid search works correctly", %{conn: conn} do
-      # Given: Database has programs
-      soccer =
-        insert_program(%{
-          title: "Soccer Training"
-        })
+      soccer = insert_program(%{title: "Soccer Training"})
+      art = insert_program(%{title: "Art Class"})
 
-      art =
-        insert_program(%{
-          title: "Art Class"
-        })
-
-      # When: User uses invalid filter with valid search
       {:ok, view, _html} = live(conn, ~p"/programs?filter=invalid&q=soccer")
 
-      # Then: Page works correctly
       assert_program_visible(view, soccer)
       refute_program_visible(view, art)
-
-      # And: Filter defaults to "all" (UI shows all filter active)
       assert has_element?(view, "[data-filter='all'][data-active='true']")
-
-      # And: Search is applied correctly (only soccer program shown)
     end
 
-    # T090: Empty search query clears search filter
     test "empty search query shows all programs", %{conn: conn} do
-      # Given: Database has programs
       program1 = insert_program(%{title: "Program 1"})
       program2 = insert_program(%{title: "Program 2"})
 
-      # When: User navigates with empty search query
       {:ok, view, _html} = live(conn, ~p"/programs?q=")
 
-      # Then: All programs are shown
       assert_program_visible(view, program1)
       assert_program_visible(view, program2)
     end
   end
 
-  # T093-T102: ProgramsLive - Pagination Behavior
   describe "ProgramsLive - Pagination Behavior" do
-    # T093: "loads first page with default page size on mount"
     test "loads first page with default page size on mount", %{conn: conn} do
-      # Given: 30 programs exist (more than default page size of 20)
       base_time = DateTime.utc_now()
 
       for i <- 1..30 do
         insert_program(%{
           title: "Program #{i}",
-          # Insert with incrementing timestamps so Program 30 is most recent
           inserted_at: DateTime.add(base_time, i, :second)
         })
       end
 
-      # When: User loads the programs page
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Look up programs by title to verify pagination
       program_30 = Repo.get_by!(ProgramListing, title: "Program 30")
       program_11 = Repo.get_by!(ProgramListing, title: "Program 11")
       program_10 = Repo.get_by!(ProgramListing, title: "Program 10")
       program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
 
-      # Then: First 20 programs are shown (Programs 30 down to 11, DESC order)
-      # Most recent (first in list)
+      # First 20 (Programs 30..11, DESC); Programs 1-10 wait on page 2.
       assert_program_visible(view, program_30)
-      # 20th program (last in first page)
       assert_program_visible(view, program_11)
-
-      # And: Programs 1-10 are not shown yet (on second page)
-      # Just below page boundary
       refute_program_visible(view, program_10)
-      # Oldest program
       refute_program_visible(view, program_1)
 
-      # And: Load More button is present
       assert has_element?(view, "button[phx-click='load_more']")
     end
 
-    # T094: "Load More button appears when has_more is true"
     test "Load More button appears when has_more is true", %{conn: conn} do
-      # Given: 25 programs exist (5 more than page size)
       base_time = DateTime.utc_now()
 
       for i <- 1..25 do
@@ -573,17 +355,13 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      # When: User loads the programs page
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Then: Load More button is visible
       assert has_element?(view, "button[phx-click='load_more']")
       assert view |> element("button[phx-click='load_more']") |> render() =~ "Load more programs"
     end
 
-    # T095: "Load More button hidden when has_more is false"
     test "Load More button hidden when has_more is false", %{conn: conn} do
-      # Given: Only 15 programs exist (less than page size)
       base_time = DateTime.utc_now()
 
       for i <- 1..15 do
@@ -593,16 +371,12 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      # When: User loads the programs page
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Then: Load More button is NOT visible
       refute has_element?(view, "button[phx-click='load_more']")
     end
 
-    # T096: "clicking Load More appends next page to stream"
     test "clicking Load More appends next page to stream", %{conn: conn} do
-      # Given: 30 programs exist
       base_time = DateTime.utc_now()
 
       for i <- 1..30 do
@@ -612,36 +386,29 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      # When: User loads the page and clicks Load More
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Look up programs by title
       program_30 = Repo.get_by!(ProgramListing, title: "Program 30")
       program_11 = Repo.get_by!(ProgramListing, title: "Program 11")
       program_10 = Repo.get_by!(ProgramListing, title: "Program 10")
       program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
 
-      # Then: First 20 programs are visible (Programs 30 down to 11, DESC order)
       assert_program_visible(view, program_30)
       assert_program_visible(view, program_11)
       refute_program_visible(view, program_10)
 
-      # When: User clicks Load More
       view |> element("button[phx-click='load_more']") |> render_click()
 
-      # Then: All 30 programs are now visible (stream appended, not reset)
+      # Stream appended (not reset): all 30 now visible.
       assert_program_visible(view, program_30)
       assert_program_visible(view, program_11)
       assert_program_visible(view, program_10)
       assert_program_visible(view, program_1)
 
-      # And: Load More button is now hidden (no more pages)
       refute has_element?(view, "button[phx-click='load_more']")
     end
 
-    # T097: "search resets to page 1 and clears pagination"
     test "search resets to page 1 and clears pagination", %{conn: conn} do
-      # Given: 30 programs, some matching search
       base_time = DateTime.utc_now()
 
       for i <- 1..15 do
@@ -658,56 +425,42 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      # Look up programs by title (before any LiveView operations)
       soccer_15 = Repo.get_by!(ProgramListing, title: "Soccer Program 15")
       soccer_11 = Repo.get_by!(ProgramListing, title: "Soccer Program 11")
       art_30 = Repo.get_by!(ProgramListing, title: "Art Program 30")
 
-      # When: User loads page and clicks Load More
       {:ok, view, _html} = live(conn, ~p"/programs")
       view |> element("button[phx-click='load_more']") |> render_click()
 
-      # Then: All 30 programs are visible
       assert_program_visible(view, soccer_15)
       assert_program_visible(view, art_30)
 
-      # When: User searches for "Soccer"
       view
       |> element("input[name='search']")
       |> render_change(%{"search" => "Soccer"})
 
-      # Then: Only Soccer programs from page 1 are shown (stream was reset)
-      # Page 1 has programs 30-11 (DESC order), so only Soccer 11-15 are visible
+      # Stream reset to page 1 (programs 30..11 DESC), so only Soccer 11-15 show.
       assert_program_visible(view, soccer_11)
       assert_program_visible(view, soccer_15)
       refute has_element?(view, "[data-program-id]", "Art Program")
 
-      # Note: Load More button may still be visible because has_more is based on DB pagination state,
-      # not client-side filtered results. This is expected behavior with client-side filtering.
-      # The button allows loading more pages to apply the same client-side filter to additional data.
+      # Load More may remain: has_more reflects DB pagination, not the
+      # client-side filtered result — it lets the filter apply to more pages.
     end
 
-    # T099: "program click navigates with ID without database call"
     test "program click navigates with ID without database call", %{conn: conn} do
-      # Given: A program exists
       program = insert_program(%{title: "Test Program"})
 
-      # When: User loads the page
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # And: Clicks on the program card
-      # Then: Navigation happens with program ID (no database call needed)
       assert view
              |> element("[phx-click='program_click'][phx-value-program-id='#{program.id}']")
              |> render_click()
 
-      # Verify navigation occurred by checking flash redirect
       assert_redirect(view, ~p"/programs/#{program.id}")
     end
 
-    # T100: "Load More shows loading state during operation"
     test "Load More shows loading state during operation", %{conn: conn} do
-      # Given: 25 programs exist
       base_time = DateTime.utc_now()
 
       for i <- 1..25 do
@@ -717,34 +470,25 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      # When: User loads the page
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Then: Load More button is enabled
       assert view |> element("button[phx-click='load_more']") |> render() =~
                "Load more programs"
 
       refute view |> element("button[phx-click='load_more'][disabled]") |> has_element?()
 
-      # When: User clicks Load More (triggers loading state)
       view |> element("button[phx-click='load_more']") |> render_click()
 
-      # Note: In actual async operation, button would show loading state
-      # But in sync tests, operation completes immediately so we verify final state
-      # The loading state is transient and only visible during actual async operations
-
-      # Look up programs by title
+      # The loading state is transient (only visible during real async ops);
+      # sync tests complete immediately, so we assert the final state.
       program_5 = Repo.get_by!(ProgramListing, title: "Program 5")
       program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
 
-      # Then: After load completes, programs 21-25 are visible (Programs 5 down to 1, DESC order)
       assert_program_visible(view, program_5)
       assert_program_visible(view, program_1)
     end
 
-    # T101: "Load More error handling preserves existing results"
     test "Load More error handling preserves existing results", %{conn: conn} do
-      # Given: 25 programs on first page
       base_time = DateTime.utc_now()
 
       for i <- 1..25 do
@@ -754,30 +498,21 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      # When: User loads the page
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      # Look up programs by title
       program_25 = Repo.get_by!(ProgramListing, title: "Program 25")
       program_6 = Repo.get_by!(ProgramListing, title: "Program 6")
 
-      # Then: First 20 programs are visible (Programs 25 down to 6, DESC order)
       assert_program_visible(view, program_25)
       assert_program_visible(view, program_6)
 
-      # Note: Testing actual error handling would require mocking repository failures
-      # In real production scenario:
-      # - If Load More fails, existing programs (6-25) remain visible
-      # - Error flash message is shown
-      # - Load More button remains available for retry
-
-      # For this test, we verify the happy path behavior
-      # Error handling is already comprehensively tested in the LiveView implementation
+      # Actual Load More failure handling (existing results kept, error flash,
+      # retry available) requires mocking repository failures; here we verify
+      # the happy path only.
       assert has_element?(view, "button[phx-click='load_more']")
     end
   end
 
-  # Helper function to insert program listings into the read model table
   defp insert_program(attrs) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
 
@@ -809,15 +544,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
     |> Repo.insert!()
   end
 
-  # Test helper functions for element-based assertions
-  # Following Phoenix LiveView best practices: always use element-based assertions, never raw HTML
-
-  # Helper: Assert program is visible using element-based assertion
   defp assert_program_visible(view, program) do
     assert has_element?(view, "[data-program-id='#{program.id}']")
   end
 
-  # Helper: Refute program is visible
   defp refute_program_visible(view, program) do
     refute has_element?(view, "[data-program-id='#{program.id}']")
   end

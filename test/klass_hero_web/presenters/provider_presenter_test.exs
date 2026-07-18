@@ -5,56 +5,56 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
   alias KlassHeroWeb.Presenters.ProviderPresenter
 
   describe "verification_status_from_docs/2" do
-    test "returns :verified when provider.verified is true and no docs" do
-      assert ProviderPresenter.verification_status_from_docs(true, []) == :verified
-    end
+    # {verified, docs, expected status} — verified always wins; then pending > rejected
+    # among doc statuses; all-approved still reads as :pending (awaiting admin sign-off).
+    @verification_cases [
+      {true, [], :verified},
+      {true, [%{status: :pending}], :verified},
+      {false, [], :not_started},
+      {nil, [], :not_started},
+      {false, [%{status: :pending}], :pending},
+      {false, [%{status: :rejected}], :rejected},
+      {false, [%{status: :approved}], :pending},
+      {false, [%{status: :pending}, %{status: :rejected}], :pending},
+      {false, [%{status: :approved}, %{status: :rejected}], :rejected}
+    ]
 
-    test "returns :verified even when docs are pending" do
-      docs = [%{status: :pending}]
-      assert ProviderPresenter.verification_status_from_docs(true, docs) == :verified
-    end
-
-    test "returns :not_started when no docs submitted" do
-      assert ProviderPresenter.verification_status_from_docs(false, []) == :not_started
-    end
-
-    test "returns :not_started when verified is nil" do
-      assert ProviderPresenter.verification_status_from_docs(nil, []) == :not_started
-    end
-
-    test "returns :pending when any doc is pending" do
-      docs = [%{status: :pending}]
-      assert ProviderPresenter.verification_status_from_docs(false, docs) == :pending
-    end
-
-    test "returns :rejected when any doc is rejected" do
-      docs = [%{status: :rejected}]
-      assert ProviderPresenter.verification_status_from_docs(false, docs) == :rejected
-    end
-
-    test "returns :pending when all docs approved (awaiting admin final verification)" do
-      docs = [%{status: :approved}]
-      assert ProviderPresenter.verification_status_from_docs(false, docs) == :pending
-    end
-
-    test "pending takes priority over rejected" do
-      docs = [%{status: :pending}, %{status: :rejected}]
-      assert ProviderPresenter.verification_status_from_docs(false, docs) == :pending
-    end
-
-    test "rejected present among approved" do
-      docs = [%{status: :approved}, %{status: :rejected}]
-      assert ProviderPresenter.verification_status_from_docs(false, docs) == :rejected
+    for {verified, docs, expected} <- @verification_cases do
+      @verified verified
+      @docs docs
+      @expected expected
+      test "verified=#{inspect(verified)}, docs=#{inspect(docs)} -> #{inspect(expected)}" do
+        assert ProviderPresenter.verification_status_from_docs(@verified, @docs) == @expected
+      end
     end
   end
 
   describe "document_type_label/1" do
-    test "humanizes a canonical type" do
-      assert ProviderPresenter.document_type_label(:business_registration) == "Business Registration"
+    # {type, expected label} — every canonical enum clause, in source order.
+    @document_type_cases [
+      {:business_registration, "Business Registration"},
+      {:insurance_certificate, "Insurance Certificate"},
+      {:id_document, "ID Document"},
+      {:tax_certificate, "Tax Certificate"},
+      {:other, "Other"},
+      {:experience_validation, "Experience validation"},
+      {:background_check, "Background check"},
+      {:video_screening, "Video screening"},
+      {:safeguarding_certificate, "Safeguarding certificate"},
+      # Legacy/out-of-enum values load as the :unknown sentinel (#1026).
+      {:unknown, "Unknown"}
+    ]
+
+    for {doc_type, expected} <- @document_type_cases do
+      @doc_type doc_type
+      @expected expected
+      test "#{inspect(doc_type)} -> #{inspect(expected)}" do
+        assert ProviderPresenter.document_type_label(@doc_type) == @expected
+      end
     end
 
-    test "labels the :unknown legacy sentinel (#1026)" do
-      assert ProviderPresenter.document_type_label(:unknown) == "Unknown"
+    test "falls back to to_string/1 for an atom outside the known enum" do
+      assert ProviderPresenter.document_type_label(:some_future_type) == "some_future_type"
     end
   end
 

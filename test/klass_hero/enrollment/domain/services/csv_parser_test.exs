@@ -169,132 +169,86 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
   end
 
   # -- type conversions ------------------------------------------------------
+  #
+  # These four clusters share one shape (single-field override -> parsed
+  # value) so they're tabular. Everything else in this file stays hand-written
+  # — streaming/laziness, :parse_halt, BOM, and multi-line-quoted-field
+  # scenarios are too heterogeneous to gain clarity from a table.
+
+  @date_parsing_cases [
+    {"1/1/2016", ~D[2016-01-01], "M/D/YYYY"},
+    {"09/23/2017", ~D[2017-09-23], "MM/DD/YYYY"},
+    {"1/31/2017", ~D[2017-01-31], "M/DD/YYYY"},
+    {"03/09/2018", ~D[2018-03-09], "MM/D/YYYY"},
+    {"12/17/2015", ~D[2015-12-17], "MM/DD/YYYY"}
+  ]
 
   describe "date parsing" do
-    test "parses M/D/YYYY format" do
-      csv =
-        build_csv([
-          row_with_overrides(child_date_of_birth: "1/1/2016")
-        ])
+    test "parses M/D/YYYY and MM/DD/YYYY dates" do
+      for {input, expected, label} <- @date_parsing_cases do
+        csv = build_csv([row_with_overrides(child_date_of_birth: input)])
 
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.child_date_of_birth == ~D[2016-01-01]
-    end
-
-    test "parses MM/DD/YYYY format" do
-      csv =
-        build_csv([
-          row_with_overrides(child_date_of_birth: "09/23/2017")
-        ])
-
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.child_date_of_birth == ~D[2017-09-23]
-    end
-
-    test "parses mixed date formats correctly" do
-      csv =
-        build_csv([
-          row_with_overrides(child_date_of_birth: "1/31/2017"),
-          row_with_overrides(child_date_of_birth: "03/09/2018"),
-          row_with_overrides(child_date_of_birth: "12/17/2015")
-        ])
-
-      assert {:ok, rows} = CsvParser.parse(csv)
-      assert Enum.at(rows, 0).child_date_of_birth == ~D[2017-01-31]
-      assert Enum.at(rows, 1).child_date_of_birth == ~D[2018-03-09]
-      assert Enum.at(rows, 2).child_date_of_birth == ~D[2015-12-17]
+        assert {:ok, [row]} = CsvParser.parse(csv), label
+        assert row.child_date_of_birth == expected, label
+      end
     end
   end
+
+  @boolean_mapping_cases [
+    {"Yes", true},
+    {"yes", true},
+    {"YES", true},
+    {"True", true},
+    {"true", true},
+    {"1", true},
+    {"No", false},
+    {"no", false},
+    {"NO", false},
+    {"", false}
+  ]
 
   describe "boolean mapping" do
-    test "Yes maps to true" do
-      csv =
-        build_csv([
-          row_with_overrides(nut_allergy: "Yes", consent_photo_marketing: "Yes")
-        ])
+    test "maps CSV boolean strings to true/false, case-insensitively" do
+      for {input, expected} <- @boolean_mapping_cases do
+        csv = build_csv([row_with_overrides(nut_allergy: input, consent_photo_marketing: input)])
 
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.nut_allergy == true
-      assert row.consent_photo_marketing == true
-    end
-
-    test "No maps to false" do
-      csv =
-        build_csv([
-          row_with_overrides(nut_allergy: "No", consent_photo_marketing: "No")
-        ])
-
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.nut_allergy == false
-      assert row.consent_photo_marketing == false
-    end
-
-    test "empty string maps to false" do
-      csv =
-        build_csv([
-          row_with_overrides(nut_allergy: "", consent_photo_marketing: "")
-        ])
-
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.nut_allergy == false
-      assert row.consent_photo_marketing == false
-    end
-
-    test "handles case-insensitive truthy values" do
-      for truthy <- ["yes", "YES", "Yes", "True", "true", "1"] do
-        csv = build_csv([row_with_overrides(nut_allergy: truthy)])
-
-        assert {:ok, [row]} = CsvParser.parse(csv),
-               "expected #{inspect(truthy)} to parse successfully"
-
-        assert row.nut_allergy == true,
-               "expected #{inspect(truthy)} to map to true, got #{inspect(row.nut_allergy)}"
-      end
-    end
-
-    test "handles case-insensitive falsy values" do
-      for falsy <- ["No", "no", "NO", ""] do
-        csv = build_csv([row_with_overrides(nut_allergy: falsy)])
-
-        assert {:ok, [row]} = CsvParser.parse(csv),
-               "expected #{inspect(falsy)} to parse successfully"
-
-        assert row.nut_allergy == false,
-               "expected #{inspect(falsy)} to map to false, got #{inspect(row.nut_allergy)}"
+        assert {:ok, [row]} = CsvParser.parse(csv), "expected #{inspect(input)} to parse successfully"
+        assert row.nut_allergy == expected, "expected #{inspect(input)} to map to #{expected}"
+        assert row.consent_photo_marketing == expected, "expected #{inspect(input)} to map to #{expected}"
       end
     end
   end
+
+  @grade_parsing_cases [
+    {"3", 3, "numeric string maps to integer"},
+    {"", nil, "empty string maps to nil"}
+  ]
 
   describe "grade parsing" do
-    test "numeric string maps to integer" do
-      csv = build_csv([row_with_overrides(school_grade: "3")])
+    test "maps CSV grade strings to integer or nil" do
+      for {input, expected, label} <- @grade_parsing_cases do
+        csv = build_csv([row_with_overrides(school_grade: input)])
 
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.school_grade == 3
-    end
-
-    test "empty string maps to nil" do
-      csv = build_csv([row_with_overrides(school_grade: "")])
-
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.school_grade == nil
+        assert {:ok, [row]} = CsvParser.parse(csv), label
+        assert row.school_grade == expected, label
+      end
     end
   end
 
+  @string_handling_cases [
+    {:child_first_name, "Maxim ", "Maxim", "trims trailing whitespace"},
+    {:school_name, "", nil, "empty string becomes nil"},
+    {:instructor_name, "", nil, "empty string becomes nil"}
+  ]
+
   describe "string handling" do
-    test "trims whitespace from strings" do
-      csv = build_csv([row_with_overrides(child_first_name: "Maxim ")])
+    test "trims whitespace and converts empty strings to nil" do
+      for {field, input, expected, label} <- @string_handling_cases do
+        csv = build_csv([row_with_overrides([{field, input}])])
 
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.child_first_name == "Maxim"
-    end
-
-    test "converts empty strings to nil" do
-      csv = build_csv([row_with_overrides(school_name: "", instructor_name: "")])
-
-      assert {:ok, [row]} = CsvParser.parse(csv)
-      assert row.school_name == nil
-      assert row.instructor_name == nil
+        assert {:ok, [row]} = CsvParser.parse(csv), label
+        assert Map.get(row, field) == expected, label
+      end
     end
   end
 

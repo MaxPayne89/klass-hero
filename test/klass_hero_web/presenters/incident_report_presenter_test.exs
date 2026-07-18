@@ -34,10 +34,11 @@ defmodule KlassHeroWeb.Presenters.IncidentReportPresenterTest do
   end
 
   describe "severity_color/1" do
-    test "maps every severity to its badge colour" do
-      for {severity, color} <- @severity_colors do
-        assert IncidentReportPresenter.severity_color(severity) == color,
-               "expected #{color} for #{severity}"
+    for {severity, color} <- @severity_colors do
+      @severity severity
+      @color color
+      test "#{severity} -> #{color}" do
+        assert IncidentReportPresenter.severity_color(@severity) == @color
       end
     end
   end
@@ -69,48 +70,47 @@ defmodule KlassHeroWeb.Presenters.IncidentReportPresenterTest do
       assert result.reporter_display_name == "Max Mustermann"
     end
 
-    test "maps category to a human-readable label for every category" do
-      for {category, label} <- @category_labels do
-        result = IncidentReportPresenter.to_list_view(build_summary(%{category: category}))
-        assert result.category_label == label, "expected #{label} for #{category}"
+    for {category, label} <- @category_labels do
+      @category category
+      @label label
+      test "category #{category} -> #{inspect(label)}" do
+        result = IncidentReportPresenter.to_list_view(build_summary(%{category: @category}))
+        assert result.category_label == @label
       end
     end
 
-    test "maps severity to a human-readable label for every severity" do
-      for {severity, label} <- @severity_labels do
-        result = IncidentReportPresenter.to_list_view(build_summary(%{severity: severity}))
-        assert result.severity_label == label, "expected #{label} for #{severity}"
+    for {severity, label} <- @severity_labels do
+      @severity severity
+      @label label
+      test "severity #{severity} -> label #{inspect(label)}" do
+        result = IncidentReportPresenter.to_list_view(build_summary(%{severity: @severity}))
+        assert result.severity_label == @label
       end
     end
 
-    test "maps severity to its badge colour for every severity" do
-      for {severity, color} <- @severity_colors do
-        result = IncidentReportPresenter.to_list_view(build_summary(%{severity: severity}))
-        assert result.severity_color == color, "expected #{color} for #{severity}"
+    for {severity, color} <- @severity_colors do
+      @severity severity
+      @color color
+      test "severity #{severity} -> color #{inspect(color)}" do
+        result = IncidentReportPresenter.to_list_view(build_summary(%{severity: @severity}))
+        assert result.severity_color == @color
       end
     end
 
-    test "formats occurred_at DateTime as YYYY-MM-DD HH:MM" do
-      dt = ~U[2024-03-21 14:05:00Z]
-      result = IncidentReportPresenter.to_list_view(build_summary(%{occurred_at: dt}))
+    # {occurred_at, expected display} — a normal timestamp, nil, and the midnight boundary.
+    @occurred_at_cases [
+      {~U[2024-03-21 14:05:00Z], "2024-03-21 14:05"},
+      {nil, ""},
+      {~U[2025-01-01 00:00:00Z], "2025-01-01 00:00"}
+    ]
 
-      assert result.occurred_at_display == "2024-03-21 14:05"
-    end
-
-    test "returns empty string for nil occurred_at" do
-      summary = build_summary()
-      summary_nil = %{summary | occurred_at: nil}
-
-      result = IncidentReportPresenter.to_list_view(summary_nil)
-
-      assert result.occurred_at_display == ""
-    end
-
-    test "preserves midnight boundary formatting" do
-      dt = ~U[2025-01-01 00:00:00Z]
-      result = IncidentReportPresenter.to_list_view(build_summary(%{occurred_at: dt}))
-
-      assert result.occurred_at_display == "2025-01-01 00:00"
+    for {occurred_at, expected} <- @occurred_at_cases do
+      @occurred_at occurred_at
+      @expected expected
+      test "occurred_at #{inspect(occurred_at)} -> #{inspect(expected)}" do
+        result = IncidentReportPresenter.to_list_view(build_summary(%{occurred_at: @occurred_at}))
+        assert result.occurred_at_display == @expected
+      end
     end
   end
 end

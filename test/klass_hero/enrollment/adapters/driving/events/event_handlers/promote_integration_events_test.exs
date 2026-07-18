@@ -12,110 +12,75 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteInte
     :ok
   end
 
-  describe "handle/1 — :participant_policy_set" do
-    test "promotes to participant_policy_set integration event" do
-      program_id = Ecto.UUID.generate()
+  # Each enrollment domain event promotes to an integration event with a known
+  # entity_type, and publish failures propagate as {:error, reason}. The table
+  # drives that shared contract; per-event payload passthrough is kept below.
+  @cases [
+    %{type: :participant_policy_set, entity_type: :participant_policy, payload: %{program_id: "id-1"}},
+    %{
+      type: :enrollment_cancelled,
+      entity_type: :enrollment,
+      payload: %{enrollment_id: "id-1", admin_id: "admin-1", reason: "Duplicate booking"}
+    },
+    %{
+      type: :invite_claimed,
+      entity_type: :invite,
+      payload: %{
+        invite_id: "id-1",
+        user_id: "user-1",
+        program_id: "prog-1",
+        is_new_user: true,
+        child: %{first_name: "Emma", last_name: "Schmidt"},
+        guardian: %{email: "parent@example.com"}
+      }
+    }
+  ]
 
-      domain_event =
-        DomainEvent.new(:participant_policy_set, program_id, :enrollment, %{
-          program_id: program_id
-        })
+  for %{type: type, entity_type: entity_type, payload: payload} <- @cases do
+    describe "handle/1 — #{type}" do
+      @type_ type
+      @entity_type entity_type
+      @payload payload
 
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+      test "promotes to the #{type} integration event" do
+        domain_event = DomainEvent.new(@type_, "id-1", :enrollment, @payload)
 
-      event = assert_integration_event_published(:participant_policy_set)
-      assert event.entity_id == program_id
-      assert event.source_context == :enrollment
-      assert event.entity_type == :participant_policy
-    end
+        assert :ok = PromoteIntegrationEvents.handle(domain_event)
 
-    test "propagates publish failures as {:error, reason}" do
-      program_id = Ecto.UUID.generate()
+        event = assert_integration_event_published(@type_)
+        assert event.entity_id == "id-1"
+        assert event.source_context == :enrollment
+        assert event.entity_type == @entity_type
+      end
 
-      domain_event =
-        DomainEvent.new(:participant_policy_set, program_id, :enrollment, %{
-          program_id: program_id
-        })
+      test "propagates publish failures as {:error, reason}" do
+        domain_event = DomainEvent.new(@type_, "id-1", :enrollment, @payload)
+        TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
 
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+        assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+      end
     end
   end
 
-  describe "handle/1 — :enrollment_cancelled" do
-    test "promotes to enrollment_cancelled integration event" do
-      enrollment_id = Ecto.UUID.generate()
-      admin_id = Ecto.UUID.generate()
+  describe "handle/1 — payload passthrough" do
+    test "enrollment_cancelled carries enrollment_id and admin_id" do
+      payload = %{enrollment_id: "id-1", admin_id: "admin-1", reason: "Duplicate booking"}
 
-      domain_event =
-        DomainEvent.new(:enrollment_cancelled, enrollment_id, :enrollment, %{
-          enrollment_id: enrollment_id,
-          admin_id: admin_id,
-          reason: "Duplicate booking"
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+      assert :ok = PromoteIntegrationEvents.handle(DomainEvent.new(:enrollment_cancelled, "id-1", :enrollment, payload))
 
       event = assert_integration_event_published(:enrollment_cancelled)
-      assert event.entity_id == enrollment_id
-      assert event.source_context == :enrollment
-      assert event.entity_type == :enrollment
-      assert event.payload.enrollment_id == enrollment_id
-      assert event.payload.admin_id == admin_id
+      assert event.payload.enrollment_id == "id-1"
+      assert event.payload.admin_id == "admin-1"
     end
 
-    test "propagates publish failures as {:error, reason}" do
-      enrollment_id = Ecto.UUID.generate()
+    test "invite_claimed carries invite_id and user_id" do
+      payload = %{invite_id: "id-1", user_id: "user-1", program_id: "prog-1"}
 
-      domain_event =
-        DomainEvent.new(:enrollment_cancelled, enrollment_id, :enrollment, %{
-          enrollment_id: enrollment_id
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
-    end
-  end
-
-  describe "handle/1 — :invite_claimed" do
-    test "promotes to invite_claimed integration event" do
-      invite_id = Ecto.UUID.generate()
-      user_id = Ecto.UUID.generate()
-      program_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:invite_claimed, invite_id, :enrollment, %{
-          invite_id: invite_id,
-          user_id: user_id,
-          program_id: program_id,
-          is_new_user: true,
-          child: %{first_name: "Emma", last_name: "Schmidt"},
-          guardian: %{email: "parent@example.com"}
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+      assert :ok = PromoteIntegrationEvents.handle(DomainEvent.new(:invite_claimed, "id-1", :enrollment, payload))
 
       event = assert_integration_event_published(:invite_claimed)
-      assert event.entity_id == invite_id
-      assert event.source_context == :enrollment
-      assert event.entity_type == :invite
-      assert event.payload.invite_id == invite_id
-      assert event.payload.user_id == user_id
-    end
-
-    test "propagates publish failures as {:error, reason}" do
-      invite_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:invite_claimed, invite_id, :enrollment, %{
-          invite_id: invite_id
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+      assert event.payload.invite_id == "id-1"
+      assert event.payload.user_id == "user-1"
     end
   end
 end

@@ -1,125 +1,69 @@
 defmodule KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEventsTest do
-  @moduledoc """
-  Tests for EnrollmentIntegrationEvents factory module.
-  """
+  @moduledoc "Tests for the EnrollmentIntegrationEvents factory module."
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEvents
+  alias KlassHero.Enrollment.Domain.Events.EnrollmentIntegrationEvents, as: Events
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  describe "invite_claimed/3" do
-    test "creates an integration event with correct structure" do
-      invite_id = Ecto.UUID.generate()
-      payload = %{invite_id: invite_id, user_id: Ecto.UUID.generate()}
+  # Every enrollment integration-event factory shares one contract: build an event
+  # with stable identity fields, let the base payload's id win over any
+  # caller-supplied id (preserving extras), and raise on a blank id. The table
+  # drives that shape; enrollment_created's parent_user_id passthrough is the one
+  # factory-specific assertion, kept below the table.
+  @factories [
+    %{fun: :invite_claimed, id: :invite_id, entity: :invite},
+    %{fun: :enrollment_cancelled, id: :enrollment_id, entity: :enrollment},
+    %{fun: :participant_policy_set, id: :program_id, entity: :participant_policy},
+    %{fun: :enrollment_created, id: :enrollment_id, entity: :enrollment}
+  ]
 
-      event = EnrollmentIntegrationEvents.invite_claimed(invite_id, payload)
+  for %{fun: fun, id: id, entity: entity} <- @factories do
+    describe "#{fun}/3" do
+      @fun fun
+      @id id
+      @entity entity
 
-      assert %IntegrationEvent{} = event
-      assert event.event_type == :invite_claimed
-      assert event.source_context == :enrollment
-      assert event.entity_type == :invite
-      assert event.entity_id == invite_id
-    end
+      test "builds an event with stable identity fields" do
+        event = apply(Events, @fun, ["id-1"])
 
-    test "base_payload invite_id wins over caller-supplied invite_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{invite_id: "should-be-overridden", extra: "data"}
+        assert %IntegrationEvent{} = event
+        assert event.event_type == @fun
+        assert event.source_context == :enrollment
+        assert event.entity_type == @entity
+        assert event.entity_id == "id-1"
+      end
 
-      event = EnrollmentIntegrationEvents.invite_claimed(real_id, conflicting_payload)
+      test "base payload id wins over caller-supplied and preserves extras" do
+        payload = %{@id => "overridden", :extra => "data"}
+        event = apply(Events, @fun, ["real-id", payload])
 
-      assert event.payload.invite_id == real_id
-      assert event.payload.extra == "data"
-    end
+        assert Map.get(event.payload, @id) == "real-id"
+        assert event.payload.extra == "data"
+      end
 
-    test "raises for nil invite_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty invite_id string/,
-                   fn -> EnrollmentIntegrationEvents.invite_claimed(nil) end
-    end
-
-    test "raises for empty string invite_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty invite_id string/,
-                   fn -> EnrollmentIntegrationEvents.invite_claimed("") end
-    end
-  end
-
-  describe "enrollment_cancelled/3" do
-    test "creates integration event with correct structure" do
-      enrollment_id = Ecto.UUID.generate()
-
-      payload = %{
-        enrollment_id: enrollment_id,
-        program_id: Ecto.UUID.generate(),
-        admin_id: Ecto.UUID.generate(),
-        reason: "Admin cancellation"
-      }
-
-      event = EnrollmentIntegrationEvents.enrollment_cancelled(enrollment_id, payload)
-
-      assert %IntegrationEvent{} = event
-      assert event.event_type == :enrollment_cancelled
-      assert event.source_context == :enrollment
-      assert event.entity_type == :enrollment
-      assert event.entity_id == enrollment_id
-    end
-
-    test "base_payload enrollment_id wins over caller-supplied enrollment_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{enrollment_id: "should-be-overridden", extra: "data"}
-
-      event = EnrollmentIntegrationEvents.enrollment_cancelled(real_id, conflicting_payload)
-
-      assert event.payload.enrollment_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises for nil enrollment_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty enrollment_id string/,
-                   fn -> EnrollmentIntegrationEvents.enrollment_cancelled(nil) end
-    end
-
-    test "raises for empty string enrollment_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty enrollment_id string/,
-                   fn -> EnrollmentIntegrationEvents.enrollment_cancelled("") end
+      test "raises for a nil or blank id" do
+        for bad_id <- [nil, ""] do
+          assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
+            apply(Events, @fun, [bad_id])
+          end
+        end
+      end
     end
   end
 
-  describe "participant_policy_set/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      program_id = Ecto.UUID.generate()
+  describe "enrollment_created/3 payload" do
+    test "carries parent_user_id through to the integration event" do
+      event =
+        Events.enrollment_created("enr-1", %{
+          child_id: "child-1",
+          parent_id: "parent-1",
+          parent_user_id: "puser-1",
+          program_id: "prog-1",
+          status: :pending
+        })
 
-      event = EnrollmentIntegrationEvents.participant_policy_set(program_id)
-
-      assert event.event_type == :participant_policy_set
-      assert event.source_context == :enrollment
-      assert event.entity_type == :participant_policy
-      assert event.entity_id == program_id
-    end
-
-    test "base_payload program_id wins over caller-supplied program_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
-
-      event = EnrollmentIntegrationEvents.participant_policy_set(real_id, conflicting_payload)
-
-      assert event.payload.program_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises for nil program_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty program_id string/,
-                   fn -> EnrollmentIntegrationEvents.participant_policy_set(nil) end
-    end
-
-    test "raises for empty string program_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty program_id string/,
-                   fn -> EnrollmentIntegrationEvents.participant_policy_set("") end
+      assert event.payload.parent_user_id == "puser-1"
     end
   end
 end
