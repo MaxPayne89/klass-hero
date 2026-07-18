@@ -1872,7 +1872,7 @@ msgstr "Kind erfolgreich aktualisiert."
 msgid "Child updated, but consent update failed. Please try again."
 msgstr "Kind aktualisiert, aber Einwilligungsaktualisierung fehlgeschlagen. Bitte versuchen Sie es erneut."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:167
+#: lib/klass_hero_web/live/dashboard_live.ex:195
 #: lib/klass_hero_web/live/messaging_live_helper.ex:343
 #, elixir-autogen, elixir-format
 msgid "Conversation"
@@ -2303,7 +2303,7 @@ msgstr "Zurück zu den Verifizierungen"
 msgid "Bio"
 msgstr "Biografie"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:345
+#: lib/klass_hero_web/live/dashboard_live.ex:387
 #, elixir-autogen, elixir-format
 msgid "Book a Program"
 msgstr "Programm buchen"
@@ -2560,7 +2560,7 @@ msgstr "Einladung konnte nicht erneut gesendet werden."
 msgid "Failed to upload document."
 msgstr "Dokument konnte nicht hochgeladen werden."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:326
+#: lib/klass_hero_web/live/dashboard_live.ex:360
 #, elixir-autogen, elixir-format
 msgid "Family Programs"
 msgstr "Familienprogramme"
@@ -2799,7 +2799,7 @@ msgstr "Kein Minimum"
 msgid "No pending documents to review."
 msgstr "Keine ausstehenden Dokumente zur Überprüfung."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:334
+#: lib/klass_hero_web/live/dashboard_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "No programs booked yet"
 msgstr "Noch keine Programme gebucht"
@@ -3684,7 +3684,7 @@ msgstr "Kontaktieren Sie den Anbieter direkt (Details in der Bestätigungs-E-Mai
 msgid "Correct"
 msgstr "Korrigieren"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:258
+#: lib/klass_hero_web/live/dashboard_live.ex:286
 #: lib/klass_hero_web/live/provider/programs_live.ex:257
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:200
 #, elixir-autogen, elixir-format
@@ -3914,7 +3914,7 @@ msgstr "Mitarbeiter"
 msgid "Track Everything:"
 msgstr "Alles im Überblick:"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:245
+#: lib/klass_hero_web/live/dashboard_live.ex:273
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:143
 #, elixir-autogen, elixir-format
 msgid "Upgrade your plan to send messages."
@@ -5279,7 +5279,7 @@ msgstr "Guten Tag"
 msgid "Good evening"
 msgstr "Guten Abend"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:59
+#: lib/klass_hero_web/live/dashboard_live.ex:28
 #, elixir-autogen, elixir-format
 msgid "Your week with the kids"
 msgstr "Ihre Woche mit den Kindern"
@@ -5353,7 +5353,7 @@ msgstr "Über alle Programme hinweg"
 msgid "Active policy required to teach."
 msgstr "Aktive Versicherungspolice erforderlich, um zu unterrichten."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:278
+#: lib/klass_hero_web/live/dashboard_live.ex:306
 #: lib/klass_hero_web/live/provider/overview_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Active programs"
@@ -6106,7 +6106,7 @@ msgstr "Monat"
 msgid "Mother and child-safety specialist with 10+ years in quality assurance. Architecting our Safety-First Verification engine."
 msgstr "Mutter und Kindersicherheitsspezialistin mit über 10 Jahren Erfahrung in der Qualitätssicherung. Verantwortlich für die Konzeption unserer Safety-First-Verifizierungs-Engine."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:155
+#: lib/klass_hero_web/live/dashboard_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "New conversation"
 msgstr "Neue Unterhaltung"
@@ -6173,7 +6173,7 @@ msgid_plural "No rows imported. %{count} rows could not be processed."
 msgstr[0] "Keine Zeilen importiert. %{count} Zeile konnte nicht verarbeitet werden."
 msgstr[1] "Keine Zeilen importiert. %{count} Zeilen konnten nicht verarbeitet werden."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:312
+#: lib/klass_hero_web/live/dashboard_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "No upcoming sessions in the next few weeks."
 msgstr "Keine bevorstehenden Sitzungen in den nächsten Wochen."
@@ -6689,17 +6689,17 @@ msgstr "Unbekannter Elternteil"
 msgid "Unlimited programs and locations"
 msgstr "Unbegrenzte Programme und Standorte"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:290
+#: lib/klass_hero_web/live/dashboard_live.ex:318
 #, elixir-autogen, elixir-format
 msgid "Unread messages"
 msgstr "Ungelesene Nachrichten"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:303
+#: lib/klass_hero_web/live/dashboard_live.ex:331
 #, elixir-autogen, elixir-format
 msgid "Upcoming sessions"
 msgstr "Anstehende Sitzungen"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:284
+#: lib/klass_hero_web/live/dashboard_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "Upcoming this week"
 msgstr "Diese Woche anstehend"
@@ -6714,7 +6714,7 @@ msgstr "Geprüft"
 msgid "View"
 msgstr "Ansehen"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:308
+#: lib/klass_hero_web/live/dashboard_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "View all"
 msgstr "Alle anzeigen"
@@ -7586,3 +7586,13 @@ msgstr "Sitzungsnotiz"
 #, elixir-autogen, elixir-format
 msgid "Session note submitted for review"
 msgstr "Sitzungsnotiz zur Überprüfung eingereicht"
+
+#: lib/klass_hero_web/live/dashboard_live.ex:370
+#, elixir-autogen, elixir-format
+msgid "Loading your programs…"
+msgstr "Deine Programme werden geladen…"
+
+#: lib/klass_hero_web/live/dashboard_live.ex:340
+#, elixir-autogen, elixir-format
+msgid "Loading…"
+msgstr "Wird geladen…"

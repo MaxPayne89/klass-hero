@@ -117,6 +117,16 @@ defmodule KlassHero.Participation do
   def list_sessions(%{date: %Date{} = date}), do: list_sessions_today(date)
   def list_sessions(params) when is_map(params), do: list_sessions_today(Date.utc_today())
 
+  @doc "Lists sessions on or after `from_date` across many programs in one query, ordered soonest-first."
+  @spec list_upcoming_sessions_for_programs([String.t()], Date.t()) :: [ProgramSession.t()]
+  def list_upcoming_sessions_for_programs(program_ids, %Date{} = from_date) when is_list(program_ids) do
+    from(s in ProgramSession,
+      where: s.program_id in ^program_ids and s.session_date >= ^from_date,
+      order_by: [asc: s.session_date, asc: s.start_time]
+    )
+    |> Repo.all()
+  end
+
   @doc "Lists sessions with enriched data for the admin dashboard."
   def list_admin_sessions(filters \\ %{}) when is_map(filters) do
     # Default to today when no date filter is provided to avoid loading all sessions.

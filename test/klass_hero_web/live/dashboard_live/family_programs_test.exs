@@ -9,6 +9,7 @@ defmodule KlassHeroWeb.DashboardLive.FamilyProgramsTest do
 
     test "shows empty state when parent has no enrollments", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       assert has_element?(view, "#family-programs")
       assert has_element?(view, "#family-programs-empty")
@@ -31,6 +32,7 @@ defmodule KlassHeroWeb.DashboardLive.FamilyProgramsTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       refute has_element?(view, "#family-programs-empty")
       assert has_element?(view, "#family_programs-#{enrollment.id}")
@@ -47,6 +49,7 @@ defmodule KlassHeroWeb.DashboardLive.FamilyProgramsTest do
       )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       assert has_element?(
                view,
@@ -67,6 +70,7 @@ defmodule KlassHeroWeb.DashboardLive.FamilyProgramsTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       refute has_element?(view, "#family-programs-empty")
       assert has_element?(view, "#family_programs-#{enrollment.id}")
@@ -88,6 +92,7 @@ defmodule KlassHeroWeb.DashboardLive.FamilyProgramsTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       refute has_element?(view, "#family-programs-empty")
       assert has_element?(view, "#family_programs-#{enrollment.id}")
@@ -118,7 +123,7 @@ defmodule KlassHeroWeb.DashboardLive.FamilyProgramsTest do
         )
 
       {:ok, view, _html} = live(conn, ~p"/dashboard")
-      html = render(view)
+      html = render_async(view)
 
       active_pos = :binary.match(html, "family_programs-#{active_enrollment.id}") |> elem(0)
       expired_pos = :binary.match(html, "family_programs-#{expired_enrollment.id}") |> elem(0)
