@@ -17,6 +17,7 @@ defmodule KlassHeroWeb.Features.LoginFeatureTest do
       conn
       |> visit("/users/log-in")
       |> assert_has("h1", text: "Welcome")
+      |> click_button("Or use magic link")
       |> within("#login_form_magic", fn session ->
         session
         |> fill_in("Email", with: user.email)
@@ -33,13 +34,13 @@ defmodule KlassHeroWeb.Features.LoginFeatureTest do
 
     # Password login tests are in login_test.exs using LiveViewTest
     # phoenix_test cannot handle duplicate forms (mobile + desktop) with phx-trigger-action
-    test "user can toggle to password form", %{conn: conn} do
+    test "user can toggle to magic link form", %{conn: conn} do
       conn
       |> visit("/users/log-in")
-      |> assert_has("button", text: "Send magic link")
-      |> click_button("Or use password")
       |> assert_has("button", text: "Log in and stay logged in")
       |> assert_has("input[type='password']")
+      |> click_button("Or use magic link")
+      |> assert_has("button", text: "Send magic link")
     end
 
     test "user can navigate to registration from login", %{conn: _conn} do

@@ -33,6 +33,9 @@ defmodule KlassHeroWeb.FlashVisibilityTest do
       user = user_fixture()
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
 
+      # Magic link is now the secondary method — toggle to it first
+      lv |> element("button", "Or use magic link") |> render_click()
+
       {:ok, view, _html} =
         form(lv, "#login_form_magic", user: %{email: user.email})
         |> render_submit()
