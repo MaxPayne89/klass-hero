@@ -13,47 +13,19 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       assert has_element?(view, "h1", "Creative Art World")
     end
 
-    test "redirects with error flash for invalid program ID format", %{conn: conn} do
-      assert {:error, {:redirect, %{to: path, flash: flash}}} = live(conn, ~p"/programs/invalid")
+    # Any unresolvable id — bad format, unknown-but-valid UUID, zero, negative —
+    # redirects to the index with the same "not found" flash.
+    for id <- ["invalid", "550e8400-e29b-41d4-a716-446655449999", "0", "-1"] do
+      @id id
+      test "redirects with not-found flash for id #{id}", %{conn: conn} do
+        assert {:error, {:redirect, %{to: path, flash: flash}}} =
+                 live(conn, ~p"/programs/#{@id}")
 
-      assert path == ~p"/programs"
+        assert path == ~p"/programs"
 
-      # Invalid UUIDs return :not_found, which shows the "not found" message
-      assert flash["error"] ==
-               "Program not found. It may have been removed or is no longer available."
-    end
-
-    test "redirects with error flash for non-existent program ID", %{conn: conn} do
-      # Use a valid UUID format that doesn't exist in database
-      non_existent_uuid = "550e8400-e29b-41d4-a716-446655449999"
-
-      assert {:error, {:redirect, %{to: path, flash: flash}}} =
-               live(conn, ~p"/programs/#{non_existent_uuid}")
-
-      assert path == ~p"/programs"
-
-      assert flash["error"] ==
-               "Program not found. It may have been removed or is no longer available."
-    end
-
-    test "redirects with error flash for zero program ID", %{conn: conn} do
-      assert {:error, {:redirect, %{to: path, flash: flash}}} = live(conn, ~p"/programs/0")
-
-      assert path == ~p"/programs"
-
-      # Invalid UUIDs return :not_found, which shows the "not found" message
-      assert flash["error"] ==
-               "Program not found. It may have been removed or is no longer available."
-    end
-
-    test "redirects with error flash for negative program ID", %{conn: conn} do
-      assert {:error, {:redirect, %{to: path, flash: flash}}} = live(conn, ~p"/programs/-1")
-
-      assert path == ~p"/programs"
-
-      # Invalid UUIDs return :not_found, which shows the "not found" message
-      assert flash["error"] ==
-               "Program not found. It may have been removed or is no longer available."
+        assert flash["error"] ==
+                 "Program not found. It may have been removed or is no longer available."
+      end
     end
 
     test "enroll_now button navigates to booking page", %{conn: conn} do
