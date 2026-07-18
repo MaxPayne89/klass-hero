@@ -5,497 +5,197 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingIntegrationEventsTest do
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents
+  alias KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents, as: Events
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  describe "message_data_anonymized/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      user_id = Ecto.UUID.generate()
+  # Most Messaging integration-event factories share one contract: build an
+  # event with stable identity fields, let the base payload's id win over any
+  # caller-supplied id (while preserving extras), and raise on a blank id.
+  # Rows vary by the id field name, entity_type, whether the factory is
+  # critical, and which extra payload keys it requires. `conversations_archived`
+  # breaks the base-id-wins contract (it passes its payload straight through)
+  # and uses a different id field name, so it's handled entirely as
+  # hand-written tests below, alongside message_data_anonymized's criticality
+  # override and the participant_* factories' extra "empty list" and
+  # source-scalarization coverage.
+  @factories [
+    %{fun: :message_data_anonymized, id: :user_id, entity: :user, critical: true},
+    %{
+      fun: :conversation_created,
+      id: :conversation_id,
+      entity: :conversation,
+      required: [:participant_ids, :provider_id],
+      extra_payload: %{participant_ids: ["p1", "p2"], provider_id: "provider-1"}
+    },
+    %{
+      fun: :message_sent,
+      id: :conversation_id,
+      entity: :conversation,
+      required: [:sender_id],
+      extra_payload: %{sender_id: "sender-1", content: "Hello"}
+    },
+    %{
+      fun: :messages_read,
+      id: :conversation_id,
+      entity: :conversation,
+      required: [:user_id],
+      extra_payload: %{user_id: "user-1"}
+    },
+    %{fun: :conversation_archived, id: :conversation_id, entity: :conversation},
+    %{
+      fun: :participant_added,
+      id: :conversation_id,
+      entity: :conversation,
+      critical: true,
+      required: [:participant_user_ids, :source],
+      extra_payload: %{participant_user_ids: ["u1"], source: :initial_staff},
+      invalid_payloads: [%{}, %{participant_user_ids: ["u1"]}, %{source: :initial_staff}]
+    },
+    %{
+      fun: :participant_removed,
+      id: :conversation_id,
+      entity: :conversation,
+      critical: true,
+      required: [:participant_user_ids, :source],
+      extra_payload: %{participant_user_ids: ["u1"], source: :staff_unassignment},
+      invalid_payloads: [%{}, %{participant_user_ids: ["u1"]}, %{source: :staff_unassignment}]
+    }
+  ]
 
-      event = MessagingIntegrationEvents.message_data_anonymized(user_id)
+  for spec <- @factories do
+    describe "#{spec.fun}/3" do
+      @fun spec.fun
+      @id spec.id
+      @entity spec.entity
+      @critical Map.get(spec, :critical, false)
+      @required Map.get(spec, :required, [])
+      @extra_payload Map.get(spec, :extra_payload, %{})
+      @invalid_payloads Map.get(spec, :invalid_payloads, [%{}])
 
-      assert event.event_type == :message_data_anonymized
-      assert event.source_context == :messaging
-      assert event.entity_type == :user
-      assert event.entity_id == user_id
+      test "creates event with correct type, source_context, and entity_type" do
+        event = apply(Events, @fun, ["id-1", @extra_payload])
+
+        assert event.event_type == @fun
+        assert event.source_context == :messaging
+        assert event.entity_type == @entity
+        assert event.entity_id == "id-1"
+      end
+
+      test "base_payload id wins over caller-supplied and preserves extras" do
+        payload = Map.merge(@extra_payload, %{@id => "overridden", extra: "data"})
+        event = apply(Events, @fun, ["real-id", payload])
+
+        assert Map.get(event.payload, @id) == "real-id"
+        assert event.payload.extra == "data"
+      end
+
+      test "raises for a nil or blank id" do
+        for bad_id <- [nil, ""] do
+          assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
+            apply(Events, @fun, [bad_id, @extra_payload])
+          end
+        end
+      end
+
+      if @critical do
+        test "marks event as critical by default" do
+          event = apply(Events, @fun, ["id-1", @extra_payload])
+
+          assert IntegrationEvent.critical?(event)
+        end
+      end
+
+      if @required != [] do
+        test "raises when required payload keys are missing" do
+          for payload <- @invalid_payloads do
+            assert_raise ArgumentError, ~r/#{@fun} missing required payload keys/, fn ->
+              apply(Events, @fun, ["id-1", payload])
+            end
+          end
+        end
+      end
     end
+  end
 
-    test "base_payload user_id wins over caller-supplied user_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{user_id: "should-be-overridden", extra: "data"}
-
-      event = MessagingIntegrationEvents.message_data_anonymized(real_id, conflicting_payload)
-
-      assert event.payload.user_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "marks event as critical by default" do
-      user_id = Ecto.UUID.generate()
-
-      event = MessagingIntegrationEvents.message_data_anonymized(user_id)
-
-      assert IntegrationEvent.critical?(event)
-    end
-
+  describe "message_data_anonymized/3 criticality override" do
     test "allows overriding criticality via opts" do
-      user_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.message_data_anonymized(user_id, %{}, criticality: :normal)
+      event = Events.message_data_anonymized("user-1", %{}, criticality: :normal)
 
       refute IntegrationEvent.critical?(event)
     end
+  end
 
-    test "raises for nil user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> MessagingIntegrationEvents.message_data_anonymized(nil) end
+  describe "participant_added/3 payload passthrough" do
+    test "converts source atom to string and preserves participant_user_ids" do
+      event =
+        Events.participant_added("conv-1", %{
+          participant_user_ids: ["staff-1"],
+          source: :later_assignment
+        })
+
+      assert event.payload.participant_user_ids == ["staff-1"]
+      assert event.payload.source == "later_assignment"
     end
 
-    test "raises for empty string user_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty user_id string/,
-                   fn -> MessagingIntegrationEvents.message_data_anonymized("") end
+    test "raises when participant_user_ids is empty" do
+      assert_raise ArgumentError, ~r/participant_added requires a non-empty participant_user_ids list/, fn ->
+        Events.participant_added("conv-1", %{participant_user_ids: [], source: :initial_staff})
+      end
     end
   end
 
-  describe "conversation_created/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      conversation_id = Ecto.UUID.generate()
-
+  describe "participant_removed/3 payload passthrough" do
+    test "converts source atom to string and preserves participant_user_ids" do
       event =
-        MessagingIntegrationEvents.conversation_created(conversation_id, %{
-          participant_ids: ["p1", "p2"],
-          provider_id: Ecto.UUID.generate()
+        Events.participant_removed("conv-1", %{
+          participant_user_ids: ["staff-1"],
+          source: :staff_unassignment
         })
 
-      assert event.event_type == :conversation_created
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.entity_id == conversation_id
+      assert event.payload.participant_user_ids == ["staff-1"]
+      assert event.payload.source == "staff_unassignment"
     end
 
-    test "base_payload conversation_id wins over caller-supplied" do
-      real_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.conversation_created(real_id, %{
-          conversation_id: "should-be-overridden",
-          participant_ids: ["p1", "p2"],
-          provider_id: Ecto.UUID.generate(),
-          extra: "data"
-        })
-
-      assert event.payload.conversation_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises when required payload keys are missing" do
-      conversation_id = Ecto.UUID.generate()
-
-      assert_raise ArgumentError,
-                   ~r/conversation_created missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.conversation_created(conversation_id, %{})
-                   end
-    end
-
-    test "raises for nil or empty conversation_id" do
-      valid_payload = %{participant_ids: ["p1"], provider_id: Ecto.UUID.generate()}
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.conversation_created(nil, valid_payload) end
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.conversation_created("", valid_payload) end
-    end
-  end
-
-  describe "message_sent/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      conversation_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.message_sent(conversation_id, %{
-          sender_id: Ecto.UUID.generate(),
-          content: "Hello"
-        })
-
-      assert event.event_type == :message_sent
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.entity_id == conversation_id
-    end
-
-    test "base_payload conversation_id wins over caller-supplied" do
-      real_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.message_sent(real_id, %{
-          conversation_id: "should-be-overridden",
-          sender_id: Ecto.UUID.generate(),
-          content: "Hello",
-          extra: "data"
-        })
-
-      assert event.payload.conversation_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises when required payload keys are missing" do
-      conversation_id = Ecto.UUID.generate()
-
-      assert_raise ArgumentError,
-                   ~r/message_sent missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.message_sent(conversation_id, %{})
-                   end
-    end
-
-    test "raises for nil or empty conversation_id" do
-      valid_payload = %{sender_id: Ecto.UUID.generate(), content: "Hello"}
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.message_sent(nil, valid_payload) end
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.message_sent("", valid_payload) end
-    end
-  end
-
-  describe "messages_read/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      conversation_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.messages_read(conversation_id, %{
-          user_id: Ecto.UUID.generate()
-        })
-
-      assert event.event_type == :messages_read
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.entity_id == conversation_id
-    end
-
-    test "base_payload conversation_id wins over caller-supplied" do
-      real_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.messages_read(real_id, %{
-          conversation_id: "should-be-overridden",
-          user_id: Ecto.UUID.generate(),
-          extra: "data"
-        })
-
-      assert event.payload.conversation_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises when required payload keys are missing" do
-      conversation_id = Ecto.UUID.generate()
-
-      assert_raise ArgumentError,
-                   ~r/messages_read missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.messages_read(conversation_id, %{})
-                   end
-    end
-
-    test "raises for nil or empty conversation_id" do
-      valid_payload = %{user_id: Ecto.UUID.generate()}
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.messages_read(nil, valid_payload) end
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.messages_read("", valid_payload) end
-    end
-  end
-
-  describe "conversation_archived/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      conversation_id = Ecto.UUID.generate()
-
-      event = MessagingIntegrationEvents.conversation_archived(conversation_id)
-
-      assert event.event_type == :conversation_archived
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.entity_id == conversation_id
-    end
-
-    test "base_payload conversation_id wins over caller-supplied" do
-      real_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.conversation_archived(real_id, %{
-          conversation_id: "should-be-overridden",
-          reason: "program_ended"
-        })
-
-      assert event.payload.conversation_id == real_id
-      assert event.payload.reason == "program_ended"
-    end
-
-    test "raises for nil or empty conversation_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.conversation_archived(nil) end
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.conversation_archived("") end
+    test "raises when participant_user_ids is empty" do
+      assert_raise ArgumentError, ~r/participant_removed requires a non-empty participant_user_ids list/, fn ->
+        Events.participant_removed("conv-1", %{participant_user_ids: [], source: :staff_unassignment})
+      end
     end
   end
 
   describe "conversations_archived/3" do
     test "creates event with correct type, source_context, and entity_type" do
-      aggregate_id = "bulk_archive_123"
-
       event =
-        MessagingIntegrationEvents.conversations_archived(aggregate_id, %{
-          conversation_ids: ["c1", "c2"]
-        })
+        Events.conversations_archived("bulk_archive_123", %{conversation_ids: ["c1", "c2"]})
 
       assert event.event_type == :conversations_archived
       assert event.source_context == :messaging
       assert event.entity_type == :conversation
-      assert event.entity_id == aggregate_id
+      assert event.entity_id == "bulk_archive_123"
     end
 
     test "passes payload directly without merging base_payload" do
-      aggregate_id = "bulk_archive_123"
       payload = %{conversation_ids: ["c1", "c2"], reason: "program_ended"}
 
-      event = MessagingIntegrationEvents.conversations_archived(aggregate_id, payload)
+      event = Events.conversations_archived("bulk_archive_123", payload)
 
       assert event.payload == payload
     end
 
     test "raises when required payload keys are missing" do
-      aggregate_id = "bulk_archive_123"
-
-      assert_raise ArgumentError,
-                   ~r/conversations_archived missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.conversations_archived(aggregate_id, %{})
-                   end
+      assert_raise ArgumentError, ~r/conversations_archived missing required payload keys/, fn ->
+        Events.conversations_archived("bulk_archive_123", %{})
+      end
     end
 
-    test "raises for nil or empty aggregate_id" do
+    test "raises for a nil or blank aggregate_id" do
       valid_payload = %{conversation_ids: ["c1"]}
 
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty aggregate_id string/,
-                   fn ->
-                     MessagingIntegrationEvents.conversations_archived(nil, valid_payload)
-                   end
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty aggregate_id string/,
-                   fn ->
-                     MessagingIntegrationEvents.conversations_archived("", valid_payload)
-                   end
-    end
-  end
-
-  describe "participant_added/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      conversation_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.participant_added(conversation_id, %{
-          participant_user_ids: [Ecto.UUID.generate()],
-          source: :initial_staff
-        })
-
-      assert event.event_type == :participant_added
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.entity_id == conversation_id
-    end
-
-    test "base_payload conversation_id wins over caller-supplied" do
-      real_id = Ecto.UUID.generate()
-      staff_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.participant_added(real_id, %{
-          conversation_id: "should-be-overridden",
-          participant_user_ids: [staff_id],
-          source: :later_assignment,
-          extra: "data"
-        })
-
-      assert event.payload.conversation_id == real_id
-      assert event.payload.participant_user_ids == [staff_id]
-      assert event.payload.source == "later_assignment"
-      assert event.payload.extra == "data"
-    end
-
-    test "marks event as critical by default" do
-      conversation_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.participant_added(conversation_id, %{
-          participant_user_ids: [Ecto.UUID.generate()],
-          source: :initial_staff
-        })
-
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "raises when required payload keys are missing" do
-      conversation_id = Ecto.UUID.generate()
-
-      assert_raise ArgumentError,
-                   ~r/participant_added missing required payload keys/,
-                   fn -> MessagingIntegrationEvents.participant_added(conversation_id, %{}) end
-
-      assert_raise ArgumentError,
-                   ~r/participant_added missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.participant_added(conversation_id, %{
-                       participant_user_ids: ["u1"]
-                     })
-                   end
-
-      assert_raise ArgumentError,
-                   ~r/participant_added missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.participant_added(conversation_id, %{
-                       source: :initial_staff
-                     })
-                   end
-    end
-
-    test "raises when participant_user_ids is empty" do
-      conversation_id = Ecto.UUID.generate()
-
-      assert_raise ArgumentError,
-                   ~r/participant_added requires a non-empty participant_user_ids list/,
-                   fn ->
-                     MessagingIntegrationEvents.participant_added(conversation_id, %{
-                       participant_user_ids: [],
-                       source: :initial_staff
-                     })
-                   end
-    end
-
-    test "raises for nil or empty conversation_id" do
-      valid_payload = %{participant_user_ids: ["u1"], source: :initial_staff}
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.participant_added(nil, valid_payload) end
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.participant_added("", valid_payload) end
-    end
-  end
-
-  describe "participant_removed/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      conversation_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.participant_removed(conversation_id, %{
-          participant_user_ids: [Ecto.UUID.generate()],
-          source: :staff_unassignment
-        })
-
-      assert event.event_type == :participant_removed
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.entity_id == conversation_id
-    end
-
-    test "base_payload conversation_id wins over caller-supplied" do
-      real_id = Ecto.UUID.generate()
-      staff_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.participant_removed(real_id, %{
-          conversation_id: "should-be-overridden",
-          participant_user_ids: [staff_id],
-          source: :staff_unassignment,
-          extra: "data"
-        })
-
-      assert event.payload.conversation_id == real_id
-      assert event.payload.participant_user_ids == [staff_id]
-      assert event.payload.source == "staff_unassignment"
-      assert event.payload.extra == "data"
-    end
-
-    test "marks event as critical by default" do
-      conversation_id = Ecto.UUID.generate()
-
-      event =
-        MessagingIntegrationEvents.participant_removed(conversation_id, %{
-          participant_user_ids: [Ecto.UUID.generate()],
-          source: :staff_unassignment
-        })
-
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "raises when required payload keys are missing" do
-      conversation_id = Ecto.UUID.generate()
-
-      assert_raise ArgumentError,
-                   ~r/participant_removed missing required payload keys/,
-                   fn -> MessagingIntegrationEvents.participant_removed(conversation_id, %{}) end
-
-      assert_raise ArgumentError,
-                   ~r/participant_removed missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.participant_removed(conversation_id, %{
-                       participant_user_ids: ["u1"]
-                     })
-                   end
-
-      assert_raise ArgumentError,
-                   ~r/participant_removed missing required payload keys/,
-                   fn ->
-                     MessagingIntegrationEvents.participant_removed(conversation_id, %{
-                       source: :staff_unassignment
-                     })
-                   end
-    end
-
-    test "raises when participant_user_ids is empty" do
-      conversation_id = Ecto.UUID.generate()
-
-      assert_raise ArgumentError,
-                   ~r/participant_removed requires a non-empty participant_user_ids list/,
-                   fn ->
-                     MessagingIntegrationEvents.participant_removed(conversation_id, %{
-                       participant_user_ids: [],
-                       source: :staff_unassignment
-                     })
-                   end
-    end
-
-    test "raises for nil or empty conversation_id" do
-      valid_payload = %{participant_user_ids: ["u1"], source: :staff_unassignment}
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.participant_removed(nil, valid_payload) end
-
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty conversation_id string/,
-                   fn -> MessagingIntegrationEvents.participant_removed("", valid_payload) end
+      for bad_id <- [nil, ""] do
+        assert_raise ArgumentError, ~r/requires a non-empty aggregate_id string/, fn ->
+          Events.conversations_archived(bad_id, valid_payload)
+        end
+      end
     end
   end
 end
