@@ -26,47 +26,45 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramCategoriesTest do
     end
   end
 
-  describe "validate_filter/1" do
-    test "returns the category unchanged when valid" do
-      assert ProgramCategories.validate_filter("sports") == "sports"
-      assert ProgramCategories.validate_filter("arts") == "arts"
-      assert ProgramCategories.validate_filter("music") == "music"
-      assert ProgramCategories.validate_filter("education") == "education"
-      assert ProgramCategories.validate_filter("life-skills") == "life-skills"
-      assert ProgramCategories.validate_filter("camps") == "camps"
-      assert ProgramCategories.validate_filter("workshops") == "workshops"
-    end
+  # Every program category validates unchanged, is valid, and is a valid
+  # program category (unlike the filter-only "all" value, see below).
+  for category <- @all_categories do
+    describe "category: #{category}" do
+      @category category
 
-    test "returns 'all' for the special filter value" do
-      assert ProgramCategories.validate_filter("all") == "all"
-    end
-
-    test "returns default 'all' for nil" do
-      assert ProgramCategories.validate_filter(nil) == "all"
-    end
-
-    test "returns default 'all' for unknown category" do
-      assert ProgramCategories.validate_filter("invalid") == "all"
-      assert ProgramCategories.validate_filter("dance") == "all"
-      assert ProgramCategories.validate_filter("") == "all"
+      test "validates unchanged, is valid, and is a valid program category" do
+        assert ProgramCategories.validate_filter(@category) == @category
+        assert ProgramCategories.valid?(@category)
+        assert ProgramCategories.valid_program_category?(@category)
+      end
     end
   end
 
-  describe "valid?/1" do
-    test "returns true for each valid program category" do
-      Enum.each(@all_categories, fn category ->
-        assert ProgramCategories.valid?(category), "expected #{category} to be valid"
-      end)
+  describe "'all' filter-only value" do
+    test "validates unchanged and is valid, but is not a valid program category" do
+      assert ProgramCategories.validate_filter("all") == "all"
+      assert ProgramCategories.valid?("all")
+      refute ProgramCategories.valid_program_category?("all")
     end
+  end
 
-    test "returns true for 'all' filter value" do
-      assert ProgramCategories.valid?("all") == true
+  describe "validate_filter/1 - defaults to 'all'" do
+    test "for nil and unknown category strings" do
+      for value <- [nil, "invalid", "dance", ""] do
+        assert ProgramCategories.validate_filter(value) == "all", inspect(value)
+      end
     end
+  end
 
-    test "returns false for unknown categories" do
-      refute ProgramCategories.valid?("dance")
-      refute ProgramCategories.valid?("coding")
-      refute ProgramCategories.valid?("")
+  describe "valid?/1 and valid_program_category?/1 - unknown categories" do
+    test "return false for unrecognized category strings" do
+      for value <- ["dance", "coding", ""] do
+        refute ProgramCategories.valid?(value), inspect(value)
+      end
+
+      for value <- ["dance", ""] do
+        refute ProgramCategories.valid_program_category?(value), inspect(value)
+      end
     end
   end
 
@@ -79,28 +77,6 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramCategoriesTest do
   describe "program_categories/0" do
     test "returns all categories except 'all'" do
       assert ProgramCategories.program_categories() == @all_categories
-    end
-
-    test "does not include 'all'" do
-      refute "all" in ProgramCategories.program_categories()
-    end
-  end
-
-  describe "valid_program_category?/1" do
-    test "returns true for each program category" do
-      Enum.each(@all_categories, fn category ->
-        assert ProgramCategories.valid_program_category?(category),
-               "expected #{category} to be valid program category"
-      end)
-    end
-
-    test "returns false for 'all' (filter-only value)" do
-      refute ProgramCategories.valid_program_category?("all")
-    end
-
-    test "returns false for unknown categories" do
-      refute ProgramCategories.valid_program_category?("dance")
-      refute ProgramCategories.valid_program_category?("")
     end
   end
 

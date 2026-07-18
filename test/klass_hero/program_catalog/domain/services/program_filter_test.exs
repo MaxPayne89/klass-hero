@@ -7,504 +7,142 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramFilterTest do
   """
 
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   import KlassHero.Factory
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramFilter
 
-  # Test helper: Assert that result contains exactly one program with the expected title
-  defp assert_single_match(result, expected_title) do
-    assert length(result) == 1
-    assert Enum.at(result, 0).title == expected_title
-  end
+  defp programs_with_titles(titles), do: Enum.map(titles, &build(:program, title: &1))
+  defp result_titles(programs), do: Enum.map(programs, & &1.title)
 
-  # Test helper: Assert that programs list includes all expected titles
-  defp assert_titles_include(programs, expected_titles) do
-    actual_titles = Enum.map(programs, & &1.title)
+  @sample_titles [
+    "After School Soccer",
+    "Summer Dance Camp",
+    "Kids Yoga Flow",
+    "Basketball Training",
+    "Art! & Crafts"
+  ]
 
-    for title <- expected_titles do
-      assert title in actual_titles,
-             "Expected title '#{title}' not found in results: #{inspect(actual_titles)}"
+  # Every row exercises the same contract: filter titles by word-boundary
+  # prefix match, case-insensitive, punctuation-stripped, accents preserved.
+  @match_cases [
+    {@sample_titles, "after", ["After School Soccer"], "prefix match at start of title"},
+    {@sample_titles, "school", ["After School Soccer"], "prefix match mid-title word"},
+    {@sample_titles, "so", ["After School Soccer"], "short prefix match"},
+    {@sample_titles, "soccer", ["After School Soccer"], "full-word match"},
+    {@sample_titles, "nonexistent", [], "no matches"},
+    {[], "soccer", [], "empty programs list"},
+    {["Summer Soccer", "Summer Dance", "Winter Soccer"], "summer", ["Summer Soccer", "Summer Dance"],
+     "multiple matches preserve input order"},
+    {["Kids Yoga Flow", "Adult Yoga Class", "Meditation Flow"], "yoga", ["Kids Yoga Flow", "Adult Yoga Class"],
+     "progressive refinement: 'yoga'"},
+    {["Kids Yoga Flow", "Adult Yoga Class", "Meditation Flow"], "flow", ["Kids Yoga Flow", "Meditation Flow"],
+     "progressive refinement: 'flow'"},
+    {["Soccer Stars", "Social Club", "Art Adventure"], "soccer", ["Soccer Stars"], "narrowing: full word 'soccer'"},
+    {["Soccer Stars", "Social Club", "Art Adventure"], "soc", ["Soccer Stars", "Social Club"],
+     "narrowing: shared prefix 'soc'"},
+    {["Soccer Stars", "Social Club", "Art Adventure"], "so", ["Soccer Stars", "Social Club"],
+     "narrowing: shorter prefix 'so'"},
+    {["Soccer", "Dance"], "soc", ["Soccer"], "single-word titles"},
+    {["Advanced Soccer Training Camp for Young Athletes and Future Champions"], "future",
+     ["Advanced Soccer Training Camp for Young Athletes and Future Champions"], "very long title"},
+    {["Kids Soccer Camp", "Adult Soccer League", "Kids Dance Class"], "kids s", [],
+     "multi-word query has no AND logic"},
+    {["Basketball Training"], "ball", [], "rejects substring match (word-boundary)"},
+    {["Art! & Crafts", "Kids' Yoga"], "art", ["Art! & Crafts"], "punctuation stripped from title: 'art'"},
+    {["Art! & Crafts", "Kids' Yoga"], "kids", ["Kids' Yoga"], "punctuation stripped from title: 'kids'"},
+    {["Art & Crafts"], "art!", ["Art & Crafts"], "punctuation stripped from query"},
+    {["Art! & Crafts", "Dance Class"], "art!", ["Art! & Crafts"], "punctuation stripped from both title and query"},
+    {["Summer   Dance    Camp"], "dance", ["Summer   Dance    Camp"], "consecutive spaces collapse for matching"},
+    {["École de Danse", "Niños Yoga", "Café Cultural"], "école", ["École de Danse"], "accented: école"},
+    {["École de Danse", "Niños Yoga", "Café Cultural"], "niños", ["Niños Yoga"], "accented: niños"},
+    {["École de Danse", "Niños Yoga", "Café Cultural"], "café", ["Café Cultural"], "accented: café"},
+    {["Fußball für Kinder", "Äpfel und Birnen"], "fußball", ["Fußball für Kinder"], "German: ß preserved"},
+    {["Fußball für Kinder", "Äpfel und Birnen"], "äpfel", ["Äpfel und Birnen"], "German: ä preserved"},
+    {["São Paulo Soccer", "Ação Cultural"], "são", ["São Paulo Soccer"], "Portuguese: ã preserved"},
+    {["São Paulo Soccer", "Ação Cultural"], "ação", ["Ação Cultural"], "Portuguese: ç preserved"},
+    {["Москва Basketball", "Київ Dance"], "москва", ["Москва Basketball"], "Cyrillic script"},
+    {["Москва Basketball", "Київ Dance"], "київ", ["Київ Dance"], "Cyrillic script"},
+    {["Αθήνα Yoga", "Ελληνικά Lessons"], "αθήνα", ["Αθήνα Yoga"], "Greek script"},
+    {["Αθήνα Yoga", "Ελληνικά Lessons"], "ελληνικά", ["Ελληνικά Lessons"], "Greek script"},
+    {["Café São Москва École"], "café", ["Café São Москва École"], "mixed-script title: café fragment"},
+    {["Café São Москва École"], "são", ["Café São Москва École"], "mixed-script title: são fragment"},
+    {["Café São Москва École"], "москва", ["Café São Москва École"], "mixed-script title: москва fragment"},
+    {["Café São Москва École"], "école", ["Café São Москва École"], "mixed-script title: école fragment"},
+    {["Café! & École"], "café", ["Café! & École"], "accented characters with special-character normalization"}
+  ]
+
+  describe "execute/2 - word-boundary title matching" do
+    test "matches by prefix across basic, edge-case, and international titles" do
+      for {titles, query, expected, label} <- @match_cases do
+        result = titles |> programs_with_titles() |> ProgramFilter.execute(query)
+
+        assert result_titles(result) == expected,
+               "#{label}: execute(#{inspect(titles)}, #{inspect(query)}) returned " <>
+                 "#{inspect(result_titles(result))}, expected #{inspect(expected)}"
+      end
     end
   end
 
-  describe "execute/2 - basic filtering" do
-    test "returns all programs for empty query" do
+  describe "execute/2 - empty and whitespace queries" do
+    test "returns the input list unchanged" do
       programs = sample_programs()
 
-      result = ProgramFilter.execute(programs, "")
-
-      assert result == programs
-      assert length(result) == 5
-    end
-
-    test "matches word at beginning of title" do
-      programs = sample_programs()
-
-      result = ProgramFilter.execute(programs, "after")
-
-      assert_single_match(result, "After School Soccer")
-    end
-
-    test "matches word in middle of title" do
-      programs = sample_programs()
-
-      result = ProgramFilter.execute(programs, "school")
-
-      assert_single_match(result, "After School Soccer")
-    end
-
-    test "is case-insensitive" do
-      programs = sample_programs()
-
-      result_lower = ProgramFilter.execute(programs, "soccer")
-      result_upper = ProgramFilter.execute(programs, "SOCCER")
-      result_mixed = ProgramFilter.execute(programs, "SoCcEr")
-
-      assert result_lower == result_upper
-      assert result_upper == result_mixed
-      assert_single_match(result_lower, "After School Soccer")
-    end
-
-    test "returns empty list for no matches" do
-      programs = sample_programs()
-
-      result = ProgramFilter.execute(programs, "nonexistent")
-
-      assert result == []
-      assert Enum.empty?(result)
-    end
-
-    test "handles empty programs list" do
-      programs = []
-
-      result = ProgramFilter.execute(programs, "soccer")
-
-      assert result == []
-      assert Enum.empty?(result)
-    end
-
-    test "preserves program order" do
-      programs = [
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440010", title: "Zebra Zone"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440011", title: "Apple Adventure"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440012", title: "Monkey Madness")
-      ]
-
-      result = ProgramFilter.execute(programs, "")
-
-      assert length(result) == 3
-      assert Enum.at(result, 0).title == "Zebra Zone"
-      assert Enum.at(result, 1).title == "Apple Adventure"
-      assert Enum.at(result, 2).title == "Monkey Madness"
-    end
-
-    test "handles whitespace-only query" do
-      programs = sample_programs()
-
-      result_spaces = ProgramFilter.execute(programs, "   ")
-      result_tabs = ProgramFilter.execute(programs, "\t\t")
-      result_mixed = ProgramFilter.execute(programs, " \t \n ")
-
-      assert result_spaces == programs
-      assert result_tabs == programs
-      assert result_mixed == programs
-    end
-
-    test "handles multiple matches" do
-      programs = [
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440020", title: "Summer Soccer"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440021", title: "Summer Dance"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440022", title: "Winter Soccer")
-      ]
-
-      result = ProgramFilter.execute(programs, "summer")
-
-      assert length(result) == 2
-      assert Enum.at(result, 0).title == "Summer Soccer"
-      assert Enum.at(result, 1).title == "Summer Dance"
+      for query <- ["", "   ", "\t\t", " \t \n "] do
+        assert ProgramFilter.execute(programs, query) == programs,
+               "query #{inspect(query)} should pass programs through unchanged"
+      end
     end
   end
 
-  describe "execute/2 - user scenario tests" do
-    test "typing 'so' filters to programs with words starting with 'so'" do
-      programs = sample_programs()
+  describe "execute/2 - properties" do
+    property "matching is case-insensitive for any query" do
+      check all(query <- string(:alphanumeric, max_length: 12)) do
+        programs = sample_programs()
 
-      result = ProgramFilter.execute(programs, "so")
-
-      assert_single_match(result, "After School Soccer")
+        assert ProgramFilter.execute(programs, query) ==
+                 ProgramFilter.execute(programs, String.upcase(query))
+      end
     end
 
-    test "typing 'yoga' then 'yoga flow' further refines results" do
+    test "case-insensitivity known corners: ASCII and accented queries" do
       programs = [
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440030", title: "Kids Yoga Flow"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440031", title: "Adult Yoga Class"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440032", title: "Meditation Flow")
+        build(:program, title: "After School Soccer"),
+        build(:program, title: "École de Français")
       ]
 
-      result_yoga = ProgramFilter.execute(programs, "yoga")
-      assert length(result_yoga) == 2
-      assert_titles_include(result_yoga, ["Kids Yoga Flow", "Adult Yoga Class"])
-
-      result_flow = ProgramFilter.execute(programs, "flow")
-      assert length(result_flow) == 2
-      assert_titles_include(result_flow, ["Kids Yoga Flow", "Meditation Flow"])
+      assert ProgramFilter.execute(programs, "soccer") == ProgramFilter.execute(programs, "SOCCER")
+      assert ProgramFilter.execute(programs, "école") == ProgramFilter.execute(programs, "ÉCOLE")
+      assert ProgramFilter.execute(programs, "école") == ProgramFilter.execute(programs, "ÉcOlE")
     end
 
-    test "deleting characters expands results" do
-      programs = [
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440040", title: "Soccer Stars"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440041", title: "Social Club"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440042", title: "Art Adventure")
-      ]
+    property "a query that isn't a prefix of any word never matches (word-boundary enforcement)" do
+      check all(
+              fragment <- string(:alphanumeric, min_length: 1, max_length: 8),
+              padding <- string(:alphanumeric, max_length: 8)
+            ) do
+        # The service normalizes (downcases) both title and query before
+        # comparing, so force the title's first character to differ from the
+        # *normalized* fragment's first character. That guarantees fragment
+        # can never be a true prefix of the title, regardless of what
+        # word-internal position it was generated to sit at.
+        safe_first = if String.starts_with?(String.downcase(fragment), "a"), do: "b", else: "a"
+        title = safe_first <> padding <> fragment
 
-      result_soccer = ProgramFilter.execute(programs, "soccer")
-      assert_single_match(result_soccer, "Soccer Stars")
+        programs = [build(:program, title: title)]
 
-      result_soc = ProgramFilter.execute(programs, "soc")
-      assert length(result_soc) == 2
-      assert_titles_include(result_soc, ["Soccer Stars", "Social Club"])
-
-      result_so = ProgramFilter.execute(programs, "so")
-      assert length(result_so) == 2
+        assert ProgramFilter.execute(programs, fragment) == []
+      end
     end
 
-    test "clearing search field shows all programs" do
-      programs = sample_programs()
-
-      result_filtered = ProgramFilter.execute(programs, "soccer")
-      assert length(result_filtered) == 1
-
-      result_cleared = ProgramFilter.execute(programs, "")
-
-      assert result_cleared == programs
-      assert length(result_cleared) == 5
-    end
-  end
-
-  describe "execute/2 - edge cases" do
-    test "handles programs with single-word titles" do
-      programs = [
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440050", title: "Soccer"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440051", title: "Dance")
-      ]
-
-      result = ProgramFilter.execute(programs, "soc")
-
-      assert_single_match(result, "Soccer")
-    end
-
-    test "handles very long program titles" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440060",
-          title: "Advanced Soccer Training Camp for Young Athletes and Future Champions"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "future")
-
-      assert length(result) == 1
-      assert Enum.at(result, 0).title =~ "Future"
-    end
-
-    test "treats multi-word query as single search term (no AND logic)" do
-      programs = [
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440070", title: "Kids Soccer Camp"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440071", title: "Adult Soccer League"),
-        build(:program, id: "550e8400-e29b-41d4-a716-446655440072", title: "Kids Dance Class")
-      ]
-
-      result = ProgramFilter.execute(programs, "kids s")
-
-      assert Enum.empty?(result)
-    end
-
-    test "rejects substring matches (word-boundary enforcement)" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440080",
-          title: "Basketball Training"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "ball")
-
-      assert result == []
-    end
-
-    test "handles special characters in program titles" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440090",
-          title: "Art! & Crafts"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440091",
-          title: "Kids' Yoga"
-        )
-      ]
-
-      result_art = ProgramFilter.execute(programs, "art")
-      result_kids = ProgramFilter.execute(programs, "kids")
-
-      assert length(result_art) == 1
-      assert Enum.at(result_art, 0).title == "Art! & Crafts"
-      assert length(result_kids) == 1
-      assert Enum.at(result_kids, 0).title == "Kids' Yoga"
-    end
-
-    test "handles special characters in query" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440100",
-          title: "Art & Crafts"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "art!")
-
-      assert length(result) == 1
-      assert Enum.at(result, 0).title == "Art & Crafts"
-    end
-
-    test "matches with special chars: 'art!' matches 'Art! & Crafts'" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440101",
-          title: "Art! & Crafts"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440102",
-          title: "Dance Class"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "art!")
-
-      assert length(result) == 1
-      assert Enum.at(result, 0).title == "Art! & Crafts"
-    end
-
-    test "handles titles with multiple consecutive spaces" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440110",
-          title: "Summer   Dance    Camp"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "dance")
-
-      assert length(result) == 1
-    end
-  end
-
-  describe "execute/2 - international characters" do
-    test "handles accented characters in program titles" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440120",
-          title: "École de Danse"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440121",
-          title: "Niños Yoga"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440122",
-          title: "Café Cultural"
-        )
-      ]
-
-      result_ecole = ProgramFilter.execute(programs, "école")
-      assert_single_match(result_ecole, "École de Danse")
-
-      result_ninos = ProgramFilter.execute(programs, "niños")
-      assert_single_match(result_ninos, "Niños Yoga")
-
-      result_cafe = ProgramFilter.execute(programs, "café")
-      assert_single_match(result_cafe, "Café Cultural")
-    end
-
-    test "is case-insensitive with accented characters" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440130",
-          title: "École de Français"
-        )
-      ]
-
-      result_lower = ProgramFilter.execute(programs, "école")
-      result_upper = ProgramFilter.execute(programs, "ÉCOLE")
-      result_mixed = ProgramFilter.execute(programs, "ÉcOlE")
-
-      assert result_lower == result_upper
-      assert result_upper == result_mixed
-      assert_single_match(result_lower, "École de Français")
-    end
-
-    test "handles German special characters" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440140",
-          title: "Fußball für Kinder"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440141",
-          title: "Äpfel und Birnen"
-        )
-      ]
-
-      result_fussball = ProgramFilter.execute(programs, "fußball")
-      assert_single_match(result_fussball, "Fußball für Kinder")
-
-      result_apfel = ProgramFilter.execute(programs, "äpfel")
-      assert_single_match(result_apfel, "Äpfel und Birnen")
-    end
-
-    test "handles Portuguese special characters" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440150",
-          title: "São Paulo Soccer"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440151",
-          title: "Ação Cultural"
-        )
-      ]
-
-      result_sao = ProgramFilter.execute(programs, "são")
-      assert_single_match(result_sao, "São Paulo Soccer")
-
-      result_acao = ProgramFilter.execute(programs, "ação")
-      assert_single_match(result_acao, "Ação Cultural")
-    end
-
-    test "handles Cyrillic characters" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440160",
-          title: "Москва Basketball"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440161",
-          title: "Київ Dance"
-        )
-      ]
-
-      result_moskva = ProgramFilter.execute(programs, "москва")
-      assert_single_match(result_moskva, "Москва Basketball")
-
-      result_kyiv = ProgramFilter.execute(programs, "київ")
-      assert_single_match(result_kyiv, "Київ Dance")
-    end
-
-    test "handles Greek characters" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440170",
-          title: "Αθήνα Yoga"
-        ),
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440171",
-          title: "Ελληνικά Lessons"
-        )
-      ]
-
-      result_athina = ProgramFilter.execute(programs, "αθήνα")
-      assert_single_match(result_athina, "Αθήνα Yoga")
-
-      result_ellinika = ProgramFilter.execute(programs, "ελληνικά")
-      assert_single_match(result_ellinika, "Ελληνικά Lessons")
-    end
-
-    test "handles mixed Unicode characters in single title" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440180",
-          title: "Café São Москва École"
-        )
-      ]
-
-      result_cafe = ProgramFilter.execute(programs, "café")
-      result_sao = ProgramFilter.execute(programs, "são")
-      result_moskva = ProgramFilter.execute(programs, "москва")
-      result_ecole = ProgramFilter.execute(programs, "école")
-
-      assert length(result_cafe) == 1
-      assert length(result_sao) == 1
-      assert length(result_moskva) == 1
-      assert length(result_ecole) == 1
-    end
-
-    test "handles accented characters with special character normalization" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440190",
-          title: "Café! & École"
-        )
-      ]
-
-      # Special characters should be removed, accented characters preserved
-      result = ProgramFilter.execute(programs, "café")
-
-      assert_single_match(result, "Café! & École")
-    end
-  end
-
-  describe "execute/2 - User Story 2: flexible matching behavior" do
-    test "matches 'soc' in 'After School Soccer'" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440200",
-          title: "After School Soccer"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "soc")
-
-      assert_single_match(result, "After School Soccer")
-    end
-
-    test "matches 'dance' in 'Summer Dance Camp'" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440201",
-          title: "Summer Dance Camp"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "dance")
-
-      assert_single_match(result, "Summer Dance Camp")
-    end
-
-    test "matches 'flow' in 'Kids Yoga Flow'" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440202",
-          title: "Kids Yoga Flow"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "flow")
-
-      assert_single_match(result, "Kids Yoga Flow")
-    end
-
-    test "does NOT match 'ball' in 'Basketball Training' (substring)" do
-      programs = [
-        build(:program,
-          id: "550e8400-e29b-41d4-a716-446655440203",
-          title: "Basketball Training"
-        )
-      ]
-
-      result = ProgramFilter.execute(programs, "ball")
-
-      assert result == []
+    property "filtering an already-filtered result is idempotent" do
+      check all(query <- string(:alphanumeric, max_length: 12)) do
+        programs = sample_programs()
+        once = ProgramFilter.execute(programs, query)
+
+        assert ProgramFilter.execute(once, query) == once
+      end
     end
   end
 
@@ -519,8 +157,14 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramFilterTest do
 
     test "limits query length to 100 characters" do
       long_query = String.duplicate("a", 150)
-      result = ProgramFilter.sanitize_query(long_query)
-      assert String.length(result) == 100
+
+      assert String.length(ProgramFilter.sanitize_query(long_query)) == 100
+    end
+
+    property "never returns more than 100 characters" do
+      check all(query <- string(:alphanumeric, max_length: 500)) do
+        assert String.length(ProgramFilter.sanitize_query(query)) <= 100
+      end
     end
   end
 end

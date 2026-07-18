@@ -1,5 +1,6 @@
 defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
 
   alias KlassHero.Enrollment.Domain.Services.InviteFieldValidations
 
@@ -52,6 +53,12 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
     guardian_email: "parent@example.com"
   }
 
+  describe "apply/1" do
+    test "returns valid changeset for all valid inputs" do
+      assert TestSchema.changeset(@valid_attrs).valid?
+    end
+  end
+
   @length_max_cases [
     {:child_first_name, 100},
     {:child_last_name, 100},
@@ -64,93 +71,103 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
     {:school_name, 255}
   ]
 
-  describe "apply/1" do
-    test "returns valid changeset for all valid inputs" do
-      assert TestSchema.changeset(@valid_attrs).valid?
-    end
+  # guardian_email/guardian2_email also carry a format validation, so the
+  # filler must stay a valid email shape or a boundary test would trip the
+  # format check instead of the length check it's meant to isolate.
+  defp filler(field, length) when field in [:guardian_email, :guardian2_email] do
+    domain = "@example.com"
+    String.duplicate("a", length - String.length(domain)) <> domain
+  end
 
-    test "rejects field over its max length" do
+  defp filler(_field, length), do: String.duplicate("a", length)
+
+  describe "field length limits" do
+    test "rejects a field one character over its max length, accepts it at the max" do
       for {field, max} <- @length_max_cases do
-        over = String.duplicate("a", max + 1)
-        cs = TestSchema.changeset(Map.put(@valid_attrs, field, over))
+        over_cs = TestSchema.changeset(Map.put(@valid_attrs, field, filler(field, max + 1)))
+        at_cs = TestSchema.changeset(Map.put(@valid_attrs, field, filler(field, max)))
 
-        assert errors_on(cs)[field],
-               "expected length error on #{field} at #{max + 1} chars, got: #{inspect(errors_on(cs))}"
+        assert errors_on(over_cs)[field],
+               "expected length error on #{field} at #{max + 1} chars, got: #{inspect(errors_on(over_cs))}"
+
+        refute errors_on(at_cs)[field],
+               "expected no length error on #{field} at #{max} chars, got: #{inspect(errors_on(at_cs))}"
       end
     end
+  end
 
-    # At-limit boundaries that don't fit the over-limit table
-    test "accepts child_first_name at the 100-character limit" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_first_name, String.duplicate("a", 100)))
-      refute errors_on(cs)[:child_first_name]
-    end
-
-    test "accepts child_last_name at the 100-character limit" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :child_last_name, String.duplicate("a", 100)))
-      refute errors_on(cs)[:child_last_name]
-    end
-
+  describe "guardian_email format" do
     # Format validation is a distinct semantic from length
-    test "rejects guardian_email with invalid format" do
+    test "rejects an invalid format" do
       cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian_email, "not-an-email"))
       assert errors_on(cs)[:guardian_email] == ["must be a valid email"]
     end
+  end
 
-    # guardian2_email: conditional validation via maybe_validate_guardian2_email/1
-    # nil and "" skip the format check; a non-empty value must match the regex
-    test "accepts nil guardian2_email without format check" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, nil))
-      refute errors_on(cs)[:guardian2_email]
+  # guardian2_email: conditional validation via maybe_validate_guardian2_email/1.
+  # nil and "" skip the format check; a non-empty value must match the regex.
+  @guardian2_email_cases [
+    {nil, nil, "nil skips the format check"},
+    {"", nil, "empty string skips the format check"},
+    {"second@example.com", nil, "valid format has no error"},
+    {"nope", ["must be a valid email"], "invalid format is rejected"}
+  ]
+
+  describe "guardian2_email conditional format check" do
+    test "format is only enforced on a non-blank value" do
+      for {value, expected_errors, label} <- @guardian2_email_cases do
+        cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, value))
+        assert errors_on(cs)[:guardian2_email] == expected_errors, label
+      end
     end
+  end
 
-    test "accepts empty guardian2_email without format check" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, ""))
-      refute errors_on(cs)[:guardian2_email]
-    end
-
-    test "accepts guardian2_email with valid email format" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, "second@example.com"))
-      refute errors_on(cs)[:guardian2_email]
-    end
-
-    test "rejects non-empty guardian2_email with invalid format" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :guardian2_email, "nope"))
-      assert errors_on(cs)[:guardian2_email] == ["must be a valid email"]
-    end
-
-    # child_date_of_birth: must be strictly before the injected `today`
-    test "rejects child_date_of_birth set to today" do
+  # child_date_of_birth: must be strictly before the injected `today`
+  describe "child_date_of_birth" do
+    test "rejects a date set to today" do
       today = ~D[2026-05-10]
       cs = TestSchema.changeset(Map.put(@valid_attrs, :child_date_of_birth, today), today)
       assert errors_on(cs)[:child_date_of_birth] == ["must be in the past"]
     end
 
-    test "accepts child_date_of_birth set to yesterday" do
+    test "accepts a date set to yesterday" do
       today = ~D[2026-05-10]
       yesterday = Date.add(today, -1)
       cs = TestSchema.changeset(Map.put(@valid_attrs, :child_date_of_birth, yesterday), today)
       refute errors_on(cs)[:child_date_of_birth]
     end
+  end
 
-    # school_grade: valid range is 1..13
-    test "rejects school_grade below 1" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 0))
-      assert errors_on(cs)[:school_grade]
+  @school_grade_cases [
+    {0, true, "below the 1..13 range"},
+    {14, true, "above the 1..13 range"},
+    {1, false, "at the lower bound"},
+    {13, false, "at the upper bound"}
+  ]
+
+  describe "school_grade range" do
+    test "must be in 1..13" do
+      for {grade, error_expected?, label} <- @school_grade_cases do
+        cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, grade))
+
+        if error_expected? do
+          assert errors_on(cs)[:school_grade], label
+        else
+          refute errors_on(cs)[:school_grade], label
+        end
+      end
     end
 
-    test "rejects school_grade above 13" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 14))
-      assert errors_on(cs)[:school_grade]
-    end
+    property "errors iff the grade falls outside 1..13" do
+      check all(grade <- integer(-50..50)) do
+        cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, grade))
 
-    test "accepts school_grade at lower bound 1" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 1))
-      refute errors_on(cs)[:school_grade]
-    end
-
-    test "accepts school_grade at upper bound 13" do
-      cs = TestSchema.changeset(Map.put(@valid_attrs, :school_grade, 13))
-      refute errors_on(cs)[:school_grade]
+        if grade in 1..13 do
+          refute errors_on(cs)[:school_grade]
+        else
+          assert errors_on(cs)[:school_grade]
+        end
+      end
     end
   end
 end
