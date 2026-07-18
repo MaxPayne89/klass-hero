@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.59.0](https://github.com/MaxPayne89/klass-hero/compare/v0.58.1...v0.59.0) (2026-07-18)
+
+
+### Features
+
+* default login method to password instead of magic link ([#1110](https://github.com/MaxPayne89/klass-hero/issues/1110)) ([8fb76ef](https://github.com/MaxPayne89/klass-hero/commit/8fb76ef52eefd5aa9ccfc00a02c2fc3e69564f57))
+
+
+### Code Refactoring
+
+* rename BehavioralNote to SessionNote ([#1106](https://github.com/MaxPayne89/klass-hero/issues/1106)) ([f1147d6](https://github.com/MaxPayne89/klass-hero/commit/f1147d68a59c2fe27678bef6ac7b4984b03f0c13)), closes [#924](https://github.com/MaxPayne89/klass-hero/issues/924)
+
 ## [0.58.1](https://github.com/MaxPayne89/klass-hero/compare/v0.58.0...v0.58.1) (2026-07-17)
 
 
