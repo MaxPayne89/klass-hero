@@ -15,8 +15,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
 
   setup do
     start_supervised!({ProviderSessionDetails, name: @test_server_name})
-    # Synchronize: ensure bootstrap has completed before running the test body
-    _ = :sys.get_state(@test_server_name)
+    # Drain bootstrap before running the test body.
+    :sys.get_state(@test_server_name)
     :ok
   end
 
@@ -26,36 +26,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
 
   describe "session_created" do
     test "inserts a row with defaults, resolving program_title and provider_id" do
-      # Trigger: programs FK on provider_id requires a real provider row
-      # Why: the handler reads programs to resolve program_title/provider_id
-      # Outcome: factory creates a provider + user that satisfies FK constraints
+      # programs FK on provider_id requires a real provider row.
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id, title: "Judo")
       session_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :session_created,
-          :participation,
-          :session,
-          session_id,
-          %{
-            session_id: session_id,
-            program_id: program.id,
-            session_date: ~D[2026-05-01],
-            start_time: ~T[15:00:00],
-            end_time: ~T[16:00:00]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:participation:session_created",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
+      broadcast(:session_created, session_id, %{
+        session_id: session_id,
+        program_id: program.id,
+        session_date: ~D[2026-05-01],
+        start_time: ~T[15:00:00],
+        end_time: ~T[16:00:00]
+      })
 
       row = Repo.get(ProviderSessionDetailSchema, session_id)
 
@@ -74,9 +56,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     end
 
     test "resolves current_assigned_staff_id/name from active program_staff_assignments row" do
-      # Trigger: handler reads program_staff_assignments joined with staff_members
-      # Why: exercise the happy-path active-staff resolution (WHERE unassigned_at IS NULL)
-      # Outcome: row carries the seeded staff id + concatenated "First Last" name
+      # Exercise the happy-path active-staff resolution (WHERE unassigned_at IS NULL):
+      # the row carries the seeded staff id + concatenated "First Last" name.
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id, title: "Karate")
 
@@ -99,29 +80,13 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
 
       session_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :session_created,
-          :participation,
-          :session,
-          session_id,
-          %{
-            session_id: session_id,
-            program_id: program.id,
-            session_date: ~D[2026-05-02],
-            start_time: ~T[10:00:00],
-            end_time: ~T[11:00:00]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:participation:session_created",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
+      broadcast(:session_created, session_id, %{
+        session_id: session_id,
+        program_id: program.id,
+        session_date: ~D[2026-05-02],
+        start_time: ~T[10:00:00],
+        end_time: ~T[11:00:00]
+      })
 
       row = Repo.get(ProviderSessionDetailSchema, session_id)
 
@@ -131,42 +96,24 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     end
 
     test "duplicate delivery preserves evolved state written by other handlers" do
-      # Trigger: session_created is replayed (at-least-once delivery) after other
-      #          handlers (session_started/completed, roster_seeded, child_checked_in,
-      #          and a future cover-staff handler) have mutated the row
-      # Why: spec requires session_created to be a no-op on duplicate delivery —
-      #      it must NOT stomp evolved state owned by other handlers
-      # Outcome: after a second broadcast, status/checked_in_count/total_count and
-      #          cover_staff_* fields retain the evolved values
+      # session_created must be a no-op on duplicate (at-least-once) delivery — it
+      # must NOT stomp status/counts/cover_staff_* that other handlers evolved
+      # between deliveries.
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id, title: "Aikido")
       session_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :session_created,
-          :participation,
-          :session,
-          session_id,
-          %{
-            session_id: session_id,
-            program_id: program.id,
-            session_date: ~D[2026-05-03],
-            start_time: ~T[09:00:00],
-            end_time: ~T[10:00:00]
-          }
-        )
+      payload = %{
+        session_id: session_id,
+        program_id: program.id,
+        session_date: ~D[2026-05-03],
+        start_time: ~T[09:00:00],
+        end_time: ~T[10:00:00]
+      }
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:participation:session_created",
-        {:integration_event, event}
-      )
+      broadcast(:session_created, session_id, payload)
 
-      # Synchronize: ensure GenServer has processed the first broadcast
-      _ = :sys.get_state(@test_server_name)
-
-      # Simulate evolved state written by other handlers between deliveries
+      # Simulate evolved state written by other handlers between deliveries.
       cover_staff_id = Ecto.UUID.generate()
 
       Repo.update_all(
@@ -180,15 +127,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         ]
       )
 
-      # Replay the same event (at-least-once delivery)
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:participation:session_created",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the replay
-      _ = :sys.get_state(@test_server_name)
+      # Replay the same event.
+      broadcast(:session_created, session_id, payload)
 
       row = Repo.get(ProviderSessionDetailSchema, session_id)
 
@@ -201,40 +141,21 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     end
 
     test "skips the insert and warns when the program does not exist" do
-      # Trigger: a session_created event arrives whose program_id is not in the
-      #          programs write table (e.g., event reordering, replay before
-      #          the program row has been created, or a deleted program)
-      # Why: program_title and provider_id are NOT NULL in provider_session_details,
-      #      so projecting with nil values would crash the GenServer; bootstrap
-      #      will reconcile later if/when the program appears
-      # Outcome: no row inserted; warning logged with session + program context
+      # program_title and provider_id are NOT NULL, so a session_created whose
+      # program_id is absent from the write table (reordering/replay/deletion)
+      # must be skipped with a warning; bootstrap reconciles later.
       unknown_program_id = Ecto.UUID.generate()
       session_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :session_created,
-          :participation,
-          :session,
-          session_id,
-          %{
+      log =
+        capture_log(fn ->
+          broadcast(:session_created, session_id, %{
             session_id: session_id,
             program_id: unknown_program_id,
             session_date: ~D[2026-05-01],
             start_time: ~T[09:00:00],
             end_time: ~T[10:00:00]
-          }
-        )
-
-      log =
-        capture_log(fn ->
-          Phoenix.PubSub.broadcast(
-            KlassHero.PubSub,
-            "integration:participation:session_created",
-            {:integration_event, event}
-          )
-
-          _ = :sys.get_state(@test_server_name)
+          })
         end)
 
       assert Repo.get(ProviderSessionDetailSchema, session_id) == nil
@@ -250,9 +171,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     test "session_started sets status=:in_progress", %{session_id: session_id} do
       broadcast(:session_started, session_id, %{session_id: session_id, program_id: "prog"})
 
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
-
       assert %{status: :in_progress} = reload(session_id)
     end
 
@@ -264,17 +182,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         program_title: "Judo"
       })
 
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
-
       assert %{status: :completed} = reload(session_id)
     end
 
     test "session_cancelled sets status=:cancelled", %{session_id: session_id} do
       broadcast(:session_cancelled, session_id, %{session_id: session_id, program_id: "prog"})
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
 
       assert %{status: :cancelled} = reload(session_id)
     end
@@ -285,7 +197,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       log =
         capture_log(fn ->
           broadcast(:session_started, unknown_id, %{session_id: unknown_id, program_id: "prog"})
-          _ = :sys.get_state(@test_server_name)
         end)
 
       assert log =~ "status transition skipped"
@@ -303,9 +214,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         seeded_count: 7
       })
 
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
-
       assert %{total_count: 7} = reload(session_id)
     end
 
@@ -319,8 +227,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
             program_id: "prog",
             seeded_count: 3
           })
-
-          _ = :sys.get_state(@test_server_name)
         end)
 
       assert log =~ "roster_seeded skipped"
@@ -338,9 +244,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         child_id: "c-1"
       })
 
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
-
       assert %{checked_in_count: 1} = reload(session_id)
     end
 
@@ -357,9 +260,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         child_id: "c-2"
       })
 
-      # Synchronize: ensure GenServer has processed both broadcasts
-      _ = :sys.get_state(@test_server_name)
-
       assert %{checked_in_count: 2} = reload(session_id)
     end
 
@@ -370,7 +270,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         child_id: "c-1"
       })
 
-      _ = :sys.get_state(@test_server_name)
       assert %{checked_in_count: 1} = reload(session_id)
 
       broadcast(:child_checked_out, "rec-1", %{
@@ -379,7 +278,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         child_id: "c-1"
       })
 
-      _ = :sys.get_state(@test_server_name)
       assert %{checked_in_count: 1} = reload(session_id)
     end
 
@@ -389,8 +287,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         session_id: session_id,
         child_id: "c-1"
       })
-
-      _ = :sys.get_state(@test_server_name)
 
       assert %{checked_in_count: 0} = reload(session_id)
     end
@@ -405,8 +301,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
             session_id: unknown_id,
             child_id: "c-1"
           })
-
-          _ = :sys.get_state(@test_server_name)
         end)
 
       assert log =~ "child_checked_in skipped"
@@ -416,12 +310,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
 
   describe "staff assignment" do
     test "staff_assigned_to_program updates scheduled sessions for the program and skips non-scheduled ones" do
-      # Trigger: AssignStaffToProgram publishes an integration event and the
-      #          projection must bulk-update all scheduled rows for that program.
-      # Why: cover staff on the bulk update path — only :scheduled rows flip to
-      #      the new staff; already-started/completed rows retain their state.
-      # Outcome: scheduled row carries new staff_id + "First Last" name;
-      #          completed row's staff fields stay untouched.
+      # Cover staff on the bulk update path — only :scheduled rows flip to the new
+      # staff; already-started/completed rows retain their state.
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
 
@@ -456,9 +346,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         staff_user_id: Ecto.UUID.generate()
       })
 
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
-
       scheduled = reload(scheduled_session_id)
       completed = reload(completed_session_id)
 
@@ -469,13 +356,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     end
 
     test "staff_unassigned_from_program clears staff fields on scheduled rows for the program" do
-      # Trigger: UnassignStaffFromProgram publishes an integration event and the
-      #          projection must bulk-clear staff fields on all :scheduled rows
-      #          for that program (non-scheduled rows remain untouched).
-      # Why: once a session starts/ends, its historical staff attribution
-      #      persists; only upcoming (:scheduled) sessions lose the assignment.
-      # Outcome: scheduled row's staff_id/name are nil; completed row keeps its
-      #          pre-existing staff attribution.
+      # Once a session starts/ends, its historical staff attribution persists; only
+      # upcoming (:scheduled) sessions lose the assignment.
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
 
@@ -514,9 +396,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         staff_user_id: Ecto.UUID.generate()
       })
 
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
-
       scheduled = reload(scheduled_session_id)
       completed = reload(completed_session_id)
 
@@ -527,6 +406,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     end
   end
 
+  # Broadcasts a :participation/:session event and blocks on :sys.get_state so the
+  # projection has processed it before assertions run.
   defp broadcast(event_type, entity_id, payload) do
     event = IntegrationEvent.new(event_type, :participation, :session, entity_id, payload)
 
@@ -535,6 +416,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       "integration:participation:#{event_type}",
       {:integration_event, event}
     )
+
+    :sys.get_state(@test_server_name)
   end
 
   defp broadcast_provider(event_type, entity_id, payload) do
@@ -545,6 +428,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       "integration:provider:#{event_type}",
       {:integration_event, event}
     )
+
+    :sys.get_state(@test_server_name)
   end
 
   defp insert_program_session(attrs) do
@@ -604,12 +489,10 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
           id: :regression_projection
         )
 
-      # Synchronize: ensure bootstrap has completed
       :sys.get_state(pid)
 
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
 
-      # Build a minimal session_created event using the shared broadcast helper pattern
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id, title: "Regression")
       session_id = Ecto.UUID.generate()
@@ -630,7 +513,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         )
 
       send(pid, {:integration_event, event})
-      # Synchronize: ensure GenServer has processed the message
       :sys.get_state(pid)
 
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
