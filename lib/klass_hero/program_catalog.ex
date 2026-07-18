@@ -201,8 +201,13 @@ defmodule KlassHero.ProgramCatalog do
   @doc "Lists featured programs for homepage display (first 2 active, ordered by title)."
   @spec list_featured_programs() :: [ProgramListing.t()]
   def list_featured_programs do
-    active_listings()
-    |> Enum.take(2)
+    today = Date.utc_today()
+
+    ProgramListing
+    |> where([l], is_nil(l.end_date) or l.end_date >= ^today)
+    |> order_by([l], asc: l.title)
+    |> limit(2)
+    |> Repo.all()
   end
 
   @doc "Lists all programs for a provider, ordered by title (includes expired — #610)."
@@ -302,15 +307,6 @@ defmodule KlassHero.ProgramCatalog do
   end
 
   defp fetch_program(_), do: nil
-
-  defp active_listings do
-    today = Date.utc_today()
-
-    ProgramListing
-    |> where([l], is_nil(l.end_date) or l.end_date >= ^today)
-    |> order_by([l], asc: l.title)
-    |> Repo.all()
-  end
 
   defp listing_page(limit, cursor_data, category) do
     ProgramListing

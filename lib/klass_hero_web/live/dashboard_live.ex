@@ -10,7 +10,6 @@ defmodule KlassHeroWeb.DashboardLive do
   alias KlassHero.Messaging
   alias KlassHero.ProgramCatalog
   alias KlassHeroWeb.Helpers.Greeting
-  alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
@@ -21,37 +20,6 @@ defmodule KlassHeroWeb.DashboardLive do
   def mount(_params, _session, socket) do
     user = socket.assigns.current_scope.user
 
-    # user.id is the Accounts identity_id; enrollment.parent_id is the Family profile ID — resolve once, then fan out.
-    {_parent, children, active_programs, expired_programs} =
-      case Family.get_parent_by_identity(user.id) do
-        {:ok, parent} ->
-          children_task =
-            Task.Supervisor.async_nolink(KlassHero.TaskSupervisor, fn ->
-              Family.get_children(parent.id)
-            end)
-
-          programs_task =
-            Task.Supervisor.async_nolink(KlassHero.TaskSupervisor, fn ->
-              load_family_programs(parent.id)
-            end)
-
-          children = TaskHelpers.safe_await(children_task, [], label: "DashboardLive.children")
-
-          {active, expired} =
-            TaskHelpers.safe_await(programs_task, {[], []}, label: "DashboardLive.programs")
-
-          {parent, children, active, expired}
-
-        {:error, _} ->
-          {nil, [], [], []}
-      end
-
-    children_for_view = Enum.map(children, &ChildPresenter.to_profile_view/1)
-    kid_picker_items = build_kid_picker_items(children, active_programs)
-    upcoming_sessions = load_upcoming_sessions(active_programs, children)
-    recent_messages = load_recent_messages(user.id)
-    unread_count = socket.assigns[:total_unread_count] || 0
-
     socket =
       socket
       |> assign(
@@ -59,18 +27,77 @@ defmodule KlassHeroWeb.DashboardLive do
         page_subtitle: gettext("Your week with the kids"),
         active_nav: :home,
         user: user,
-        children_count: length(children_for_view),
-        kid_picker_items: kid_picker_items,
-        active_program_count: length(active_programs),
-        upcoming_count: length(upcoming_sessions),
-        upcoming_sessions: upcoming_sessions,
-        recent_messages: recent_messages,
-        unread_count: unread_count,
-        family_programs_empty?: active_programs == [] and expired_programs == []
+        loading?: true,
+        children_count: 0,
+        kid_picker_items: [],
+        active_program_count: 0,
+        upcoming_count: 0,
+        upcoming_sessions: [],
+        recent_messages: [],
+        unread_count: socket.assigns[:total_unread_count] || 0,
+        family_programs_empty?: true
       )
-      |> stream(:family_programs, build_family_program_items(active_programs, expired_programs))
+      |> stream(:family_programs, [])
+      |> maybe_start_load(user)
 
     {:ok, socket}
+  end
+
+  # Fetch on the connected mount only (runs once, not on the disconnected render).
+  # Parent comes from the auth chain's already-resolved scope, not a fresh query.
+  defp maybe_start_load(socket, user) do
+    if connected?(socket) do
+      parent = socket.assigns.current_scope.parent
+      start_async(socket, :load_dashboard, fn -> load_dashboard_data(parent, user.id) end)
+    else
+      socket
+    end
+  end
+
+  @impl true
+  def handle_async(:load_dashboard, {:ok, data}, socket) do
+    %{children: children, active_programs: active, expired_programs: expired} = data
+
+    socket =
+      socket
+      |> assign(
+        loading?: false,
+        children_count: length(children),
+        kid_picker_items: build_kid_picker_items(children, active),
+        active_program_count: length(active),
+        upcoming_count: length(data.upcoming_sessions),
+        upcoming_sessions: data.upcoming_sessions,
+        recent_messages: data.recent_messages,
+        family_programs_empty?: active == [] and expired == []
+      )
+      |> stream(:family_programs, build_family_program_items(active, expired), reset: true)
+
+    {:noreply, socket}
+  end
+
+  def handle_async(:load_dashboard, {:exit, reason}, socket) do
+    Logger.error("[DashboardLive] dashboard load failed", reason: inspect(reason))
+    {:noreply, assign(socket, :loading?, false)}
+  end
+
+  defp load_dashboard_data(parent, user_id) do
+    {children, active, expired} = load_family(parent)
+
+    %{
+      children: children,
+      active_programs: active,
+      expired_programs: expired,
+      upcoming_sessions: load_upcoming_sessions(active, children),
+      recent_messages: load_recent_messages(user_id)
+    }
+  end
+
+  defp load_family(nil), do: {[], [], []}
+
+  defp load_family(parent) do
+    children = Family.get_children(parent.id)
+    {active, expired} = load_family_programs(parent.id)
+    {children, active, expired}
   end
 
   # Stable color rotation per child index keeps the palette consistent across mount cycles.
@@ -308,7 +335,13 @@ defmodule KlassHeroWeb.DashboardLive do
             {gettext("View all")} →
           </.link>
         </div>
-        <div :if={@upcoming_sessions == []} class="text-sm text-hero-grey-600">
+        <div :if={@loading?} class="text-sm text-hero-grey-500">
+          {gettext("Loading…")}
+        </div>
+        <div
+          :if={@upcoming_sessions == [] and not @loading?}
+          class="text-sm text-hero-grey-600"
+        >
           {gettext("No upcoming sessions in the next few weeks.")}
         </div>
         <div class="space-y-1">
@@ -327,48 +360,56 @@ defmodule KlassHeroWeb.DashboardLive do
           </h2>
         </div>
 
-        <%= if @family_programs_empty? do %>
-          <div id="family-programs-empty" class="text-center py-12 bg-white rounded-2xl shadow-sm">
-            <.icon name="hero-book-open" class="w-12 h-12 text-hero-grey-300 mx-auto mb-4" />
-            <p class="text-hero-grey-500 mb-4">
-              {gettext("No programs booked yet")}
-            </p>
-            <.link
-              navigate={~p"/programs"}
-              class={[
-                "inline-flex items-center px-6 py-3 text-white font-medium",
-                "bg-hero-blue-600 hover:bg-hero-blue-700",
-                Theme.rounded(:lg),
-                Theme.transition(:normal)
-              ]}
+        <%= cond do %>
+          <% @loading? -> %>
+            <div
+              id="family-programs-loading"
+              class="text-center py-12 bg-white rounded-2xl shadow-sm text-hero-grey-500"
             >
-              {gettext("Book a Program")}
-            </.link>
-          </div>
-        <% else %>
-          <div
-            id="family-programs-list"
-            phx-update="stream"
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            <.program_card
-              :for={{dom_id, item} <- @streams.family_programs}
-              id={dom_id}
-              program={ProgramPresenter.to_card_view(item.program)}
-              variant={:detailed}
-              expired={item.expired}
-              phx-click="program_click"
-              phx-value-program-id={item.program.id}
+              {gettext("Loading your programs…")}
+            </div>
+          <% @family_programs_empty? -> %>
+            <div id="family-programs-empty" class="text-center py-12 bg-white rounded-2xl shadow-sm">
+              <.icon name="hero-book-open" class="w-12 h-12 text-hero-grey-300 mx-auto mb-4" />
+              <p class="text-hero-grey-500 mb-4">
+                {gettext("No programs booked yet")}
+              </p>
+              <.link
+                navigate={~p"/programs"}
+                class={[
+                  "inline-flex items-center px-6 py-3 text-white font-medium",
+                  "bg-hero-blue-600 hover:bg-hero-blue-700",
+                  Theme.rounded(:lg),
+                  Theme.transition(:normal)
+                ]}
+              >
+                {gettext("Book a Program")}
+              </.link>
+            </div>
+          <% true -> %>
+            <div
+              id="family-programs-list"
+              phx-update="stream"
+              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-              <:actions :if={!item.expired}>
-                <.contact_provider_button
-                  program_id={item.program.id}
-                  provider_id={item.program.provider_id}
-                  phx-click="contact_provider"
-                />
-              </:actions>
-            </.program_card>
-          </div>
+              <.program_card
+                :for={{dom_id, item} <- @streams.family_programs}
+                id={dom_id}
+                program={ProgramPresenter.to_card_view(item.program)}
+                variant={:detailed}
+                expired={item.expired}
+                phx-click="program_click"
+                phx-value-program-id={item.program.id}
+              >
+                <:actions :if={!item.expired}>
+                  <.contact_provider_button
+                    program_id={item.program.id}
+                    provider_id={item.program.provider_id}
+                    phx-click="contact_provider"
+                  />
+                </:actions>
+              </.program_card>
+            </div>
         <% end %>
       </section>
     </div>

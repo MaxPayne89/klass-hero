@@ -1872,7 +1872,7 @@ msgstr ""
 msgid "Child updated, but consent update failed. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:167
+#: lib/klass_hero_web/live/dashboard_live.ex:194
 #: lib/klass_hero_web/live/messaging_live_helper.ex:343
 #, elixir-autogen, elixir-format
 msgid "Conversation"
@@ -2303,7 +2303,7 @@ msgstr ""
 msgid "Bio"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:345
+#: lib/klass_hero_web/live/dashboard_live.ex:386
 #, elixir-autogen, elixir-format
 msgid "Book a Program"
 msgstr ""
@@ -2560,7 +2560,7 @@ msgstr ""
 msgid "Failed to upload document."
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:326
+#: lib/klass_hero_web/live/dashboard_live.ex:359
 #, elixir-autogen, elixir-format
 msgid "Family Programs"
 msgstr ""
@@ -2799,7 +2799,7 @@ msgstr ""
 msgid "No pending documents to review."
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:334
+#: lib/klass_hero_web/live/dashboard_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "No programs booked yet"
 msgstr ""
@@ -3684,7 +3684,7 @@ msgstr ""
 msgid "Correct"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:258
+#: lib/klass_hero_web/live/dashboard_live.ex:285
 #: lib/klass_hero_web/live/provider/programs_live.ex:257
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:200
 #, elixir-autogen, elixir-format
@@ -3914,7 +3914,7 @@ msgstr ""
 msgid "Track Everything:"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:245
+#: lib/klass_hero_web/live/dashboard_live.ex:272
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:143
 #, elixir-autogen, elixir-format
 msgid "Upgrade your plan to send messages."
@@ -5279,7 +5279,7 @@ msgstr ""
 msgid "Good evening"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:59
+#: lib/klass_hero_web/live/dashboard_live.ex:27
 #, elixir-autogen, elixir-format
 msgid "Your week with the kids"
 msgstr ""
@@ -5353,7 +5353,7 @@ msgstr ""
 msgid "Active policy required to teach."
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:278
+#: lib/klass_hero_web/live/dashboard_live.ex:305
 #: lib/klass_hero_web/live/provider/overview_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Active programs"
@@ -6106,7 +6106,7 @@ msgstr ""
 msgid "Mother and child-safety specialist with 10+ years in quality assurance. Architecting our Safety-First Verification engine."
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:155
+#: lib/klass_hero_web/live/dashboard_live.ex:182
 #, elixir-autogen, elixir-format
 msgid "New conversation"
 msgstr ""
@@ -6173,7 +6173,7 @@ msgid_plural "No rows imported. %{count} rows could not be processed."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:312
+#: lib/klass_hero_web/live/dashboard_live.ex:345
 #, elixir-autogen, elixir-format
 msgid "No upcoming sessions in the next few weeks."
 msgstr ""
@@ -6689,17 +6689,17 @@ msgstr ""
 msgid "Unlimited programs and locations"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:290
+#: lib/klass_hero_web/live/dashboard_live.ex:317
 #, elixir-autogen, elixir-format
 msgid "Unread messages"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:303
+#: lib/klass_hero_web/live/dashboard_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "Upcoming sessions"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:284
+#: lib/klass_hero_web/live/dashboard_live.ex:311
 #, elixir-autogen, elixir-format
 msgid "Upcoming this week"
 msgstr ""
@@ -6714,7 +6714,7 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: lib/klass_hero_web/live/dashboard_live.ex:308
+#: lib/klass_hero_web/live/dashboard_live.ex:335
 #, elixir-autogen, elixir-format
 msgid "View all"
 msgstr ""
@@ -7585,4 +7585,14 @@ msgstr ""
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:107
 #, elixir-autogen, elixir-format
 msgid "Session note submitted for review"
+msgstr ""
+
+#: lib/klass_hero_web/live/dashboard_live.ex:369
+#, elixir-autogen, elixir-format
+msgid "Loading your programs…"
+msgstr ""
+
+#: lib/klass_hero_web/live/dashboard_live.ex:339
+#, elixir-autogen, elixir-format
+msgid "Loading…"
 msgstr ""

@@ -12,6 +12,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
 
     test "renders dashboard page successfully", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       # New surface anchors: kid picker, KPI grid, upcoming sessions card.
       assert has_element?(view, "#dashboard-stats")
@@ -20,7 +21,8 @@ defmodule KlassHeroWeb.DashboardLiveTest do
     end
 
     test "sidebar links to user settings", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      html = render_async(view)
 
       # parent_app layout's sidebar puts the account row at the bottom.
       assert html =~ "/users/settings"
@@ -30,7 +32,8 @@ defmodule KlassHeroWeb.DashboardLiveTest do
       conn: conn,
       user: user
     } do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      html = render_async(view)
 
       # New copy: subtitle is fixed; title contains a time-bucket greeting +
       # the user's first name (extracted from `user.name`).
@@ -48,7 +51,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-      assert html = render(view)
+      assert html = render_async(view)
       assert html =~ "Active programs"
       assert html =~ "Upcoming this week"
       assert html =~ "Unread messages"
@@ -63,7 +66,8 @@ defmodule KlassHeroWeb.DashboardLiveTest do
     end
 
     test "renders weekly goal card with the bundle's title", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      html = render_async(view)
 
       assert html =~ "Weekly adventure goal"
     end
@@ -74,18 +78,20 @@ defmodule KlassHeroWeb.DashboardLiveTest do
       # is therefore not rendered — verify the section is absent rather
       # than asserting on its inner button.
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       refute has_element?(view, "#kid-picker")
     end
 
     test "upcoming sessions section renders an empty-state copy", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-      assert html =~ "No upcoming sessions"
+      assert render_async(view) =~ "No upcoming sessions"
     end
 
     test "recent messages preview renders an empty-state copy", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      html = render_async(view)
 
       assert html =~ "No messages yet."
     end
@@ -102,9 +108,9 @@ defmodule KlassHeroWeb.DashboardLiveTest do
         latest_message_at: DateTime.utc_now() |> DateTime.truncate(:second)
       )
 
-      {:ok, _view, html} = live(conn, ~p"/dashboard")
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
 
-      assert html =~ preview_text
+      assert render_async(view) =~ preview_text
     end
   end
 
@@ -127,6 +133,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
 
       conn = log_in_user(conn, user)
       {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
 
       selector =
         ~s|button[phx-click="contact_provider"][phx-value-program-id="#{program.id}"]|
@@ -135,6 +142,49 @@ defmodule KlassHeroWeb.DashboardLiveTest do
                view |> element(selector) |> render_click()
 
       assert path =~ ~r"^/messages/[0-9a-f-]+$"
+    end
+  end
+
+  describe "async loading (perf pass #1)" do
+    setup %{conn: conn} do
+      user = AccountsFixtures.user_fixture(intended_roles: [:parent])
+      parent = insert(:parent_profile_schema, identity_id: user.id)
+      owner = AccountsFixtures.user_fixture()
+      provider = insert(:provider_profile_schema, identity_id: owner.id)
+      program = insert(:program_schema, provider_id: provider.id)
+      {child, _parent} = insert_child_with_guardian(parent: parent)
+
+      insert(:enrollment_schema,
+        parent_id: parent.id,
+        program_id: program.id,
+        child_id: child.id,
+        status: "confirmed",
+        confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
+
+      %{conn: log_in_user(conn, user), program: program}
+    end
+
+    test "disconnected render shows a loading skeleton, not the family data", %{conn: conn} do
+      html = conn |> get(~p"/dashboard") |> html_response(200)
+
+      assert html =~ ~s(id="family-programs-loading")
+      refute html =~ ~s(id="family-programs-list")
+    end
+
+    test "connected mount loads family data via async (sourced from current_scope.parent)", %{
+      conn: conn
+    } do
+      {:ok, view, _loading_html} = live(conn, ~p"/dashboard")
+
+      assert has_element?(view, "#family-programs-loading")
+      refute has_element?(view, "#family-programs-list")
+
+      render_async(view)
+
+      assert has_element?(view, "#family-programs-list")
+      assert has_element?(view, "#kid-picker")
+      refute has_element?(view, "#family-programs-loading")
     end
   end
 
