@@ -24,6 +24,15 @@ defmodule KlassHeroWeb.UserAuthTest do
     %{user: %{user_fixture() | authenticated_at: DateTime.utc_now(:second)}, conn: conn}
   end
 
+  # A halt-capable LiveView socket: on_mount hooks that may redirect need an
+  # endpoint plus the flash/__changed__ assigns to put a flash message.
+  defp build_socket do
+    %LiveView.Socket{
+      endpoint: KlassHeroWeb.Endpoint,
+      assigns: %{__changed__: %{}, flash: %{}}
+    }
+  end
+
   describe "log_in_user/3" do
     test "stores the user token in the session", %{conn: conn, user: user} do
       conn = UserAuth.log_in_user(conn, user)
@@ -284,10 +293,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = "invalid_token"
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} = UserAuth.on_mount(:require_authenticated, %{}, session, socket)
       assert updated_socket.assigns.current_scope == nil
@@ -296,10 +302,7 @@ defmodule KlassHeroWeb.UserAuthTest do
     test "redirects to login page if there isn't a user_token", %{conn: conn} do
       session = conn |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} = UserAuth.on_mount(:require_authenticated, %{}, session, socket)
       assert updated_socket.assigns.current_scope == nil
@@ -311,10 +314,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       assert {:cont, _updated_socket} =
                UserAuth.on_mount(:require_sudo_mode, %{}, session, socket)
@@ -328,10 +328,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       assert DateTime.after?(token_inserted_at, user.authenticated_at)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       assert {:halt, _updated_socket} =
                UserAuth.on_mount(:require_sudo_mode, %{}, session, socket)
@@ -351,10 +348,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:cont, updated_socket} = UserAuth.on_mount(:require_parent, %{}, session, socket)
 
@@ -368,10 +362,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} = UserAuth.on_mount(:require_parent, %{}, session, socket)
 
@@ -382,10 +373,7 @@ defmodule KlassHeroWeb.UserAuthTest do
     test "halts and redirects when user is not authenticated", %{conn: conn} do
       session = get_session(conn)
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} = UserAuth.on_mount(:require_parent, %{}, session, socket)
 
@@ -407,10 +395,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:cont, updated_socket} = UserAuth.on_mount(:require_provider, %{}, session, socket)
 
@@ -424,10 +409,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} = UserAuth.on_mount(:require_provider, %{}, session, socket)
 
@@ -438,10 +420,7 @@ defmodule KlassHeroWeb.UserAuthTest do
     test "halts and redirects when user is not authenticated", %{conn: conn} do
       session = get_session(conn)
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} = UserAuth.on_mount(:require_provider, %{}, session, socket)
 
@@ -463,10 +442,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} =
         UserAuth.on_mount(:redirect_provider_or_staff_from_parent_routes, %{}, session, socket)
@@ -480,10 +456,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:cont, updated_socket} =
         UserAuth.on_mount(:redirect_provider_or_staff_from_parent_routes, %{}, session, socket)
@@ -503,10 +476,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:cont, updated_socket} =
         UserAuth.on_mount(:redirect_provider_or_staff_from_parent_routes, %{}, session, socket)
@@ -518,10 +488,7 @@ defmodule KlassHeroWeb.UserAuthTest do
     test "continues when user is not authenticated", %{conn: conn} do
       session = get_session(conn)
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:cont, _updated_socket} =
         UserAuth.on_mount(:redirect_provider_or_staff_from_parent_routes, %{}, session, socket)
@@ -541,10 +508,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} =
         UserAuth.on_mount(:redirect_provider_or_staff_from_parent_routes, %{}, session, socket)
@@ -559,10 +523,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:cont, updated_socket} =
         UserAuth.on_mount(:redirect_provider_or_staff_from_parent_routes, %{}, session, socket)
@@ -578,10 +539,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       user_token = Accounts.generate_user_session_token(user)
       session = conn |> put_session(:user_token, user_token) |> get_session()
 
-      socket = %LiveView.Socket{
-        endpoint: KlassHeroWeb.Endpoint,
-        assigns: %{__changed__: %{}, flash: %{}}
-      }
+      socket = build_socket()
 
       {:halt, updated_socket} =
         UserAuth.on_mount(:redirect_provider_or_staff_from_parent_routes, %{}, session, socket)
@@ -744,31 +702,32 @@ defmodule KlassHeroWeb.UserAuthTest do
   end
 
   describe "signed_in_path/1 dual-role precedence" do
-    test "provider takes precedence over staff for dual-role users" do
-      user = %Accounts.User{intended_roles: [:staff, :provider]}
-      assert UserAuth.signed_in_path(user) == ~p"/provider/dashboard"
-    end
+    test "provider wins regardless of role order; single roles map to their dashboard" do
+      # [:staff, :provider] proves provider wins independent of order.
+      cases = [
+        {[:staff, :provider], ~p"/provider/dashboard"},
+        {[:staff], ~p"/staff/dashboard"},
+        {[:provider], ~p"/provider/dashboard"}
+      ]
 
-    test "staff-only users still go to staff dashboard" do
-      user = %Accounts.User{intended_roles: [:staff]}
-      assert UserAuth.signed_in_path(user) == ~p"/staff/dashboard"
-    end
-
-    test "provider-only users go to provider dashboard" do
-      user = %Accounts.User{intended_roles: [:provider]}
-      assert UserAuth.signed_in_path(user) == ~p"/provider/dashboard"
+      for {roles, expected} <- cases do
+        user = %Accounts.User{intended_roles: roles}
+        assert UserAuth.signed_in_path(user) == expected, "roles=#{inspect(roles)}"
+      end
     end
   end
 
   describe "dashboard_path/1 dual-role precedence" do
-    test "provider takes precedence over staff for dual-role users" do
-      user = %Accounts.User{intended_roles: [:staff, :provider]}
-      assert UserAuth.dashboard_path(user) == ~p"/provider/dashboard"
-    end
+    test "provider wins regardless of role order; staff-only maps to staff" do
+      cases = [
+        {[:staff, :provider], ~p"/provider/dashboard"},
+        {[:staff], ~p"/staff/dashboard"}
+      ]
 
-    test "staff-only users still go to staff dashboard" do
-      user = %Accounts.User{intended_roles: [:staff]}
-      assert UserAuth.dashboard_path(user) == ~p"/staff/dashboard"
+      for {roles, expected} <- cases do
+        user = %Accounts.User{intended_roles: roles}
+        assert UserAuth.dashboard_path(user) == expected, "roles=#{inspect(roles)}"
+      end
     end
   end
 end
