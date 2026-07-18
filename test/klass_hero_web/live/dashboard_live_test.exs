@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.AccountsFixtures
+  alias KlassHero.Family.Child
 
   describe "DashboardLive (Phase 2.1 — Pa* component layout)" do
     setup :register_and_log_in_user
@@ -201,6 +202,40 @@ defmodule KlassHeroWeb.DashboardLiveTest do
 
       refute upcoming =~ "No upcoming sessions"
       assert upcoming =~ program.title
+    end
+  end
+
+  describe "upcoming sessions fan-out (perf pass #2)" do
+    test "a session in a program shared by two children renders one row per child", %{conn: conn} do
+      user = AccountsFixtures.user_fixture(intended_roles: [:parent])
+      parent = insert(:parent_profile_schema, identity_id: user.id)
+      owner = AccountsFixtures.user_fixture()
+      provider = insert(:provider_profile_schema, identity_id: owner.id)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      {child_a, _} = insert_child_with_guardian(parent: parent, first_name: "Ada", last_name: "Alpha")
+      {child_b, _} = insert_child_with_guardian(parent: parent, first_name: "Ben", last_name: "Beta")
+
+      for child <- [child_a, child_b] do
+        insert(:enrollment_schema,
+          parent_id: parent.id,
+          program_id: program.id,
+          child_id: child.id,
+          status: "confirmed",
+          confirmed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+      end
+
+      insert(:program_session_schema, program_id: program.id, session_date: Date.add(Date.utc_today(), 2))
+
+      conn = log_in_user(conn, user)
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
+
+      upcoming = view |> element("#upcoming-sessions") |> render()
+
+      assert upcoming =~ Child.full_name(child_a)
+      assert upcoming =~ Child.full_name(child_b)
     end
   end
 
