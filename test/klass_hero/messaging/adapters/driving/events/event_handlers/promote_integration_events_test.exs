@@ -13,289 +13,127 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteInteg
     :ok
   end
 
-  describe "handle/1 — :user_data_anonymized" do
-    test "promotes to message_data_anonymized integration event" do
-      user_id = Ecto.UUID.generate()
-      domain_event = DomainEvent.new(:user_data_anonymized, user_id, :user, %{user_id: user_id})
+  # Messaging promotions vary along more axes than the other contexts, so each is
+  # a full table row: the published event type (usually the domain type, but
+  # user_data_anonymized renames to message_data_anonymized), aggregate type, the
+  # payload, whether a publish failure is swallowed (:ok) or propagated
+  # ({:error, reason}), and the per-event entity_type/criticality/payload checks.
+  @cases [
+    %{
+      type: :user_data_anonymized,
+      published: :message_data_anonymized,
+      agg: :user,
+      id: "user-1",
+      payload: %{user_id: "user-1"},
+      mode: :swallow,
+      critical: true
+    },
+    %{
+      type: :conversation_created,
+      agg: :conversation,
+      id: "conv-1",
+      entity_type: :conversation,
+      payload: %{conversation_id: "conv-1", type: :direct, provider_id: "pv-1", participant_ids: ["u1", "u2"]},
+      mode: :propagate
+    },
+    %{
+      type: :message_sent,
+      agg: :conversation,
+      id: "conv-1",
+      payload: %{
+        conversation_id: "conv-1",
+        message_id: "msg-1",
+        sender_id: "s-1",
+        content: "Hello!",
+        message_type: :text,
+        sent_at: ~U[2026-01-01 00:00:00Z]
+      },
+      mode: :propagate,
+      checks: [content: "Hello!"]
+    },
+    %{
+      type: :messages_read,
+      agg: :conversation,
+      id: "conv-1",
+      payload: %{conversation_id: "conv-1", user_id: "user-1", read_at: ~U[2026-01-01 00:00:00Z]},
+      mode: :swallow,
+      checks: [user_id: "user-1"]
+    },
+    %{
+      type: :conversation_archived,
+      agg: :conversation,
+      id: "conv-1",
+      payload: %{conversation_id: "conv-1", reason: :program_ended},
+      mode: :swallow
+    },
+    %{
+      type: :conversations_archived,
+      agg: :conversation,
+      id: "bulk_archive_123",
+      payload: %{conversation_ids: ["c1", "c2"], reason: :program_ended, count: 2},
+      mode: :swallow,
+      checks: [count: 2]
+    },
+    %{
+      type: :participant_added,
+      agg: :conversation,
+      id: "conv-1",
+      entity_type: :conversation,
+      critical: true,
+      payload: %{conversation_id: "conv-1", participant_user_ids: ["u1", "u2"], source: :initial_staff},
+      mode: :propagate,
+      checks: [participant_user_ids: ["u1", "u2"], source: "initial_staff"]
+    },
+    %{
+      type: :participant_removed,
+      agg: :conversation,
+      id: "conv-1",
+      entity_type: :conversation,
+      critical: true,
+      payload: %{conversation_id: "conv-1", participant_user_ids: ["u1"], source: :staff_unassignment},
+      mode: :propagate,
+      checks: [participant_user_ids: ["u1"], source: "staff_unassignment"]
+    }
+  ]
 
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+  for spec <- @cases do
+    describe "handle/1 — #{spec.type}" do
+      @type_ spec.type
+      @published Map.get(spec, :published, spec.type)
+      @agg spec.agg
+      @id spec.id
+      @payload spec.payload
+      @mode spec.mode
+      @entity_type Map.get(spec, :entity_type)
+      @critical Map.get(spec, :critical, false)
+      @checks Map.get(spec, :checks, [])
 
-      event = assert_integration_event_published(:message_data_anonymized)
-      assert event.entity_id == user_id
-      assert event.source_context == :messaging
-      assert IntegrationEvent.critical?(event)
-    end
+      test "promotes to the #{Map.get(spec, :published, spec.type)} integration event" do
+        domain_event = DomainEvent.new(@type_, @id, @agg, @payload)
 
-    test "swallows publish failures with :ok" do
-      user_id = Ecto.UUID.generate()
-      domain_event = DomainEvent.new(:user_data_anonymized, user_id, :user, %{user_id: user_id})
+        assert :ok = PromoteIntegrationEvents.handle(domain_event)
 
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
+        event = assert_integration_event_published(@published)
+        assert event.entity_id == @id
+        assert event.source_context == :messaging
+        if @entity_type, do: assert(event.entity_type == @entity_type)
+        if @critical, do: assert(IntegrationEvent.critical?(event))
+        Enum.each(@checks, fn {key, value} -> assert Map.get(event.payload, key) == value end)
+      end
 
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-      assert_no_integration_events_published()
-    end
-  end
+      test "#{spec.mode}s publish failures" do
+        domain_event = DomainEvent.new(@type_, @id, @agg, @payload)
+        TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
 
-  describe "handle/1 — :conversation_created" do
-    test "promotes to conversation_created integration event" do
-      conversation_id = Ecto.UUID.generate()
+        case @mode do
+          :swallow ->
+            assert :ok = PromoteIntegrationEvents.handle(domain_event)
+            assert_no_integration_events_published()
 
-      domain_event =
-        DomainEvent.new(:conversation_created, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          type: :direct,
-          provider_id: Ecto.UUID.generate(),
-          participant_ids: [Ecto.UUID.generate(), Ecto.UUID.generate()]
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:conversation_created)
-      assert event.entity_id == conversation_id
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-    end
-
-    test "propagates publish failures as {:error, reason}" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:conversation_created, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          type: :direct,
-          provider_id: Ecto.UUID.generate(),
-          participant_ids: [Ecto.UUID.generate(), Ecto.UUID.generate()]
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
-    end
-  end
-
-  describe "handle/1 — :message_sent" do
-    test "promotes to message_sent integration event" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:message_sent, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          message_id: Ecto.UUID.generate(),
-          sender_id: Ecto.UUID.generate(),
-          content: "Hello!",
-          message_type: :text,
-          sent_at: DateTime.utc_now()
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:message_sent)
-      assert event.entity_id == conversation_id
-      assert event.source_context == :messaging
-      assert event.payload.content == "Hello!"
-    end
-
-    test "propagates publish failures as {:error, reason}" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:message_sent, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          message_id: Ecto.UUID.generate(),
-          sender_id: Ecto.UUID.generate(),
-          content: "Hello!",
-          message_type: :text,
-          sent_at: DateTime.utc_now()
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
-    end
-  end
-
-  describe "handle/1 — :messages_read" do
-    test "promotes to messages_read integration event" do
-      conversation_id = Ecto.UUID.generate()
-      user_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:messages_read, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          user_id: user_id,
-          read_at: DateTime.utc_now()
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:messages_read)
-      assert event.entity_id == conversation_id
-      assert event.source_context == :messaging
-      assert event.payload.user_id == user_id
-    end
-
-    test "swallows publish failures with :ok" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:messages_read, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          user_id: Ecto.UUID.generate(),
-          read_at: DateTime.utc_now()
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-      assert_no_integration_events_published()
-    end
-  end
-
-  describe "handle/1 — :conversation_archived" do
-    test "promotes to conversation_archived integration event" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:conversation_archived, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          reason: :program_ended
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:conversation_archived)
-      assert event.entity_id == conversation_id
-      assert event.source_context == :messaging
-    end
-
-    test "swallows publish failures with :ok" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:conversation_archived, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          reason: :program_ended
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-      assert_no_integration_events_published()
-    end
-  end
-
-  describe "handle/1 — :conversations_archived" do
-    test "promotes to conversations_archived integration event" do
-      aggregate_id = "bulk_archive_123"
-
-      domain_event =
-        DomainEvent.new(:conversations_archived, aggregate_id, :conversation, %{
-          conversation_ids: [Ecto.UUID.generate(), Ecto.UUID.generate()],
-          reason: :program_ended,
-          count: 2
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:conversations_archived)
-      assert event.entity_id == aggregate_id
-      assert event.source_context == :messaging
-      assert event.payload.count == 2
-    end
-
-    test "swallows publish failures with :ok" do
-      aggregate_id = "bulk_archive_123"
-
-      domain_event =
-        DomainEvent.new(:conversations_archived, aggregate_id, :conversation, %{
-          conversation_ids: [Ecto.UUID.generate(), Ecto.UUID.generate()],
-          reason: :program_ended,
-          count: 2
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-      assert_no_integration_events_published()
-    end
-  end
-
-  describe "handle/1 — :participant_added" do
-    test "promotes to participant_added integration event" do
-      conversation_id = Ecto.UUID.generate()
-      user_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
-
-      domain_event =
-        DomainEvent.new(:participant_added, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          participant_user_ids: user_ids,
-          source: :initial_staff
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:participant_added)
-      assert event.entity_id == conversation_id
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == "initial_staff"
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "propagates publish failures as {:error, reason}" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:participant_added, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          participant_user_ids: [Ecto.UUID.generate()],
-          source: :later_assignment
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
-    end
-  end
-
-  describe "handle/1 — :participant_removed" do
-    test "promotes to participant_removed integration event" do
-      conversation_id = Ecto.UUID.generate()
-      user_ids = [Ecto.UUID.generate()]
-
-      domain_event =
-        DomainEvent.new(:participant_removed, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          participant_user_ids: user_ids,
-          source: :staff_unassignment
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
-
-      event = assert_integration_event_published(:participant_removed)
-      assert event.entity_id == conversation_id
-      assert event.source_context == :messaging
-      assert event.entity_type == :conversation
-      assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == "staff_unassignment"
-      assert IntegrationEvent.critical?(event)
-    end
-
-    test "propagates publish failures as {:error, reason}" do
-      conversation_id = Ecto.UUID.generate()
-
-      domain_event =
-        DomainEvent.new(:participant_removed, conversation_id, :conversation, %{
-          conversation_id: conversation_id,
-          participant_user_ids: [Ecto.UUID.generate()],
-          source: :staff_unassignment
-        })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+          :propagate ->
+            assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+        end
+      end
     end
   end
 end

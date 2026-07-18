@@ -12,57 +12,46 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driving.Events.EventHandlers.Promote
     :ok
   end
 
-  describe "handle/1 — :program_created" do
-    test "promotes to program_created integration event" do
-      program_id = Ecto.UUID.generate()
+  # Each program-catalog domain event promotes to a :program integration event,
+  # and publish failures propagate as {:error, reason}. The table drives that
+  # shared contract; program_updated's title passthrough is kept below.
+  @cases [
+    %{type: :program_created, payload: %{provider_id: "pv-1", title: "Summer Camp", category: "sports"}},
+    %{type: :program_updated, payload: %{provider_id: "pv-1", title: "Updated Title", price: "200.00"}}
+  ]
 
-      domain_event =
-        DomainEvent.new(:program_created, program_id, :program, %{
-          provider_id: Ecto.UUID.generate(),
-          title: "Summer Camp",
-          category: "sports"
-        })
+  for %{type: type, payload: payload} <- @cases do
+    describe "handle/1 — #{type}" do
+      @type_ type
+      @payload payload
 
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+      test "promotes to the #{type} integration event" do
+        domain_event = DomainEvent.new(@type_, "prog-1", :program, @payload)
 
-      event = assert_integration_event_published(:program_created)
-      assert event.entity_id == program_id
-      assert event.source_context == :program_catalog
-      assert event.entity_type == :program
-    end
+        assert :ok = PromoteIntegrationEvents.handle(domain_event)
 
-    test "propagates publish failures as {:error, reason}" do
-      program_id = Ecto.UUID.generate()
+        event = assert_integration_event_published(@type_)
+        assert event.entity_id == "prog-1"
+        assert event.source_context == :program_catalog
+        assert event.entity_type == :program
+      end
 
-      domain_event =
-        DomainEvent.new(:program_created, program_id, :program, %{
-          provider_id: Ecto.UUID.generate(),
-          title: "Summer Camp",
-          category: "sports"
-        })
+      test "propagates publish failures as {:error, reason}" do
+        domain_event = DomainEvent.new(@type_, "prog-1", :program, @payload)
+        TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
 
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+        assert {:error, :pubsub_down} = PromoteIntegrationEvents.handle(domain_event)
+      end
     end
   end
 
-  describe "handle/1 — :program_updated" do
-    test "promotes to program_updated integration event" do
-      program_id = Ecto.UUID.generate()
+  describe "handle/1 — :program_updated payload" do
+    test "carries the updated title through to the integration event" do
+      payload = %{provider_id: "pv-1", title: "Updated Title", price: "200.00"}
 
-      domain_event =
-        DomainEvent.new(:program_updated, program_id, :program, %{
-          provider_id: Ecto.UUID.generate(),
-          title: "Updated Title",
-          price: "200.00"
-        })
-
-      assert :ok = PromoteIntegrationEvents.handle(domain_event)
+      assert :ok = PromoteIntegrationEvents.handle(DomainEvent.new(:program_updated, "prog-1", :program, payload))
 
       event = assert_integration_event_published(:program_updated)
-      assert event.entity_id == program_id
-      assert event.source_context == :program_catalog
       assert event.payload.title == "Updated Title"
     end
   end
