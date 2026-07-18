@@ -143,7 +143,7 @@ _Avoid_: Note, Complaint, unqualified "Report"
 
 **Session Note**:
 Routine per-child feedback from the **Instructor** about one **Child** at one **Session** (often positive, e.g. "very engaged today"). The **Parent** must approve it before it is shared; a rejected note can be revised. Attached to the child's **Participation Record**.
-_Avoid_: Behavioral Note (current code name, being retired), Feedback, Review, Comment
+_Avoid_: Behavioral Note (retired in #924), Feedback, Review, Comment
 
 ## Trust & Compliance
 
@@ -236,9 +236,9 @@ Messaging's **Participant** is a conversation member (a **User**). The Participa
 "Book"/"Booking" lives almost entirely in the web/UI layer (front-of-house), while the domain records an **Enrollment**. They are the same concept under two names, not two concepts.
 **Resolution:** "Enrollment" is the only domain noun for the record. "Book"/"Booking" may appear in UI copy and route names but must never become a domain noun or a second entity (e.g. a multi-enrollment cart) unless that distinct concept is deliberately introduced and defined here.
 
-**"Behavioural" is overloaded; the feedback note should be a Session Note.**
-The per-child, parent-approved feedback entity is named `BehavioralNote` in code, but it is usually positive and collides with the `behavioral_issue` category on **Incident Report**.
-**Resolution:** Canonical term is **Session Note** for routine per-child feedback; reserve "behavioural" for the safeguarding-level `behavioral_issue` **Incident Report** category. A code rename `BehavioralNote → SessionNote` is pending.
+**"Behavioural" is no longer overloaded (resolved).**
+The per-child, parent-approved feedback entity was named `BehavioralNote` in code, but it is usually positive and collided with the `behavioral_issue` category on **Incident Report**.
+**Resolution:** #924 renamed the entity, its table, its events, and its UI copy to **Session Note**. "Behavioural" is now reserved exclusively for the safeguarding-level `behavioral_issue` **Incident Report** category. Do not reintroduce "behavioural" for routine feedback.
 
 **Subscription tiers and the Entitlements service are removed (resolved).**
 Both provider tiers (ADR-0004) and parent tiers (ADR-0007) are gone: every Provider and Parent has full access, the Shared **Entitlements** service and tier vocabulary are deleted, and the `:active` tier vs `active` lifecycle-flag collision no longer exists. A **success-based fee** on platform income is the planned monetisation model (not yet built). Do not reintroduce `subscription_tier` or an `Entitlements` service.

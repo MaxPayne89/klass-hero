@@ -1,6 +1,6 @@
-defmodule KlassHero.Participation.GetApprovedBehavioralNotesTest do
+defmodule KlassHero.Participation.GetApprovedSessionNotesTest do
   @moduledoc """
-  Integration tests for GetApprovedBehavioralNotes use case.
+  Integration tests for GetApprovedSessionNotes use case.
   """
 
   use KlassHero.DataCase, async: true
@@ -9,9 +9,9 @@ defmodule KlassHero.Participation.GetApprovedBehavioralNotesTest do
 
   describe "execute/1" do
     test "returns approved notes for a child" do
-      note = insert(:behavioral_note_schema, status: :approved, reviewed_at: DateTime.utc_now())
+      note = insert(:session_note_schema, status: :approved, reviewed_at: DateTime.utc_now())
 
-      assert {:ok, notes} = KlassHero.Participation.get_approved_behavioral_notes(note.child_id)
+      assert {:ok, notes} = KlassHero.Participation.get_approved_session_notes(note.child_id)
       assert length(notes) == 1
       assert hd(notes).id == note.id
       assert hd(notes).status == :approved
@@ -30,7 +30,7 @@ defmodule KlassHero.Participation.GetApprovedBehavioralNotesTest do
 
       child_id = record.child_id
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child_id,
         parent_id: record.parent_id,
@@ -48,7 +48,7 @@ defmodule KlassHero.Participation.GetApprovedBehavioralNotesTest do
           check_in_by: staff_user.id
         )
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record2.id,
         child_id: child_id,
         parent_id: record.parent_id,
@@ -64,7 +64,7 @@ defmodule KlassHero.Participation.GetApprovedBehavioralNotesTest do
           check_in_by: staff_user.id
         )
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record3.id,
         child_id: child_id,
         parent_id: record.parent_id,
@@ -73,13 +73,13 @@ defmodule KlassHero.Participation.GetApprovedBehavioralNotesTest do
         reviewed_at: DateTime.utc_now()
       )
 
-      assert {:ok, notes} = KlassHero.Participation.get_approved_behavioral_notes(child_id)
+      assert {:ok, notes} = KlassHero.Participation.get_approved_session_notes(child_id)
       assert length(notes) == 1
       assert hd(notes).status == :approved
     end
 
     test "returns {:ok, []} for nonexistent child" do
-      assert {:ok, []} = KlassHero.Participation.get_approved_behavioral_notes(Ecto.UUID.generate())
+      assert {:ok, []} = KlassHero.Participation.get_approved_session_notes(Ecto.UUID.generate())
     end
   end
 end

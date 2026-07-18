@@ -8,13 +8,13 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
   import KlassHero.Factory
 
   alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
-  alias KlassHero.Participation.BehavioralNote
+  alias KlassHero.Participation.SessionNote
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   describe "handle_event/1 for :child_data_anonymized" do
-    test "anonymizes all behavioral notes for the child" do
+    test "anonymizes all session notes for the child" do
       note =
-        insert(:behavioral_note_schema,
+        insert(:session_note_schema,
           content: "Very attentive today",
           status: :approved
         )
@@ -31,13 +31,13 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
       assert :ok == ParticipationEventHandler.handle_event(event)
 
-      reloaded = Repo.get!(BehavioralNote, note.id)
+      reloaded = Repo.get!(SessionNote, note.id)
       assert reloaded.content == "[Removed - account deleted]"
       assert reloaded.status == :rejected
       assert is_nil(reloaded.rejection_reason)
     end
 
-    test "returns :ok when child has no behavioral notes" do
+    test "returns :ok when child has no session notes" do
       child_id = Ecto.UUID.generate()
 
       event =

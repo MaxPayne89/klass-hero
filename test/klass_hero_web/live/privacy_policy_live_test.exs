@@ -128,7 +128,7 @@ defmodule KlassHeroWeb.PrivacyPolicyLiveTest do
       {:ok, _view, html} = live(conn, ~p"/privacy")
 
       assert html =~ "consent"
-      assert html =~ "Behavioral"
+      assert html =~ "Session Notes"
     end
   end
 end

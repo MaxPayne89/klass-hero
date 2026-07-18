@@ -50,9 +50,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
         "participation_record:participation_marked_absent"
       )
 
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_submitted")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_approved")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "behavioral_note:behavioral_note_rejected")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_submitted")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_approved")
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_rejected")
     end
 
     {:ok, load_session_data(socket)}
@@ -143,7 +143,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   def handle_event("submit_revision", %{"id" => note_id, "revision" => params}, socket) do
     content = Map.get(params, "content", "")
 
-    case Participation.revise_behavioral_note(%{
+    case Participation.revise_session_note(%{
            note_id: note_id,
            provider_id: socket.assigns.provider_id,
            content: content
@@ -245,7 +245,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
-      when event_type in [:behavioral_note_submitted, :behavioral_note_approved, :behavioral_note_rejected] do
+      when event_type in [:session_note_submitted, :session_note_approved, :session_note_rejected] do
     {:noreply, load_session_data(socket)}
   end
 
@@ -298,7 +298,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
     # Single batch query instead of N+1 per record.
     notes =
-      Participation.list_behavioral_notes_by_records_and_provider(record_ids, provider_id)
+      Participation.list_session_notes_by_records_and_provider(record_ids, provider_id)
 
     notes_by_record =
       Map.new(notes, fn note -> {to_string(note.participation_record_id), note} end)

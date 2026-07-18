@@ -96,7 +96,7 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
         content: """
         <p class="mb-4">We take your privacy seriously and limit data sharing to what's necessary:</p>
         <h4 class="font-semibold text-gray-900 mb-2">Program Providers:</h4>
-        <p class="mb-4">Providers see enrolled children's names for program management. Optional safety information (support needs, allergies) is visible to providers only when a parent explicitly consents to share it. Behavioral notes written by providers about a child require parent approval before being displayed.</p>
+        <p class="mb-4">Providers see enrolled children's names for program management. Optional safety information (support needs, allergies) is visible to providers only when a parent explicitly consents to share it. Session notes written by providers about a child require parent approval before being displayed.</p>
         <h4 class="font-semibold text-gray-900 mb-2">Payment Processors:</h4>
         <p class="mb-4">For credit card payments, we work with third-party payment processors who handle transaction processing securely. They only receive the information necessary to process payments.</p>
         <h4 class="font-semibold text-gray-900 mb-2">What We Don't Do:</h4>
@@ -157,7 +157,7 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
           <li><strong>Parental Consent:</strong> Parents or legal guardians must create accounts and provide consent for their children's participation</li>
           <li><strong>Consent-Gated Sharing:</strong> Optional safety information (support needs, allergies) is shared with program providers only when a parent explicitly consents</li>
           <li><strong>Data Minimization:</strong> Only a child's name and date of birth are required; all health and safety notes are optional and parent-controlled</li>
-          <li><strong>Behavioral Notes:</strong> Observations written by providers about a child require parent approval before they are displayed</li>
+          <li><strong>Session Notes:</strong> Observations written by providers about a child require parent approval before they are displayed</li>
           <li><strong>COPPA Compliance:</strong> We comply with the Children's Online Privacy Protection Act (COPPA) for children under 13</li>
           <li><strong>Limited Collection:</strong> We only collect the minimum information necessary for program enrollment and safety</li>
           <li><strong>No Direct Marketing:</strong> We never market directly to children or collect information from them for marketing purposes</li>

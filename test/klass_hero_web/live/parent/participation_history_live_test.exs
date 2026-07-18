@@ -1,6 +1,6 @@
 defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
   @moduledoc """
-  Tests for ParticipationHistoryLive behavioral notes review functionality.
+  Tests for ParticipationHistoryLive session notes review functionality.
   """
 
   use KlassHeroWeb.ConnCase, async: true
@@ -30,7 +30,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       )
 
     note =
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         parent_id: parent.id,
@@ -57,7 +57,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       parent: parent
     } do
       # Approve the note so nothing is pending
-      KlassHero.Participation.review_behavioral_note(%{
+      KlassHero.Participation.review_session_note(%{
         note_id: note.id,
         parent_id: parent.id,
         decision: :approve

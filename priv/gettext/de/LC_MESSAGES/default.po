@@ -1811,11 +1811,6 @@ msgstr "Besondere Bedürfnisse oder Unterstützungsbedarf..."
 msgid "Back to Settings"
 msgstr "Zurück zu Einstellungen"
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:107
-#, elixir-autogen, elixir-format
-msgid "Behavioral note submitted for review"
-msgstr "Verhaltensnotiz zur Überprüfung eingereicht"
-
 #: lib/klass_hero_web/components/messaging_components.ex:150
 #, elixir-autogen, elixir-format
 msgid "Broadcast"
@@ -4074,11 +4069,6 @@ msgstr "Zurück zu Sitzungen"
 #, elixir-autogen, elixir-format
 msgid "Back to emails"
 msgstr "Zurück zu E-Mails"
-
-#: lib/klass_hero_web/components/participation_components.ex:495
-#, elixir-autogen, elixir-format
-msgid "Behavioral Note"
-msgstr "Verhaltensnotiz"
 
 #: lib/klass_hero_web/components/messaging_components.ex:688
 #, elixir-autogen, elixir-format
@@ -7586,3 +7576,13 @@ msgstr "Die Erklärung zur Mitarbeiter-Compliance wurde seit deiner letzten Unte
 #, elixir-autogen, elixir-format
 msgid "You have signed the Staff Compliance Declaration."
 msgstr "Du hast die Erklärung zur Mitarbeiter-Compliance unterzeichnet."
+
+#: lib/klass_hero_web/components/participation_components.ex:495
+#, elixir-autogen, elixir-format
+msgid "Session Note"
+msgstr "Sitzungsnotiz"
+
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:107
+#, elixir-autogen, elixir-format
+msgid "Session note submitted for review"
+msgstr "Sitzungsnotiz zur Überprüfung eingereicht"

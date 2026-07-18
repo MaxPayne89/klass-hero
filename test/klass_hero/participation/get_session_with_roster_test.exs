@@ -283,8 +283,8 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
     end
   end
 
-  describe "behavioral notes in roster" do
-    test "enriched records include approved behavioral notes when consented" do
+  describe "session notes in roster" do
+    test "enriched records include approved session notes when consented" do
       parent = insert(:parent_profile_schema)
 
       {child, _parent} =
@@ -311,7 +311,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
           check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
         )
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         parent_id: parent.id,
@@ -321,11 +321,11 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
       assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [enriched] = session.participation_records
-      assert length(enriched.behavioral_notes) == 1
-      assert hd(enriched.behavioral_notes).status == :approved
+      assert length(enriched.session_notes) == 1
+      assert hd(enriched.session_notes).status == :approved
     end
 
-    test "enriched records have empty behavioral notes when no consent" do
+    test "enriched records have empty session notes when no consent" do
       child = insert(:child_schema, allergies: "Peanuts")
       session_schema = insert(:program_session_schema)
 
@@ -338,7 +338,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
           check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
         )
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         status: :approved,
@@ -347,10 +347,10 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
       assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [enriched] = session.participation_records
-      assert enriched.behavioral_notes == []
+      assert enriched.session_notes == []
     end
 
-    test "roster entries include approved behavioral notes when consented" do
+    test "roster entries include approved session notes when consented" do
       parent = insert(:parent_profile_schema)
 
       {child, _parent} =
@@ -375,7 +375,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
           status: :registered
         )
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         parent_id: parent.id,
@@ -385,10 +385,10 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
       assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert [entry] = result.roster
-      assert length(entry.behavioral_notes) == 1
+      assert length(entry.session_notes) == 1
     end
 
-    test "roster entries have empty behavioral notes when no consent" do
+    test "roster entries have empty session notes when no consent" do
       child = insert(:child_schema)
       session_schema = insert(:program_session_schema)
 
@@ -399,7 +399,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
           status: :registered
         )
 
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         status: :approved,
@@ -408,7 +408,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
       assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert [entry] = result.roster
-      assert entry.behavioral_notes == []
+      assert entry.session_notes == []
     end
 
     test "only approved notes appear in enriched records (pending excluded)" do
@@ -436,7 +436,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
         )
 
       # Approved note — should appear
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         parent_id: parent.id,
@@ -445,7 +445,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
       )
 
       # Pending note — should NOT appear
-      insert(:behavioral_note_schema,
+      insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
         parent_id: parent.id,
@@ -454,8 +454,8 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
       assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
       assert [enriched] = session.participation_records
-      assert length(enriched.behavioral_notes) == 1
-      assert hd(enriched.behavioral_notes).status == :approved
+      assert length(enriched.session_notes) == 1
+      assert hd(enriched.session_notes).status == :approved
     end
   end
 end

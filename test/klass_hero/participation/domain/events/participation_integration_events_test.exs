@@ -426,23 +426,23 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
   end
 
   # ---------------------------------------------------------------------------
-  # behavioral_note_submitted
+  # session_note_submitted
   # ---------------------------------------------------------------------------
 
-  describe "behavioral_note_submitted/3" do
+  describe "session_note_submitted/3" do
     test "creates event with correct type, source_context, and entity_type" do
       note_id = Ecto.UUID.generate()
 
       event =
-        ParticipationIntegrationEvents.behavioral_note_submitted(note_id, %{
+        ParticipationIntegrationEvents.session_note_submitted(note_id, %{
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
           provider_id: Ecto.UUID.generate()
         })
 
-      assert event.event_type == :behavioral_note_submitted
+      assert event.event_type == :session_note_submitted
       assert event.source_context == :participation
-      assert event.entity_type == :behavioral_note
+      assert event.entity_type == :session_note
       assert event.entity_id == note_id
     end
 
@@ -450,7 +450,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       real_id = Ecto.UUID.generate()
 
       event =
-        ParticipationIntegrationEvents.behavioral_note_submitted(real_id, %{
+        ParticipationIntegrationEvents.session_note_submitted(real_id, %{
           note_id: "should-be-overridden",
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -466,9 +466,9 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       note_id = Ecto.UUID.generate()
 
       assert_raise ArgumentError,
-                   ~r/behavioral_note_submitted missing required payload keys/,
+                   ~r/session_note_submitted missing required payload keys/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_submitted(note_id, %{})
+                     ParticipationIntegrationEvents.session_note_submitted(note_id, %{})
                    end
     end
 
@@ -482,35 +482,35 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       assert_raise ArgumentError,
                    ~r/requires a non-empty note_id string/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_submitted(nil, valid_payload)
+                     ParticipationIntegrationEvents.session_note_submitted(nil, valid_payload)
                    end
 
       assert_raise ArgumentError,
                    ~r/requires a non-empty note_id string/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_submitted("", valid_payload)
+                     ParticipationIntegrationEvents.session_note_submitted("", valid_payload)
                    end
     end
   end
 
   # ---------------------------------------------------------------------------
-  # behavioral_note_approved
+  # session_note_approved
   # ---------------------------------------------------------------------------
 
-  describe "behavioral_note_approved/3" do
+  describe "session_note_approved/3" do
     test "creates event with correct type, source_context, and entity_type" do
       note_id = Ecto.UUID.generate()
 
       event =
-        ParticipationIntegrationEvents.behavioral_note_approved(note_id, %{
+        ParticipationIntegrationEvents.session_note_approved(note_id, %{
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
           provider_id: Ecto.UUID.generate()
         })
 
-      assert event.event_type == :behavioral_note_approved
+      assert event.event_type == :session_note_approved
       assert event.source_context == :participation
-      assert event.entity_type == :behavioral_note
+      assert event.entity_type == :session_note
       assert event.entity_id == note_id
     end
 
@@ -518,7 +518,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       real_id = Ecto.UUID.generate()
 
       event =
-        ParticipationIntegrationEvents.behavioral_note_approved(real_id, %{
+        ParticipationIntegrationEvents.session_note_approved(real_id, %{
           note_id: "should-be-overridden",
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -534,9 +534,9 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       note_id = Ecto.UUID.generate()
 
       assert_raise ArgumentError,
-                   ~r/behavioral_note_approved missing required payload keys/,
+                   ~r/session_note_approved missing required payload keys/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_approved(note_id, %{})
+                     ParticipationIntegrationEvents.session_note_approved(note_id, %{})
                    end
     end
 
@@ -550,35 +550,35 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       assert_raise ArgumentError,
                    ~r/requires a non-empty note_id string/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_approved(nil, valid_payload)
+                     ParticipationIntegrationEvents.session_note_approved(nil, valid_payload)
                    end
 
       assert_raise ArgumentError,
                    ~r/requires a non-empty note_id string/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_approved("", valid_payload)
+                     ParticipationIntegrationEvents.session_note_approved("", valid_payload)
                    end
     end
   end
 
   # ---------------------------------------------------------------------------
-  # behavioral_note_rejected
+  # session_note_rejected
   # ---------------------------------------------------------------------------
 
-  describe "behavioral_note_rejected/3" do
+  describe "session_note_rejected/3" do
     test "creates event with correct type, source_context, and entity_type" do
       note_id = Ecto.UUID.generate()
 
       event =
-        ParticipationIntegrationEvents.behavioral_note_rejected(note_id, %{
+        ParticipationIntegrationEvents.session_note_rejected(note_id, %{
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
           provider_id: Ecto.UUID.generate()
         })
 
-      assert event.event_type == :behavioral_note_rejected
+      assert event.event_type == :session_note_rejected
       assert event.source_context == :participation
-      assert event.entity_type == :behavioral_note
+      assert event.entity_type == :session_note
       assert event.entity_id == note_id
     end
 
@@ -586,7 +586,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       real_id = Ecto.UUID.generate()
 
       event =
-        ParticipationIntegrationEvents.behavioral_note_rejected(real_id, %{
+        ParticipationIntegrationEvents.session_note_rejected(real_id, %{
           note_id: "should-be-overridden",
           participation_record_id: Ecto.UUID.generate(),
           child_id: Ecto.UUID.generate(),
@@ -602,9 +602,9 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       note_id = Ecto.UUID.generate()
 
       assert_raise ArgumentError,
-                   ~r/behavioral_note_rejected missing required payload keys/,
+                   ~r/session_note_rejected missing required payload keys/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_rejected(note_id, %{})
+                     ParticipationIntegrationEvents.session_note_rejected(note_id, %{})
                    end
     end
 
@@ -618,13 +618,13 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       assert_raise ArgumentError,
                    ~r/requires a non-empty note_id string/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_rejected(nil, valid_payload)
+                     ParticipationIntegrationEvents.session_note_rejected(nil, valid_payload)
                    end
 
       assert_raise ArgumentError,
                    ~r/requires a non-empty note_id string/,
                    fn ->
-                     ParticipationIntegrationEvents.behavioral_note_rejected("", valid_payload)
+                     ParticipationIntegrationEvents.session_note_rejected("", valid_payload)
                    end
     end
   end

@@ -37,9 +37,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
-  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.SessionNote
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
@@ -901,40 +901,40 @@ defmodule KlassHero.Factory do
   end
 
   # =============================================================================
-  # Behavioral Note Factories
+  # Session Note Factories
   # =============================================================================
 
   @doc """
-  Factory for creating BehavioralNote domain entities (pure Elixir structs).
+  Factory for creating SessionNote domain entities (pure Elixir structs).
 
   Used in use case tests where we don't need database persistence.
 
   ## Examples
 
-      note = build(:behavioral_note)
-      note = build(:behavioral_note, content: "Custom observation")
+      note = build(:session_note)
+      note = build(:session_note, content: "Custom observation")
   """
-  def behavioral_note_factory do
-    %BehavioralNote{
+  def session_note_factory do
+    %SessionNote{
       id:
         sequence(
-          :behavioral_note_id,
+          :session_note_id,
           &"aa1e8400-e29b-41d4-a716-55665544#{String.pad_leading("#{&1}", 4, "0")}"
         ),
       participation_record_id:
         sequence(
-          :behavioral_note_record_id,
+          :session_note_record_id,
           &"990e8400-e29b-41d4-a716-55665544#{String.pad_leading("#{&1}", 4, "0")}"
         ),
       child_id:
         sequence(
-          :behavioral_note_child_id,
+          :session_note_child_id,
           &"550e8400-e29b-41d4-a716-66665544#{String.pad_leading("#{&1}", 4, "0")}"
         ),
       parent_id: nil,
       provider_id:
         sequence(
-          :behavioral_note_provider_id,
+          :session_note_provider_id,
           &"770e8400-e29b-41d4-a716-55665544#{String.pad_leading("#{&1}", 4, "0")}"
         ),
       content: "Child was very engaged and cooperative during the session",
@@ -948,17 +948,17 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Factory for creating BehavioralNote Ecto schemas.
+  Factory for creating SessionNote Ecto schemas.
 
   Used in repository and integration tests where we need database persistence.
   Automatically creates a participation record when inserted.
 
   ## Examples
 
-      schema = insert(:behavioral_note_schema)
-      schema = insert(:behavioral_note_schema, content: "Custom observation")
+      schema = insert(:session_note_schema)
+      schema = insert(:session_note_schema, content: "Custom observation")
   """
-  def behavioral_note_schema_factory do
+  def session_note_schema_factory do
     # Trigger: check_in_by references users, provider_id references providers
     # Why: consolidated migrations enforce referential integrity
     # Outcome: all FK fields point to real records
@@ -972,7 +972,7 @@ defmodule KlassHero.Factory do
         check_in_by: user.id
       )
 
-    %BehavioralNote{
+    %SessionNote{
       id: Ecto.UUID.generate(),
       participation_record_id: record.id,
       child_id: record.child_id,
@@ -987,20 +987,20 @@ defmodule KlassHero.Factory do
   end
 
   @doc """
-  Approved behavioral note domain entity variant.
+  Approved session note domain entity variant.
   """
-  def approved_behavioral_note_factory do
-    build(:behavioral_note, %{
+  def approved_session_note_factory do
+    build(:session_note, %{
       status: :approved,
       reviewed_at: ~U[2025-06-02 12:00:00Z]
     })
   end
 
   @doc """
-  Rejected behavioral note domain entity variant.
+  Rejected session note domain entity variant.
   """
-  def rejected_behavioral_note_factory do
-    build(:behavioral_note, %{
+  def rejected_session_note_factory do
+    build(:session_note, %{
       status: :rejected,
       rejection_reason: "Please rephrase",
       reviewed_at: ~U[2025-06-02 12:00:00Z]

@@ -23,12 +23,12 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
     Entity type: `:participation_record`.
   - `:child_marked_absent` - Emitted when a child is marked absent for a session.
     Entity type: `:participation_record`.
-  - `:behavioral_note_submitted` - Emitted when a behavioral note is submitted for review.
-    Entity type: `:behavioral_note`.
-  - `:behavioral_note_approved` - Emitted when a behavioral note is approved.
-    Entity type: `:behavioral_note`.
-  - `:behavioral_note_rejected` - Emitted when a behavioral note is rejected.
-    Entity type: `:behavioral_note`.
+  - `:session_note_submitted` - Emitted when a session note is submitted for review.
+    Entity type: `:session_note`.
+  - `:session_note_approved` - Emitted when a session note is approved.
+    Entity type: `:session_note`.
+  - `:session_note_rejected` - Emitted when a session note is rejected.
+    Entity type: `:session_note`.
   """
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -90,8 +90,8 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           optional(atom()) => term()
         }
 
-  @typedoc "Payload for `:behavioral_note_submitted` events."
-  @type behavioral_note_submitted_payload :: %{
+  @typedoc "Payload for `:session_note_submitted` events."
+  @type session_note_submitted_payload :: %{
           required(:note_id) => String.t(),
           required(:participation_record_id) => String.t(),
           required(:child_id) => String.t(),
@@ -99,8 +99,8 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           optional(atom()) => term()
         }
 
-  @typedoc "Payload for `:behavioral_note_approved` events."
-  @type behavioral_note_approved_payload :: %{
+  @typedoc "Payload for `:session_note_approved` events."
+  @type session_note_approved_payload :: %{
           required(:note_id) => String.t(),
           required(:participation_record_id) => String.t(),
           required(:child_id) => String.t(),
@@ -108,8 +108,8 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           optional(atom()) => term()
         }
 
-  @typedoc "Payload for `:behavioral_note_rejected` events."
-  @type behavioral_note_rejected_payload :: %{
+  @typedoc "Payload for `:session_note_rejected` events."
+  @type session_note_rejected_payload :: %{
           required(:note_id) => String.t(),
           required(:participation_record_id) => String.t(),
           required(:child_id) => String.t(),
@@ -323,91 +323,91 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "child_marked_absent/3 requires a non-empty record_id string, got: #{inspect(record_id)}"
   end
 
-  @doc "Creates a `behavioral_note_submitted` integration event. Raises `ArgumentError` on invalid args."
-  def behavioral_note_submitted(note_id, payload \\ %{}, opts \\ [])
+  @doc "Creates a `session_note_submitted` integration event. Raises `ArgumentError` on invalid args."
+  def session_note_submitted(note_id, payload \\ %{}, opts \\ [])
 
-  def behavioral_note_submitted(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
+  def session_note_submitted(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
       when is_binary(note_id) and byte_size(note_id) > 0 do
     base_payload = %{note_id: note_id}
 
     IntegrationEvent.new(
-      :behavioral_note_submitted,
+      :session_note_submitted,
       @source_context,
-      :behavioral_note,
+      :session_note,
       note_id,
       Map.merge(payload, base_payload),
       opts
     )
   end
 
-  def behavioral_note_submitted(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
+  def session_note_submitted(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
     missing = [:participation_record_id, :child_id, :provider_id] -- Map.keys(payload)
 
     raise ArgumentError,
-          "behavioral_note_submitted missing required payload keys: #{inspect(missing)}"
+          "session_note_submitted missing required payload keys: #{inspect(missing)}"
   end
 
-  def behavioral_note_submitted(note_id, _payload, _opts) do
+  def session_note_submitted(note_id, _payload, _opts) do
     raise ArgumentError,
-          "behavioral_note_submitted/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
+          "session_note_submitted/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
   end
 
-  @doc "Creates a `behavioral_note_approved` integration event. Raises `ArgumentError` on invalid args."
-  def behavioral_note_approved(note_id, payload \\ %{}, opts \\ [])
+  @doc "Creates a `session_note_approved` integration event. Raises `ArgumentError` on invalid args."
+  def session_note_approved(note_id, payload \\ %{}, opts \\ [])
 
-  def behavioral_note_approved(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
+  def session_note_approved(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
       when is_binary(note_id) and byte_size(note_id) > 0 do
     base_payload = %{note_id: note_id}
 
     IntegrationEvent.new(
-      :behavioral_note_approved,
+      :session_note_approved,
       @source_context,
-      :behavioral_note,
+      :session_note,
       note_id,
       Map.merge(payload, base_payload),
       opts
     )
   end
 
-  def behavioral_note_approved(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
+  def session_note_approved(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
     missing = [:participation_record_id, :child_id, :provider_id] -- Map.keys(payload)
 
     raise ArgumentError,
-          "behavioral_note_approved missing required payload keys: #{inspect(missing)}"
+          "session_note_approved missing required payload keys: #{inspect(missing)}"
   end
 
-  def behavioral_note_approved(note_id, _payload, _opts) do
+  def session_note_approved(note_id, _payload, _opts) do
     raise ArgumentError,
-          "behavioral_note_approved/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
+          "session_note_approved/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
   end
 
-  @doc "Creates a `behavioral_note_rejected` integration event. Raises `ArgumentError` on invalid args."
-  def behavioral_note_rejected(note_id, payload \\ %{}, opts \\ [])
+  @doc "Creates a `session_note_rejected` integration event. Raises `ArgumentError` on invalid args."
+  def session_note_rejected(note_id, payload \\ %{}, opts \\ [])
 
-  def behavioral_note_rejected(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
+  def session_note_rejected(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
       when is_binary(note_id) and byte_size(note_id) > 0 do
     base_payload = %{note_id: note_id}
 
     IntegrationEvent.new(
-      :behavioral_note_rejected,
+      :session_note_rejected,
       @source_context,
-      :behavioral_note,
+      :session_note,
       note_id,
       Map.merge(payload, base_payload),
       opts
     )
   end
 
-  def behavioral_note_rejected(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
+  def session_note_rejected(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
     missing = [:participation_record_id, :child_id, :provider_id] -- Map.keys(payload)
 
     raise ArgumentError,
-          "behavioral_note_rejected missing required payload keys: #{inspect(missing)}"
+          "session_note_rejected missing required payload keys: #{inspect(missing)}"
   end
 
-  def behavioral_note_rejected(note_id, _payload, _opts) do
+  def session_note_rejected(note_id, _payload, _opts) do
     raise ArgumentError,
-          "behavioral_note_rejected/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
+          "session_note_rejected/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
   end
 
   @typedoc "Payload for `:session_cancelled` events."

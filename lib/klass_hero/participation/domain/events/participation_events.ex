@@ -11,19 +11,19 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   - `child_checked_in` - A child was checked into a session
   - `child_checked_out` - A child was checked out of a session
   - `child_marked_absent` - A child was marked absent from a session
-  - `behavioral_note_submitted` - A behavioral note was submitted for review
-  - `behavioral_note_approved` - A behavioral note was approved by a parent
-  - `behavioral_note_rejected` - A behavioral note was rejected by a parent
+  - `session_note_submitted` - A session note was submitted for review
+  - `session_note_approved` - A session note was approved by a parent
+  - `session_note_rejected` - A session note was rejected by a parent
 
   All events are returned as `DomainEvent` structs.
   """
 
-  alias KlassHero.Participation.BehavioralNote
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.SessionNote
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
-  @type behavioral_note_payload :: %{
+  @type session_note_payload :: %{
           note_id: String.t(),
           participation_record_id: String.t(),
           child_id: String.t(),
@@ -198,32 +198,32 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
     DomainEvent.new(:child_marked_absent, record.id, @aggregate_type, payload, [])
   end
 
-  @doc "Creates a behavioral_note_submitted event."
-  @spec behavioral_note_submitted(BehavioralNote.t(), keyword()) :: DomainEvent.t()
-  def behavioral_note_submitted(%BehavioralNote{} = note, opts \\ []) do
-    payload = behavioral_note_payload(note)
+  @doc "Creates a session_note_submitted event."
+  @spec session_note_submitted(SessionNote.t(), keyword()) :: DomainEvent.t()
+  def session_note_submitted(%SessionNote{} = note, opts \\ []) do
+    payload = session_note_payload(note)
 
-    DomainEvent.new(:behavioral_note_submitted, note.id, :behavioral_note, payload, opts)
+    DomainEvent.new(:session_note_submitted, note.id, :session_note, payload, opts)
   end
 
-  @doc "Creates a behavioral_note_approved event."
-  @spec behavioral_note_approved(BehavioralNote.t(), keyword()) :: DomainEvent.t()
-  def behavioral_note_approved(%BehavioralNote{} = note, opts \\ []) do
-    payload = behavioral_note_payload(note)
+  @doc "Creates a session_note_approved event."
+  @spec session_note_approved(SessionNote.t(), keyword()) :: DomainEvent.t()
+  def session_note_approved(%SessionNote{} = note, opts \\ []) do
+    payload = session_note_payload(note)
 
-    DomainEvent.new(:behavioral_note_approved, note.id, :behavioral_note, payload, opts)
+    DomainEvent.new(:session_note_approved, note.id, :session_note, payload, opts)
   end
 
-  @doc "Creates a behavioral_note_rejected event."
-  @spec behavioral_note_rejected(BehavioralNote.t(), keyword()) :: DomainEvent.t()
-  def behavioral_note_rejected(%BehavioralNote{} = note, opts \\ []) do
-    payload = behavioral_note_payload(note)
+  @doc "Creates a session_note_rejected event."
+  @spec session_note_rejected(SessionNote.t(), keyword()) :: DomainEvent.t()
+  def session_note_rejected(%SessionNote{} = note, opts \\ []) do
+    payload = session_note_payload(note)
 
-    DomainEvent.new(:behavioral_note_rejected, note.id, :behavioral_note, payload, opts)
+    DomainEvent.new(:session_note_rejected, note.id, :session_note, payload, opts)
   end
 
-  @spec behavioral_note_payload(BehavioralNote.t()) :: behavioral_note_payload()
-  defp behavioral_note_payload(%BehavioralNote{} = note) do
+  @spec session_note_payload(SessionNote.t()) :: session_note_payload()
+  defp session_note_payload(%SessionNote{} = note) do
     %{
       note_id: note.id,
       participation_record_id: note.participation_record_id,
