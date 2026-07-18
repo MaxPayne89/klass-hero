@@ -14,6 +14,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyIntegrationEventsTest do
   @factories [
     %{fun: :child_created, id: :child_id, entity_type: :child},
     %{fun: :child_updated, id: :child_id, entity_type: :child},
+    %{fun: :child_data_anonymized, id: :child_id, entity_type: :child},
     %{fun: :invite_family_ready, id: :invite_id, entity_type: :invite}
   ]
 
@@ -77,6 +78,12 @@ defmodule KlassHero.Family.Domain.Events.FamilyIntegrationEventsTest do
         })
 
       assert event.payload.first_name == "Emily"
+    end
+
+    test "child_data_anonymized defaults to :critical (GDPR event)" do
+      event = FamilyIntegrationEvents.child_data_anonymized(Ecto.UUID.generate())
+
+      assert event.metadata.criticality == :critical
     end
 
     test "invite_family_ready carries user_id" do
