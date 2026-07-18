@@ -24,12 +24,9 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
         status: :registered
       )
 
-      insert(:participation_record_schema,
-        session_id: session_schema.id,
-        child_id: child2.id,
-        status: :checked_in,
-        check_in_at: DateTime.utc_now(),
-        check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
+      insert(
+        :participation_record_schema,
+        [session_id: session_schema.id, child_id: child2.id] ++ checked_in_attrs()
       )
 
       assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
@@ -58,15 +55,11 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
     test "includes child name in roster entries" do
       session_schema = insert(:program_session_schema)
       child = insert(:child_schema)
-      check_in_time = DateTime.utc_now()
 
-      insert(:participation_record_schema,
-        session_id: session_schema.id,
-        child_id: child.id,
-        status: :checked_in,
-        check_in_at: check_in_time,
-        check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id,
-        check_in_notes: "Arrived on time"
+      insert(
+        :participation_record_schema,
+        [session_id: session_schema.id, child_id: child.id, check_in_notes: "Arrived on time"] ++
+          checked_in_attrs()
       )
 
       assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
@@ -88,12 +81,9 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
         status: :registered
       )
 
-      insert(:participation_record_schema,
-        session_id: session2.id,
-        child_id: child.id,
-        status: :checked_in,
-        check_in_at: DateTime.utc_now(),
-        check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
+      insert(
+        :participation_record_schema,
+        [session_id: session2.id, child_id: child.id] ++ checked_in_attrs()
       )
 
       assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session1.id)
@@ -135,21 +125,12 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
     end
 
     test "enriched records include safety info when child has active consent" do
-      parent = insert(:parent_profile_schema)
-
-      {child, _parent} =
-        insert_child_with_guardian(
-          parent: parent,
+      %{parent: parent, child: child} =
+        consented_child(
           allergies: "Peanuts",
           support_needs: "Wheelchair access",
           emergency_contact: "+49 123 456789"
         )
-
-      insert(:consent_schema,
-        parent_id: parent.id,
-        child_id: child.id,
-        consent_type: "provider_data_sharing"
-      )
 
       session_schema = insert(:program_session_schema)
 
@@ -185,22 +166,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
     end
 
     test "mixed roster: some children consented, some not" do
-      # Child with consent
-      parent1 = insert(:parent_profile_schema)
-
-      {child_with_consent, _parent1} =
-        insert_child_with_guardian(
-          parent: parent1,
-          allergies: "Dairy"
-        )
-
-      insert(:consent_schema,
-        parent_id: parent1.id,
-        child_id: child_with_consent.id,
-        consent_type: "provider_data_sharing"
-      )
-
-      # Child without consent
+      %{parent: parent1, child: child_with_consent} = consented_child(allergies: "Dairy")
       child_without_consent = insert(:child_schema, allergies: "Gluten")
 
       session_schema = insert(:program_session_schema)
@@ -234,20 +200,8 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
   describe "execute/1 roster entries include safety info" do
     test "roster entries include safety fields when child has consent" do
-      parent = insert(:parent_profile_schema)
-
-      {child, _parent} =
-        insert_child_with_guardian(
-          parent: parent,
-          allergies: "Nuts",
-          emergency_contact: "Mom: +49 111"
-        )
-
-      insert(:consent_schema,
-        parent_id: parent.id,
-        child_id: child.id,
-        consent_type: "provider_data_sharing"
-      )
+      %{parent: parent, child: child} =
+        consented_child(allergies: "Nuts", emergency_contact: "Mom: +49 111")
 
       session_schema = insert(:program_session_schema)
 
@@ -285,30 +239,14 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
   describe "session notes in roster" do
     test "enriched records include approved session notes when consented" do
-      parent = insert(:parent_profile_schema)
-
-      {child, _parent} =
-        insert_child_with_guardian(
-          parent: parent,
-          allergies: "Peanuts"
-        )
-
-      insert(:consent_schema,
-        parent_id: parent.id,
-        child_id: child.id,
-        consent_type: "provider_data_sharing"
-      )
-
+      %{parent: parent, child: child} = consented_child(allergies: "Peanuts")
       session_schema = insert(:program_session_schema)
 
       record =
-        insert(:participation_record_schema,
-          session_id: session_schema.id,
-          child_id: child.id,
-          parent_id: parent.id,
-          status: :checked_in,
-          check_in_at: DateTime.utc_now(),
-          check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
+        insert(
+          :participation_record_schema,
+          [session_id: session_schema.id, child_id: child.id, parent_id: parent.id] ++
+            checked_in_attrs()
         )
 
       insert(:session_note_schema,
@@ -330,12 +268,9 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
       session_schema = insert(:program_session_schema)
 
       record =
-        insert(:participation_record_schema,
-          session_id: session_schema.id,
-          child_id: child.id,
-          status: :checked_in,
-          check_in_at: DateTime.utc_now(),
-          check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
+        insert(
+          :participation_record_schema,
+          [session_id: session_schema.id, child_id: child.id] ++ checked_in_attrs()
         )
 
       insert(:session_note_schema,
@@ -351,20 +286,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
     end
 
     test "roster entries include approved session notes when consented" do
-      parent = insert(:parent_profile_schema)
-
-      {child, _parent} =
-        insert_child_with_guardian(
-          parent: parent,
-          allergies: "Nuts"
-        )
-
-      insert(:consent_schema,
-        parent_id: parent.id,
-        child_id: child.id,
-        consent_type: "provider_data_sharing"
-      )
-
+      %{parent: parent, child: child} = consented_child(allergies: "Nuts")
       session_schema = insert(:program_session_schema)
 
       record =
@@ -412,30 +334,17 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
     end
 
     test "only approved notes appear in enriched records (pending excluded)" do
-      parent = insert(:parent_profile_schema)
-
-      {child, _parent} =
-        insert_child_with_guardian(parent: parent)
-
-      insert(:consent_schema,
-        parent_id: parent.id,
-        child_id: child.id,
-        consent_type: "provider_data_sharing"
-      )
-
+      %{parent: parent, child: child} = consented_child()
       session_schema = insert(:program_session_schema)
 
       record =
-        insert(:participation_record_schema,
-          session_id: session_schema.id,
-          child_id: child.id,
-          parent_id: parent.id,
-          status: :checked_in,
-          check_in_at: DateTime.utc_now(),
-          check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
+        insert(
+          :participation_record_schema,
+          [session_id: session_schema.id, child_id: child.id, parent_id: parent.id] ++
+            checked_in_attrs()
         )
 
-      # Approved note — should appear
+      # Approved note — should appear.
       insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
@@ -444,7 +353,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
         reviewed_at: DateTime.utc_now() |> DateTime.truncate(:second)
       )
 
-      # Pending note — should NOT appear
+      # Pending note — should NOT appear.
       insert(:session_note_schema,
         participation_record_id: record.id,
         child_id: child.id,
@@ -457,5 +366,30 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
       assert length(enriched.session_notes) == 1
       assert hd(enriched.session_notes).status == :approved
     end
+  end
+
+  # A guardian-linked child with an active provider_data_sharing consent.
+  # child_attrs (allergies:, support_needs:, emergency_contact:, …) flow to the child.
+  defp consented_child(child_attrs \\ []) do
+    parent = insert(:parent_profile_schema)
+    {child, _parent} = insert_child_with_guardian(Keyword.put(child_attrs, :parent, parent))
+
+    insert(:consent_schema,
+      parent_id: parent.id,
+      child_id: child.id,
+      consent_type: "provider_data_sharing"
+    )
+
+    %{parent: parent, child: child}
+  end
+
+  # The check-in fields for a :checked_in participation record; check_in_by must
+  # reference a real user id for the FK.
+  defp checked_in_attrs do
+    [
+      status: :checked_in,
+      check_in_at: DateTime.utc_now(),
+      check_in_by: KlassHero.AccountsFixtures.unconfirmed_user_fixture().id
+    ]
   end
 end
