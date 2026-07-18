@@ -8,7 +8,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  # Use a unique name to avoid conflicts with the supervision tree
+  # Unique name to avoid conflicts with the supervision tree.
   @test_server_name :program_listings_projection_test
 
   setup do
@@ -18,12 +18,10 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
 
   describe "bootstrap" do
     test "projects existing programs from write table into program_listings on startup" do
-      # Trigger: programs table has a FK to provider_profiles
-      # Why: must create a real provider to satisfy referential integrity
-      # Outcome: provider_id is valid for program_schema inserts
+      # program_schema has a FK to provider_profiles, so a real provider is required.
       provider = insert(:provider_profile_schema)
 
-      # Insert programs into the write table BEFORE starting the projection
+      # Insert into the write table BEFORE starting the projection.
       program_1 =
         insert(:program_schema,
           title: "Soccer Camp",
@@ -42,8 +40,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           provider_id: provider.id
         )
 
-      # Stop the default test server and start a fresh one so it bootstraps
-      # from the write table that now has data
+      # Restart the projection so it bootstraps from the now-populated write table.
       stop_supervised!(ProgramListings)
 
       bootstrap_name = :"bootstrap_test_#{System.unique_integer([:positive])}"
@@ -51,10 +48,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       bootstrap_pid =
         start_supervised!({ProgramListings, name: bootstrap_name}, id: :bootstrap)
 
-      # Synchronize: ensure bootstrap has completed
-      _ = :sys.get_state(bootstrap_pid)
+      :sys.get_state(bootstrap_pid)
 
-      # Verify program_1 was projected
       listing_1 = Repo.get(ProgramListing, program_1.id)
       assert listing_1 != nil
       assert listing_1.title == "Soccer Camp"
@@ -64,10 +59,9 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing_1.age_range == "6-10 years"
       assert listing_1.price == Decimal.new("150.00")
       assert listing_1.pricing_period == "per session"
-      # Bootstrap defaults provider_verified to false
+      # Bootstrap defaults provider_verified to false.
       assert listing_1.provider_verified == false
 
-      # Verify program_2 was projected
       listing_2 = Repo.get(ProgramListing, program_2.id)
       assert listing_2 != nil
       assert listing_2.title == "Art Class"
@@ -77,12 +71,11 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
 
   describe "rebuild/1" do
     test "rebuilds program_listings from write table without restarting" do
-      # Ensure initial bootstrap has completed before inserting test data
-      _ = :sys.get_state(@test_server_name)
+      # Drain the initial bootstrap before inserting test data.
+      :sys.get_state(@test_server_name)
 
       provider = insert(:provider_profile_schema)
 
-      # Insert programs into the write table after the projection has already started
       program =
         insert(:program_schema,
           title: "Rebuild Test Program",
@@ -90,10 +83,9 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           provider_id: provider.id
         )
 
-      # The read table should not have this program yet (it was inserted after bootstrap)
+      # Not projected yet — inserted after bootstrap.
       assert Repo.get(ProgramListing, program.id) == nil
 
-      # Rebuild should pick it up from the write table
       assert :ok = ProgramListings.rebuild(@test_server_name)
 
       listing = Repo.get(ProgramListing, program.id)
@@ -128,14 +120,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:program_catalog:program_created",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
+      dispatch("integration:program_catalog:program_created", event)
 
       listing = Repo.get(ProgramListing, program_id)
       assert listing != nil
@@ -169,26 +154,13 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      # First broadcast
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:program_catalog:program_created",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch("integration:program_catalog:program_created", event)
       original = Repo.get!(ProgramListing, program_id)
 
-      # Second broadcast of same event
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:program_catalog:program_created",
-        {:integration_event, event}
-      )
+      # Re-dispatch the same event.
+      dispatch("integration:program_catalog:program_created", event)
 
-      _ = :sys.get_state(@test_server_name)
-
-      # Row still exists with preserved inserted_at
+      # Row still exists with preserved inserted_at.
       listing = Repo.get!(ProgramListing, program_id)
       assert listing.title == "Soccer Camp"
       assert listing.inserted_at == original.inserted_at
@@ -200,15 +172,15 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       program_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
-      # Insert an existing listing with season pre-set (from bootstrap)
-      Repo.insert!(%ProgramListing{
+      # Existing listing with season pre-set (from bootstrap).
+      insert_listing(
         id: program_id,
         title: "Old Title",
         category: "sports",
         season: "Spring 2026",
         provider_id: provider_id,
         provider_verified: false
-      })
+      )
 
       event =
         IntegrationEvent.new(
@@ -238,14 +210,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:program_catalog:program_updated",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
+      dispatch("integration:program_catalog:program_updated", event)
 
       listing = Repo.get(ProgramListing, program_id)
       assert listing.title == "Updated Soccer Camp"
@@ -288,13 +253,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:program_catalog:program_updated",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch("integration:program_catalog:program_updated", event)
 
       listing = Repo.get(ProgramListing, program_id)
       assert listing != nil
@@ -311,33 +270,12 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
     test "sets provider_verified to true for all listings of that provider" do
       provider_id = Ecto.UUID.generate()
 
-      # Insert listings with provider_verified = false
-      listing_1 =
-        Repo.insert!(%ProgramListing{
-          id: Ecto.UUID.generate(),
-          title: "Program A",
-          provider_id: provider_id,
-          provider_verified: false
-        })
+      listing_1 = insert_listing(title: "Program A", provider_id: provider_id, provider_verified: false)
+      listing_2 = insert_listing(title: "Program B", provider_id: provider_id, provider_verified: false)
 
-      listing_2 =
-        Repo.insert!(%ProgramListing{
-          id: Ecto.UUID.generate(),
-          title: "Program B",
-          provider_id: provider_id,
-          provider_verified: false
-        })
-
-      # Unrelated provider's listing should not be affected
+      # Unrelated provider's listing must not be affected.
       other_provider_id = Ecto.UUID.generate()
-
-      other_listing =
-        Repo.insert!(%ProgramListing{
-          id: Ecto.UUID.generate(),
-          title: "Other Program",
-          provider_id: other_provider_id,
-          provider_verified: false
-        })
+      other_listing = insert_listing(title: "Other Program", provider_id: other_provider_id, provider_verified: false)
 
       event =
         IntegrationEvent.new(
@@ -348,18 +286,10 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           %{provider_id: provider_id, business_name: "Test Business"}
         )
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:provider:provider_verified",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
+      dispatch("integration:provider:provider_verified", event)
 
       assert Repo.get(ProgramListing, listing_1.id).provider_verified == true
       assert Repo.get(ProgramListing, listing_2.id).provider_verified == true
-      # Other provider's listing should remain unchanged
       assert Repo.get(ProgramListing, other_listing.id).provider_verified == false
     end
   end
@@ -368,33 +298,12 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
     test "sets provider_verified to false for all listings of that provider" do
       provider_id = Ecto.UUID.generate()
 
-      # Insert listings with provider_verified = true
-      listing_1 =
-        Repo.insert!(%ProgramListing{
-          id: Ecto.UUID.generate(),
-          title: "Program A",
-          provider_id: provider_id,
-          provider_verified: true
-        })
+      listing_1 = insert_listing(title: "Program A", provider_id: provider_id, provider_verified: true)
+      listing_2 = insert_listing(title: "Program B", provider_id: provider_id, provider_verified: true)
 
-      listing_2 =
-        Repo.insert!(%ProgramListing{
-          id: Ecto.UUID.generate(),
-          title: "Program B",
-          provider_id: provider_id,
-          provider_verified: true
-        })
-
-      # Unrelated provider's listing should not be affected
+      # Unrelated provider's listing must not be affected.
       other_provider_id = Ecto.UUID.generate()
-
-      other_listing =
-        Repo.insert!(%ProgramListing{
-          id: Ecto.UUID.generate(),
-          title: "Other Program",
-          provider_id: other_provider_id,
-          provider_verified: true
-        })
+      other_listing = insert_listing(title: "Other Program", provider_id: other_provider_id, provider_verified: true)
 
       event =
         IntegrationEvent.new(
@@ -405,18 +314,10 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           %{provider_id: provider_id, business_name: "Test Business"}
         )
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:provider:provider_unverified",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
+      dispatch("integration:provider:provider_unverified", event)
 
       assert Repo.get(ProgramListing, listing_1.id).provider_verified == false
       assert Repo.get(ProgramListing, listing_2.id).provider_verified == false
-      # Other provider's listing should remain unchanged
       assert Repo.get(ProgramListing, other_listing.id).provider_verified == true
     end
   end
@@ -464,5 +365,16 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       # No retry was scheduled by handle_event; state invariant preserved.
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
     end
+  end
+
+  # Broadcasts an integration event on `topic`, then blocks on :sys.get_state so
+  # the projection GenServer has finished processing before assertions run.
+  defp dispatch(topic, event) do
+    Phoenix.PubSub.broadcast(KlassHero.PubSub, topic, {:integration_event, event})
+    :sys.get_state(@test_server_name)
+  end
+
+  defp insert_listing(attrs) do
+    Repo.insert!(struct!(ProgramListing, Keyword.put_new(attrs, :id, Ecto.UUID.generate())))
   end
 end
