@@ -186,6 +186,22 @@ defmodule KlassHeroWeb.DashboardLiveTest do
       assert has_element?(view, "#kid-picker")
       refute has_element?(view, "#family-programs-loading")
     end
+
+    test "upcoming sessions tile renders a future session (was always empty before the batch fix)",
+         %{conn: conn, program: program} do
+      insert(:program_session_schema,
+        program_id: program.id,
+        session_date: Date.add(Date.utc_today(), 3)
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/dashboard")
+      render_async(view)
+
+      upcoming = view |> element("#upcoming-sessions") |> render()
+
+      refute upcoming =~ "No upcoming sessions"
+      assert upcoming =~ program.title
+    end
   end
 
   describe "role-based redirect from /dashboard" do

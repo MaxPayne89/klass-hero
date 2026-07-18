@@ -8,6 +8,7 @@ defmodule KlassHeroWeb.DashboardLive do
   alias KlassHero.Family
   alias KlassHero.Family.Child
   alias KlassHero.Messaging
+  alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHeroWeb.Helpers.Greeting
   alias KlassHeroWeb.Presenters.ChildPresenter
@@ -125,23 +126,23 @@ defmodule KlassHeroWeb.DashboardLive do
   end
 
   # Top 5 upcoming sessions across active programs, ascending by date.
+  # One batched query; each session fans out to every {enrollment, program}
+  # pair sharing its program (a program can hold more than one enrolled child).
   defp load_upcoming_sessions([], _children), do: []
 
   defp load_upcoming_sessions(active_programs, children) do
-    today = Date.utc_today()
     children_by_id = Map.new(children, &{&1.id, &1})
+    pairs_by_program = Enum.group_by(active_programs, fn {_enrollment, program} -> program.id end)
 
-    active_programs
-    |> Enum.flat_map(fn {enrollment, program} ->
-      case KlassHero.Participation.list_sessions(%{program_id: program.id}) do
-        {:ok, sessions} ->
-          sessions
-          |> Enum.filter(&(Date.compare(&1.session_date, today) != :lt))
-          |> Enum.map(&{enrollment, program, &1, Map.get(children_by_id, enrollment.child_id)})
-
-        _ ->
-          []
-      end
+    pairs_by_program
+    |> Map.keys()
+    |> Participation.list_upcoming_sessions_for_programs(Date.utc_today())
+    |> Enum.flat_map(fn session ->
+      pairs_by_program
+      |> Map.get(session.program_id, [])
+      |> Enum.map(fn {enrollment, program} ->
+        {enrollment, program, session, Map.get(children_by_id, enrollment.child_id)}
+      end)
     end)
     |> Enum.sort_by(fn {_, _, session, _} -> session.session_date end, {:asc, Date})
     |> Enum.take(5)
