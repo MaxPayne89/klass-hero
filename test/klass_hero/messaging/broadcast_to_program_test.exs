@@ -13,29 +13,18 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
   alias KlassHero.Messaging.Message
   alias KlassHero.Provider.ProviderProfile
 
+  setup do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    scope = build_scope_with_provider(provider)
+    %{provider: provider, program: program, scope: scope}
+  end
+
   describe "execute/4" do
-    test "creates broadcast conversation and message with enrolled parents" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      # Create parents with real users to satisfy FK constraint
-      parent_user1 = AccountsFixtures.user_fixture()
-      parent_user2 = AccountsFixtures.user_fixture()
-      parent1 = insert(:parent_profile_schema, identity_id: parent_user1.id)
-      parent2 = insert(:parent_profile_schema, identity_id: parent_user2.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent1.id,
-        status: "confirmed"
-      )
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent2.id,
-        status: "pending"
-      )
+    test "creates broadcast conversation and message with enrolled parents", ctx do
+      %{program: program, scope: scope} = ctx
+      enroll_parent(program, status: "confirmed")
+      enroll_parent(program, status: "pending")
 
       assert {:ok, conversation, message, recipient_count} =
                BroadcastToProgram.execute(scope, program.id, "Important announcement!")
@@ -50,19 +39,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert recipient_count == 2
     end
 
-    test "includes subject when provided" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "includes subject when provided", %{program: program, scope: scope} do
+      enroll_parent(program)
 
       assert {:ok, conversation, _message, _count} =
                BroadcastToProgram.execute(
@@ -75,62 +53,26 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert conversation.subject == "Schedule Change"
     end
 
-    test "any provider can broadcast (former starter tier included)" do
-      # Provider tiers removed (ADR-0004): no entitlement gate on broadcasts
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent = insert(:parent_profile_schema)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    # Provider tiers removed (ADR-0004): no entitlement gate on broadcasts.
+    test "any provider can broadcast (former starter tier included)", %{
+      program: program,
+      scope: scope
+    } do
+      enroll_parent(program)
 
       assert {:ok, _conversation, _message, _recipient_count} =
                BroadcastToProgram.execute(scope, program.id, "Message")
     end
 
-    test "returns no_enrollments error when no parents enrolled" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
+    test "returns no_enrollments error when no parents enrolled", %{program: program, scope: scope} do
       assert {:error, :no_enrollments} =
                BroadcastToProgram.execute(scope, program.id, "Message")
     end
 
-    test "excludes cancelled and completed enrollments" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      active_user = AccountsFixtures.user_fixture()
-      cancelled_user = AccountsFixtures.user_fixture()
-      completed_user = AccountsFixtures.user_fixture()
-      active_parent = insert(:parent_profile_schema, identity_id: active_user.id)
-      cancelled_parent = insert(:parent_profile_schema, identity_id: cancelled_user.id)
-      completed_parent = insert(:parent_profile_schema, identity_id: completed_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: active_parent.id,
-        status: "confirmed"
-      )
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: cancelled_parent.id,
-        status: "cancelled"
-      )
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: completed_parent.id,
-        status: "completed"
-      )
+    test "excludes cancelled and completed enrollments", %{program: program, scope: scope} do
+      enroll_parent(program, status: "confirmed")
+      enroll_parent(program, status: "cancelled")
+      enroll_parent(program, status: "completed")
 
       assert {:ok, _conversation, _message, recipient_count} =
                BroadcastToProgram.execute(scope, program.id, "Message")
@@ -138,20 +80,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert recipient_count == 1
     end
 
-    # Provider tiers removed (ADR-0004): any provider can broadcast.
-    test "provider can broadcast" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "provider can broadcast", %{program: program, scope: scope} do
+      enroll_parent(program)
 
       assert {:ok, _conversation, _message, _count} =
                BroadcastToProgram.execute(scope, program.id, "Message")
@@ -159,19 +89,9 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
   end
 
   describe "staff auto-inclusion in broadcast" do
-    test "adds assigned staff as participants alongside parents" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "adds assigned staff as participants alongside parents", ctx do
+      %{provider: provider, program: program, scope: scope} = ctx
+      enroll_parent(program)
 
       staff_user = AccountsFixtures.user_fixture()
 
@@ -187,21 +107,11 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
-    test "does not duplicate owner when owner is also assigned as staff" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
+    test "does not duplicate owner when owner is also assigned as staff", ctx do
+      %{provider: provider, program: program, scope: scope} = ctx
+      enroll_parent(program)
 
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
-
-      # Assign the broadcasting user as staff too
+      # Assign the broadcasting user as staff too.
       ProgramStaffParticipantRepository.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
@@ -221,19 +131,9 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
     #      back the entire transaction, surfacing as a generic "Failed to send broadcast".
     # Outcome: both calls succeed, the same broadcast conversation is reused, both messages
     #          are persisted, no duplicate participant rows.
-    test "second broadcast on the same program reuses the conversation and persists both messages" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "second broadcast on the same program reuses the conversation and persists both messages",
+         %{program: program, scope: scope} do
+      enroll_parent(program)
 
       assert {:ok, first_conv, first_msg, 1} =
                BroadcastToProgram.execute(scope, program.id, "First announcement")
@@ -244,7 +144,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert second_conv.id == first_conv.id
       refute second_msg.id == first_msg.id
 
-      # Sender stays a single participant — no duplicate insert
+      # Sender stays a single participant — no duplicate insert.
       assert KlassHero.Messaging.participant?(first_conv.id, scope.user.id)
 
       sender_rows =
@@ -264,19 +164,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       size: 1_000
     }
 
-    test "persists attachments alongside the broadcast message" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "persists attachments alongside the broadcast message", %{program: program, scope: scope} do
+      enroll_parent(program)
 
       assert {:ok, _conversation, message, _count} =
                BroadcastToProgram.execute(scope, program.id, "Look at this!", attachments: [@photo])
@@ -285,19 +174,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert hd(message.attachments).original_filename == "announcement.jpg"
     end
 
-    test "attachment-only broadcast persists nil content" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "attachment-only broadcast persists nil content", %{program: program, scope: scope} do
+      enroll_parent(program)
 
       for content <- ["", "   "] do
         assert {:ok, _conversation, message, _count} =
@@ -309,19 +187,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       end
     end
 
-    test "surfaces SendMessage validation errors" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "surfaces SendMessage validation errors", %{program: program, scope: scope} do
+      enroll_parent(program)
 
       too_many =
         for i <- 1..6 do
@@ -354,19 +221,11 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       :ok
     end
 
-    test "publishes :message_sent with conversation, sender, and content" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "publishes :message_sent with conversation, sender, and content", %{
+      program: program,
+      scope: scope
+    } do
+      enroll_parent(program)
 
       assert {:ok, conversation, message, _count} =
                BroadcastToProgram.execute(scope, program.id, "Announcement")
@@ -379,19 +238,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       })
     end
 
-    test "does not publish :broadcast_sent" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "does not publish :broadcast_sent", %{program: program, scope: scope} do
+      enroll_parent(program)
 
       assert {:ok, _conv, _msg, _count} =
                BroadcastToProgram.execute(scope, program.id, "Announcement")
@@ -407,27 +255,10 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       :ok
     end
 
-    test "first broadcast emits :participant_added with source :broadcast_setup carrying sender + parent user_ids" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
-
-      parent1_user = AccountsFixtures.user_fixture()
-      parent2_user = AccountsFixtures.user_fixture()
-      parent1 = insert(:parent_profile_schema, identity_id: parent1_user.id)
-      parent2 = insert(:parent_profile_schema, identity_id: parent2_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent1.id,
-        status: "confirmed"
-      )
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent2.id,
-        status: "confirmed"
-      )
+    test "first broadcast emits :participant_added with source :broadcast_setup carrying sender + parent user_ids",
+         %{program: program, scope: scope} do
+      %{user: parent1_user} = enroll_parent(program)
+      %{user: parent2_user} = enroll_parent(program)
 
       assert {:ok, conversation, _msg, _count} =
                BroadcastToProgram.execute(scope, program.id, "Hi")
@@ -450,19 +281,9 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
                Enum.sort([scope.user.id, parent1_user.id, parent2_user.id])
     end
 
-    test "re-broadcast on existing conversation with same participants emits NO :broadcast_setup event" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
-
-      parent_user = AccountsFixtures.user_fixture()
-      parent = insert(:parent_profile_schema, identity_id: parent_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent.id,
-        status: "confirmed"
-      )
+    test "re-broadcast on existing conversation with same participants emits NO :broadcast_setup event",
+         %{program: program, scope: scope} do
+      enroll_parent(program)
 
       assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
 
@@ -480,33 +301,16 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
              "expected no :broadcast_setup event on re-broadcast when participants are unchanged"
     end
 
-    test "re-broadcast that adds a NEW enrolled parent emits :broadcast_setup with only the new user_id" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
-
-      parent1_user = AccountsFixtures.user_fixture()
-      parent1 = insert(:parent_profile_schema, identity_id: parent1_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent1.id,
-        status: "confirmed"
-      )
+    test "re-broadcast that adds a NEW enrolled parent emits :broadcast_setup with only the new user_id",
+         %{program: program, scope: scope} do
+      enroll_parent(program)
 
       assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "first")
 
       clear_integration_events()
 
-      # New parent enrolled between broadcasts
-      parent2_user = AccountsFixtures.user_fixture()
-      parent2 = insert(:parent_profile_schema, identity_id: parent2_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent2.id,
-        status: "confirmed"
-      )
+      # New parent enrolled between broadcasts.
+      %{user: parent2_user} = enroll_parent(program)
 
       assert {:ok, _, _, _} = BroadcastToProgram.execute(scope, program.id, "second")
 
@@ -525,27 +329,10 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert event.payload.participant_user_ids == [parent2_user.id]
     end
 
-    test "sender and each parent see broadcast in inbox after projection runs (no server restart)" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
-
-      parent1_user = AccountsFixtures.user_fixture()
-      parent2_user = AccountsFixtures.user_fixture()
-      parent1 = insert(:parent_profile_schema, identity_id: parent1_user.id)
-      parent2 = insert(:parent_profile_schema, identity_id: parent2_user.id)
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent1.id,
-        status: "confirmed"
-      )
-
-      insert(:enrollment_schema,
-        program_id: program.id,
-        parent_id: parent2.id,
-        status: "confirmed"
-      )
+    test "sender and each parent see broadcast in inbox after projection runs (no server restart)",
+         %{program: program, scope: scope} do
+      %{user: parent1_user} = enroll_parent(program)
+      %{user: parent2_user} = enroll_parent(program)
 
       assert {:ok, conversation, _msg, _count} =
                BroadcastToProgram.execute(scope, program.id, "Important")
@@ -572,6 +359,18 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
                  "got #{inspect(Enum.map(summaries, & &1.conversation_id))}"
       end
     end
+  end
+
+  # Enrolls a fresh parent (backed by a real user for the FK) into the program.
+  # Returns the created %{user, parent}.
+  defp enroll_parent(program, opts \\ []) do
+    status = Keyword.get(opts, :status, "confirmed")
+    user = AccountsFixtures.user_fixture()
+    parent = insert(:parent_profile_schema, identity_id: user.id)
+
+    insert(:enrollment_schema, program_id: program.id, parent_id: parent.id, status: status)
+
+    %{user: user, parent: parent}
   end
 
   defp build_scope_with_provider(provider_schema) do
