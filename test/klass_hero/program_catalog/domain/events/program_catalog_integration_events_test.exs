@@ -5,75 +5,42 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramCatalogIntegrationEvents
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.ProgramCatalog.Domain.Events.ProgramCatalogIntegrationEvents
+  alias KlassHero.ProgramCatalog.Domain.Events.ProgramCatalogIntegrationEvents, as: Events
 
-  describe "program_created/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      program_id = Ecto.UUID.generate()
+  # Both factories share one contract: build a :program_catalog integration
+  # event with stable identity fields, let base_payload's program_id win over
+  # any caller-supplied value, and raise on a nil or blank program_id.
+  @factories [:program_created, :program_updated]
 
-      event = ProgramCatalogIntegrationEvents.program_created(program_id)
+  for fun <- @factories do
+    describe "#{fun}/3" do
+      @fun fun
 
-      assert event.event_type == :program_created
-      assert event.source_context == :program_catalog
-      assert event.entity_type == :program
-      assert event.entity_id == program_id
-    end
+      test "creates event with correct type, source_context, and entity_type" do
+        event = apply(Events, @fun, ["prog-1"])
 
-    test "base_payload program_id wins over caller-supplied program_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
+        assert event.event_type == @fun
+        assert event.source_context == :program_catalog
+        assert event.entity_type == :program
+        assert event.entity_id == "prog-1"
+      end
 
-      event = ProgramCatalogIntegrationEvents.program_created(real_id, conflicting_payload)
+      test "base_payload program_id wins over caller-supplied program_id" do
+        conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
 
-      assert event.payload.program_id == real_id
-      assert event.payload.extra == "data"
-    end
+        event = apply(Events, @fun, ["real-id", conflicting_payload])
 
-    test "raises for nil program_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty program_id string/,
-                   fn -> ProgramCatalogIntegrationEvents.program_created(nil) end
-    end
+        assert event.payload.program_id == "real-id"
+        assert event.payload.extra == "data"
+      end
 
-    test "raises for empty string program_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty program_id string/,
-                   fn -> ProgramCatalogIntegrationEvents.program_created("") end
-    end
-  end
-
-  describe "program_updated/3" do
-    test "creates event with correct type, source_context, and entity_type" do
-      program_id = Ecto.UUID.generate()
-
-      event = ProgramCatalogIntegrationEvents.program_updated(program_id)
-
-      assert event.event_type == :program_updated
-      assert event.source_context == :program_catalog
-      assert event.entity_type == :program
-      assert event.entity_id == program_id
-    end
-
-    test "base_payload program_id wins over caller-supplied program_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
-
-      event = ProgramCatalogIntegrationEvents.program_updated(real_id, conflicting_payload)
-
-      assert event.payload.program_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises for nil program_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty program_id string/,
-                   fn -> ProgramCatalogIntegrationEvents.program_updated(nil) end
-    end
-
-    test "raises for empty string program_id" do
-      assert_raise ArgumentError,
-                   ~r/requires a non-empty program_id string/,
-                   fn -> ProgramCatalogIntegrationEvents.program_updated("") end
+      test "raises for a nil or empty program_id" do
+        for bad_id <- [nil, ""] do
+          assert_raise ArgumentError, ~r/requires a non-empty program_id string/, fn ->
+            apply(Events, @fun, [bad_id])
+          end
+        end
+      end
     end
   end
 end

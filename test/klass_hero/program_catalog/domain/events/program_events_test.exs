@@ -8,127 +8,68 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
   alias KlassHero.ProgramCatalog.Domain.Events.ProgramEvents
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
-  describe "program_created/3" do
-    test "base_payload program_id wins over caller-supplied program_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
+  # Every factory shares one contract: build a :program DomainEvent, let
+  # base_payload's program_id win over any caller-supplied value, and raise
+  # on a nil or blank program_id. The table drives that shared shape;
+  # factory-specific payload assertions live in their own describe below.
+  @factories [:program_created, :program_updated, :program_schedule_updated]
 
-      event = ProgramEvents.program_created(real_id, conflicting_payload)
+  for fun <- @factories do
+    describe "#{fun}/3" do
+      @fun fun
 
-      assert event.payload.program_id == real_id
-      assert event.payload.extra == "data"
-    end
+      test "builds a valid event with default payload" do
+        event = apply(ProgramEvents, @fun, ["program-1"])
 
-    test "creates event with correct type" do
-      program_id = Ecto.UUID.generate()
-
-      event = ProgramEvents.program_created(program_id)
-
-      assert event.event_type == :program_created
-      assert event.aggregate_id == program_id
-    end
-
-    test "raises for nil program_id" do
-      assert_raise ArgumentError, fn ->
-        ProgramEvents.program_created(nil)
+        assert %DomainEvent{} = event
+        assert event.event_type == @fun
+        assert event.aggregate_id == "program-1"
+        assert event.aggregate_type == :program
+        assert event.payload.program_id == "program-1"
       end
-    end
 
-    test "raises for empty string program_id" do
-      assert_raise ArgumentError, fn ->
-        ProgramEvents.program_created("")
+      test "base_payload program_id wins over caller-supplied and preserves extras" do
+        conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
+
+        event = apply(ProgramEvents, @fun, ["real-id", conflicting_payload])
+
+        assert event.payload.program_id == "real-id"
+        assert event.payload.extra == "data"
+      end
+
+      test "raises for a nil or empty program_id" do
+        for bad_id <- [nil, ""] do
+          assert_raise ArgumentError, fn ->
+            apply(ProgramEvents, @fun, [bad_id])
+          end
+        end
       end
     end
   end
 
-  describe "program_schedule_updated/3" do
-    test "creates a valid schedule updated event" do
+  describe "program_schedule_updated/3 payload" do
+    test "carries meeting day and time fields" do
       event =
-        ProgramEvents.program_schedule_updated("program-123", %{
+        ProgramEvents.program_schedule_updated("program-1", %{
           meeting_days: ["Monday", "Wednesday"],
           meeting_start_time: ~T[16:00:00],
           meeting_end_time: ~T[17:30:00]
         })
 
-      assert event.event_type == :program_schedule_updated
-      assert event.aggregate_id == "program-123"
-      assert event.aggregate_type == :program
-      assert event.payload.program_id == "program-123"
       assert event.payload.meeting_days == ["Monday", "Wednesday"]
-    end
-
-    test "creates event with default empty payload" do
-      event = ProgramEvents.program_schedule_updated("program-123")
-
-      assert event.event_type == :program_schedule_updated
-      assert event.payload.program_id == "program-123"
-    end
-
-    test "base_payload program_id wins over caller-supplied program_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
-
-      event = ProgramEvents.program_schedule_updated(real_id, conflicting_payload)
-
-      assert event.payload.program_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises for nil program_id" do
-      assert_raise ArgumentError, fn ->
-        ProgramEvents.program_schedule_updated(nil)
-      end
-    end
-
-    test "raises for empty string program_id" do
-      assert_raise ArgumentError, fn ->
-        ProgramEvents.program_schedule_updated("")
-      end
+      assert event.payload.meeting_start_time == ~T[16:00:00]
+      assert event.payload.meeting_end_time == ~T[17:30:00]
     end
   end
 
-  describe "program_updated/3" do
-    test "creates a program_updated domain event with payload" do
-      program_id = Ecto.UUID.generate()
+  describe "program_updated/3 payload" do
+    test "carries title and price fields" do
       payload = %{title: "Updated Title", price: Decimal.new("200.00")}
 
-      event = ProgramEvents.program_updated(program_id, payload)
+      event = ProgramEvents.program_updated("program-1", payload)
 
-      assert %DomainEvent{} = event
-      assert event.event_type == :program_updated
-      assert event.aggregate_id == program_id
-      assert event.aggregate_type == :program
-      assert event.payload.program_id == program_id
       assert event.payload.title == "Updated Title"
-    end
-
-    test "creates event with default empty payload" do
-      event = ProgramEvents.program_updated("program-123")
-
-      assert event.event_type == :program_updated
-      assert event.payload.program_id == "program-123"
-    end
-
-    test "base_payload program_id wins over caller-supplied program_id" do
-      real_id = Ecto.UUID.generate()
-      conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
-
-      event = ProgramEvents.program_updated(real_id, conflicting_payload)
-
-      assert event.payload.program_id == real_id
-      assert event.payload.extra == "data"
-    end
-
-    test "raises for nil program_id" do
-      assert_raise ArgumentError, fn ->
-        ProgramEvents.program_updated(nil)
-      end
-    end
-
-    test "raises on empty program_id" do
-      assert_raise ArgumentError, fn ->
-        ProgramEvents.program_updated("", %{})
-      end
+      assert event.payload.price == Decimal.new("200.00")
     end
   end
 end
