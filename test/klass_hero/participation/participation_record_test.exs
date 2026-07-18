@@ -5,7 +5,7 @@ defmodule KlassHero.Participation.ParticipationRecordTest do
   Covers validation, status transitions, and check-in/out flows.
   """
 
-  use KlassHero.DataCase, async: true
+  use ExUnit.Case, async: true
 
   import KlassHero.Factory
 
@@ -208,46 +208,34 @@ defmodule KlassHero.Participation.ParticipationRecordTest do
   end
 
   describe "checked_in?/1" do
-    test "returns true for :checked_in status" do
-      record = build(:participation_record, status: :checked_in)
-      assert ParticipationRecord.checked_in?(record)
-    end
-
-    test "returns false for :registered status" do
-      record = build(:participation_record, status: :registered)
-      refute ParticipationRecord.checked_in?(record)
-    end
-
-    test "returns false for :checked_out status" do
-      record = build(:participation_record, status: :checked_out)
-      refute ParticipationRecord.checked_in?(record)
-    end
-
-    test "returns false for :absent status" do
-      record = build(:participation_record, status: :absent)
-      refute ParticipationRecord.checked_in?(record)
+    for {status, expected} <- [
+          {:checked_in, true},
+          {:registered, false},
+          {:checked_out, false},
+          {:absent, false}
+        ] do
+      @status status
+      @expected expected
+      test "#{expected} for #{status} status" do
+        record = build(:participation_record, status: @status)
+        assert ParticipationRecord.checked_in?(record) == @expected
+      end
     end
   end
 
   describe "completed?/1" do
-    test "returns true for :checked_out status" do
-      record = build(:participation_record, status: :checked_out)
-      assert ParticipationRecord.completed?(record)
-    end
-
-    test "returns false for :registered status" do
-      record = build(:participation_record, status: :registered)
-      refute ParticipationRecord.completed?(record)
-    end
-
-    test "returns false for :checked_in status" do
-      record = build(:participation_record, status: :checked_in)
-      refute ParticipationRecord.completed?(record)
-    end
-
-    test "returns false for :absent status" do
-      record = build(:participation_record, status: :absent)
-      refute ParticipationRecord.completed?(record)
+    for {status, expected} <- [
+          {:checked_out, true},
+          {:registered, false},
+          {:checked_in, false},
+          {:absent, false}
+        ] do
+      @status status
+      @expected expected
+      test "#{expected} for #{status} status" do
+        record = build(:participation_record, status: @status)
+        assert ParticipationRecord.completed?(record) == @expected
+      end
     end
   end
 
