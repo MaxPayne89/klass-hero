@@ -4,9 +4,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  # ============================================================================
   # Authentication & Authorization
-  # ============================================================================
 
   describe "authentication" do
     test "unauthenticated user is redirected from index", %{conn: conn} do
@@ -40,9 +38,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
   end
 
-  # ============================================================================
   # Index Page
-  # ============================================================================
 
   describe "index page" do
     setup :register_and_log_in_admin
@@ -164,9 +160,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
   end
 
-  # ============================================================================
   # Show Page
-  # ============================================================================
 
   describe "show page" do
     setup :register_and_log_in_admin
@@ -326,9 +320,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
   end
 
-  # ============================================================================
   # Approve Flow
-  # ============================================================================
 
   describe "approve flow" do
     setup :register_and_log_in_admin
@@ -372,9 +364,7 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
     end
   end
 
-  # ============================================================================
   # Reject Flow
-  # ============================================================================
 
   describe "reject flow" do
     setup :register_and_log_in_admin

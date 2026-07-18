@@ -68,9 +68,7 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
     )
   end
 
-  # ---------------------------------------------------------------------------
   # Path 1: Happy path — new user
-  # ---------------------------------------------------------------------------
 
   describe "full saga — new user" do
     setup do
@@ -156,9 +154,7 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Path 2: Existing user — fast path
-  # ---------------------------------------------------------------------------
 
   describe "full saga — existing user" do
     setup do
@@ -220,9 +216,7 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
     end
   end
 
-  # ---------------------------------------------------------------------------
   # Path 3: Compensation — email failure and resend
-  # ---------------------------------------------------------------------------
 
   describe "compensation — email failure and resend" do
     setup do
