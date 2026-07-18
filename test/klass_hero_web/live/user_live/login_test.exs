@@ -12,7 +12,8 @@ defmodule KlassHeroWeb.UserLive.LoginTest do
 
       assert html =~ "Welcome"
       assert html =~ "Register"
-      assert html =~ "Send magic link"
+      # Password is the default sign-in method; magic link is one toggle away
+      assert html =~ ~s(id="login_form_password")
     end
   end
 
@@ -21,6 +22,9 @@ defmodule KlassHeroWeb.UserLive.LoginTest do
       user = user_fixture()
 
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
+
+      # Magic link is now the secondary method — toggle to it first
+      lv |> element("button", "Or use magic link") |> render_click()
 
       {:ok, _lv, html} =
         form(lv, "#login_form_magic", user: %{email: user.email})
@@ -35,6 +39,9 @@ defmodule KlassHeroWeb.UserLive.LoginTest do
 
     test "does not disclose if user is registered", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
+
+      # Magic link is now the secondary method — toggle to it first
+      lv |> element("button", "Or use magic link") |> render_click()
 
       {:ok, _lv, html} =
         form(lv, "#login_form_magic", user: %{email: "idonotexist@example.com"})
@@ -51,9 +58,7 @@ defmodule KlassHeroWeb.UserLive.LoginTest do
 
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
 
-      # Toggle to password form
-      lv |> element("button", "Or use password") |> render_click()
-
+      # Password is the default form now — no toggle needed
       form =
         form(lv, "#login_form_password", user: %{email: user.email, password: valid_user_password(), remember_me: true})
 
@@ -67,9 +72,7 @@ defmodule KlassHeroWeb.UserLive.LoginTest do
     } do
       {:ok, lv, _html} = live(conn, ~p"/users/log-in")
 
-      # Toggle to password form
-      lv |> element("button", "Or use password") |> render_click()
-
+      # Password is the default form now — no toggle needed
       form =
         form(lv, "#login_form_password", user: %{email: "test@email.com", password: "123456"})
 
@@ -106,7 +109,7 @@ defmodule KlassHeroWeb.UserLive.LoginTest do
 
       assert html =~ "You need to reauthenticate"
       refute html =~ "Register"
-      assert html =~ "Send magic link"
+      assert html =~ "Log in and stay logged in"
 
       assert html =~ user.email
     end

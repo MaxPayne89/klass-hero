@@ -96,13 +96,12 @@ defmodule KlassHeroWeb.E2E.MessagingHelpers do
   @doc """
   Logs in through the UI as the given user.
 
-  Navigates to the login page, toggles to the password form,
+  Navigates to the login page (password is the default form),
   fills in credentials, and submits. The user must have had
   `AccountsFixtures.set_password/1` called on them.
   """
   def log_in(session, %{email: email}) do
     session = visit(session, "/users/log-in")
-    session = click(session, Query.button("Or use password"))
 
     assert_has(session, Query.css("#login_form_password"))
 

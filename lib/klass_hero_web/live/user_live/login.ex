@@ -144,7 +144,7 @@ defmodule KlassHeroWeb.UserLive.Login do
      assign(socket,
        form: form,
        trigger_submit: false,
-       show_password_form: false,
+       show_password_form: true,
        active_nav: :auth
      )}
   end
