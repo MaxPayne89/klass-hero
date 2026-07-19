@@ -18,19 +18,18 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
       |> assign(:active_nav, :participation)
       |> assign(:parent_id, parent_id)
       |> assign(:child_names_map, %{})
-      |> assign(:children_ids, MapSet.new())
       |> stream(:participation_records, [])
       |> assign(:pending_notes, [])
       |> assign(:reject_form_expanded, nil)
       |> assign(:reject_forms, %{})
 
     if connected?(socket) do
-      # A parent's children can attend any provider's sessions, so subscribe to the
-      # generic attendance topics (filtered to this parent's children in handle_info)
-      # plus session-note submissions. Topics derive from the event registry (#1108).
-      topics = [Participation.event_topic(:session_note_submitted) | Participation.participation_topics(:attendance)]
-
-      for topic <- topics, do: Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
+      # Subscribe per child to child-scoped topics (#1121) so this LiveView only
+      # receives its own children's attendance + session-note events — no generic
+      # firehose, no handle_info membership filter. The subscription set is fixed at
+      # mount: a child added mid-session isn't streamed until the next remount.
+      for child_id <- Family.get_child_ids_for_parent(parent_id),
+          do: Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.child_topic(child_id))
     end
 
     {:ok, load_participation_history(socket)}
@@ -110,41 +109,28 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
     end
   end
 
+  # Ownership is guaranteed by the child-scoped subscription (#1121) — we only
+  # receive events for this parent's children, so no membership check is needed.
   @impl true
-  def handle_info(
-        {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id, payload: %{child_id: child_id}}},
-        socket
-      )
+  def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id}}, socket)
       when event_type in [:child_checked_in, :child_checked_out, :child_marked_absent] do
-    socket =
-      if child_belongs_to_parent?(child_id, socket) do
-        opts = if event_type == :child_checked_in, do: [at: 0], else: []
-        load_and_stream_record(socket, record_id, opts)
-      else
-        socket
-      end
-
-    {:noreply, socket}
+    opts = if event_type == :child_checked_in, do: [at: 0], else: []
+    {:noreply, load_and_stream_record(socket, record_id, opts)}
   end
 
+  # Any session-note lifecycle event refreshes the pending list — submitted adds one,
+  # approved/rejected removes one (e.g. reviewed from another device/tab).
   @impl true
-  def handle_info(
-        {:domain_event, %DomainEvent{event_type: :session_note_submitted, payload: %{child_id: child_id}}},
-        socket
-      ) do
-    socket =
-      if child_belongs_to_parent?(child_id, socket) do
-        load_pending_notes(socket)
-      else
-        socket
-      end
-
-    {:noreply, socket}
+  def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
+      when event_type in [:session_note_submitted, :session_note_approved, :session_note_rejected] do
+    {:noreply, load_pending_notes(socket)}
   end
 
-  defp child_belongs_to_parent?(child_id, socket) do
-    MapSet.member?(socket.assigns.children_ids, child_id)
-  end
+  # publish_to_child_topic/1 fans out ANY child_id-bearing event to this LiveView's
+  # subscribed child topics. Ignore the ones with no display effect here rather than
+  # crashing on an unmatched message (a new child_id event must not break the page).
+  @impl true
+  def handle_info({:domain_event, %DomainEvent{}}, socket), do: {:noreply, socket}
 
   defp load_participation_history(socket) do
     parent_id = socket.assigns.parent_id
@@ -170,14 +156,11 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
         {child.id, %{first_name: child.first_name, last_name: child.last_name}}
       end)
 
-    children_ids = MapSet.new(children, & &1.id)
-
     enriched_records =
       Enum.map(participation_records, &enrich_history_record(&1, child_names_map))
 
     socket
     |> assign(:child_names_map, child_names_map)
-    |> assign(:children_ids, children_ids)
     |> stream(:participation_records, enriched_records, reset: true)
     |> assign(:participation_error, nil)
     |> load_pending_notes()

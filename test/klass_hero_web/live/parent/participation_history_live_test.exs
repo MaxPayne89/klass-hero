@@ -5,14 +5,20 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
 
   use KlassHeroWeb.ConnCase, async: true
 
-  import KlassHero.EventTestHelper
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Participation
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
   setup :register_and_log_in_parent
+
+  # Mirrors the prod publish path: broadcast the {:domain_event, _} envelope on the
+  # child-scoped topic. Only a view subscribed to that child's topic receives it.
+  defp broadcast_on_child_topic(%DomainEvent{payload: %{child_id: child_id}} = event) do
+    Phoenix.PubSub.broadcast(KlassHero.PubSub, Participation.child_topic(child_id), {:domain_event, event})
+  end
 
   defp create_child_with_note(%{parent: parent, user: user}) do
     {child, _parent} =
@@ -119,7 +125,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
     end
   end
 
-  describe "real-time attendance updates (#1108)" do
+  describe "real-time attendance updates (child-scoped topics, #1121)" do
     setup %{parent: parent} do
       {child, _parent} =
         insert_child_with_guardian(parent: parent, first_name: "Emma", last_name: "Mueller")
@@ -129,25 +135,51 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       %{child: child}
     end
 
-    test "streams the parent's own child when a check-in event arrives", %{conn: conn, child: child} do
+    test "streams the parent's own child when a check-in is broadcast on its child topic", %{
+      conn: conn,
+      child: child
+    } do
       {:ok, view, _html} = live(conn, ~p"/parent/participation")
       record = insert(:participation_record_schema, child_id: child.id, status: :checked_in)
 
-      emit_domain_event(view, ParticipationEvents.child_checked_in(record, []))
+      broadcast_on_child_topic(ParticipationEvents.child_checked_in(record, []))
 
+      assert render(view) =~ record.id
       assert has_element?(view, "#participation_records-#{record.id}")
     end
 
-    test "handles child_marked_absent (guard atom fix)", %{conn: conn, child: child} do
+    test "streams on child_marked_absent (guard atom fix)", %{conn: conn, child: child} do
       {:ok, view, _html} = live(conn, ~p"/parent/participation")
       record = insert(:participation_record_schema, child_id: child.id, status: :absent)
 
-      emit_domain_event(view, ParticipationEvents.child_marked_absent(record, []))
+      broadcast_on_child_topic(ParticipationEvents.child_marked_absent(record, []))
 
+      assert render(view) =~ record.id
       assert has_element?(view, "#participation_records-#{record.id}")
     end
 
-    test "ignores an attendance event for another family's child (privacy)", %{conn: conn} do
+    test "survives session-note review events fanned out on its child topic (#1121)", %{
+      conn: conn,
+      child: child
+    } do
+      {:ok, view, _html} = live(conn, ~p"/parent/participation")
+
+      # publish_to_child_topic fans out ANY child_id-bearing event, including
+      # session_note_approved/rejected. The LiveView must handle them, not crash —
+      # review_session_note/1 dispatches these in the parent's own process.
+      for event_type <- [:session_note_approved, :session_note_rejected] do
+        event =
+          DomainEvent.new(event_type, Ecto.UUID.generate(), :session_note, %{
+            child_id: child.id,
+            note_id: Ecto.UUID.generate()
+          })
+
+        broadcast_on_child_topic(event)
+        assert render(view), "LiveView crashed on #{event_type}"
+      end
+    end
+
+    test "never receives another family's child event — not subscribed to its topic (privacy)", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/parent/participation")
       foreign_record_id = Ecto.UUID.generate()
 
@@ -157,7 +189,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
           child_id: Ecto.UUID.generate()
         })
 
-      emit_domain_event(view, foreign_event)
+      broadcast_on_child_topic(foreign_event)
 
       refute has_element?(view, "#participation_records-#{foreign_record_id}")
     end
