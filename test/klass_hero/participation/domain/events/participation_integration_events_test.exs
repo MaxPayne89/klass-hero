@@ -32,24 +32,6 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEventsTe
       entity: :participation_record,
       id: :record_id,
       valid: %{session_id: "s", child_id: "c"}
-    },
-    %{
-      fun: :session_note_submitted,
-      entity: :session_note,
-      id: :note_id,
-      valid: %{participation_record_id: "pr", child_id: "c", provider_id: "pv"}
-    },
-    %{
-      fun: :session_note_approved,
-      entity: :session_note,
-      id: :note_id,
-      valid: %{participation_record_id: "pr", child_id: "c", provider_id: "pv"}
-    },
-    %{
-      fun: :session_note_rejected,
-      entity: :session_note,
-      id: :note_id,
-      valid: %{participation_record_id: "pr", child_id: "c", provider_id: "pv"}
     }
   ]
 

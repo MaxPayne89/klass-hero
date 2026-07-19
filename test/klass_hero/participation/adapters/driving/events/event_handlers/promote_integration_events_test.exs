@@ -33,22 +33,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
     %{type: :roster_seeded, agg: :participation, payload: %{program_id: "prog-1", seeded_count: 3}},
     %{type: :child_checked_in, agg: :participation, payload: %{session_id: "sess-1", child_id: "child-1"}},
     %{type: :child_checked_out, agg: :participation, payload: %{session_id: "sess-1", child_id: "child-1"}},
-    %{type: :child_marked_absent, agg: :participation, payload: %{session_id: "sess-1", child_id: "child-1"}},
-    %{
-      type: :session_note_submitted,
-      agg: :session_note,
-      payload: %{participation_record_id: "pr-1", child_id: "child-1", provider_id: "pv-1"}
-    },
-    %{
-      type: :session_note_approved,
-      agg: :session_note,
-      payload: %{participation_record_id: "pr-1", child_id: "child-1", provider_id: "pv-1"}
-    },
-    %{
-      type: :session_note_rejected,
-      agg: :session_note,
-      payload: %{participation_record_id: "pr-1", child_id: "child-1", provider_id: "pv-1"}
-    }
+    %{type: :child_marked_absent, agg: :participation, payload: %{session_id: "sess-1", child_id: "child-1"}}
   ]
 
   for %{type: type, agg: agg, payload: payload} <- @cases do

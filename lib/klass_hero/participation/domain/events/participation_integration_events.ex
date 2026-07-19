@@ -23,12 +23,6 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
     Entity type: `:participation_record`.
   - `:child_marked_absent` - Emitted when a child is marked absent for a session.
     Entity type: `:participation_record`.
-  - `:session_note_submitted` - Emitted when a session note is submitted for review.
-    Entity type: `:session_note`.
-  - `:session_note_approved` - Emitted when a session note is approved.
-    Entity type: `:session_note`.
-  - `:session_note_rejected` - Emitted when a session note is rejected.
-    Entity type: `:session_note`.
   """
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -87,33 +81,6 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           required(:record_id) => String.t(),
           required(:session_id) => String.t(),
           required(:child_id) => String.t(),
-          optional(atom()) => term()
-        }
-
-  @typedoc "Payload for `:session_note_submitted` events."
-  @type session_note_submitted_payload :: %{
-          required(:note_id) => String.t(),
-          required(:participation_record_id) => String.t(),
-          required(:child_id) => String.t(),
-          required(:provider_id) => String.t(),
-          optional(atom()) => term()
-        }
-
-  @typedoc "Payload for `:session_note_approved` events."
-  @type session_note_approved_payload :: %{
-          required(:note_id) => String.t(),
-          required(:participation_record_id) => String.t(),
-          required(:child_id) => String.t(),
-          required(:provider_id) => String.t(),
-          optional(atom()) => term()
-        }
-
-  @typedoc "Payload for `:session_note_rejected` events."
-  @type session_note_rejected_payload :: %{
-          required(:note_id) => String.t(),
-          required(:participation_record_id) => String.t(),
-          required(:child_id) => String.t(),
-          required(:provider_id) => String.t(),
           optional(atom()) => term()
         }
 
@@ -321,93 +288,6 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
   def child_marked_absent(record_id, _payload, _opts) do
     raise ArgumentError,
           "child_marked_absent/3 requires a non-empty record_id string, got: #{inspect(record_id)}"
-  end
-
-  @doc "Creates a `session_note_submitted` integration event. Raises `ArgumentError` on invalid args."
-  def session_note_submitted(note_id, payload \\ %{}, opts \\ [])
-
-  def session_note_submitted(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
-      when is_binary(note_id) and byte_size(note_id) > 0 do
-    base_payload = %{note_id: note_id}
-
-    IntegrationEvent.new(
-      :session_note_submitted,
-      @source_context,
-      :session_note,
-      note_id,
-      Map.merge(payload, base_payload),
-      opts
-    )
-  end
-
-  def session_note_submitted(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
-    missing = [:participation_record_id, :child_id, :provider_id] -- Map.keys(payload)
-
-    raise ArgumentError,
-          "session_note_submitted missing required payload keys: #{inspect(missing)}"
-  end
-
-  def session_note_submitted(note_id, _payload, _opts) do
-    raise ArgumentError,
-          "session_note_submitted/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
-  end
-
-  @doc "Creates a `session_note_approved` integration event. Raises `ArgumentError` on invalid args."
-  def session_note_approved(note_id, payload \\ %{}, opts \\ [])
-
-  def session_note_approved(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
-      when is_binary(note_id) and byte_size(note_id) > 0 do
-    base_payload = %{note_id: note_id}
-
-    IntegrationEvent.new(
-      :session_note_approved,
-      @source_context,
-      :session_note,
-      note_id,
-      Map.merge(payload, base_payload),
-      opts
-    )
-  end
-
-  def session_note_approved(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
-    missing = [:participation_record_id, :child_id, :provider_id] -- Map.keys(payload)
-
-    raise ArgumentError,
-          "session_note_approved missing required payload keys: #{inspect(missing)}"
-  end
-
-  def session_note_approved(note_id, _payload, _opts) do
-    raise ArgumentError,
-          "session_note_approved/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
-  end
-
-  @doc "Creates a `session_note_rejected` integration event. Raises `ArgumentError` on invalid args."
-  def session_note_rejected(note_id, payload \\ %{}, opts \\ [])
-
-  def session_note_rejected(note_id, %{participation_record_id: _, child_id: _, provider_id: _} = payload, opts)
-      when is_binary(note_id) and byte_size(note_id) > 0 do
-    base_payload = %{note_id: note_id}
-
-    IntegrationEvent.new(
-      :session_note_rejected,
-      @source_context,
-      :session_note,
-      note_id,
-      Map.merge(payload, base_payload),
-      opts
-    )
-  end
-
-  def session_note_rejected(note_id, payload, _opts) when is_binary(note_id) and byte_size(note_id) > 0 do
-    missing = [:participation_record_id, :child_id, :provider_id] -- Map.keys(payload)
-
-    raise ArgumentError,
-          "session_note_rejected missing required payload keys: #{inspect(missing)}"
-  end
-
-  def session_note_rejected(note_id, _payload, _opts) do
-    raise ArgumentError,
-          "session_note_rejected/3 requires a non-empty note_id string, got: #{inspect(note_id)}"
   end
 
   @typedoc "Payload for `:session_cancelled` events."
