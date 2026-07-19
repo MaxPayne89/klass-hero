@@ -43,15 +43,12 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
       |> assign(:record_note_map, %{})
 
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(
-        KlassHero.PubSub,
-        "participation:provider:#{staff_member.provider_id}"
-      )
+      # Attendance on the provider-scoped topic; session-note topics derive from the
+      # event registry (#1108). Both come from the Participation facade.
+      provider_topic = Participation.provider_topic(staff_member.provider_id)
 
-      # Session note events use global topics; no provider-scoped version exists.
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_submitted")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_approved")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_rejected")
+      for topic <- [provider_topic | Participation.participation_topics(:session_note)],
+          do: Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
     end
 
     {:ok, load_session_data(socket)}
@@ -181,7 +178,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
 
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id}}, socket)
-      when event_type in [:child_checked_in, :child_checked_out, :participation_marked_absent] do
+      when event_type in [:child_checked_in, :child_checked_out, :child_marked_absent] do
     {:noreply, update_participation_record(socket, record_id)}
   end
 

@@ -5,8 +5,12 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
 
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
   import Phoenix.LiveViewTest
+
+  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Shared.Domain.Events.DomainEvent
 
   setup :register_and_log_in_parent
 
@@ -112,6 +116,50 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       |> render_submit()
 
       refute has_element?(view, "#pending-note-#{note.id}")
+    end
+  end
+
+  describe "real-time attendance updates (#1108)" do
+    setup %{parent: parent} do
+      {child, _parent} =
+        insert_child_with_guardian(parent: parent, first_name: "Emma", last_name: "Mueller")
+
+      # No participation record at mount — the history stream starts empty, so an
+      # event that streams a row is an unambiguous, observable delta.
+      %{child: child}
+    end
+
+    test "streams the parent's own child when a check-in event arrives", %{conn: conn, child: child} do
+      {:ok, view, _html} = live(conn, ~p"/parent/participation")
+      record = insert(:participation_record_schema, child_id: child.id, status: :checked_in)
+
+      emit_domain_event(view, ParticipationEvents.child_checked_in(record, []))
+
+      assert has_element?(view, "#participation_records-#{record.id}")
+    end
+
+    test "handles child_marked_absent (guard atom fix)", %{conn: conn, child: child} do
+      {:ok, view, _html} = live(conn, ~p"/parent/participation")
+      record = insert(:participation_record_schema, child_id: child.id, status: :absent)
+
+      emit_domain_event(view, ParticipationEvents.child_marked_absent(record, []))
+
+      assert has_element?(view, "#participation_records-#{record.id}")
+    end
+
+    test "ignores an attendance event for another family's child (privacy)", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/parent/participation")
+      foreign_record_id = Ecto.UUID.generate()
+
+      foreign_event =
+        DomainEvent.new(:child_checked_in, foreign_record_id, :participation, %{
+          record_id: foreign_record_id,
+          child_id: Ecto.UUID.generate()
+        })
+
+      emit_domain_event(view, foreign_event)
+
+      refute has_element?(view, "#participation_records-#{foreign_record_id}")
     end
   end
 

@@ -22,6 +22,7 @@ defmodule KlassHero.Participation do
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
+  alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
@@ -327,6 +328,33 @@ defmodule KlassHero.Participation do
 
   @doc "Returns the list of valid session statuses."
   def session_statuses, do: ProgramSession.valid_statuses()
+
+  @doc """
+  Returns the PubSub topics a LiveView should subscribe to for a subscription
+  group (`:session_note` or `:attendance`).
+
+  Topics derive from `ParticipationEvents`' event registry (#1108), so renaming an
+  event atom moves the publisher and every subscriber together — no hand-typed
+  topic strings in LiveViews.
+  """
+  @spec participation_topics(atom()) :: [String.t()]
+  def participation_topics(group) do
+    for event_type <- ParticipationEvents.subscription_event_types(group), do: event_topic(event_type)
+  end
+
+  @doc "Returns the PubSub topic a single event type is published on."
+  @spec event_topic(atom()) :: String.t()
+  def event_topic(event_type) do
+    NotifyLiveViews.build_topic(ParticipationEvents.aggregate_type_for(event_type), event_type)
+  end
+
+  @doc """
+  Returns the provider-scoped participation topic — the single topic carrying all
+  of a provider's participation events. Provider/staff LiveViews subscribe to it;
+  `NotifyLiveViews` publishes to it. One builder, so the two sides can't drift.
+  """
+  @spec provider_topic(String.t()) :: String.t()
+  defdelegate provider_topic(provider_id), to: NotifyLiveViews
 
   @doc """
   Seeds a session roster with the program's enrolled children. Best-effort: always returns `:ok`.

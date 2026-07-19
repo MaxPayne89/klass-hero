@@ -171,6 +171,34 @@ defmodule KlassHero.EventTestHelper do
   end
 
   @doc """
+  Asserts that an event of the given type was published to `topic`.
+
+  Proves the real publish→subscribe coupling (#1108): the topic recorded here is
+  the exact string the event was broadcast on, so a subscriber listening on
+  `topic` would have received it. Returns the matching event.
+
+  ## Examples
+
+      assert_published_to(:child_checked_in, "participation:child_checked_in")
+  """
+  @spec assert_published_to(atom(), String.t()) :: DomainEvent.t()
+  def assert_published_to(event_type, topic) when is_atom(event_type) and is_binary(topic) do
+    published = TestEventPublisher.get_published()
+
+    match =
+      Enum.find(published, fn {%DomainEvent{event_type: type}, published_topic} ->
+        type == event_type and published_topic == topic
+      end)
+
+    assert match != nil,
+           "Expected #{inspect(event_type)} to be published to #{inspect(topic)}.\n" <>
+             "Published: #{format_published(published)}"
+
+    {event, _topic} = match
+    event
+  end
+
+  @doc """
   Asserts that no events were published.
 
   ## Examples
@@ -215,6 +243,14 @@ defmodule KlassHero.EventTestHelper do
 
   defp format_event_types([]), do: "(none)"
   defp format_event_types(events), do: Enum.map_join(events, ", ", &inspect(&1.event_type))
+
+  defp format_published([]), do: "(none)"
+
+  defp format_published(published) do
+    Enum.map_join(published, ", ", fn {event, topic} ->
+      "#{inspect(event.event_type)}→#{inspect(topic)}"
+    end)
+  end
 
   defp format_event_payloads(events) do
     events

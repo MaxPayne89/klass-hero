@@ -4,6 +4,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Participation
+  alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.SessionNote
 
@@ -786,6 +788,39 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       |> render_click()
 
       refute has_element?(view, "#edit-record-form-#{record.id}")
+    end
+  end
+
+  describe "real-time roster updates over PubSub (#1108)" do
+    setup [:create_session_with_child]
+
+    test "re-renders when a check-in event arrives on the provider-scoped topic", %{
+      conn: conn,
+      user: user,
+      provider: provider,
+      session: session,
+      record: record
+    } do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      # A registered record shows the check-in control, not the edit control.
+      refute has_element?(view, "#edit-btn-#{record.id}")
+
+      # Flip the record in the DB, then broadcast on the exact topic the view
+      # subscribes to. If the subscription targeted the wrong topic (the pre-#1108
+      # bug), this broadcast never arrives and the edit control never appears.
+      {:ok, _} =
+        record
+        |> Ecto.Changeset.change(status: :checked_in, check_in_by: user.id)
+        |> KlassHero.Repo.update()
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        Participation.provider_topic(provider.id),
+        {:domain_event, ParticipationEvents.child_checked_in(record, [])}
+      )
+
+      assert render(view) =~ "edit-btn-#{record.id}"
     end
   end
 end
