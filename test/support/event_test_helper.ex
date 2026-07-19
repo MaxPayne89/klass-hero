@@ -356,6 +356,35 @@ defmodule KlassHero.EventTestHelper do
   end
 
   @doc """
+  Asserts that an integration event of the given type was published to `topic`.
+
+  Proves the real producer/consumer topic coupling (#1122): the topic recorded
+  here is the exact `integration:<context>:<event>` string the event was routed
+  on, so the `critical_event_handlers` registry entry keyed by `topic` would have
+  received it. Returns the matching event.
+
+  ## Examples
+
+      assert_integration_published_to(:invite_claimed, "integration:enrollment:invite_claimed")
+  """
+  @spec assert_integration_published_to(atom(), String.t()) :: IntegrationEvent.t()
+  def assert_integration_published_to(event_type, topic) when is_atom(event_type) and is_binary(topic) do
+    published = TestIntegrationEventPublisher.get_published()
+
+    match =
+      Enum.find(published, fn {%IntegrationEvent{event_type: type}, published_topic} ->
+        type == event_type and published_topic == topic
+      end)
+
+    assert match != nil,
+           "Expected integration event #{inspect(event_type)} to be published to #{inspect(topic)}.\n" <>
+             "Published: #{format_published(published)}"
+
+    {event, _topic} = match
+    event
+  end
+
+  @doc """
   Asserts that no integration events were published.
   """
   @spec assert_no_integration_events_published() :: :ok

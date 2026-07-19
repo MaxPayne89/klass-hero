@@ -78,12 +78,28 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher 
   end
 
   @doc """
-  Returns all integration events published in the current test process.
+  Returns all integration events published in the current test process, without
+  their topics.
 
   Returns an empty list if setup() was not called.
   """
   @spec get_events() :: [IntegrationEvent.t()]
   def get_events do
+    for {event, _topic} <- get_published(), do: event
+  end
+
+  @doc """
+  Returns `{event, topic}` tuples for every integration event published in the
+  current test process, in publish order.
+
+  The topic is the exact `integration:<context>:<event>` string the event was
+  routed on — added for #1122 (mirroring #1108 on the domain-event axis) so tests
+  can assert the producer/consumer topic coupling of the `critical_event_handlers`
+  registry rather than pinning topic literals by hand. Events published via
+  `publish/1` carry their derived topic.
+  """
+  @spec get_published() :: [{IntegrationEvent.t(), String.t()}]
+  def get_published do
     Process.get(@key, [])
   end
 
@@ -91,7 +107,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher 
   def publish(%IntegrationEvent{} = event) do
     case Process.get(@error_key) do
       nil ->
-        store_event(event)
+        store_event(event, derive_topic(event))
         :ok
 
       reason ->
@@ -100,19 +116,29 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher 
   end
 
   @impl true
-  def publish(%IntegrationEvent{} = event, _topic) do
-    store_event(event)
-    :ok
+  def publish(%IntegrationEvent{} = event, topic) do
+    case Process.get(@error_key) do
+      nil ->
+        store_event(event, topic)
+        :ok
+
+      reason ->
+        {:error, reason}
+    end
   end
 
   @impl true
   def publish_all(events) when is_list(events) do
-    Enum.each(events, &store_event/1)
+    Enum.each(events, &store_event(&1, derive_topic(&1)))
     :ok
   end
 
-  defp store_event(%IntegrationEvent{} = event) do
-    events = Process.get(@key, [])
-    Process.put(@key, events ++ [event])
+  defp store_event(%IntegrationEvent{} = event, topic) do
+    published = Process.get(@key, [])
+    Process.put(@key, published ++ [{event, topic}])
+  end
+
+  defp derive_topic(%IntegrationEvent{source_context: source_context, event_type: event_type}) do
+    "integration:#{source_context}:#{event_type}"
   end
 end
