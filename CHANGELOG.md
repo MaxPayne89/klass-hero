@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.60.0](https://github.com/MaxPayne89/klass-hero/compare/v0.59.2...v0.60.0) (2026-07-19)
+
+
+### Features
+
+* child-scoped parent attendance routing ([#1126](https://github.com/MaxPayne89/klass-hero/issues/1126)) ([8b32914](https://github.com/MaxPayne89/klass-hero/commit/8b329140cd2db2d13423f77a1ab8d379f649627a)), closes [#1121](https://github.com/MaxPayne89/klass-hero/issues/1121)
+
 ## [0.59.2](https://github.com/MaxPayne89/klass-hero/compare/v0.59.1...v0.59.2) (2026-07-19)
 
 
