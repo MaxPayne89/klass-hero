@@ -1387,7 +1387,7 @@ msgstr "Willkommen zurück"
 msgid "WhatsApp Community"
 msgstr "WhatsApp-Community"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:163
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:149
 #, elixir-autogen, elixir-format
 msgid "Failed to load participation history"
 msgstr "Teilnahmeverlauf konnte nicht geladen werden"
@@ -1915,12 +1915,12 @@ msgstr "Kind bearbeiten"
 msgid "Emergency contact"
 msgstr "Notfallkontakt"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:58
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "Failed to approve note"
 msgstr "Notiz konnte nicht genehmigt werden"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:109
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:108
 #, elixir-autogen, elixir-format
 msgid "Failed to reject note"
 msgstr "Notiz konnte nicht abgelehnt werden"
@@ -2011,7 +2011,7 @@ msgstr "Noch keine Nachrichten"
 msgid "No parents are enrolled in this program"
 msgstr "Für dieses Programm sind keine Eltern angemeldet"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:49
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:48
 #, elixir-autogen, elixir-format
 msgid "Note approved"
 msgstr "Notiz genehmigt"
@@ -2022,7 +2022,7 @@ msgstr "Notiz genehmigt"
 msgid "Note content cannot be blank"
 msgstr "Notizinhalt darf nicht leer sein"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:98
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:97
 #, elixir-autogen, elixir-format
 msgid "Note rejected"
 msgstr "Notiz abgelehnt"

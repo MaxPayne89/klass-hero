@@ -357,6 +357,15 @@ defmodule KlassHero.Participation do
   defdelegate provider_topic(provider_id), to: NotifyLiveViews
 
   @doc """
+  Returns the child-scoped participation topic — the single topic carrying one
+  child's attendance and session-note events. Parent LiveViews subscribe to it
+  per child; `NotifyLiveViews` publishes to it. One builder, so the two sides
+  can't drift (#1121).
+  """
+  @spec child_topic(String.t()) :: String.t()
+  defdelegate child_topic(child_id), to: NotifyLiveViews
+
+  @doc """
   Seeds a session roster with the program's enrolled children. Best-effort: always returns `:ok`.
 
   Invoked by the `session_created` integration-event handler.

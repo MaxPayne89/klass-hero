@@ -4,7 +4,20 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
   import KlassHero.EventTestHelper
 
   alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
+  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
   alias KlassHero.Shared.Domain.Events.DomainEvent
+
+  # Events that carry child_id in their payload → routed to the child-scoped topic (#1121).
+  # Includes every session-note lifecycle event, all of which carry child_id.
+  @child_scoped_events [
+    :child_checked_in,
+    :child_checked_out,
+    :child_marked_absent,
+    :session_note_submitted,
+    :session_note_approved,
+    :session_note_rejected
+  ]
 
   setup do
     setup_test_events()
@@ -41,6 +54,35 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
 
       assert :ok = NotifyLiveViews.handle(event)
       assert_event_published(:child_checked_in)
+    end
+  end
+
+  describe "handle/1 — child-scoped fan-out (#1121)" do
+    test "publishes every child-bearing event to its participation:child:<child_id> topic" do
+      for event_type <- @child_scoped_events do
+        child_id = Ecto.UUID.generate()
+        aggregate = ParticipationEvents.aggregate_type_for(event_type)
+        event = DomainEvent.new(event_type, Ecto.UUID.generate(), aggregate, %{child_id: child_id})
+
+        assert :ok = NotifyLiveViews.handle(event)
+        assert_published_to(event_type, "participation:child:#{child_id}")
+      end
+    end
+
+    test "does not publish a child topic for events without child_id" do
+      event =
+        DomainEvent.new(:session_created, Ecto.UUID.generate(), :participation, %{
+          session_id: Ecto.UUID.generate()
+        })
+
+      assert :ok = NotifyLiveViews.handle(event)
+
+      child_topics =
+        for {_event, topic} <- TestEventPublisher.get_published(),
+            String.starts_with?(topic, "participation:child:"),
+            do: topic
+
+      assert child_topics == [], "no child-scoped topic expected, got #{inspect(child_topics)}"
     end
   end
 
