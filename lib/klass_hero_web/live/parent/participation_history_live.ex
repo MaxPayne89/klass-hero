@@ -25,15 +25,12 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
       |> assign(:reject_forms, %{})
 
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "participation_record:child_checked_in")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "participation_record:child_checked_out")
+      # A parent's children can attend any provider's sessions, so subscribe to the
+      # generic attendance topics (filtered to this parent's children in handle_info)
+      # plus session-note submissions. Topics derive from the event registry (#1108).
+      topics = [Participation.event_topic(:session_note_submitted) | Participation.participation_topics(:attendance)]
 
-      Phoenix.PubSub.subscribe(
-        KlassHero.PubSub,
-        "participation_record:participation_marked_absent"
-      )
-
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_submitted")
+      for topic <- topics, do: Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
     end
 
     {:ok, load_participation_history(socket)}
@@ -118,7 +115,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
         {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id, payload: %{child_id: child_id}}},
         socket
       )
-      when event_type in [:child_checked_in, :child_checked_out, :participation_marked_absent] do
+      when event_type in [:child_checked_in, :child_checked_out, :child_marked_absent] do
     socket =
       if child_belongs_to_parent?(child_id, socket) do
         opts = if event_type == :child_checked_in, do: [at: 0], else: []

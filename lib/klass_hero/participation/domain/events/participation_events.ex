@@ -31,7 +31,37 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
           parent_id: String.t() | nil
         }
 
-  @aggregate_type :participation
+  # Single source of truth for event routing (#1108). Each event's aggregate_type
+  # is looked up here rather than hand-written at each call site, and subscription
+  # topics on the `Participation` facade derive from the same map — so renaming an
+  # atom moves the publisher and every LiveView subscriber together.
+  @event_aggregates %{
+    session_created: :participation,
+    session_started: :participation,
+    session_completed: :participation,
+    roster_seeded: :participation,
+    child_checked_in: :participation,
+    child_checked_out: :participation,
+    child_marked_absent: :participation,
+    session_note_submitted: :session_note,
+    session_note_approved: :session_note,
+    session_note_rejected: :session_note
+  }
+
+  # The event_types each LiveView group subscribes to. Kept alongside the registry
+  # so the facade can build the exact topic strings subscribers need.
+  @subscription_groups %{
+    attendance: [:child_checked_in, :child_checked_out, :child_marked_absent],
+    session_note: [:session_note_submitted, :session_note_approved, :session_note_rejected]
+  }
+
+  @doc "Returns the aggregate_type registered for an event type. Raises if unknown."
+  @spec aggregate_type_for(atom()) :: atom()
+  def aggregate_type_for(event_type), do: Map.fetch!(@event_aggregates, event_type)
+
+  @doc "Returns the ordered event types a subscription group listens for."
+  @spec subscription_event_types(atom()) :: [atom()]
+  def subscription_event_types(group), do: Map.fetch!(@subscription_groups, group)
 
   @doc "Creates a session_created event."
   @spec session_created(ProgramSession.t(), keyword()) :: DomainEvent.t()
@@ -46,7 +76,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       max_capacity: session.max_capacity
     }
 
-    DomainEvent.new(:session_created, session.id, @aggregate_type, payload, opts)
+    new_event(:session_created, session.id, payload, opts)
   end
 
   @doc "Creates a session_started event."
@@ -58,7 +88,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       started_at: DateTime.utc_now()
     }
 
-    DomainEvent.new(:session_started, session.id, @aggregate_type, payload, opts)
+    new_event(:session_started, session.id, payload, opts)
   end
 
   @doc "Creates a session_completed event."
@@ -74,7 +104,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
 
     payload = Map.merge(extra, base_payload)
 
-    DomainEvent.new(:session_completed, session.id, @aggregate_type, payload, event_opts)
+    new_event(:session_completed, session.id, payload, event_opts)
   end
 
   @doc "Creates a roster_seeded event."
@@ -86,7 +116,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       seeded_count: count
     }
 
-    DomainEvent.new(:roster_seeded, session_id, @aggregate_type, payload, opts)
+    new_event(:roster_seeded, session_id, payload, opts)
   end
 
   @doc deprecated: "Use child_checked_in/2 with ProgramSession to include program_id in payload"
@@ -106,7 +136,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       notes: record.check_in_notes
     }
 
-    DomainEvent.new(:child_checked_in, record.id, @aggregate_type, payload, opts)
+    new_event(:child_checked_in, record.id, payload, opts)
   end
 
   def child_checked_in(%ParticipationRecord{} = record, nil), do: child_checked_in(record, [])
@@ -125,7 +155,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       program_id: session.program_id
     }
 
-    DomainEvent.new(:child_checked_in, record.id, @aggregate_type, payload, [])
+    new_event(:child_checked_in, record.id, payload, [])
   end
 
   @doc deprecated: "Use child_checked_out/2 with ProgramSession to include program_id in payload"
@@ -145,7 +175,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       notes: record.check_out_notes
     }
 
-    DomainEvent.new(:child_checked_out, record.id, @aggregate_type, payload, opts)
+    new_event(:child_checked_out, record.id, payload, opts)
   end
 
   def child_checked_out(%ParticipationRecord{} = record, nil), do: child_checked_out(record, [])
@@ -163,7 +193,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       program_id: session.program_id
     }
 
-    DomainEvent.new(:child_checked_out, record.id, @aggregate_type, payload, [])
+    new_event(:child_checked_out, record.id, payload, [])
   end
 
   @doc deprecated: "Use child_marked_absent/2 with ProgramSession to include program_id in payload"
@@ -180,7 +210,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       child_id: record.child_id
     }
 
-    DomainEvent.new(:child_marked_absent, record.id, @aggregate_type, payload, opts)
+    new_event(:child_marked_absent, record.id, payload, opts)
   end
 
   def child_marked_absent(%ParticipationRecord{} = record, nil), do: child_marked_absent(record, [])
@@ -195,7 +225,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       program_id: session.program_id
     }
 
-    DomainEvent.new(:child_marked_absent, record.id, @aggregate_type, payload, [])
+    new_event(:child_marked_absent, record.id, payload, [])
   end
 
   @doc "Creates a session_note_submitted event."
@@ -203,7 +233,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   def session_note_submitted(%SessionNote{} = note, opts \\ []) do
     payload = session_note_payload(note)
 
-    DomainEvent.new(:session_note_submitted, note.id, :session_note, payload, opts)
+    new_event(:session_note_submitted, note.id, payload, opts)
   end
 
   @doc "Creates a session_note_approved event."
@@ -211,7 +241,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   def session_note_approved(%SessionNote{} = note, opts \\ []) do
     payload = session_note_payload(note)
 
-    DomainEvent.new(:session_note_approved, note.id, :session_note, payload, opts)
+    new_event(:session_note_approved, note.id, payload, opts)
   end
 
   @doc "Creates a session_note_rejected event."
@@ -219,7 +249,14 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   def session_note_rejected(%SessionNote{} = note, opts \\ []) do
     payload = session_note_payload(note)
 
-    DomainEvent.new(:session_note_rejected, note.id, :session_note, payload, opts)
+    new_event(:session_note_rejected, note.id, payload, opts)
+  end
+
+  # Builds a DomainEvent, deriving aggregate_type from the registry so no call site
+  # hand-writes it (#1108).
+  @spec new_event(atom(), String.t(), map(), keyword()) :: DomainEvent.t()
+  defp new_event(event_type, aggregate_id, payload, opts) do
+    DomainEvent.new(event_type, aggregate_id, aggregate_type_for(event_type), payload, opts)
   end
 
   @spec session_note_payload(SessionNote.t()) :: session_note_payload()

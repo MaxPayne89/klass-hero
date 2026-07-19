@@ -43,6 +43,10 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
   @spec build_topic(atom(), atom()) :: String.t()
   defdelegate build_topic(aggregate_type, event_type), to: SharedNotifyLiveViews
 
+  @doc "Builds the provider-scoped participation topic. The single source both the publisher (here) and subscribers (via the `Participation` facade) use."
+  @spec provider_topic(String.t()) :: String.t()
+  def provider_topic(provider_id), do: "participation:provider:#{provider_id}"
+
   defp publish_to_provider_topic(%DomainEvent{payload: payload} = event) do
     case Map.fetch(payload, :program_id) do
       {:ok, program_id} ->
@@ -59,8 +63,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLi
   defp resolve_and_publish(event, program_id) do
     case ProgramProviderResolver.resolve_provider_id(program_id) do
       {:ok, provider_id} ->
-        provider_topic = "participation:provider:#{provider_id}"
-        SharedNotifyLiveViews.safe_publish(event, provider_topic)
+        SharedNotifyLiveViews.safe_publish(event, provider_topic(provider_id))
 
       {:error, reason} ->
         # Best-effort: generic topic already published. Demoted from :warning — sustained

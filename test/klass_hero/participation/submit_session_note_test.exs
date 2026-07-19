@@ -5,11 +5,13 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
 
   use KlassHero.DataCase, async: true
 
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
 
+  alias KlassHero.Participation
+  alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.SessionNote
-  alias KlassHero.Shared.Adapters.Driven.Events.EventHandlers.NotifyLiveViews
 
   describe "execute/1" do
     test "submits a session note for a checked-in record" do
@@ -187,34 +189,34 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
     end
   end
 
-  describe "session_note PubSub topics" do
-    # The publisher derives its topic from the event's atoms, while
-    # provider/staff/parent LiveViews hand-type the resulting string to
-    # subscribe. Nothing links the two: rename the atoms without the literals
-    # and delivery stops silently.
-    #
-    # This cannot be covered end-to-end — TestEventPublisher.publish/2 discards
-    # the topic argument, so the test double makes the topic unobservable. These
-    # pin the derived topics to the literals the LiveViews subscribe to, so a
-    # future atom rename fails here instead of in production.
+  describe "session_note PubSub topics (#1108)" do
+    # Proves publisher and subscriber meet: publish each session-note event through
+    # the real handler, then assert the topic it was actually broadcast on is one the
+    # LiveViews subscribe to (`Participation.participation_topics(:session_note)`).
+    # Both sides derive from the event registry, so a rename that touches only one
+    # side fails here instead of silently in production. Supersedes #924's literal
+    # pins now that TestEventPublisher records the topic.
 
     setup do
+      setup_test_events()
       %{note: build(:session_note)}
     end
 
-    test "submitted topic matches the LiveView subscribe literal", %{note: note} do
-      event = ParticipationEvents.session_note_submitted(note)
-      assert NotifyLiveViews.derive_topic(event) == "session_note:session_note_submitted"
-    end
+    @topic_cases [
+      {:session_note_submitted, "session_note:session_note_submitted"},
+      {:session_note_approved, "session_note:session_note_approved"},
+      {:session_note_rejected, "session_note:session_note_rejected"}
+    ]
 
-    test "approved topic matches the LiveView subscribe literal", %{note: note} do
-      event = ParticipationEvents.session_note_approved(%{note | status: :approved})
-      assert NotifyLiveViews.derive_topic(event) == "session_note:session_note_approved"
-    end
+    for {event_type, expected_topic} <- @topic_cases do
+      test "#{event_type} is published to a topic the LiveViews subscribe to", %{note: note} do
+        event = apply(ParticipationEvents, unquote(event_type), [note])
 
-    test "rejected topic matches the LiveView subscribe literal", %{note: note} do
-      event = ParticipationEvents.session_note_rejected(%{note | status: :rejected})
-      assert NotifyLiveViews.derive_topic(event) == "session_note:session_note_rejected"
+        NotifyLiveViews.handle(event)
+
+        assert_published_to(unquote(event_type), unquote(expected_topic))
+        assert unquote(expected_topic) in Participation.participation_topics(:session_note)
+      end
     end
   end
 end

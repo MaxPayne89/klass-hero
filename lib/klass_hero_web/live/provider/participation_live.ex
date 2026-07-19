@@ -42,17 +42,12 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       |> assign(:record_note_map, %{})
 
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "participation_record:child_checked_in")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "participation_record:child_checked_out")
+      # Attendance updates arrive on the provider-scoped topic (the publisher routes
+      # per provider); session-note topics derive from the event registry (#1108).
+      provider_topic = Participation.provider_topic(provider_id)
 
-      Phoenix.PubSub.subscribe(
-        KlassHero.PubSub,
-        "participation_record:participation_marked_absent"
-      )
-
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_submitted")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_approved")
-      Phoenix.PubSub.subscribe(KlassHero.PubSub, "session_note:session_note_rejected")
+      for topic <- [provider_topic | Participation.participation_topics(:session_note)],
+          do: Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
     end
 
     {:ok, load_session_data(socket)}
@@ -239,7 +234,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id}}, socket)
-      when event_type in [:child_checked_in, :child_checked_out, :participation_marked_absent] do
+      when event_type in [:child_checked_in, :child_checked_out, :child_marked_absent] do
     {:noreply, update_participation_record(socket, record_id)}
   end
 
@@ -247,6 +242,13 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
       when event_type in [:session_note_submitted, :session_note_approved, :session_note_rejected] do
     {:noreply, load_session_data(socket)}
+  end
+
+  @impl true
+  def handle_info({:domain_event, _event}, socket) do
+    # The provider-scoped topic also carries session-lifecycle events this view
+    # doesn't act on. Ignore them rather than crash on an unmatched message.
+    {:noreply, socket}
   end
 
   defp load_session_data(socket) do

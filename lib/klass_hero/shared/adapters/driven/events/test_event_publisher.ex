@@ -59,35 +59,52 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher do
   end
 
   @doc """
-  Returns all events published in the current test process.
+  Returns all events published in the current test process, without their topics.
 
   Returns an empty list if setup() was not called.
   """
   @spec get_events() :: [DomainEvent.t()]
   def get_events do
+    for {event, _topic} <- get_published(), do: event
+  end
+
+  @doc """
+  Returns `{event, topic}` tuples for everything published in the current test
+  process, in publish order.
+
+  The topic is the exact string the event was broadcast on — added for #1108 so
+  tests can assert the publish→subscribe coupling rather than pinning topic
+  literals by hand. Events published via `publish/1` carry their derived topic.
+  """
+  @spec get_published() :: [{DomainEvent.t(), String.t()}]
+  def get_published do
     Process.get(@key, [])
   end
 
   @impl true
   def publish(%DomainEvent{} = event) do
-    store_event(event)
+    store_event(event, derive_topic(event))
     :ok
   end
 
   @impl true
-  def publish(%DomainEvent{} = event, _topic) do
-    store_event(event)
+  def publish(%DomainEvent{} = event, topic) do
+    store_event(event, topic)
     :ok
   end
 
   @impl true
   def publish_all(events) when is_list(events) do
-    Enum.each(events, &store_event/1)
+    Enum.each(events, &store_event(&1, derive_topic(&1)))
     :ok
   end
 
-  defp store_event(%DomainEvent{} = event) do
-    events = Process.get(@key, [])
-    Process.put(@key, events ++ [event])
+  defp store_event(%DomainEvent{} = event, topic) do
+    published = Process.get(@key, [])
+    Process.put(@key, published ++ [{event, topic}])
+  end
+
+  defp derive_topic(%DomainEvent{aggregate_type: aggregate_type, event_type: event_type}) do
+    "#{aggregate_type}:#{event_type}"
   end
 end

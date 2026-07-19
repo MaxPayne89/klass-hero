@@ -858,10 +858,10 @@ msgstr "Fragen zu diesen Bedingungen?"
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:61
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:94
 #: lib/klass_hero_web/live/admin/sessions_live.ex:251
-#: lib/klass_hero_web/live/provider/participation_live.ex:176
-#: lib/klass_hero_web/live/provider/participation_live.ex:222
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:118
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:164
+#: lib/klass_hero_web/live/provider/participation_live.ex:171
+#: lib/klass_hero_web/live/provider/participation_live.ex:217
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:115
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:161
 #, elixir-autogen, elixir-format
 msgid "Record not found"
 msgstr "Eintrag nicht gefunden"
@@ -906,8 +906,8 @@ msgstr "Sitzung erfolgreich abgeschlossen"
 
 #: lib/klass_hero_web/live/admin/sessions_live.ex:67
 #: lib/klass_hero_web/live/admin/sessions_live.ex:73
-#: lib/klass_hero_web/live/provider/participation_live.ex:270
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:229
+#: lib/klass_hero_web/live/provider/participation_live.ex:272
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "Session not found"
 msgstr "Sitzung nicht gefunden"
@@ -1387,7 +1387,7 @@ msgstr "Willkommen zurück"
 msgid "WhatsApp Community"
 msgstr "WhatsApp-Community"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:166
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:163
 #, elixir-autogen, elixir-format
 msgid "Failed to load participation history"
 msgstr "Teilnahmeverlauf konnte nicht geladen werden"
@@ -1915,17 +1915,17 @@ msgstr "Kind bearbeiten"
 msgid "Emergency contact"
 msgstr "Notfallkontakt"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:61
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:58
 #, elixir-autogen, elixir-format
 msgid "Failed to approve note"
 msgstr "Notiz konnte nicht genehmigt werden"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:112
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:109
 #, elixir-autogen, elixir-format
 msgid "Failed to reject note"
 msgstr "Notiz konnte nicht abgelehnt werden"
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:168
+#: lib/klass_hero_web/live/provider/participation_live.ex:163
 #, elixir-autogen, elixir-format
 msgid "Failed to resubmit note"
 msgstr "Notiz konnte nicht erneut eingereicht werden"
@@ -2011,23 +2011,23 @@ msgstr "Noch keine Nachrichten"
 msgid "No parents are enrolled in this program"
 msgstr "Für dieses Programm sind keine Eltern angemeldet"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:52
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:49
 #, elixir-autogen, elixir-format
 msgid "Note approved"
 msgstr "Notiz genehmigt"
 
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:113
-#: lib/klass_hero_web/live/provider/participation_live.ex:160
+#: lib/klass_hero_web/live/provider/participation_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Note content cannot be blank"
 msgstr "Notizinhalt darf nicht leer sein"
 
-#: lib/klass_hero_web/live/parent/participation_history_live.ex:101
+#: lib/klass_hero_web/live/parent/participation_history_live.ex:98
 #, elixir-autogen, elixir-format
 msgid "Note rejected"
 msgstr "Notiz abgelehnt"
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:154
+#: lib/klass_hero_web/live/provider/participation_live.ex:149
 #, elixir-autogen, elixir-format
 msgid "Note resubmitted for review"
 msgstr "Notiz erneut zur Überprüfung eingereicht"
@@ -2133,8 +2133,8 @@ msgstr "Diese Nachricht wird an alle Eltern mit aktiven Anmeldungen in diesem Pr
 msgid "Type a message..."
 msgstr "Nachricht eingeben..."
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:290
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:249
+#: lib/klass_hero_web/live/provider/participation_live.ex:292
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:246
 #, elixir-autogen, elixir-format
 msgid "Unable to refresh roster. Please reload."
 msgstr "Teilnehmerliste konnte nicht aktualisiert werden. Bitte laden Sie die Seite neu."
@@ -4737,7 +4737,7 @@ msgid "View and manage your assigned sessions"
 msgstr "Ihre zugewiesenen Sitzungen anzeigen und verwalten"
 
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:60
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:218
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "You are not assigned to this program"
 msgstr "Sie sind diesem Programm nicht zugewiesen"
@@ -4983,14 +4983,14 @@ msgstr "Abgereist"
 msgid "Departure notes"
 msgstr "Notizen zur Abreise"
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:225
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:167
+#: lib/klass_hero_web/live/provider/participation_live.ex:220
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:164
 #, elixir-autogen, elixir-format
 msgid "Departure time is not a valid date and time"
 msgstr "Abreisezeit ist kein gültiges Datum oder keine gültige Uhrzeit"
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:236
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:178
+#: lib/klass_hero_web/live/provider/participation_live.ex:231
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:175
 #, elixir-autogen, elixir-format
 msgid "Failed to update record"
 msgstr "Aktualisieren des Datensatzes fehlgeschlagen"
@@ -5030,8 +5030,8 @@ msgstr "Gesundheit & Einwilligungen (optional)"
 msgid "Medical conditions"
 msgstr "Gesundheitliche Besonderheiten"
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:228
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:170
+#: lib/klass_hero_web/live/provider/participation_live.ex:223
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "Nothing to update"
 msgstr "Nichts zu aktualisieren"
@@ -5072,8 +5072,8 @@ msgstr "Abreise erfassen"
 msgid "Record departure time (optional)"
 msgstr "Abreisezeit erfassen (optional)"
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:216
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:158
+#: lib/klass_hero_web/live/provider/participation_live.ex:211
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Record updated"
 msgstr "Datensatz aktualisiert"
