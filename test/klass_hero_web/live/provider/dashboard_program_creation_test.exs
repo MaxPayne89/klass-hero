@@ -329,77 +329,36 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       refute has_element?(view, "#program-form")
     end
 
-    test "creates program successfully with valid capacity", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+    # Each accepted capacity shape creates the program and shows no capacity
+    # warning; they differ only in the enrollment_policy map, so table-fold them.
+    for {label, policy} <- [
+          {"valid capacity", %{"min_enrollment" => "5", "max_enrollment" => "20"}},
+          {"only max_enrollment set", %{"max_enrollment" => "20"}},
+          {"only min_enrollment set", %{"min_enrollment" => "5"}}
+        ] do
+      @capacity_policy policy
 
-      view |> element("#new-program-btn") |> render_click()
+      test "creates program successfully with #{label}", %{conn: conn} do
+        {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
-      view
-      |> form("#program-form", %{
-        "program_schema" => %{
-          "title" => "Valid Capacity Program",
-          "description" => "Testing valid capacity handling",
-          "category" => "sports",
-          "price" => "30.00"
-        },
-        "enrollment_policy" => %{
-          "min_enrollment" => "5",
-          "max_enrollment" => "20"
-        }
-      })
-      |> render_submit()
+        view |> element("#new-program-btn") |> render_click()
 
-      html = render(view)
-      assert html =~ "Program created successfully."
-      refute html =~ "enrollment capacity could not be saved"
-    end
+        view
+        |> form("#program-form", %{
+          "program_schema" => %{
+            "title" => "Capacity Program",
+            "description" => "Testing an accepted enrollment capacity shape",
+            "category" => "sports",
+            "price" => "30.00"
+          },
+          "enrollment_policy" => @capacity_policy
+        })
+        |> render_submit()
 
-    test "creates policy with only max_enrollment set", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
-
-      view |> element("#new-program-btn") |> render_click()
-
-      view
-      |> form("#program-form", %{
-        "program_schema" => %{
-          "title" => "Max Only Program",
-          "description" => "Testing max-only capacity",
-          "category" => "sports",
-          "price" => "30.00"
-        },
-        "enrollment_policy" => %{
-          "max_enrollment" => "20"
-        }
-      })
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "Program created successfully."
-      refute html =~ "enrollment capacity could not be saved"
-    end
-
-    test "creates policy with only min_enrollment set", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
-
-      view |> element("#new-program-btn") |> render_click()
-
-      view
-      |> form("#program-form", %{
-        "program_schema" => %{
-          "title" => "Min Only Program",
-          "description" => "Testing min-only capacity",
-          "category" => "sports",
-          "price" => "30.00"
-        },
-        "enrollment_policy" => %{
-          "min_enrollment" => "5"
-        }
-      })
-      |> render_submit()
-
-      html = render(view)
-      assert html =~ "Program created successfully."
-      refute html =~ "enrollment capacity could not be saved"
+        html = render(view)
+        assert html =~ "Program created successfully."
+        refute html =~ "enrollment capacity could not be saved"
+      end
     end
 
     test "creates program without capacity fields (no policy created)", %{conn: conn} do
@@ -501,10 +460,9 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
-      render_click(view, "edit_program", %{"id" => victim_program.id})
+      view = assert_idor_guarded(view, "edit_program", victim_program.id, "Program not found.")
 
       refute has_element?(view, "#program-form")
-      assert render(view) =~ "Program not found."
     end
   end
 end

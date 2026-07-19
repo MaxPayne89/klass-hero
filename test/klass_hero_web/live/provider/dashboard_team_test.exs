@@ -227,10 +227,9 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
-      render_click(view, "edit_member", %{"id" => victim_staff.id})
+      view = assert_idor_guarded(view, "edit_member", victim_staff.id, "Staff member not found.")
 
       refute has_element?(view, "#staff-member-form")
-      assert render(view) =~ "Staff member not found."
     end
 
     test "delete_member on a foreign staff id is rejected and leaves the row intact", %{
@@ -239,9 +238,8 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
     } do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
-      render_click(view, "delete_member", %{"id" => victim_staff.id})
+      assert_idor_guarded(view, "delete_member", victim_staff.id, "Staff member not found.")
 
-      assert render(view) =~ "Staff member not found."
       assert {:ok, _still_there} = Provider.get_staff_member(victim_staff.id)
     end
   end
