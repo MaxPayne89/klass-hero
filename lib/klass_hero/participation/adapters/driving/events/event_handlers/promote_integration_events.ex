@@ -77,25 +77,4 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
       record_id: event.aggregate_id
     )
   end
-
-  def handle(%DomainEvent{event_type: :session_note_submitted} = event) do
-    ParticipationIntegrationEvents.session_note_submitted(event.aggregate_id, event.payload)
-    |> IntegrationEventPublishing.publish_best_effort("session_note_submitted",
-      note_id: event.aggregate_id
-    )
-  end
-
-  def handle(%DomainEvent{event_type: :session_note_approved} = event) do
-    ParticipationIntegrationEvents.session_note_approved(event.aggregate_id, event.payload)
-    |> IntegrationEventPublishing.publish_best_effort("session_note_approved",
-      note_id: event.aggregate_id
-    )
-  end
-
-  def handle(%DomainEvent{event_type: :session_note_rejected} = event) do
-    ParticipationIntegrationEvents.session_note_rejected(event.aggregate_id, event.payload)
-    |> IntegrationEventPublishing.publish_best_effort("session_note_rejected",
-      note_id: event.aggregate_id
-    )
-  end
 end
