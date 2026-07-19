@@ -83,6 +83,25 @@ defmodule KlassHeroWeb.ConnCase do
   end
 
   @doc """
+  Asserts a cross-tenant (IDOR) ownership guard.
+
+  Triggers `event` on the LiveView with a foreign resource `id` and asserts the
+  guard rejects it with the `error` flash. Covers only the shared spine — the
+  caller keeps its own tail assertion (no form opened, row still present).
+  Returns the view for chaining.
+
+  ## Examples
+
+      view = assert_idor_guarded(view, "edit_program", foreign_id, "Program not found.")
+      refute has_element?(view, "#program-form")
+  """
+  def assert_idor_guarded(view, event, id, error) do
+    Phoenix.LiveViewTest.render_click(view, event, %{"id" => id})
+    assert Phoenix.LiveViewTest.render(view) =~ error
+    view
+  end
+
+  @doc """
   Setup helper that registers and logs in users.
 
       setup :register_and_log_in_user
