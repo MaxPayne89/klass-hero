@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.59.2](https://github.com/MaxPayne89/klass-hero/compare/v0.59.1...v0.59.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* single-source PubSub topics; fix dead attendance subscriptions ([#1108](https://github.com/MaxPayne89/klass-hero/issues/1108)) ([#1120](https://github.com/MaxPayne89/klass-hero/issues/1120)) ([e55af2c](https://github.com/MaxPayne89/klass-hero/commit/e55af2c111f42be46117b72d940677e8ee7c2800))
+
+
+### Code Refactoring
+
+* delete orphaned session-note integration events ([#1107](https://github.com/MaxPayne89/klass-hero/issues/1107)) ([#1119](https://github.com/MaxPayne89/klass-hero/issues/1119)) ([87f7682](https://github.com/MaxPayne89/klass-hero/commit/87f7682c8b4bc9c26755006180f6d0fe9c363e7c))
+
 ## [0.59.1](https://github.com/MaxPayne89/klass-hero/compare/v0.59.0...v0.59.1) (2026-07-18)
 
 
