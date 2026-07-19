@@ -32,66 +32,24 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # Outcome: provider_id is valid for conversation inserts
       provider = insert(:provider_profile_schema)
 
-      # Create a conversation in the write table
       conversation_id = Ecto.UUID.generate()
+      five_min_ago = DateTime.add(now(), -300, :second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
 
-      # Create participants
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      five_min_ago = DateTime.add(now, -300, :second)
+      insert_participant(conversation_id, user_id: user_1.id, joined_at: now(), last_read_at: five_min_ago)
+      insert_participant(conversation_id, user_id: user_2.id, joined_at: now(), last_read_at: nil)
 
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: user_1.id,
-        joined_at: now,
-        last_read_at: five_min_ago
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: user_2.id,
-        joined_at: now,
-        last_read_at: nil
-      })
-
-      # Create messages — one before and one after user_1's last_read_at
-      Repo.insert!(%Message{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
+      # Messages — one before and one after user_1's last_read_at
+      insert_message(conversation_id,
         sender_id: user_2.id,
         content: "Old message",
-        message_type: :text,
-        inserted_at: DateTime.add(five_min_ago, -60, :second),
-        updated_at: DateTime.add(five_min_ago, -60, :second)
-      })
+        inserted_at: DateTime.add(five_min_ago, -60, :second)
+      )
 
-      Repo.insert!(%Message{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        sender_id: user_2.id,
-        content: "Latest message",
-        message_type: :text,
-        inserted_at: now,
-        updated_at: now
-      })
+      insert_message(conversation_id, sender_id: user_2.id, content: "Latest message")
 
-      # Stop the default test server and start a fresh one so it bootstraps
-      stop_supervised!(ConversationSummaries)
-
-      bootstrap_name = :"bootstrap_test_#{System.unique_integer([:positive])}"
-
-      bootstrap_pid =
-        start_supervised!({ConversationSummaries, name: bootstrap_name}, id: :bootstrap)
-
-      # Synchronize: ensure bootstrap has completed
-      _ = :sys.get_state(bootstrap_pid)
+      _ = restart_for_bootstrap(:bootstrap)
 
       # Verify user_1's summary row
       summary_1 =
@@ -131,66 +89,25 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       user_2 = user_fixture(name: "Bob Jones")
 
       provider = insert(:provider_profile_schema)
-
-      # Create a conversation in the write table
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: user_1.id,
-        joined_at: now
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: user_2.id,
-        joined_at: now
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
+      insert_participant(conversation_id, user_id: user_1.id, joined_at: now())
+      insert_participant(conversation_id, user_id: user_2.id, joined_at: now())
 
       # Insert a system message with a broadcast token
       token = "[broadcast:#{Ecto.UUID.generate()}]"
 
-      Repo.insert!(%Message{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
+      insert_message(conversation_id,
         sender_id: user_1.id,
         content: "System note #{token}",
-        message_type: :system,
-        inserted_at: now,
-        updated_at: now
-      })
+        message_type: :system
+      )
 
       # Insert a regular text message (should NOT appear in system_notes)
-      Repo.insert!(%Message{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        sender_id: user_2.id,
-        content: "Just a regular message",
-        message_type: :text,
-        inserted_at: now,
-        updated_at: now
-      })
+      insert_message(conversation_id, sender_id: user_2.id, content: "Just a regular message")
 
-      # Stop the default test server and start fresh for bootstrap
-      stop_supervised!(ConversationSummaries)
-
-      bootstrap_name = :"bootstrap_sysnotes_#{System.unique_integer([:positive])}"
-
-      bootstrap_pid =
-        start_supervised!({ConversationSummaries, name: bootstrap_name},
-          id: :bootstrap_sysnotes
-        )
-
-      _ = :sys.get_state(bootstrap_pid)
+      _ = restart_for_bootstrap(:bootstrap_sysnotes)
 
       # Verify the bootstrapped summary row has the token in system_notes
       summary =
@@ -224,28 +141,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       program = insert(:program_schema, provider_id: provider.id)
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id,
-        program_id: program.id
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: parent_user.id,
-        joined_at: now
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: provider_user.id,
-        joined_at: now
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id, program_id: program.id)
+      insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
+      insert_participant(conversation_id, user_id: provider_user.id, joined_at: now())
 
       Repo.insert!(%EnrolledChildrenSchema{
         id: Ecto.UUID.generate(),
@@ -253,20 +152,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         program_id: program.id,
         child_id: child.id,
         child_first_name: "Emma",
-        inserted_at: now,
-        updated_at: now
+        inserted_at: now(),
+        updated_at: now()
       })
 
-      stop_supervised!(ConversationSummaries)
-
-      bootstrap_name = :"bootstrap_enrolled_children_#{System.unique_integer([:positive])}"
-
-      bootstrap_pid =
-        start_supervised!({ConversationSummaries, name: bootstrap_name},
-          id: :bootstrap_enrolled_children
-        )
-
-      _ = :sys.get_state(bootstrap_pid)
+      _ = restart_for_bootstrap(:bootstrap_enrolled_children)
 
       parent_summary =
         Repo.one(
@@ -299,37 +189,18 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       provider_user = user_fixture(name: "Claudia Wolf")
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
+      insert_conversation(
         id: conversation_id,
         type: :program_broadcast,
         provider_id: provider.id,
         program_id: program.id
-      })
+      )
 
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: parent_user.id,
-        joined_at: now
-      })
+      insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
+      insert_participant(conversation_id, user_id: provider_user.id, joined_at: now())
 
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: provider_user.id,
-        joined_at: now
-      })
-
-      stop_supervised!(ConversationSummaries)
-
-      bootstrap_name = :"bootstrap_program_name_#{System.unique_integer([:positive])}"
-
-      bootstrap_pid =
-        start_supervised!({ConversationSummaries, name: bootstrap_name}, id: :bootstrap_program_name)
-
-      _ = :sys.get_state(bootstrap_pid)
+      _ = restart_for_bootstrap(:bootstrap_program_name)
 
       summaries =
         Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
@@ -351,27 +222,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       # Create a conversation in the write table after the projection has started
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: user_1.id,
-        joined_at: now
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: user_2.id,
-        joined_at: now
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
+      insert_participant(conversation_id, user_id: user_1.id, joined_at: now())
+      insert_participant(conversation_id, user_id: user_2.id, joined_at: now())
 
       # The read table should not have this conversation yet
       assert Repo.all(
@@ -406,30 +260,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            program_id: nil,
-            subject: nil,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, event}
-      )
-
-      # Synchronize: ensure GenServer has processed the broadcast
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        program_id: nil,
+        subject: nil,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       # Verify user_1's summary row
       summary_1 =
@@ -470,29 +308,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       missing_program_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :program_broadcast,
-            provider_id: provider.id,
-            program_id: missing_program_id,
-            subject: "Welcome",
-            participant_ids: [user.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :program_broadcast,
+        provider_id: provider.id,
+        program_id: missing_program_id,
+        subject: "Welcome",
+        participant_ids: [user.id]
+      })
 
       summary =
         Repo.one(
@@ -520,29 +343,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       conversation_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :program_broadcast,
-            provider_id: provider.id,
-            program_id: program.id,
-            subject: "Welcome",
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :program_broadcast,
+        provider_id: provider.id,
+        program_id: program.id,
+        subject: "Welcome",
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       summaries =
         Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
@@ -559,35 +367,23 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
-      event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            program_id: nil,
-            subject: nil,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
+      created =
+        event(:conversation_created, %{
+          conversation_id: conversation_id,
+          type: :direct,
+          provider_id: provider_id,
+          program_id: nil,
+          subject: nil,
+          participant_ids: [user_1.id, user_2.id]
+        })
 
       # First firing — creates baseline rows
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(created)
 
       # Simulate user_1 having read messages: messages_read flow would set
       # last_read_at and reset unread_count. Mutate directly to isolate the
       # idempotency assertion from the messages_read code path.
-      read_at = DateTime.utc_now() |> DateTime.truncate(:second)
+      read_at = now()
 
       {1, _} =
         Repo.update_all(
@@ -598,13 +394,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       # Re-fire the same event — simulates an at-least-once redelivery
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(created)
 
       summary_1 =
         Repo.one(
@@ -634,57 +424,25 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      sent_at = now()
 
       # Seed the summary rows first via conversation_created event
-      created_event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       # Now send a message_sent event from user_1
-      message_id = Ecto.UUID.generate()
-
-      sent_event =
-        IntegrationEvent.new(
-          :message_sent,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            message_id: message_id,
-            sender_id: user_1.id,
-            content: "Hello Bob!",
-            message_type: :text,
-            sent_at: now
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:message_sent",
-        {:integration_event, sent_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:message_sent, %{
+        conversation_id: conversation_id,
+        message_id: Ecto.UUID.generate(),
+        sender_id: user_1.id,
+        content: "Hello Bob!",
+        message_type: :text,
+        sent_at: sent_at
+      })
 
       # user_2 should have unread_count incremented and latest message updated
       summary_2 =
@@ -696,7 +454,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       assert summary_2.latest_message_content == "Hello Bob!"
       assert summary_2.latest_message_sender_id == user_1.id
-      assert summary_2.latest_message_at == now
+      assert summary_2.latest_message_at == sent_at
       assert summary_2.unread_count == 1
 
       # user_1 (sender) should have latest message updated but unread_count still 0
@@ -722,54 +480,24 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       provider_id = Ecto.UUID.generate()
 
       # Create conversation first
-      created_event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       # Send a system message with a broadcast token
       token = "[broadcast:#{Ecto.UUID.generate()}]"
 
-      sent_event =
-        IntegrationEvent.new(
-          :message_sent,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            message_id: Ecto.UUID.generate(),
-            sender_id: user_1.id,
-            content: "System note #{token}",
-            message_type: :system,
-            sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:message_sent",
-        {:integration_event, sent_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:message_sent, %{
+        conversation_id: conversation_id,
+        message_id: Ecto.UUID.generate(),
+        sender_id: user_1.id,
+        content: "System note #{token}",
+        message_type: :system,
+        sent_at: now()
+      })
 
       # Both participants should have the token in system_notes
       summaries =
@@ -795,52 +523,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       provider_id = Ecto.UUID.generate()
 
       # Create conversation
-      created_event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       # Send a regular text message (not system)
-      sent_event =
-        IntegrationEvent.new(
-          :message_sent,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            message_id: Ecto.UUID.generate(),
-            sender_id: user_1.id,
-            content: "Just a regular message [broadcast:#{Ecto.UUID.generate()}]",
-            message_type: :text,
-            sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:message_sent",
-        {:integration_event, sent_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:message_sent, %{
+        conversation_id: conversation_id,
+        message_id: Ecto.UUID.generate(),
+        sender_id: user_1.id,
+        content: "Just a regular message [broadcast:#{Ecto.UUID.generate()}]",
+        message_type: :text,
+        sent_at: now()
+      })
 
       # system_notes should remain empty
       summaries =
@@ -866,63 +564,29 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       provider_id = Ecto.UUID.generate()
 
       # Create conversation
-      created_event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       # Send the same system message event twice
       token = "[broadcast:#{Ecto.UUID.generate()}]"
 
-      sent_event =
-        IntegrationEvent.new(
-          :message_sent,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            message_id: Ecto.UUID.generate(),
-            sender_id: user_1.id,
-            content: "System note #{token}",
-            message_type: :system,
-            sent_at: DateTime.utc_now() |> DateTime.truncate(:second)
-          }
-        )
+      sent =
+        event(:message_sent, %{
+          conversation_id: conversation_id,
+          message_id: Ecto.UUID.generate(),
+          sender_id: user_1.id,
+          content: "System note #{token}",
+          message_type: :system,
+          sent_at: now()
+        })
 
       # Send same event twice
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:message_sent",
-        {:integration_event, sent_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:message_sent",
-        {:integration_event, sent_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(sent)
+      dispatch(sent)
 
       # system_notes should have exactly 1 key (idempotent merge)
       summary =
@@ -944,53 +608,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
       # Create conversation + send a message so user_2 has unread
-      created_event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
-
-      sent_event =
-        IntegrationEvent.new(
-          :message_sent,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            message_id: Ecto.UUID.generate(),
-            sender_id: user_1.id,
-            content: "Unread message",
-            sent_at: now
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:message_sent",
-        {:integration_event, sent_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:message_sent, %{
+        conversation_id: conversation_id,
+        message_id: Ecto.UUID.generate(),
+        sender_id: user_1.id,
+        content: "Unread message",
+        sent_at: now()
+      })
 
       # Verify user_2 has unread_count = 1
       summary =
@@ -1003,28 +636,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert summary.unread_count == 1
 
       # Now user_2 reads messages
-      read_at = DateTime.add(now, 10, :second)
+      read_at = DateTime.add(now(), 10, :second)
 
-      read_event =
-        IntegrationEvent.new(
-          :messages_read,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            user_id: user_2.id,
-            read_at: read_at
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:messages_read",
-        {:integration_event, read_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:messages_read, %{
+        conversation_id: conversation_id,
+        user_id: user_2.id,
+        read_at: read_at
+      })
 
       # Verify unread_count is now 0
       summary =
@@ -1046,51 +664,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      archived_at = now()
 
       # Create conversation first
-      created_event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       # Now archive it
-      archived_event =
-        IntegrationEvent.new(
-          :conversation_archived,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            archived_at: now
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_archived",
-        {:integration_event, archived_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_archived, %{
+        conversation_id: conversation_id,
+        archived_at: archived_at
+      })
 
       # Both participants' summary rows should have archived_at set
       summaries =
@@ -1101,7 +689,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       assert length(summaries) == 2
-      assert Enum.all?(summaries, fn s -> s.archived_at == now end)
+      assert Enum.all?(summaries, fn s -> s.archived_at == archived_at end)
     end
   end
 
@@ -1110,56 +698,30 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       user_1 = user_fixture(name: "Alice Smith")
       user_2 = user_fixture(name: "Bob Jones")
       provider_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      archived_at = now()
 
       conv_1_id = Ecto.UUID.generate()
       conv_2_id = Ecto.UUID.generate()
 
       # Create two conversations
       for conv_id <- [conv_1_id, conv_2_id] do
-        event =
-          IntegrationEvent.new(
-            :conversation_created,
-            :messaging,
-            :conversation,
-            conv_id,
-            %{
-              conversation_id: conv_id,
-              type: :direct,
-              provider_id: provider_id,
-              participant_ids: [user_1.id, user_2.id]
-            }
-          )
-
-        Phoenix.PubSub.broadcast(
-          KlassHero.PubSub,
-          "integration:messaging:conversation_created",
-          {:integration_event, event}
-        )
-
-        _ = :sys.get_state(@test_server_name)
+        dispatch(:conversation_created, %{
+          conversation_id: conv_id,
+          type: :direct,
+          provider_id: provider_id,
+          participant_ids: [user_1.id, user_2.id]
+        })
       end
 
       # Bulk archive both conversations
-      bulk_event =
-        IntegrationEvent.new(
-          :conversations_archived,
-          :messaging,
-          :conversation,
-          "bulk_archive_#{System.unique_integer([:positive])}",
-          %{
-            conversation_ids: [conv_1_id, conv_2_id],
-            archived_at: now
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversations_archived",
-        {:integration_event, bulk_event}
+      dispatch(
+        :conversations_archived,
+        %{
+          conversation_ids: [conv_1_id, conv_2_id],
+          archived_at: archived_at
+        },
+        entity_id: "bulk_archive_#{System.unique_integer([:positive])}"
       )
-
-      _ = :sys.get_state(@test_server_name)
 
       # All 4 summary rows (2 per conversation) should have archived_at set
       summaries =
@@ -1170,7 +732,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       assert length(summaries) == 4
-      assert Enum.all?(summaries, fn s -> s.archived_at == now end)
+      assert Enum.all?(summaries, fn s -> s.archived_at == archived_at end)
     end
   end
 
@@ -1183,27 +745,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       provider_id = Ecto.UUID.generate()
 
       # Create conversation
-      created_event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, user_2.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created_event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, user_2.id]
+      })
 
       # Verify initial names are correct
       summary_1 =
@@ -1216,22 +763,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert summary_1.other_participant_name == "Bob Jones"
 
       # Anonymize user_2
-      anonymize_event =
-        IntegrationEvent.new(
-          :message_data_anonymized,
-          :messaging,
-          :user,
-          user_2.id,
-          %{user_id: user_2.id}
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:message_data_anonymized",
-        {:integration_event, anonymize_event}
+      dispatch(
+        :message_data_anonymized,
+        %{user_id: user_2.id},
+        entity_type: :user,
+        entity_id: user_2.id
       )
-
-      _ = :sys.get_state(@test_server_name)
 
       # user_1's summary should now show "Deleted User" as the other participant
       summary_1 =
@@ -1265,35 +802,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       staff_user = user_fixture(name: "Staff Member")
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
 
       # Insert participants: owner first, then parent, then staff
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: provider.identity_id,
-        joined_at: now
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: parent_user.id,
-        joined_at: now
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: staff_user.id,
-        joined_at: now
-      })
+      insert_participant(conversation_id, user_id: provider.identity_id, joined_at: now())
+      insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
+      insert_participant(conversation_id, user_id: staff_user.id, joined_at: now())
 
       # Rebuild projection
       assert :ok = ConversationSummaries.rebuild(@test_server_name)
@@ -1333,35 +848,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       staff_user = user_fixture(name: "Staff Member")
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
 
       # Use distinct joined_at timestamps to guarantee ordering via preload_order
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: parent_user.id,
-        joined_at: now
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: provider.identity_id,
-        joined_at: DateTime.add(now, 1, :second)
-      })
-
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: staff_user.id,
-        joined_at: DateTime.add(now, 2, :second)
-      })
+      insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
+      insert_participant(conversation_id, user_id: provider.identity_id, joined_at: DateTime.add(now(), 1, :second))
+      insert_participant(conversation_id, user_id: staff_user.id, joined_at: DateTime.add(now(), 2, :second))
 
       assert :ok = ConversationSummaries.rebuild(@test_server_name)
 
@@ -1388,63 +881,25 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       staff = user_fixture(name: "Staff Late")
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
 
-      for {uid, ts} <- [{parent.id, now}, {provider_user.id, DateTime.add(now, 1, :second)}] do
-        Repo.insert!(%Participant{
-          id: Ecto.UUID.generate(),
-          conversation_id: conversation_id,
-          user_id: uid,
-          joined_at: ts
-        })
+      for {uid, ts} <- [{parent.id, now()}, {provider_user.id, DateTime.add(now(), 1, :second)}] do
+        insert_participant(conversation_id, user_id: uid, joined_at: ts)
       end
 
       # Seed an existing message so the new participant's summary back-fills
       # last-message data and unread_count
-      Repo.insert!(%Message{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        sender_id: parent.id,
-        content: "Hi there",
-        message_type: :text,
-        inserted_at: now,
-        updated_at: now
-      })
+      insert_message(conversation_id, sender_id: parent.id, content: "Hi there")
 
       # Add staff participant in write model — projection event follows
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
+      insert_participant(conversation_id, user_id: staff.id, joined_at: DateTime.add(now(), 2, :second))
+
+      dispatch(:participant_added, %{
         conversation_id: conversation_id,
-        user_id: staff.id,
-        joined_at: DateTime.add(now, 2, :second)
+        participant_user_ids: [staff.id],
+        source: :later_assignment
       })
-
-      event =
-        IntegrationEvent.new(
-          :participant_added,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_user_ids: [staff.id],
-            source: :later_assignment
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_added",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
 
       summary =
         Repo.one(
@@ -1471,51 +926,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       staff = user_fixture(name: "Staff Late")
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
+      insert_participant(conversation_id, user_id: parent.id, joined_at: now())
+      insert_participant(conversation_id, user_id: staff.id, joined_at: DateTime.add(now(), 1, :second))
 
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: parent.id,
-        joined_at: now
-      })
+      added =
+        event(:participant_added, %{
+          conversation_id: conversation_id,
+          participant_user_ids: [staff.id],
+          source: :later_assignment
+        })
 
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
-        conversation_id: conversation_id,
-        user_id: staff.id,
-        joined_at: DateTime.add(now, 1, :second)
-      })
-
-      event =
-        IntegrationEvent.new(
-          :participant_added,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_user_ids: [staff.id],
-            source: :later_assignment
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_added",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(added)
 
       # Staff reads the conversation: simulate by setting last_read_at + zeroing unread
-      read_at = DateTime.utc_now() |> DateTime.truncate(:second)
+      read_at = now()
 
       {1, _} =
         Repo.update_all(
@@ -1526,13 +952,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       # Replay the same event
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_added",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(added)
 
       summary =
         Repo.one(
@@ -1557,47 +977,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       staff_b = user_fixture(name: "Staff B")
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :direct,
-        provider_id: provider.id
-      })
+      insert_conversation(id: conversation_id, type: :direct, provider_id: provider.id)
 
       for {uid, ts} <- [
-            {parent.id, now},
-            {staff_a.id, DateTime.add(now, 1, :second)},
-            {staff_b.id, DateTime.add(now, 2, :second)}
+            {parent.id, now()},
+            {staff_a.id, DateTime.add(now(), 1, :second)},
+            {staff_b.id, DateTime.add(now(), 2, :second)}
           ] do
-        Repo.insert!(%Participant{
-          id: Ecto.UUID.generate(),
-          conversation_id: conversation_id,
-          user_id: uid,
-          joined_at: ts
-        })
+        insert_participant(conversation_id, user_id: uid, joined_at: ts)
       end
 
-      event =
-        IntegrationEvent.new(
-          :participant_added,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_user_ids: [staff_a.id, staff_b.id],
-            source: :initial_staff
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_added",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:participant_added, %{
+        conversation_id: conversation_id,
+        participant_user_ids: [staff_a.id, staff_b.id],
+        source: :initial_staff
+      })
 
       summaries =
         Repo.all(
@@ -1621,41 +1016,15 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       staff = user_fixture(name: "Staff Late")
 
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%Conversation{
-        id: conversation_id,
-        type: :program_broadcast,
-        provider_id: provider.id
-      })
+      insert_conversation(id: conversation_id, type: :program_broadcast, provider_id: provider.id)
+      insert_participant(conversation_id, user_id: staff.id, joined_at: now())
 
-      Repo.insert!(%Participant{
-        id: Ecto.UUID.generate(),
+      dispatch(:participant_added, %{
         conversation_id: conversation_id,
-        user_id: staff.id,
-        joined_at: now
+        participant_user_ids: [staff.id],
+        source: :later_assignment
       })
-
-      event =
-        IntegrationEvent.new(
-          :participant_added,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_user_ids: [staff.id],
-            source: :later_assignment
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_added",
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
 
       summary =
         Repo.one(
@@ -1680,48 +1049,18 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
-      created =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, staff.id]
-          }
-        )
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, staff.id]
+      })
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created}
-      )
-
-      _ = :sys.get_state(@test_server_name)
-
-      removed =
-        IntegrationEvent.new(
-          :participant_removed,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_user_ids: [staff.id],
-            source: :staff_unassignment
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_removed",
-        {:integration_event, removed}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:participant_removed, %{
+        conversation_id: conversation_id,
+        participant_user_ids: [staff.id],
+        source: :staff_unassignment
+      })
 
       staff_summary =
         Repo.one(
@@ -1753,48 +1092,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
-      created =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, staff.id]
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, staff.id]
+      })
 
       removed =
-        IntegrationEvent.new(
-          :participant_removed,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_user_ids: [staff.id],
-            source: :staff_unassignment
-          }
-        )
+        event(:participant_removed, %{
+          conversation_id: conversation_id,
+          participant_user_ids: [staff.id],
+          source: :staff_unassignment
+        })
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_removed",
-        {:integration_event, removed}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(removed)
 
       first =
         Repo.one(
@@ -1808,13 +1120,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       # blindly overwrote. COALESCE keeps the original.
       Process.sleep(1_100)
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_removed",
-        {:integration_event, removed}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(removed)
 
       second =
         Repo.one(
@@ -1837,48 +1143,18 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       conversation_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
 
-      created =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            type: :direct,
-            provider_id: provider_id,
-            participant_ids: [user_1.id, staff_a.id, staff_b.id]
-          }
-        )
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: provider_id,
+        participant_ids: [user_1.id, staff_a.id, staff_b.id]
+      })
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:conversation_created",
-        {:integration_event, created}
-      )
-
-      _ = :sys.get_state(@test_server_name)
-
-      removed =
-        IntegrationEvent.new(
-          :participant_removed,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_user_ids: [staff_a.id, staff_b.id],
-            source: :staff_unassignment
-          }
-        )
-
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:participant_removed",
-        {:integration_event, removed}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      dispatch(:participant_removed, %{
+        conversation_id: conversation_id,
+        participant_user_ids: [staff_a.id, staff_b.id],
+        source: :staff_unassignment
+      })
 
       archived_count =
         Repo.aggregate(
@@ -1894,19 +1170,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       assert archived_count == 2
     end
-  end
-
-  # Helper to create users with specific names
-  defp user_fixture(attrs) do
-    KlassHero.AccountsFixtures.user_fixture(attrs)
-  end
-
-  defp list_summaries_for_user(user_id) do
-    Repo.all(
-      from(s in ConversationSummary,
-        where: s.user_id == ^user_id
-      )
-    )
   end
 
   describe "macro invariants after happy-path startup" do
@@ -1928,25 +1191,102 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       provider_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
-          :conversation_created,
-          :messaging,
-          :conversation,
-          conversation_id,
-          %{
-            conversation_id: conversation_id,
-            participant_ids: [user_1.id, user_2.id],
-            type: :direct,
-            provider_id: provider_id,
-            program_id: nil,
-            subject: nil
-          }
-        )
+        event(:conversation_created, %{
+          conversation_id: conversation_id,
+          participant_ids: [user_1.id, user_2.id],
+          type: :direct,
+          provider_id: provider_id,
+          program_id: nil,
+          subject: nil
+        })
 
       send(pid, {:integration_event, event})
       :sys.get_state(pid)
 
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
     end
+  end
+
+  # ── Seed + dispatch helpers ────────────────────────────────────────────────
+
+  defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
+
+  defp insert_conversation(attrs) do
+    Repo.insert!(struct!(Conversation, Keyword.put_new(attrs, :id, Ecto.UUID.generate())))
+  end
+
+  defp insert_participant(conversation_id, attrs) do
+    attrs =
+      attrs
+      |> Keyword.put_new(:id, Ecto.UUID.generate())
+      |> Keyword.put(:conversation_id, conversation_id)
+
+    Repo.insert!(struct!(Participant, attrs))
+  end
+
+  defp insert_message(conversation_id, attrs) do
+    ts = Keyword.get(attrs, :inserted_at, now())
+
+    attrs =
+      attrs
+      |> Keyword.put_new(:id, Ecto.UUID.generate())
+      |> Keyword.put(:conversation_id, conversation_id)
+      |> Keyword.put_new(:message_type, :text)
+      |> Keyword.put_new(:inserted_at, ts)
+      |> Keyword.put_new(:updated_at, ts)
+
+    Repo.insert!(struct!(Message, attrs))
+  end
+
+  # Stops the shared server and starts a fresh one so it re-runs bootstrap from
+  # the write tables; blocks on :sys.get_state until bootstrap completes. Keeps
+  # the bootstrap sync path (a distinct, per-test pid) separate from dispatch/1's
+  # module-server sync.
+  defp restart_for_bootstrap(id) do
+    stop_supervised!(ConversationSummaries)
+    name = :"#{id}_#{System.unique_integer([:positive])}"
+    pid = start_supervised!({ConversationSummaries, name: name}, id: id)
+    :sys.get_state(pid)
+    pid
+  end
+
+  # Builds a messaging integration event, defaulting the entity to
+  # (:conversation, payload.conversation_id); override via :entity_type/:entity_id.
+  defp event(event_type, payload, opts \\ []) do
+    entity_type = Keyword.get(opts, :entity_type, :conversation)
+    entity_id = Keyword.get(opts, :entity_id, Map.get(payload, :conversation_id))
+    IntegrationEvent.new(event_type, :messaging, entity_type, entity_id, payload)
+  end
+
+  # Broadcasts a prebuilt event on its contract topic
+  # (integration:{source_context}:{event_type}), then blocks on :sys.get_state so
+  # the module-level projection GenServer finishes processing before assertions run.
+  defp dispatch(%IntegrationEvent{} = event) do
+    Phoenix.PubSub.broadcast(
+      KlassHero.PubSub,
+      "integration:#{event.source_context}:#{event.event_type}",
+      {:integration_event, event}
+    )
+
+    :sys.get_state(@test_server_name)
+    event
+  end
+
+  # Convenience: build and dispatch a single-shot event.
+  defp dispatch(event_type, payload, opts \\ []) when is_atom(event_type) do
+    event_type |> event(payload, opts) |> dispatch()
+  end
+
+  # Helper to create users with specific names
+  defp user_fixture(attrs) do
+    KlassHero.AccountsFixtures.user_fixture(attrs)
+  end
+
+  defp list_summaries_for_user(user_id) do
+    Repo.all(
+      from(s in ConversationSummary,
+        where: s.user_id == ^user_id
+      )
+    )
   end
 end

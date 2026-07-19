@@ -178,9 +178,11 @@ defmodule KlassHeroWeb.DashboardLiveTest do
     } do
       {:ok, view, _loading_html} = live(conn, ~p"/dashboard")
 
-      assert has_element?(view, "#family-programs-loading")
-      refute has_element?(view, "#family-programs-list")
-
+      # NB: the pre-async loading skeleton is asserted deterministically in the
+      # disconnected-render test above. Asserting it here (before render_async)
+      # races the assign_async task — on a fast/loaded runner the result lands
+      # first, flaking both the "loading shown" and "list absent" checks. Only
+      # the settled state is deterministic, so that's all we assert here.
       render_async(view)
 
       assert has_element?(view, "#family-programs-list")
