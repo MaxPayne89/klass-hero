@@ -139,6 +139,21 @@ defmodule KlassHero.ProgramCatalog do
     end
   end
 
+  @doc """
+  Gets a program by ID, scoped to its owning provider.
+
+  Same IDOR idiom as `update_program/3`: a program owned by another provider is
+  indistinguishable from a missing one — both return `{:error, :not_found}`, so
+  callers can't probe for existence by enumerating ids.
+  """
+  @spec get_program_for_provider(String.t(), String.t()) :: {:ok, Program.t()} | {:error, :not_found}
+  def get_program_for_provider(provider_id, program_id) when is_binary(provider_id) do
+    case fetch_program(program_id) do
+      %Program{provider_id: ^provider_id} = program -> {:ok, Program.load_value_objects(program)}
+      _nil_or_foreign -> {:error, :not_found}
+    end
+  end
+
   @doc "Fetches multiple programs by ID in one query. Missing IDs are silently omitted."
   @spec get_programs_by_ids([String.t()]) :: [Program.t()]
   def get_programs_by_ids(ids) when is_list(ids) do

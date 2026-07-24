@@ -19,6 +19,7 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.SendMessage
   alias KlassHero.Messaging.Shared
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
 
@@ -37,13 +38,17 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
     - subject: Subject line for the broadcast
     - attachments: List of `%{binary, filename, content_type, size}` maps,
       forwarded verbatim to `SendMessage`
-    - provider_id: Explicit provider ID (defaults to scope.provider.id).
-      Required when scope.provider is nil (e.g. staff member scopes).
+    - provider_id: Acting provider ID (defaults to scope.provider.id). Required
+      when scope.provider is nil (e.g. staff member scopes). Authorised against
+      the scope — a provider the scope neither owns nor staffs is rejected.
     - skip_entitlement_check: When true, skips the entitlement check.
       Caller is responsible for verifying entitlements before calling.
 
   ## Returns
   - `{:ok, conversation, message, recipient_count}` - Broadcast sent
+  - `{:error, :not_found}` - The program doesn't exist, doesn't belong to the
+    acting provider, or the scope isn't authorised to act as that provider
+    (all three collapse to one atom so ids can't be probed)
   - `{:error, :not_entitled}` - Provider cannot send broadcasts
   - `{:error, :no_enrollments}` - No enrolled parents to broadcast to
   - `{:error, :missing_provider_id}` - Could not resolve a provider_id
@@ -52,7 +57,8 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
   @spec execute(Scope.t(), String.t(), String.t(), keyword()) ::
           {:ok, Conversation.t(), Message.t(), non_neg_integer()}
           | {:error,
-             :not_entitled
+             :not_found
+             | :not_entitled
              | :no_enrollments
              | :missing_provider_id
              | :empty_message
@@ -64,28 +70,19 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
              | :broadcast_reply_not_allowed
              | term()}
   def execute(%Scope{} = scope, program_id, content, opts \\ []) do
-    provider_id = Keyword.get(opts, :provider_id) || (scope.provider && scope.provider.id)
-
-    if is_nil(provider_id) do
-      Logger.error("BroadcastToProgram called without provider_id",
-        user_id: scope.user.id,
-        program_id: program_id
-      )
-
-      {:error, :missing_provider_id}
-    else
-      execute_broadcast(scope, program_id, content, provider_id, opts)
-    end
-  end
-
-  defp execute_broadcast(scope, program_id, content, provider_id, opts) do
     subject = Keyword.get(opts, :subject)
     attachments = Keyword.get(opts, :attachments, [])
     # normalize_content: attachment-only broadcasts submit "" which must become nil
     # to match direct-message behaviour (SendMessage.trim_content/1 preserves "").
     normalized_content = normalize_content(content, attachments)
 
-    with :ok <- Shared.maybe_check_entitlement(scope, opts, provider_id: provider_id),
+    # Authorise before touching anything: the acting provider must be bound to
+    # the scope, and the program must belong to that provider. Both guards are
+    # defence-in-depth — callers are expected to check too — but they keep the
+    # facade safe on its own.
+    with {:ok, provider_id} <- Shared.resolve_acting_provider(scope, opts),
+         {:ok, _program} <- ProgramCatalog.get_program_for_provider(provider_id, program_id),
+         :ok <- Shared.maybe_check_entitlement(scope, opts, provider_id: provider_id),
          {:ok, parent_user_ids} <- get_enrolled_parent_user_ids(program_id),
          :ok <- verify_has_recipients(parent_user_ids),
          {:ok, conversation} <- get_or_create_broadcast_conversation(provider_id, program_id, subject),

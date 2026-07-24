@@ -8,8 +8,51 @@ defmodule KlassHero.Messaging.Shared do
   """
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
 
   require Logger
+
+  @doc """
+  Resolves the provider the scope is acting as, and authorises it.
+
+  The `:provider_id` option is a *hint*, not an override: staff scopes carry no
+  `scope.provider`, so the acting provider has to come from the caller — but it
+  is only accepted once it is bound back to the scope, either as the provider's
+  own profile or as an active staff membership.
+
+  Returns `{:error, :not_found}` (not `:unauthorized`) for an unauthorised
+  provider so an attacker can't distinguish "not yours" from "doesn't exist".
+  """
+  @spec resolve_acting_provider(Scope.t(), keyword()) ::
+          {:ok, String.t()} | {:error, :missing_provider_id | :not_found}
+  def resolve_acting_provider(%Scope{} = scope, opts) do
+    case Keyword.get(opts, :provider_id) || (scope.provider && scope.provider.id) do
+      nil ->
+        Logger.error("Messaging command called without a resolvable provider_id",
+          user_id: scope.user.id
+        )
+
+        {:error, :missing_provider_id}
+
+      provider_id ->
+        authorize_acting_provider(scope, provider_id)
+    end
+  end
+
+  defp authorize_acting_provider(%Scope{provider: %{id: provider_id}}, provider_id), do: {:ok, provider_id}
+
+  defp authorize_acting_provider(%Scope{} = scope, provider_id) do
+    if ProviderStaffResolver.active_staff_for_provider?(provider_id, scope.user.id) do
+      {:ok, provider_id}
+    else
+      Logger.warning("Scope not authorised to act as provider",
+        user_id: scope.user.id,
+        provider_id: provider_id
+      )
+
+      {:error, :not_found}
+    end
+  end
 
   @doc """
   Verifies that a user is a participant in a conversation.
