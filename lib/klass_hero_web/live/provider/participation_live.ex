@@ -259,9 +259,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
     case Participation.get_session_with_roster_enriched(session_id) do
       {:ok, session} ->
-        # Ownership guard (IDOR): the session's program must belong to this
-        # provider. Without it, any provider could read and mutate another
-        # business's roster by guessing a session id.
+        # Ownership guard (IDOR): the session's program must belong to this provider,
+        # else any provider could read/mutate another business's roster via a guessed id.
         if MapSet.member?(socket.assigns.assigned_program_ids, session.program_id) do
           socket
           |> assign(:session, session)

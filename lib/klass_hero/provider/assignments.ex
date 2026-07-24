@@ -156,10 +156,8 @@ defmodule KlassHero.Provider.Assignments do
   def set_lead_instructor(program_id, staff_member_id, provider_id)
       when is_binary(program_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "program_staff_assignment" do
-      # Ownership guard (IDOR): the staff member must belong to the caller's
-      # provider — a foreign one is indistinguishable from missing (:not_found),
-      # so a competitor's staff can never be attached to this (publicly-rendered)
-      # program. The existence check also short-circuits before the transaction.
+      # Foreign staff → :not_found (see @doc): a competitor's staff must never attach
+      # to this publicly-rendered program.
       case Provider.get_staff_member(staff_member_id) do
         {:ok, %StaffMember{provider_id: ^provider_id} = staff_member} ->
           Multi.new()

@@ -146,9 +146,7 @@ defmodule KlassHero.Provider.Staff do
   def resend_staff_invitation(provider_id, staff_member_id)
       when is_binary(provider_id) and is_binary(staff_member_id) do
     context_span entity: "staff_member" do
-      # Ownership guard (IDOR): a staff member owned by another provider is
-      # indistinguishable from a missing one — both return :not_found, so no
-      # existence/status oracle leaks across tenants. Mirrors update_staff_member/3.
+      # Ownership guard (IDOR, see @doc) — mirrors update_staff_member/3 above.
       with {:ok, %StaffMember{provider_id: ^provider_id} = staff} <- get_staff_member(staff_member_id),
            {:ok, _transitioned} <- StaffMember.transition_invitation(staff, :pending),
            {raw_token, token_hash} = StaffMember.generate_invitation_token(),

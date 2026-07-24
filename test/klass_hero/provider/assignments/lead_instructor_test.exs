@@ -84,9 +84,7 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
       foreign_provider = insert(:provider_profile_schema)
       foreign_staff = insert(:staff_member_schema, provider_id: foreign_provider.id)
 
-      # A competitor's staff must never be attachable to my program — the assignment
-      # would render publicly on /programs/:id. Foreign staff = indistinguishable
-      # from missing (:not_found), and NO cross-provider assignment row is written.
+      # Public-render risk: assert no row was written, not just :not_found.
       assert {:error, :not_found} =
                Provider.set_lead_instructor(program.id, foreign_staff.id, provider.id)
 

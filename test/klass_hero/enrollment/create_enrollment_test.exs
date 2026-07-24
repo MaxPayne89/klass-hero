@@ -266,9 +266,8 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
           eligibility_at: "registration"
         })
 
-      # A child_id that exists nowhere is, by definition, not this parent's child.
-      # The ownership guard rejects it uniformly with :not_your_child — this also
-      # avoids an existence oracle (nonexistent vs. foreign-but-real look identical).
+      # A nonexistent child is, by definition, not this parent's — same :not_your_child
+      # as a foreign child, avoiding an existence oracle.
       result =
         KlassHero.Enrollment.create_enrollment(%{
           identity_id: parent.identity_id,

@@ -754,10 +754,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   defp maybe_flash_cover_warning(socket, _cover_result), do: socket
 
-  # Validates the picked lead instructor exists AND belongs to this provider before
-  # the program is written (IDOR guard), so a foreign/bad id short-circuits with a
-  # flash rather than orphaning or cross-tenant-attaching a lead assignment. This is
-  # the pre-write gate that keeps apply_lead_instructor's {:ok, _} = match safe.
+  # Validates the instructor exists AND belongs to this provider (IDOR guard) —
+  # the pre-write gate that keeps apply_lead_instructor's bang-match safe.
   defp resolve_instructor(id, _socket) when id in [nil, ""], do: {:ok, nil}
 
   defp resolve_instructor(instructor_id, socket) do
@@ -778,9 +776,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   end
 
   # Persists the lead choice on program_staff_assignments (single source of truth).
-  # A blank pick clears the lead; the id is already validated (existence + ownership)
-  # by resolve_instructor/2, so the {:ok, _} match below is safe. provider_id is
-  # threaded so the context re-checks ownership (defence in depth).
+  # Blank pick clears the lead; id already ownership-validated by resolve_instructor/2.
+  # provider_id re-threaded so the context re-checks too (defence in depth).
   defp apply_lead_instructor(program_id, nil, _provider_id), do: Provider.clear_lead_instructor(program_id)
 
   defp apply_lead_instructor(program_id, instructor_id, provider_id) do

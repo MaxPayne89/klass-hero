@@ -99,12 +99,10 @@ defmodule KlassHero.Provider.Staff.ResendStaffInvitationTest do
       # Drop fixture-setup event noise so the assertion below isolates the resend.
       clear_integration_events()
 
-      # A foreign staff member is indistinguishable from a missing one — both
-      # return :not_found, so no existence/status oracle leaks across tenants.
+      # Foreign staff → :not_found, same as missing (no existence oracle).
       assert {:error, :not_found} =
                Provider.resend_staff_invitation(attacker.id, foreign_staff.id)
 
-      # No resend fired: token + status untouched, no invitation event published.
       schema = Repo.get!(StaffMember, foreign_staff.id)
       assert schema.invitation_status == :failed
       assert schema.invitation_token_hash == old_token

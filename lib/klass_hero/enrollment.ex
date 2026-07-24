@@ -70,10 +70,8 @@ defmodule KlassHero.Enrollment do
     end
   end
 
-  # Ownership guard (IDOR): a parent may only enroll their own children. The
-  # child_id arrives from client params, so it must be checked against the
-  # authenticated parent before it reaches the DB (a foreign_key_constraint
-  # only proves the child exists, not that it belongs to this parent).
+  # Ownership guard (IDOR): child_id is client-supplied; the FK constraint proves
+  # the child exists, not that it belongs to this parent.
   defp ensure_child_belongs_to_parent(child_id, parent_id) when is_binary(child_id) do
     if ChildInfoACL.child_belongs_to_parent?(child_id, parent_id) do
       :ok
