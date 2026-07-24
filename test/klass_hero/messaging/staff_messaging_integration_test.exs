@@ -86,7 +86,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
 
       # 5. Unassign staff (and drive the handler directly as above)
       assert {:ok, unassigned} =
-               Provider.unassign_staff_from_program(ctx.program.id, ctx.staff.id)
+               Provider.unassign_staff_from_program(ctx.program.id, ctx.staff.id, ctx.provider.id)
 
       assert :ok =
                StaffAssignmentHandler.handle_event(

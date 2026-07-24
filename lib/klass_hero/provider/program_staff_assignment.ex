@@ -12,6 +12,7 @@ defmodule KlassHero.Provider.ProgramStaffAssignment do
   use Ecto.Schema
 
   import Ecto.Changeset
+  import Ecto.Query, only: [from: 2]
 
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
@@ -81,6 +82,18 @@ defmodule KlassHero.Provider.ProgramStaffAssignment do
       name: :program_staff_assignments_single_lead,
       message: "program already has a lead instructor"
     )
+  end
+
+  @doc """
+  Narrows a query to assignments owned by `provider_id`.
+
+  Composed into every mutation query so a crafted `program_id`/`staff_member_id`
+  pair cannot reach another provider's row — the guard holds even where a
+  caller's pre-check is missing.
+  """
+  @spec owned_by(Ecto.Queryable.t(), String.t()) :: Ecto.Query.t()
+  def owned_by(query \\ __MODULE__, provider_id) when is_binary(provider_id) do
+    from a in query, where: a.provider_id == ^provider_id
   end
 
   @doc "Returns true when the assignment is still active (never unassigned)."

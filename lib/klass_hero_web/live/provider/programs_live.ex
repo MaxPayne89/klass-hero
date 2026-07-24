@@ -761,8 +761,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   defp resolve_instructor(instructor_id, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    case Provider.get_staff_member(instructor_id) do
-      {:ok, %{provider_id: ^provider_id}} ->
+    case Provider.get_staff_member(instructor_id, provider_id) do
+      {:ok, _staff} ->
         {:ok, instructor_id}
 
       _not_found_or_foreign ->
@@ -778,7 +778,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   # Persists the lead choice on program_staff_assignments (single source of truth).
   # Blank pick clears the lead; id already ownership-validated by resolve_instructor/2.
   # provider_id re-threaded so the context re-checks too (defence in depth).
-  defp apply_lead_instructor(program_id, nil, _provider_id), do: Provider.clear_lead_instructor(program_id)
+  defp apply_lead_instructor(program_id, nil, provider_id), do: Provider.clear_lead_instructor(program_id, provider_id)
 
   defp apply_lead_instructor(program_id, instructor_id, provider_id) do
     {:ok, _assignment} = Provider.set_lead_instructor(program_id, instructor_id, provider_id)

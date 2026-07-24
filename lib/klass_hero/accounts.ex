@@ -160,13 +160,11 @@ defmodule KlassHero.Accounts do
         # Ownership guard (IDOR): a staff row owned by another provider is
         # indistinguishable from a missing one — both roll back :not_found so an
         # attacker can't probe existence, and no foreign row/role is touched.
-        with {:ok, %StaffMember{provider_id: ^provider_id} = staff} <-
-               Provider.get_staff_member(staff_id),
+        with {:ok, staff} <- Provider.get_staff_member(staff_id, provider_id),
              :ok <- Provider.delete_staff_member(staff_id),
              :ok <- maybe_revoke_staff_role(staff) do
           staff
         else
-          {:ok, %StaffMember{}} -> Repo.rollback(:not_found)
           {:error, reason} -> Repo.rollback(reason)
         end
       end)
