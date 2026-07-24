@@ -26,6 +26,7 @@ defmodule KlassHeroWeb.MarketingComponents do
   import KlassHeroWeb.UIComponents,
     only: [kh_logo: 1, kh_button: 1, kh_card: 1, kh_pill: 1, kh_icon_chip: 1, icon: 1]
 
+  alias KlassHeroWeb.Theme
   alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
 
@@ -236,7 +237,7 @@ defmodule KlassHeroWeb.MarketingComponents do
           {gettext("for Our Youth")}
         </h1>
 
-        <p class="mt-6 text-lg md:text-xl text-[var(--fg-muted)] max-w-2xl mx-auto leading-relaxed">
+        <p class="mt-6 text-lg md:text-xl text-[var(--fg-muted-on-light)] max-w-2xl mx-auto leading-relaxed">
           {gettext(
             "Berlin's leading network for tutors, coaches, and camp providers — every one verified by our team."
           )}
@@ -941,7 +942,7 @@ defmodule KlassHeroWeb.MarketingComponents do
     ~H"""
     <section
       id="mk-programs-hero"
-      class="relative overflow-hidden bg-gradient-to-b from-hero-pink-50 to-white pt-14 pb-12 lg:pt-20 lg:pb-16"
+      class={[Theme.gradient(:base_fade), "relative overflow-hidden pt-14 pb-12 lg:pt-20 lg:pb-16"]}
     >
       <div class="absolute top-10 right-1/4 w-72 h-72 rounded-full bg-hero-yellow-500 opacity-20 blur-3xl pointer-events-none">
       </div>
@@ -958,7 +959,7 @@ defmodule KlassHeroWeb.MarketingComponents do
           {gettext(", camps & classes for your child")}
         </h1>
 
-        <p class="mt-5 text-lg text-[var(--fg-muted)] max-w-2xl mx-auto">
+        <p class="mt-5 text-lg text-[var(--fg-muted-on-light)] max-w-2xl mx-auto">
           {gettext(
             "Hand-picked, vetted programs across Berlin — filter by category, age, or schedule."
           )}
@@ -1276,7 +1277,7 @@ defmodule KlassHeroWeb.MarketingComponents do
     ~H"""
     <section
       id={@id}
-      class="relative overflow-hidden bg-gradient-to-b from-hero-pink-50 to-white pt-16 pb-20 lg:pt-24 lg:pb-28"
+      class={[Theme.gradient(:base_fade), "relative overflow-hidden pt-16 pb-20 lg:pt-24 lg:pb-28"]}
     >
       <div class="absolute top-10 right-1/4 w-72 h-72 rounded-full bg-hero-yellow-500 opacity-20 blur-3xl pointer-events-none">
       </div>
@@ -1295,7 +1296,7 @@ defmodule KlassHeroWeb.MarketingComponents do
         </h1>
         <p
           :if={@lede != []}
-          class="mt-6 text-lg md:text-xl text-[var(--fg-muted)] max-w-3xl mx-auto leading-relaxed"
+          class="mt-6 text-lg md:text-xl text-[var(--fg-muted-on-light)] max-w-3xl mx-auto leading-relaxed"
         >
           {render_slot(@lede)}
         </p>
@@ -1307,7 +1308,7 @@ defmodule KlassHeroWeb.MarketingComponents do
   @doc """
   Generic peach CTA closer used by Trust & Safety (and reusable by About /
   Contact follow-ups). H2 + lede + primary CTA via slot, with an optional
-  tracking-widest tagline + sub-tagline rendered below a horizontal rule.
+  tagline + sub-tagline rendered below a horizontal rule.
   """
   attr :id, :string, default: "mk-cta"
   attr :title, :string, required: true
@@ -1318,20 +1319,20 @@ defmodule KlassHeroWeb.MarketingComponents do
 
   def mk_cta_section(assigns) do
     ~H"""
-    <section id={@id} class="py-16 lg:py-20 bg-hero-pink-50 text-center">
+    <section id={@id} class={[Theme.gradient(:base_fade), "py-16 lg:py-20 text-center"]}>
       <div class="max-w-3xl mx-auto px-6">
         <%!-- typography-lint-ignore: marketing CTA closer title intentionally larger than Theme.typography(:page_title) --%>
         <h2 class="font-display font-bold tracking-tight text-4xl lg:text-5xl text-hero-black">
           {@title}
         </h2>
-        <p :if={@lede} class="text-lg text-[var(--fg-muted)] mt-4">{@lede}</p>
+        <p :if={@lede} class="text-lg text-[var(--fg-muted-on-light)] mt-4">{@lede}</p>
         <div class="mt-8">
           {render_slot(@cta)}
         </div>
 
         <div :if={@tagline} class="mt-14 pt-10 border-t border-[var(--border-light)]">
-          <%!-- typography-lint-ignore: tracking-widest tagline rendered in display font is intentional --%>
-          <p class="font-display font-bold text-2xl tracking-widest text-hero-black">
+          <%!-- typography-lint-ignore: display-font tagline is an intentional non-heading brand callout --%>
+          <p class="font-display font-bold text-2xl tracking-tight text-hero-black">
             {@tagline}
           </p>
           <p :if={@sub_tagline} class="text-xl text-[var(--brand-primary-dark)] font-bold mt-2">
