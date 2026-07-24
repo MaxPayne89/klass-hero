@@ -148,25 +148,36 @@ defmodule KlassHero.Provider.Assignments do
   mid-flight. Creates an active assignment when the staff member has none yet.
 
   Returns `{:ok, ProgramStaffAssignment.t()}` or `{:error, :not_found}` when the
-  staff member does not exist.
+  staff member does not exist **or is owned by another provider** (IDOR guard —
+  the two are indistinguishable, so no cross-tenant assignment is ever written).
   """
-  @spec set_lead_instructor(String.t(), String.t()) ::
+  @spec set_lead_instructor(String.t(), String.t(), String.t()) ::
           {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | term()}
-  def set_lead_instructor(program_id, staff_member_id) when is_binary(program_id) and is_binary(staff_member_id) do
+  def set_lead_instructor(program_id, staff_member_id, provider_id)
+      when is_binary(program_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "program_staff_assignment" do
-      # Existence check up front so a missing staff member short-circuits before
-      # the transaction; provider_id is immutable so reusing it inside is safe.
-      with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id) do
-        Multi.new()
-        |> Multi.update_all(:clear_other_leads, other_active_leads_query(program_id, staff_member_id),
-          set: [is_lead_instructor: false]
-        )
-        |> Multi.run(:lead, fn repo, _ -> upsert_lead(repo, program_id, staff_member) end)
-        |> Repo.transaction()
-        |> case do
-          {:ok, %{lead: lead}} -> {:ok, lead}
-          {:error, _step, reason, _changes} -> {:error, reason}
-        end
+      # Ownership guard (IDOR): the staff member must belong to the caller's
+      # provider — a foreign one is indistinguishable from missing (:not_found),
+      # so a competitor's staff can never be attached to this (publicly-rendered)
+      # program. The existence check also short-circuits before the transaction.
+      case Provider.get_staff_member(staff_member_id) do
+        {:ok, %StaffMember{provider_id: ^provider_id} = staff_member} ->
+          Multi.new()
+          |> Multi.update_all(:clear_other_leads, other_active_leads_query(program_id, staff_member_id),
+            set: [is_lead_instructor: false]
+          )
+          |> Multi.run(:lead, fn repo, _ -> upsert_lead(repo, program_id, staff_member) end)
+          |> Repo.transaction()
+          |> case do
+            {:ok, %{lead: lead}} -> {:ok, lead}
+            {:error, _step, reason, _changes} -> {:error, reason}
+          end
+
+        {:ok, %StaffMember{}} ->
+          {:error, :not_found}
+
+        error ->
+          error
       end
     end
   end

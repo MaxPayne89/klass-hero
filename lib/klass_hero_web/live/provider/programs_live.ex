@@ -541,7 +541,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     with {:ok, instructor_id} <- resolve_instructor(program_params["instructor_id"], socket),
          {:ok, program} <- ProgramCatalog.create_program(attrs) do
-      :ok = apply_lead_instructor(program.id, instructor_id)
+      :ok = apply_lead_instructor(program.id, instructor_id, socket.assigns.current_scope.provider.id)
       policy_result = maybe_set_enrollment_policy(program.id, enrollment_params)
       set_participant_policy_on_create(program.id, participant_policy_params)
       capacity = resolve_capacity(policy_result, enrollment_params)
@@ -597,7 +597,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     with {:ok, instructor_id} <- resolve_instructor(program_params["instructor_id"], socket),
          {:ok, updated} <- ProgramCatalog.update_program(provider_id, program_id, attrs) do
-      :ok = apply_lead_instructor(program_id, instructor_id)
+      :ok = apply_lead_instructor(program_id, instructor_id, provider_id)
       policy_result = maybe_set_enrollment_policy(program_id, enrollment_params)
       set_participant_policy_on_update(program_id, participant_policy_params)
 
@@ -754,19 +754,23 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   defp maybe_flash_cover_warning(socket, _cover_result), do: socket
 
-  # Validates the picked lead instructor exists before the program is written, so a
-  # bad id short-circuits with a flash rather than orphaning a lead assignment.
+  # Validates the picked lead instructor exists AND belongs to this provider before
+  # the program is written (IDOR guard), so a foreign/bad id short-circuits with a
+  # flash rather than orphaning or cross-tenant-attaching a lead assignment. This is
+  # the pre-write gate that keeps apply_lead_instructor's {:ok, _} = match safe.
   defp resolve_instructor(id, _socket) when id in [nil, ""], do: {:ok, nil}
 
   defp resolve_instructor(instructor_id, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
     case Provider.get_staff_member(instructor_id) do
-      {:ok, _staff} ->
+      {:ok, %{provider_id: ^provider_id}} ->
         {:ok, instructor_id}
 
-      {:error, _reason} ->
-        Logger.warning("Instructor not found during program creation",
+      _not_found_or_foreign ->
+        Logger.warning("Instructor not found or not owned by provider during program save",
           instructor_id: instructor_id,
-          provider_id: socket.assigns.current_scope.provider.id
+          provider_id: provider_id
         )
 
         {:error, :instructor_not_found}
@@ -774,11 +778,13 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   end
 
   # Persists the lead choice on program_staff_assignments (single source of truth).
-  # A blank pick clears the lead; the id is already validated by resolve_instructor/2.
-  defp apply_lead_instructor(program_id, nil), do: Provider.clear_lead_instructor(program_id)
+  # A blank pick clears the lead; the id is already validated (existence + ownership)
+  # by resolve_instructor/2, so the {:ok, _} match below is safe. provider_id is
+  # threaded so the context re-checks ownership (defence in depth).
+  defp apply_lead_instructor(program_id, nil, _provider_id), do: Provider.clear_lead_instructor(program_id)
 
-  defp apply_lead_instructor(program_id, instructor_id) do
-    {:ok, _assignment} = Provider.set_lead_instructor(program_id, instructor_id)
+  defp apply_lead_instructor(program_id, instructor_id, provider_id) do
+    {:ok, _assignment} = Provider.set_lead_instructor(program_id, instructor_id, provider_id)
     :ok
   end
 

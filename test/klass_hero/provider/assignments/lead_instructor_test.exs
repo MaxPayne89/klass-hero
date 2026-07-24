@@ -14,7 +14,7 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
     {provider, program, staff}
   end
 
-  describe "set_lead_instructor/2" do
+  describe "set_lead_instructor/3" do
     test "flags an existing active assignment as lead" do
       {provider, program, staff} = setup_provider_program_staff()
 
@@ -26,7 +26,7 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
         })
 
       assert {:ok, %ProgramStaffAssignment{} = lead} =
-               Provider.set_lead_instructor(program.id, staff.id)
+               Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
 
       assert lead.is_lead_instructor == true
       assert lead.staff_member_id == staff.id
@@ -36,7 +36,7 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
       {_provider, program, staff} = setup_provider_program_staff()
 
       assert {:ok, %ProgramStaffAssignment{} = lead} =
-               Provider.set_lead_instructor(program.id, staff.id)
+               Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
 
       assert lead.is_lead_instructor == true
       assert lead.program_id == program.id
@@ -49,8 +49,8 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
       staff_a = insert(:staff_member_schema, provider_id: provider.id)
       staff_b = insert(:staff_member_schema, provider_id: provider.id)
 
-      {:ok, _} = Provider.set_lead_instructor(program.id, staff_a.id)
-      {:ok, _} = Provider.set_lead_instructor(program.id, staff_b.id)
+      {:ok, _} = Provider.set_lead_instructor(program.id, staff_a.id, program.provider_id)
+      {:ok, _} = Provider.set_lead_instructor(program.id, staff_b.id, program.provider_id)
 
       leads =
         ProgramStaffAssignment
@@ -64,8 +64,8 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
     test "is idempotent when the staff member is already lead" do
       {_provider, program, staff} = setup_provider_program_staff()
 
-      {:ok, first} = Provider.set_lead_instructor(program.id, staff.id)
-      {:ok, second} = Provider.set_lead_instructor(program.id, staff.id)
+      {:ok, first} = Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
+      {:ok, second} = Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
 
       assert first.id == second.id
       assert second.is_lead_instructor == true
@@ -75,14 +75,29 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
       {_provider, program, _staff} = setup_provider_program_staff()
 
       assert {:error, :not_found} =
-               Provider.set_lead_instructor(program.id, Ecto.UUID.generate())
+               Provider.set_lead_instructor(program.id, Ecto.UUID.generate(), program.provider_id)
+    end
+
+    test "rejects a staff member owned by another provider (IDOR guard)" do
+      {provider, program, _staff} = setup_provider_program_staff()
+
+      foreign_provider = insert(:provider_profile_schema)
+      foreign_staff = insert(:staff_member_schema, provider_id: foreign_provider.id)
+
+      # A competitor's staff must never be attachable to my program — the assignment
+      # would render publicly on /programs/:id. Foreign staff = indistinguishable
+      # from missing (:not_found), and NO cross-provider assignment row is written.
+      assert {:error, :not_found} =
+               Provider.set_lead_instructor(program.id, foreign_staff.id, provider.id)
+
+      refute Repo.exists?(from(a in ProgramStaffAssignment, where: a.program_id == ^program.id))
     end
   end
 
   describe "clear_lead_instructor/1" do
     test "unsets the lead flag but keeps the assignment active" do
       {_provider, program, staff} = setup_provider_program_staff()
-      {:ok, _} = Provider.set_lead_instructor(program.id, staff.id)
+      {:ok, _} = Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
 
       assert :ok = Provider.clear_lead_instructor(program.id)
 
@@ -104,7 +119,7 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
   describe "get_lead_instructor/1" do
     test "returns the lead as a display map" do
       {_provider, program, staff} = setup_provider_program_staff()
-      {:ok, _} = Provider.set_lead_instructor(program.id, staff.id)
+      {:ok, _} = Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
 
       assert %{id: id, name: name, headshot_url: headshot} =
                Provider.get_lead_instructor(program.id)
@@ -127,8 +142,8 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
       staff_b = insert(:staff_member_schema, provider_id: provider.id)
       program_c = insert(:program_schema, provider_id: provider.id)
 
-      {:ok, _} = Provider.set_lead_instructor(program_a.id, staff_a.id)
-      {:ok, _} = Provider.set_lead_instructor(program_b.id, staff_b.id)
+      {:ok, _} = Provider.set_lead_instructor(program_a.id, staff_a.id, program_a.provider_id)
+      {:ok, _} = Provider.set_lead_instructor(program_b.id, staff_b.id, program_b.provider_id)
 
       result =
         Provider.list_lead_instructors_for_programs([program_a.id, program_b.id, program_c.id])
