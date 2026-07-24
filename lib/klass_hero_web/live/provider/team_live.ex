@@ -179,7 +179,9 @@ defmodule KlassHeroWeb.Provider.TeamLive do
 
   @impl true
   def handle_event("resend_invitation", %{"id" => staff_member_id}, socket) do
-    case Provider.resend_staff_invitation(staff_member_id) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case Provider.resend_staff_invitation(provider_id, staff_member_id) do
       {:ok, updated, _raw_token} ->
         staff_view = StaffMemberPresenter.to_admin_view(updated)
 
@@ -189,6 +191,13 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> put_flash(:info, gettext("Invitation resent successfully."))}
 
       {:error, :not_found} ->
+        # A foreign staff_member_id is indistinguishable from a genuine miss (IDOR
+        # guard lives in the context) — log the attempt so enumeration is visible.
+        Logger.warning("[TeamLive] Resend invitation returned not_found",
+          staff_member_id: staff_member_id,
+          provider_id: provider_id
+        )
+
         {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
 
       {:error, :invalid_invitation_transition} ->

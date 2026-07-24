@@ -10,6 +10,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     ]
 
   alias KlassHero.Participation
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
@@ -20,6 +21,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   @impl true
   def mount(%{"session_id" => session_id}, _session, socket) do
     provider_id = socket.assigns.current_scope.provider.id
+    assigned_program_ids = MapSet.new(ProgramCatalog.list_program_ids_for_provider(provider_id))
 
     socket =
       socket
@@ -27,6 +29,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       |> assign(:active_nav, :roster)
       |> assign(:session_id, session_id)
       |> assign(:provider_id, provider_id)
+      |> assign(:assigned_program_ids, assigned_program_ids)
       |> assign(:session, nil)
       # Regular assign (not stream): small bounded collection, needs Enum.find/filter, always fully replaced.
       |> assign(:participation_records, [])
@@ -256,11 +259,25 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
     case Participation.get_session_with_roster_enriched(session_id) do
       {:ok, session} ->
-        socket
-        |> assign(:session, session)
-        |> assign(:participation_records, session.participation_records || [])
-        |> assign(:session_error, nil)
-        |> load_provider_notes()
+        # Ownership guard (IDOR): the session's program must belong to this provider,
+        # else any provider could read/mutate another business's roster via a guessed id.
+        if MapSet.member?(socket.assigns.assigned_program_ids, session.program_id) do
+          socket
+          |> assign(:session, session)
+          |> assign(:participation_records, session.participation_records || [])
+          |> assign(:session_error, nil)
+          |> load_provider_notes()
+        else
+          Logger.warning(
+            "[ParticipationLive] Unauthorized access to session",
+            session_id: session_id,
+            provider_id: socket.assigns.provider_id
+          )
+
+          socket
+          |> put_flash(:error, gettext("You are not assigned to this program"))
+          |> push_navigate(to: ~p"/provider/sessions")
+        end
 
       {:error, :not_found} ->
         Logger.warning(

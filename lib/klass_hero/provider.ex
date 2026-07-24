@@ -201,8 +201,8 @@ defmodule KlassHero.Provider do
   @doc "Deletes a staff member by ID."
   defdelegate delete_staff_member(staff_id), to: Staff
 
-  @doc "Resends a staff invitation for a staff member in :failed or :expired status."
-  defdelegate resend_staff_invitation(staff_member_id), to: Staff
+  @doc "Resends a staff invitation for a `:failed`/`:expired` member owned by `provider_id`."
+  defdelegate resend_staff_invitation(provider_id, staff_member_id), to: Staff
 
   @doc "Transitions a staff member's invitation status to :expired."
   defdelegate expire_staff_invitation(staff_member_or_id), to: Staff
@@ -266,8 +266,8 @@ defmodule KlassHero.Provider do
   @doc "Lists all active program assignments for a staff member."
   defdelegate list_active_assignments_for_staff_member(staff_member_id), to: Assignments
 
-  @doc "Promotes a staff member to the program's lead instructor (single source of truth)."
-  defdelegate set_lead_instructor(program_id, staff_member_id), to: Assignments
+  @doc "Promotes a `provider_id`-owned staff member to the program's lead instructor (single source of truth)."
+  defdelegate set_lead_instructor(program_id, staff_member_id, provider_id), to: Assignments
 
   @doc "Clears the program's lead instructor, leaving the assignment active."
   defdelegate clear_lead_instructor(program_id), to: Assignments

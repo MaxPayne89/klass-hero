@@ -180,6 +180,10 @@ defmodule KlassHeroWeb.BookingLiveTest do
       assert Decimal.equal?(enrollment.card_fee_amount, Decimal.new("0.00"))
     end
 
+    # NOTE: the cross-family IDOR guard is tested at the context boundary (see
+    # create_enrollment_test.exs). The child_id <select> only lists the user's own
+    # children, so a LiveView-level test can't submit a foreign id.
+
     test "back_to_program button navigates to program detail", %{conn: conn} do
       program = insert(:program_schema)
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")

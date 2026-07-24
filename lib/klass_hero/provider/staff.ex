@@ -129,22 +129,25 @@ defmodule KlassHero.Provider.Staff do
   end
 
   @doc """
-  Resends a staff invitation for a staff member in :failed or :expired status.
+  Resends a staff invitation for a `:failed`/`:expired` member owned by `provider_id`.
 
   Generates a fresh token, transitions status back to :pending, and re-emits
   :staff_member_invited to restart the invitation saga.
 
   Returns:
   - `{:ok, StaffMember.t(), raw_token}` on success
-  - `{:error, :not_found}` if the staff member does not exist
+  - `{:error, :not_found}` if the staff member does not exist **or is owned by
+    another provider** (IDOR guard — the two are indistinguishable)
   - `{:error, :invalid_invitation_transition}` if the current status does not allow resend
   """
-  @spec resend_staff_invitation(String.t()) ::
+  @spec resend_staff_invitation(String.t(), String.t()) ::
           {:ok, StaffMember.t(), String.t()}
           | {:error, :not_found | :invalid_invitation_transition}
-  def resend_staff_invitation(staff_member_id) when is_binary(staff_member_id) do
+  def resend_staff_invitation(provider_id, staff_member_id)
+      when is_binary(provider_id) and is_binary(staff_member_id) do
     context_span entity: "staff_member" do
-      with {:ok, staff} <- get_staff_member(staff_member_id),
+      # Ownership guard (IDOR, see @doc) — mirrors update_staff_member/3 above.
+      with {:ok, %StaffMember{provider_id: ^provider_id} = staff} <- get_staff_member(staff_member_id),
            {:ok, _transitioned} <- StaffMember.transition_invitation(staff, :pending),
            {raw_token, token_hash} = StaffMember.generate_invitation_token(),
            {:ok, persisted} <-
@@ -153,6 +156,9 @@ defmodule KlassHero.Provider.Staff do
                invitation_token_hash: token_hash
              }) do
         emit_or_compensate_staff_invitation(persisted, raw_token)
+      else
+        {:ok, %StaffMember{}} -> {:error, :not_found}
+        other -> other
       end
     end
   end

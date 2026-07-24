@@ -249,7 +249,8 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
       assert staff_failed.invitation_status == :failed
 
       # Step 3: Provider resends the invitation → status back to :pending, new token
-      assert {:ok, staff_resent, new_raw_token} = Provider.resend_staff_invitation(staff.id)
+      assert {:ok, staff_resent, new_raw_token} =
+               Provider.resend_staff_invitation(provider.id, staff.id)
 
       assert staff_resent.invitation_status == :pending
       assert is_binary(new_raw_token)

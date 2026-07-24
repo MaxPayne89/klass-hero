@@ -255,7 +255,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
                })
     end
 
-    test "returns processing_failed when child does not exist" do
+    test "rejects a nonexistent child (ownership guard fires before eligibility)" do
       program = insert(:program_schema)
       parent = insert(:parent_profile_schema)
 
@@ -266,6 +266,8 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
           eligibility_at: "registration"
         })
 
+      # A nonexistent child is, by definition, not this parent's — same :not_your_child
+      # as a foreign child, avoiding an existence oracle.
       result =
         KlassHero.Enrollment.create_enrollment(%{
           identity_id: parent.identity_id,
@@ -274,7 +276,27 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
           payment_method: "card"
         })
 
-      assert {:error, :processing_failed} = result
+      assert {:error, :not_your_child} = result
+    end
+
+    test "rejects enrolling a child that belongs to another parent (IDOR guard)" do
+      program = insert(:program_schema)
+      parent = insert(:parent_profile_schema)
+
+      other_parent = insert(:parent_profile_schema)
+      {other_child, _other_parent} = insert_child_with_guardian(parent: other_parent)
+
+      result =
+        KlassHero.Enrollment.create_enrollment(%{
+          identity_id: parent.identity_id,
+          program_id: program.id,
+          child_id: other_child.id,
+          payment_method: "card"
+        })
+
+      assert {:error, :not_your_child} = result
+
+      refute KlassHero.Repo.exists?(from(e in Enrollment, where: e.child_id == ^other_child.id))
     end
   end
 
