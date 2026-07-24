@@ -9,7 +9,7 @@ defmodule KlassHeroWeb.ContactLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    changeset = ContactForm.changeset(%ContactForm{}, %{})
+    changeset = ContactForm.changeset(%ContactForm{}, prefill_attrs(socket.assigns.current_scope))
 
     socket =
       socket
@@ -52,6 +52,12 @@ defmodule KlassHeroWeb.ContactLive do
         {:noreply, assign(socket, form: to_form(changeset, as: :contact))}
     end
   end
+
+  # Seeds the contact form's initial name/email from the signed-in user, so
+  # logged-in visitors don't retype what we already know. On the public /contact
+  # route `current_scope.user` is nil for anonymous visitors — seed nothing then.
+  defp prefill_attrs(%{user: %{} = user}), do: %{"name" => user.name, "email" => user.email}
+  defp prefill_attrs(_scope), do: %{}
 
   defp contact_methods do
     email = KlassHero.Contact.email()

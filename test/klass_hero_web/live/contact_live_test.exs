@@ -215,6 +215,14 @@ defmodule KlassHeroWeb.ContactLiveTest do
       end
     end
 
+    test "anonymous visitor sees blank name and email fields", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/contact")
+
+      # No logged-in user → nothing to prefill; value attr is omitted entirely
+      refute has_element?(view, "input#contact_name[value]")
+      refute has_element?(view, "input#contact_email[value]")
+    end
+
     test "real-time validation updates as user types", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/contact")
 
@@ -241,6 +249,17 @@ defmodule KlassHeroWeb.ContactLiveTest do
 
       html = render(view)
       refute html =~ "must be a valid email address"
+    end
+  end
+
+  describe "ContactLive prefill for logged-in users" do
+    setup :register_and_log_in_user
+
+    test "prefills name and email from the current user", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(conn, ~p"/contact")
+
+      assert has_element?(view, "input#contact_name[value='#{user.name}']")
+      assert has_element?(view, "input#contact_email[value='#{user.email}']")
     end
   end
 end
