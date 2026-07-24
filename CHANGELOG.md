@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.61.0](https://github.com/MaxPayne89/klass-hero/compare/v0.60.1...v0.61.0) (2026-07-24)
+
+
+### Features
+
+* prefill contact form name and email for logged-in users ([#1130](https://github.com/MaxPayne89/klass-hero/issues/1130)) ([a55b585](https://github.com/MaxPayne89/klass-hero/commit/a55b585dc9ca12092ef4f4abea46ecf2bd0fcc03))
+
+
+### Bug Fixes
+
+* close 5 multi-tenant IDORs in provider web layer ([#1131](https://github.com/MaxPayne89/klass-hero/issues/1131)) ([5ae0a02](https://github.com/MaxPayne89/klass-hero/commit/5ae0a02421b81a76a7c0ca320538822fdaa3687a))
+
 ## [0.60.1](https://github.com/MaxPayne89/klass-hero/compare/v0.60.0...v0.60.1) (2026-07-24)
 
 
