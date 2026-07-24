@@ -21,7 +21,8 @@ defmodule KlassHeroWeb.Theme do
     safety: "bg-gradient-to-r from-green-500 to-emerald-600",
     cool: "bg-gradient-to-r from-hero-blue-400 to-hero-blue-600",
     art: "bg-gradient-to-r from-hero-yellow-400 to-hero-pink-400",
-    cream: "bg-hero-cream-100"
+    cream: "bg-hero-cream-100",
+    base_fade: "bg-gradient-to-b from-hero-pink-50 to-white"
   }
 
   @doc """
@@ -32,6 +33,8 @@ defmodule KlassHeroWeb.Theme do
   - `:primary` - Hero blue horizontal gradient (hero-blue-500 to hero-blue-600)
   - `:hero` - Hero blue/yellow diagonal gradient
   - `:safety` - Green horizontal gradient (green-500 to emerald-600)
+  - `:base_fade` - Vertical fade from the base pink surface (hero-pink-50) to white,
+    for marketing sections that must meet a white/black seam on a clean edge
 
   ## Examples
 

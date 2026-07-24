@@ -1745,8 +1745,12 @@ defmodule KlassHeroWeb.UIComponents do
       type={@type}
       class={
         [
+          # No `border-0` here: Tailwind preflight already zeroes borders on every element, and an
+          # explicit `border-0` in this base stack out-cascades the `:ghost` variant's opt-in `border`
+          # (equal-specificity single-class rules resolve by emit order, not markup order), leaving the
+          # ghost button invisible at rest. Borderless variants stay borderless via preflight.
           # typography-lint-ignore: KhButton owns its own display-font CTA styling (size scales separately)
-          "inline-flex items-center justify-center gap-2 font-display font-bold tracking-tight transition-all cursor-pointer border-0",
+          "inline-flex items-center justify-center gap-2 font-display font-bold tracking-tight transition-all cursor-pointer",
           "active:scale-[0.98]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]",
           "disabled:cursor-not-allowed disabled:bg-hero-grey-200 disabled:text-hero-grey-400 disabled:shadow-none disabled:translate-y-0",

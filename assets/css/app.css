@@ -174,6 +174,11 @@
   --fg-primary:    var(--color-hero-black);
   --fg-body:       var(--color-hero-black-100);
   --fg-muted:      var(--color-hero-grey-600);
+  /* Muted text on warm-tinted light surfaces (hero-pink-50 / base_fade gradients):
+     grey-600 only reaches ~3.1:1 over the pink zone (fails WCAG AA). grey-800 clears
+     4.5:1 across the whole gradient. Use on pink/gradient surfaces; plain --fg-muted
+     stays for muted text on white. */
+  --fg-muted-on-light: var(--color-hero-grey-800);
   --fg-subtle:     var(--color-hero-grey-500);
   --fg-inverse:    #ffffff;
   --fg-link:       var(--color-hero-blue-600);
