@@ -415,7 +415,7 @@ msgstr ""
 msgid "Account Termination"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:79
+#: lib/klass_hero_web/live/contact_live.ex:85
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:311
 #, elixir-autogen, elixir-format
 msgid "Address"
@@ -436,7 +436,7 @@ msgstr ""
 msgid "An email was sent to %{email}, please access it to confirm your account."
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:91
+#: lib/klass_hero_web/live/contact_live.ex:97
 #, elixir-autogen, elixir-format
 msgid "Booking Support"
 msgstr ""
@@ -515,7 +515,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/composite_components.ex:651
 #: lib/klass_hero_web/live/contact_live.ex:16
-#: lib/klass_hero_web/live/contact_live.ex:101
+#: lib/klass_hero_web/live/contact_live.ex:107
 #: lib/klass_hero_web/live/privacy_policy_live.ex:221
 #, elixir-autogen, elixir-format
 msgid "Contact Us"
@@ -585,8 +585,8 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:647
 #: lib/klass_hero_web/components/provider_components.ex:2073
 #: lib/klass_hero_web/components/provider_components.ex:2091
-#: lib/klass_hero_web/live/contact_live.ex:65
-#: lib/klass_hero_web/live/contact_live.ex:154
+#: lib/klass_hero_web/live/contact_live.ex:71
+#: lib/klass_hero_web/live/contact_live.ex:160
 #: lib/klass_hero_web/live/user_live/login.ex:60
 #: lib/klass_hero_web/live/user_live/login.ex:89
 #: lib/klass_hero_web/live/user_live/registration.ex:48
@@ -653,7 +653,7 @@ msgstr ""
 msgid "Find and book activities, camps, and classes for your children"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:89
+#: lib/klass_hero_web/live/contact_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "General Inquiry"
 msgstr ""
@@ -678,7 +678,7 @@ msgstr ""
 msgid "Information We Collect"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:92
+#: lib/klass_hero_web/live/contact_live.ex:98
 #, elixir-autogen, elixir-format
 msgid "Instructor Application"
 msgstr ""
@@ -754,14 +754,14 @@ msgstr ""
 msgid "Magic link is invalid or it has expired."
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:170
+#: lib/klass_hero_web/live/contact_live.ex:176
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:177
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:129
+#: lib/klass_hero_web/live/contact_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "Message sent successfully!"
 msgstr ""
@@ -774,7 +774,7 @@ msgstr ""
 msgid "My Sessions"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:147
+#: lib/klass_hero_web/live/contact_live.ex:153
 #: lib/klass_hero_web/live/user_live/registration.ex:41
 #: lib/klass_hero_web/live/user_live/staff_invitation.ex:62
 #, elixir-autogen, elixir-format
@@ -801,7 +801,7 @@ msgstr ""
 msgid "Or use password"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:94
+#: lib/klass_hero_web/live/contact_live.ex:100
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:241
 #: lib/klass_hero_web/live/provider/verification_live.ex:626
 #: lib/klass_hero_web/presenters/provider_presenter.ex:97
@@ -821,7 +821,7 @@ msgstr ""
 msgid "Payment Terms"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:72
+#: lib/klass_hero_web/live/contact_live.ex:78
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Phone"
@@ -839,7 +839,7 @@ msgstr ""
 msgid "Program Enrollment & Bookings"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:90
+#: lib/klass_hero_web/live/contact_live.ex:96
 #, elixir-autogen, elixir-format
 msgid "Program Question"
 msgstr ""
@@ -918,7 +918,7 @@ msgstr ""
 msgid "Session started successfully"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:162
+#: lib/klass_hero_web/live/contact_live.ex:168
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:163
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:179
 #, elixir-autogen, elixir-format
@@ -930,7 +930,7 @@ msgstr ""
 msgid "Table of Contents"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:93
+#: lib/klass_hero_web/live/contact_live.ex:99
 #, elixir-autogen, elixir-format
 msgid "Technical Issue"
 msgstr ""
@@ -5514,7 +5514,7 @@ msgstr ""
 msgid "Cancel anytime"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:209
+#: lib/klass_hero_web/live/contact_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "Check our FAQ — most questions are answered there."
 msgstr ""
@@ -5789,7 +5789,7 @@ msgstr ""
 msgid "Get Started Today →"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:189
+#: lib/klass_hero_web/live/contact_live.ex:195
 #, elixir-autogen, elixir-format
 msgid "Get in touch"
 msgstr ""
@@ -6046,7 +6046,7 @@ msgstr ""
 msgid "Looking for programs for your child?"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:206
+#: lib/klass_hero_web/live/contact_live.ex:212
 #, elixir-autogen, elixir-format
 msgid "Looking for quick answers?"
 msgstr ""
@@ -6347,7 +6347,7 @@ msgstr ""
 msgid "Quality & accountability — always on."
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:107
+#: lib/klass_hero_web/live/contact_live.ex:113
 #, elixir-autogen, elixir-format
 msgid "Questions about programs, bookings, or becoming a Hero — we read every message."
 msgstr ""
@@ -6474,12 +6474,12 @@ msgstr ""
 msgid "See provider plans"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:163
+#: lib/klass_hero_web/live/contact_live.ex:169
 #, elixir-autogen, elixir-format
 msgid "Select a topic…"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:181
+#: lib/klass_hero_web/live/contact_live.ex:187
 #, elixir-autogen, elixir-format
 msgid "Send Message →"
 msgstr ""
@@ -6489,7 +6489,7 @@ msgstr ""
 msgid "Send magic link"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:116
+#: lib/klass_hero_web/live/contact_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "Send us a message"
 msgstr ""
@@ -6612,7 +6612,7 @@ msgstr ""
 msgid "Teaching kids is your thing? Join as a Hero."
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:119
+#: lib/klass_hero_web/live/contact_live.ex:125
 #, elixir-autogen, elixir-format
 msgid "Tell us a bit about what you need — we'll route you to the right person."
 msgstr ""
@@ -6724,7 +6724,7 @@ msgstr ""
 msgid "View →"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:221
+#: lib/klass_hero_web/live/contact_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "Visit FAQ →"
 msgstr ""
@@ -6739,7 +6739,7 @@ msgstr ""
 msgid "We earn when you earn"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:178
+#: lib/klass_hero_web/live/contact_live.ex:184
 #, elixir-autogen, elixir-format
 msgid "We never share your details."
 msgstr ""
@@ -6749,7 +6749,7 @@ msgstr ""
 msgid "We use SEPA bank transfers, paid out every Monday for the previous week's completed sessions. You'll receive an automatic invoice for each payout, and VAT is handled per-booking."
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:103
+#: lib/klass_hero_web/live/contact_live.ex:109
 #, elixir-autogen, elixir-format
 msgid "We're here to"
 msgstr ""
@@ -6759,7 +6759,7 @@ msgstr ""
 msgid "We're parents, brothers, and partners of educators — building the infrastructure that helps every child learn and thrive."
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:132
+#: lib/klass_hero_web/live/contact_live.ex:138
 #, elixir-autogen, elixir-format
 msgid "We've got it — we'll be in touch."
 msgstr ""
@@ -6790,7 +6790,7 @@ msgstr ""
 msgid "Welcome aboard! Let's set up your business profile."
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:171
+#: lib/klass_hero_web/live/contact_live.ex:177
 #, elixir-autogen, elixir-format
 msgid "What's on your mind?"
 msgstr ""
@@ -6916,7 +6916,7 @@ msgstr ""
 msgid "for Our Youth"
 msgstr ""
 
-#: lib/klass_hero_web/live/contact_live.ex:104
+#: lib/klass_hero_web/live/contact_live.ex:110
 #, elixir-autogen, elixir-format
 msgid "help"
 msgstr ""
