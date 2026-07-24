@@ -30,8 +30,13 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
   end
 
   defp mount_broadcast_form(socket, program_id) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    # Ownership guard (IDOR): a program owned by another provider is treated the
+    # same as a missing one — both redirect with "Program not found" so an
+    # attacker can't broadcast to, or probe the existence of, a foreign program.
     case ProgramCatalog.get_program_by_id(program_id) do
-      {:ok, program} ->
+      {:ok, %{provider_id: ^provider_id} = program} ->
         form = to_form(%{"subject" => "", "content" => ""})
 
         socket =
@@ -49,7 +54,7 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
 
         {:ok, socket}
 
-      {:error, :not_found} ->
+      _not_found_or_foreign ->
         {:ok,
          socket
          |> put_flash(:error, gettext("Program not found"))

@@ -34,13 +34,23 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
 
       assert flash["error"] == "Program not found"
     end
+
+    test "redirects when program belongs to another provider (IDOR guard)", %{conn: conn} do
+      foreign_provider = insert(:provider_profile_schema)
+      foreign_program = insert(:program_schema, provider_id: foreign_provider.id)
+
+      assert {:error, {:live_redirect, %{to: "/provider/dashboard/programs", flash: flash}}} =
+               live(conn, ~p"/provider/programs/#{foreign_program.id}/broadcast")
+
+      assert flash["error"] == "Program not found"
+    end
   end
 
   describe "broadcast form" do
     setup :register_and_log_in_provider
 
-    test "renders broadcast form for valid program", %{conn: conn} do
-      program = insert(:program_schema)
+    test "renders broadcast form for valid program", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
@@ -50,16 +60,16 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       assert has_element?(view, "textarea[name=\"content\"]")
     end
 
-    test "shows program title", %{conn: conn} do
-      program = insert(:program_schema, title: "Junior Soccer Academy")
+    test "shows program title", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id, title: "Junior Soccer Academy")
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
       assert has_element?(view, "p", "Junior Soccer Academy")
     end
 
-    test "shows warning about broadcast reach", %{conn: conn} do
-      program = insert(:program_schema)
+    test "shows warning about broadcast reach", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
@@ -70,8 +80,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
   describe "sending broadcast" do
     setup :register_and_log_in_provider
 
-    test "shows error when content is empty", %{conn: conn} do
-      program = insert(:program_schema)
+    test "shows error when content is empty", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
@@ -82,8 +92,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       assert_flash(view, :error, "Message content is required")
     end
 
-    test "shows error when content is only whitespace", %{conn: conn} do
-      program = insert(:program_schema)
+    test "shows error when content is only whitespace", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
@@ -94,8 +104,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       assert_flash(view, :error, "Message content is required")
     end
 
-    test "shows no_enrollments error when no parents enrolled", %{conn: conn} do
-      program = insert(:program_schema)
+    test "shows no_enrollments error when no parents enrolled", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
@@ -110,11 +120,10 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       # Provider tiers removed (ADR-0004): every provider can broadcast
       user = AccountsFixtures.user_fixture(%{intended_roles: [:provider]})
 
-      _provider =
-        insert(:provider_profile_schema, identity_id: user.id)
+      provider = insert(:provider_profile_schema, identity_id: user.id)
 
       conn = log_in_user(conn, user)
-      program = insert(:program_schema)
+      program = insert(:program_schema, provider_id: provider.id)
       parent = insert(:parent_profile_schema)
 
       insert(:enrollment_schema,
@@ -128,8 +137,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       assert has_element?(view, "#broadcast-form")
     end
 
-    test "successfully sends broadcast to enrolled parents", %{conn: conn} do
-      program = insert(:program_schema)
+    test "successfully sends broadcast to enrolled parents", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
 
@@ -155,8 +164,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       assert flash["info"] =~ "Broadcast sent"
     end
 
-    test "sends broadcast without subject", %{conn: conn} do
-      program = insert(:program_schema)
+    test "sends broadcast without subject", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
 
@@ -187,8 +196,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
 
     @png_bytes <<137, 80, 78, 71, 13, 10, 26, 10>>
 
-    test "renders the attachment uploader trigger", %{conn: conn} do
-      program = insert(:program_schema)
+    test "renders the attachment uploader trigger", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
@@ -196,8 +205,11 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
       assert has_element?(view, "input[type='file']")
     end
 
-    test "sends broadcast with photo attachment and navigates to conversation", %{conn: conn} do
-      program = insert(:program_schema)
+    test "sends broadcast with photo attachment and navigates to conversation", %{
+      conn: conn,
+      provider: provider
+    } do
+      program = insert(:program_schema, provider_id: provider.id)
       parent_user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: parent_user.id)
 
@@ -232,8 +244,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
   describe "cancel navigation" do
     setup :register_and_log_in_provider
 
-    test "cancel link navigates back to programs", %{conn: conn} do
-      program = insert(:program_schema)
+    test "cancel link navigates back to programs", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 
@@ -246,8 +258,8 @@ defmodule KlassHeroWeb.Provider.BroadcastLiveTest do
   describe "sidebar navigation" do
     setup :register_and_log_in_provider
 
-    test "highlights Comms in the sidebar", %{conn: conn} do
-      program = insert(:program_schema)
+    test "highlights Comms in the sidebar", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/programs/#{program.id}/broadcast")
 

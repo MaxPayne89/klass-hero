@@ -49,6 +49,7 @@ defmodule KlassHero.Enrollment do
 
   defp do_create_enrollment(%{identity_id: identity_id} = params) when is_binary(identity_id) do
     with {:ok, parent} <- fetch_parent(identity_id),
+         :ok <- ensure_child_belongs_to_parent(params[:child_id], parent.id),
          {:ok, :eligible} <- ensure_eligible(params[:program_id], params[:child_id]) do
       params
       |> build_enrollment_attrs(parent.id)
@@ -68,6 +69,20 @@ defmodule KlassHero.Enrollment do
       {:error, :not_found} -> {:error, :no_parent_profile}
     end
   end
+
+  # Ownership guard (IDOR): a parent may only enroll their own children. The
+  # child_id arrives from client params, so it must be checked against the
+  # authenticated parent before it reaches the DB (a foreign_key_constraint
+  # only proves the child exists, not that it belongs to this parent).
+  defp ensure_child_belongs_to_parent(child_id, parent_id) when is_binary(child_id) do
+    if ChildInfoACL.child_belongs_to_parent?(child_id, parent_id) do
+      :ok
+    else
+      {:error, :not_your_child}
+    end
+  end
+
+  defp ensure_child_belongs_to_parent(_child_id, _parent_id), do: {:error, :not_your_child}
 
   # 3-tuple {:error, :ineligible, reasons} bubbles verbatim; 2-tuple lookup failures map to
   # :processing_failed (fail-closed when eligibility cannot be verified).

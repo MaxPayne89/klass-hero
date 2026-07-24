@@ -11,8 +11,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
 
   setup :register_and_log_in_provider
 
-  defp create_session_with_child(%{provider: _provider}) do
-    session = insert(:program_session_schema, status: "in_progress")
+  defp create_session_with_child(%{provider: provider}) do
+    program = insert(:program_schema, provider_id: provider.id)
+    session = insert(:program_session_schema, program_id: program.id, status: "in_progress")
     parent = insert(:parent_profile_schema)
 
     {child, _parent} =
@@ -34,6 +35,21 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       )
 
     %{session: session, parent: parent, child: child, record: record}
+  end
+
+  describe "cross-provider authorization" do
+    test "redirects when the session belongs to another provider (IDOR guard)", %{conn: conn} do
+      foreign_provider = insert(:provider_profile_schema)
+      foreign_program = insert(:program_schema, provider_id: foreign_provider.id)
+
+      foreign_session =
+        insert(:program_session_schema, program_id: foreign_program.id, status: "in_progress")
+
+      assert {:error, {:live_redirect, %{to: "/provider/sessions", flash: flash}}} =
+               live(conn, ~p"/provider/participation/#{foreign_session.id}")
+
+      assert flash["error"] =~ "not"
+    end
   end
 
   describe "roster displays child name" do

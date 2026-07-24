@@ -180,6 +180,14 @@ defmodule KlassHeroWeb.BookingLiveTest do
       assert Decimal.equal?(enrollment.card_fee_amount, Decimal.new("0.00"))
     end
 
+    # NOTE: the cross-family IDOR guard is enforced (and tested) at the context
+    # boundary — see create_enrollment_test.exs "rejects enrolling a child that
+    # belongs to another parent". A LiveView-level test can't exercise it: the
+    # <select name="child_id"> only renders the user's own children as options,
+    # so render_submit rejects a foreign id before it reaches the server. The
+    # real attack path (a raw socket event) bypasses that select and hits the
+    # facade, which is exactly what the context test covers.
+
     test "back_to_program button navigates to program detail", %{conn: conn} do
       program = insert(:program_schema)
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
