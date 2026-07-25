@@ -130,7 +130,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
   describe "complete broadcast flow" do
     test "provider broadcasts to all enrolled parents" do
       provider = insert(:provider_profile_schema)
-      program = insert(:program_schema)
+      program = insert(:program_schema, provider_id: provider.id)
       provider_scope = build_scope_with_provider(provider)
 
       # Create parents with real users to satisfy FK constraint

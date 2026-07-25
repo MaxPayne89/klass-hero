@@ -201,6 +201,8 @@ defmodule KlassHero.Messaging do
 
   ## Returns
   - `{:ok, conversation, message, recipient_count}` - Broadcast sent
+  - `{:error, :not_found}` - Program missing, not owned by the acting provider,
+    or the scope isn't authorised to act as that provider
   - `{:error, :not_entitled}` - Provider cannot send broadcasts
   - `{:error, :no_enrollments}` - No enrolled parents
 
@@ -212,7 +214,7 @@ defmodule KlassHero.Messaging do
   """
   @spec broadcast_to_program(Scope.t(), String.t(), String.t(), keyword()) ::
           {:ok, Conversation.t(), Message.t(), non_neg_integer()}
-          | {:error, :not_entitled | :no_enrollments | term()}
+          | {:error, :not_found | :not_entitled | :no_enrollments | term()}
   defdelegate broadcast_to_program(scope, program_id, content, opts \\ []),
     to: BroadcastToProgram,
     as: :execute

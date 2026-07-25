@@ -361,6 +361,68 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
     end
   end
 
+  describe "authorization" do
+    test "rejects every unclaimable target with :not_found", %{scope: scope} do
+      %{provider: foreign_provider, program: foreign_program} = insert_foreign_program()
+
+      cases = [
+        {"another provider's program", foreign_program.id, []},
+        {"an unknown program id", Ecto.UUID.generate(), []},
+        {"a malformed program id", "not-a-uuid", []},
+        {"a provider_id the scope neither owns nor staffs", foreign_program.id,
+         [provider_id: foreign_provider.id, skip_entitlement_check: true]}
+      ]
+
+      for {label, program_id, opts} <- cases do
+        assert {:error, :not_found} = BroadcastToProgram.execute(scope, program_id, "Leak?", opts),
+               "expected :not_found for #{label}"
+      end
+    end
+
+    # Separate from the table above on purpose: `assert` inside a `for` raises on
+    # the first failure, so trailing invariants would go unchecked whenever an
+    # earlier case regressed — exactly when they matter most.
+    test "rejected broadcasts leave no trace", %{scope: scope} do
+      %{provider: foreign_provider, program: foreign_program} = insert_foreign_program()
+
+      assert {:error, :not_found} = BroadcastToProgram.execute(scope, foreign_program.id, "Leak?")
+
+      assert {:error, :not_found} =
+               KlassHero.Messaging.find_active_broadcast_for_program(foreign_provider.id, foreign_program.id)
+
+      assert Repo.aggregate(Message, :count) == 0,
+             "no message may be persisted for a rejected broadcast"
+    end
+
+    test "allows active staff to broadcast for their provider", %{provider: provider, program: program} do
+      staff_scope = build_staff_scope(provider)
+      enroll_parent(program)
+
+      assert {:ok, _conversation, _message, 1} =
+               BroadcastToProgram.execute(staff_scope, program.id, "From staff",
+                 provider_id: provider.id,
+                 skip_entitlement_check: true
+               )
+    end
+
+    test "returns missing_provider_id when neither scope nor opts resolve a provider" do
+      scope = %Scope{user: AccountsFixtures.user_fixture(), roles: [], provider: nil, parent: nil}
+
+      assert {:error, :missing_provider_id} =
+               BroadcastToProgram.execute(scope, Ecto.UUID.generate(), "Hi")
+    end
+  end
+
+  # A program owned by somebody else, with a parent enrolled so that a rejection
+  # can't be mistaken for :no_enrollments.
+  defp insert_foreign_program do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    enroll_parent(program)
+
+    %{provider: provider, program: program}
+  end
+
   # Enrolls a fresh parent (backed by a real user for the FK) into the program.
   # Returns the created %{user, parent}.
   defp enroll_parent(program, opts \\ []) do
@@ -396,6 +458,21 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       roles: [:provider],
       provider: provider_profile,
       parent: nil
+    }
+  end
+
+  # A staff scope has no `provider` — the acting provider is carried in opts and
+  # must be authorised against an active staff row (as StaffBroadcastLive does).
+  defp build_staff_scope(provider_schema) do
+    user = AccountsFixtures.user_fixture()
+    staff = insert(:staff_member_schema, provider_id: provider_schema.id, user_id: user.id, active: true)
+
+    %Scope{
+      user: user,
+      roles: [:staff],
+      provider: nil,
+      parent: nil,
+      staff_member: staff
     }
   end
 end
