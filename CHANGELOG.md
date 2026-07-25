@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.61.2](https://github.com/MaxPayne89/klass-hero/compare/v0.61.1...v0.61.2) (2026-07-25)
+
+
+### Bug Fixes
+
+* scope domain-event subscriptions to their owning process ([#1140](https://github.com/MaxPayne89/klass-hero/issues/1140)) ([4a0e7b8](https://github.com/MaxPayne89/klass-hero/commit/4a0e7b8e1be78caf6b2196dddba3c349ff1a6d39)), closes [#1136](https://github.com/MaxPayne89/klass-hero/issues/1136)
+
 ## [0.61.1](https://github.com/MaxPayne89/klass-hero/compare/v0.61.0...v0.61.1) (2026-07-25)
 
 
