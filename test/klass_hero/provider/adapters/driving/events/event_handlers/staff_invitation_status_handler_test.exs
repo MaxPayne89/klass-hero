@@ -207,10 +207,10 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
     end
 
     test "ignores a legacy create_provider_profile flag — still no profile" do
-      # Defends the #965 deploy window: in-flight staff_user_registered events enqueued
-      # by old code may still carry create_provider_profile: true. The handler must ignore it.
-      # TODO(#965): remove once those old jobs have drained post-deploy — the field is no
-      # longer in the event contract and no live code path can produce it.
+      # create_provider_profile is not in the staff_user_registered contract (ADR-0005,
+      # #965). Originally added to defend that deploy's drain window; kept permanently
+      # because the invariant outlives it — a staff registration must never create a
+      # provider profile, whatever extra fields an event payload happens to carry.
       user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
       provider = KlassHero.ProviderFixtures.provider_profile_fixture()
 

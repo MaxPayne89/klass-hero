@@ -269,7 +269,7 @@ msgstr ""
 msgid "Featured Programs"
 msgstr ""
 
-#: lib/klass_hero_web/live/programs_live.ex:220
+#: lib/klass_hero_web/live/programs_live.ex:221
 #, elixir-autogen, elixir-format
 msgid "Invalid pagination state. Please refresh the page."
 msgstr ""
@@ -279,7 +279,7 @@ msgstr ""
 msgid "Invoice & Payment Confirmation"
 msgstr ""
 
-#: lib/klass_hero_web/live/programs_live.ex:360
+#: lib/klass_hero_web/live/programs_live.ex:361
 #, elixir-autogen, elixir-format
 msgid "Loading..."
 msgstr ""
@@ -291,7 +291,7 @@ msgid_plural "Meet the Heroes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/live/programs_live.ex:305
+#: lib/klass_hero_web/live/programs_live.ex:306
 #, elixir-autogen, elixir-format
 msgid "No programs found"
 msgstr ""
@@ -6018,7 +6018,7 @@ msgstr ""
 msgid "Live video screen with our safeguarding lead."
 msgstr ""
 
-#: lib/klass_hero_web/live/programs_live.ex:362
+#: lib/klass_hero_web/live/programs_live.ex:363
 #, elixir-autogen, elixir-format
 msgid "Load more programs"
 msgstr ""
@@ -6672,7 +6672,7 @@ msgstr ""
 msgid "Trusted Heroes"
 msgstr ""
 
-#: lib/klass_hero_web/live/programs_live.ex:307
+#: lib/klass_hero_web/live/programs_live.ex:308
 #, elixir-autogen, elixir-format
 msgid "Try adjusting your search or filter criteria — there's plenty more in Berlin."
 msgstr ""

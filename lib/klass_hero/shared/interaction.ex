@@ -159,10 +159,12 @@ defmodule KlassHero.Shared.Interaction do
             result = unquote(block)
             duration_us = System.monotonic_time(:microsecond) - start_us
 
-            status = KlassHero.Shared.Interaction.classify(result, kind_mod, success_fun)
+            # unquote(__MODULE__) rather than an alias: this expands in the caller's
+            # module, where an alias declared here would not apply.
+            status = unquote(__MODULE__).classify(result, kind_mod, success_fun)
             attributes = kind_mod.attributes(result, kind_opts)
 
-            interaction = %KlassHero.Shared.Interaction{
+            interaction = %unquote(__MODULE__){
               kind: unquote(kind),
               operation: unquote(operation),
               adapter: unquote(adapter),
@@ -176,9 +178,9 @@ defmodule KlassHero.Shared.Interaction do
               metadata: attributes
             }
 
-            KlassHero.Shared.Interaction.set_span_attributes(attributes)
+            unquote(__MODULE__).set_span_attributes(attributes)
 
-            {result, %{duration_us: duration_us}, KlassHero.Shared.Interaction.to_telemetry_metadata(interaction)}
+            {result, %{duration_us: duration_us}, unquote(__MODULE__).to_telemetry_metadata(interaction)}
           end
         )
       end
