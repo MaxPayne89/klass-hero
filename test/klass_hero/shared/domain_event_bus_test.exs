@@ -8,6 +8,9 @@ defmodule KlassHero.Shared.DomainEventBusTest do
   - Priority ordering (lower number runs first, default 100)
   - Same-priority handlers preserve registration order
   - Init-time {Module, :function} handler registration via `handlers:` opt
+  - Owner-scoped delivery: a subscribe/4 handler fires only for dispatches from
+    its owning process or a Task descendant, is exempt for `handlers:` (boot)
+    registrations, and is dropped when its owner exits (#1136)
   """
 
   use ExUnit.Case, async: true
@@ -41,6 +44,14 @@ defmodule KlassHero.Shared.DomainEventBusTest do
 
   defp build_event(event_type, payload \\ %{}) do
     DomainEvent.new(event_type, "entity-1", :test, payload)
+  end
+
+  defp handler_count(context, event_type) do
+    state = :sys.get_state(DomainEventBus.process_name(context))
+
+    state.handlers
+    |> Map.get(event_type, [])
+    |> length()
   end
 
   # Handler result tests
@@ -133,6 +144,93 @@ defmodule KlassHero.Shared.DomainEventBusTest do
       # Why: proves execution happens in the caller, not inside the GenServer
       # Outcome: confirms caller-side execution model
       assert handler_pid == test_pid
+    end
+  end
+
+  # Owner-scoped delivery (#1136)
+
+  describe "owner-scoped delivery" do
+    test "handler does not fire for a dispatch from an unrelated process" do
+      test_pid = self()
+
+      DomainEventBus.subscribe(@test_context, :scoped_event, fn _event ->
+        send(test_pid, :handler_fired)
+        :ok
+      end)
+
+      # Trigger: a bare spawn does not inherit :"$callers", so this process is
+      #   genuinely unrelated — the shape of two concurrent async tests (#1136).
+      # Why: both sends originate in the spawned process, so message order is
+      #   guaranteed; :dispatch_done arriving means the handler would already
+      #   have delivered :handler_fired if it had run.
+      # Outcome: a subscriber never hears another process's dispatch.
+      spawn(fn ->
+        DomainEventBus.dispatch(@test_context, build_event(:scoped_event))
+        send(test_pid, :dispatch_done)
+      end)
+
+      assert_receive :dispatch_done
+      refute_received :handler_fired
+    end
+
+    test "handler fires for a dispatch from a Task descendant of its owner" do
+      test_pid = self()
+
+      DomainEventBus.subscribe(@test_context, :task_event, fn _event ->
+        send(test_pid, :handler_fired)
+        :ok
+      end)
+
+      # Trigger: Task propagates :"$callers", so the owner is in the chain.
+      # Why: work a test farms out to a Task is still that test's own work.
+      # Outcome: scoping follows process lineage, not strict pid equality.
+      Task.await(Task.async(fn -> DomainEventBus.dispatch(@test_context, build_event(:task_event)) end))
+
+      assert_received :handler_fired
+    end
+
+    test "boot-time handlers fire regardless of the dispatching process" do
+      context = __MODULE__.BootScopeContext
+      test_pid = self()
+
+      _bus =
+        start_supervised!(
+          {DomainEventBus, context: context, handlers: [{:boot_event, {TestHandler, :report_pid}}]},
+          id: :boot_scope_test
+        )
+
+      # Trigger: dispatch from an unrelated process, as production does from
+      #   Oban workers and EventSubscriber GenServers.
+      # Why: owner-scoping must never narrow production handler delivery.
+      # Outcome: `handlers:` registrations are exempt from the owner filter.
+      spawn(fn ->
+        DomainEventBus.dispatch(context, build_event(:boot_event, %{test_pid: test_pid}))
+      end)
+
+      assert_receive {:handler_ran_in, _pid}
+    end
+
+    test "handlers are dropped when their owner process exits" do
+      test_pid = self()
+
+      owner =
+        spawn(fn ->
+          DomainEventBus.subscribe(@test_context, :cleanup_event, fn _event -> :ok end)
+          send(test_pid, :subscribed)
+          receive do: (:stop -> :ok)
+        end)
+
+      assert_receive :subscribed
+      assert handler_count(@test_context, :cleanup_event) == 1
+
+      ref = Process.monitor(owner)
+      send(owner, :stop)
+      assert_receive {:DOWN, ^ref, :process, ^owner, _reason}
+
+      # Both :DOWN messages are enqueued when the owner dies; ours arrives first
+      # by the assert above, so the :sys.get_state call inside handler_count/2 is
+      # enqueued behind the bus's own :DOWN. FIFO makes this deterministic — no sleep.
+      assert handler_count(@test_context, :cleanup_event) == 0
     end
   end
 
