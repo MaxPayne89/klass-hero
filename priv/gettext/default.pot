@@ -333,7 +333,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/booking_live.ex:54
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:59
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:67
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:49
 #, elixir-autogen, elixir-format
 msgid "Program not found"
 msgstr ""
@@ -756,7 +756,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/contact_live.ex:176
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:181
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:193
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -920,7 +920,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/contact_live.ex:168
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:167
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:179
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:187
 #, elixir-autogen, elixir-format
 msgid "Subject"
 msgstr ""
@@ -1817,7 +1817,7 @@ msgid "Broadcast"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:101
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:114
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "Broadcast sent to %{count} parents"
 msgstr ""
@@ -1836,7 +1836,7 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:186
 #: lib/klass_hero_web/live/settings/children_live.ex:579
 #: lib/klass_hero_web/live/settings/children_live.ex:738
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:225
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:233
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr ""
@@ -1931,7 +1931,7 @@ msgid "Failed to resubmit note"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:124
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:146
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:154
 #, elixir-autogen, elixir-format
 msgid "Failed to send broadcast"
 msgstr ""
@@ -1973,7 +1973,7 @@ msgid "Manage your children's profiles"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:82
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:94
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:102
 #, elixir-autogen, elixir-format
 msgid "Message content is required"
 msgstr ""
@@ -2006,7 +2006,7 @@ msgid "No messages yet"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:109
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:122
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "No parents are enrolled in this program"
 msgstr ""
@@ -2095,9 +2095,9 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:43
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:151
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:252
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:44
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:163
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:238
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:58
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:171
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:246
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:392
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:393
 #, elixir-autogen, elixir-format
@@ -2111,7 +2111,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2148
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:251
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:237
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:245
 #, elixir-autogen, elixir-format
 msgid "Sending..."
 msgstr ""
@@ -2123,7 +2123,7 @@ msgid "Support needs"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:210
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:213
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:221
 #, elixir-autogen, elixir-format
 msgid "This message will be sent to all parents with active enrollments in this program."
 msgstr ""
@@ -2140,7 +2140,7 @@ msgid "Unable to refresh roster. Please reload."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:188
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:200
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:208
 #, elixir-autogen, elixir-format
 msgid "Write your message to all enrolled parents..."
 msgstr ""
@@ -2176,13 +2176,13 @@ msgid "Your conversations with providers will appear here"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:175
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:187
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:195
 #, elixir-autogen, elixir-format
 msgid "e.g., Important Update"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:167
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:179
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:187
 #, elixir-autogen, elixir-format
 msgid "optional"
 msgstr ""
@@ -4734,7 +4734,7 @@ msgid "View and manage your assigned sessions"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:278
-#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:60
+#: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:45
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "You are not assigned to this program"

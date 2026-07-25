@@ -122,6 +122,25 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
 
       assert flash["error"] =~ "not assigned"
     end
+
+    test "redirects to dashboard for any unreachable program (IDOR guard)", %{conn: conn} do
+      foreign_provider = insert(:provider_profile_schema, %{})
+      foreign_program = insert(:program_schema, provider_id: foreign_provider.id)
+
+      unreachable = [
+        {"foreign provider's program", foreign_program.id},
+        {"nonexistent program", Ecto.UUID.generate()},
+        {"malformed id", "not-a-uuid"}
+      ]
+
+      for {label, program_id} <- unreachable do
+        assert {:error, {:live_redirect, %{to: "/staff/dashboard", flash: flash}}} =
+                 live(conn, ~p"/staff/programs/#{program_id}/broadcast"),
+               "expected #{label} to be rejected"
+
+        assert flash["error"] == "Program not found", "wrong flash for #{label}"
+      end
+    end
   end
 
   describe "staff broadcast (former starter-tier provider)" do
