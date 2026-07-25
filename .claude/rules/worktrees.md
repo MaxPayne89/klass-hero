@@ -62,9 +62,21 @@ MIX_TEST_PARTITION=1060 mix precommit
 itself is shared and started once (`mix test.setup`); only the DB *name* is
 per-partition, so no extra container management is required.
 
-Test HTTP port is fixed at 4002 (`config/test.exs`) and only one test run binds it
-at a time — run worktree suites sequentially, not concurrently, or they collide on
-the port even with different partitions.
+`mix test` binds **no** HTTP port, so worktree suites can run concurrently — only the
+`MIX_TEST_PARTITION` DB isolation above is required. `config/test.exs` sets
+`server: System.get_env("WALLABY_E2E") == "true"`, and only `mix test.e2e` sets that
+var, because Wallaby is the sole consumer of a real socket.
+
+The e2e suite *does* bind (port 4002 by default), so only one `mix test.e2e` runs at a
+time. Override with `TEST_PORT` when 4002 is taken — by another worktree's e2e run, or
+by an unrelated project on the same machine:
+
+```bash
+TEST_PORT=4242 MIX_TEST_PARTITION=1060 mix test.e2e
+```
+
+`TEST_PORT` feeds both the endpoint and Wallaby's `base_url` from one binding, so the
+two can't drift apart.
 
 ## Tidewave / dev server per worktree (separate axis from the test partition)
 

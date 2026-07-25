@@ -8,6 +8,11 @@ alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 alias Swoosh.Adapters.Test
 
+# The one source of truth for the test HTTP port, shared by the endpoint and Wallaby's
+# base_url below. Override with TEST_PORT when 4002 is taken (another worktree, or an
+# unrelated project on the same machine).
+test_port = String.to_integer(System.get_env("TEST_PORT") || "4002")
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
@@ -24,11 +29,14 @@ config :klass_hero, KlassHero.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
-# We run a server during test for Wallaby E2E browser tests
+# Bind a real socket ONLY for the Wallaby e2e suite (`mix test.e2e`, which sets
+# WALLABY_E2E). Everything else drives the endpoint through Plug/LiveView test helpers and
+# needs no listener — binding unconditionally made one global port a prerequisite for the
+# entire suite, so any other worktree or project holding it blocked every test run.
 config :klass_hero, KlassHeroWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4002],
+  http: [ip: {127, 0, 0, 1}, port: test_port],
   secret_key_base: "gY/oKuAYeC5ExhHrtu1JBwrpQdoGwtPOo3X9GdS7CFOnLe0eqRQ9w4cyV1MqvoYc",
-  server: true
+  server: System.get_env("WALLABY_E2E") == "true"
 
 # Oban runs inline in tests so critical event handlers execute synchronously
 config :klass_hero, Oban, testing: :inline
@@ -64,19 +72,18 @@ config :klass_hero, :stripe_webhook_secret, "whsec_test_secret"
 config :klass_hero, :verify_webhook_signature, false
 config :klass_hero, env: :test
 
-# Outcome: disabling projections prevents sandbox leaks across async tests
+# Enable Ecto sandbox plug for Wallaby browser sessions
 config :klass_hero, sql_sandbox: true
+
+# Trigger: VerifiedProviders GenServer bootstraps a DB query at app startup
+# Why: that query runs outside the Ecto test sandbox, poisoning the connection pool
+# Outcome: disabling projections prevents sandbox leaks across async tests
 config :klass_hero, start_projections: false
 
 # Print only warnings and errors during test
 config :logger, level: :warning
 
-# Enable Ecto sandbox plug for Wallaby browser sessions
-# Why: that query runs outside the Ecto test sandbox, poisoning the connection pool
-
 # OpenTelemetry: disable exporting in tests; tracing tests opt in via TracingHelpers.
-# Trigger: VerifiedProviders GenServer bootstraps a DB query at app startup
-
 # Sampler must be always_on so tracing tests receive every span deterministically.
 config :opentelemetry,
   traces_exporter: :none,
@@ -96,7 +103,7 @@ config :swoosh, :api_client, false
 
 # Wallaby E2E test configuration
 config :wallaby,
-  base_url: "http://localhost:4002",
+  base_url: "http://localhost:#{test_port}",
   driver: Wallaby.Chrome,
   screenshot_on_failure: true,
   screenshot_dir: "tmp/e2e_screenshots",
