@@ -34,39 +34,47 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
   end
 
   defp mount_broadcast_form(socket, provider, staff_member, program_id) do
-    case ProgramCatalog.get_program_by_id(program_id) do
+    # program_id is untrusted URL input; the scoped getter makes a foreign program
+    # unreachable (IDOR guard) rather than fetched and then compared. A foreign and
+    # a missing program are deliberately indistinguishable here.
+    case ProgramCatalog.get_program_for_provider(provider.id, program_id) do
       {:ok, program} ->
-        if program.provider_id == provider.id and staff_assigned?(staff_member, program) do
-          form = to_form(%{"subject" => "", "content" => ""})
-
-          socket =
-            socket
-            |> assign(:page_title, gettext("Send Broadcast"))
-            |> assign(:active_nav, :messages)
-            |> assign(:program, program)
-            |> assign(:provider, provider)
-            |> assign(:form, form)
-            |> assign(:sending, false)
-            |> allow_upload(:attachments,
-              accept: ~w(.jpg .jpeg .png .gif .webp),
-              max_entries: Attachment.max_per_message(),
-              max_file_size: Attachment.max_file_size_bytes()
-            )
-
-          {:ok, socket}
+        if staff_assigned?(staff_member, program) do
+          mount_form(socket, provider, program)
         else
-          {:ok,
-           socket
-           |> put_flash(:error, gettext("You are not assigned to this program"))
-           |> push_navigate(to: ~p"/staff/dashboard")}
+          redirect_to_dashboard(socket, gettext("You are not assigned to this program"))
         end
 
       {:error, :not_found} ->
-        {:ok,
-         socket
-         |> put_flash(:error, gettext("Program not found"))
-         |> push_navigate(to: ~p"/staff/dashboard")}
+        redirect_to_dashboard(socket, gettext("Program not found"))
     end
+  end
+
+  defp mount_form(socket, provider, program) do
+    form = to_form(%{"subject" => "", "content" => ""})
+
+    socket =
+      socket
+      |> assign(:page_title, gettext("Send Broadcast"))
+      |> assign(:active_nav, :messages)
+      |> assign(:program, program)
+      |> assign(:provider, provider)
+      |> assign(:form, form)
+      |> assign(:sending, false)
+      |> allow_upload(:attachments,
+        accept: ~w(.jpg .jpeg .png .gif .webp),
+        max_entries: Attachment.max_per_message(),
+        max_file_size: Attachment.max_file_size_bytes()
+      )
+
+    {:ok, socket}
+  end
+
+  defp redirect_to_dashboard(socket, message) do
+    {:ok,
+     socket
+     |> put_flash(:error, message)
+     |> push_navigate(to: ~p"/staff/dashboard")}
   end
 
   defp staff_assigned?(staff_member, program) do
