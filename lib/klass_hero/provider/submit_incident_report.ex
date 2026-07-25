@@ -5,8 +5,6 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   Validates ownership via Provider-local projections (no cross-context
   synchronous reads), optionally uploads a photo to private storage, and
   **atomically** persists the report row plus the notification-email Oban job.
-  The `:incident_reported` domain event is dispatched after the transaction
-  commits.
 
   Persistence and enqueue commit together — if either fails, the report row is
   rolled back, no email is scheduled, and any uploaded photo is deleted on a
@@ -16,18 +14,14 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
   alias KlassHero.Provider.Adapters.Driving.Workers.NotifyIncidentReportedWorker
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.Programs
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.Storage
   alias KlassHero.Shared.Tracing.ObanEnqueue
 
   require Logger
-
-  @context KlassHero.Provider
 
   defguardp is_present(s) when is_binary(s) and byte_size(s) > 0
 
@@ -50,14 +44,6 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
       params
       |> build_changeset(photo_ref)
       |> persist_and_enqueue(profile, photo_ref, storage_opts)
-      |> case do
-        {:ok, persisted} ->
-          publish_event(persisted, profile)
-          {:ok, persisted}
-
-        error ->
-          error
-      end
     end
   end
 
@@ -190,10 +176,5 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
 
         :ok
     end
-  end
-
-  defp publish_event(report, profile) do
-    event = ProviderEvents.incident_reported(report, profile)
-    DomainEventBus.dispatch(@context, event)
   end
 end

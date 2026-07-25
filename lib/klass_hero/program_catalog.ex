@@ -45,8 +45,6 @@ defmodule KlassHero.ProgramCatalog do
 
   require Logger
 
-  @scheduling_fields ~w(meeting_days meeting_start_time meeting_end_time start_date end_date)a
-
   ## Writes
 
   @doc """
@@ -104,7 +102,6 @@ defmodule KlassHero.ProgramCatalog do
       {:ok, schema} ->
         updated = Program.load_value_objects(schema)
         dispatch_program_updated(updated)
-        maybe_dispatch_schedule_updated(current, updated)
         {:ok, updated}
 
       {:error, changeset} ->
@@ -395,26 +392,6 @@ defmodule KlassHero.ProgramCatalog do
       registration_end_date: program.registration_end_date
     })
     |> dispatch("program_updated", program.id)
-  end
-
-  defp maybe_dispatch_schedule_updated(original, updated) do
-    changed? =
-      Enum.any?(@scheduling_fields, fn field ->
-        Map.get(original, field) != Map.get(updated, field)
-      end)
-
-    if changed? do
-      updated.id
-      |> ProgramEvents.program_schedule_updated(%{
-        provider_id: updated.provider_id,
-        meeting_days: updated.meeting_days,
-        meeting_start_time: updated.meeting_start_time,
-        meeting_end_time: updated.meeting_end_time,
-        start_date: updated.start_date,
-        end_date: updated.end_date
-      })
-      |> dispatch("program_schedule_updated", updated.id)
-    end
   end
 
   # Fire-and-forget: dispatch failures are logged but never roll back the write.

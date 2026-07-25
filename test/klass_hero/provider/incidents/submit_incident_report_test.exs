@@ -15,7 +15,6 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
   alias KlassHero.Provider.SubmitIncidentReport
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
-  alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.Tracing.ObanEnqueue
 
   setup do
@@ -28,13 +27,6 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
       program_id: program.id,
       name: "Art Club"
     )
-
-    test_pid = self()
-
-    DomainEventBus.subscribe(KlassHero.Provider, :incident_reported, fn event ->
-      send(test_pid, {:domain_event, event})
-      :ok
-    end)
 
     %{provider: provider, program_id: program.id, user: user}
   end
@@ -65,7 +57,7 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
   end
 
   describe "execute/1 — program scope" do
-    test "persists the report and emits an incident_reported domain event", %{
+    test "persists the report under the given program", %{
       provider: p,
       program_id: pg,
       user: u
@@ -74,15 +66,11 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
       params = base_params(p, pg, u)
 
       assert {:ok, report} = SubmitIncidentReport.execute(params)
-      assert Repo.get(IncidentReport, report.id)
 
-      assert_receive {:domain_event, event}, 500
-      assert event.event_type == :incident_reported
-      assert event.aggregate_id == report.id
-      assert event.payload.program_id == pg
-      assert event.payload.has_photo == false
-      assert event.payload.business_owner_email == "owner@example.com"
-      assert event.payload.business_name == p.business_name
+      stored = Repo.get(IncidentReport, report.id)
+      assert stored.program_id == pg
+      assert stored.provider_profile_id == p.id
+      assert is_nil(stored.photo_url)
     end
 
     test "fails when program_id does not belong to the provider", %{provider: p, user: u} do
@@ -122,7 +110,7 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
   end
 
   describe "execute/1 — session scope" do
-    test "persists the report and emits an incident_reported domain event", %{
+    test "persists the report under the given session", %{
       provider: p,
       program_id: pg,
       user: u
@@ -153,12 +141,14 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
 
       assert {:ok, report} = SubmitIncidentReport.execute(params)
 
-      assert_receive {:domain_event, event}, 500
-      assert event.event_type == :incident_reported
-      assert event.aggregate_id == report.id
-      assert is_nil(event.payload.program_id)
-      assert event.payload.session_id == session.id
-      assert event.payload.has_photo == false
+      # Mirrors the program-scope assertions above. session_id and program_id are
+      # mutually exclusive (validate_ownership/1 admits exactly one), so pinning
+      # both sides is what distinguishes session scope from program scope.
+      stored = Repo.get(IncidentReport, report.id)
+      assert stored.session_id == session.id
+      assert is_nil(stored.program_id)
+      assert stored.provider_profile_id == p.id
+      assert is_nil(stored.photo_url)
     end
   end
 
@@ -191,10 +181,6 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
 
       assert {:ok, ^photo_binary} =
                StubStorageAdapter.get_uploaded(:private, report.photo_url, agent: storage)
-
-      assert_receive {:domain_event, event}, 500
-      assert event.event_type == :incident_reported
-      assert event.payload.has_photo == true
     end
 
     # Trigger: file_binary supplied without an original_filename (or with a blank one)
@@ -260,9 +246,6 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
       assert {:ok, _report} = SubmitIncidentReport.execute(params)
 
       assert_no_email_sent()
-      # Domain event is still dispatched — preserves the eventing contract;
-      # only the email work is skipped.
-      assert_receive {:domain_event, _event}, 500
     end
 
     test "skips the notification when the provider has no business_owner_email on file", %{
@@ -276,7 +259,6 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
       assert {:ok, _report} = SubmitIncidentReport.execute(params)
 
       assert_no_email_sent()
-      assert_receive {:domain_event, _event}, 500
     end
   end
 
@@ -299,7 +281,6 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
       assert {:error, :enqueue_failed} = SubmitIncidentReport.execute(params)
 
       refute Repo.exists?(IncidentReport)
-      refute_receive {:domain_event, _}, 100
     end
 
     test "enqueues the notification with the persisted report id and loaded profile",
