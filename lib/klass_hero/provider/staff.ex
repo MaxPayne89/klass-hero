@@ -18,6 +18,7 @@ defmodule KlassHero.Provider.Staff do
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.IntegrationEventPublishing
 
@@ -113,16 +114,22 @@ defmodule KlassHero.Provider.Staff do
     end
   end
 
-  @doc "Deletes a staff member by ID."
-  def delete_staff_member(staff_id) when is_binary(staff_id) do
-    context_span entity: "staff_member" do
-      case Repo.get(StaffMember, staff_id) do
-        nil ->
-          {:error, :not_found}
+  @doc """
+  Deletes a staff member owned by `provider_id`.
 
-        staff ->
+  Scoped like `get_staff_member/2`, so a foreign row is unreachable rather than
+  fetched and then rejected — the guard cannot be skipped by a caller.
+  """
+  @spec delete_staff_member(String.t(), String.t()) :: :ok | {:error, :not_found}
+  def delete_staff_member(staff_id, provider_id) when is_binary(staff_id) and is_binary(provider_id) do
+    context_span entity: "staff_member" do
+      case get_staff_member(staff_id, provider_id) do
+        {:ok, staff} ->
           {:ok, _} = Repo.delete(staff)
           :ok
+
+        {:error, :not_found} ->
+          {:error, :not_found}
       end
     end
   end
@@ -195,23 +202,20 @@ defmodule KlassHero.Provider.Staff do
   end
 
   @doc """
-  Retrieves a staff member owned by `provider_id` — the tenancy-safe getter.
+  Retrieves a staff member owned by `provider_id`; foreign ≡ missing.
 
-  A staff member owned by another provider is *unreachable*, not fetched-then-
-  rejected: `StaffMember.owned_by/2` narrows the query, so foreign and missing
-  both arrive as `nil` and collapse to `{:error, :not_found}`. No existence
-  oracle, and no ownership check for the caller to forget.
-
-  Prefer this over `get_staff_member/1` on every provider-initiated path.
+  Scoped via `StaffMember.owned_by/2` (see its docs for why). Prefer this over
+  `get_staff_member/1` on every provider-initiated path. A malformed `staff_id`
+  is `{:error, :not_found}`, not a raise.
   """
   @spec get_staff_member(String.t(), String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
   def get_staff_member(staff_id, provider_id) when is_binary(staff_id) and is_binary(provider_id) do
-    StaffMember
-    |> StaffMember.owned_by(provider_id)
-    |> Repo.get(staff_id)
+    provider_id
+    |> StaffMember.owned_by()
+    |> RepositoryHelpers.get_schema_by_uuid(staff_id)
     |> case do
-      nil -> {:error, :not_found}
-      staff -> {:ok, StaffMember.load_pay_rate(staff)}
+      {:ok, staff} -> {:ok, StaffMember.load_pay_rate(staff)}
+      {:error, :not_found} -> {:error, :not_found}
     end
   end
 

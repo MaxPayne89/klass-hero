@@ -92,8 +92,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> assign(staff_form: to_form(changeset, as: :staff_member_schema))}
 
       {:error, :not_found} ->
-        # Foreign and missing are one branch now — the scoped getter can't tell them
-        # apart, which is the point. Logged either way; the user sees one message.
+        # Logged either way so enumeration is visible; the user sees one message.
         Logger.warning("[TeamLive] Staff edit attempt for unknown or foreign member",
           staff_member_id: staff_id,
           provider_id: provider_id
@@ -165,8 +164,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> put_flash(:info, gettext("Team member removed."))}
 
       {:error, :not_found} ->
-        # Foreign id is indistinguishable from a genuine miss here — log the
-        # attempt so an enumeration attack is visible (IDOR guard).
+        # Log the attempt so an enumeration attack is visible.
         Logger.warning("[TeamLive] Staff delete returned not_found",
           staff_member_id: staff_id,
           provider_id: provider_id
@@ -190,8 +188,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> put_flash(:info, gettext("Invitation resent successfully."))}
 
       {:error, :not_found} ->
-        # A foreign staff_member_id is indistinguishable from a genuine miss (IDOR
-        # guard lives in the context) — log the attempt so enumeration is visible.
+        # Log the attempt so enumeration is visible.
         Logger.warning("[TeamLive] Resend invitation returned not_found",
           staff_member_id: staff_member_id,
           provider_id: provider_id

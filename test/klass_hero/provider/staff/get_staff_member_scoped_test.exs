@@ -35,6 +35,12 @@ defmodule KlassHero.Provider.Staff.GetStaffMemberScopedTest do
       assert {:error, :not_found} = Provider.get_staff_member(Ecto.UUID.generate(), ctx.provider.id)
     end
 
+    # staff_id reaches here straight from phx-value-id, so a malformed one must
+    # not crash the LiveView.
+    test "returns not_found for a malformed id instead of raising", ctx do
+      assert {:error, :not_found} = Provider.get_staff_member("not-a-uuid", ctx.provider.id)
+    end
+
     test "foreign and missing are indistinguishable (no existence oracle)", ctx do
       foreign = Provider.get_staff_member(ctx.staff.id, ctx.other_provider.id)
       missing = Provider.get_staff_member(Ecto.UUID.generate(), ctx.other_provider.id)

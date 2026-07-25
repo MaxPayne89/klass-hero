@@ -198,8 +198,8 @@ defmodule KlassHero.Provider do
   @doc "Updates an existing staff member."
   defdelegate update_staff_member(provider_id, staff_id, attrs), to: Staff
 
-  @doc "Deletes a staff member by ID."
-  defdelegate delete_staff_member(staff_id), to: Staff
+  @doc "Deletes a staff member owned by `provider_id`; foreign ≡ missing."
+  defdelegate delete_staff_member(staff_id, provider_id), to: Staff
 
   @doc "Resends a staff invitation for a `:failed`/`:expired` member owned by `provider_id`."
   defdelegate resend_staff_invitation(provider_id, staff_member_id), to: Staff
@@ -294,7 +294,15 @@ defmodule KlassHero.Provider do
   @doc "Lists per-session detail rows for a provider's program from the projection."
   defdelegate list_program_sessions(provider_id, program_id), to: Programs
 
-  @doc "Returns the provider-owned program by ID from the `provider_programs` projection."
+  @doc """
+  Returns a projected program owned by `provider_id`; foreign ≡ missing (IDOR guard).
+
+  The default getter for provider-initiated paths — prefer it over the unscoped
+  `get_provider_program/1`.
+  """
+  defdelegate get_provider_program(program_id, provider_id), to: Programs
+
+  @doc "Returns a program by ID from the `provider_programs` projection, unscoped."
   defdelegate get_provider_program(program_id), to: Programs
 
   @doc "Lists all programs owned by the given provider, ordered by name asc."

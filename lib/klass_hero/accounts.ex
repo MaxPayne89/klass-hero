@@ -157,11 +157,11 @@ defmodule KlassHero.Accounts do
   def remove_staff_member(provider_id, staff_id) when is_binary(provider_id) and is_binary(staff_id) do
     context_span entity: "user" do
       Repo.transaction(fn ->
-        # Ownership guard (IDOR): a staff row owned by another provider is
-        # indistinguishable from a missing one — both roll back :not_found so an
-        # attacker can't probe existence, and no foreign row/role is touched.
+        # The fetch supplies the struct the caller gets back and the role teardown
+        # needs; the delete is independently provider-scoped, so neither step can
+        # reach a foreign row.
         with {:ok, staff} <- Provider.get_staff_member(staff_id, provider_id),
-             :ok <- Provider.delete_staff_member(staff_id),
+             :ok <- Provider.delete_staff_member(staff_id, provider_id),
              :ok <- maybe_revoke_staff_role(staff) do
           staff
         else

@@ -29,10 +29,11 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
     end
   end
 
-  # A single projection read verifies ownership and fetches the record, avoiding a race between two queries.
+  # A single scoped projection read verifies ownership and fetches the record,
+  # avoiding a race between two queries.
   defp mount_for_provider(socket, provider, program_id) do
-    case Provider.get_provider_program(program_id) do
-      {:ok, %{provider_id: prov_id} = program} when prov_id == provider.id ->
+    case Provider.get_provider_program(program_id, provider.id) do
+      {:ok, program} ->
         summaries = Provider.list_incident_reports_for_program(provider.id, program_id)
         rows = Enum.map(summaries, &IncidentReportPresenter.to_list_view/1)
 
@@ -47,7 +48,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
          )
          |> stream(:incident_reports, rows)}
 
-      _ ->
+      {:error, :not_found} ->
         {:ok,
          socket
          |> put_flash(:error, gettext("Program not found."))

@@ -157,15 +157,18 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
     end
   end
 
-  describe "delete_staff_member/1" do
+  describe "delete_staff_member/2" do
     test "deletes existing staff member" do
       staff = ProviderFixtures.staff_member_fixture()
-      assert :ok = Provider.delete_staff_member(staff.id)
+      assert :ok = Provider.delete_staff_member(staff.id, staff.provider_id)
       assert {:error, :not_found} = Provider.get_staff_member(staff.id)
     end
 
     test "returns not_found for missing id" do
-      assert {:error, :not_found} = Provider.delete_staff_member(Ecto.UUID.generate())
+      staff = ProviderFixtures.staff_member_fixture()
+
+      assert {:error, :not_found} =
+               Provider.delete_staff_member(Ecto.UUID.generate(), staff.provider_id)
     end
   end
 

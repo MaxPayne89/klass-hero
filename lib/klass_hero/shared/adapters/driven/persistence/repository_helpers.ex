@@ -23,8 +23,11 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
 
   Uses `Ecto.UUID.dump/1`, not `cast/1`: `cast/1` accepts raw 16-byte binaries
   that are not valid textual UUIDs.
+
+  Accepts any `Ecto.Queryable` — pass a scoped query (e.g. `Schema.owned_by(id)`)
+  to make a foreign row unreachable rather than fetched and then rejected.
   """
-  @spec get_schema_by_uuid(module(), term()) :: {:ok, struct()} | {:error, :not_found}
+  @spec get_schema_by_uuid(Ecto.Queryable.t(), term()) :: {:ok, struct()} | {:error, :not_found}
   def get_schema_by_uuid(schema, id) do
     case Ecto.UUID.dump(id) do
       {:ok, _binary} ->

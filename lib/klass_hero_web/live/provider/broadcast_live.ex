@@ -32,10 +32,10 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
   defp mount_broadcast_form(socket, program_id) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    # Verify ownership before rendering — a foreign program is treated as not_found
-    # so its existence can't be probed (IDOR guard).
-    case ProgramCatalog.get_program_by_id(program_id) do
-      {:ok, %{provider_id: ^provider_id} = program} ->
+    # Scoped getter — a foreign program is unreachable, so its existence can't be
+    # probed (IDOR guard).
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+      {:ok, program} ->
         form = to_form(%{"subject" => "", "content" => ""})
 
         socket =
@@ -53,7 +53,7 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
 
         {:ok, socket}
 
-      _not_found_or_foreign ->
+      {:error, :not_found} ->
         {:ok,
          socket
          |> put_flash(:error, gettext("Program not found"))
