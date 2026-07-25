@@ -6,48 +6,56 @@ defmodule KlassHero.Provider.Assignments.UnassignStaffFromProgramTest do
   alias KlassHero.Provider
   alias KlassHero.Provider.ProgramStaffAssignment
 
-  describe "unassign_staff_from_program/2" do
-    test "unassigns an active assignment and sets unassigned_at" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      staff = insert(:staff_member_schema, provider_id: provider.id)
+  setup do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    staff = insert(:staff_member_schema, provider_id: provider.id)
 
-      {:ok, _} =
-        Provider.assign_staff_to_program(%{
-          provider_id: provider.id,
-          program_id: program.id,
-          staff_member_id: staff.id
-        })
+    %{provider: provider, program: program, staff: staff}
+  end
+
+  describe "unassign_staff_from_program/3" do
+    test "unassigns an active assignment and sets unassigned_at", ctx do
+      assign!(ctx)
 
       assert {:ok, %ProgramStaffAssignment{} = assignment} =
-               Provider.unassign_staff_from_program(program.id, staff.id)
+               Provider.unassign_staff_from_program(ctx.program.id, ctx.staff.id, ctx.provider.id)
 
-      assert assignment.staff_member_id == staff.id
-      assert assignment.program_id == program.id
+      assert assignment.staff_member_id == ctx.staff.id
+      assert assignment.program_id == ctx.program.id
       assert %DateTime{} = assignment.unassigned_at
     end
 
-    test "returns not_found when no active assignment exists" do
+    test "returns not_found when no active assignment exists", ctx do
       assert {:error, :not_found} =
-               Provider.unassign_staff_from_program(Ecto.UUID.generate(), Ecto.UUID.generate())
+               Provider.unassign_staff_from_program(
+                 Ecto.UUID.generate(),
+                 Ecto.UUID.generate(),
+                 ctx.provider.id
+               )
     end
 
-    test "returns not_found when assignment was already unassigned" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      staff = insert(:staff_member_schema, provider_id: provider.id)
+    test "returns not_found when assignment was already unassigned", ctx do
+      assign!(ctx)
 
-      {:ok, _} =
-        Provider.assign_staff_to_program(%{
-          provider_id: provider.id,
-          program_id: program.id,
-          staff_member_id: staff.id
-        })
+      assert {:ok, _} =
+               Provider.unassign_staff_from_program(ctx.program.id, ctx.staff.id, ctx.provider.id)
 
-      assert {:ok, _} = Provider.unassign_staff_from_program(program.id, staff.id)
-
-      # Second unassign on same pair should return not_found (no active assignment)
-      assert {:error, :not_found} = Provider.unassign_staff_from_program(program.id, staff.id)
+      assert {:error, :not_found} =
+               Provider.unassign_staff_from_program(ctx.program.id, ctx.staff.id, ctx.provider.id)
     end
+  end
+
+  # Cross-tenant rejection is asserted module-wide in ownership_guard_test.exs.
+
+  defp assign!(ctx) do
+    {:ok, assignment} =
+      Provider.assign_staff_to_program(%{
+        provider_id: ctx.provider.id,
+        program_id: ctx.program.id,
+        staff_member_id: ctx.staff.id
+      })
+
+    assignment
   end
 end

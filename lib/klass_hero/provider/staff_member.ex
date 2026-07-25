@@ -29,6 +29,7 @@ defmodule KlassHero.Provider.StaffMember do
   use Ecto.Schema
 
   import Ecto.Changeset
+  import Ecto.Query, only: [from: 2]
 
   # Parked alias to the still-DDD ProviderProfile schema — repointed to the
   # flattened KlassHero.Provider.ProviderProfile in Slice 5.
@@ -284,6 +285,21 @@ defmodule KlassHero.Provider.StaffMember do
   end
 
   defp build_pay_rate(_), do: nil
+
+  # ── Query scopes ─────────────────────────────────────────────────────────
+
+  @doc """
+  Narrows a query to staff owned by `provider_id` — the tenancy guard for every
+  provider-initiated read or write.
+
+  Composing this scope makes a foreign row *unreachable* rather than fetched and
+  then rejected, so the caller's `nil` branch already collapses foreign to
+  missing: no existence oracle, and no ownership check left to forget.
+  """
+  @spec owned_by(Ecto.Queryable.t(), String.t()) :: Ecto.Query.t()
+  def owned_by(query \\ __MODULE__, provider_id) when is_binary(provider_id) do
+    from s in query, where: s.provider_id == ^provider_id
+  end
 
   # ── Functional core (ported domain validator + helpers) ──────────────────
 

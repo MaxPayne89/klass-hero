@@ -122,33 +122,29 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   def handle_event("edit_program", %{"id" => program_id}, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    # Verify ownership before loading into the form — program_id is untrusted
-    # client input (IDOR guard). The shared getter is unscoped (7 callers), so the
-    # guard lives here, mirroring view_roster.
-    with {:ok, program} <- ProgramCatalog.get_program_by_id(program_id),
-         true <- program.provider_id == provider_id do
-      changeset = ProgramCatalog.new_program_changeset(program_to_form_params(program))
+    # program_id is untrusted client input; the scoped getter makes a foreign
+    # program unreachable (IDOR guard) rather than fetched and then compared.
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+      {:ok, program} ->
+        changeset = ProgramCatalog.new_program_changeset(program_to_form_params(program))
 
-      {:noreply,
-       socket
-       |> assign(
-         show_program_form: true,
-         editing_program_id: program_id,
-         program_form: to_form(changeset, as: :program_schema),
-         enrollment_form: load_enrollment_policy_form(program_id),
-         participant_policy_form: load_participant_policy_form(program_id),
-         instructor_options: build_instructor_options(provider_id)
-       )}
-    else
-      false ->
-        Logger.warning("[ProgramsLive] Unauthorized program edit attempt",
+        {:noreply,
+         socket
+         |> assign(
+           show_program_form: true,
+           editing_program_id: program_id,
+           program_form: to_form(changeset, as: :program_schema),
+           enrollment_form: load_enrollment_policy_form(program_id),
+           participant_policy_form: load_participant_policy_form(program_id),
+           instructor_options: build_instructor_options(provider_id)
+         )}
+
+      {:error, :not_found} ->
+        Logger.warning("[ProgramsLive] Program edit attempt for unknown or foreign program",
           program_id: program_id,
           provider_id: provider_id
         )
 
-        {:noreply, put_flash(socket, :error, gettext("Program not found."))}
-
-      {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Program not found."))}
     end
   end
@@ -157,37 +153,35 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   def handle_event("view_roster", %{"id" => program_id}, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    # Verify ownership before loading — program_id is untrusted client input (IDOR guard).
-    with {:ok, program} <- ProgramCatalog.get_program_by_id(program_id),
-         true <- program.provider_id == provider_id do
-      roster = Enrollment.list_program_enrollments(program_id)
-      invite_count = Enrollment.count_program_invites(program_id)
+    # program_id is untrusted client input; the scoped getter makes a foreign
+    # program unreachable (IDOR guard).
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+      {:ok, program} ->
+        roster = Enrollment.list_program_enrollments(program_id)
+        invite_count = Enrollment.count_program_invites(program_id)
 
-      {:noreply,
-       assign(socket,
-         show_roster: true,
-         roster_program_name: program.title,
-         roster_program_id: program_id,
-         roster_entries: roster,
-         roster_tab: "enrolled",
-         roster_invites: [],
-         roster_enrolled_count: length(roster),
-         roster_invite_count: invite_count,
-         import_errors: nil,
-         can_message?: Messaging.can_initiate_messaging?(socket.assigns.current_scope),
-         invite_mode: "single",
-         single_invite_form: blank_single_invite_form()
-       )}
-    else
-      false ->
-        Logger.warning("[ProgramsLive] Unauthorized roster access attempt",
+        {:noreply,
+         assign(socket,
+           show_roster: true,
+           roster_program_name: program.title,
+           roster_program_id: program_id,
+           roster_entries: roster,
+           roster_tab: "enrolled",
+           roster_invites: [],
+           roster_enrolled_count: length(roster),
+           roster_invite_count: invite_count,
+           import_errors: nil,
+           can_message?: Messaging.can_initiate_messaging?(socket.assigns.current_scope),
+           invite_mode: "single",
+           single_invite_form: blank_single_invite_form()
+         )}
+
+      {:error, :not_found} ->
+        Logger.warning("[ProgramsLive] Roster access attempt for unknown or foreign program",
           program_id: program_id,
           provider_id: provider_id
         )
 
-        {:noreply, put_flash(socket, :error, gettext("Program not found."))}
-
-      {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Program not found."))}
     end
   end
@@ -761,8 +755,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   defp resolve_instructor(instructor_id, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    case Provider.get_staff_member(instructor_id) do
-      {:ok, %{provider_id: ^provider_id}} ->
+    case Provider.get_staff_member(instructor_id, provider_id) do
+      {:ok, _staff} ->
         {:ok, instructor_id}
 
       _not_found_or_foreign ->
@@ -778,7 +772,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   # Persists the lead choice on program_staff_assignments (single source of truth).
   # Blank pick clears the lead; id already ownership-validated by resolve_instructor/2.
   # provider_id re-threaded so the context re-checks too (defence in depth).
-  defp apply_lead_instructor(program_id, nil, _provider_id), do: Provider.clear_lead_instructor(program_id)
+  defp apply_lead_instructor(program_id, nil, provider_id), do: Provider.clear_lead_instructor(program_id, provider_id)
 
   defp apply_lead_instructor(program_id, instructor_id, provider_id) do
     {:ok, _assignment} = Provider.set_lead_instructor(program_id, instructor_id, provider_id)

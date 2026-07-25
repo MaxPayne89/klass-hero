@@ -123,7 +123,13 @@ defmodule KlassHero.ProgramCatalog do
 
   ## Write-model reads
 
-  @doc "Gets a program by ID. Returns `{:error, :not_found}` if absent or the ID is not a valid UUID."
+  @doc """
+  Gets a program by ID, **unscoped**. Returns `{:error, :not_found}` if absent or
+  the ID is not a valid UUID.
+
+  Only for paths with no provider in scope (public program pages, cross-context
+  reads). Any path that has a `provider_id` must use `get_program_for_provider/2`.
+  """
   @spec get_program_by_id(String.t()) :: {:ok, Program.t()} | {:error, :not_found}
   def get_program_by_id(id) do
     case fetch_program(id) do
@@ -135,16 +141,21 @@ defmodule KlassHero.ProgramCatalog do
   @doc """
   Gets a program by ID, scoped to its owning provider.
 
-  Ownership guard (IDOR): a program owned by another provider is
-  indistinguishable from a missing one — both return `{:error, :not_found}`, so
-  callers can't probe for existence by enumerating ids. `update_program/3`
-  routes through this, so every scoped access shares one definition of "yours".
+  A foreign program is *unreachable* rather than fetched-then-rejected:
+  `Program.owned_by/2` narrows the query, so foreign, missing and malformed ids
+  all arrive as `nil` and collapse to `{:error, :not_found}` — callers can't probe
+  for existence by enumerating ids, and there is no ownership check left to forget.
+
+  Every provider-initiated program read routes through this, so they share one
+  definition of "yours".
   """
   @spec get_program_for_provider(String.t(), String.t()) :: {:ok, Program.t()} | {:error, :not_found}
   def get_program_for_provider(provider_id, program_id) when is_binary(provider_id) do
-    case fetch_program(program_id) do
-      %Program{provider_id: ^provider_id} = program -> {:ok, Program.load_value_objects(program)}
-      _nil_or_foreign -> {:error, :not_found}
+    program_id
+    |> fetch_program(Program.owned_by(provider_id))
+    |> case do
+      nil -> {:error, :not_found}
+      program -> {:ok, Program.load_value_objects(program)}
     end
   end
 
@@ -307,15 +318,17 @@ defmodule KlassHero.ProgramCatalog do
 
   ## Internals
 
-  defp fetch_program(id) when is_binary(id) do
+  defp fetch_program(id), do: fetch_program(id, Program)
+
+  defp fetch_program(id, queryable) when is_binary(id) do
     # dump/1 validates UUID format; cast/1 wrongly accepts any 16-byte binary.
     case Ecto.UUID.dump(id) do
-      {:ok, _binary} -> Repo.get(Program, id)
+      {:ok, _binary} -> Repo.get(queryable, id)
       :error -> nil
     end
   end
 
-  defp fetch_program(_), do: nil
+  defp fetch_program(_, _queryable), do: nil
 
   defp listing_page(limit, cursor_data, category) do
     ProgramListing

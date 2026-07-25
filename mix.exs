@@ -9,6 +9,12 @@ defmodule KlassHero.MixProject do
       erlang: "~> 29.0",
       elixirc_paths: elixirc_paths(Mix.env()),
       elixirc_options: [module_definition: :interpreted],
+      # Consolidate only where the dispatch win matters. In dev, recompiling a module
+      # that carries a `defimpl` (e.g. Accounts.User's GDPR Inspect) while consolidated
+      # protocols are already loaded emits an "already consolidated" warning — which
+      # `mix precommit`'s --warnings-as-errors then turns into a failure that can't
+      # clear itself, since the failed compile never marks the module done.
+      consolidate_protocols: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
@@ -140,12 +146,13 @@ defmodule KlassHero.MixProject do
       "test.watch": ["test.setup", "test.watch.continuous"],
       "test.e2e": ["test test/e2e --include e2e"],
       precommit: [
-        "compile --warning-as-errors",
+        "compile --warnings-as-errors",
         "deps.unlock --unused",
         "format",
         "lint_typography",
         "lint_translations",
-        "cmd env MIX_ENV=test mix test"
+        "credo --strict",
+        "cmd env MIX_ENV=test mix test --include slow"
       ]
     ]
   end

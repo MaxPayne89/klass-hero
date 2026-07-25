@@ -3,7 +3,15 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
   Event-driven projection maintaining the `provider_programs` read table.
 
   Mirrors program ownership + display metadata from the Program Catalog context
-  so Provider use cases never reach across the context boundary at runtime.
+  so Provider's **list and display** reads need no cross-context call.
+
+  Not a substitute for an authorization check. Being event-driven, this table is
+  eventually consistent: a program created moments ago may not be projected yet.
+  Ownership *guards* on write paths therefore read
+  `ProgramCatalog.get_program_by_id/1` directly — see
+  `KlassHero.Provider.Assignments.ensure_program_owned/2` (#1134), where
+  projection lag would otherwise reject a lead set immediately after the program
+  is created.
 
   Built on `KlassHero.Shared.Projection` (base) + `Projection.WithBootstrapRetry`
   (linear-backoff retry on transient bootstrap failure).

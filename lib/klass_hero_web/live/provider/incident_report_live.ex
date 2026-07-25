@@ -66,9 +66,9 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
   end
 
   defp resolve_preselection(%{"program_id" => program_id}, provider_id) when is_binary(program_id) do
-    case Provider.get_provider_program(program_id) do
-      {:ok, %{provider_id: ^provider_id} = program} -> {:ok, {:program, program}}
-      _ -> {:error, :preselection_invalid}
+    case Provider.get_provider_program(program_id, provider_id) do
+      {:ok, program} -> {:ok, {:program, program}}
+      {:error, :not_found} -> {:error, :preselection_invalid}
     end
   end
 

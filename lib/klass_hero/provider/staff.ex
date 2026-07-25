@@ -18,6 +18,7 @@ defmodule KlassHero.Provider.Staff do
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.IntegrationEventPublishing
 
@@ -102,28 +103,33 @@ defmodule KlassHero.Provider.Staff do
     context_span entity: "staff_member" do
       attrs = Map.take(attrs, @staff_updatable_fields)
 
-      with {:ok, %StaffMember{provider_id: ^provider_id} = existing} <- get_staff_member(staff_id),
+      with {:ok, existing} <- get_staff_member(staff_id, provider_id),
            merged = Map.merge(Map.from_struct(existing), attrs),
            {:ok, _validated} <- StaffMember.new(merged),
            {:ok, persisted} <- persist_staff_update(existing, attrs) do
         {:ok, persisted}
       else
-        {:ok, %StaffMember{}} -> {:error, :not_found}
         result -> CommandResult.wrap_validation_errors(result)
       end
     end
   end
 
-  @doc "Deletes a staff member by ID."
-  def delete_staff_member(staff_id) when is_binary(staff_id) do
-    context_span entity: "staff_member" do
-      case Repo.get(StaffMember, staff_id) do
-        nil ->
-          {:error, :not_found}
+  @doc """
+  Deletes a staff member owned by `provider_id`.
 
-        staff ->
+  Scoped like `get_staff_member/2`, so a foreign row is unreachable rather than
+  fetched and then rejected — the guard cannot be skipped by a caller.
+  """
+  @spec delete_staff_member(String.t(), String.t()) :: :ok | {:error, :not_found}
+  def delete_staff_member(staff_id, provider_id) when is_binary(staff_id) and is_binary(provider_id) do
+    context_span entity: "staff_member" do
+      case get_staff_member(staff_id, provider_id) do
+        {:ok, staff} ->
           {:ok, _} = Repo.delete(staff)
           :ok
+
+        {:error, :not_found} ->
+          {:error, :not_found}
       end
     end
   end
@@ -147,7 +153,7 @@ defmodule KlassHero.Provider.Staff do
       when is_binary(provider_id) and is_binary(staff_member_id) do
     context_span entity: "staff_member" do
       # Ownership guard (IDOR, see @doc) — mirrors update_staff_member/3 above.
-      with {:ok, %StaffMember{provider_id: ^provider_id} = staff} <- get_staff_member(staff_member_id),
+      with {:ok, staff} <- get_staff_member(staff_member_id, provider_id),
            {:ok, _transitioned} <- StaffMember.transition_invitation(staff, :pending),
            {raw_token, token_hash} = StaffMember.generate_invitation_token(),
            {:ok, persisted} <-
@@ -156,9 +162,6 @@ defmodule KlassHero.Provider.Staff do
                invitation_token_hash: token_hash
              }) do
         emit_or_compensate_staff_invitation(persisted, raw_token)
-      else
-        {:ok, %StaffMember{}} -> {:error, :not_found}
-        other -> other
       end
     end
   end
@@ -198,7 +201,31 @@ defmodule KlassHero.Provider.Staff do
     end
   end
 
-  @doc "Retrieves a single staff member by ID."
+  @doc """
+  Retrieves a staff member owned by `provider_id`; foreign ≡ missing.
+
+  Scoped via `StaffMember.owned_by/2` (see its docs for why). Prefer this over
+  `get_staff_member/1` on every provider-initiated path. A malformed `staff_id`
+  is `{:error, :not_found}`, not a raise.
+  """
+  @spec get_staff_member(String.t(), String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
+  def get_staff_member(staff_id, provider_id) when is_binary(staff_id) and is_binary(provider_id) do
+    provider_id
+    |> StaffMember.owned_by()
+    |> RepositoryHelpers.get_schema_by_uuid(staff_id)
+    |> case do
+      {:ok, staff} -> {:ok, StaffMember.load_pay_rate(staff)}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Retrieves a single staff member by ID, **unscoped**.
+
+  Only for paths with no provider in scope — invitation-token and accept flows,
+  and event handlers reacting to a staff id they were handed. Any path that has
+  a `provider_id` must use `get_staff_member/2` instead.
+  """
   @spec get_staff_member(String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
   def get_staff_member(staff_id) when is_binary(staff_id) do
     case Repo.get(StaffMember, staff_id) do

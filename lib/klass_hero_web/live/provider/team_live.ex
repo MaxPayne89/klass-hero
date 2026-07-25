@@ -80,26 +80,24 @@ defmodule KlassHeroWeb.Provider.TeamLive do
   def handle_event("edit_member", %{"id" => staff_id}, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    # Verify ownership before loading into the form — staff_id is untrusted client
-    # input (IDOR guard). The shared getter is unscoped, so the guard lives here.
-    with {:ok, staff} <- Provider.get_staff_member(staff_id),
-         true <- staff.provider_id == provider_id do
-      changeset = Provider.change_staff_member(staff)
+    # staff_id is untrusted client input; the scoped getter makes a foreign row
+    # unreachable (IDOR guard) rather than fetched and then compared.
+    case Provider.get_staff_member(staff_id, provider_id) do
+      {:ok, staff} ->
+        changeset = Provider.change_staff_member(staff)
 
-      {:noreply,
-       socket
-       |> assign(show_staff_form: true, editing_staff_id: staff_id, self_staffing?: false)
-       |> assign(staff_form: to_form(changeset, as: :staff_member_schema))}
-    else
-      false ->
-        Logger.warning("[TeamLive] Unauthorized staff edit attempt",
+        {:noreply,
+         socket
+         |> assign(show_staff_form: true, editing_staff_id: staff_id, self_staffing?: false)
+         |> assign(staff_form: to_form(changeset, as: :staff_member_schema))}
+
+      {:error, :not_found} ->
+        # Logged either way so enumeration is visible; the user sees one message.
+        Logger.warning("[TeamLive] Staff edit attempt for unknown or foreign member",
           staff_member_id: staff_id,
           provider_id: provider_id
         )
 
-        {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
-
-      {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
     end
   end
@@ -123,8 +121,8 @@ defmodule KlassHeroWeb.Provider.TeamLive do
           # Member may have been deleted between form open and keystroke — fall back
           # to a new changeset. Ownership is re-checked here too (defence in depth):
           # a foreign row must never rehydrate into the form via a crafted event.
-          case Provider.get_staff_member(staff_id) do
-            {:ok, %{provider_id: ^provider_id} = staff} ->
+          case Provider.get_staff_member(staff_id, provider_id) do
+            {:ok, staff} ->
               Provider.change_staff_member(staff, params)
 
             _not_found_or_foreign ->
@@ -166,8 +164,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> put_flash(:info, gettext("Team member removed."))}
 
       {:error, :not_found} ->
-        # Foreign id is indistinguishable from a genuine miss here — log the
-        # attempt so an enumeration attack is visible (IDOR guard).
+        # Log the attempt so an enumeration attack is visible.
         Logger.warning("[TeamLive] Staff delete returned not_found",
           staff_member_id: staff_id,
           provider_id: provider_id
@@ -191,8 +188,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> put_flash(:info, gettext("Invitation resent successfully."))}
 
       {:error, :not_found} ->
-        # A foreign staff_member_id is indistinguishable from a genuine miss (IDOR
-        # guard lives in the context) — log the attempt so enumeration is visible.
+        # Log the attempt so enumeration is visible.
         Logger.warning("[TeamLive] Resend invitation returned not_found",
           staff_member_id: staff_member_id,
           provider_id: provider_id
@@ -418,8 +414,8 @@ defmodule KlassHeroWeb.Provider.TeamLive do
     provider_id = socket.assigns.current_scope.provider.id
 
     # Ownership re-checked (defence in depth): a foreign row is treated as gone.
-    case Provider.get_staff_member(staff_id) do
-      {:ok, %{provider_id: ^provider_id} = staff} ->
+    case Provider.get_staff_member(staff_id, provider_id) do
+      {:ok, staff} ->
         changeset =
           Provider.change_staff_member(staff, normalize_staff_form_params(params))
           |> Map.put(:action, :validate)

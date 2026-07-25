@@ -16,6 +16,7 @@ defmodule KlassHero.ProgramCatalog.Program do
   use Ecto.Schema
 
   import Ecto.Changeset
+  import Ecto.Query, only: [from: 2]
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramCategories
   alias KlassHero.ProgramCatalog.RegistrationPeriod
@@ -158,6 +159,17 @@ defmodule KlassHero.ProgramCatalog.Program do
     |> validate_date_range()
     |> validate_registration_date_range()
     |> optimistic_lock(:lock_version)
+  end
+
+  @doc """
+  Narrows a query to programs owned by `provider_id`.
+
+  Composing this scope makes a foreign row *unreachable* rather than fetched and
+  then rejected, so a caller's `nil` branch already collapses foreign to missing.
+  """
+  @spec owned_by(Ecto.Queryable.t(), String.t()) :: Ecto.Query.t()
+  def owned_by(query \\ __MODULE__, provider_id) when is_binary(provider_id) do
+    from p in query, where: p.provider_id == ^provider_id
   end
 
   @doc """

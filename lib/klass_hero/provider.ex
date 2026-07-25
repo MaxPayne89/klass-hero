@@ -198,8 +198,8 @@ defmodule KlassHero.Provider do
   @doc "Updates an existing staff member."
   defdelegate update_staff_member(provider_id, staff_id, attrs), to: Staff
 
-  @doc "Deletes a staff member by ID."
-  defdelegate delete_staff_member(staff_id), to: Staff
+  @doc "Deletes a staff member owned by `provider_id`; foreign ≡ missing."
+  defdelegate delete_staff_member(staff_id, provider_id), to: Staff
 
   @doc "Resends a staff invitation for a `:failed`/`:expired` member owned by `provider_id`."
   defdelegate resend_staff_invitation(provider_id, staff_member_id), to: Staff
@@ -210,7 +210,15 @@ defmodule KlassHero.Provider do
   @doc "Links a user to a staff member and accepts the invitation (synchronous, #967)."
   defdelegate accept_staff_invitation(staff_member, user_id), to: Staff
 
-  @doc "Retrieves a single staff member by ID."
+  @doc """
+  Retrieves a staff member owned by `provider_id`; foreign ≡ missing (IDOR guard).
+
+  The default getter for provider-initiated paths — prefer it over the unscoped
+  `get_staff_member/1`.
+  """
+  defdelegate get_staff_member(staff_id, provider_id), to: Staff
+
+  @doc "Retrieves a single staff member by ID, unscoped (no provider in scope)."
   defdelegate get_staff_member(staff_id), to: Staff
 
   @doc "Lists all staff members for a provider, ordered by insertion date."
@@ -248,8 +256,8 @@ defmodule KlassHero.Provider do
   @doc "Assigns a staff member to a program."
   defdelegate assign_staff_to_program(attrs), to: Assignments
 
-  @doc "Unassigns a staff member from a program."
-  defdelegate unassign_staff_from_program(program_id, staff_member_id), to: Assignments
+  @doc "Unassigns a staff member from a program owned by the provider."
+  defdelegate unassign_staff_from_program(program_id, staff_member_id, provider_id), to: Assignments
 
   @doc "Filters a list of programs to only those assigned to a staff member."
   defdelegate list_assigned_programs(staff_member, programs), to: Assignments
@@ -270,7 +278,7 @@ defmodule KlassHero.Provider do
   defdelegate set_lead_instructor(program_id, staff_member_id, provider_id), to: Assignments
 
   @doc "Clears the program's lead instructor, leaving the assignment active."
-  defdelegate clear_lead_instructor(program_id), to: Assignments
+  defdelegate clear_lead_instructor(program_id, provider_id), to: Assignments
 
   @doc "Returns the program's lead instructor as a `%{id, name, headshot_url}` map, or nil."
   defdelegate get_lead_instructor(program_id), to: Assignments
@@ -286,7 +294,15 @@ defmodule KlassHero.Provider do
   @doc "Lists per-session detail rows for a provider's program from the projection."
   defdelegate list_program_sessions(provider_id, program_id), to: Programs
 
-  @doc "Returns the provider-owned program by ID from the `provider_programs` projection."
+  @doc """
+  Returns a projected program owned by `provider_id`; foreign ≡ missing (IDOR guard).
+
+  The default getter for provider-initiated paths — prefer it over the unscoped
+  `get_provider_program/1`.
+  """
+  defdelegate get_provider_program(program_id, provider_id), to: Programs
+
+  @doc "Returns a program by ID from the `provider_programs` projection, unscoped."
   defdelegate get_provider_program(program_id), to: Programs
 
   @doc "Lists all programs owned by the given provider, ordered by name asc."

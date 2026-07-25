@@ -78,26 +78,21 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
                Provider.set_lead_instructor(program.id, Ecto.UUID.generate(), program.provider_id)
     end
 
-    test "rejects a staff member owned by another provider (IDOR guard)" do
-      {provider, program, _staff} = setup_provider_program_staff()
+    test "returns :not_found when the program does not exist" do
+      {provider, _program, staff} = setup_provider_program_staff()
 
-      foreign_provider = insert(:provider_profile_schema)
-      foreign_staff = insert(:staff_member_schema, provider_id: foreign_provider.id)
-
-      # Public-render risk: assert no row was written, not just :not_found.
       assert {:error, :not_found} =
-               Provider.set_lead_instructor(program.id, foreign_staff.id, provider.id)
-
-      refute Repo.exists?(from(a in ProgramStaffAssignment, where: a.program_id == ^program.id))
+               Provider.set_lead_instructor(Ecto.UUID.generate(), staff.id, provider.id)
     end
   end
 
-  describe "clear_lead_instructor/1" do
+  # Cross-tenant rejection is asserted module-wide in ownership_guard_test.exs.
+  describe "clear_lead_instructor/2" do
     test "unsets the lead flag but keeps the assignment active" do
       {_provider, program, staff} = setup_provider_program_staff()
       {:ok, _} = Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
 
-      assert :ok = Provider.clear_lead_instructor(program.id)
+      assert :ok = Provider.clear_lead_instructor(program.id, program.provider_id)
 
       [assignment] =
         ProgramStaffAssignment
@@ -110,7 +105,7 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
 
     test "is a no-op when there is no lead" do
       {_provider, program, _staff} = setup_provider_program_staff()
-      assert :ok = Provider.clear_lead_instructor(program.id)
+      assert :ok = Provider.clear_lead_instructor(program.id, program.provider_id)
     end
   end
 

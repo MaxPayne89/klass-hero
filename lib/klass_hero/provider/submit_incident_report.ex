@@ -71,12 +71,17 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   end
 
   # Ownership enforced via Provider-local projections — no cross-context sync read.
-  defp validate_ownership(%{program_id: pid, provider_profile_id: prov_id}) when is_binary(pid) do
-    case Programs.get_provider_program(pid) do
-      {:ok, %{provider_id: ^prov_id}} -> :ok
-      _ -> {:error, [program_id: "does not belong to this provider"]}
+  defp validate_ownership(%{program_id: pid, provider_profile_id: prov_id})
+       when is_binary(pid) and is_binary(prov_id) do
+    case Programs.get_provider_program(pid, prov_id) do
+      {:ok, _owned} -> :ok
+      {:error, :not_found} -> {:error, [program_id: "does not belong to this provider"]}
     end
   end
+
+  # No provider to own it — same outcome as a foreign program.
+  defp validate_ownership(%{program_id: pid}) when is_binary(pid),
+    do: {:error, [program_id: "does not belong to this provider"]}
 
   defp validate_ownership(%{session_id: sid, provider_profile_id: prov_id}) when is_binary(sid) do
     case SessionDetailsRepository.get_by_id(sid) do

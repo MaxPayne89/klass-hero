@@ -43,10 +43,11 @@
       #
       requires: [],
       #
-      # If you want to enforce a style guide and need a more traditional linting
-      # experience, you can change `strict` to `true` below:
+      # Strict by default so a bare `mix credo` gives the same verdict as CI and
+      # `mix precommit`, which both run `--strict`. A weaker default here is how
+      # local runs silently drift from the gate.
       #
-      strict: false,
+      strict: true,
       #
       # To modify the timeout for parsing files, change this value:
       #
@@ -72,8 +73,9 @@
           {Credo.Check.Consistency.ExceptionNames, []},
           {Credo.Check.Consistency.LineEndings, []},
           {Credo.Check.Consistency.ParameterPatternMatching, []},
-          # TODO: Re-enable when Credo supports Elixir 1.20 sigil token format
-          # Crashes on ~D[] and ~w() sigils with FunctionClauseError in Token.position/1
+          # Disabled upstream-bug workaround: crashes on ~D[] and ~w() sigils with
+          # FunctionClauseError in Token.position/1. Re-enable once Credo supports
+          # the Elixir 1.20 sigil token format.
           {Credo.Check.Consistency.SpaceAroundOperators, false},
           {Credo.Check.Consistency.SpaceInParentheses, []},
           {Credo.Check.Consistency.TabsOrSpaces, []},

@@ -24,8 +24,8 @@ mix test --failed            # Re-run failed tests
 mix test.e2e                 # Run end-to-end tests (Wallaby)
 
 # Quality
-mix precommit                # Full pre-commit: compile --warnings-as-errors, deps.unlock --unused, format, lint_typography, test
-mix credo --strict           # Elixir linting (runs in CI)
+mix precommit                # Full pre-commit: compile --warnings-as-errors, deps.unlock --unused, format, lint_typography, lint_translations, credo --strict, test --include slow
+mix credo --strict           # Elixir linting (runs in CI; .credo.exs sets strict: true, so bare `mix credo` is equivalent)
 mix lint_typography          # Check font/typography usage in templates
 
 # Database
@@ -175,7 +175,7 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 |---|---|
 | `mix compile --warnings-as-errors` | Unused vars/imports, deprecations |
 | `mix format --check-formatted` | Formatting issues |
-| `mix credo --min-priority=high` | Style violations, code smells |
+| `mix credo --strict` | Style violations, code smells, long lines, TODO tags |
 | `mix lint_typography` | Font/typography usage violations |
 | `mix test` | Functional regressions (full suite with PostgreSQL) |
 | Sobelow | Common Phoenix security vulnerabilities |

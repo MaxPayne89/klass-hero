@@ -52,5 +52,18 @@ defmodule KlassHero.Provider.Assignments.AssignStaffToProgramTest do
                  staff_member_id: Ecto.UUID.generate()
                })
     end
+
+    # Cross-tenant rejection is asserted module-wide in ownership_guard_test.exs.
+    test "returns not_found when the program does not exist" do
+      provider = insert(:provider_profile_schema)
+      staff = insert(:staff_member_schema, provider_id: provider.id)
+
+      assert {:error, :not_found} =
+               Provider.assign_staff_to_program(%{
+                 provider_id: provider.id,
+                 program_id: Ecto.UUID.generate(),
+                 staff_member_id: staff.id
+               })
+    end
   end
 end

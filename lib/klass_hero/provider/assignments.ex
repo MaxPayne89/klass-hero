@@ -5,6 +5,25 @@ defmodule KlassHero.Provider.Assignments do
   Assignment writes emit domain events on the Provider bus (promoted to durable
   integration events); reads expose active assignments and the staff behind them.
   Reached through `KlassHero.Provider`'s public API.
+
+  ## Tenancy
+
+  Every write takes a `provider_id` and enforces it uniformly (#1134): the staff
+  member comes from the scoped `Provider.get_staff_member/2`, the program from the
+  scoped `ProgramCatalog.get_program_for_provider/2` (via `ensure_program_owned/2`), and
+  every UPDATE is narrowed by `ProgramStaffAssignment.owned_by/2`. Ownership is a
+  property of the queries, not a caller convention, so no UPDATE can reach a
+  foreign row even if a pre-check were missed.
+
+  INSERTs are the one shape a query scope can't cover, so they take their
+  `provider_id` from the ownership-proven `StaffMember` rather than from caller
+  attrs — see `build_assignment_attrs/2` and `upsert_lead/4`.
+
+  Foreign and missing are deliberately indistinguishable throughout — both
+  `{:error, :not_found}`, leaking no existence oracle.
+
+  Reads are intentionally *not* provider-scoped: `get_lead_instructor/1` and its
+  batch sibling feed publicly-rendered program pages.
   """
 
   use KlassHero.Shared.Tracing
@@ -12,6 +31,7 @@ defmodule KlassHero.Provider.Assignments do
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.ProgramStaffAssignment
@@ -25,18 +45,23 @@ defmodule KlassHero.Provider.Assignments do
   @doc """
   Assigns a staff member to a program.
 
+  `attrs.provider_id` is the tenancy authority and must come from the
+  authenticated scope, never from client input. Both the staff member and the
+  program are verified to belong to it.
+
   Returns:
   - `{:ok, ProgramStaffAssignment.t()}` on success
   - `{:error, :already_assigned}` if the staff member is already assigned
-  - `{:error, :not_found}` if staff member does not exist
+  - `{:error, :not_found}` if the staff member or program is missing or foreign
   """
   @spec assign_staff_to_program(map()) ::
           {:ok, ProgramStaffAssignment.t()}
           | {:error, :already_assigned | :not_found | term()}
-  def assign_staff_to_program(attrs) when is_map(attrs) do
+  def assign_staff_to_program(%{provider_id: provider_id} = attrs) do
     context_span entity: "program_staff_assignment" do
-      with {:ok, staff_member} <- Provider.get_staff_member(attrs.staff_member_id),
-           assignment_attrs = Map.put(attrs, :assigned_at, DateTime.utc_now()),
+      with {:ok, staff_member} <- Provider.get_staff_member(attrs.staff_member_id, provider_id),
+           :ok <- ensure_program_owned(attrs.program_id, provider_id),
+           assignment_attrs = build_assignment_attrs(attrs, staff_member),
            {:ok, assignment} <- insert_program_staff_assignment(assignment_attrs) do
         assignment
         |> ProviderEvents.staff_assigned_to_program(staff_member)
@@ -53,19 +78,20 @@ defmodule KlassHero.Provider.Assignments do
   end
 
   @doc """
-  Unassigns a staff member from a program.
+  Unassigns a staff member from a program owned by `provider_id`.
 
   Returns:
   - `{:ok, ProgramStaffAssignment.t()}` on success
-  - `{:error, :not_found}` if no active assignment exists
+  - `{:error, :not_found}` if no active assignment exists or it is foreign
   """
-  @spec unassign_staff_from_program(String.t(), String.t()) ::
+  @spec unassign_staff_from_program(String.t(), String.t(), String.t()) ::
           {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | term()}
-  def unassign_staff_from_program(program_id, staff_member_id)
-      when is_binary(program_id) and is_binary(staff_member_id) do
+  def unassign_staff_from_program(program_id, staff_member_id, provider_id)
+      when is_binary(program_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "program_staff_assignment" do
-      with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id),
-           {:ok, assignment} <- unassign_program_staff_assignment(program_id, staff_member_id) do
+      with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id, provider_id),
+           {:ok, assignment} <-
+             unassign_program_staff_assignment(program_id, staff_member_id, provider_id) do
         assignment
         |> ProviderEvents.staff_unassigned_from_program(staff_member)
         |> dispatch_assignment_event()
@@ -86,9 +112,10 @@ defmodule KlassHero.Provider.Assignments do
   If the staff member has no tags, returns all programs unchanged.
   If tags are set, returns only programs whose category matches a tag.
 
-  The caller is responsible for fetching the programs list (typically
-  from `ProgramCatalog.list_programs_for_provider/1`), keeping the
-  Provider context free of cross-context dependencies.
+  The caller is responsible for fetching the programs list (typically from
+  `ProgramCatalog.list_programs_for_provider/1`), which keeps this function pure
+  and free of I/O. (The module does read the Program Catalog facade elsewhere —
+  see `ensure_program_owned/2` — but only for write-path ownership guards.)
   """
   @spec list_assigned_programs(StaffMember.t(), [map()]) :: [map()]
   def list_assigned_programs(%StaffMember{} = staff_member, programs) when is_list(programs) do
@@ -147,46 +174,43 @@ defmodule KlassHero.Provider.Assignments do
   `program_staff_assignments_single_lead` partial unique index is never violated
   mid-flight. Creates an active assignment when the staff member has none yet.
 
-  Returns `{:ok, ProgramStaffAssignment.t()}` or `{:error, :not_found}` when the
-  staff member does not exist **or is owned by another provider** (IDOR guard —
-  the two are indistinguishable, so no cross-tenant assignment is ever written).
+  Returns `{:ok, ProgramStaffAssignment.t()}`, or `{:error, :not_found}` when the
+  staff member **or the program** is missing or foreign — both sides are checked,
+  so a competitor's staff can never attach to this program, nor this provider's
+  staff to theirs.
   """
   @spec set_lead_instructor(String.t(), String.t(), String.t()) ::
           {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | term()}
   def set_lead_instructor(program_id, staff_member_id, provider_id)
       when is_binary(program_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "program_staff_assignment" do
-      # Foreign staff → :not_found (see @doc): a competitor's staff must never attach
-      # to this publicly-rendered program.
-      case Provider.get_staff_member(staff_member_id) do
-        {:ok, %StaffMember{provider_id: ^provider_id} = staff_member} ->
-          Multi.new()
-          |> Multi.update_all(:clear_other_leads, other_active_leads_query(program_id, staff_member_id),
-            set: [is_lead_instructor: false]
-          )
-          |> Multi.run(:lead, fn repo, _ -> upsert_lead(repo, program_id, staff_member) end)
-          |> Repo.transaction()
-          |> case do
-            {:ok, %{lead: lead}} -> {:ok, lead}
-            {:error, _step, reason, _changes} -> {:error, reason}
-          end
-
-        {:ok, %StaffMember{}} ->
-          {:error, :not_found}
-
-        error ->
-          error
+      with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id, provider_id),
+           :ok <- ensure_program_owned(program_id, provider_id) do
+        Multi.new()
+        |> Multi.update_all(
+          :clear_other_leads,
+          other_active_leads_query(program_id, staff_member_id, provider_id),
+          set: [is_lead_instructor: false]
+        )
+        |> Multi.run(:lead, fn repo, _ -> upsert_lead(repo, program_id, staff_member, provider_id) end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{lead: lead}} -> {:ok, lead}
+          {:error, _step, reason, _changes} -> {:error, reason}
+        end
       end
     end
   end
 
   @doc """
-  Clears the program's lead instructor, leaving the assignment otherwise active.
-  No-op when the program has no lead.
+  Clears the lead instructor on a program owned by `provider_id`, leaving the
+  assignment otherwise active.
+
+  No-op when the program has no lead or is foreign.
   """
-  @spec clear_lead_instructor(String.t()) :: :ok
-  def clear_lead_instructor(program_id) when is_binary(program_id) do
-    active_leads_query(program_id)
+  @spec clear_lead_instructor(String.t(), String.t()) :: :ok
+  def clear_lead_instructor(program_id, provider_id) when is_binary(program_id) and is_binary(provider_id) do
+    active_leads_query(program_id, provider_id)
     |> Repo.update_all(set: [is_lead_instructor: false])
 
     :ok
@@ -220,16 +244,17 @@ defmodule KlassHero.Provider.Assignments do
     |> Map.new(fn {program_id, staff} -> {program_id, to_lead_map(staff)} end)
   end
 
-  # Active lead assignment(s) for a program (should be at most one via the index).
-  defp active_leads_query(program_id) do
-    from a in ProgramStaffAssignment,
+  # Active lead assignment(s) for a program (should be at most one via the index),
+  # scoped to the owning provider so no mutation can reach a foreign lead.
+  defp active_leads_query(program_id, provider_id) do
+    from a in ProgramStaffAssignment.owned_by(provider_id),
       where: a.program_id == ^program_id and a.is_lead_instructor and is_nil(a.unassigned_at)
   end
 
   # Active leads for the program EXCEPT the incoming staff member — cleared first
   # so promoting a new lead never collides with the partial unique index.
-  defp other_active_leads_query(program_id, staff_member_id) do
-    from a in active_leads_query(program_id),
+  defp other_active_leads_query(program_id, staff_member_id, provider_id) do
+    from a in active_leads_query(program_id, provider_id),
       where: a.staff_member_id != ^staff_member_id
   end
 
@@ -242,12 +267,12 @@ defmodule KlassHero.Provider.Assignments do
       where: a.is_lead_instructor and is_nil(a.unassigned_at)
   end
 
-  defp upsert_lead(repo, program_id, staff_member) do
-    case repo.one(active_assignment_scope(program_id, staff_member.id)) do
+  defp upsert_lead(repo, program_id, staff_member, provider_id) do
+    case repo.one(active_assignment_scope(program_id, staff_member.id, provider_id)) do
       nil ->
         %ProgramStaffAssignment{}
         |> ProgramStaffAssignment.create_changeset(%{
-          provider_id: staff_member.provider_id,
+          provider_id: provider_id,
           program_id: program_id,
           staff_member_id: staff_member.id,
           assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
@@ -262,9 +287,9 @@ defmodule KlassHero.Provider.Assignments do
     end
   end
 
-  # The single active (program, staff) assignment, if one exists.
-  defp active_assignment_scope(program_id, staff_member_id) do
-    from a in ProgramStaffAssignment,
+  # The single active (program, staff) assignment for the provider, if one exists.
+  defp active_assignment_scope(program_id, staff_member_id, provider_id) do
+    from a in ProgramStaffAssignment.owned_by(provider_id),
       where:
         a.program_id == ^program_id and a.staff_member_id == ^staff_member_id and
           is_nil(a.unassigned_at)
@@ -276,6 +301,18 @@ defmodule KlassHero.Provider.Assignments do
     %{id: staff.id, name: StaffMember.full_name(staff), headshot_url: staff.headshot_url}
   end
 
+  # Programs are owned by Program Catalog, so ownership is read through its public
+  # facade — strongly consistent, unlike the `provider_programs` projection, whose
+  # lag would reject a lead set immediately after the program is created.
+  defp ensure_program_owned(program_id, provider_id) do
+    acl_span source: "provider", target: "program_catalog" do
+      case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+        {:ok, _owned} -> :ok
+        {:error, :not_found} -> {:error, :not_found}
+      end
+    end
+  end
+
   # Dispatches the domain event on the Provider bus. PromoteIntegrationEvents
   # then promotes it to a :critical integration event delivered belt-and-suspenders
   # (PubSub + durable Oban via the critical_event_handlers registry for
@@ -283,6 +320,15 @@ defmodule KlassHero.Provider.Assignments do
   # prevents double execution). The bus is keyed on the Provider context module,
   # so dispatch explicitly through `Provider`, not this sub-module.
   defp dispatch_assignment_event(event), do: DomainEventBus.dispatch(Provider, event)
+
+  # An INSERT can't carry a query scope, so the row's tenancy key is taken from
+  # the ownership-proven staff member rather than the caller's attrs — the same
+  # rule `upsert_lead/4` follows.
+  defp build_assignment_attrs(attrs, %StaffMember{provider_id: provider_id}) do
+    attrs
+    |> Map.put(:assigned_at, DateTime.utc_now())
+    |> Map.put(:provider_id, provider_id)
+  end
 
   defp insert_program_staff_assignment(attrs) do
     %ProgramStaffAssignment{}
@@ -301,13 +347,9 @@ defmodule KlassHero.Provider.Assignments do
     end
   end
 
-  defp unassign_program_staff_assignment(program_id, staff_member_id) do
-    ProgramStaffAssignment
-    |> where(
-      [a],
-      a.program_id == ^program_id and a.staff_member_id == ^staff_member_id and
-        is_nil(a.unassigned_at)
-    )
+  defp unassign_program_staff_assignment(program_id, staff_member_id, provider_id) do
+    program_id
+    |> active_assignment_scope(staff_member_id, provider_id)
     |> Repo.one()
     |> case do
       nil ->

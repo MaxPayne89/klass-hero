@@ -29,7 +29,23 @@ defmodule KlassHero.Provider.Programs do
     SessionDetailsRepository.list_by_program(provider_id, program_id)
   end
 
-  @doc "Returns the provider-owned program by ID from the `provider_programs` projection."
+  @doc """
+  Returns a projected program owned by `provider_id` — the tenancy-safe getter.
+
+  Foreign and missing are indistinguishable: the `provider_id` predicate is part
+  of the query, so a foreign row is never reached.
+  """
+  @spec get_provider_program(String.t(), String.t()) :: {:ok, ProviderProgram.t()} | {:error, :not_found}
+  def get_provider_program(program_id, provider_id) when is_binary(program_id) and is_binary(provider_id) do
+    ProviderProgramRepository.get_by_id(program_id, provider_id)
+  end
+
+  @doc """
+  Returns a program by ID from the `provider_programs` projection, **unscoped**.
+
+  Only for paths with no provider in scope. Any path that has a `provider_id`
+  must use `get_provider_program/2`.
+  """
   @spec get_provider_program(String.t()) :: {:ok, ProviderProgram.t()} | {:error, :not_found}
   def get_provider_program(program_id) when is_binary(program_id) do
     ProviderProgramRepository.get_by_id(program_id)
