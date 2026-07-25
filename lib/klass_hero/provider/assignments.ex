@@ -5,6 +5,19 @@ defmodule KlassHero.Provider.Assignments do
   Assignment writes emit domain events on the Provider bus (promoted to durable
   integration events); reads expose active assignments and the staff behind them.
   Reached through `KlassHero.Provider`'s public API.
+
+  ## Tenancy
+
+  Every write takes a `provider_id` and enforces it uniformly (#1134): the staff
+  member is fetched through the provider-scoped `Provider.get_staff_member/2`,
+  the program is checked by `ensure_program_owned/2`, and each mutation query is
+  narrowed by `ProgramStaffAssignment.owned_by/2`. Ownership is a property of the
+  queries rather than a caller convention, so a foreign row cannot be reached even
+  if a pre-check were missed. Foreign and missing are deliberately
+  indistinguishable — both `{:error, :not_found}`, leaking no existence oracle.
+
+  Reads are intentionally *not* provider-scoped: `get_lead_instructor/1` and its
+  batch sibling feed publicly-rendered program pages.
   """
 
   use KlassHero.Shared.Tracing
@@ -97,9 +110,10 @@ defmodule KlassHero.Provider.Assignments do
   If the staff member has no tags, returns all programs unchanged.
   If tags are set, returns only programs whose category matches a tag.
 
-  The caller is responsible for fetching the programs list (typically
-  from `ProgramCatalog.list_programs_for_provider/1`), keeping the
-  Provider context free of cross-context dependencies.
+  The caller is responsible for fetching the programs list (typically from
+  `ProgramCatalog.list_programs_for_provider/1`), which keeps this function pure
+  and free of I/O. (The module does read the Program Catalog facade elsewhere —
+  see `ensure_program_owned/2` — but only for write-path ownership guards.)
   """
   @spec list_assigned_programs(StaffMember.t(), [map()]) :: [map()]
   def list_assigned_programs(%StaffMember{} = staff_member, programs) when is_list(programs) do
