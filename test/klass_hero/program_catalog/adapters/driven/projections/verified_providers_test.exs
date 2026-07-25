@@ -4,7 +4,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   alias KlassHero.AccountsFixtures
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   alias KlassHero.Provider
-  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   # Use a unique name for each test to avoid conflicts with the supervision tree
