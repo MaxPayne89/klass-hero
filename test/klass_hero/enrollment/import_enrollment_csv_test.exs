@@ -509,10 +509,15 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
       assert {:ok, %{created: 1, failed: [%{category: :validation}]}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
+      provider_id = provider.id
+
+      # provider_id is pinned as defence in depth. Owner-scoped delivery already makes a
+      # foreign event unreachable here (#1136); an unpinned `count: 1` payload would
+      # otherwise match another provider's single-invite import.
       assert_receive {:bulk_invites_imported,
                       %DomainEvent{
                         event_type: :bulk_invites_imported,
-                        payload: %{program_ids: ids, count: 1}
+                        payload: %{provider_id: ^provider_id, program_ids: ids, count: 1}
                       }},
                      1_000
 
