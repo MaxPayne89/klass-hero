@@ -14,9 +14,6 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
 
   - `:staff_unassigned_from_program` - Emitted when a staff member is unassigned from a program.
     The Messaging context reacts to revoke conversation participant access (critical).
-
-  - `:incident_reported` - Emitted when a provider submits an incident report.
-    Downstream contexts (e.g., admin dashboards, notifications) can react to safety events (critical).
   """
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
@@ -29,7 +26,6 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
 
   @source_context :provider
   @staff_entity_type :staff_member
-  @incident_report_entity_type :incident_report
 
   @doc """
   Creates a `staff_member_invited` integration event.
@@ -161,57 +157,4 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEvents do
     raise ArgumentError,
           "staff_unassigned_from_program/3 requires a non-empty staff_member_id string, got: #{inspect(staff_member_id)}"
   end
-
-  @doc """
-  Creates an `incident_reported` integration event.
-
-  Marked `:critical` by default — downstream consumers (admin dashboards, notifications)
-  must receive safety events durably.
-
-  ## Parameters
-
-  - `incident_report_id` - The ID of the reported incident
-  - `payload` - Pass-through payload from the domain event (no sensitive fields)
-  - `opts` - Metadata options (correlation_id, causation_id)
-
-  ## Raises
-
-  - `ArgumentError` if `incident_report_id` is nil or empty
-  """
-  def incident_reported(incident_report_id, payload \\ %{}, opts \\ [])
-
-  def incident_reported(incident_report_id, payload, opts)
-      when is_binary(incident_report_id) and byte_size(incident_report_id) > 0 do
-    base_payload = %{incident_report_id: incident_report_id}
-    opts = Keyword.put_new(opts, :criticality, :critical)
-
-    IntegrationEvent.new(
-      :incident_reported,
-      @source_context,
-      @incident_report_entity_type,
-      incident_report_id,
-      # Merge order: base_payload wins so callers cannot accidentally overwrite canonical IDs.
-      Map.merge(scalarize_payload(payload), base_payload),
-      opts
-    )
-  end
-
-  def incident_reported(incident_report_id, _payload, _opts) do
-    raise ArgumentError,
-          "incident_reported/3 requires a non-empty incident_report_id string, got: #{inspect(incident_report_id)}"
-  end
-
-  # Critical payloads serialize to jsonb, so category/severity atoms and the
-  # occurred_at DateTime must be encoded as JSON scalars (see #1010). All three
-  # are write-only over the integration channel (no registered handler). Only
-  # keys actually present are touched.
-  defp scalarize_payload(payload) do
-    payload
-    |> Map.replace_lazy(:category, &to_string/1)
-    |> Map.replace_lazy(:severity, &to_string/1)
-    |> Map.replace_lazy(:occurred_at, &encode_timestamp/1)
-  end
-
-  defp encode_timestamp(%DateTime{} = timestamp), do: DateTime.to_iso8601(timestamp)
-  defp encode_timestamp(other), do: other
 end

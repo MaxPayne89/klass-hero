@@ -34,12 +34,4 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegr
       staff_member_id: event.payload.staff_member_id
     )
   end
-
-  def handle(%DomainEvent{event_type: :incident_reported} = event) do
-    event.aggregate_id
-    |> ProviderIntegrationEvents.incident_reported(event.payload)
-    |> IntegrationEventPublishing.publish_critical("incident_reported",
-      incident_report_id: event.aggregate_id
-    )
-  end
 end

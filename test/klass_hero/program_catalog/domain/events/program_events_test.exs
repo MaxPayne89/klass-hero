@@ -12,7 +12,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
   # base_payload's program_id win over any caller-supplied value, and raise
   # on a nil or blank program_id. The table drives that shared shape;
   # factory-specific payload assertions live in their own describe below.
-  @factories [:program_created, :program_updated, :program_schedule_updated]
+  @factories [:program_created, :program_updated]
 
   for fun <- @factories do
     describe "#{fun}/3" do
@@ -47,21 +47,6 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
     end
   end
 
-  describe "program_schedule_updated/3 payload" do
-    test "carries meeting day and time fields" do
-      event =
-        ProgramEvents.program_schedule_updated("program-1", %{
-          meeting_days: ["Monday", "Wednesday"],
-          meeting_start_time: ~T[16:00:00],
-          meeting_end_time: ~T[17:30:00]
-        })
-
-      assert event.payload.meeting_days == ["Monday", "Wednesday"]
-      assert event.payload.meeting_start_time == ~T[16:00:00]
-      assert event.payload.meeting_end_time == ~T[17:30:00]
-    end
-  end
-
   describe "program_updated/3 payload" do
     test "carries title and price fields" do
       payload = %{title: "Updated Title", price: Decimal.new("200.00")}
@@ -70,6 +55,22 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
 
       assert event.payload.title == "Updated Title"
       assert event.payload.price == Decimal.new("200.00")
+    end
+
+    # Schedule changes ride on :program_updated — the dedicated
+    # :program_schedule_updated event was deleted in #1141 as an
+    # unconsumed duplicate of this strictly larger payload.
+    test "carries meeting day and time fields" do
+      event =
+        ProgramEvents.program_updated("program-1", %{
+          meeting_days: ["Monday", "Wednesday"],
+          meeting_start_time: ~T[16:00:00],
+          meeting_end_time: ~T[17:30:00]
+        })
+
+      assert event.payload.meeting_days == ["Monday", "Wednesday"]
+      assert event.payload.meeting_start_time == ~T[16:00:00]
+      assert event.payload.meeting_end_time == ~T[17:30:00]
     end
   end
 end

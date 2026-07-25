@@ -5,7 +5,6 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
-  alias KlassHero.Shared.DomainEventBus
 
   describe "update_program/3" do
     setup do
@@ -69,74 +68,11 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       assert unchanged.title == "Original Title"
     end
 
-    test "dispatches schedule event when scheduling fields change", %{
-      program: program,
-      provider: provider
-    } do
-      # Subscribe a handler to capture schedule update events
-      test_pid = self()
-
-      DomainEventBus.subscribe(
-        KlassHero.ProgramCatalog,
-        :program_schedule_updated,
-        fn event ->
-          send(test_pid, {:schedule_event, event})
-          :ok
-        end
-      )
-
-      assert {:ok, _updated} =
-               ProgramCatalog.update_program(provider.id, program.id, %{
-                 meeting_days: ["Monday", "Wednesday"]
-               })
-
-      assert_receive {:schedule_event, event}
-      assert event.event_type == :program_schedule_updated
-      assert event.payload.program_id == program.id
-      assert event.payload.provider_id == provider.id
-      assert event.payload.meeting_days == ["Monday", "Wednesday"]
-      assert Map.has_key?(event.payload, :meeting_start_time)
-      assert Map.has_key?(event.payload, :meeting_end_time)
-      assert Map.has_key?(event.payload, :start_date)
-      assert Map.has_key?(event.payload, :end_date)
-    end
-
-    test "does not dispatch schedule event for non-schedule changes", %{
-      program: program,
-      provider: provider
-    } do
-      test_pid = self()
-
-      DomainEventBus.subscribe(
-        KlassHero.ProgramCatalog,
-        :program_schedule_updated,
-        fn event ->
-          send(test_pid, {:schedule_event, event})
-          :ok
-        end
-      )
-
-      assert {:ok, _updated} =
-               ProgramCatalog.update_program(provider.id, program.id, %{title: "New Title"})
-
-      refute_receive {:schedule_event, _}, 100
-    end
-
-    test "dispatches single event for multiple schedule field changes", %{
-      program: program,
-      provider: provider
-    } do
-      test_pid = self()
-
-      DomainEventBus.subscribe(
-        KlassHero.ProgramCatalog,
-        :program_schedule_updated,
-        fn event ->
-          send(test_pid, {:schedule_event, event})
-          :ok
-        end
-      )
-
+    # The dedicated :program_schedule_updated event was deleted in #1141 (an
+    # unconsumed duplicate of :program_updated, whose payload is a superset).
+    # What the old event tests actually protected — that scheduling changes
+    # round-trip through update_program — is asserted on the row instead.
+    test "persists scheduling field changes", %{program: program, provider: provider} do
       assert {:ok, _updated} =
                ProgramCatalog.update_program(provider.id, program.id, %{
                  meeting_days: ["Tuesday", "Thursday"],
@@ -144,8 +80,10 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
                  meeting_end_time: ~T[15:30:00]
                })
 
-      assert_receive {:schedule_event, _event}
-      refute_receive {:schedule_event, _}, 100
+      assert {:ok, stored} = ProgramCatalog.get_program_by_id(program.id)
+      assert stored.meeting_days == ["Tuesday", "Thursday"]
+      assert stored.meeting_start_time == ~T[14:00:00]
+      assert stored.meeting_end_time == ~T[15:30:00]
     end
 
     test "optimistic lock raises StaleEntryError on a stale version", %{program: program} do

@@ -8,17 +8,15 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsTest do
   alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  # Both provider integration-event factories share one contract: build a
+  # The provider integration-event factories share one contract: build a
   # critical event with stable identity fields, let the base payload's id win
   # over any caller-supplied id (while preserving extras), allow criticality
   # to be lowered via opts, and raise on a blank id. The table drives that
   # shape; rows vary only by the factory function, id field name, and
-  # entity_type. Factory-specific payload passthrough — including
-  # incident_reported's atom-to-string scalarization — is covered by the
+  # entity_type. Factory-specific payload passthrough is covered by the
   # hand-written tests below.
   @factories [
-    %{fun: :staff_member_invited, id: :staff_member_id, entity: :staff_member},
-    %{fun: :incident_reported, id: :incident_report_id, entity: :incident_report}
+    %{fun: :staff_member_invited, id: :staff_member_id, entity: :staff_member}
   ]
 
   for %{fun: fun, id: id, entity: entity} <- @factories do
@@ -78,22 +76,6 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsTest do
       assert event.payload.staff_member_id == "staff-1"
       assert event.payload.provider_id == "provider-1"
       assert event.payload.email == "staff@example.com"
-    end
-  end
-
-  describe "incident_reported/3 payload passthrough" do
-    test "scalarizes category and severity atoms to strings" do
-      event =
-        ProviderIntegrationEvents.incident_reported("incident-1", %{
-          provider_id: "provider-1",
-          category: :injury,
-          severity: :high
-        })
-
-      assert event.payload.incident_report_id == "incident-1"
-      assert event.payload.provider_id == "provider-1"
-      assert event.payload.category == "injury"
-      assert event.payload.severity == "high"
     end
   end
 end
