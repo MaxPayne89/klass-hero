@@ -26,22 +26,26 @@ defmodule KlassHero.Messaging.Shared do
   @spec resolve_acting_provider(Scope.t(), keyword()) ::
           {:ok, String.t()} | {:error, :missing_provider_id | :not_found}
   def resolve_acting_provider(%Scope{} = scope, opts) do
-    case Keyword.get(opts, :provider_id) || (scope.provider && scope.provider.id) do
-      nil ->
-        Logger.error("Messaging command called without a resolvable provider_id",
-          user_id: scope.user.id
-        )
+    provider_id = Keyword.get(opts, :provider_id) || (scope.provider && scope.provider.id)
 
-        {:error, :missing_provider_id}
-
-      provider_id ->
-        authorize_acting_provider(scope, provider_id)
-    end
+    authorize_acting_provider(provider_id, scope)
   end
 
-  defp authorize_acting_provider(%Scope{provider: %{id: provider_id}}, provider_id), do: {:ok, provider_id}
+  defp authorize_acting_provider(nil, %Scope{} = scope) do
+    Logger.error("Messaging command called without a resolvable provider_id",
+      user_id: scope.user.id
+    )
 
-  defp authorize_acting_provider(%Scope{} = scope, provider_id) do
+    {:error, :missing_provider_id}
+  end
+
+  defp authorize_acting_provider(provider_id, %Scope{provider: %{id: provider_id}}), do: {:ok, provider_id}
+
+  # Staff scopes are re-checked against the DB rather than `scope.staff_member`:
+  # that field is a mount-time snapshot loaded via get_active_staff_member_by_user/1,
+  # which is `limit: 1` and not provider-scoped, so it would authorize a
+  # multi-employer staffer against the wrong provider.
+  defp authorize_acting_provider(provider_id, %Scope{} = scope) do
     if ProviderStaffResolver.active_staff_for_provider?(provider_id, scope.user.id) do
       {:ok, provider_id}
     else

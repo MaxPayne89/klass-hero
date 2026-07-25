@@ -362,11 +362,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
   end
 
   describe "authorization" do
-    test "rejects every unclaimable target with :not_found and fans nothing out", %{scope: scope} do
-      foreign_provider = insert(:provider_profile_schema)
-      foreign_program = insert(:program_schema, provider_id: foreign_provider.id)
-      # Enrol a parent so a rejection here can't be mistaken for :no_enrollments.
-      enroll_parent(foreign_program)
+    test "rejects every unclaimable target with :not_found", %{scope: scope} do
+      %{provider: foreign_provider, program: foreign_program} = insert_foreign_program()
 
       cases = [
         {"another provider's program", foreign_program.id, []},
@@ -380,12 +377,21 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
         assert {:error, :not_found} = BroadcastToProgram.execute(scope, program_id, "Leak?", opts),
                "expected :not_found for #{label}"
       end
+    end
+
+    # Separate from the table above on purpose: `assert` inside a `for` raises on
+    # the first failure, so trailing invariants would go unchecked whenever an
+    # earlier case regressed — exactly when they matter most.
+    test "rejected broadcasts leave no trace", %{scope: scope} do
+      %{provider: foreign_provider, program: foreign_program} = insert_foreign_program()
+
+      assert {:error, :not_found} = BroadcastToProgram.execute(scope, foreign_program.id, "Leak?")
 
       assert {:error, :not_found} =
                KlassHero.Messaging.find_active_broadcast_for_program(foreign_provider.id, foreign_program.id)
 
       assert Repo.aggregate(Message, :count) == 0,
-             "no message may be persisted for any rejected broadcast"
+             "no message may be persisted for a rejected broadcast"
     end
 
     test "allows active staff to broadcast for their provider", %{provider: provider, program: program} do
@@ -405,6 +411,16 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert {:error, :missing_provider_id} =
                BroadcastToProgram.execute(scope, Ecto.UUID.generate(), "Hi")
     end
+  end
+
+  # A program owned by somebody else, with a parent enrolled so that a rejection
+  # can't be mistaken for :no_enrollments.
+  defp insert_foreign_program do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    enroll_parent(program)
+
+    %{provider: provider, program: program}
   end
 
   # Enrolls a fresh parent (backed by a real user for the FK) into the program.

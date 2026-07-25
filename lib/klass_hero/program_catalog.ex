@@ -90,20 +90,13 @@ defmodule KlassHero.ProgramCatalog do
           {:ok, Program.t()} | {:error, :not_found | :stale_data | Ecto.Changeset.t()}
   def update_program(provider_id, id, changes) when is_binary(provider_id) and is_binary(id) and is_map(changes) do
     context_span entity: "program" do
-      # Ownership guard (IDOR): a program owned by another provider is
-      # indistinguishable from a missing one — both return :not_found so an
-      # attacker can't probe for existence by enumerating ids.
-      case fetch_program(id) do
-        %Program{provider_id: ^provider_id} = current ->
-          do_update_program(current, changes, Program.load_value_objects(current))
-
-        _nil_or_foreign ->
-          {:error, :not_found}
+      with {:ok, current} <- get_program_for_provider(provider_id, id) do
+        do_update_program(current, changes)
       end
     end
   end
 
-  defp do_update_program(current, attrs, original) do
+  defp do_update_program(current, attrs) do
     current
     |> Program.update_changeset(attrs)
     |> Repo.update()
@@ -111,7 +104,7 @@ defmodule KlassHero.ProgramCatalog do
       {:ok, schema} ->
         updated = Program.load_value_objects(schema)
         dispatch_program_updated(updated)
-        maybe_dispatch_schedule_updated(original, updated)
+        maybe_dispatch_schedule_updated(current, updated)
         {:ok, updated}
 
       {:error, changeset} ->
@@ -142,9 +135,10 @@ defmodule KlassHero.ProgramCatalog do
   @doc """
   Gets a program by ID, scoped to its owning provider.
 
-  Same IDOR idiom as `update_program/3`: a program owned by another provider is
+  Ownership guard (IDOR): a program owned by another provider is
   indistinguishable from a missing one — both return `{:error, :not_found}`, so
-  callers can't probe for existence by enumerating ids.
+  callers can't probe for existence by enumerating ids. `update_program/3`
+  routes through this, so every scoped access shares one definition of "yours".
   """
   @spec get_program_for_provider(String.t(), String.t()) :: {:ok, Program.t()} | {:error, :not_found}
   def get_program_for_provider(provider_id, program_id) when is_binary(provider_id) do
