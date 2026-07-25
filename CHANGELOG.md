@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.61.1](https://github.com/MaxPayne89/klass-hero/compare/v0.61.0...v0.61.1) (2026-07-25)
+
+
+### Bug Fixes
+
+* guard broadcasts against foreign programs and unauthorized provider_id ([#1135](https://github.com/MaxPayne89/klass-hero/issues/1135)) ([3637283](https://github.com/MaxPayne89/klass-hero/commit/363728362dd29853291858882ebd74528fe4e8c2))
+* make provider ownership a query scope, not a caller convention ([#1137](https://github.com/MaxPayne89/klass-hero/issues/1137)) ([2c0e777](https://github.com/MaxPayne89/klass-hero/commit/2c0e7777011467a844f09cca405bf6a81b0589a2))
+
 ## [0.61.0](https://github.com/MaxPayne89/klass-hero/compare/v0.60.1...v0.61.0) (2026-07-24)
 
 
