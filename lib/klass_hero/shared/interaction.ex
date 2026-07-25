@@ -40,6 +40,9 @@ defmodule KlassHero.Shared.Interaction do
     `attributes/2`.
   """
 
+  # Self-alias so the generated code below can say `Interaction.…`. Alias hygiene
+  # carries the expansion into the caller's module, where the macro expands.
+  alias KlassHero.Shared.Interaction
   alias KlassHero.Shared.Interaction.Kind
   alias KlassHero.Shared.Tracing
 
@@ -159,12 +162,10 @@ defmodule KlassHero.Shared.Interaction do
             result = unquote(block)
             duration_us = System.monotonic_time(:microsecond) - start_us
 
-            # unquote(__MODULE__) rather than an alias: this expands in the caller's
-            # module, where an alias declared here would not apply.
-            status = unquote(__MODULE__).classify(result, kind_mod, success_fun)
+            status = Interaction.classify(result, kind_mod, success_fun)
             attributes = kind_mod.attributes(result, kind_opts)
 
-            interaction = %unquote(__MODULE__){
+            interaction = %Interaction{
               kind: unquote(kind),
               operation: unquote(operation),
               adapter: unquote(adapter),
@@ -178,9 +179,9 @@ defmodule KlassHero.Shared.Interaction do
               metadata: attributes
             }
 
-            unquote(__MODULE__).set_span_attributes(attributes)
+            Interaction.set_span_attributes(attributes)
 
-            {result, %{duration_us: duration_us}, unquote(__MODULE__).to_telemetry_metadata(interaction)}
+            {result, %{duration_us: duration_us}, Interaction.to_telemetry_metadata(interaction)}
           end
         )
       end

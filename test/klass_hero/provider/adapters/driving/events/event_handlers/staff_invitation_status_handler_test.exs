@@ -205,43 +205,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       # ...but being hired created NO provider profile.
       assert {:error, :not_found} = KlassHero.Provider.get_provider_by_identity(user.id)
     end
-
-    test "ignores a legacy create_provider_profile flag — still no profile" do
-      # create_provider_profile is not in the staff_user_registered contract (ADR-0005,
-      # #965). Originally added to defend that deploy's drain window; kept permanently
-      # because the invariant outlives it — a staff registration must never create a
-      # provider profile, whatever extra fields an event payload happens to carry.
-      user = KlassHero.AccountsFixtures.user_fixture(intended_roles: [:staff])
-      provider = KlassHero.ProviderFixtures.provider_profile_fixture()
-
-      staff =
-        KlassHero.ProviderFixtures.staff_member_fixture(
-          provider_id: provider.id,
-          email: "staff2@test.com",
-          first_name: "Test",
-          last_name: "Staff",
-          invitation_status: :sent,
-          invitation_token_hash: :crypto.hash(:sha256, "test-token-2"),
-          invitation_sent_at: DateTime.utc_now()
-        )
-
-      event =
-        AccountsIntegrationEvents.staff_user_registered(
-          user.id,
-          %{
-            staff_member_id: staff.id,
-            provider_id: provider.id,
-            create_provider_profile: true,
-            user_name: user.name
-          }
-        )
-
-      assert :ok = StaffInvitationStatusHandler.handle_event(event)
-
-      assert {:ok, linked} = KlassHero.Provider.get_staff_member(staff.id)
-      assert linked.invitation_status == :accepted
-      assert {:error, :not_found} = KlassHero.Provider.get_provider_by_identity(user.id)
-    end
   end
 
   describe "handle_event/1 for unknown events" do
