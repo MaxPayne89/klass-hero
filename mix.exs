@@ -144,7 +144,8 @@ defmodule KlassHero.MixProject do
       ],
       "test.clean": ["test.teardown --remove-volumes", "test.setup --force-recreate"],
       "test.watch": ["test.setup", "test.watch.continuous"],
-      "test.e2e": ["test test/e2e --include e2e"],
+      # WALLABY_E2E makes config/test.exs bind a real HTTP socket; no other test needs one.
+      "test.e2e": ["cmd env WALLABY_E2E=true mix test test/e2e --include e2e"],
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",

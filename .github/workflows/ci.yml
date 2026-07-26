@@ -240,8 +240,10 @@ jobs:
       - name: Install ChromeDriver
         uses: nanasess/setup-chromedriver@c75c3d53d445b96d41dbf2355797b470953c6c30
 
+      # Use the alias rather than duplicating its body: it sets WALLABY_E2E, without which
+      # config/test.exs binds no HTTP socket and every browser test fails to connect.
       - name: Run E2E tests
-        run: mix test test/e2e --include e2e
+        run: mix test.e2e
 
       # actions/upload-artifact@v4.6.2
       - name: Upload E2E screenshots
