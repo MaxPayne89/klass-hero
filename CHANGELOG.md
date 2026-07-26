@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.61.3](https://github.com/MaxPayne89/klass-hero/compare/v0.61.2...v0.61.3) (2026-07-26)
+
+
+### Bug Fixes
+
+* delete two domain events dispatched with no registered handler ([#1148](https://github.com/MaxPayne89/klass-hero/issues/1148)) ([94378fd](https://github.com/MaxPayne89/klass-hero/commit/94378fd5567c5b31904a16eecfbd7490bbef4399)), closes [#1141](https://github.com/MaxPayne89/klass-hero/issues/1141)
+
+
+### Code Refactoring
+
+* route staff broadcast lookup through provider-scoped getter ([#1149](https://github.com/MaxPayne89/klass-hero/issues/1149)) ([10c9d16](https://github.com/MaxPayne89/klass-hero/commit/10c9d165e1dc1d57c058ea98b201a540f8e84f1a)), closes [#1138](https://github.com/MaxPayne89/klass-hero/issues/1138)
+
 ## [0.61.2](https://github.com/MaxPayne89/klass-hero/compare/v0.61.1...v0.61.2) (2026-07-25)
 
 
