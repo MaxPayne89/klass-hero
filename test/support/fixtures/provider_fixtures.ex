@@ -121,7 +121,11 @@ defmodule KlassHero.ProviderFixtures do
     {:ok, persisted} =
       %{
         provider_profile_id: attrs_map[:provider_id] || provider_profile_fixture().id,
-        document_type: attrs_map[:document_type] || "business_registration",
+        # Must stay an INDIVIDUAL-track type: provider_profile_fixture defaults to
+        # entity_type: :individual, and a business-only type here (e.g. the previous
+        # "business_registration") makes AdvanceVettingStepOnDocumentReview find no
+        # matching step and silently no-op — tests then pass vacuously (#1142).
+        document_type: attrs_map[:document_type] || "experience_validation",
         file_url: attrs_map[:file_url] || "verification-docs/#{Ecto.UUID.generate()}.pdf",
         original_filename: attrs_map[:original_filename] || "doc.pdf"
       }
