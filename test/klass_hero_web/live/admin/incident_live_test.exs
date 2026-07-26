@@ -5,6 +5,8 @@ defmodule KlassHeroWeb.Admin.IncidentLiveTest do
   import KlassHero.ProviderFixtures
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Provider.IncidentReport
+
   # A provider distinct from the logged-in admin, plus a program it owns.
   # `provider_profile_fixture/1` creates the backing user, which doubles as the
   # incident's reporter.
@@ -234,6 +236,37 @@ defmodule KlassHeroWeb.Admin.IncidentLiveTest do
       {:ok, _view, html} = live(conn, ~p"/admin/incidents/#{report.id}/show")
 
       assert html =~ "slipped near the play area"
+    end
+
+    # Backpex still renders a (disabled) bulk Delete button and row checkboxes on
+    # the index regardless of `can?/3`. That is cosmetic — `can?/3` is enforced
+    # server-side in `Backpex.LiveComponents.FormComponent`, which filters the
+    # selected items before the action module runs.
+    #
+    # The `item-action` event alone only opens the confirm modal, so submitting
+    # that modal's form is what actually reaches the delete. Asserting on the
+    # event alone would pass even with `can?(:delete)` returning true.
+    test "confirming a forged delete does not delete the report", %{conn: conn} do
+      %{provider: provider, program: program} = provider_with_program("Acme Clubs", "Robotics")
+
+      report =
+        incident_report_fixture(
+          provider_profile_id: provider.id,
+          reporter_user_id: provider.identity_id,
+          program_id: program.id
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/admin/incidents")
+
+      render_hook(view, "item-action", %{"action-key" => "delete", "item-id" => report.id})
+
+      assert has_element?(view, "#action-confirm-modal"),
+             "the delete confirm modal should open, otherwise this test proves nothing"
+
+      view |> element("#resource-form") |> render_submit(%{"action-key" => "delete"})
+
+      assert KlassHero.Repo.get(IncidentReport, report.id),
+             "incident report must survive a confirmed delete"
     end
 
     test "edit and delete buttons are not shown", %{conn: conn} do
