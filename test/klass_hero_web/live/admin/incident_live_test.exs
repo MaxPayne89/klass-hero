@@ -148,6 +148,29 @@ defmodule KlassHeroWeb.Admin.IncidentLiveTest do
       {:ok, view, _html} = live(conn, ~p"/admin/incidents")
       assert has_element?(view, "div.bg-amber-50", "Read-only safety record")
     end
+
+    # Backpex's orderable default is `true`, so a virtual field is sortable unless
+    # opted out — and sorting one emits `ORDER BY i0."provider_name"`, a column
+    # that does not exist. Both must be rejected and fall back to init_order.
+    @virtual_order_fields ["provider_name", "program_title"]
+
+    test "sorting by a virtual field does not reach the database", %{conn: conn} do
+      %{provider: provider, program: program} = provider_with_program("Acme Clubs", "Robotics")
+
+      incident_report_fixture(
+        provider_profile_id: provider.id,
+        reporter_user_id: provider.identity_id,
+        program_id: program.id
+      )
+
+      for field <- @virtual_order_fields do
+        {:ok, view, _html} =
+          live(conn, ~p"/admin/incidents?order_by=#{field}&order_direction=asc")
+
+        assert has_element?(view, "td", "Acme Clubs"),
+               "order_by=#{field} should render rather than raise"
+      end
+    end
   end
 
   describe "filters" do

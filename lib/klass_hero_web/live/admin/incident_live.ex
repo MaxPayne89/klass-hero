@@ -113,15 +113,21 @@ defmodule KlassHeroWeb.Admin.IncidentLive do
   @impl Backpex.LiveResource
   def fields do
     [
+      # `orderable: false` is load-bearing on both virtual fields. Backpex's
+      # orderable default is `true`, and it validates `order_by` against the
+      # orderable list — so leaving it out lets `?order_by=provider_name` through
+      # to `ORDER BY i0."provider_name"`, a column that does not exist (42703).
       provider_name: %{
         module: Text,
         label: "Provider",
-        only: [:index, :show]
+        only: [:index, :show],
+        orderable: false
       },
       program_title: %{
         module: Text,
         label: "Target",
         only: [:index, :show],
+        orderable: false,
         render: fn assigns ->
           ~H"""
           <span>
