@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.62.0](https://github.com/MaxPayne89/klass-hero/compare/v0.61.3...v0.62.0) (2026-07-27)
+
+
+### Features
+
+* add read-only admin view for incident reports ([#1151](https://github.com/MaxPayne89/klass-hero/issues/1151)) ([bd9d565](https://github.com/MaxPayne89/klass-hero/commit/bd9d565ffb4a66b3fdb929529903bceabfb5e602))
+
 ## [0.61.3](https://github.com/MaxPayne89/klass-hero/compare/v0.61.2...v0.61.3) (2026-07-26)
 
 
