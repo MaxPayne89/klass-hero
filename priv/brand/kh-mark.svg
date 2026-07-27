@@ -1,36 +1,12 @@
 <!--
-  Klass Hero brand mark — "KH" monogram.
+  Klass Hero "KH" monogram — geometry source for every shipped icon.
+  Regenerate with: node priv/brand/generate_icons.mjs
 
-  GEOMETRY SOURCE OF TRUTH. Every shipped icon (priv/static/favicon.ico,
-  priv/static/images/icon.svg, priv/static/images/apple-touch-icon.png) is
-  derived from the <path> data below by priv/brand/generate_icons.mjs.
-
-      node priv/brand/generate_icons.mjs
-
-  This file owns the SHAPE only. Colour and per-size treatment live in the
-  generator's VARIANT / SIZES constants, so a palette change never touches
-  geometry and vice versa.
-
-  Design constraints, all load-bearing:
-
-  * Letterforms are STROKED POLYLINES, not <text>. A favicon SVG is fetched as
-    a standalone document and cannot reach the page's webfonts, so type has to
-    be geometry. K and H are pure straight-stroke letters — one stem plus two
-    diagonals, and two stems plus a crossbar — so three segments each describes
-    them exactly, with no tracing and no font dependency.
-
-  * Caps and joins are ROUND. That matches the soft-cornered lettering of the
-    landing-bar wordmark (priv/static/images/logo.png), and it means the outline
-    pass wraps the ends of every stroke instead of leaving them bare, which butt
-    caps do.
-
-  * Round caps extend ink by stroke-width/2 past each centreline endpoint. The
-    numbers below already account for that: with the 11px outline pass, ink
-    spans x 3→61 and y 8.5→55.5 inside the 64px viewBox.
-
-  The colours here are the hero-blue-500 / hero-yellow-500 tokens from
-  assets/css/app.css, and exist so this file previews sensibly on its own.
-  The generator overrides them.
+  Strokes, not <text>: a favicon SVG is fetched standalone and cannot reach the
+  page's webfonts. Round caps match the landing-bar wordmark and extend ink by
+  stroke-width/2 past each endpoint, so the shipped 8px fill spans x 4.5→59.5,
+  y 10→54 — leaving room for an 11px outline pass (x 3→61, y 8.5→55.5) if one
+  ever returns. Colour lives in the generator; the values here are for preview.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
   <g id="mark" fill="none" stroke="#0FC3FF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">

@@ -1,35 +1,16 @@
 #!/usr/bin/env node
 //
-// Generates every shipped Klass Hero site icon from priv/brand/kh-mark.svg.
+// Regenerates every shipped site icon from kh-mark.svg:
 //
 //     node priv/brand/generate_icons.mjs
 //
-// Outputs (all committed to git — they are release artifacts, not build output;
-// nothing in mix assets.deploy produces them):
+// Outputs are committed release artifacts — nothing in mix assets.deploy builds
+// them. Zero npm dependencies by design (the repo has no package.json): Chrome
+// rasterises, and the ICO container is written by hand against the spec.
 //
-//     priv/static/favicon.ico                    16 / 32 / 48, PNG-in-ICO
-//     priv/static/images/icon.svg                vector, Chromium + Firefox
-//     priv/static/images/apple-touch-icon.png    180x180, opaque, square
-//
-// WHY THIS EXISTS
-//
-// The bug this fixes (#1159) was created by hand-exporting a binary with no
-// tracked source: commit 1dcdbb2c squeezed the 5.5:1 wordmark into a square,
-// saved it at 8bpp, and shipped it. Nothing could catch that, because there was
-// nothing upstream of the bytes to check. So the icons are now a pure function
-// of one vector plus the constants below.
-//
-// NO DEPENDENCIES. The repo has zero npm footprint (there is no
-// assets/package.json — tailwind and esbuild come from Hex escripts), and this
-// script deliberately keeps it that way: rasterising goes through the Chrome
-// binary, and the ICO container is written by hand against the spec.
-//
-// WHY PNG-IN-ICO
-//
-// Since Vista, an ICO entry's payload may be a whole PNG rather than a legacy
-// BMP/DIB with a separate 1-bit AND transparency mask. Every browser favicon
-// decoder handles it. It also makes the original defect *structurally*
-// unreachable: there is no palette and no AND mask to clip antialiased strokes.
+// ICO entries carry whole PNGs rather than legacy BMP/DIB, so no palette and no
+// 1-bit AND mask exist to clip antialiased strokes — the #1159 defect is
+// structurally unreachable.
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -42,26 +23,14 @@ const REPO = path.resolve(HERE, '..', '..')
 const SOURCE = path.join(HERE, 'kh-mark.svg')
 const STATIC = path.join(REPO, 'priv', 'static')
 
-// ---------------------------------------------------------------------------
-// Palette
-//
-// Tokens mirror assets/css/app.css. Swapping the whole look is a change here
-// and a re-run — geometry in kh-mark.svg is untouched either way.
-// ---------------------------------------------------------------------------
-
+// Hex mirrors the oklch() tokens in assets/css/app.css — kept in sync by hand.
 const TOKENS = {
   heroBlue: '#0FC3FF', // --color-hero-blue-500
-  heroYellow: '#FFFF36', // --color-hero-yellow-500
-  heroBlack: '#000000' // --color-hero-black
+  heroYellow: '#FFFF36' // --color-hero-yellow-500
 }
 
-// Yellow tile, cyan monogram — the two landing-bar logo colours, with the
-// letterforms keeping the brand cyan. No outline pass: a third colour on a
-// two-colour mark reads as noise at tab size.
-//
-// `outline: null` disables the outline pass entirely, which makes
-// OUTLINE_MIN_SIZE below inert for this palette. It is kept because it is a
-// property of the treatment, not of this particular colour choice.
+// Yellow tile, cyan monogram — the two landing-bar logo colours. No outline
+// pass: a third colour on a two-colour mark reads as noise at tab size.
 const VARIANT = {
   tile: TOKENS.heroYellow,
   fill: TOKENS.heroBlue,
@@ -70,34 +39,20 @@ const VARIANT = {
 
 const FILL_WIDTH = 8
 const OUTLINE_WIDTH = 11
-const TILE_RADIUS = 12 // on the 64-unit viewBox
-
-// ---------------------------------------------------------------------------
-// Per-size treatment
-//
-// Small icons are hand-tuned, not downscaled. At 16px a stroke lands around
-// 2px, and the outline pass only adds 1.5px per side — below the threshold it
-// stops reading as an outline and just muddies the letterforms, so it is
-// dropped and the fill carries the mark alone.
-//
-// Apple touch icons are masked and rounded by iOS itself, so that one ships
-// square and fully opaque; rounding it here would show as a dark fringe inside
-// the system's own corner radius.
-// ---------------------------------------------------------------------------
-
-const OUTLINE_MIN_SIZE = 24
-
-const treatmentFor = (size, { square = false } = {}) => ({
-  outline: Boolean(VARIANT.outline) && size >= OUTLINE_MIN_SIZE,
-  radius: square ? 0 : TILE_RADIUS
-})
-
+const TILE_RADIUS = 12
 const ICO_SIZES = [16, 32, 48]
 const APPLE_TOUCH_SIZE = 180
 
-// ---------------------------------------------------------------------------
-// Source geometry
-// ---------------------------------------------------------------------------
+// Below ~24px an outline adds under 2px per side, so it stops reading as an
+// outline and just muddies the letterforms.
+const OUTLINE_MIN_SIZE = 24
+
+// iOS masks and rounds the apple-touch icon itself; rounding it here would show
+// as a fringe inside the system's own corner radius.
+const treatmentFor = (size, square) => ({
+  outline: Boolean(VARIANT.outline) && size >= OUTLINE_MIN_SIZE,
+  radius: square ? 0 : TILE_RADIUS
+})
 
 const EXPECTED_PATHS = 6 // K: stem + 2 diagonals. H: 2 stems + crossbar.
 
@@ -114,18 +69,14 @@ function readGeometry() {
   return paths
 }
 
-// ---------------------------------------------------------------------------
-// SVG composition
-// ---------------------------------------------------------------------------
-
 const strokeGroup = (paths, color, width) =>
   `<g fill="none" stroke="${color}" stroke-width="${width}" ` +
   `stroke-linecap="round" stroke-linejoin="round">` +
   paths.map((d) => `<path d="${d}"/>`).join('') +
   `</g>`
 
-function composeSvg(paths, size, opts = {}) {
-  const { outline, radius } = treatmentFor(size, opts)
+function composeSvg(paths, size, { square = false } = {}) {
+  const { outline, radius } = treatmentFor(size, square)
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" ` +
@@ -139,13 +90,8 @@ function composeSvg(paths, size, opts = {}) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Rasterisation via headless Chrome
-//
-// Chrome is the renderer the icons are actually consumed by, it needs no npm
-// dependency, and the same binary exists on Linux CI images.
-// ---------------------------------------------------------------------------
-
+// Chrome is the renderer these icons are actually consumed by, and the same
+// binary exists on Linux CI images.
 const CHROME_CANDIDATES = [
   process.env.CHROME_BIN,
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -166,8 +112,6 @@ function findChrome() {
 }
 
 function rasterize(chrome, svg, size, tmp) {
-  // The SVG is inlined as a data URI inside a page sized exactly to the target,
-  // so the screenshot needs no cropping and no device-scale correction.
   const page = path.join(tmp, `page-${size}.html`)
   const out = path.join(tmp, `out-${size}.png`)
   const dataUri = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
@@ -199,10 +143,6 @@ function rasterize(chrome, svg, size, tmp) {
   return png
 }
 
-// ---------------------------------------------------------------------------
-// PNG / ICO
-// ---------------------------------------------------------------------------
-
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 
 function assertPngSize(png, size) {
@@ -217,8 +157,8 @@ function assertPngSize(png, size) {
   }
 }
 
-// ICO container. 6-byte ICONDIR, then one 16-byte ICONDIRENTRY per image,
-// then the payloads. Offsets are absolute from the start of the file.
+// 6-byte ICONDIR, one 16-byte ICONDIRENTRY per image, then the payloads.
+// Offsets are absolute from the start of the file.
 function buildIco(images) {
   const HEADER = 6
   const ENTRY = 16
@@ -232,8 +172,10 @@ function buildIco(images) {
 
   const entries = images.map(({ size, png }) => {
     const e = Buffer.alloc(ENTRY)
-    e.writeUInt8(size === 256 ? 0 : size, 0) // width, 0 means 256
-    e.writeUInt8(size === 256 ? 0 : size, 1) // height
+    const dim = size === 256 ? 0 : size // the spec encodes 256 as 0
+
+    e.writeUInt8(dim, 0) // width
+    e.writeUInt8(dim, 1) // height
     e.writeUInt8(0, 2) // palette entries — 0, this is truecolor
     e.writeUInt8(0, 3) // reserved
     e.writeUInt16LE(1, 4) // colour planes
@@ -246,10 +188,6 @@ function buildIco(images) {
 
   return Buffer.concat([dir, ...entries, ...images.map((i) => i.png)])
 }
-
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
 
 function write(relative, data) {
   const target = path.join(STATIC, relative)
@@ -268,9 +206,8 @@ function main() {
   console.log(`chrome  ${chrome}\n`)
 
   try {
-    // Vector icon. Chromium and Firefox prefer this; Safari ignores SVG
-    // favicons entirely, which is exactly why the .ico below still has to be
-    // correct rather than a token fallback.
+    // Safari ignores SVG favicons entirely, which is why the .ico below still
+    // has to be correct rather than a token fallback.
     write('images/icon.svg', Buffer.from(composeSvg(paths, 64) + '\n'))
 
     const images = ICO_SIZES.map((size) => ({
@@ -288,15 +225,6 @@ function main() {
         tmp
       )
     )
-
-    if (VARIANT.outline) {
-      const outlined = ICO_SIZES.filter((size) => size >= OUTLINE_MIN_SIZE)
-      console.log(
-        `\noutline applied at ${outlined.join('/')}px, dropped below ${OUTLINE_MIN_SIZE}px`
-      )
-    } else {
-      console.log(`\nno outline pass — this variant is two-colour`)
-    }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
   }

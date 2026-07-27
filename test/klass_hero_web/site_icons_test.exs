@@ -1,26 +1,22 @@
 defmodule KlassHeroWeb.SiteIconsTest do
   @moduledoc """
-  Covers the site-icon surface: the `<link>` declarations in the root layout,
-  that the referenced files are actually served, and that `favicon.ico` is
-  structurally sound.
+  Covers the site-icon surface: the `<link>` declarations, that the assets are
+  served, and that `favicon.ico` is structurally sound.
 
-  On what these tests are and are not worth (see #1159):
-
-  The markup and reachability tests would have **passed** the whole time the
-  favicon was broken — the tag and the route were always fine, the *pixels* were
-  not. They are genuine regression cover for a different failure: someone edits
-  the root layout and drops a tag, or renames an asset. They do not validate the
-  original fix.
-
-  The `favicon.ico` structure test is the one that encodes the actual root cause.
-  The shipped icon had a paletted 8bpp entry at 32x32 whose 1-bit AND mask
-  clipped every antialiased stroke — and 32x32 is exactly what Chrome requests
-  on a 2x display. Asserting 32bpp truecolour PNG payloads makes that
-  unshippable again.
+  The markup and reachability tests would have passed the whole time the favicon
+  was broken (#1159) — only the structure tests cover the actual root cause: a
+  paletted 8bpp entry whose 1-bit AND mask clipped every antialiased stroke, at
+  the 32x32 size Chrome requests on a 2x display.
   """
   use KlassHeroWeb.ConnCase, async: true
 
   @favicon Path.join([:code.priv_dir(:klass_hero), "static", "favicon.ico"])
+  @apple_touch Path.join([
+                 :code.priv_dir(:klass_hero),
+                 "static",
+                 "images",
+                 "apple-touch-icon.png"
+               ])
   @png_signature <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A>>
   @expected_entries [{16, 16}, {32, 32}, {48, 48}]
 
@@ -44,6 +40,22 @@ defmodule KlassHeroWeb.SiteIconsTest do
 
     test "declares an apple-touch-icon so iOS uses the mark, not a screenshot", %{doc: doc} do
       assert "/images/apple-touch-icon.png" in icon_hrefs(doc, ~s(link[rel="apple-touch-icon"]))
+    end
+
+    test "the declared ICO size is one the file actually ships", %{doc: doc} do
+      declared = declared_size(doc, ~s(link[href^="/favicon.ico"]))
+      shipped = Enum.map(ico_entries(File.read!(@favicon)), &{&1.width, &1.height})
+
+      assert declared in shipped,
+             "layout declares #{inspect(declared)} but favicon.ico ships #{inspect(shipped)} — " <>
+               "ICO_SIZES in generate_icons.mjs changed without updating root.html.heex"
+    end
+
+    test "the declared apple-touch size matches the PNG", %{doc: doc} do
+      declared = declared_size(doc, ~s(link[rel="apple-touch-icon"]))
+
+      assert declared == png_dimensions(File.read!(@apple_touch)),
+             "layout declares #{inspect(declared)} — check APPLE_TOUCH_SIZE in generate_icons.mjs"
     end
   end
 
@@ -94,23 +106,29 @@ defmodule KlassHeroWeb.SiteIconsTest do
 
     test "each PNG's own IHDR agrees with its directory entry", %{entries: entries} do
       for entry <- entries do
-        <<_signature::binary-size(8), _length::32, "IHDR", width::32, height::32, _rest::binary>> =
-          entry.payload
-
-        assert {width, height} == {entry.width, entry.height},
-               "directory claims #{entry.width}x#{entry.height} but the PNG is #{width}x#{height}"
+        assert png_dimensions(entry.payload) == {entry.width, entry.height},
+               "directory claims #{entry.width}x#{entry.height} but the PNG disagrees"
       end
     end
   end
 
-  # `~p` appends a cache-busting query (`?vsn=d`) to known static paths, so
-  # compare on the path alone.
+  # `~p` appends a cache-busting query (`?vsn=d`) to known static paths.
   defp icon_hrefs(doc, selector) do
     doc
     |> LazyHTML.query(selector)
     |> LazyHTML.attribute("href")
     |> Enum.map(&(&1 |> String.split("?") |> hd()))
   end
+
+  defp declared_size(doc, selector) do
+    [sizes] = doc |> LazyHTML.query(selector) |> LazyHTML.attribute("sizes")
+    [width, height] = sizes |> String.split("x") |> Enum.map(&String.to_integer/1)
+
+    {width, height}
+  end
+
+  defp png_dimensions(<<_signature::binary-size(8), _length::32, "IHDR", width::32, height::32, _rest::binary>>),
+    do: {width, height}
 
   defp ico_entries(<<0::16-little, 1::16-little, count::16-little, _::binary>> = binary) do
     for index <- 0..(count - 1)//1 do
