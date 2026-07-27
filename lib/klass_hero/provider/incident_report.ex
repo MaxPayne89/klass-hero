@@ -15,6 +15,18 @@ defmodule KlassHero.Provider.IncidentReport do
   The struct field is `provider_profile_id` (semantic clarity) but the DB column
   is `provider_id`, which references the `providers` table. The `source:` option
   carries the mapping so consumers keep reading `report.provider_profile_id`.
+
+  ## Admin affordances
+
+  `provider_name` and `program_title` are **virtual** — nothing in the write path
+  populates them. They exist for `KlassHeroWeb.Admin.IncidentLive`, whose
+  `item_query/3` joins the owning provider and program and merges the names in.
+  Virtual fields rather than `belongs_to` associations deliberately: an
+  association added for a Backpex field becomes an invisible consumer, so a later
+  removal breaks the admin view silently.
+
+  `admin_changeset/3` is inert config, not a second validation path —
+  `create_changeset/1` remains the only gatekeeper.
   """
 
   use Ecto.Schema
@@ -50,6 +62,10 @@ defmodule KlassHero.Provider.IncidentReport do
     field :occurred_at, :utc_datetime
     field :photo_url, :string
     field :original_filename, :string
+
+    # Populated only by KlassHeroWeb.Admin.IncidentLive's item_query/3 join.
+    field :provider_name, :string, virtual: true
+    field :program_title, :string, virtual: true
 
     timestamps()
   end
@@ -120,6 +136,9 @@ defmodule KlassHero.Provider.IncidentReport do
     |> foreign_key_constraint(:program_id)
     |> foreign_key_constraint(:session_id)
   end
+
+  @doc "No-op changeset required by Backpex even when edit is disabled via `can?/3`."
+  def admin_changeset(schema, _attrs, _metadata), do: change(schema)
 
   defp validate_occurred_at_not_future(changeset) do
     validate_change(changeset, :occurred_at, fn :occurred_at, occurred_at ->

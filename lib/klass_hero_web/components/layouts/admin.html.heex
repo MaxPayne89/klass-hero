@@ -45,6 +45,11 @@
         "Consents"
       )}
     </Backpex.HTML.Layout.sidebar_item>
+    <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/admin/incidents"}>
+      <Backpex.HTML.CoreComponents.icon name="hero-exclamation-triangle" class="h-5 w-5" /> {gettext(
+        "Incidents"
+      )}
+    </Backpex.HTML.Layout.sidebar_item>
     <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/admin/emails"}>
       <Backpex.HTML.CoreComponents.icon name="hero-envelope" class="h-5 w-5" /> {gettext("Emails")}
       <span

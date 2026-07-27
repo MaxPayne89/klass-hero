@@ -216,6 +216,7 @@ defmodule KlassHeroWeb.Router do
         live_resources("/staff", StaffLive, only: [:index, :show, :edit])
         live_resources("/bookings", BookingLive, only: [:index, :show])
         live_resources("/consents", ConsentLive, only: [:index, :show])
+        live_resources("/incidents", IncidentLive, only: [:index, :show])
       end
     end
 

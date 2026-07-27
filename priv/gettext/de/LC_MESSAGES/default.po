@@ -1333,7 +1333,7 @@ msgid "Push, email, SMS settings"
 msgstr "Push-, E-Mail-, SMS-Einstellungen"
 
 #: lib/klass_hero_web/components/composite_components.ex:103
-#: lib/klass_hero_web/components/layouts/admin.html.heex:58
+#: lib/klass_hero_web/components/layouts/admin.html.heex:63
 #: lib/klass_hero_web/components/provider_components.ex:119
 #: lib/klass_hero_web/live/admin/sessions_live.ex:26
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:3
@@ -4207,7 +4207,7 @@ msgstr "E-Mail als ungelesen markiert"
 msgid "Email not found"
 msgstr "E-Mail nicht gefunden"
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:49
+#: lib/klass_hero_web/components/layouts/admin.html.heex:54
 #: lib/klass_hero_web/live/admin/emails_live.ex:21
 #: lib/klass_hero_web/live/admin/emails_live.ex:41
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:4
@@ -7594,3 +7594,8 @@ msgstr "Deine Programme werden geladen…"
 #, elixir-autogen, elixir-format
 msgid "Loading…"
 msgstr "Wird geladen…"
+
+#: lib/klass_hero_web/components/layouts/admin.html.heex:49
+#, elixir-autogen, elixir-format
+msgid "Incidents"
+msgstr "Vorfälle"
