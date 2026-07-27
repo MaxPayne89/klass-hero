@@ -55,10 +55,17 @@ const TOKENS = {
   heroBlack: '#000000' // --color-hero-black
 }
 
+// Yellow tile, cyan monogram — the two landing-bar logo colours, with the
+// letterforms keeping the brand cyan. No outline pass: a third colour on a
+// two-colour mark reads as noise at tab size.
+//
+// `outline: null` disables the outline pass entirely, which makes
+// OUTLINE_MIN_SIZE below inert for this palette. It is kept because it is a
+// property of the treatment, not of this particular colour choice.
 const VARIANT = {
-  tile: TOKENS.heroBlack,
+  tile: TOKENS.heroYellow,
   fill: TOKENS.heroBlue,
-  outline: TOKENS.heroYellow
+  outline: null
 }
 
 const FILL_WIDTH = 8
@@ -282,10 +289,14 @@ function main() {
       )
     )
 
-    const outlined = ICO_SIZES.filter((s) => s >= OUTLINE_MIN_SIZE)
-    console.log(
-      `\noutline applied at ${outlined.join('/')}px, dropped below ${OUTLINE_MIN_SIZE}px`
-    )
+    if (VARIANT.outline) {
+      const outlined = ICO_SIZES.filter((size) => size >= OUTLINE_MIN_SIZE)
+      console.log(
+        `\noutline applied at ${outlined.join('/')}px, dropped below ${OUTLINE_MIN_SIZE}px`
+      )
+    } else {
+      console.log(`\nno outline pass — this variant is two-colour`)
+    }
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true })
   }
