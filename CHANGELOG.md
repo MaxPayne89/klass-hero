@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.62.1](https://github.com/MaxPayne89/klass-hero/compare/v0.62.0...v0.62.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* replace illegible wordmark favicon with a KH monogram ([#1160](https://github.com/MaxPayne89/klass-hero/issues/1160)) ([cf25207](https://github.com/MaxPayne89/klass-hero/commit/cf252074dd3356bba0df50566bf89a426f5d253d))
+
 ## [0.62.0](https://github.com/MaxPayne89/klass-hero/compare/v0.61.3...v0.62.0) (2026-07-27)
 
 
