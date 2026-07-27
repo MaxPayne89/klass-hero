@@ -6,7 +6,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <link rel="icon" type="image/x-icon" href={~p"/favicon.ico"} />
+    <%!-- Icons are generated from priv/brand/kh-mark.svg — see priv/brand/generate_icons.mjs.
+          The ICO is not a fallback of last resort: Safari ignores SVG favicons entirely, and
+          crawlers and link unfurlers probe /favicon.ico regardless of what is declared here. --%>
+    <link rel="icon" href={~p"/favicon.ico"} sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href={~p"/images/icon.svg"} sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href={~p"/images/apple-touch-icon.png"} />
     <.live_title default="Klass Hero" suffix=" · Afterschool Activities & Camps">
       {assigns[:page_title]}
     </.live_title>
