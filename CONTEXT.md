@@ -74,6 +74,10 @@ _Avoid_: Payout (that is the next leg), Settlement, Disbursement
 The movement of money from a **Provider**'s connected account to their bank account. Scheduled and executed by the payment processor — Klass Hero sets the schedule and may hold it, but does not move the money itself.
 _Avoid_: Transfer (that is the previous leg), Withdrawal
 
+**Refund**:
+The return of a **Payment** to the **Parent** after an **Enrollment** is cancelled. Always the full amount while the **Program** has not yet begun, which is the only window Klass Hero supports — because Klass Hero still holds the money then, a Refund is never reclaimed from the **Provider**. Recorded by a **Storno**.
+_Avoid_: Reversal, Chargeback (that is the parent's bank acting against us, not us refunding), Cancellation (the **Enrollment** state change that causes it)
+
 **Processing Fee**:
 The payment processor's actual cost on one **Enrollment**'s **Payment**, passed through so that Klass Hero nets zero on it. It is a recovered cost, **not revenue**, and deliberately not the **Success Fee**. Deducted from what the **Provider** receives, so a provider's payout is less than the **Price** by this amount.
 _Avoid_: Commission (deleted with provider tiers, ADR-0004), Platform fee, Application fee (that's the processor's API term), Service charge
