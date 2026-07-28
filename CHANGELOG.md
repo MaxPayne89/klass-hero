@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.62.2](https://github.com/MaxPayne89/klass-hero/compare/v0.62.1...v0.62.2) (2026-07-28)
+
+
+### Bug Fixes
+
+* recolour the favicon to the landing wordmark's palette ([#1176](https://github.com/MaxPayne89/klass-hero/issues/1176)) ([283be1f](https://github.com/MaxPayne89/klass-hero/commit/283be1f372d0ef0e41d7bada940802efe6eff429))
+
 ## [0.62.1](https://github.com/MaxPayne89/klass-hero/compare/v0.62.0...v0.62.1) (2026-07-27)
 
 
