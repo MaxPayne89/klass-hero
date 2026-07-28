@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.63.0](https://github.com/MaxPayne89/klass-hero/compare/v0.62.2...v0.63.0) (2026-07-28)
+
+
+### Features
+
+* add readiness endpoint reporting database health ([#1178](https://github.com/MaxPayne89/klass-hero/issues/1178)) ([22c6a37](https://github.com/MaxPayne89/klass-hero/commit/22c6a37c9e53accb91e29415f716d49403ae3dc5))
+
 ## [0.62.2](https://github.com/MaxPayne89/klass-hero/compare/v0.62.1...v0.62.2) (2026-07-28)
 
 
