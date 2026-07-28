@@ -29,13 +29,20 @@ const TOKENS = {
   heroYellow: '#FFFF36' // --color-hero-yellow-500
 }
 
-// Yellow tile, cyan monogram — the two landing-bar logo colours. No outline
-// pass: a third colour on a two-colour mark reads as noise at tab size.
+// Mirrors the landing wordmark (priv/static/images/logo.png): cyan letterforms,
+// yellow outline, no field colour. Yellow is 1.07:1 on a white tab strip, so on
+// a light tab the outline reads as almost nothing and the mark carries on the
+// cyan alone — the same thing the wordmark does on a white page.
 const VARIANT = {
-  tile: TOKENS.heroYellow,
+  tile: null,
   fill: TOKENS.heroBlue,
-  outline: null
+  outline: TOKENS.heroYellow
 }
+
+// iOS composites a transparent apple-touch icon onto an unspecified background,
+// so that one size gets an explicit tile rather than inheriting whatever the OS
+// picks. Black keeps both brand colours at full contrast.
+const APPLE_TOUCH_TILE = '#000000'
 
 const FILL_WIDTH = 8
 const OUTLINE_WIDTH = 11
@@ -47,10 +54,11 @@ const APPLE_TOUCH_SIZE = 180
 // outline and just muddies the letterforms.
 const OUTLINE_MIN_SIZE = 24
 
-// iOS masks and rounds the apple-touch icon itself; rounding it here would show
-// as a fringe inside the system's own corner radius.
+// `square` means the apple-touch icon. iOS masks and rounds it itself, so
+// rounding here would show as a fringe inside the system's own corner radius.
 const treatmentFor = (size, square) => ({
   outline: Boolean(VARIANT.outline) && size >= OUTLINE_MIN_SIZE,
+  tile: square ? APPLE_TOUCH_TILE : VARIANT.tile,
   radius: square ? 0 : TILE_RADIUS
 })
 
@@ -76,14 +84,12 @@ const strokeGroup = (paths, color, width) =>
   `</g>`
 
 function composeSvg(paths, size, { square = false } = {}) {
-  const { outline, radius } = treatmentFor(size, square)
+  const { outline, tile, radius } = treatmentFor(size, square)
 
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" ` +
     `width="${size}" height="${size}">` +
-    (VARIANT.tile
-      ? `<rect width="64" height="64" rx="${radius}" fill="${VARIANT.tile}"/>`
-      : '') +
+    (tile ? `<rect width="64" height="64" rx="${radius}" fill="${tile}"/>` : '') +
     (outline ? strokeGroup(paths, VARIANT.outline, OUTLINE_WIDTH) : '') +
     strokeGroup(paths, VARIANT.fill, FILL_WIDTH) +
     `</svg>`
