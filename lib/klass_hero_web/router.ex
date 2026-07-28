@@ -55,11 +55,13 @@ defmodule KlassHeroWeb.Router do
     plug Backpex.ThemeSelectorPlug
   end
 
-  # Health check endpoint for Fly.io
+  # /health is Fly.io's machine check; /health/ready is for external uptime monitoring.
+  # See KlassHeroWeb.HealthController for why they must stay separate.
   scope "/", KlassHeroWeb do
     pipe_through :api
 
     get "/health", HealthController, :index
+    get "/health/ready", HealthController, :ready
   end
 
   scope "/", KlassHeroWeb do
