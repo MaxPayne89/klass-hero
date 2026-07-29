@@ -231,7 +231,16 @@ defmodule KlassHero.Application do
     ]
   end
 
-  defp integration_event_subscribers do
+  @doc """
+  Integration-event subscriber child specs.
+
+  Public so a test can check each subscriber's `topics:` covers everything its
+  handler declares in `subscribed_events/0` — `EventSubscriber` subscribes off
+  the literal topic list and never consults the handler, so the two drift
+  silently, and a handler clause that never receives its event looks exactly
+  like a feature that quietly does nothing.
+  """
+  def integration_event_subscribers do
     [
       Supervisor.child_spec(
         {EventSubscriber,
@@ -304,11 +313,15 @@ defmodule KlassHero.Application do
          event_label: "Integration event"},
         id: :enrollment_family_invite_subscriber
       ),
-      # Participation seeds session roster when a session is created
+      # Participation seeds session rosters, whether a session was created by hand
+      # or derived from a program's schedule.
       Supervisor.child_spec(
         {EventSubscriber,
          handler: SeedSessionRosterHandler,
-         topics: ["integration:participation:session_created"],
+         topics: [
+           "integration:participation:session_created",
+           "integration:participation:sessions_generated"
+         ],
          message_tag: :integration_event,
          event_label: "Integration event"},
         id: :participation_seed_roster_subscriber
