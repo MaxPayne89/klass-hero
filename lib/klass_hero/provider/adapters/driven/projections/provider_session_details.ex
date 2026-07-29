@@ -75,11 +75,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     update_status(event.entity_id, :cancelled)
   end
 
+  # `seeded_count` is the delta a seeding inserted, not a running total — a roster
+  # is seeded once at session creation and again whenever a child enrols later, so
+  # this accumulates rather than overwrites.
   def handle_event(:roster_seeded, %IntegrationEvent{payload: %{seeded_count: seeded_count}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     from(d in ProviderSessionDetailSchema, where: d.session_id == ^event.entity_id)
-    |> Repo.update_all(set: [total_count: seeded_count, updated_at: now])
+    |> Repo.update_all(inc: [total_count: seeded_count], set: [updated_at: now])
     |> warn_if_missing("roster_seeded", session_id: event.entity_id, seeded_count: seeded_count)
   end
 

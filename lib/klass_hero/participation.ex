@@ -401,6 +401,45 @@ defmodule KlassHero.Participation do
       :ok
   end
 
+  @doc """
+  Places a newly-enrolled child on the roster of every upcoming scheduled session
+  of the program. Best-effort: always returns `:ok`.
+
+  Invoked by the `enrollment_created` integration-event handler. Sessions in the
+  past, in progress, completed or cancelled are left alone — enrolling today must
+  never rewrite attendance history.
+  """
+  @spec backfill_roster_for_enrollment(String.t(), String.t()) :: :ok
+  def backfill_roster_for_enrollment(child_id, program_id) when is_binary(child_id) and is_binary(program_id) do
+    context_span entity: "participation_record" do
+      session_ids = upcoming_scheduled_session_ids(program_id)
+      {:ok, seeded_ids} = seed_child_records(session_ids, child_id)
+
+      Logger.info(
+        "[Participation] Backfilled roster — upcoming=#{length(session_ids)} inserted=#{length(seeded_ids)}",
+        child_id: child_id,
+        program_id: program_id
+      )
+
+      # One event per session that actually gained a row, so each session's
+      # read-model count moves by exactly the number of rows it gained.
+      Enum.each(seeded_ids, &safe_publish_roster_seeded(&1, program_id, 1))
+
+      :ok
+    end
+  rescue
+    error ->
+      Logger.error(
+        "[Participation] Failed to backfill roster: #{Exception.message(error)}",
+        child_id: child_id,
+        program_id: program_id,
+        step: "session_query_or_bulk_insert",
+        stacktrace: Exception.format_stacktrace(__STACKTRACE__)
+      )
+
+      :ok
+  end
+
   # ============================================================================
   # Attendance
   # ============================================================================
@@ -1065,6 +1104,47 @@ defmodule KlassHero.Participation do
       |> Repo.update_all(inc: [lock_version: 1], set: [status: :absent, updated_at: now])
 
     {:ok, count}
+  end
+
+  defp upcoming_scheduled_session_ids(program_id) do
+    today = Date.utc_today()
+
+    from(s in ProgramSession,
+      where: s.program_id == ^program_id and s.status == :scheduled and s.session_date >= ^today,
+      select: s.id
+    )
+    |> Repo.all()
+  end
+
+  defp seed_child_records([], _child_id), do: {:ok, []}
+
+  # Returns the ids of sessions that actually gained a row: with `on_conflict:
+  # :nothing`, Postgres RETURNING reports only rows that landed, so a child
+  # already on a roster is skipped silently rather than double-counted.
+  defp seed_child_records(session_ids, child_id) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    rows =
+      Enum.map(session_ids, fn session_id ->
+        %{
+          id: Ecto.UUID.generate(),
+          session_id: session_id,
+          child_id: child_id,
+          status: :registered,
+          lock_version: 1,
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    {_count, inserted} =
+      Repo.insert_all(ParticipationRecord, rows,
+        on_conflict: :nothing,
+        conflict_target: [:session_id, :child_id],
+        returning: [:session_id]
+      )
+
+    {:ok, Enum.map(inserted, & &1.session_id)}
   end
 
   defp seed_records(_session_id, []), do: {:ok, 0}

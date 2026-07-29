@@ -217,6 +217,24 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       assert %{total_count: 7} = reload(session_id)
     end
 
+    test "accumulates across seedings instead of overwriting", %{session_id: session_id} do
+      # seeded_count is the *delta* an insert added, not a running total: a later
+      # back-fill of one child must not stomp an existing roster of five.
+      broadcast(:roster_seeded, session_id, %{
+        session_id: session_id,
+        program_id: "prog",
+        seeded_count: 5
+      })
+
+      broadcast(:roster_seeded, session_id, %{
+        session_id: session_id,
+        program_id: "prog",
+        seeded_count: 1
+      })
+
+      assert %{total_count: 6} = reload(session_id)
+    end
+
     test "logs a warning when the session row is missing" do
       unknown_id = Ecto.UUID.generate()
 
