@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.65.0](https://github.com/MaxPayne89/klass-hero/compare/v0.64.0...v0.65.0) (2026-07-29)
+
+
+### Features
+
+* generate sessions from a program's recurring schedule ([#1187](https://github.com/MaxPayne89/klass-hero/issues/1187)) ([b34c4f7](https://github.com/MaxPayne89/klass-hero/commit/b34c4f793bb38a0137d234dc09ab513797bc819e))
+
 ## [0.64.0](https://github.com/MaxPayne89/klass-hero/compare/v0.63.0...v0.64.0) (2026-07-29)
 
 
