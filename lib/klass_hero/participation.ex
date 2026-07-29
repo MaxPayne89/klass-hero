@@ -78,6 +78,45 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
+  Brings a program's generated sessions into agreement with its recurring schedule.
+
+  Idempotent, and deliberately so: `program_updated` carries a full snapshot
+  rather than a diff, so a caller cannot tell a schedule edit from a title edit
+  and must be safe to run on every write.
+
+  Three steps, all scoped to `origin: :generated` sessions dated today or later:
+  slots that returned to the schedule are revived, missing ones are created, and
+  ones that fell out are cancelled. Manually created sessions are never touched,
+  and neither is any session already started, completed or cancelled.
+
+  Returns `{:error, :incomplete_schedule}` when the program has no full schedule
+  to derive from — distinct from a complete schedule that yields no dates.
+  """
+  @spec sync_sessions_for_program(String.t()) ::
+          {:ok, %{generated: non_neg_integer(), cancelled: non_neg_integer(), revived: non_neg_integer()}}
+          | {:error, :program_not_found | :incomplete_schedule | :schedule_range_too_large}
+  def sync_sessions_for_program(program_id) when is_binary(program_id) do
+    context_span entity: "session" do
+      with {:ok, program} <- fetch_program_for_sync(program_id),
+           {:ok, dates} <- ProgramCatalog.meeting_dates(program) do
+        today = Date.utc_today()
+        upcoming = Enum.reject(dates, &Date.before?(&1, today))
+
+        {:ok, tally} =
+          Repo.transaction(fn ->
+            revived = revive_generated_sessions(program, upcoming)
+            inserted = insert_generated_sessions(program, upcoming)
+            cancelled = cancel_orphaned_sessions(program, upcoming, today)
+
+            %{generated: length(inserted), cancelled: cancelled, revived: revived}
+          end)
+
+        {:ok, tally}
+      end
+    end
+  end
+
+  @doc """
   Starts a scheduled session.
 
   Returns `{:ok, session}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
@@ -1105,6 +1144,89 @@ defmodule KlassHero.Participation do
 
     {:ok, count}
   end
+
+  defp fetch_program_for_sync(program_id) do
+    case ProgramCatalog.get_program_by_id(program_id) do
+      {:ok, program} -> {:ok, program}
+      {:error, :not_found} -> {:error, :program_not_found}
+    end
+  end
+
+  # A generated session is identified by its slot — date *and* start time — so
+  # moving a program's meeting time orphans the old slot rather than editing it.
+  defp generated_slot_query(program) do
+    from(s in ProgramSession,
+      where: s.program_id == ^program.id,
+      where: s.origin == :generated,
+      where: s.start_time == ^program.meeting_start_time
+    )
+  end
+
+  defp revive_generated_sessions(_program, []), do: 0
+
+  # Without this a narrow-then-revert edit would silently lose those sessions:
+  # the slot's row still exists, so the insert below skips it, and nothing else
+  # would ever move it back off :cancelled.
+  defp revive_generated_sessions(program, dates) do
+    {count, _} =
+      program
+      |> generated_slot_query()
+      |> where([s], s.status == :cancelled and s.session_date in ^dates)
+      |> Repo.update_all(set: [status: :scheduled, updated_at: now_utc()])
+
+    count
+  end
+
+  defp insert_generated_sessions(_program, []), do: []
+
+  defp insert_generated_sessions(program, dates) do
+    now = now_utc()
+
+    rows =
+      for date <- dates do
+        %{
+          id: Ecto.UUID.generate(),
+          program_id: program.id,
+          session_date: date,
+          start_time: program.meeting_start_time,
+          end_time: program.meeting_end_time,
+          status: :scheduled,
+          origin: :generated,
+          location: program.location,
+          lock_version: 1,
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    {_count, inserted} =
+      Repo.insert_all(ProgramSession, rows,
+        on_conflict: :nothing,
+        conflict_target: [:program_id, :session_date, :start_time],
+        returning: [:id, :session_date, :start_time, :end_time]
+      )
+
+    inserted
+  end
+
+  # Only :scheduled rows are swept, so a session already under way or finished
+  # keeps its outcome no matter what happens to the schedule.
+  defp cancel_orphaned_sessions(program, dates, today) do
+    orphans =
+      from(s in ProgramSession,
+        where: s.program_id == ^program.id,
+        where: s.origin == :generated,
+        where: s.status == :scheduled,
+        where: s.session_date >= ^today,
+        where: s.session_date not in ^dates or s.start_time != ^program.meeting_start_time
+      )
+
+    {count, _} = Repo.update_all(orphans, set: [status: :cancelled, updated_at: now_utc()])
+
+    count
+  end
+
+  defp now_utc, do: DateTime.utc_now() |> DateTime.truncate(:second)
 
   defp upcoming_scheduled_session_ids(program_id) do
     today = Date.utc_today()
