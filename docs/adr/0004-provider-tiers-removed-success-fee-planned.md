@@ -16,7 +16,11 @@ Tiers could be removed this bluntly because they were never monetised: the €19
 - Provider registration no longer asks for a plan; `/for-providers` marketing sells "free to join, all features included, success-based fee coming" instead of three pricing cards.
 - The column drop ships in the same PR as the code removal (single deploy, low traffic); a brief window where an old release selects a dropped column is accepted.
 
+## Update: fee machinery now exists, and it is not this fee
+
+[ADR-0012](0012-merchant-of-record-via-separate-charges-and-transfers.md) introduces a **Processing Fee** — the payment processor's actual cost, deducted from a Provider's payout and passed through at zero margin. A reader who finds fee-deduction code after reading the paragraph above would reasonably conclude this ADR had been ignored. It has not: a recovered cost is not a take rate. The **Success Fee** described here remains undesigned and unbuilt, and `CONTEXT.md` defines the two against each other precisely so they cannot be conflated.
+
 ## When to revisit
 
-- When the success-based fee is built: it defines its own fee schedule, storage, and statements from scratch — it must not resurrect tier vocabulary or the Entitlements provider map.
+- When the success-based fee is built: it defines its own fee schedule, storage, and statements from scratch — it must not resurrect tier vocabulary or the Entitlements provider map. It sits beside the Processing Fee, not inside it.
 - If provider-side capability gating is ever needed again (e.g. fee-delinquent Providers losing features), model it on the fee system's own state, not on a reintroduced tier.

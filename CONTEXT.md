@@ -16,6 +16,10 @@ _Avoid_: Type, Kind, Tag
 The window during which parents may enrol in a Program. When unbounded, registration is "always open".
 _Avoid_: Enrolment window, Signup period, Booking window
 
+**Price**:
+What a **Program** costs a parent, always **gross** — the final amount payable, VAT included whatever the rate turns out to be. A Provider entering "100" means the parent pays €100. Net and VAT are *derived* from it, never the other way round.
+_Avoid_: Net price, Fee (reserved for the platform's success-based fee), Cost
+
 ## Scheduling
 
 **Session**:
@@ -39,6 +43,48 @@ _Avoid_: Attendance record, Booking
 **Attendance**:
 The act and result of checking a child in and out of a **Session** (the state changes recorded on a **Participation Record**).
 _Avoid_: Presence, Sign-in
+
+## Payments & Invoicing
+
+**Invoice**:
+An immutable, numbered record of money owed or paid for one **Enrollment**, issued by Klass Hero. Append-only: it is never edited after issue, and a correction is a new Invoice, not a change to the old one. Comes in three kinds — a **Rechnung** to the **Parent**, a **Gutschrift** to the **Provider**, and a **Storno** reversing either. One concept rather than three, because German law treats a Gutschrift as an invoice issued by the recipient of the supply (§14 Abs. 2 S. 2 UStG).
+_Avoid_: Document (that's a **Verification Document**), Receipt, Bill, Booking invoice ("Booking" is not a domain noun)
+
+**Rechnung**:
+The **Invoice** kind issued by Klass Hero to a **Parent** for an **Enrollment**. Klass Hero's own VAT treatment governs it. The German term is kept because the document is German and consumer-facing.
+_Avoid_: Parent invoice, Receipt
+
+**Gutschrift**:
+The **Invoice** kind issued by Klass Hero to a **Provider**, self-billing for the provider's supply. The **Provider**'s own VAT status governs it, and issuing it requires the provider's prior agreement.
+_Avoid_: Credit note (means something else in English), Payout statement, Self-bill
+
+**Storno**:
+The **Invoice** kind that reverses a **Rechnung** or a **Gutschrift** after a cancellation or refund. Never mutates the invoice it reverses.
+_Avoid_: Cancellation (that's the **Enrollment** state change that may cause a Storno), Credit note, Refund (the money movement, not the document)
+
+**Payment**:
+The **Parent**'s money movement into Klass Hero for one **Enrollment**. Two-phase: the money is *held* when the parent books and only *taken* once the **Provider** accepts. Taking it is what confirms the **Enrollment** — neither the parent submitting the form nor the provider accepting does so alone. A held Payment that is never taken lapses and no money moves. Only programs with a **Price** above zero have one.
+_Avoid_: Charge (the processor's term), Transaction, Booking payment ("Booking" is not a domain noun)
+
+**Transfer**:
+The movement of a **Provider**'s share from Klass Hero to that provider's connected account. Held back until the **Program** begins, so that Klass Hero — not the provider — holds the money while a booking can still be cancelled. Separate from the **Payment**, later than it, and able to fail on its own.
+_Avoid_: Payout (that is the next leg), Settlement, Disbursement
+
+**Payout**:
+The movement of money from a **Provider**'s connected account to their bank account. Scheduled and executed by the payment processor — Klass Hero sets the schedule and may hold it, but does not move the money itself.
+_Avoid_: Transfer (that is the previous leg), Withdrawal
+
+**Refund**:
+The return of a **Payment** to the **Parent** after an **Enrollment** is cancelled. Always the full amount while the **Program** has not yet begun, which is the only window Klass Hero supports — because Klass Hero still holds the money then, a Refund is never reclaimed from the **Provider**. Recorded by a **Storno**.
+_Avoid_: Reversal, Chargeback (that is the parent's bank acting against us, not us refunding), Cancellation (the **Enrollment** state change that causes it)
+
+**Processing Fee**:
+The payment processor's actual cost on one **Enrollment**'s **Payment**, passed through so that Klass Hero nets zero on it. It is a recovered cost, **not revenue**, and deliberately not the **Success Fee**. Deducted from what the **Provider** receives, so a provider's payout is less than the **Price** by this amount.
+_Avoid_: Commission (deleted with provider tiers, ADR-0004), Platform fee, Application fee (that's the processor's API term), Service charge
+
+**Success Fee**:
+The planned share of a **Provider**'s platform income that Klass Hero will earn ("we earn when you earn"). Not built and not modelled — see [ADR-0004](adr/0004-provider-tiers-removed-success-fee-planned.md). Distinct from the **Processing Fee**: one is Klass Hero's margin, the other is a cost recovered at zero margin. Do not let code, copy, or invoices blur them.
+_Avoid_: Commission, Tier rate, Take rate
 
 ## Providers & Staff
 
