@@ -2,6 +2,10 @@ import Config
 
 alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
 
+# Every dev port derives from PORT so a worktree can run its own server alongside
+# main's. See .claude/rules/worktrees.md.
+dev_port = String.to_integer(System.get_env("PORT") || "4000")
+
 config :klass_hero, KlassHero.Repo,
   username: "postgres",
   password: "postgres",
@@ -18,7 +22,8 @@ config :klass_hero, KlassHero.Repo,
   pool_size: 10
 
 config :klass_hero, KlassHeroWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
+  http: [ip: {127, 0, 0, 1}, port: dev_port],
+  url: [host: "localhost", port: dev_port],
   check_origin: false,
   # The watchers configuration can be used to run external
   code_reloader: true,
@@ -41,6 +46,8 @@ config :klass_hero, KlassHeroWeb.Endpoint,
     ]
   ]
 
+config :klass_hero, :app_base_url, "http://localhost:#{dev_port}"
+
 # Storage: MinIO S3-compatible storage for development (via docker-compose)
 config :klass_hero, :storage,
   adapter: S3StorageAdapter,
@@ -52,6 +59,12 @@ config :klass_hero, :storage,
 
 # Enable dev routes for dashboard and mailbox
 config :klass_hero, dev_routes: true
+
+# live_debugger runs its own endpoint and defaults to 4007, so a second concurrent
+# dev server would hit :eaddrinuse. Offsetting by 100 keeps it collision-free without
+# per-worktree config. Deliberately not `auto_port: true` — its upward scan could
+# wander onto a neighbouring worktree's port.
+config :live_debugger, port: dev_port + 100
 
 # Do not include metadata nor timestamps in development logs
 # debugging and code reloading.
