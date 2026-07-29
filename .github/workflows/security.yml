@@ -92,3 +92,47 @@ jobs:
 
       - name: Audit dependencies for vulnerabilities
         run: mix deps.audit --ignore-file .mix_audit.ignore
+
+  # Reads hex.pm's advisory feed; the mix-audit job above reads the community
+  # elixir-security-advisories repo. Disjoint sets — a HIGH against bandit was
+  # visible only to this one and passed CI silently (#1181).
+  #
+  # Report-only by intent: it gets its own job so a finding is visible as its own
+  # red entry, but it should stay out of any required-status-checks rule on `main`.
+  hex-audit:
+    name: hex.pm Advisory Audit
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout@v6.0.2
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      # erlef/setup-beam@v1.23.0
+      - name: Set up Elixir
+        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+          version-type: strict
+
+      # actions/cache@v5.0.4
+      - name: Restore dependencies cache
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      # Populates the local Hex registry cache that hex.audit reads. `~/.hex` is
+      # absent from the cache above, so the advisory data is fetched fresh here.
+      - name: Install dependencies
+        run: mix deps.get
+
+      # Exits non-zero on advisories and on maintainer-retired versions. There is
+      # no --ignore-file equivalent to .mix_audit.ignore, so a finding that can't
+      # be fixed by a bump has to be handled here in the workflow.
+      - name: Audit dependencies against hex.pm advisories
+        run: mix hex.audit
