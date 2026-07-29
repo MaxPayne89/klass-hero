@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+#
+# Start the dev server on this checkout's port.
+#
+# The port is read from .mcp.json — the same file that points Claude Code at this
+# checkout's Tidewave endpoint — so the MCP client and the server it talks to can
+# never drift apart. Falls back to 4000 if the file is missing.
+#
+# Run bin/setup-mcp once per checkout to create it.
+#
+# Usage:
+#   bin/dev            start the server
+#   bin/dev --port     print the port and exit
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+port=4000
+
+if [[ -f .mcp.json ]]; then
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "bin/dev: .mcp.json exists but jq is not installed — cannot read the port." >&2
+    exit 1
+  fi
+
+  url=$(jq -r '.mcpServers.tidewave.url // empty' .mcp.json)
+
+  if [[ -n "$url" ]]; then
+    port="${url##*:}"  # http://localhost:4010/tidewave/mcp -> 4010/tidewave/mcp
+    port="${port%%/*}" # 4010/tidewave/mcp                  -> 4010
+  fi
+
+  if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+    echo "bin/dev: could not parse a port out of .mcp.json (url: ${url:-none})" >&2
+    exit 1
+  fi
+fi
+
+if [[ "${1:-}" == "--port" ]]; then
+  echo "$port"
+  exit 0
+fi
+
+echo "Starting dev server on http://localhost:${port} (live_debugger on $((port + 100)))"
+exec env PORT="$port" iex -S mix phx.server

@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+#
+# Give this checkout its own dev-server port and Tidewave MCP endpoint by writing
+# .mcp.json. Run once per checkout — the main one included.
+#
+# The main checkout takes 4000; each worktree takes the lowest free port in
+# PORT_MIN..PORT_MAX, so several dev servers can run at once and each Claude Code
+# session talks to the server for the code it is actually looking at.
+#
+# .mcp.json is *project* scope, which outranks user scope and replaces the entry
+# wholesale (scopes match by name; fields are never merged). Keeping the name
+# `tidewave` is deliberate: MCP tool permissions are keyed on the server name, so a
+# per-worktree name would need its own mcp__<name>__* grants in settings.
+#
+# .mcp.json is gitignored, so every checkout needs this run once.
+#
+# Usage: bin/setup-mcp
+
+set -euo pipefail
+
+MAIN_PORT=4000
+PORT_MIN=4010
+PORT_MAX=4039
+
+cd "$(git rev-parse --show-toplevel)"
+
+if ! command -v jq >/dev/null 2>&1; then
+  echo "setup-mcp: jq is required" >&2
+  exit 1
+fi
+
+# Extract the port from a .mcp.json, or nothing if it has no tidewave entry.
+port_from() {
+  jq -r '.mcpServers.tidewave.url // empty' "$1" 2>/dev/null |
+    sed -n 's#.*localhost:\([0-9][0-9]*\)/.*#\1#p'
+}
+
+if [[ -f .mcp.json ]]; then
+  echo "Already configured: port $(port_from .mcp.json). Nothing to do."
+  exit 0
+fi
+
+# Ports already written into some checkout's .mcp.json. Stale entries self-clean:
+# a deleted worktree stops appearing in `git worktree list`.
+claimed_ports() {
+  local worktree
+  while read -r worktree; do
+    if [[ -f "$worktree/.mcp.json" ]]; then
+      port_from "$worktree/.mcp.json"
+    fi
+  done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
+}
+
+# Ports currently bound by any listening process on this machine.
+bound_ports() {
+  lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null |
+    sed -n 's/.*:\([0-9][0-9]*\) (LISTEN).*/\1/p'
+}
+
+# Lowest free port in the range. Claimed ports keep two worktrees off the same
+# number even while their servers are down; bound ports additionally dodge an
+# unrelated process squatting in the range.
+allocate_port() {
+  local taken port
+  taken=$(
+    {
+      claimed_ports
+      bound_ports
+    } | sort -u
+  )
+
+  for ((port = PORT_MIN; port <= PORT_MAX; port++)); do
+    if ! grep -qx "$port" <<<"$taken"; then
+      echo "$port"
+      return 0
+    fi
+  done
+
+  echo "setup-mcp: no free port in ${PORT_MIN}-${PORT_MAX}." >&2
+  echo "Prune a stale worktree, or widen the range at the top of this script." >&2
+  return 1
+}
+
+# A linked worktree has .git as a file ("gitdir: ..."); the main checkout has a directory.
+if [[ -d .git ]]; then
+  port=$MAIN_PORT
+  where="main checkout"
+else
+  port=$(allocate_port)
+  where=$(git branch --show-current)
+fi
+
+cat >.mcp.json <<EOF
+{
+  "mcpServers": {
+    "tidewave": {
+      "type": "http",
+      "url": "http://localhost:${port}/tidewave/mcp"
+    }
+  }
+}
+EOF
+
+cat <<EOF
+Configured port ${port} for ${where}.
+
+  wrote .mcp.json  -> tidewave at http://localhost:${port}/tidewave/mcp
+  bin/dev          -> starts the server on ${port} (live_debugger on $((port + 100)))
+
+Restart Claude Code here — .mcp.json is read at session start.
+EOF
