@@ -30,6 +30,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   use KlassHero.Shared.Projection,
     topics: [
       "integration:participation:session_created",
+      "integration:participation:sessions_generated",
       "integration:participation:session_started",
       "integration:participation:session_completed",
       "integration:participation:session_cancelled",
@@ -61,6 +62,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
 
     project_session_created(event.payload)
+  end
+
+  # The batch shares one program, so its title/provider/staff resolve once here
+  # rather than once per session as the per-session clause above does.
+  def handle_event(:sessions_generated, %IntegrationEvent{payload: %{program_id: program_id, sessions: sessions}}) do
+    Enum.each(sessions, &project_session_created(Map.put(&1, :program_id, program_id)))
   end
 
   def handle_event(:session_started, %IntegrationEvent{} = event) do

@@ -694,7 +694,7 @@ msgid "Introduction"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:113
-#: lib/klass_hero_web/live/provider/sessions_live.ex:348
+#: lib/klass_hero_web/live/provider/sessions_live.ex:355
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:64
 #, elixir-autogen, elixir-format
 msgid "Invalid date format"
@@ -3997,7 +3997,7 @@ msgstr ""
 msgid "%{count} unread"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:366
+#: lib/klass_hero_web/live/provider/sessions_live.ex:373
 #, elixir-autogen, elixir-format
 msgid "A session already exists at this time"
 msgstr ""
@@ -4176,8 +4176,8 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:342
-#: lib/klass_hero_web/live/provider/sessions_live.ex:343
+#: lib/klass_hero_web/live/provider/sessions_live.ex:349
+#: lib/klass_hero_web/live/provider/sessions_live.ex:350
 #, elixir-autogen, elixir-format
 msgid "Date is required"
 msgstr ""
@@ -4220,7 +4220,7 @@ msgstr ""
 msgid "Emergency: %{details}"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:365
+#: lib/klass_hero_web/live/provider/sessions_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
 msgstr ""
@@ -4235,7 +4235,7 @@ msgstr ""
 msgid "Failed to archive email"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:302
+#: lib/klass_hero_web/live/provider/sessions_live.ex:309
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Failed to create session: %{reason}"
 msgstr ""
@@ -4292,7 +4292,7 @@ msgid "Invalid Invitation"
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/sessions_live.ex:259
-#: lib/klass_hero_web/live/provider/sessions_live.ex:361
+#: lib/klass_hero_web/live/provider/sessions_live.ex:368
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Invalid time format"
 msgstr ""
@@ -4431,7 +4431,7 @@ msgstr ""
 msgid "Please explain why you're rejecting this note..."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:368
+#: lib/klass_hero_web/live/provider/sessions_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "Please fill in all required fields"
 msgstr ""
@@ -4555,7 +4555,7 @@ msgstr ""
 msgid "Session Roster"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:284
+#: lib/klass_hero_web/live/provider/sessions_live.ex:291
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Session created successfully"
 msgstr ""
@@ -4621,8 +4621,8 @@ msgstr ""
 msgid "This invite link is invalid or has expired."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/sessions_live.ex:352
-#: lib/klass_hero_web/live/provider/sessions_live.ex:353
+#: lib/klass_hero_web/live/provider/sessions_live.ex:359
+#: lib/klass_hero_web/live/provider/sessions_live.ex:360
 #, elixir-autogen, elixir-format
 msgid "Time is required"
 msgstr ""

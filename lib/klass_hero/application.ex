@@ -181,6 +181,16 @@ defmodule KlassHero.Application do
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
            {:session_created, {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
+           {:sessions_generated,
+            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
+            priority: 10},
+           {:sessions_generated,
+            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
+           {:session_cancelled,
+            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
+            priority: 10},
+           {:session_cancelled,
+            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
            {:session_started,
             {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
             priority: 10},
@@ -258,7 +268,12 @@ defmodule KlassHero.Application do
       Supervisor.child_spec(
         {EventSubscriber,
          handler: ParticipationEventHandler,
-         topics: ["integration:family:child_data_anonymized"],
+         topics: [
+           "integration:family:child_data_anonymized",
+           "integration:program_catalog:program_created",
+           "integration:program_catalog:program_updated",
+           "integration:enrollment:enrollment_created"
+         ],
          message_tag: :integration_event,
          event_label: "Integration event"},
         id: :participation_integration_event_subscriber

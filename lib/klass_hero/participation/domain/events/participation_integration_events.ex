@@ -174,6 +174,35 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationIntegrationEvents d
           "session_completed/3 requires a non-empty session_id string, got: #{inspect(session_id)}"
   end
 
+  @doc """
+  Creates a `sessions_generated` integration event for a schedule-derived batch.
+
+  Keyed on the program rather than a session: the batch is the unit, so consumers
+  resolve the program once and write all its rows in a single pass.
+  """
+  def sessions_generated(program_id, payload \\ %{}, opts \\ [])
+
+  def sessions_generated(program_id, %{sessions: _} = payload, opts)
+      when is_binary(program_id) and byte_size(program_id) > 0 do
+    IntegrationEvent.new(
+      :sessions_generated,
+      @source_context,
+      :program,
+      program_id,
+      Map.put(payload, :program_id, program_id),
+      opts
+    )
+  end
+
+  def sessions_generated(program_id, _payload, _opts) when is_binary(program_id) and byte_size(program_id) > 0 do
+    raise ArgumentError, "sessions_generated missing required payload key: :sessions"
+  end
+
+  def sessions_generated(program_id, _payload, _opts) do
+    raise ArgumentError,
+          "sessions_generated/3 requires a non-empty program_id string, got: #{inspect(program_id)}"
+  end
+
   @doc "Creates a `roster_seeded` integration event."
   def roster_seeded(session_id, payload \\ %{}, opts \\ [])
 

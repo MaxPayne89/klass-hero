@@ -102,16 +102,20 @@ defmodule KlassHero.Participation do
         today = Date.utc_today()
         upcoming = Enum.reject(dates, &Date.before?(&1, today))
 
-        {:ok, tally} =
+        {:ok, {inserted, cancelled, revived}} =
           Repo.transaction(fn ->
             revived = revive_generated_sessions(program, upcoming)
             inserted = insert_generated_sessions(program, upcoming)
             cancelled = cancel_orphaned_sessions(program, upcoming, today)
 
-            %{generated: length(inserted), cancelled: cancelled, revived: revived}
+            {inserted, cancelled, revived}
           end)
 
-        {:ok, tally}
+        # Dispatched after commit, fire-and-forget, as every other write path here.
+        publish_sessions_generated(program_id, inserted)
+        Enum.each(cancelled, &DomainEventBus.dispatch(@context, ParticipationEvents.session_cancelled(&1)))
+
+        {:ok, %{generated: length(inserted), cancelled: length(cancelled), revived: revived}}
       end
     end
   end
@@ -432,6 +436,45 @@ defmodule KlassHero.Participation do
       Logger.error(
         "[Participation] Failed to seed roster: #{Exception.message(error)}",
         session_id: session_id,
+        program_id: program_id,
+        step: "acl_query_or_bulk_insert",
+        stacktrace: Exception.format_stacktrace(__STACKTRACE__)
+      )
+
+      :ok
+  end
+
+  @doc """
+  Seeds the rosters of a batch of sessions that share one program. Best-effort:
+  always returns `:ok`.
+
+  Invoked by the `sessions_generated` integration-event handler. The program's
+  enrolled children are resolved once for the batch, rather than once per
+  session as `seed_session_roster/2` would.
+  """
+  @spec seed_rosters_for_sessions([String.t()], String.t()) :: :ok
+  def seed_rosters_for_sessions([], _program_id), do: :ok
+
+  def seed_rosters_for_sessions(session_ids, program_id) when is_list(session_ids) and is_binary(program_id) do
+    context_span entity: "participation_record" do
+      child_ids = EnrolledChildrenResolver.list_enrolled_child_ids(program_id)
+
+      for session_id <- session_ids do
+        {:ok, count} = seed_records(session_id, child_ids)
+        safe_publish_roster_seeded(session_id, program_id, count)
+      end
+
+      Logger.info(
+        "[Participation] Seeded generated rosters — sessions=#{length(session_ids)} enrolled=#{length(child_ids)}",
+        program_id: program_id
+      )
+
+      :ok
+    end
+  rescue
+    error ->
+      Logger.error(
+        "[Participation] Failed to seed generated rosters: #{Exception.message(error)}",
         program_id: program_id,
         step: "acl_query_or_bulk_insert",
         stacktrace: Exception.format_stacktrace(__STACKTRACE__)
@@ -1221,9 +1264,20 @@ defmodule KlassHero.Participation do
         where: s.session_date not in ^dates or s.start_time != ^program.meeting_start_time
       )
 
-    {count, _} = Repo.update_all(orphans, set: [status: :cancelled, updated_at: now_utc()])
+    # `select` rather than the :returning option — update_all returns the updated
+    # rows only when the query itself selects them.
+    {_count, cancelled} =
+      orphans
+      |> select([s], s)
+      |> Repo.update_all(set: [status: :cancelled, updated_at: now_utc()])
 
-    count
+    cancelled
+  end
+
+  defp publish_sessions_generated(_program_id, []), do: :ok
+
+  defp publish_sessions_generated(program_id, sessions) do
+    DomainEventBus.dispatch(@context, ParticipationEvents.sessions_generated(program_id, sessions))
   end
 
   defp now_utc, do: DateTime.utc_now() |> DateTime.truncate(:second)

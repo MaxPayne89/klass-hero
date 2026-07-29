@@ -190,7 +190,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
         {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id, payload: payload}},
         socket
       )
-      when event_type in [:session_started, :session_completed, :session_created, :roster_seeded] do
+      when event_type in [:session_started, :session_completed, :session_created, :session_cancelled, :roster_seeded] do
     # session_created may be for a different date; only insert if it matches the current view.
     if event_type == :session_created and
          Map.get(payload, :session_date) != socket.assigns.selected_date do
@@ -198,6 +198,13 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     else
       {:noreply, update_session_in_stream(socket, session_id)}
     end
+  end
+
+  # A generated batch is keyed on the program, not one session, and may span any
+  # number of dates — so reload the day being viewed rather than patching rows.
+  @impl true
+  def handle_info({:domain_event, %DomainEvent{event_type: :sessions_generated}}, socket) do
+    {:noreply, load_sessions(socket)}
   end
 
   @impl true
