@@ -133,6 +133,11 @@ function rasterize(chrome, svg, size, tmp) {
     chrome,
     [
       '--headless=new',
+      // Ubuntu 23.10+ sets apparmor_restrict_unprivileged_userns=1, so Chrome's
+      // namespace sandbox cannot start on the CI image. Opt-in rather than
+      // unconditional: local runs keep the sandbox. The only content rendered is
+      // a data: URI built two lines up, and the flag does not alter output bytes.
+      ...(process.env.CHROME_NO_SANDBOX ? ['--no-sandbox'] : []),
       '--disable-gpu',
       '--hide-scrollbars',
       '--force-device-scale-factor=1',

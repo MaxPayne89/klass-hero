@@ -7,6 +7,10 @@ defmodule KlassHeroWeb.SiteIconsTest do
   was broken (#1159) — only the structure tests cover the actual root cause: a
   paletted 8bpp entry whose 1-bit AND mask clipped every antialiased stroke, at
   the 32x32 size Chrome requests on a 2x display.
+
+  These assert the committed bytes are well-formed, never that they are current —
+  a stale ICO is still a valid ICO. Regeneration from `priv/brand/kh-mark.svg` is
+  gated by the `site-icons` job in `.github/workflows/ci.yml` (#1163).
   """
   use KlassHeroWeb.ConnCase, async: true
 

@@ -253,3 +253,44 @@ jobs:
           name: e2e-screenshots
           path: tmp/e2e_screenshots/
           retention-days: 7
+
+  # The site icons are committed release artifacts — nothing in mix assets.deploy
+  # builds them — so this job is the only thing linking the bytes to their source,
+  # priv/brand/kh-mark.svg. site_icons_test.exs covers a different axis: it proves
+  # the committed ICO is well-formed, which a stale ICO also is.
+  #
+  # Report-only by intent, like the hex-audit job in security.yml: it gets its own
+  # red PR entry, but must stay OUT of the required-status-checks ruleset on
+  # `main`. A Chrome major bump can shift Skia's antialiasing and red this on an
+  # unrelated PR; the fix is a one-line regen commit, which must not gate a merge.
+  #
+  # No `needs:` and no Elixir — this runs off the deps job's critical path.
+  site-icons:
+    name: Site Icon Provenance
+    runs-on: ubuntu-latest
+
+    steps:
+      # actions/checkout@v6.0.2
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      # Node and Google Chrome both ship on the runner image, and the generator
+      # has no npm dependencies — hence no setup-node and no install step.
+      # CHROME_BIN is set explicitly rather than leaning on the generator's
+      # fallback list, so a runner image that moves the binary fails loudly.
+      - name: Regenerate the site icons from kh-mark.svg
+        run: node priv/brand/generate_icons.mjs
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+          CHROME_NO_SANDBOX: '1'
+
+      - name: Fail if the committed artifacts drifted from their source
+        run: |
+          git diff --exit-code --stat \
+            priv/static/favicon.ico \
+            priv/static/images/icon.svg \
+            priv/static/images/apple-touch-icon.png \
+          || {
+            echo "::error::Site icons are stale. Run 'node priv/brand/generate_icons.mjs' and commit the result."
+            exit 1
+          }
