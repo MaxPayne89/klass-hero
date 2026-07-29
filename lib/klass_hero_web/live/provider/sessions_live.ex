@@ -50,6 +50,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       |> assign(:selected_date, selected_date)
       |> assign(:provider_programs, provider_programs)
       |> assign(:provider_program_ids, provider_program_ids)
+      |> assign(:program_names, program_names(provider_programs))
       |> assign(:business, business)
       |> assign(:form, nil)
       |> stream(:sessions, [])
@@ -193,9 +194,20 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   # A generated batch is keyed on the program, not one session, and may span any
   # number of dates — so reload the day being viewed rather than patching rows.
+  # The batch may also belong to a program created after mount, so refresh the
+  # title map or its sessions would render under the generic fallback.
   @impl true
   def handle_info({:domain_event, %DomainEvent{event_type: :sessions_generated}}, socket) do
-    {:noreply, load_sessions(socket)}
+    programs = ProgramCatalog.list_programs_for_provider(socket.assigns.provider_id)
+
+    socket =
+      socket
+      |> assign(:provider_programs, programs)
+      |> assign(:provider_program_ids, MapSet.new(programs, & &1.id))
+      |> assign(:program_names, program_names(programs))
+      |> load_sessions()
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -212,6 +224,8 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   # that takes the LiveView down. Mirrors ParticipationLive and StaffParticipationLive.
   @impl true
   def handle_info({:domain_event, %DomainEvent{}}, socket), do: {:noreply, socket}
+
+  defp program_names(programs), do: Map.new(programs, &{&1.id, &1.title})
 
   defp build_initial_form_data(selected_date) do
     %{

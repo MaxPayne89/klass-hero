@@ -55,6 +55,39 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       assert has_element?(view, "button", "Start Session")
     end
 
+    test "names each session's program so a day's cards are distinguishable", %{
+      conn: conn,
+      provider: provider
+    } do
+      # Generating a term produces many same-shaped cards on one day; without the
+      # program name they all read alike and a provider cannot tell them apart.
+      for {title, start_time, end_time} <- [
+            {"Junior Choir", ~T[09:00:00], ~T[10:00:00]},
+            {"Piano for Beginners", ~T[15:00:00], ~T[16:00:00]}
+          ] do
+        program = insert(:program_schema, provider_id: provider.id, title: title)
+        # Titles reach the page through the ProviderPrograms read model, not `programs`.
+        insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: title)
+
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          start_time: start_time,
+          end_time: end_time,
+          status: :scheduled
+        )
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      assert has_element?(view, "h3", "Junior Choir")
+      assert has_element?(view, "h3", "Piano for Beginners")
+
+      # Generated sessions carry no location, so the placeholder has to render
+      # rather than leaving a bare map-pin icon.
+      assert has_element?(view, "span", "Location TBD")
+    end
+
     test "does not show sessions for other providers", %{conn: conn} do
       other_provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: other_provider.id)
