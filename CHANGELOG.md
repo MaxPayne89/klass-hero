@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.64.0](https://github.com/MaxPayne89/klass-hero/compare/v0.63.0...v0.64.0) (2026-07-29)
+
+
+### Features
+
+* give each worktree its own dev server and Tidewave endpoint ([#1183](https://github.com/MaxPayne89/klass-hero/issues/1183)) ([117981a](https://github.com/MaxPayne89/klass-hero/commit/117981a304bd00aa9985d431a96f0543e08902f4))
+
 ## [0.63.0](https://github.com/MaxPayne89/klass-hero/compare/v0.62.2...v0.63.0) (2026-07-28)
 
 
