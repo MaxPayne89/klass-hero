@@ -179,7 +179,8 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 | `mix lint_typography` | Font/typography usage violations |
 | `mix test` | Functional regressions (full suite with PostgreSQL) |
 | Sobelow | Common Phoenix security vulnerabilities |
-| `mix deps.audit` | Known dependency vulnerabilities |
+| `mix deps.audit` | Known dependency vulnerabilities (community advisory DB) |
+| `mix hex.audit` | Known dependency vulnerabilities (hex.pm advisory DB) + retired packages — reports red, does not block merge |
 | Conventional commits | PR title format validation |
 
 ## Ecto Anti-Patterns
