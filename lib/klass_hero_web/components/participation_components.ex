@@ -38,6 +38,22 @@ defmodule KlassHeroWeb.ParticipationComponents do
     doc: "User role viewing the card"
 
   attr :class, :string, default: "", doc: "Additional CSS classes"
+
+  attr :program_name, :string,
+    default: nil,
+    doc: """
+    Heading for the card. A bare `ProgramSession` carries only `program_id`, so
+    callers that can resolve the title pass it here; the rest fall back to a
+    generic label.
+    """
+
+  attr :attendance, :map,
+    default: nil,
+    doc: """
+    `%{roster: n, checked_in: n}` for this session. Nil hides the line — used by
+    callers with no roster data to hand rather than rendering a misleading zero.
+    """
+
   slot :actions, doc: "Action buttons for the session"
 
   def participation_card(assigns) do
@@ -51,7 +67,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
       <div class="flex items-start justify-between gap-4 mb-4">
         <div class="flex-1">
           <h3 class="text-lg font-semibold text-hero-black">
-            {Map.get(@session, :program_name, gettext("Session"))}
+            {@program_name || Map.get(@session, :program_name) || gettext("Session")}
           </h3>
           <p class="text-sm text-hero-black-100 mt-1">
             {format_session_datetime(@session)}
@@ -63,17 +79,25 @@ defmodule KlassHeroWeb.ParticipationComponents do
       <div class="space-y-2 mb-4">
         <div class="flex items-center gap-2 text-sm text-hero-black-100">
           <.icon name="hero-map-pin" class="w-4 h-4 text-hero-grey-400" />
-          <span>{Map.get(@session, :location, gettext("Location TBD"))}</span>
+          <%!-- `Map.get/3`'s default never fires here: the key exists holding nil,
+                which renders a lone pin icon with no text. --%>
+          <span>{Map.get(@session, :location) || gettext("Location TBD")}</span>
         </div>
 
-        <%= if @role in [:provider, :staff] && Map.get(@session, :capacity) do %>
+        <%= if @role in [:provider, :staff] && @attendance do %>
           <div class="flex items-center gap-2 text-sm text-hero-black-100">
             <.icon name="hero-user-group" class="w-4 h-4 text-hero-grey-400" />
             <span>
-              {gettext("%{checked_in} / %{capacity} checked in",
-                checked_in: Map.get(@session, :checked_in_count, 0),
-                capacity: Map.get(@session, :capacity)
-              )}
+              <%= if @session.status == :scheduled do %>
+                {ngettext("%{count} child enrolled", "%{count} children enrolled", @attendance.roster,
+                  count: @attendance.roster
+                )}
+              <% else %>
+                {gettext("%{checked_in} of %{roster} checked in",
+                  checked_in: @attendance.checked_in,
+                  roster: @attendance.roster
+                )}
+              <% end %>
             </span>
           </div>
         <% end %>

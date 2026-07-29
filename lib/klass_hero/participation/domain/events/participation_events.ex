@@ -37,8 +37,10 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   # atom moves the publisher and every LiveView subscriber together.
   @event_aggregates %{
     session_created: :participation,
+    sessions_generated: :participation,
     session_started: :participation,
     session_completed: :participation,
+    session_cancelled: :participation,
     roster_seeded: :participation,
     child_checked_in: :participation,
     child_checked_out: :participation,
@@ -77,6 +79,45 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
     }
 
     new_event(:session_created, session.id, payload, opts)
+  end
+
+  @doc """
+  Creates a sessions_generated event for a batch derived from a program's schedule.
+
+  One event per sync rather than one per session: consumers resolve the program
+  once for the whole batch, and the roster is seeded in a single pass instead of
+  re-querying enrollments per session.
+  """
+  @spec sessions_generated(String.t(), [map()], keyword()) :: DomainEvent.t()
+  def sessions_generated(program_id, sessions, opts \\ []) when is_binary(program_id) and is_list(sessions) do
+    payload = %{
+      program_id: program_id,
+      sessions:
+        for session <- sessions do
+          %{
+            session_id: session.id,
+            program_id: program_id,
+            session_date: session.session_date,
+            start_time: session.start_time,
+            end_time: session.end_time
+          }
+        end
+    }
+
+    new_event(:sessions_generated, program_id, payload, opts)
+  end
+
+  @doc "Creates a session_cancelled event."
+  @spec session_cancelled(ProgramSession.t(), keyword()) :: DomainEvent.t()
+  def session_cancelled(%ProgramSession{} = session, opts \\ []) do
+    payload = %{
+      session_id: session.id,
+      program_id: session.program_id,
+      session_date: session.session_date,
+      start_time: session.start_time
+    }
+
+    new_event(:session_cancelled, session.id, payload, opts)
   end
 
   @doc "Creates a session_started event."

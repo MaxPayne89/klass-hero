@@ -50,6 +50,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       |> assign(:selected_date, selected_date)
       |> assign(:provider_programs, provider_programs)
       |> assign(:provider_program_ids, provider_program_ids)
+      |> assign(:program_names, program_names(provider_programs))
       |> assign(:business, business)
       |> assign(:form, nil)
       |> stream(:sessions, [])
@@ -186,18 +187,27 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   end
 
   @impl true
-  def handle_info(
-        {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id, payload: payload}},
-        socket
-      )
-      when event_type in [:session_started, :session_completed, :session_created, :roster_seeded] do
-    # session_created may be for a different date; only insert if it matches the current view.
-    if event_type == :session_created and
-         Map.get(payload, :session_date) != socket.assigns.selected_date do
-      {:noreply, socket}
-    else
-      {:noreply, update_session_in_stream(socket, session_id)}
-    end
+  def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id}}, socket)
+      when event_type in [:session_started, :session_completed, :session_created, :session_cancelled, :roster_seeded] do
+    {:noreply, update_session_in_stream(socket, session_id)}
+  end
+
+  # A generated batch is keyed on the program, not one session, and may span any
+  # number of dates — so reload the day being viewed rather than patching rows.
+  # The batch may also belong to a program created after mount, so refresh the
+  # title map or its sessions would render under the generic fallback.
+  @impl true
+  def handle_info({:domain_event, %DomainEvent{event_type: :sessions_generated}}, socket) do
+    programs = ProgramCatalog.list_programs_for_provider(socket.assigns.provider_id)
+
+    socket =
+      socket
+      |> assign(:provider_programs, programs)
+      |> assign(:provider_program_ids, MapSet.new(programs, & &1.id))
+      |> assign(:program_names, program_names(programs))
+      |> load_sessions()
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -207,6 +217,15 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       ) do
     {:noreply, update_session_in_stream(socket, session_id)}
   end
+
+  # The provider topic carries every participation event for this provider, not
+  # only the ones this view renders — child_checked_out and child_marked_absent
+  # already arrive here. Without this, an unmatched event is a FunctionClauseError
+  # that takes the LiveView down. Mirrors ParticipationLive and StaffParticipationLive.
+  @impl true
+  def handle_info({:domain_event, %DomainEvent{}}, socket), do: {:noreply, socket}
+
+  defp program_names(programs), do: Map.new(programs, &{&1.id, &1.title})
 
   defp build_initial_form_data(selected_date) do
     %{
@@ -233,6 +252,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   defp apply_sessions_result(socket, {:ok, sessions}) do
     socket
     |> stream(:sessions, sessions, reset: true)
+    |> assign(:attendance, Participation.session_attendance_counts(Enum.map(sessions, & &1.id)))
     |> assign(:sessions_error, nil)
   end
 
@@ -371,8 +391,22 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   defp update_session_in_stream(socket, session_id) do
     case Participation.get_session_with_roster(session_id) do
-      {:ok, %{session: session}} ->
-        stream_insert(socket, :sessions, session)
+      {:ok, %{session: session, roster: roster}} ->
+        # Session events fan out across dates — a schedule edit cancels every
+        # orphaned date at once, an enrolment seeds every upcoming roster — so
+        # check the session's own date rather than trusting the event to concern
+        # the day on screen.
+        if session.session_date == socket.assigns.selected_date do
+          # The roster came back with the session, so the recount is free.
+          socket
+          |> assign(
+            :attendance,
+            Map.put(socket.assigns.attendance, session.id, Participation.attendance_from_roster(roster))
+          )
+          |> stream_insert(:sessions, session)
+        else
+          socket
+        end
 
       {:error, reason} ->
         Logger.error(

@@ -293,6 +293,16 @@ defmodule KlassHero.ProgramCatalog do
   @spec format_price(Decimal.t() | number() | nil) :: String.t()
   defdelegate format_price(price), to: ProgramPricing
 
+  @doc """
+  Expands a program's recurring schedule into the dates it meets on.
+
+  Exposed on the facade so other contexts derive session dates without importing
+  the schema or the weekday vocabulary.
+  """
+  @spec meeting_dates(Program.t()) ::
+          {:ok, [Date.t()]} | {:error, :incomplete_schedule | :schedule_range_too_large}
+  defdelegate meeting_dates(program), to: Program
+
   @doc "Checks if the program's registration is currently open."
   @spec registration_open?(Program.t()) :: boolean()
   defdelegate registration_open?(program), to: Program

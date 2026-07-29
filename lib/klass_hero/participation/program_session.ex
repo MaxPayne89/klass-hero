@@ -32,6 +32,10 @@ defmodule KlassHero.Participation.ProgramSession do
     field :max_capacity, :integer
     field :lock_version, :integer, default: 1
 
+    # Deliberately absent from both changesets: set server-side only, so the
+    # manual create path can never claim a session was schedule-derived.
+    field :origin, Ecto.Enum, values: [:generated, :manual], default: :manual
+
     has_many :participation_records, ParticipationRecord, foreign_key: :session_id
 
     timestamps(type: :utc_datetime)

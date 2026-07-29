@@ -25,11 +25,20 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @impl true
-  def subscribed_events, do: [:session_created]
+  def subscribed_events, do: [:session_created, :sessions_generated]
 
   @impl true
   def handle_event(%IntegrationEvent{event_type: :session_created, payload: payload}) do
     Participation.seed_session_roster(payload.session_id, payload.program_id)
+  end
+
+  # A schedule-derived batch shares one program, so the enrolled children are
+  # resolved once for the whole batch rather than once per session.
+  def handle_event(%IntegrationEvent{
+        event_type: :sessions_generated,
+        payload: %{program_id: program_id, sessions: sessions}
+      }) do
+    Participation.seed_rosters_for_sessions(Enum.map(sessions, & &1.session_id), program_id)
   end
 
   def handle_event(_event), do: :ignore

@@ -50,6 +50,13 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteI
     )
   end
 
+  def handle(%DomainEvent{event_type: :sessions_generated} = event) do
+    ParticipationIntegrationEvents.sessions_generated(event.aggregate_id, event.payload)
+    |> IntegrationEventPublishing.publish_best_effort("sessions_generated",
+      program_id: event.aggregate_id
+    )
+  end
+
   def handle(%DomainEvent{event_type: :roster_seeded} = event) do
     ParticipationIntegrationEvents.roster_seeded(event.aggregate_id, event.payload)
     |> IntegrationEventPublishing.publish_best_effort("roster_seeded",

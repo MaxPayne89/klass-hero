@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
   alias KlassHero.Participation
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
 
   describe "authentication and authorization" do
@@ -52,6 +53,60 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/provider/sessions")
 
       assert has_element?(view, "button", "Start Session")
+    end
+
+    test "names each session's program so a day's cards are distinguishable", %{
+      conn: conn,
+      provider: provider
+    } do
+      # Generating a term produces many same-shaped cards on one day; without the
+      # program name they all read alike and a provider cannot tell them apart.
+      for {title, start_time, end_time} <- [
+            {"Junior Choir", ~T[09:00:00], ~T[10:00:00]},
+            {"Piano for Beginners", ~T[15:00:00], ~T[16:00:00]}
+          ] do
+        program = insert(:program_schema, provider_id: provider.id, title: title)
+        # Titles reach the page through the ProviderPrograms read model, not `programs`.
+        insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: title)
+
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          start_time: start_time,
+          end_time: end_time,
+          status: :scheduled
+        )
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      assert has_element?(view, "h3", "Junior Choir")
+      assert has_element?(view, "h3", "Piano for Beginners")
+
+      # Generated sessions carry no location, so the placeholder has to render
+      # rather than leaving a bare map-pin icon.
+      assert has_element?(view, "span", "Location TBD")
+    end
+
+    test "shows how many children are on each session's roster", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id, title: "Junior Choir")
+      insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: "Junior Choir")
+
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      for _ <- 1..2 do
+        {child, _parent} = insert_child_with_guardian()
+        insert(:participation_record_schema, session_id: session.id, child_id: child.id)
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      assert has_element?(view, "span", "2 children enrolled")
     end
 
     test "does not show sessions for other providers", %{conn: conn} do
@@ -522,6 +577,68 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
       # Session is for tomorrow but we're viewing today — should NOT appear
       refute has_element?(view, "button", "Start Session")
+    end
+
+    test "cancelling a session on another date does not add it to today's list", %{
+      conn: conn,
+      provider: provider
+    } do
+      listing = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+      tomorrow = Date.add(Date.utc_today(), 1)
+
+      session =
+        insert(:program_session_schema, program_id: program.id, session_date: tomorrow, status: :scheduled)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+      refute has_element?(view, "button", "Start Session")
+
+      # A schedule edit cancels every orphaned date at once, so this event routinely
+      # concerns a day other than the one on screen.
+      event =
+        ParticipationEvents.session_cancelled(
+          struct!(ProgramSession, %{
+            id: session.id,
+            program_id: program.id,
+            session_date: tomorrow,
+            start_time: ~T[09:00:00]
+          })
+        )
+
+      emit_domain_event(view, event)
+
+      refute has_element?(view, "button", "Start Session")
+    end
+
+    test "an unrelated participation event does not crash the view", %{conn: conn, provider: provider} do
+      listing = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      # child_marked_absent already reaches the provider topic and this view
+      # renders no clause for it — without a catch-all that is a FunctionClauseError.
+      record =
+        struct!(ParticipationRecord, %{
+          id: Ecto.UUID.generate(),
+          session_id: Ecto.UUID.generate(),
+          child_id: Ecto.UUID.generate(),
+          status: :absent
+        })
+
+      session =
+        struct!(ProgramSession, %{
+          id: record.session_id,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          start_time: ~T[09:00:00]
+        })
+
+      event = ParticipationEvents.child_marked_absent(record, session)
+
+      emit_domain_event(view, event)
+
+      assert render(view) =~ "Select Date"
     end
   end
 

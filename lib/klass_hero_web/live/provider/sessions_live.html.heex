@@ -33,7 +33,12 @@
 
   <div id="sessions" phx-update="stream" class="space-y-4">
     <div :for={{id, session} <- @streams.sessions} id={id}>
-      <.participation_card session={session} role={:provider}>
+      <.participation_card
+        session={session}
+        role={:provider}
+        program_name={@program_names[session.program_id]}
+        attendance={@attendance[session.id]}
+      >
         <:actions>
           <%= cond do %>
             <% session.status == :scheduled -> %>

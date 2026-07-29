@@ -1,10 +1,12 @@
 defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
   alias KlassHero.Participation
+  alias KlassHero.Participation.Domain.Events.ParticipationEvents
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do
@@ -27,6 +29,65 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
 
       assert has_element?(view, "#staff-sessions")
       assert has_element?(view, "#date-select")
+    end
+
+    test "names each session's program and shows how many children are enrolled", %{
+      conn: conn,
+      provider: provider
+    } do
+      program = insert(:program_schema, provider_id: provider.id, category: "sports")
+
+      insert(:program_listing_schema,
+        id: program.id,
+        provider_id: provider.id,
+        category: "sports",
+        title: "Soccer Training"
+      )
+
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      {child, _parent} = insert_child_with_guardian()
+      insert(:participation_record_schema, session_id: session.id, child_id: child.id)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      assert has_element?(view, "h3", "Soccer Training")
+      assert has_element?(view, "span", "1 child enrolled")
+    end
+
+    test "an event for another date does not inject that session into today's list", %{
+      conn: conn,
+      provider: provider
+    } do
+      # A schedule edit cancels every orphaned date at once and an enrolment seeds
+      # every upcoming roster, so session events routinely concern other days.
+      program = insert(:program_schema, provider_id: provider.id, category: "sports")
+
+      insert(:program_listing_schema,
+        id: program.id,
+        provider_id: provider.id,
+        category: "sports",
+        title: "Soccer Training"
+      )
+
+      future =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.add(Date.utc_today(), 21),
+          status: :scheduled
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+      refute has_element?(view, "button[phx-value-session_id='#{future.id}']")
+
+      emit_domain_event(view, ParticipationEvents.roster_seeded(future.id, program.id, 1))
+
+      refute has_element?(view, "button[phx-value-session_id='#{future.id}']")
     end
 
     test "shows only assigned program sessions (matching staff tags)", %{

@@ -30,6 +30,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   use KlassHero.Shared.Projection,
     topics: [
       "integration:participation:session_created",
+      "integration:participation:sessions_generated",
       "integration:participation:session_started",
       "integration:participation:session_completed",
       "integration:participation:session_cancelled",
@@ -63,6 +64,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     project_session_created(event.payload)
   end
 
+  # The batch shares one program, so its title/provider/staff resolve once here
+  # rather than once per session as the per-session clause above does.
+  def handle_event(:sessions_generated, %IntegrationEvent{payload: %{program_id: program_id, sessions: sessions}}) do
+    Enum.each(sessions, &project_session_created(Map.put(&1, :program_id, program_id)))
+  end
+
   def handle_event(:session_started, %IntegrationEvent{} = event) do
     update_status(event.entity_id, :in_progress)
   end
@@ -75,11 +82,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     update_status(event.entity_id, :cancelled)
   end
 
+  # `seeded_count` is the delta a seeding inserted, not a running total — a roster
+  # is seeded once at session creation and again whenever a child enrols later, so
+  # this accumulates rather than overwrites.
   def handle_event(:roster_seeded, %IntegrationEvent{payload: %{seeded_count: seeded_count}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     from(d in ProviderSessionDetailSchema, where: d.session_id == ^event.entity_id)
-    |> Repo.update_all(set: [total_count: seeded_count, updated_at: now])
+    |> Repo.update_all(inc: [total_count: seeded_count], set: [updated_at: now])
     |> warn_if_missing("roster_seeded", session_id: event.entity_id, seeded_count: seeded_count)
   end
 

@@ -207,6 +207,64 @@ defmodule KlassHero.ProgramCatalog.Program do
 
   @valid_weekdays ~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday)
 
+  # Derived from @valid_weekdays so the weekday vocabulary has one definition:
+  # `Date.day_of_week/1` numbers Monday 1 through Sunday 7.
+  @weekday_numbers @valid_weekdays |> Enum.with_index(1) |> Map.new()
+
+  # A term of twice-weekly sessions is ~40; the cap only rejects schedules no
+  # provider plausibly means, rather than letting one expand to tens of thousands
+  # of rows in a single insert.
+  @max_meeting_dates 500
+
+  @doc """
+  Expands the advertised recurring schedule into the concrete dates it falls on,
+  in ascending order.
+
+  Pure. The weekday vocabulary stays here beside `validate_meeting_days/1`, so
+  consumers receive `Date` structs and never handle day-name strings themselves.
+
+  Requires the whole schedule — meeting days plus both times plus both dates.
+  A partial schedule is `{:error, :incomplete_schedule}` rather than an empty
+  list, so a caller can tell "this program has no schedule" apart from "this
+  schedule genuinely has no matching dates".
+  """
+  @spec meeting_dates(t()) :: {:ok, [Date.t()]} | {:error, :incomplete_schedule | :schedule_range_too_large}
+  def meeting_dates(%__MODULE__{} = program) do
+    with {:ok, weekdays} <- scheduled_weekdays(program) do
+      dates =
+        program.start_date
+        |> Date.range(program.end_date)
+        |> Stream.filter(&(Date.day_of_week(&1) in weekdays))
+        |> Enum.take(@max_meeting_dates + 1)
+
+      if length(dates) > @max_meeting_dates do
+        {:error, :schedule_range_too_large}
+      else
+        {:ok, dates}
+      end
+    end
+  end
+
+  defp scheduled_weekdays(%__MODULE__{
+         meeting_days: [_ | _] = days,
+         meeting_start_time: %Time{},
+         meeting_end_time: %Time{},
+         start_date: %Date{} = start_date,
+         end_date: %Date{} = end_date
+       }) do
+    # Unrecognised names are dropped rather than raising: the changeset already
+    # rejects them, so reaching here means data that predates that validation.
+    weekdays = for day <- days, number = Map.get(@weekday_numbers, day), into: MapSet.new(), do: number
+
+    if Enum.empty?(weekdays) or Date.after?(start_date, end_date) do
+      {:error, :incomplete_schedule}
+    else
+      {:ok, weekdays}
+    end
+  end
+
+  defp scheduled_weekdays(%__MODULE__{}), do: {:error, :incomplete_schedule}
+
   defp validate_meeting_days(changeset) do
     validate_change(changeset, :meeting_days, fn :meeting_days, days ->
       invalid = Enum.reject(days, &(&1 in @valid_weekdays))

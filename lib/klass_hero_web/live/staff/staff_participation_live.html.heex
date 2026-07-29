@@ -18,7 +18,11 @@
     </.page_header>
 
     <div class="mb-6">
-      <.participation_card session={@session} role={:staff} />
+      <.participation_card
+        session={@session}
+        role={:staff}
+        attendance={Participation.attendance_from_records(@participation_records)}
+      />
     </div>
 
     <div class="mt-6">
