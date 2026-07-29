@@ -211,6 +211,54 @@ defmodule KlassHero.Participation do
   # Statuses that count toward the attendance tally ("has attended", not "currently present").
   @admin_checked_in_statuses ~w(checked_in checked_out)
 
+  @doc """
+  Roster size and attendance tally for the given sessions, keyed by session id.
+
+  One grouped query for the whole list, so a day's sessions cost the same as one.
+  Sessions with an empty roster are absent from the map rather than mapping to
+  zeroes — callers decide what "no roster yet" should render as.
+  """
+  @spec session_attendance_counts([String.t()]) ::
+          %{optional(String.t()) => %{roster: non_neg_integer(), checked_in: non_neg_integer()}}
+  def session_attendance_counts([]), do: %{}
+
+  def session_attendance_counts(session_ids) when is_list(session_ids) do
+    from(r in ParticipationRecord,
+      where: r.session_id in ^session_ids,
+      group_by: r.session_id,
+      select: {
+        r.session_id,
+        count(r.id),
+        count(fragment("CASE WHEN ? = ANY(?) THEN 1 END", r.status, ^@admin_checked_in_statuses))
+      }
+    )
+    |> Repo.all()
+    |> Map.new(fn {id, roster, checked_in} -> {id, %{roster: roster, checked_in: checked_in}} end)
+  end
+
+  @doc """
+  Counts an already-loaded roster into the same shape as `session_attendance_counts/1`.
+
+  Live updates arrive with the roster already fetched, so recounting in memory
+  keeps a check-in from costing another query.
+  """
+  @spec attendance_from_roster([map()]) :: %{roster: non_neg_integer(), checked_in: non_neg_integer()}
+  def attendance_from_roster(roster) when is_list(roster),
+    do: roster |> Enum.map(& &1.record) |> attendance_from_records()
+
+  @doc """
+  Same tally as `attendance_from_roster/1`, for a bare list of participation records.
+
+  Detail pages hold enriched records rather than roster entries.
+  """
+  @spec attendance_from_records([map()]) :: %{roster: non_neg_integer(), checked_in: non_neg_integer()}
+  def attendance_from_records(records) when is_list(records) do
+    %{
+      roster: length(records),
+      checked_in: Enum.count(records, &("#{&1.status}" in @admin_checked_in_statuses))
+    }
+  end
+
   # Translate a cross-context :provider_id filter into a local :program_ids filter,
   # so the aggregation query stays free of ProgramCatalog/Provider vocabulary.
   defp resolve_provider_scope(%{provider_id: provider_id} = filters) do

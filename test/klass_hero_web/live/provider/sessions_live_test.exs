@@ -88,6 +88,27 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       assert has_element?(view, "span", "Location TBD")
     end
 
+    test "shows how many children are on each session's roster", %{conn: conn, provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id, title: "Junior Choir")
+      insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: "Junior Choir")
+
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      for _ <- 1..2 do
+        {child, _parent} = insert_child_with_guardian()
+        insert(:participation_record_schema, session_id: session.id, child_id: child.id)
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      assert has_element?(view, "span", "2 children enrolled")
+    end
+
     test "does not show sessions for other providers", %{conn: conn} do
       other_provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: other_provider.id)

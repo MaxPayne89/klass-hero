@@ -47,6 +47,13 @@ defmodule KlassHeroWeb.ParticipationComponents do
     generic label.
     """
 
+  attr :attendance, :map,
+    default: nil,
+    doc: """
+    `%{roster: n, checked_in: n}` for this session. Nil hides the line — used by
+    callers with no roster data to hand rather than rendering a misleading zero.
+    """
+
   slot :actions, doc: "Action buttons for the session"
 
   def participation_card(assigns) do
@@ -77,14 +84,20 @@ defmodule KlassHeroWeb.ParticipationComponents do
           <span>{Map.get(@session, :location) || gettext("Location TBD")}</span>
         </div>
 
-        <%= if @role in [:provider, :staff] && Map.get(@session, :capacity) do %>
+        <%= if @role in [:provider, :staff] && @attendance do %>
           <div class="flex items-center gap-2 text-sm text-hero-black-100">
             <.icon name="hero-user-group" class="w-4 h-4 text-hero-grey-400" />
             <span>
-              {gettext("%{checked_in} / %{capacity} checked in",
-                checked_in: Map.get(@session, :checked_in_count, 0),
-                capacity: Map.get(@session, :capacity)
-              )}
+              <%= if @session.status == :scheduled do %>
+                {ngettext("%{count} child enrolled", "%{count} children enrolled", @attendance.roster,
+                  count: @attendance.roster
+                )}
+              <% else %>
+                {gettext("%{checked_in} of %{roster} checked in",
+                  checked_in: @attendance.checked_in,
+                  roster: @attendance.roster
+                )}
+              <% end %>
             </span>
           </div>
         <% end %>

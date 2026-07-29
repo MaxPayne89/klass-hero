@@ -37,6 +37,7 @@
         session={session}
         role={:provider}
         program_name={@program_names[session.program_id]}
+        attendance={@attendance[session.id]}
       >
         <:actions>
           <%= cond do %>

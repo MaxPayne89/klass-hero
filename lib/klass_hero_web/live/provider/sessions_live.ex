@@ -252,6 +252,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   defp apply_sessions_result(socket, {:ok, sessions}) do
     socket
     |> stream(:sessions, sessions, reset: true)
+    |> assign(:attendance, Participation.session_attendance_counts(Enum.map(sessions, & &1.id)))
     |> assign(:sessions_error, nil)
   end
 
@@ -390,13 +391,19 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   defp update_session_in_stream(socket, session_id) do
     case Participation.get_session_with_roster(session_id) do
-      {:ok, %{session: session}} ->
+      {:ok, %{session: session, roster: roster}} ->
         # Session events fan out across dates — a schedule edit cancels every
         # orphaned date at once, an enrolment seeds every upcoming roster — so
         # check the session's own date rather than trusting the event to concern
         # the day on screen.
         if session.session_date == socket.assigns.selected_date do
-          stream_insert(socket, :sessions, session)
+          # The roster came back with the session, so the recount is free.
+          socket
+          |> assign(
+            :attendance,
+            Map.put(socket.assigns.attendance, session.id, Participation.attendance_from_roster(roster))
+          )
+          |> stream_insert(:sessions, session)
         else
           socket
         end
