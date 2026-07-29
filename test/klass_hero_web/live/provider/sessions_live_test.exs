@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
   alias KlassHero.Participation
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
 
   describe "authentication and authorization" do
@@ -522,6 +523,68 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
       # Session is for tomorrow but we're viewing today — should NOT appear
       refute has_element?(view, "button", "Start Session")
+    end
+
+    test "cancelling a session on another date does not add it to today's list", %{
+      conn: conn,
+      provider: provider
+    } do
+      listing = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+      tomorrow = Date.add(Date.utc_today(), 1)
+
+      session =
+        insert(:program_session_schema, program_id: program.id, session_date: tomorrow, status: :scheduled)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+      refute has_element?(view, "button", "Start Session")
+
+      # A schedule edit cancels every orphaned date at once, so this event routinely
+      # concerns a day other than the one on screen.
+      event =
+        ParticipationEvents.session_cancelled(
+          struct!(ProgramSession, %{
+            id: session.id,
+            program_id: program.id,
+            session_date: tomorrow,
+            start_time: ~T[09:00:00]
+          })
+        )
+
+      emit_domain_event(view, event)
+
+      refute has_element?(view, "button", "Start Session")
+    end
+
+    test "an unrelated participation event does not crash the view", %{conn: conn, provider: provider} do
+      listing = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      # child_marked_absent already reaches the provider topic and this view
+      # renders no clause for it — without a catch-all that is a FunctionClauseError.
+      record =
+        struct!(ParticipationRecord, %{
+          id: Ecto.UUID.generate(),
+          session_id: Ecto.UUID.generate(),
+          child_id: Ecto.UUID.generate(),
+          status: :absent
+        })
+
+      session =
+        struct!(ProgramSession, %{
+          id: record.session_id,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          start_time: ~T[09:00:00]
+        })
+
+      event = ParticipationEvents.child_marked_absent(record, session)
+
+      emit_domain_event(view, event)
+
+      assert render(view) =~ "Select Date"
     end
   end
 

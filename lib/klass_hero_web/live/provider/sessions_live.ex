@@ -186,18 +186,9 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   end
 
   @impl true
-  def handle_info(
-        {:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id, payload: payload}},
-        socket
-      )
+  def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id}}, socket)
       when event_type in [:session_started, :session_completed, :session_created, :session_cancelled, :roster_seeded] do
-    # session_created may be for a different date; only insert if it matches the current view.
-    if event_type == :session_created and
-         Map.get(payload, :session_date) != socket.assigns.selected_date do
-      {:noreply, socket}
-    else
-      {:noreply, update_session_in_stream(socket, session_id)}
-    end
+    {:noreply, update_session_in_stream(socket, session_id)}
   end
 
   # A generated batch is keyed on the program, not one session, and may span any
@@ -214,6 +205,13 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       ) do
     {:noreply, update_session_in_stream(socket, session_id)}
   end
+
+  # The provider topic carries every participation event for this provider, not
+  # only the ones this view renders — child_checked_out and child_marked_absent
+  # already arrive here. Without this, an unmatched event is a FunctionClauseError
+  # that takes the LiveView down. Mirrors ParticipationLive and StaffParticipationLive.
+  @impl true
+  def handle_info({:domain_event, %DomainEvent{}}, socket), do: {:noreply, socket}
 
   defp build_initial_form_data(selected_date) do
     %{
@@ -379,7 +377,15 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   defp update_session_in_stream(socket, session_id) do
     case Participation.get_session_with_roster(session_id) do
       {:ok, %{session: session}} ->
-        stream_insert(socket, :sessions, session)
+        # Session events fan out across dates — a schedule edit cancels every
+        # orphaned date at once, an enrolment seeds every upcoming roster — so
+        # check the session's own date rather than trusting the event to concern
+        # the day on screen.
+        if session.session_date == socket.assigns.selected_date do
+          stream_insert(socket, :sessions, session)
+        else
+          socket
+        end
 
       {:error, reason} ->
         Logger.error(
