@@ -16,7 +16,6 @@ alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
-alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: MessagingPromoter
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
@@ -291,7 +290,6 @@ config :klass_hero, :event_consumers, %{
 # event model; until then this is the one place the mapping is declared rather
 # than implied by a bus registration.
 config :klass_hero, :event_promoters, %{
-  KlassHero.Messaging => MessagingPromoter,
   KlassHero.Participation => ParticipationPromoter,
   KlassHero.Provider => ProviderPromoter
 }

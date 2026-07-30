@@ -6,6 +6,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   describe "conversation_created/4" do
     test "creates event with correct type and payload" do
@@ -22,8 +23,8 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
         )
 
       assert event.event_type == :conversation_created
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
+      assert event.entity_id == conversation_id
+      assert event.entity_type == :conversation
       assert event.payload.conversation_id == conversation_id
       assert event.payload.type == :direct
       assert event.payload.provider_id == provider_id
@@ -49,8 +50,8 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
         )
 
       assert event.event_type == :message_sent
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
+      assert event.entity_id == conversation_id
+      assert event.entity_type == :conversation
       assert event.payload.message_id == message_id
       assert event.payload.sender_id == sender_id
       assert event.payload.content == "Hello!"
@@ -81,8 +82,8 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
       event = MessagingEvents.messages_read(conversation_id, user_id, read_at)
 
       assert event.event_type == :messages_read
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
+      assert event.entity_id == conversation_id
+      assert event.entity_type == :conversation
       assert event.payload.user_id == user_id
       assert event.payload.read_at == read_at
     end
@@ -95,8 +96,8 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
       event = MessagingEvents.conversation_archived(conversation_id, :program_ended)
 
       assert event.event_type == :conversation_archived
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
+      assert event.entity_id == conversation_id
+      assert event.entity_type == :conversation
       assert event.payload.reason == :program_ended
     end
   end
@@ -108,33 +109,22 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
       event = MessagingEvents.conversations_archived(ids, :retention_policy, 2)
 
       assert event.event_type == :conversations_archived
-      assert event.aggregate_type == :conversation
+      assert event.entity_type == :conversation
       assert event.payload.conversation_ids == ids
       assert event.payload.reason == :retention_policy
       assert event.payload.count == 2
     end
   end
 
-  describe "retention_enforced/2" do
-    test "creates event with correct type and payload" do
-      event = MessagingEvents.retention_enforced(10, 3)
-
-      assert event.event_type == :retention_enforced
-      assert event.aggregate_type == :conversation
-      assert event.payload.messages_deleted == 10
-      assert event.payload.conversations_deleted == 3
-      assert %DateTime{} = event.payload.enforced_at
-    end
-  end
-
-  describe "user_data_anonymized/1" do
-    test "creates event with correct type and payload" do
+  describe "message_data_anonymized/1" do
+    test "creates a critical event with correct type and payload" do
       user_id = Ecto.UUID.generate()
-      event = MessagingEvents.user_data_anonymized(user_id)
+      event = MessagingEvents.message_data_anonymized(user_id)
 
-      assert event.event_type == :user_data_anonymized
-      assert event.aggregate_id == user_id
-      assert event.aggregate_type == :user
+      assert IntegrationEvent.critical?(event)
+      assert event.event_type == :message_data_anonymized
+      assert event.entity_id == user_id
+      assert event.entity_type == :user
       assert event.payload.user_id == user_id
     end
   end
@@ -147,11 +137,11 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
       event = MessagingEvents.participant_added(conversation_id, user_ids, :initial_staff)
 
       assert event.event_type == :participant_added
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
+      assert event.entity_id == conversation_id
+      assert event.entity_type == :conversation
       assert event.payload.conversation_id == conversation_id
       assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == :initial_staff
+      assert event.payload.source == "initial_staff"
     end
 
     test "accepts :later_assignment source" do
@@ -162,7 +152,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
           :later_assignment
         )
 
-      assert event.payload.source == :later_assignment
+      assert event.payload.source == "later_assignment"
     end
   end
 
@@ -175,11 +165,11 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
         MessagingEvents.participant_removed(conversation_id, user_ids, :staff_unassignment)
 
       assert event.event_type == :participant_removed
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
+      assert event.entity_id == conversation_id
+      assert event.entity_type == :conversation
       assert event.payload.conversation_id == conversation_id
       assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == :staff_unassignment
+      assert event.payload.source == "staff_unassignment"
     end
   end
 end

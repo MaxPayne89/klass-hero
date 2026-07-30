@@ -17,14 +17,10 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicy do
   the archive worker has run.
   """
 
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Repo
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Storage
 
   require Logger
-
-  @context KlassHero.Messaging
 
   @doc """
   Enforces retention policy by deleting expired messages and conversations.
@@ -107,8 +103,6 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicy do
   end
 
   defp handle_result({:ok, result}) do
-    publish_event(result.messages_deleted, result.conversations_deleted)
-
     Logger.info("Retention policy enforcement complete",
       messages_deleted: result.messages_deleted,
       conversations_deleted: result.conversations_deleted
@@ -123,11 +117,5 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicy do
     )
 
     error
-  end
-
-  defp publish_event(messages_deleted, conversations_deleted) do
-    event = MessagingEvents.retention_enforced(messages_deleted, conversations_deleted)
-    EventDispatchHelper.dispatch(event, @context)
-    :ok
   end
 end

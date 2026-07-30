@@ -1,18 +1,23 @@
 defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   @moduledoc """
-  Factory module for creating messaging domain events.
+  Factory module for creating Messaging events.
 
-  These events are internal to the Messaging context and drive real-time
-  LiveView updates via PubSub. They are not intended for cross-context
-  communication.
+  Each factory takes the arguments its producer holds, rather than an id and a
+  payload map, and assembles the payload itself — so a producer cannot omit a
+  field a consumer needs.
 
-  For cross-context integration events, see
-  `KlassHero.Messaging.Domain.Events.MessagingIntegrationEvents`.
+  `:participant_added`, `:participant_removed` and `:message_data_anonymized`
+  are critical: without durable delivery, late participants would be missing
+  from read-model summaries until a restart re-derived them, removed ones would
+  linger, and the GDPR cascade could be lost. Their `source` atom is written
+  out as a string, because a critical payload must be a JSON scalar to survive
+  Oban's jsonb round trip (see #1010).
   """
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  @aggregate_type :conversation
+  @source_context :messaging
+  @entity_type :conversation
 
   @doc """
   Creates a conversation_created event.
@@ -25,12 +30,13 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           provider_id :: String.t(),
           participant_ids :: [String.t()],
           program_id :: String.t() | nil
-        ) :: DomainEvent.t()
+        ) :: IntegrationEvent.t()
   def conversation_created(conversation_id, type, provider_id, participant_ids, program_id \\ nil) do
-    DomainEvent.new(
+    IntegrationEvent.new(
       :conversation_created,
+      @source_context,
+      @entity_type,
       conversation_id,
-      @aggregate_type,
       %{
         conversation_id: conversation_id,
         type: type,
@@ -44,7 +50,6 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   @doc """
   Creates a message_sent event.
 
-  Published when a message is sent to a conversation.
   The sent_at field is included for real-time display in LiveViews.
   """
   @spec message_sent(
@@ -55,12 +60,13 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           message_type :: :text | :system,
           sent_at :: DateTime.t() | nil,
           attachments :: [map()]
-        ) :: DomainEvent.t()
+        ) :: IntegrationEvent.t()
   def message_sent(conversation_id, message_id, sender_id, content, message_type, sent_at \\ nil, attachments \\ []) do
-    DomainEvent.new(
+    IntegrationEvent.new(
       :message_sent,
+      @source_context,
+      @entity_type,
       conversation_id,
-      @aggregate_type,
       %{
         conversation_id: conversation_id,
         message_id: message_id,
@@ -86,160 +92,138 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           conversation_id :: String.t(),
           user_id :: String.t(),
           read_at :: DateTime.t()
-        ) :: DomainEvent.t()
+        ) :: IntegrationEvent.t()
   def messages_read(conversation_id, user_id, read_at) do
-    DomainEvent.new(
+    IntegrationEvent.new(
       :messages_read,
+      @source_context,
+      @entity_type,
       conversation_id,
-      @aggregate_type,
-      %{
-        conversation_id: conversation_id,
-        user_id: user_id,
-        read_at: read_at
-      }
+      %{conversation_id: conversation_id, user_id: user_id, read_at: read_at}
     )
   end
 
   @doc """
-  Creates a conversation_archived event.
-
-  Published when a conversation is archived.
+  Creates a conversation_archived event (single conversation).
   """
   @spec conversation_archived(
           conversation_id :: String.t(),
           reason :: :program_ended | :manual
-        ) :: DomainEvent.t()
+        ) :: IntegrationEvent.t()
   def conversation_archived(conversation_id, reason) do
-    DomainEvent.new(
+    IntegrationEvent.new(
       :conversation_archived,
+      @source_context,
+      @entity_type,
       conversation_id,
-      @aggregate_type,
-      %{
-        conversation_id: conversation_id,
-        reason: reason
-      }
+      %{conversation_id: conversation_id, reason: reason}
     )
   end
 
   @doc """
   Creates a conversations_archived event for bulk archive operations.
 
-  Published when multiple conversations are archived at once (e.g., program ended).
+  Published when multiple conversations are archived at once (e.g. program
+  ended). Its entity id is a bulk-operation identifier rather than any one
+  conversation.
   """
   @spec conversations_archived(
           conversation_ids :: [String.t()],
           reason :: :program_ended | :retention_policy,
           count :: non_neg_integer()
-        ) :: DomainEvent.t()
+        ) :: IntegrationEvent.t()
   def conversations_archived(conversation_ids, reason, count) do
-    aggregate_id = "bulk_archive_#{DateTime.to_unix(DateTime.utc_now())}"
-
-    DomainEvent.new(
+    IntegrationEvent.new(
       :conversations_archived,
-      aggregate_id,
-      @aggregate_type,
-      %{
-        conversation_ids: conversation_ids,
-        reason: reason,
-        count: count
-      }
+      @source_context,
+      @entity_type,
+      "bulk_archive_#{DateTime.to_unix(DateTime.utc_now())}",
+      %{conversation_ids: conversation_ids, reason: reason, count: count}
     )
   end
 
   @doc """
-  Creates a retention_enforced event.
-
-  Published when retention policy is enforced, deleting expired messages and conversations.
-  """
-  @spec retention_enforced(
-          messages_deleted :: non_neg_integer(),
-          conversations_deleted :: non_neg_integer()
-        ) :: DomainEvent.t()
-  def retention_enforced(messages_deleted, conversations_deleted) do
-    aggregate_id = "retention_#{DateTime.to_unix(DateTime.utc_now())}"
-
-    DomainEvent.new(
-      :retention_enforced,
-      aggregate_id,
-      @aggregate_type,
-      %{
-        messages_deleted: messages_deleted,
-        conversations_deleted: conversations_deleted,
-        enforced_at: DateTime.utc_now()
-      }
-    )
-  end
-
-  @doc """
-  Creates a user_data_anonymized event.
+  Creates a message_data_anonymized event (critical).
 
   Published after anonymizing a user's messaging data (content replaced,
-  participations ended). Handlers may promote this to an integration event
-  for cross-context notification.
+  participations ended). Part of the GDPR deletion cascade, so it must not be
+  lost.
   """
-  @spec user_data_anonymized(user_id :: String.t()) :: DomainEvent.t()
-  def user_data_anonymized(user_id) do
-    DomainEvent.new(
-      :user_data_anonymized,
-      user_id,
+  @spec message_data_anonymized(user_id :: String.t()) :: IntegrationEvent.t()
+  def message_data_anonymized(user_id) when is_binary(user_id) and byte_size(user_id) > 0 do
+    IntegrationEvent.new(
+      :message_data_anonymized,
+      @source_context,
       :user,
-      %{user_id: user_id}
+      user_id,
+      %{user_id: user_id},
+      criticality: :critical
     )
+  end
+
+  def message_data_anonymized(user_id) do
+    raise ArgumentError,
+          "message_data_anonymized requires a non-empty user_id string, got: #{inspect(user_id)}"
   end
 
   @typedoc "Provenance of a participant_added event."
   @type participant_added_source :: :initial_staff | :later_assignment | :broadcast_setup
 
   @doc """
-  Creates a participant_added event.
+  Creates a participant_added event (critical).
 
   Published after one or more users are inserted into a conversation's
-  `participants` table. Promoted to a critical integration event for
-  CQRS projections.
+  `participants` table. Consumed by CQRS projections.
   """
   @spec participant_added(
           conversation_id :: String.t(),
           participant_user_ids :: [String.t()],
           source :: participant_added_source()
-        ) :: DomainEvent.t()
-  def participant_added(conversation_id, participant_user_ids, source) do
-    DomainEvent.new(
-      :participant_added,
-      conversation_id,
-      @aggregate_type,
-      %{
-        conversation_id: conversation_id,
-        participant_user_ids: participant_user_ids,
-        source: source
-      }
-    )
+        ) :: IntegrationEvent.t()
+  def participant_added(conversation_id, [_ | _] = participant_user_ids, source) do
+    participant_event(:participant_added, conversation_id, participant_user_ids, source)
+  end
+
+  def participant_added(_conversation_id, [], _source) do
+    raise ArgumentError, "participant_added requires a non-empty participant_user_ids list"
   end
 
   @typedoc "Provenance of a participant_removed event."
   @type participant_removed_source :: :staff_unassignment
 
   @doc """
-  Creates a participant_removed event.
+  Creates a participant_removed event (critical).
 
   Published after one or more users are removed from a conversation's
-  `participants` table. Promoted to a critical integration event for
-  CQRS projections (soft-archives summary rows).
+  `participants` table. Consumed by CQRS projections, which soft-archive the
+  summary rows.
   """
   @spec participant_removed(
           conversation_id :: String.t(),
           participant_user_ids :: [String.t()],
           source :: participant_removed_source()
-        ) :: DomainEvent.t()
-  def participant_removed(conversation_id, participant_user_ids, source) do
-    DomainEvent.new(
-      :participant_removed,
+        ) :: IntegrationEvent.t()
+  def participant_removed(conversation_id, [_ | _] = participant_user_ids, source) do
+    participant_event(:participant_removed, conversation_id, participant_user_ids, source)
+  end
+
+  def participant_removed(_conversation_id, [], _source) do
+    raise ArgumentError, "participant_removed requires a non-empty participant_user_ids list"
+  end
+
+  defp participant_event(event_type, conversation_id, participant_user_ids, source) do
+    IntegrationEvent.new(
+      event_type,
+      @source_context,
+      @entity_type,
       conversation_id,
-      @aggregate_type,
       %{
         conversation_id: conversation_id,
         participant_user_ids: participant_user_ids,
-        source: source
-      }
+        # Critical payload must be a JSON scalar; the atom source is write-only (see #1010).
+        source: to_string(source)
+      },
+      criticality: :critical
     )
   end
 end
