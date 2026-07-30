@@ -13,9 +13,9 @@ defmodule KlassHero.Provider.Verification do
 
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.VerificationDocument
+  alias KlassHero.Provider.Vetting
+  alias KlassHero.Provider.VettingVerificationSync
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.Event
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Storage
 
   require Logger
@@ -82,8 +82,8 @@ defmodule KlassHero.Provider.Verification do
     context_span entity: "verification_document" do
       with {:ok, doc} <- get_verification_document(document_id),
            {:ok, approved} <- VerificationDocument.approve(doc, reviewer_id),
-           {:ok, persisted} <- persist_verification_review(doc, approved) do
-        dispatch_verification_event(:verification_document_approved, persisted, reviewer_id)
+           {:ok, persisted} <- review_and_sync_vetting(doc, approved, reviewer_id) do
+        VettingVerificationSync.broadcast_updated(persisted.provider_profile_id)
         {:ok, persisted}
       end
     end
@@ -95,11 +95,39 @@ defmodule KlassHero.Provider.Verification do
       with :ok <- validate_rejection_reason(reason),
            {:ok, doc} <- get_verification_document(document_id),
            {:ok, rejected} <- VerificationDocument.reject(doc, reviewer_id, reason),
-           {:ok, persisted} <- persist_verification_review(doc, rejected) do
-        dispatch_verification_event(:verification_document_rejected, persisted, reviewer_id)
+           {:ok, persisted} <- review_and_sync_vetting(doc, rejected, reviewer_id) do
+        VettingVerificationSync.broadcast_updated(persisted.provider_profile_id)
         {:ok, persisted}
       end
     end
+  end
+
+  # The review and the vetting step it moves are one fact. They used to be two: the
+  # review committed on its own and a bus handler advanced the step afterwards,
+  # fire-and-forget on a `:normal` event with no retry behind it — so a failure there
+  # left a document reading "approved" whose step never advanced, logged and lost.
+  #
+  # `Vetting` decides approve-vs-reset from the document's persisted status, so this
+  # needs no decision argument of its own.
+  defp review_and_sync_vetting(original, updated, reviewer_id) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:review, fn _repo, _changes -> persist_verification_review(original, updated) end)
+    |> Ecto.Multi.run(:vetting, fn _repo, %{review: persisted} ->
+      with :ok <- sync_vetting_step(persisted, reviewer_id), do: {:ok, :synced}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{review: persisted}} -> {:ok, persisted}
+      {:error, _step, reason, _changes} -> {:error, reason}
+    end
+  end
+
+  defp sync_vetting_step(%VerificationDocument{status: :approved} = doc, reviewer_id) do
+    Vetting.advance_step_for_document(doc.provider_profile_id, reviewer_id, to_string(doc.document_type), doc.id)
+  end
+
+  defp sync_vetting_step(%VerificationDocument{} = doc, reviewer_id) do
+    Vetting.reset_step_for_document(doc.provider_profile_id, reviewer_id, to_string(doc.document_type))
   end
 
   @doc "Returns all verification documents for a provider."
@@ -256,24 +284,6 @@ defmodule KlassHero.Provider.Verification do
     original
     |> VerificationDocument.review_changeset(attrs)
     |> Repo.update()
-  end
-
-  defp dispatch_verification_event(event_name, doc, reviewer_id) do
-    Event.new(
-      event_name,
-      :provider,
-      :verification_document,
-      doc.id,
-      %{
-        provider_id: doc.provider_profile_id,
-        reviewer_id: reviewer_id,
-        # document_type as a string matches the step catalog's `{:document, type}`
-        # form; document_id becomes the approved step's evidence_ref.
-        document_type: to_string(doc.document_type),
-        document_id: doc.id
-      }
-    )
-    |> EventDispatchHelper.dispatch(KlassHero.Provider)
   end
 
   defp admin_review_base_query do

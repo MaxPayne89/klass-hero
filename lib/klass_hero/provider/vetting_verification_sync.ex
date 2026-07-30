@@ -1,10 +1,10 @@
-defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync do
+defmodule KlassHero.Provider.VettingVerificationSync do
   @moduledoc """
   Shared bridge from a fully-verified (or newly-unverified) Vetting Case to the
-  published `ProviderProfile.verified` fact. Used by both step-advance handlers
-  (document review and Stripe Identity outcome) so the verify/unverify path — and the
-  frozen `provider_verified`/`provider_unverified` integration events it emits — is
-  written once.
+  published `ProviderProfile.verified` fact. Every path that can complete or undo a
+  step — document review, Stripe Identity outcome, signed agreement — routes through
+  here, so the verify/unverify path and the `provider_verified`/`provider_unverified`
+  events it emits are written once.
 
   `reviewer_id` is the admin id for document approvals, or `nil` for system-driven
   verification (the Stripe Identity webhook).

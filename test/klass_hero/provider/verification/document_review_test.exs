@@ -54,9 +54,9 @@ defmodule KlassHero.Provider.Verification.DocumentReviewTest do
                KlassHero.Provider.approve_verification_document(doc.id, admin.id)
     end
 
-    # Asserts the OUTCOME, not the event: AdvanceVettingStepOnDocumentReview is registered at
-    # boot (application.ex), so approving a document must advance the step that consumes its
-    # document_type. Asserting the event alone passed even while the handler no-opped (#1142).
+    # Asserts the OUTCOME, not the mechanism: approving a document must advance the step
+    # that consumes its document_type, in the same transaction. Asserting the event alone
+    # passed even while the handler that read it no-opped (#1142).
     test "advances the vetting step that consumes the document type", %{
       provider: provider,
       admin: admin,
@@ -142,9 +142,9 @@ defmodule KlassHero.Provider.Verification.DocumentReviewTest do
                KlassHero.Provider.reject_verification_document(doc.id, admin.id, "Too late")
     end
 
-    # The reset is the only handler-sensitive outcome of a rejection. Do NOT assert via
+    # The reset is the only step-level outcome of a rejection. Do NOT assert via
     # Vetting.checklist_for_provider/1 — that read derives :rejected from the document
-    # evidence, not the step, so it would pass with the handler deleted.
+    # evidence, not the step, so it would pass even with the reset gone.
     #
     # Two documents are needed: reject_verification_document/3 requires a :pending document,
     # so the approved one cannot also be the rejected one.

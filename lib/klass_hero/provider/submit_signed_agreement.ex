@@ -22,11 +22,11 @@ defmodule KlassHero.Provider.SubmitSignedAgreement do
   """
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.SignedAgreement
   alias KlassHero.Provider.Vetting
   alias KlassHero.Provider.VettingCase
+  alias KlassHero.Provider.VettingVerificationSync
   alias KlassHero.Repo
 
   @doc """

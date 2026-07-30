@@ -7,9 +7,9 @@ defmodule KlassHeroWeb.Provider.VerificationLiveTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Factory
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.Provider.Vetting
   alias KlassHero.Provider.VettingCase
+  alias KlassHero.Provider.VettingVerificationSync
   alias KlassHero.ProviderFixtures
 
   setup :register_and_log_in_provider

@@ -3,13 +3,9 @@ defmodule KlassHero.Application do
 
   use Application
 
-  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
-  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcome
-  alias KlassHero.Shared.DomainEventBus
-
   @impl true
   def start(_type, _args) do
-    children = infrastructure_children() ++ domain_children() ++ [KlassHeroWeb.Endpoint]
+    children = infrastructure_children() ++ projections() ++ [KlassHeroWeb.Endpoint]
 
     opts = [strategy: :one_for_one, name: KlassHero.Supervisor]
     Supervisor.start_link(children, opts)
@@ -29,28 +25,6 @@ defmodule KlassHero.Application do
       {Phoenix.PubSub, name: KlassHero.PubSub},
       {Oban, Application.fetch_env!(:klass_hero, Oban)},
       {Task.Supervisor, name: KlassHero.TaskSupervisor}
-    ]
-  end
-
-  defp domain_children do
-    domain_event_buses() ++ projections()
-  end
-
-  # Provider is the last context still routing through the bus. The rest call their
-  # reactions directly, inside the transaction that made them true.
-  defp domain_event_buses do
-    [
-      Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.Provider,
-         handlers: [
-           {:verification_document_approved, {AdvanceVettingStepOnDocumentReview, :handle}},
-           {:verification_document_rejected, {AdvanceVettingStepOnDocumentReview, :handle}},
-           {:identity_verification_passed, {AdvanceVettingStepOnIdentityOutcome, :handle}},
-           {:identity_verification_failed, {AdvanceVettingStepOnIdentityOutcome, :handle}}
-         ]},
-        id: :provider_domain_event_bus
-      )
     ]
   end
 
