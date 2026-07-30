@@ -22,7 +22,6 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -95,11 +94,7 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
     |> handle_commit(scope, provider_id)
   end
 
-  # Cross-context delivery committed with the conversation; this is the same-context
-  # remainder — the LiveView notifier.
-  defp handle_commit({:ok, {conversation, events}}, scope, provider_id) do
-    Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
-
+  defp handle_commit({:ok, conversation}, scope, provider_id) do
     Logger.info("Created direct conversation",
       conversation_id: conversation.id,
       provider_id: provider_id,

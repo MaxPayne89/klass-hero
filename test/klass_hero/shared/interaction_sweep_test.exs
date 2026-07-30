@@ -41,11 +41,11 @@ defmodule KlassHero.Shared.InteractionSweepTest do
     # stay bare), so their DB I/O no longer emits the `[:klass_hero, :interaction, :stop]` event
     # this sweep watches. Only the shared greenfield infra below still runs through the envelope.
 
-    test "shared (greenfield) — ProcessedEventRepository.mark_processed/2" do
-      assert ProcessedEventRepository.mark_processed(Ecto.UUID.generate(), "sweep-probe") == :ok
+    test "shared (greenfield) — ProcessedEventRepository.execute_atomically/3" do
+      assert ProcessedEventRepository.execute_atomically(Ecto.UUID.generate(), "sweep-probe", fn -> :ok end) == :ok
 
       assert_receive {:telemetry, [:klass_hero, :interaction, :stop], _,
-                      %{io_kind: :db, operation: :mark_processed, status: :ok}}
+                      %{io_kind: :db, operation: :execute_atomically, status: :ok}}
     end
   end
 end

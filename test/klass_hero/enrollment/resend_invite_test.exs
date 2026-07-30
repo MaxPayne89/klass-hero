@@ -1,7 +1,12 @@
 defmodule KlassHero.Enrollment.ResendInviteTest do
   use KlassHero.DataCase, async: true
+  use Oban.Testing, repo: KlassHero.Repo
 
   import KlassHero.Factory
+
+  alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+  alias KlassHero.Repo
 
   setup do
     provider = insert(:provider_profile_schema)
@@ -31,10 +36,24 @@ defmodule KlassHero.Enrollment.ResendInviteTest do
   end
 
   describe "execute/2" do
-    test "resets invite and dispatches event", %{invite: invite, provider: provider} do
+    # The reset clears the old token and the reissue mints a new one, in one transaction.
+    # Asserting the returned struct alone is not enough: it is the pre-reissue snapshot,
+    # so a resend that cleared the token and never replaced it would still pass.
+    test "clears the old token and issues a fresh one", %{invite: invite, provider: provider} do
       assert {:ok, reset} = KlassHero.Enrollment.resend_invite(invite.id, provider.id)
       assert reset.status == :pending
-      assert is_nil(reset.invite_token)
+
+      persisted = Repo.get!(BulkEnrollmentInvite, invite.id)
+      assert is_binary(persisted.invite_token)
+      refute persisted.invite_token == "original-token"
+    end
+
+    test "enqueues the email for this invite only", %{invite: invite, provider: provider} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _reset} = KlassHero.Enrollment.resend_invite(invite.id, provider.id)
+
+        assert_enqueued(worker: SendInviteEmailWorker, args: %{invite_id: invite.id})
+      end)
     end
 
     test "returns error for non-existent invite" do

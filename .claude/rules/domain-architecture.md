@@ -56,17 +56,18 @@ The flatten deleted aggregate ports, mappers, and DI wiring. Subdirectories rema
 
 - Call other contexts **only** through their root `<context>.ex` module — never their internal schemas/Repo.
 - For cross-context **reads**: use an ACL adapter (`adapters/driven/acl/`) or subscribe an event handler that builds a local read model. Prefer projections over ACLs for hot read paths.
-- There is **no** per-context *aggregate* `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly. (Shared is the exception: its genuine env-swapped adapter seams — `event_publisher`, `integration_event_publisher`, `feature_flags`, `storage`, `for_tracking_processed_events` — keep a slim behaviour at the Shared root + a config-selected impl. That is idiomatic Elixir DI, not ceremony; see ADR 0006.)
+- There is **no** per-context *aggregate* `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly. (Shared is the exception: its genuine env-swapped adapter seams — `outbox`, `feature_flags`, `storage`, `for_tracking_processed_events` — keep a slim behaviour at the Shared root + a config-selected impl. That is idiomatic Elixir DI, not ceremony; see ADR 0006.)
 
 ## Event System
 
 Directionality still classifies the surviving event code:
 
-> If Oban or the event bus triggers it, it's **driving**. If the application calls it outward, it's **driven**.
+> If Oban triggers it, it's **driving**. If the application calls it outward, it's **driven**.
 
-- **Domain events** (non-critical) — published via PubSub for real-time UI updates.
-- **Integration events** (critical) — routed through the `critical_event_handlers` registry in `config/config.exs` to Oban-backed handlers for durable, at-least-once cross-context delivery.
-- **Shared event infrastructure** (`shared/adapters/driven/events/` + `shared/domain_event_bus.ex`, `event_dispatch_helper.ex`, `integration_event_publishing.ex`): publishers, subscriber, registry, retry helpers, test doubles — driven, because the application calls them outward. Individual context handlers live under their own `adapters/driving/events/`.
+- **One `Event` struct**, staged inside the producer's transaction via `Shared.Outbox.transact/2` and delivered by `EventDeliveryWorker`, an Oban job. Consumers are registered per topic under `:event_consumers` in `config/config.exs`; that registry is also the staging filter, so an event nobody consumes is dropped rather than staged.
+- **Same-context reactions are not events.** A producer calls them directly, inside its own transaction, so the write and its consequence commit together.
+- **UI updates are not events either.** A LiveView receives a plain tagged tuple over `Phoenix.PubSub` naming what changed, broadcast post-commit by whoever wrote the data.
+- **Shared event infrastructure** (`shared/outbox.ex`, `shared/adapters/driven/events/`, `shared/adapters/driven/workers/event_delivery_worker.ex`): staging adapters, the consumer registry, the exactly-once gate, retry helpers, test doubles — driven, because the application calls them outward. Context consumers live under their own `adapters/driving/events/`.
 
 ## CQRS Read Models
 
@@ -92,4 +93,4 @@ Schema-as-struct itself is covered above under `## Context Layout` and `## Recom
 - `lib/klass_hero/provider/staff_member.ex` — schema-as-struct with inlined functional core
 - `lib/klass_hero/provider/adapters/driven/projections/provider_programs.ex` — projection pattern
 - `lib/klass_hero/shared/` — event infrastructure, projection macro, interaction/tracing
-- `config/config.exs` — `critical_event_handlers` registry (DI port maps are gone)
+- `config/config.exs` — `:event_consumers` registry (DI port maps are gone)

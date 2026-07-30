@@ -1,11 +1,16 @@
 defmodule KlassHero.Enrollment.EnqueueInviteEmailsTest do
   use KlassHero.DataCase, async: true
+  use Oban.Testing, repo: KlassHero.Repo
 
   import KlassHero.Factory
 
+  alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Repo
+
+  # `testing: :inline` executes a job at insert, leaving no row to assert on.
+  defp manual(fun), do: Oban.Testing.with_testing_mode(:manual, fun)
 
   defp create_pending_invites(_context) do
     provider = insert(:provider_profile_schema)
@@ -42,42 +47,49 @@ defmodule KlassHero.Enrollment.EnqueueInviteEmailsTest do
   describe "execute/2" do
     setup :create_pending_invites
 
-    test "returns {:ok, []} when no pending invites exist", %{
+    test "enqueues nothing when no pending invites exist", %{
       provider: provider,
       program: program
     } do
       Repo.update_all(BulkEnrollmentInvite, set: [status: :failed, error_details: "test"])
 
-      assert {:ok, []} = EnqueueInviteEmails.execute([program.id], provider.id)
+      manual(fn ->
+        assert :ok = EnqueueInviteEmails.execute([program.id], provider.id)
+        refute_enqueued(worker: SendInviteEmailWorker)
+      end)
     end
 
-    test "returns pairs with correct length and shape", %{
+    test "assigns a unique token to every pending invite and enqueues its email", %{
       provider: provider,
       program: program
     } do
-      assert {:ok, pairs} = EnqueueInviteEmails.execute([program.id], provider.id)
+      manual(fn ->
+        assert :ok = EnqueueInviteEmails.execute([program.id], provider.id)
 
-      assert length(pairs) == 2
-      assert Enum.all?(pairs, fn {id, name} -> is_binary(id) and is_binary(name) end)
+        invites = Repo.all(BulkEnrollmentInvite)
+        tokens = Enum.map(invites, & &1.invite_token)
+
+        assert Enum.all?(tokens, &is_binary/1)
+        assert length(Enum.uniq(tokens)) == 2
+
+        for invite <- invites do
+          assert_enqueued(
+            worker: SendInviteEmailWorker,
+            args: %{invite_id: invite.id, program_name: "Dance Class"}
+          )
+        end
+      end)
     end
 
-    test "assigns unique tokens to all invites in DB", %{
-      provider: provider,
-      program: program
-    } do
-      {:ok, _pairs} = EnqueueInviteEmails.execute([program.id], provider.id)
+    test "only the named invite gets a job on a resend", %{provider: provider, program: program} do
+      [first, second] = Repo.all(BulkEnrollmentInvite)
 
-      invites = Repo.all(BulkEnrollmentInvite)
-      tokens = Enum.map(invites, & &1.invite_token)
+      manual(fn ->
+        assert :ok = EnqueueInviteEmails.execute_for_invite(program.id, provider.id, first.id)
 
-      assert Enum.all?(tokens, &(not is_nil(&1)))
-      assert length(Enum.uniq(tokens)) == 2
-    end
-
-    test "resolves program name correctly", %{provider: provider, program: program} do
-      assert {:ok, pairs} = EnqueueInviteEmails.execute([program.id], provider.id)
-
-      assert Enum.all?(pairs, fn {_id, name} -> name == "Dance Class" end)
+        assert_enqueued(worker: SendInviteEmailWorker, args: %{invite_id: first.id})
+        refute_enqueued(worker: SendInviteEmailWorker, args: %{invite_id: second.id})
+      end)
     end
 
     test "falls back to 'Program' when program not in catalog", %{provider: provider} do
@@ -103,18 +115,22 @@ defmodule KlassHero.Enrollment.EnqueueInviteEmailsTest do
       )
       |> Repo.update_all(set: [status: :failed, error_details: "test"])
 
-      assert {:ok, [{_id, "Program"}]} =
-               EnqueueInviteEmails.execute([orphan_program.id], provider.id)
+      manual(fn ->
+        assert :ok = EnqueueInviteEmails.execute([orphan_program.id], provider.id)
+        assert_enqueued(worker: SendInviteEmailWorker, args: %{program_name: "Program"})
+      end)
     end
 
-    test "second call returns {:ok, []} (idempotent)", %{
+    test "a second call enqueues nothing — every invite already has a token", %{
       provider: provider,
       program: program
     } do
-      {:ok, pairs} = EnqueueInviteEmails.execute([program.id], provider.id)
-      assert length(pairs) == 2
+      assert :ok = EnqueueInviteEmails.execute([program.id], provider.id)
 
-      assert {:ok, []} = EnqueueInviteEmails.execute([program.id], provider.id)
+      manual(fn ->
+        assert :ok = EnqueueInviteEmails.execute([program.id], provider.id)
+        refute_enqueued(worker: SendInviteEmailWorker)
+      end)
     end
   end
 end

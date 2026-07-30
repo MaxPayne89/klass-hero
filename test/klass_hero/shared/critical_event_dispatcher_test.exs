@@ -143,48 +143,4 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
       assert Repo.get_by(ProcessedEvent, event_id: event_id, handler_ref: handler_ref)
     end
   end
-
-  describe "parse_handler_ref/1" do
-    test "round-trips with handler_ref/1" do
-      original = {MyApp.SomeHandler, :handle_event}
-      ref_str = CriticalEventDispatcher.handler_ref(original)
-      assert CriticalEventDispatcher.parse_handler_ref(ref_str) == original
-    end
-
-    test "raises ArgumentError on missing colon" do
-      assert_raise ArgumentError, ~r/Invalid handler_ref format/, fn ->
-        CriticalEventDispatcher.parse_handler_ref("NoColonHere")
-      end
-    end
-
-    test "raises ArgumentError on multiple colons" do
-      assert_raise ArgumentError, ~r/Invalid handler_ref format/, fn ->
-        CriticalEventDispatcher.parse_handler_ref("Elixir.Mod:func:extra")
-      end
-    end
-
-    test "raises ArgumentError on non-existent atom" do
-      assert_raise ArgumentError, fn ->
-        CriticalEventDispatcher.parse_handler_ref("Elixir.NonExistentModule99999:handle")
-      end
-    end
-  end
-
-  describe "mark_processed/2" do
-    test "inserts a processed_events row" do
-      event_id = Ecto.UUID.generate()
-      handler_ref = "Elixir.TestModule:handle"
-
-      assert :ok = CriticalEventDispatcher.mark_processed(event_id, handler_ref)
-      assert Repo.get_by(ProcessedEvent, event_id: event_id, handler_ref: handler_ref)
-    end
-
-    test "is idempotent — second call is a no-op" do
-      event_id = Ecto.UUID.generate()
-      handler_ref = "Elixir.TestModule:handle"
-
-      assert :ok = CriticalEventDispatcher.mark_processed(event_id, handler_ref)
-      assert :ok = CriticalEventDispatcher.mark_processed(event_id, handler_ref)
-    end
-  end
 end

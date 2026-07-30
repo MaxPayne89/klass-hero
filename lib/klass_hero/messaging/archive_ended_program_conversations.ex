@@ -11,7 +11,6 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
   """
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -61,13 +60,11 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
       end)
 
     case archived do
-      {:ok, {%{count: 0} = result, _events}} ->
+      {:ok, %{count: 0} = result} ->
         Logger.debug("No conversations to archive for ended programs")
         {:ok, result}
 
-      {:ok, {%{count: count} = result, events}} ->
-        Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
-
+      {:ok, %{count: count} = result} ->
         Logger.info("Archived conversations for ended programs",
           count: count,
           cutoff_date: cutoff_date

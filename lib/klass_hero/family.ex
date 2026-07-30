@@ -32,7 +32,6 @@ defmodule KlassHero.Family do
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   @context __MODULE__
@@ -84,8 +83,7 @@ defmodule KlassHero.Family do
       {parent_id, child_attrs} = Map.pop(attrs, :parent_id)
 
       case insert_child_with_event(child_attrs, parent_id) do
-        {:ok, {child, events}} ->
-          dispatch_all(events)
+        {:ok, child} ->
           {:ok, child}
 
         {:error, %Ecto.Changeset{} = changeset} ->
@@ -128,10 +126,8 @@ defmodule KlassHero.Family do
   """
   def update_child(child_id, attrs) when is_binary(child_id) and is_map(attrs) do
     context_span entity: "child" do
-      with {:ok, child} <- fetch_child(child_id),
-           {:ok, {updated, events}} <- update_child_with_event(child, attrs) do
-        dispatch_all(events)
-        {:ok, updated}
+      with {:ok, child} <- fetch_child(child_id) do
+        update_child_with_event(child, attrs)
       end
     end
   end
@@ -279,9 +275,7 @@ defmodule KlassHero.Family do
 
     Enum.reduce_while(children, {:ok, %{children_anonymized: 0, consents_deleted: 0}}, fn child, {:ok, acc} ->
       case anonymize_child_with_event(child, anonymized_attrs) do
-        {:ok, {consent_count, events}} ->
-          dispatch_all(events)
-
+        {:ok, consent_count} ->
           {:cont,
            {:ok,
             %{
@@ -582,8 +576,6 @@ defmodule KlassHero.Family do
       end
     end)
   end
-
-  defp dispatch_all(events), do: Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 
   defp child_created_event(child, parent_id) do
     FamilyEvents.child_created(child.id, %{

@@ -12,7 +12,6 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -43,17 +42,7 @@ defmodule KlassHero.Accounts do
         {:ok, user, [AccountsEvents.user_registered(user, %{registration_source: "web"})]}
       end
     end)
-    |> case do
-      {:ok, {user, events}} ->
-        dispatch_all(events)
-        {:ok, user}
-
-      {:error, changeset} ->
-        {:error, changeset}
-    end
   end
-
-  defp dispatch_all(events), do: Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
 
   @doc """
   Links an existing, authenticated user to a staff invitation (#967).
@@ -384,14 +373,6 @@ defmodule KlassHero.Accounts do
         {:ok, {confirmed_user, tokens}, [event]}
       end
     end)
-    |> case do
-      {:ok, {{confirmed_user, tokens}, events}} ->
-        dispatch_all(events)
-        {:ok, {confirmed_user, tokens}}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
   end
 
   defp delete_magic_link_token(%UserToken{} = token) do
@@ -465,14 +446,6 @@ defmodule KlassHero.Accounts do
           {:ok, anonymized_user, [event]}
         end
       end)
-      |> case do
-        {:ok, {anonymized_user, events}} ->
-          dispatch_all(events)
-          {:ok, anonymized_user}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
     end
   end
 

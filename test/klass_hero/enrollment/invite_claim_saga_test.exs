@@ -142,8 +142,8 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       token: token,
       invite: invite
     } do
-      # Step 1: Claim the invite. MarkInviteRegistered runs synchronously on the bus;
-      # the cross-context event is staged in the same transaction, not published.
+      # Step 1: Claim the invite. Marking it registered and staging the cross-context
+      # event happen in one transaction.
       #
       # Manual mode, then an explicit drain, is what makes this test model production:
       # under the suite's `testing: :inline`, staging would execute the delivery job

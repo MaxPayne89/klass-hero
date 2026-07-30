@@ -20,6 +20,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.ClaimInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
+  alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Enrollment.EnrollmentPolicy
   alias KlassHero.Enrollment.ImportEnrollmentCsv
@@ -31,7 +32,6 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Family
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   @active_statuses ~w(pending confirmed)
@@ -54,7 +54,7 @@ defmodule KlassHero.Enrollment do
          {:ok, :eligible} <- ensure_eligible(params[:program_id], params[:child_id]) do
       params
       |> build_enrollment_attrs(parent.id)
-      |> persist_and_dispatch(identity_id)
+      |> persist_enrollment(identity_id)
     end
   end
 
@@ -66,7 +66,7 @@ defmodule KlassHero.Enrollment do
   defp do_create_enrollment(params) do
     params
     |> build_enrollment_attrs(params[:parent_id])
-    |> persist_and_dispatch(params[:identity_id] || parent_user_id(params[:parent_id]))
+    |> persist_enrollment(params[:identity_id] || parent_user_id(params[:parent_id]))
   end
 
   defp parent_user_id(nil), do: nil
@@ -123,17 +123,8 @@ defmodule KlassHero.Enrollment do
     }
   end
 
-  defp persist_and_dispatch(attrs, identity_id) do
-    case create_enrollment_with_capacity_check(attrs, attrs[:program_id], identity_id) do
-      {:ok, {enrollment, events}} ->
-        # Fire-and-forget — a failed same-context handler must not roll back a
-        # successful enrollment. Cross-context delivery committed with it.
-        Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
-        {:ok, enrollment}
-
-      error ->
-        error
-    end
+  defp persist_enrollment(attrs, identity_id) do
+    create_enrollment_with_capacity_check(attrs, attrs[:program_id], identity_id)
   end
 
   defp enrollment_created_event(enrollment, identity_id) do
@@ -160,10 +151,8 @@ defmodule KlassHero.Enrollment do
     context_span entity: "enrollment" do
       with {:ok, reason} <- Enrollment.ensure_reason_present(reason),
            {:ok, enrollment} <- get_enrollment(enrollment_id),
-           {:ok, cancelled} <- Enrollment.cancel(enrollment, reason),
-           {:ok, {persisted, events}} <- cancel_with_event(enrollment_id, cancelled, admin_id, reason) do
-        Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
-        {:ok, persisted}
+           {:ok, cancelled} <- Enrollment.cancel(enrollment, reason) do
+        cancel_with_event(enrollment_id, cancelled, admin_id, reason)
       end
     end
   end
@@ -234,7 +223,7 @@ defmodule KlassHero.Enrollment do
   """
   def set_participant_policy(attrs) when is_map(attrs) do
     context_span entity: "participant_policy" do
-      with {:ok, {policy, _events}} <- upsert_policy_with_event(attrs) do
+      with {:ok, policy} <- upsert_policy_with_event(attrs) do
         Notifications.participant_policy_set(policy.program_id)
         {:ok, policy}
       end
@@ -318,7 +307,7 @@ defmodule KlassHero.Enrollment do
 
   Unlike `import_enrollment_csv/2`, the caller supplies a pre-resolved
   `program_id` (picked from the provider's own catalog). Runs the same
-  `:bulk_invites_imported` event path with `count: 1`, so the downstream
+  invite-email path, so the downstream
   email worker pipeline is reused verbatim.
 
   Returns:
@@ -359,13 +348,26 @@ defmodule KlassHero.Enrollment do
   def resend_invite(invite_id, provider_id) when is_binary(invite_id) and is_binary(provider_id) do
     with {:ok, invite} <- get_invite(invite_id),
          {:ok, invite} <- authorize_invite_owner(invite, provider_id),
-         {:ok, invite} <- BulkEnrollmentInvite.ensure_resendable(invite),
-         {:ok, reset} <- reset_invite_for_resend(invite) do
-      # Dedicated event distinguishes single resend from bulk import; EnqueueInviteEmails
-      # assigns a fresh token + enqueues the job.
-      reset.provider_id
-      |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
-      |> EventDispatchHelper.dispatch_or_ok(__MODULE__, reset)
+         {:ok, invite} <- BulkEnrollmentInvite.ensure_resendable(invite) do
+      resend_with_fresh_token(invite)
+    end
+  end
+
+  # The reset clears the old token, so it must not survive a failure to issue a new
+  # one — that would leave an invite whose link is dead and whose email never sends.
+  # Previously the reset committed first and only the reporting was gated on what
+  # followed, so the caller could be told a resend failed that had already half-happened.
+  defp resend_with_fresh_token(invite) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:reset, fn _repo, _changes -> reset_invite_for_resend(invite) end)
+    |> Ecto.Multi.run(:enqueue, fn _repo, %{reset: reset} ->
+      with :ok <- EnqueueInviteEmails.execute_for_invite(reset.program_id, reset.provider_id, reset.id),
+           do: {:ok, :enqueued}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{reset: reset}} -> {:ok, reset}
+      {:error, _step, reason, _changes} -> {:error, reason}
     end
   end
 
@@ -671,13 +673,12 @@ defmodule KlassHero.Enrollment do
     # Staged in the same Multi as the capacity lock, so an enrollment and the event
     # announcing it cannot disagree about whether it happened.
     |> Ecto.Multi.run(:stage, fn _repo, %{create: enrollment} ->
-      event = enrollment_created_event(enrollment, identity_id)
-      Outbox.stage(__MODULE__, [event])
-      {:ok, [event]}
+      Outbox.stage(__MODULE__, [enrollment_created_event(enrollment, identity_id)])
+      {:ok, :staged}
     end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{create: enrollment, stage: events}} -> {:ok, {enrollment, events}}
+      {:ok, %{create: enrollment}} -> {:ok, enrollment}
       {:error, :lock_and_check, :program_full, _} -> {:error, :program_full}
       {:error, :create, reason, _} -> {:error, reason}
     end
@@ -947,6 +948,30 @@ defmodule KlassHero.Enrollment do
     %BulkEnrollmentInvite{}
     |> BulkEnrollmentInvite.import_changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  Marks a claimed invite registered, re-reading it first so the decision is made on
+  the row as it stands now.
+
+  `ClaimInvite` checks claimability before it opens its transaction; this is the same
+  check made again inside it. Two concurrent claims of one token both pass the first
+  check, and the loser must be told the invite is spoken for rather than be handed a
+  changeset error for an invalid `:registered -> :registered` transition.
+
+  Returns `{:error, :already_claimed}` for an invite that has moved past `:invite_sent`,
+  matching what a sequential second claim gets.
+  """
+  @spec register_claimed_invite(String.t()) ::
+          {:ok, BulkEnrollmentInvite.t()} | {:error, :not_found | :already_claimed | term()}
+  def register_claimed_invite(invite_id) when is_binary(invite_id) do
+    with {:ok, invite} <- get_invite(invite_id),
+         {:ok, invite} <- BulkEnrollmentInvite.ensure_claimable(invite) do
+      transition_invite(invite, %{
+        status: :registered,
+        registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+    end
   end
 
   @doc "Applies a validated status transition to an invite (refetched by id)."

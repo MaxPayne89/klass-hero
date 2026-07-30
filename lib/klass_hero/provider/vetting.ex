@@ -18,7 +18,6 @@ defmodule KlassHero.Provider.Vetting do
 
   import Ecto.Query
 
-  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.Provider.CommunityGuidelines
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.ProviderProfile
@@ -32,9 +31,8 @@ defmodule KlassHero.Provider.Vetting do
   alias KlassHero.Provider.VettingCase
   alias KlassHero.Provider.VettingChecklist
   alias KlassHero.Provider.VettingStepView
+  alias KlassHero.Provider.VettingVerificationSync
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.Event
-  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -107,6 +105,99 @@ defmodule KlassHero.Provider.Vetting do
       nil -> backfill_case(provider_id)
       case_ -> {:ok, case_}
     end
+  end
+
+  @doc """
+  Approves the step a reviewed document satisfies, and verifies the provider if that
+  was the last one outstanding.
+
+  Called by `Verification` from inside its review transaction, so the document's new
+  status and the step it advances commit together. A document type no vetting step
+  consumes is a no-op, not an error — the two catalogs are allowed to differ.
+
+  Announcing the change is the caller's job: this runs pre-commit, and a broadcast
+  from in here would describe a review that has not landed.
+  """
+  @spec advance_step_for_document(String.t(), String.t(), String.t(), String.t()) ::
+          :ok | {:error, term()}
+  def advance_step_for_document(provider_id, reviewer_id, document_type, document_id) do
+    with {:ok, case_} <- get_case_for_provider(provider_id),
+         step_key when not is_nil(step_key) <- VettingCase.step_key_for_document(case_, document_type),
+         {:ok, updated} <- VettingCase.approve_step(case_, step_key, reviewer_id, document_id),
+         {:ok, _} <- save_case(updated) do
+      VettingVerificationSync.verify_if_complete(updated, provider_id, reviewer_id)
+    else
+      nil -> log_no_document_step(provider_id, document_type)
+      {:error, :not_found} -> :ok
+      {:error, reason} -> {:error, {:vetting_advance_failed, reason}}
+    end
+  end
+
+  @doc """
+  Resets the step a rejected document satisfied, unverifying the provider if it was
+  verified. Counterpart to `advance_step_for_document/4`, same transaction contract.
+  """
+  @spec reset_step_for_document(String.t(), String.t(), String.t()) :: :ok | {:error, term()}
+  def reset_step_for_document(provider_id, reviewer_id, document_type) do
+    with {:ok, case_} <- get_case_for_provider(provider_id),
+         step_key when not is_nil(step_key) <- VettingCase.step_key_for_document(case_, document_type),
+         {:ok, updated} <- VettingCase.reset_step(case_, step_key),
+         {:ok, _} <- save_case(updated) do
+      VettingVerificationSync.maybe_unverify(provider_id, reviewer_id)
+    else
+      nil -> log_no_document_step(provider_id, document_type)
+      {:error, :not_found} -> :ok
+      {:error, reason} -> {:error, {:vetting_reset_failed, reason}}
+    end
+  end
+
+  @doc """
+  Auto-approves the identity step on a passing Stripe Identity outcome — no human
+  reviewer, so verification is attributed to the system (`nil` admin).
+  """
+  @spec advance_step_for_identity(String.t(), String.t()) :: :ok | {:error, term()}
+  def advance_step_for_identity(provider_id, evidence_ref) do
+    with {:ok, case_} <- get_case_for_provider(provider_id),
+         step_key when not is_nil(step_key) <- VettingCase.step_key_for_identity(case_),
+         {:ok, updated} <- VettingCase.auto_approve_step(case_, step_key, evidence_ref),
+         {:ok, _} <- save_case(updated) do
+      VettingVerificationSync.verify_if_complete(updated, provider_id, nil)
+    else
+      nil -> log_no_identity_step(provider_id)
+      {:error, :not_found} -> :ok
+      {:error, reason} -> {:error, {:vetting_advance_failed, reason}}
+    end
+  end
+
+  @doc "Resets the identity step on a failed or cancelled Stripe Identity outcome."
+  @spec reset_step_for_identity(String.t()) :: :ok | {:error, term()}
+  def reset_step_for_identity(provider_id) do
+    with {:ok, case_} <- get_case_for_provider(provider_id),
+         step_key when not is_nil(step_key) <- VettingCase.step_key_for_identity(case_),
+         {:ok, updated} <- VettingCase.reset_step(case_, step_key),
+         {:ok, _} <- save_case(updated) do
+      VettingVerificationSync.maybe_unverify(provider_id, nil)
+    else
+      nil -> log_no_identity_step(provider_id)
+      {:error, :not_found} -> :ok
+      {:error, reason} -> {:error, {:vetting_reset_failed, reason}}
+    end
+  end
+
+  # `:ok` explicitly, not whatever Logger returns: the callers match on `:ok` inside an
+  # `Ecto.Multi` step, so anything else here would roll back a review that succeeded.
+  defp log_no_document_step(provider_id, document_type) do
+    Logger.warning(
+      "No vetting step consumes document_type=#{inspect(document_type)} for provider #{provider_id}; ignoring"
+    )
+
+    :ok
+  end
+
+  defp log_no_identity_step(provider_id) do
+    Logger.warning("No Stripe Identity step in track for provider #{provider_id}; ignoring identity outcome")
+
+    :ok
   end
 
   @doc """
@@ -623,16 +714,31 @@ defmodule KlassHero.Provider.Vetting do
     end
   end
 
+  # The recorded outcome and the step it moves commit together; the broadcast that
+  # tells the provider's open page follows the commit, never precedes it.
   defp apply_identity_outcome(iv, outcome) do
     case resolve_identity_outcome(iv, outcome) do
       :ignore ->
         {:ok, :ignored}
 
-      {updated, event_type} ->
-        with {:ok, persisted} <- update_identity_verification(updated) do
-          dispatch_identity_event(event_type, persisted)
+      {updated, step_sync} ->
+        with {:ok, persisted} <- record_identity_outcome(updated, step_sync) do
+          VettingVerificationSync.broadcast_updated(persisted.provider_id)
           {:ok, persisted}
         end
+    end
+  end
+
+  defp record_identity_outcome(updated, step_sync) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:record, fn _repo, _changes -> update_identity_verification(updated) end)
+    |> Ecto.Multi.run(:step, fn _repo, %{record: persisted} ->
+      with :ok <- step_sync.(persisted), do: {:ok, :synced}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{record: persisted}} -> {:ok, persisted}
+      {:error, _step, reason, _changes} -> {:error, reason}
     end
   end
 
@@ -641,15 +747,15 @@ defmodule KlassHero.Provider.Vetting do
   # log and no-op (`:ignore`), never fabricating a pass/fail.
   defp resolve_identity_outcome(%IdentityVerification{} = iv, %{stripe_status: :verified, dob: dob, today: today}) do
     updated = IdentityVerification.mark_verified(iv, dob, today)
-    {updated, identity_event_for(updated.outcome)}
+    {updated, step_sync_for(updated.outcome)}
   end
 
   defp resolve_identity_outcome(%IdentityVerification{} = iv, %{stripe_status: :requires_input}) do
-    {IdentityVerification.mark_requires_input(iv), :identity_verification_failed}
+    {IdentityVerification.mark_requires_input(iv), &reset_identity_step/1}
   end
 
   defp resolve_identity_outcome(%IdentityVerification{} = iv, %{stripe_status: :canceled}) do
-    {IdentityVerification.mark_canceled(iv), :identity_verification_failed}
+    {IdentityVerification.mark_canceled(iv), &reset_identity_step/1}
   end
 
   defp resolve_identity_outcome(%IdentityVerification{}, %{stripe_status: stripe_status}) do
@@ -657,18 +763,11 @@ defmodule KlassHero.Provider.Vetting do
     :ignore
   end
 
-  defp identity_event_for(:pass), do: :identity_verification_passed
-  defp identity_event_for(:fail), do: :identity_verification_failed
+  defp step_sync_for(:pass), do: &advance_identity_step/1
+  defp step_sync_for(:fail), do: &reset_identity_step/1
 
-  defp dispatch_identity_event(event_type, iv) do
-    Event.new(event_type, :provider, :identity_verification, iv.id, %{
-      provider_id: iv.provider_id,
-      identity_verification_id: iv.id,
-      stripe_session_id: iv.stripe_session_id,
-      failure_reason: iv.failure_reason
-    })
-    |> EventDispatchHelper.dispatch(KlassHero.Provider)
-  end
+  defp advance_identity_step(iv), do: advance_step_for_identity(iv.provider_id, iv.id)
+  defp reset_identity_step(iv), do: reset_step_for_identity(iv.provider_id)
 
   defp create_identity_verification(%IdentityVerification{} = iv) do
     attrs = Map.take(iv, ~w(id provider_id stripe_session_id status outcome failure_reason verified_at)a)

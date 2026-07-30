@@ -103,7 +103,7 @@ defmodule KlassHero.Participation do
         upcoming = Enum.reject(dates, &Date.before?(&1, today))
 
         {:ok, {{inserted, cancelled, revived}, events}} =
-          Outbox.transact(@context, fn ->
+          Outbox.transact_with_events(@context, fn ->
             revived = revive_generated_sessions(program, upcoming)
             inserted = insert_generated_sessions(program, upcoming)
             cancelled = cancel_orphaned_sessions(program, upcoming, today)
@@ -530,7 +530,7 @@ defmodule KlassHero.Participation do
       # One event per session that actually gained a row, so each session's
       # read-model count moves by exactly the number of rows it gained.
       {:ok, {seeded_ids, backfill_events}} =
-        Outbox.transact(@context, fn ->
+        Outbox.transact_with_events(@context, fn ->
           {:ok, seeded_ids} = seed_child_records(session_ids, child_id)
           {:ok, seeded_ids, Enum.map(seeded_ids, &ParticipationEvents.roster_seeded(&1, program_id, 1))}
         end)
@@ -1017,7 +1017,7 @@ defmodule KlassHero.Participation do
   defp check_in_event(record, nil), do: ParticipationEvents.child_checked_in(record)
 
   defp insert_session_with_event(session) do
-    Outbox.transact(@context, fn ->
+    Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- insert_session(session) do
         {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
       end
@@ -1025,7 +1025,7 @@ defmodule KlassHero.Participation do
   end
 
   defp update_session_with_event(session, event_fn) do
-    Outbox.transact(@context, fn ->
+    Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- update_session(session) do
         {:ok, persisted, [event_fn.(persisted)]}
       end
@@ -1035,7 +1035,7 @@ defmodule KlassHero.Participation do
   # The absences and the completion are one fact: a completed session whose
   # registered children were never marked absent is a half-finished write.
   defp complete_session_with_events(completed) do
-    Outbox.transact(@context, fn ->
+    Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- update_session(completed),
            {:ok, absence_events} <- mark_remaining_as_absent(persisted) do
         {:ok, persisted, absence_events ++ [session_completed_event(persisted)]}
@@ -1044,7 +1044,7 @@ defmodule KlassHero.Participation do
   end
 
   defp update_record_with_event(updated, event_fn) do
-    Outbox.transact(@context, fn ->
+    Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- update_record(updated) do
         # Best-effort: attendance already succeeded; a session fetch failure enriches
         # the event less, it does not fail the write.
@@ -1055,7 +1055,7 @@ defmodule KlassHero.Participation do
   end
 
   defp check_in_record_with_event(checked_in, session) do
-    Outbox.transact(@context, fn ->
+    Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- update_record(checked_in) do
         resolved = resolve_session_best_effort(session, persisted.session_id)
         {:ok, {persisted, resolved}, [check_in_event(persisted, resolved)]}
@@ -1066,7 +1066,7 @@ defmodule KlassHero.Participation do
   # Seeds one session's roster and stages its roster_seeded event in the same
   # transaction, so a seeded row can never exist without the event describing it.
   defp seed_roster_records(session_id, program_id, child_ids) do
-    Outbox.transact(@context, fn ->
+    Outbox.transact_with_events(@context, fn ->
       {:ok, count} = seed_records(session_id, child_ids)
       {:ok, count, [ParticipationEvents.roster_seeded(session_id, program_id, count)]}
     end)

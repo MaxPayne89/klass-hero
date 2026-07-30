@@ -27,11 +27,10 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsv do
   alias KlassHero.Enrollment
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ChangesetErrors
-  alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Enrollment.Domain.Services.CsvParser
   alias KlassHero.Enrollment.Domain.Services.ImportRowValidator
+  alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Enrollment.ProviderProgramContext
-  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -82,7 +81,7 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsv do
       if empty_csv?(final) do
         {:error, %{parse_errors: [{0, "CSV file is empty or has no data rows"}]}}
       else
-        maybe_publish_event(provider_id, final)
+        maybe_enqueue_invite_emails(provider_id, final)
         {:ok, %{created: final.created, failed: Enum.reverse(final.failed)}}
       end
     end
@@ -268,10 +267,9 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsv do
     end
   end
 
-  defp maybe_publish_event(_provider_id, %{created: 0}), do: :ok
+  defp maybe_enqueue_invite_emails(_provider_id, %{created: 0}), do: :ok
 
-  defp maybe_publish_event(provider_id, %{created: count, success_program_ids: ids}) do
-    EnrollmentEvents.bulk_invites_imported(provider_id, MapSet.to_list(ids), count)
-    |> EventDispatchHelper.dispatch(KlassHero.Enrollment)
+  defp maybe_enqueue_invite_emails(provider_id, %{success_program_ids: ids}) do
+    EnqueueInviteEmails.execute(MapSet.to_list(ids), provider_id)
   end
 end

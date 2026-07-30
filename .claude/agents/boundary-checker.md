@@ -64,7 +64,7 @@ schemas, or `adapters/` modules.
    (`KlassHero.B.<Entity>`, `KlassHero.B.Adapters.*`, `KlassHero.B.<...>Schema`)
    rather than `KlassHero.B` itself
 4. Exception: Shared infrastructure (`KlassHero.Shared.*` — `Tracing`, `Projection`,
-   `DomainEventBus`, `FeatureFlags`, `RepositoryHelpers`) is universal
+   `Outbox`, `FeatureFlags`, `RepositoryHelpers`) is universal
 
 **Example violation:**
 ```elixir

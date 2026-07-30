@@ -134,19 +134,29 @@ error propagation into the caller's `with`). What actually needs to be asynchron
 - **If the app scales past a couple of machines**, where the `email: 1` queue comment already flags a
   known problem — that queue is per-node, so concurrency is already the machine count, not 1.
 
-## Sequence
+## Sequence — shipped
 
-Six PRs, risk-ordered so the live defects are fixed before the structural churn. Each is
-independently valuable and revertable.
+Six PRs, risk-ordered so the live defects were fixed before the structural churn.
 
-| # | Change | Removes / fixes |
-|---|---|---|
-| 1 | `Oban.Plugins.Lifeline` + raise `max_attempts` | #1191 — orphaned jobs never rescued |
-| 2 | Stateless projections | `VerifiedProviders`' in-memory `MapSet`; prerequisite for PR 3 |
-| 3 | Outbox + job-invoked consumers | #1190 — commit→publish window; 11 `EventSubscriber` specs |
-| 4 | UI tagged tuples | `NotifyLiveViews`, `WithDomainEvents`, `build_message_from_event`, 9 LiveViews |
-| 5 | One struct, kill promotion | `DomainEvent`, 30 handlers, 7 modules, 2 publishers, 4 behaviours |
-| 6 | Delete the bus, inline the 7 | 55 registrations, `subscribe/4` owner-scoping machinery |
+| # | Change | Removed / fixed | PR |
+|---|---|---|---|
+| 1 | `Oban.Plugins.Lifeline` + raise `max_attempts` | #1191 — orphaned jobs never rescued | #1193 |
+| 2 | Stateless projections | `VerifiedProviders`' in-memory `MapSet` | #1196 |
+| 3 | Outbox + job-invoked consumers | #1190 — commit→publish window; 11 `EventSubscriber` specs | #1207 |
+| 4 | UI tagged tuples | `NotifyLiveViews`, `WithDomainEvents`, 9 LiveViews | #1208 |
+| 5 | One struct, kill promotion | `DomainEvent`, 30 handlers, 7 promoters, 2 publishers | #1211 |
+| 6 | Delete the bus, inline the 7 | `DomainEventBus`, `EventDispatchHelper`, `subscribe/4` | — |
+
+PR 6 found the bus emptier than this ADR's count implies. Of 27 dispatch call sites, **21 targeted
+a bus with no handler registered for that event type** — five of the seven bus instances ran with
+`handlers: []`. It also retired the parallel durable-retry path (`CriticalEventWorker`), which
+existed only because a bus handler ran inside the producer's process and a failure there had
+already escaped the transaction.
+
+Two of this ADR's three reasons for keeping dispatch synchronous had decayed before PR 6 started:
+the priority ordering on `:invite_claimed` lost its second handler in PR 5, and the GDPR cascade's
+`dispatch_or_error` gate was replaced in PR 4. Only error propagation was still load-bearing, at
+two call sites, and inlining preserved it.
 
 PR 1 is a live defect fix independent of everything else and should land whatever happens to the
 rest. PR 4 is independent of 1–3 and can be reordered freely. PR 2 must precede PR 3, because

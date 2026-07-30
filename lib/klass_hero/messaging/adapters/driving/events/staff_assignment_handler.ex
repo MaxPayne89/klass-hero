@@ -6,10 +6,9 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   1. Upserts the `program_staff_participants` projection (sets active=true).
   2. Adds the staff user as a participant to every active program conversation
      where they are not already an active participant. The participant inserts
-     and one `:participant_added` domain event per back-filled conversation
-     are collected inside a single `Repo.transaction`; events dispatch
-     *after* the transaction commits so the `ConversationSummaries` projection
-     can read-your-own-writes on a separate DB connection.
+     and one `:participant_added` event per back-filled conversation are staged
+     inside a single transaction, so the delivery job reaches the
+     `ConversationSummaries` projection only after the rows it describes commit.
 
   On unassignment:
   1. Deactivates the projection entry (sets active=false).
@@ -25,7 +24,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.RemoveAssignedStaff
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -91,8 +89,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
     RetryHelpers.retry_and_normalize(operation, context)
   end
 
-  # Participants and their events commit together; what dispatches after is only the
-  # same-context remainder.
+  # Participants and their events commit together.
   defp add_staff_to_existing_conversations(program_id, staff_user_id) do
     conversation_ids =
       KlassHero.Messaging.list_active_program_conversation_ids_without_participant(
@@ -106,14 +103,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
       ids ->
         Outbox.transact(@context, fn -> backfill_participants(staff_user_id, ids) end)
-        |> case do
-          {:ok, {events, _staged}} ->
-            Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
-            :ok
-
-          {:error, reason} ->
-            {:error, reason}
-        end
     end
   end
 
@@ -124,7 +113,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
           MessagingEvents.participant_added(conversation_id, [staff_user_id], :later_assignment)
         end)
 
-      {:ok, events, events}
+      {:ok, :ok, events}
     end
   end
 
@@ -132,16 +121,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   defp remove_staff_from_existing_conversations(program_id, staff_user_id) do
     Outbox.transact(@context, fn ->
       with {:ok, {_removals, events}} <- RemoveAssignedStaff.execute(program_id, staff_user_id) do
-        {:ok, events, events}
+        {:ok, :ok, events}
       end
     end)
-    |> case do
-      {:ok, {events, _staged}} ->
-        Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
-        :ok
-
-      {:error, reason} ->
-        {:error, reason}
-    end
   end
 end

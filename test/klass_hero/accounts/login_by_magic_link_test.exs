@@ -8,7 +8,7 @@ defmodule KlassHero.Accounts.LoginByMagicLinkTest do
   3. Error cases       — invalid/malformed/expired tokens, security violation
 
   The unconfirmed path dispatches a `user_confirmed` domain event as a
-  fire-and-forget side effect through the global (non-sandboxed) DomainEventBus.
+  fire-and-forget side effect.
   That dispatch cannot be captured deterministically in a unit test, so we assert
   the observable state change the event announces — `confirmed_at` is set and the
   user's tokens are cleaned up — mirroring how the sibling context tests
