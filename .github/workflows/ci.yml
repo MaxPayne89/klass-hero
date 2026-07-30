@@ -1,98 +1,37 @@
 name: CI
 
+# Pull requests only. Re-verifying a squash commit on `main` that a PR run verified minutes
+# earlier cost ~8 billable minutes per merge (#1198). The three roles the main-push run used
+# to fill are covered elsewhere now: the dev deploy triggers on push (fly-deploy.yml), the
+# default-branch dep cache is written by deps-cache.yml, and PR CI is enforced by the
+# `required_status_checks` rule on the `main` ruleset rather than after the merge.
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ '**' ]
 
-# Supersede an in-flight run when a PR is pushed again. NOT on `main`: fly-deploy.yml
-# waits on this workflow via `workflow_run`, so cancelling a main run silently drops a
-# dev deploy.
+# Supersede an in-flight run when a PR is pushed again.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
+# Bumping either version here means bumping it in deps-cache.yml and security.yml too. A
+# called workflow does not inherit the caller's `env`, and both versions are baked into the
+# cache key AND its restore-keys prefix — so a one-sided bump means the writer stores under a
+# key no reader ever asks for, and every job compiles from cold, indefinitely and silently.
 env:
   ELIXIR_VERSION: '1.20.2'
   OTP_VERSION: '29.0.2'
   MIX_OS_DEPS_COMPILE_PARTITION_COUNT: '4'
 
 jobs:
-  # The ONLY job that writes the cache. Every other job restores it read-only, so the
-  # stored tree is deterministically the both-env one this job produces, rather than
-  # whichever job happened to win a race to save first.
-  #
-  # Nothing `needs:` this job. On a warm run it hits the primary key and therefore saves
-  # nothing — meaning downstream jobs restore byte-identical content whether or not it
-  # ran, and gating them on it was ~55s of pure serialisation. It earns its place only on
-  # a cold cache (a mix.lock change), where it is the single writer that seeds the next
-  # run. The cost of that: on a cold run the other jobs each compile deps independently,
-  # in parallel, and none of them seeds the cache.
+  # The cache writer, defined once in deps-cache.yml because it also has to run on push to
+  # main — see that file's header. Nothing `needs:` it: on a warm run it hits the primary key
+  # and saves nothing, so downstream jobs restore byte-identical content whether or not it
+  # ran, and gating them on it was ~55s of pure serialisation (#1201). On a PR it earns its
+  # place only on a cold cache, where it seeds the PR-scoped cache that later pushes to the
+  # same PR restore.
   deps:
-    name: Dependencies
-    runs-on: ubuntu-latest
-
-    steps:
-      # actions/checkout@v7.0.1
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-
-      # erlef/setup-beam@v1.24.1
-      - name: Set up Elixir
-        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
-        with:
-          elixir-version: ${{ env.ELIXIR_VERSION }}
-          otp-version: ${{ env.OTP_VERSION }}
-          version-type: strict
-
-      # actions/cache@v6.1.0
-      - name: Restore dependencies cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
-        with:
-          path: |
-            deps
-            _build
-          key: v2-${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
-          restore-keys: |
-            v2-${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      # Compile all deps once before the NIF force-rebuild. `mix deps.compile
-      # lazy_html --force` only rebuilds lazy_html itself — it does NOT
-      # trigger compilation of transitive deps (fine, elixir_make,
-      # cc_precompiler). On a warm cache they're already in _build/; on a
-      # cold cache (e.g. after a runtime bump invalidates the cache key)
-      # the --force step fails with "could not find an app file at
-      # _build/test/lib/fine/ebin/fine.app".
-      - name: Compile dependencies
-        run: mix deps.compile
-        env:
-          MIX_ENV: test
-
-      # Force-recompile NIF deps to prevent stale cache issues.
-      # The restore-keys fallback can provide a NIF binary from a
-      # previous version that doesn't match the current mix.lock.
-      - name: Recompile NIF dependencies
-        run: mix deps.compile lazy_html --force
-        env:
-          MIX_ENV: test
-
-      # Compile both envs so the cache this job seeds is useful to both. Only matters on
-      # a cold run — on a warm one the primary key already exists and nothing is saved.
-      #
-      # (The old comment here claimed dev was "needed by quality job (includes boundary
-      # checker)". The boundary library was removed in #986-#1002, and a probe showed
-      # quality rebuilds the dev tree regardless — see the commit message.)
-      - name: Compile (dev)
-        run: mix compile
-
-      - name: Compile (test)
-        run: mix compile
-        env:
-          MIX_ENV: test
+    uses: ./.github/workflows/deps-cache.yml
 
   quality:
     name: Code Quality
@@ -111,7 +50,7 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # Restore-only — the `deps` job is the sole writer. See its comment.
+      # Restore-only — deps-cache.yml is the sole writer. See its header.
       # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
       - name: Restore dependencies cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
@@ -152,23 +91,24 @@ jobs:
 
   # Release-please's Release PR only ever touches .release-please-manifest.json,
   # CHANGELOG.md and mix.exs's `version:` — content already tested on main. Running the
-  # full suite plus a browser E2E pass for a version bump costs ~9 billable minutes twice
-  # (once on the PR, once on the squash commit). `quality` deliberately still runs: format
-  # and credo over a bumped mix.exs are cheap and catch a malformed version.
+  # full suite plus a browser E2E pass for a version bump costs ~9 billable minutes.
+  # `quality` deliberately still runs: format and credo over a bumped mix.exs are cheap and
+  # catch a malformed version.
   #
   # paths-ignore can't express this — mix.exs is in the changed set, and ignoring mix.exs
   # would blind CI to real dependency changes.
   #
   # Duplicated on `e2e` below because Actions does not support YAML anchors. Keep in sync.
   #
-  # NOTE: if required status checks are ever added to the `main` ruleset, verify GitHub's
-  # skipped-vs-required semantics before relying on both together.
+  # `Tests` and `E2E Tests` are required status checks on the `main` ruleset, which is safe
+  # alongside this skip: an `if:`-skipped job still emits a check run (conclusion `skipped`),
+  # and a skipped check satisfies a required one. The trap that leaves a required check
+  # Pending forever needs a WORKFLOW that never runs at all — path/branch filters — which is
+  # why the skip lives on the jobs and not on the trigger.
   test:
     name: Tests
     runs-on: ubuntu-latest
-    if: >-
-      github.head_ref != 'release-please--branches--main' &&
-      !startsWith(github.event.head_commit.message, 'chore: release main')
+    if: github.head_ref != 'release-please--branches--main'
 
     services:
       postgres:
@@ -201,7 +141,7 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # Restore-only — the `deps` job is the sole writer. See its comment.
+      # Restore-only — deps-cache.yml is the sole writer. See its header.
       # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
       - name: Restore dependencies cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
@@ -227,9 +167,7 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    if: >-
-      github.head_ref != 'release-please--branches--main' &&
-      !startsWith(github.event.head_commit.message, 'chore: release main')
+    if: github.head_ref != 'release-please--branches--main'
 
     services:
       postgres:
@@ -262,7 +200,7 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # Restore-only — the `deps` job is the sole writer. See its comment.
+      # Restore-only — deps-cache.yml is the sole writer. See its header.
       # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
       - name: Restore dependencies cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
