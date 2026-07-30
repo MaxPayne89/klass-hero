@@ -4,9 +4,9 @@ defmodule KlassHero.Provider.ProviderProfile do
 
   A profile is created in `:draft` status during a deliberate staff→provider
   upgrade (ADR-0005) and completed to `:active` once business details are filled
-  in. Admins verify/unverify providers, which drives cross-context projections
-  (VerifiedProviders, ProgramListings) via integration events published by the
-  context facade.
+  in. Admins verify/unverify providers, which drives the cross-context
+  `ProgramListings` projection via integration events published by the context
+  facade.
 
   This module is both the Ecto schema and the struct consumers pattern-match.
   Two layers guard invariants:

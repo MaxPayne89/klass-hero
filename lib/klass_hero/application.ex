@@ -51,8 +51,7 @@ defmodule KlassHero.Application do
   defp domain_children do
     domain_event_buses() ++
       integration_event_subscribers() ++
-      in_memory_projections() ++
-      in_memory_repositories()
+      projections()
   end
 
   defp domain_event_buses do
@@ -364,18 +363,14 @@ defmodule KlassHero.Application do
   end
 
   # Trigger: start_projections is false in test config
-  # Why: VerifiedProviders bootstraps a DB query outside the Ecto sandbox,
-  #      poisoning the connection pool and causing sandbox leaks across async tests
+  # Why: projections bootstrap DB queries outside the Ecto sandbox, poisoning the
+  #      connection pool and causing sandbox leaks across async tests
   # Outcome: projections skipped in test env, started normally elsewhere
-  defp in_memory_projections do
+  defp projections do
     if Application.get_env(:klass_hero, :start_projections, true) do
       [{KlassHero.ProjectionSupervisor, []}]
     else
       []
     end
-  end
-
-  defp in_memory_repositories do
-    []
   end
 end

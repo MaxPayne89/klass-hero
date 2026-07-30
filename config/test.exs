@@ -75,9 +75,10 @@ config :klass_hero, env: :test
 # Enable Ecto sandbox plug for Wallaby browser sessions
 config :klass_hero, sql_sandbox: true
 
-# Trigger: VerifiedProviders GenServer bootstraps a DB query at app startup
-# Why: that query runs outside the Ecto test sandbox, poisoning the connection pool
-# Outcome: disabling projections prevents sandbox leaks across async tests
+# Trigger: every projection GenServer runs a bootstrap query at app startup
+# Why: those queries run outside the Ecto test sandbox, poisoning the connection pool
+# Outcome: disabling projections prevents sandbox leaks across async tests; projection
+#          tests start the one they exercise themselves via start_supervised!/2
 config :klass_hero, start_projections: false
 
 # Print only warnings and errors during test

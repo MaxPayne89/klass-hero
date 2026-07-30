@@ -33,9 +33,9 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
 
   import Ecto.Query
 
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHero.Provider
   alias KlassHero.Repo
   alias KlassHero.Shared.Projection
 
@@ -96,13 +96,14 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       0
     else
       now = DateTime.utc_now() |> DateTime.truncate(:second)
+      verified_ids = verified_provider_ids()
 
       entries =
         Enum.map(programs, fn program ->
           program
           |> Map.take(@shared_fields)
           |> Map.put(:id, program.id)
-          |> Map.put(:provider_verified, lookup_provider_verified(program.provider_id))
+          |> Map.put(:provider_verified, MapSet.member?(verified_ids, program.provider_id))
           |> Map.put(:inserted_at, program.inserted_at || now)
           |> Map.put(:updated_at, program.updated_at || now)
         end)
@@ -202,17 +203,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     )
   end
 
-  # VerifiedProviders starts before ProgramListings in the supervision tree, so it should always be available.
-  # Catch :exit in case it isn't (e.g. test env) and default to unverified.
-  defp lookup_provider_verified(provider_id) do
-    VerifiedProviders.verified?(provider_id)
-  catch
-    :exit, reason ->
-      Logger.warning("ProgramListings: VerifiedProviders unavailable, defaulting to unverified",
-        provider_id: provider_id,
-        reason: inspect(reason)
-      )
-
-      false
+  defp verified_provider_ids do
+    {:ok, ids} = Provider.list_verified_provider_ids()
+    MapSet.new(ids)
   end
 end

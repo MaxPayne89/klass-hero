@@ -59,13 +59,34 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing_1.age_range == "6-10 years"
       assert listing_1.price == Decimal.new("150.00")
       assert listing_1.pricing_period == "per session"
-      # Bootstrap defaults provider_verified to false.
-      assert listing_1.provider_verified == false
 
       listing_2 = Repo.get(ProgramListing, program_2.id)
       assert listing_2 != nil
       assert listing_2.title == "Art Class"
       assert listing_2.category == "education"
+    end
+
+    # `start_projections: false` means no projection runs during the suite, so while bootstrap asked a
+    # sibling GenServer for verification state it silently caught the :exit and marked every provider
+    # unverified — in tests always, and in any environment where that GenServer was down.
+    test "carries each program's provider verification state" do
+      verified_provider = insert(:provider_profile_schema, verified: true)
+      unverified_provider = insert(:provider_profile_schema)
+
+      verified_program = insert(:program_schema, title: "Verified", provider_id: verified_provider.id)
+      unverified_program = insert(:program_schema, title: "Unverified", provider_id: unverified_provider.id)
+
+      stop_supervised!(ProgramListings)
+
+      pid =
+        start_supervised!({ProgramListings, name: :"verification_test_#{System.unique_integer([:positive])}"},
+          id: :verification_bootstrap
+        )
+
+      :sys.get_state(pid)
+
+      assert Repo.get(ProgramListing, verified_program.id).provider_verified == true
+      assert Repo.get(ProgramListing, unverified_program.id).provider_verified == false
     end
   end
 

@@ -3,9 +3,9 @@ defmodule KlassHero.ProjectionSupervisor do
   Supervises all CQRS projection GenServers under an isolated subtree.
 
   Uses `:one_for_one` strategy — each projection crashes and restarts
-  independently. Projections that depend on others during bootstrap
-  (e.g., ProgramListings → VerifiedProviders) handle unavailability
-  via their own retry logic.
+  independently. No projection depends on another, so start order carries no
+  meaning; cross-context data is read through the owning context's facade at
+  bootstrap rather than from a sibling projection.
   """
 
   use Supervisor
@@ -13,7 +13,6 @@ defmodule KlassHero.ProjectionSupervisor do
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
-  alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
@@ -25,7 +24,6 @@ defmodule KlassHero.ProjectionSupervisor do
   @impl true
   def init(_init_arg) do
     children = [
-      VerifiedProviders,
       ProgramListings,
       EnrolledChildren,
       ConversationSummaries,

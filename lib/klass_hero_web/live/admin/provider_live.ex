@@ -115,8 +115,8 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
     ]
   end
 
-  # admin_changeset bypasses domain use cases; publish events so projections
-  # (VerifiedProviders, ProgramListings) stay in sync.
+  # admin_changeset bypasses domain use cases; publish events so the
+  # ProgramListings projection stays in sync.
   KlassHeroWeb.BackpexCompat.override :on_item_updated, 2 do
     @impl Backpex.LiveResource
     def on_item_updated(socket, item) do
