@@ -8,8 +8,8 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
   ## Architecture
 
   ```
-  PubSub "integration:participation:session_created"
-    → EventSubscriber (shared GenServer)
+  staged "integration:participation:session_created"
+    → EventDeliveryWorker (Oban, retries on failure)
     → [THIS HANDLER] handle_event/1
     → SeedSessionRoster.execute/2
   ```

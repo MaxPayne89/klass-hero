@@ -8,7 +8,6 @@ defmodule KlassHero.Application do
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcome
-  alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents
   alias KlassHero.Shared.DomainEventBus
 
   @impl true
@@ -57,8 +56,7 @@ defmodule KlassHero.Application do
            {:verification_document_approved, {AdvanceVettingStepOnDocumentReview, :handle}},
            {:verification_document_rejected, {AdvanceVettingStepOnDocumentReview, :handle}},
            {:identity_verification_passed, {AdvanceVettingStepOnIdentityOutcome, :handle}},
-           {:identity_verification_failed, {AdvanceVettingStepOnIdentityOutcome, :handle}},
-           {:staff_unassigned_from_program, {PromoteIntegrationEvents, :handle}}
+           {:identity_verification_failed, {AdvanceVettingStepOnIdentityOutcome, :handle}}
          ]},
         id: :provider_domain_event_bus
       ),

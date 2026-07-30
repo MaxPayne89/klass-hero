@@ -279,7 +279,9 @@ defmodule KlassHero.Family do
 
     Enum.reduce_while(children, {:ok, %{children_anonymized: 0, consents_deleted: 0}}, fn child, {:ok, acc} ->
       case anonymize_child_with_event(child, anonymized_attrs) do
-        {:ok, {consent_count, _events}} ->
+        {:ok, {consent_count, events}} ->
+          dispatch_all(events)
+
           {:cont,
            {:ok,
             %{

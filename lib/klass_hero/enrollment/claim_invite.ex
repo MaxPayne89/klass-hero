@@ -107,15 +107,18 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   end
 
   # This one has no local write to join a transaction: the invite is marked registered
-  # by MarkInviteRegistered, a priority-5 handler the dispatch below triggers. So the
-  # order is dispatch first (that handler runs and its failure still gates the result),
-  # then stage for cross-context delivery — which is the order the bus produced before,
-  # with Promote registered at priority 10 behind it. Collapsing the two into one
-  # transaction means inlining that handler, which belongs with deleting the bus.
+  # by MarkInviteRegistered, a priority-5 handler the dispatch below triggers, and
+  # Promote sat behind it at priority 10. So the order is dispatch first, then stage.
+  # Collapsing the two into one transaction means inlining that handler, which belongs
+  # with deleting the bus.
+  #
+  # Staging is deliberately not gated on the dispatch result: the bus ran every
+  # registered handler regardless of what an earlier one returned, so gating here
+  # would newly let a MarkInviteRegistered failure suppress the whole cross-context
+  # onboarding chain. The dispatch result still decides what the caller gets back.
   defp stage_and_dispatch(event, result) do
-    with {:ok, result} <- EventDispatchHelper.dispatch_or_ok(event, KlassHero.Enrollment, result) do
-      Outbox.stage(KlassHero.Enrollment, event)
-      {:ok, result}
-    end
+    dispatch_result = EventDispatchHelper.dispatch_or_ok(event, KlassHero.Enrollment, result)
+    Outbox.stage(KlassHero.Enrollment, event)
+    dispatch_result
   end
 end

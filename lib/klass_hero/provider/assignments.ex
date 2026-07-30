@@ -313,12 +313,11 @@ defmodule KlassHero.Provider.Assignments do
     end
   end
 
-  # Dispatches the domain event on the Provider bus. PromoteIntegrationEvents
-  # then promotes it to a :critical integration event delivered belt-and-suspenders
-  # (PubSub + durable Oban via the critical_event_handlers registry for
-  # integration:provider:staff_(un)assigned_*; the event-id idempotency gate
-  # prevents double execution). The bus is keyed on the Provider context module,
-  # so dispatch explicitly through `Provider`, not this sub-module.
+  # The assignment and the event announcing it commit together; the outbox job then
+  # delivers to everything routed from integration:provider:staff_(un)assigned_*,
+  # with the event-id idempotency gate preventing double execution on retry. The bus
+  # is keyed on the Provider context module, so `dispatch_all/1` below dispatches
+  # through `Provider`, not this sub-module.
   defp assign_with_event(assignment_attrs, staff_member) do
     Outbox.transact(@context, fn ->
       with {:ok, assignment} <- insert_program_staff_assignment(assignment_attrs) do

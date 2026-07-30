@@ -57,7 +57,7 @@ defmodule KlassHero.Messaging.SendMessage do
          :ok <- Shared.verify_participant(conversation_id, sender_id),
          :ok <- verify_broadcast_send_permission(conversation_id, sender_id, conversation),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),
-         {:ok, message_with_attachments} <-
+         {:ok, {message_with_attachments, events}} <-
            persist_message_and_attachments(
              conversation_id,
              sender_id,
@@ -66,7 +66,8 @@ defmodule KlassHero.Messaging.SendMessage do
              uploaded_files
            ) do
       update_sender_read_status(conversation_id, sender_id)
-      publish_event(message_with_attachments)
+      # The same event that was staged, not a second build of it.
+      Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 
       Logger.info("Message sent",
         message_id: message_with_attachments.id,
@@ -173,8 +174,8 @@ defmodule KlassHero.Messaging.SendMessage do
       end)
 
     case result do
-      {:ok, {message_with_attachments, _events}} ->
-        {:ok, message_with_attachments}
+      {:ok, {_message, _events}} = ok ->
+        ok
 
       {:error, reason} ->
         cleanup_uploaded_files(uploaded_files)
@@ -291,11 +292,6 @@ defmodule KlassHero.Messaging.SendMessage do
 
         :ok
     end
-  end
-
-  defp publish_event(message) do
-    EventDispatchHelper.dispatch(message_sent_event(message), @context)
-    :ok
   end
 
   defp message_sent_event(message) do

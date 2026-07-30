@@ -14,7 +14,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler do
   ## Error Handling
 
   Operations use retry logic with backoff for transient failures.
-  Errors are returned as tuples for the EventSubscriber to log without blocking event processing.
+  Errors are returned as tuples so the delivery job can retry this handler without
+  re-running the ones that already succeeded.
   """
 
   @behaviour KlassHero.Shared.ForHandlingEvents

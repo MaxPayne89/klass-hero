@@ -15,7 +15,6 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
   alias KlassHero.Family
   alias KlassHero.Family.Child
   alias KlassHero.Family.Consent
-  alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "anonymize_data_for_user/1" do
     setup do
