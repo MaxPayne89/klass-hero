@@ -97,16 +97,7 @@ defmodule KlassHero.Application do
         id: :provider_domain_event_bus
       ),
       Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.ProgramCatalog,
-         handlers: [
-           {:program_created,
-            {KlassHero.ProgramCatalog.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10},
-           {:program_updated,
-            {KlassHero.ProgramCatalog.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10}
-         ]},
+        {DomainEventBus, context: KlassHero.ProgramCatalog, handlers: []},
         id: :program_catalog_domain_event_bus
       ),
       Supervisor.child_spec(
