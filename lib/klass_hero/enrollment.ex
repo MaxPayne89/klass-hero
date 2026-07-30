@@ -72,7 +72,7 @@ defmodule KlassHero.Enrollment do
   defp parent_user_id(nil), do: nil
 
   defp parent_user_id(parent_id) do
-    case Family.get_parents_by_ids([parent_id]) do
+    case ParentInfoACL.get_parents_by_ids([parent_id]) do
       [%{identity_id: identity_id}] -> identity_id
       [] -> nil
     end
