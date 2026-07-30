@@ -41,6 +41,8 @@ jobs:
   deps:
     name: Dependencies
     runs-on: ubuntu-latest
+    # See the note above ci.yml's jobs: the 360-minute default makes a hang expensive.
+    timeout-minutes: 15
 
     steps:
       # actions/checkout@v7.0.1

@@ -39,9 +39,13 @@ jobs:
   # (setup-beam + deps.get, ~15s) and paying for it twice bought nothing. They stay
   # independent of each other: the audit step is `if: always()` so a Sobelow finding
   # can't mask a dependency advisory. Which one failed is visible per-step.
+  # Both jobs cap `timeout-minutes` against the 360-minute default — see the note above
+  # ci.yml's jobs. Both run in well under a minute; these fetch remote advisory feeds, so
+  # the plausible hang is a request that never returns.
   audit:
     name: Sobelow & Dependency Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # actions/checkout@v7.0.1
       - name: Checkout code
@@ -102,6 +106,7 @@ jobs:
   hex-audit:
     name: hex.pm Advisory Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # actions/checkout@v7.0.1
       - name: Checkout code
