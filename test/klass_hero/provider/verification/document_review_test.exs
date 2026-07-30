@@ -13,6 +13,32 @@ defmodule KlassHero.Provider.Verification.DocumentReviewTest do
     %{provider: provider, admin: admin, document: doc}
   end
 
+  # The refresh nudge is sent after the review commits, never before and never without
+  # one. `VerificationLive` refetches when it arrives, so a nudge for a review that did
+  # not land would show the reviewer stale state and imply their click did nothing.
+  describe "refresh broadcast" do
+    setup %{provider: provider} do
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, "provider:#{provider.id}:verification_updated")
+      :ok
+    end
+
+    test "a committed review nudges the provider's open page", %{admin: admin, document: doc} do
+      assert {:ok, _approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
+
+      assert_receive :verification_updated
+    end
+
+    test "a rejected-outright review nudges nobody", %{admin: admin, document: doc} do
+      assert {:ok, _approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
+      assert_receive :verification_updated
+
+      # Already approved — the review never happens, so nothing changed to announce.
+      assert {:error, _} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
+
+      refute_receive :verification_updated, 100
+    end
+  end
+
   describe "ApproveVerificationDocument.execute/1" do
     test "approves pending document", %{admin: admin, document: doc} do
       assert {:ok, approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
