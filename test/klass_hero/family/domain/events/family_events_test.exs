@@ -4,39 +4,40 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Family.Domain.Events.FamilyEvents
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  # Every family domain-event factory shares one contract: build a domain
-  # event with stable identity fields, let the base payload's id win over any
-  # caller-supplied id (while preserving extras), and raise on a blank id.
-  # The table drives that shape; rows vary only by the id field name, the
-  # aggregate_type, and (for child_data_anonymized) default criticality.
+  # Every family event factory shares one contract: build a :family event with
+  # stable identity fields, let the id argument win over any caller-supplied
+  # one (while preserving extras), and raise on a blank id. The table drives
+  # that shape; rows vary only by the id field name, the entity_type, and
+  # (for child_data_anonymized) default criticality.
   @factories [
-    %{fun: :child_created, id: :child_id, aggregate_type: :child, critical: false},
-    %{fun: :child_updated, id: :child_id, aggregate_type: :child, critical: false},
-    %{fun: :child_data_anonymized, id: :child_id, aggregate_type: :child, critical: true},
-    %{fun: :invite_family_ready, id: :invite_id, aggregate_type: :invite, critical: false}
+    %{fun: :child_created, id: :child_id, entity_type: :child, critical: false},
+    %{fun: :child_updated, id: :child_id, entity_type: :child, critical: false},
+    %{fun: :child_data_anonymized, id: :child_id, entity_type: :child, critical: true},
+    %{fun: :invite_family_ready, id: :invite_id, entity_type: :invite, critical: false}
   ]
 
-  for %{fun: fun, id: id, aggregate_type: aggregate_type, critical: critical} <- @factories do
+  for %{fun: fun, id: id, entity_type: entity_type, critical: critical} <- @factories do
     describe "#{fun}/3" do
       @fun fun
       @id id
-      @aggregate_type aggregate_type
+      @entity_type entity_type
       @critical critical
 
-      test "builds a domain event with the right type, aggregate, and criticality" do
+      test "builds an event with the right type, entity, and criticality" do
         event = apply(FamilyEvents, @fun, ["id-1"])
 
-        assert %DomainEvent{} = event
+        assert %IntegrationEvent{} = event
         assert event.event_type == @fun
-        assert event.aggregate_id == "id-1"
-        assert event.aggregate_type == @aggregate_type
+        assert event.source_context == :family
+        assert event.entity_id == "id-1"
+        assert event.entity_type == @entity_type
         assert Map.get(event.payload, @id) == "id-1"
-        assert DomainEvent.critical?(event) == @critical
+        assert IntegrationEvent.critical?(event) == @critical
       end
 
-      test "base payload id wins over caller-supplied and preserves extras" do
+      test "the id argument wins over a caller-supplied one and preserves extras" do
         payload = %{@id => "overridden", extra: "data"}
         event = apply(FamilyEvents, @fun, ["real-id", payload])
 

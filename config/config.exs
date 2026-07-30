@@ -13,7 +13,6 @@ alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
 alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: EnrollmentPromoter
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
-alias KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: FamilyPromoter
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
@@ -294,7 +293,6 @@ config :klass_hero, :event_consumers, %{
 # than implied by a bus registration.
 config :klass_hero, :event_promoters, %{
   KlassHero.Enrollment => EnrollmentPromoter,
-  KlassHero.Family => FamilyPromoter,
   KlassHero.Messaging => MessagingPromoter,
   KlassHero.Participation => ParticipationPromoter,
   KlassHero.Provider => ProviderPromoter

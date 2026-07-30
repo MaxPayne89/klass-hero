@@ -14,16 +14,15 @@ defmodule KlassHero.Shared.OutboxTest do
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Outbox
+  alias KlassHero.StubPromoter
 
   setup do
     TestOutbox.setup()
     :ok
   end
 
-  # Family still promotes; ProgramCatalog's producers build the single struct
-  # directly now, so it can no longer demonstrate promotion.
-  defp domain_event(type, child_id) do
-    DomainEvent.new(type, child_id, :child, %{child_id: child_id})
+  defp domain_event(type, id) do
+    DomainEvent.new(type, id, :program, %{})
   end
 
   defp event(type, entity_id, payload \\ %{}) do
@@ -36,11 +35,20 @@ defmodule KlassHero.Shared.OutboxTest do
 
   defp worker_name, do: "KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker"
 
+  # Registered rather than borrowed from a real context: the outbox's contract is
+  # "consult this context's promoter", and these tests should not break each time
+  # a context stops promoting.
   describe "promotion" do
-    test "maps a domain event to its context's integration event" do
-      Outbox.stage(KlassHero.Family, domain_event(:child_created, "child-1"))
+    setup do
+      original = Application.get_env(:klass_hero, :event_promoters, %{})
+      Application.put_env(:klass_hero, :event_promoters, Map.put(original, KlassHero.ProgramCatalog, StubPromoter))
+      on_exit(fn -> Application.put_env(:klass_hero, :event_promoters, original) end)
+    end
 
-      assert [%IntegrationEvent{event_type: :child_created, source_context: :family, entity_id: "child-1"}] =
+    test "maps a domain event to its context's integration event" do
+      Outbox.stage(KlassHero.ProgramCatalog, domain_event(:program_created, "prog-1"))
+
+      assert [%IntegrationEvent{event_type: :program_created, source_context: :program_catalog, entity_id: "prog-1"}] =
                TestOutbox.staged()
     end
 
@@ -55,13 +63,13 @@ defmodule KlassHero.Shared.OutboxTest do
     # A domain event with no promoter clause was never promoted under the bus either —
     # it simply had no registration. Staging nothing keeps that exact behaviour.
     test "stages nothing for an event type the context does not promote" do
-      Outbox.stage(KlassHero.Family, domain_event(:child_archived, "child-1"))
+      Outbox.stage(KlassHero.ProgramCatalog, domain_event(:program_archived, "prog-1"))
 
       assert [] = TestOutbox.staged()
     end
 
     test "stages nothing for a context with no promoter at all" do
-      Outbox.stage(KlassHero.Admin, domain_event(:child_created, "child-1"))
+      Outbox.stage(KlassHero.Admin, domain_event(:program_created, "prog-1"))
 
       assert [] = TestOutbox.staged()
     end
