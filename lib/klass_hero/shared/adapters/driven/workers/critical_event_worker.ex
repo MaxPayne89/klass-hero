@@ -12,9 +12,12 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorker do
     delivery (belt-and-suspenders, idempotency gate prevents double execution)
   """
 
+  # Lifeline rescues an orphan only while `attempt < max_attempts` and discards it at the ceiling, so
+  # this bound doubles as the window in which an orphaned event stays recoverable. 10 spans roughly
+  # 4.5 hours under Oban's default backoff.
   use KlassHero.Shared.Tracing.TracedWorker,
     queue: :critical_events,
-    max_attempts: 3
+    max_attempts: 10
 
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.CriticalEventDispatcher

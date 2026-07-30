@@ -89,7 +89,14 @@ config :klass_hero, KlassHeroWeb.Gettext,
 config :klass_hero, Oban,
   repo: KlassHero.Repo,
   plugins: [
-    Oban.Plugins.Pruner,
+    # max_age is in seconds and defaults to 60, which deletes a permanently-failed job before anyone
+    # can open /oban to see what happened.
+    {Oban.Plugins.Pruner, max_age: 604_800},
+    # Rescues jobs left `executing` by a machine that went away — routine under
+    # auto_stop_machines = "suspend". Rescuing is time-based with no liveness check, so the 60-minute
+    # default is really a duplicate-execution budget: no job here runs anywhere near that long. Do not
+    # lower it without bounding worker runtime via `timeout/1`.
+    Oban.Plugins.Lifeline,
     {Oban.Plugins.Cron,
      crontab: [
        {"0 3 * * *", MessageCleanupWorker},

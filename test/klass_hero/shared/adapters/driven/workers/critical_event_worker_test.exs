@@ -69,6 +69,15 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorkerTest do
     end
   end
 
+  describe "retry envelope" do
+    # Lifeline only rescues an orphan while `attempt < max_attempts`; at or past the ceiling it
+    # discards instead. So this number is not just "how many retries" — it is how long a job orphaned
+    # by a vanishing machine remains rescuable at all.
+    test "retries long enough for Lifeline to rescue a late orphan" do
+      assert %{max_attempts: 10} = CriticalEventWorker.new(%{}).changes
+    end
+  end
+
   describe "perform/1 retry logging" do
     test "logs warning on non-final failure" do
       event = DomainEvent.new(:test_warn, "agg-1", :test_aggregate, %{})
