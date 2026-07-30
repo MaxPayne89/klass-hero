@@ -12,7 +12,8 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
-  alias KlassHero.Shared.{EventDispatchHelper, IntegrationEventPublishing}
+  alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -37,20 +38,22 @@ defmodule KlassHero.Accounts do
   end
 
   defp register(attrs, changeset_fn) when is_map(attrs) do
-    %User{}
-    |> changeset_fn.(attrs)
-    |> Repo.insert()
+    Outbox.transact(__MODULE__, fn ->
+      with {:ok, user} <- %User{} |> changeset_fn.(attrs) |> Repo.insert() do
+        {:ok, user, [UserEvents.user_registered(user, %{registration_source: "web"})]}
+      end
+    end)
     |> case do
-      {:ok, user} ->
-        UserEvents.user_registered(user, %{registration_source: "web"})
-        |> EventDispatchHelper.dispatch(__MODULE__)
-
+      {:ok, {user, events}} ->
+        dispatch_all(events)
         {:ok, user}
 
       {:error, changeset} ->
         {:error, changeset}
     end
   end
+
+  defp dispatch_all(events), do: Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
 
   @doc """
   Links an existing, authenticated user to a staff invitation (#967).
@@ -215,10 +218,7 @@ defmodule KlassHero.Accounts do
       staff_member_id: staff_member_id,
       provider_id: provider_id
     })
-    |> IntegrationEventPublishing.publish_critical("staff_user_registered",
-      user_id: user_id,
-      staff_member_id: staff_member_id
-    )
+    |> then(&Outbox.stage(__MODULE__, &1))
   end
 
   @doc """
@@ -388,14 +388,16 @@ defmodule KlassHero.Accounts do
 
   # First login for unconfirmed user: confirm email, expire all tokens, dispatch event
   defp confirm_magic_link_login(user) do
-    user
-    |> User.confirm_changeset()
-    |> update_user_and_delete_all_tokens()
+    Outbox.transact(__MODULE__, fn ->
+      with {:ok, {confirmed_user, tokens}} <-
+             user |> User.confirm_changeset() |> update_user_and_delete_all_tokens() do
+        event = UserEvents.user_confirmed(confirmed_user, %{confirmation_method: "magic_link"})
+        {:ok, {confirmed_user, tokens}, [event]}
+      end
+    end)
     |> case do
-      {:ok, {confirmed_user, tokens}} ->
-        UserEvents.user_confirmed(confirmed_user, %{confirmation_method: "magic_link"})
-        |> EventDispatchHelper.dispatch(__MODULE__)
-
+      {:ok, {{confirmed_user, tokens}, events}} ->
+        dispatch_all(events)
         {:ok, {confirmed_user, tokens}}
 
       {:error, reason} ->
@@ -468,11 +470,15 @@ defmodule KlassHero.Accounts do
     context_span entity: "user" do
       previous_email = user.email
 
-      case anonymize(user) do
-        {:ok, anonymized_user} ->
-          UserEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
-          |> EventDispatchHelper.dispatch(__MODULE__)
-
+      Outbox.transact(__MODULE__, fn ->
+        with {:ok, anonymized_user} <- anonymize(user) do
+          event = UserEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
+          {:ok, anonymized_user, [event]}
+        end
+      end)
+      |> case do
+        {:ok, {anonymized_user, events}} ->
+          dispatch_all(events)
           {:ok, anonymized_user}
 
         {:error, reason} ->

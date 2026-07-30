@@ -3,7 +3,6 @@ defmodule KlassHero.Application do
 
   use Application
 
-  alias KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents
   alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInviteEmails
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteRegistered
@@ -57,13 +56,7 @@ defmodule KlassHero.Application do
   defp domain_event_buses do
     [
       Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.Accounts,
-         handlers: [
-           {:user_registered, {PromoteIntegrationEvents, :handle}, priority: 10},
-           {:user_confirmed, {PromoteIntegrationEvents, :handle}, priority: 10},
-           {:user_anonymized, {PromoteIntegrationEvents, :handle}, priority: 10}
-         ]},
+        {DomainEventBus, context: KlassHero.Accounts, handlers: []},
         id: :accounts_domain_event_bus
       ),
       Supervisor.child_spec(

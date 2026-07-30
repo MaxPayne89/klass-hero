@@ -16,10 +16,12 @@ defmodule KlassHero.Participation.OutboxStagingTest do
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 
   setup do
-    TestOutbox.setup()
-
     provider = insert(:provider_profile_schema)
     program = insert(:program_schema, provider_id: provider.id)
+
+    # After the fixtures: creating a provider registers a user, which stages
+    # user_registered now that Accounts is on the outbox too.
+    TestOutbox.setup()
 
     {:ok, program: program}
   end
