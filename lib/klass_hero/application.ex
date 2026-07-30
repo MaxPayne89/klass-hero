@@ -4,7 +4,6 @@ defmodule KlassHero.Application do
   use Application
 
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInviteEmails
-  alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteRegistered
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcome
   alias KlassHero.Shared.DomainEventBus
@@ -58,8 +57,7 @@ defmodule KlassHero.Application do
          context: KlassHero.Enrollment,
          handlers: [
            {:bulk_invites_imported, {EnqueueInviteEmails, :handle}},
-           {:invite_resend_requested, {EnqueueInviteEmails, :handle}},
-           {:invite_claimed, {MarkInviteRegistered, :handle}}
+           {:invite_resend_requested, {EnqueueInviteEmails, :handle}}
          ]},
         id: :enrollment_domain_event_bus
       )

@@ -2,9 +2,9 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   @moduledoc """
   Use case for claiming a bulk enrollment invite by token.
 
-  Validates the token, resolves or creates the user account, and publishes
-  the `:invite_claimed` event to trigger the async saga (child creation,
-  enrollment).
+  Validates the token, resolves or creates the user account, then marks the invite
+  registered and stages `:invite_claimed` in one transaction — the event drives the
+  rest of the saga (child creation, enrollment) through the outbox.
   """
 
   alias KlassHero.Accounts
@@ -12,7 +12,6 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -103,22 +102,28 @@ defmodule KlassHero.Enrollment.ClaimInvite do
       consent_photo_marketing: invite.consent_photo_marketing,
       consent_photo_social_media: invite.consent_photo_social_media
     })
-    |> stage_and_dispatch(%ClaimResult{user_type: user_type, user: user, invite: invite})
+    |> register_and_stage(invite, %ClaimResult{user_type: user_type, user: user, invite: invite})
   end
 
-  # This one has no local write to join a transaction: the invite is marked registered
-  # by MarkInviteRegistered, a priority-5 handler the dispatch below triggers, and
-  # Promote sat behind it at priority 10. So the order is dispatch first, then stage.
-  # Collapsing the two into one transaction means inlining that handler, which belongs
-  # with deleting the bus.
+  # Marking the invite registered and announcing the claim are one fact. They used to
+  # be two: a `MarkInviteRegistered` handler ran the transition during dispatch, and
+  # staging followed it ungated, so a staging failure left a registered invite no
+  # consumer ever heard about.
   #
-  # Staging is deliberately not gated on the dispatch result: the bus ran every
-  # registered handler regardless of what an earlier one returned, so gating here
-  # would newly let a MarkInviteRegistered failure suppress the whole cross-context
-  # onboarding chain. The dispatch result still decides what the caller gets back.
-  defp stage_and_dispatch(event, result) do
-    dispatch_result = EventDispatchHelper.dispatch_or_ok(event, KlassHero.Enrollment, result)
-    Outbox.stage(KlassHero.Enrollment, event)
-    dispatch_result
+  # `ensure_claimable/1` has already proven the invite is :invite_sent, so the
+  # handler's idempotent status branches had nothing left to guard.
+  defp register_and_stage(event, invite, result) do
+    Outbox.transact(KlassHero.Enrollment, fn ->
+      with {:ok, _registered} <- mark_registered(invite) do
+        {:ok, result, [event]}
+      end
+    end)
+  end
+
+  defp mark_registered(invite) do
+    Enrollment.transition_invite(invite, %{
+      status: :registered,
+      registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    })
   end
 end
