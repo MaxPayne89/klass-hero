@@ -38,16 +38,10 @@ defmodule KlassHero.Application do
     domain_event_buses() ++ projections()
   end
 
+  # Only the two contexts that still register a handler get a bus. The other five
+  # ran with `handlers: []` — every dispatch to them looked up an empty list.
   defp domain_event_buses do
     [
-      Supervisor.child_spec(
-        {DomainEventBus, context: KlassHero.Accounts, handlers: []},
-        id: :accounts_domain_event_bus
-      ),
-      Supervisor.child_spec(
-        {DomainEventBus, context: KlassHero.Family, handlers: []},
-        id: :family_domain_event_bus
-      ),
       Supervisor.child_spec(
         {DomainEventBus,
          context: KlassHero.Provider,
@@ -60,26 +54,14 @@ defmodule KlassHero.Application do
         id: :provider_domain_event_bus
       ),
       Supervisor.child_spec(
-        {DomainEventBus, context: KlassHero.ProgramCatalog, handlers: []},
-        id: :program_catalog_domain_event_bus
-      ),
-      Supervisor.child_spec(
         {DomainEventBus,
          context: KlassHero.Enrollment,
          handlers: [
            {:bulk_invites_imported, {EnqueueInviteEmails, :handle}},
            {:invite_resend_requested, {EnqueueInviteEmails, :handle}},
-           {:invite_claimed, {MarkInviteRegistered, :handle}, priority: 5}
+           {:invite_claimed, {MarkInviteRegistered, :handle}}
          ]},
         id: :enrollment_domain_event_bus
-      ),
-      Supervisor.child_spec(
-        {DomainEventBus, context: KlassHero.Messaging, handlers: []},
-        id: :messaging_domain_event_bus
-      ),
-      Supervisor.child_spec(
-        {DomainEventBus, context: KlassHero.Participation, handlers: []},
-        id: :participation_domain_event_bus
       )
     ]
   end

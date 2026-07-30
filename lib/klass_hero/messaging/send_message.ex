@@ -57,7 +57,7 @@ defmodule KlassHero.Messaging.SendMessage do
          :ok <- Shared.verify_participant(conversation_id, sender_id),
          :ok <- verify_broadcast_send_permission(conversation_id, sender_id, conversation),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),
-         {:ok, {message_with_attachments, _events}} <-
+         {:ok, message_with_attachments} <-
            persist_message_and_attachments(
              conversation_id,
              sender_id,
@@ -173,7 +173,7 @@ defmodule KlassHero.Messaging.SendMessage do
       end)
 
     case result do
-      {:ok, {_message, _events}} = ok ->
+      {:ok, _message} = ok ->
         ok
 
       {:error, reason} ->

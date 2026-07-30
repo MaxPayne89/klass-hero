@@ -157,7 +157,7 @@ defmodule KlassHero.Provider.Staff do
            {:ok, _transitioned} <- StaffMember.transition_invitation(staff, :pending),
            {:ok, provider} <- Profiles.get_provider_profile(provider_id),
            {raw_token, token_hash} = StaffMember.generate_invitation_token(),
-           {:ok, {persisted, _events}} <- reissue_invitation(staff, provider, token_hash, raw_token) do
+           {:ok, persisted} <- reissue_invitation(staff, provider, token_hash, raw_token) do
         {:ok, persisted, raw_token}
       end
     end
@@ -359,7 +359,7 @@ defmodule KlassHero.Provider.Staff do
 
     with {:ok, _validated} <- StaffMember.new(attrs_with_invitation),
          {:ok, provider} <- Profiles.get_provider_profile(attrs.provider_id),
-         {:ok, {persisted, _events}} <- insert_invited_staff(attrs_with_invitation, provider, raw_token) do
+         {:ok, persisted} <- insert_invited_staff(attrs_with_invitation, provider, raw_token) do
       {:ok, persisted, raw_token}
     else
       result -> CommandResult.wrap_validation_errors(result)

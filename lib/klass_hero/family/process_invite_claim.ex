@@ -46,7 +46,7 @@ defmodule KlassHero.Family.ProcessInviteClaim do
       end)
 
     case result do
-      {:ok, {family, _events}} ->
+      {:ok, family} ->
         {:ok, family}
 
       {:error, reason} ->

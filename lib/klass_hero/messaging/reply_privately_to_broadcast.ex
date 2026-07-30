@@ -13,7 +13,6 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -113,12 +112,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
     |> handle_commit()
   end
 
-  # Dispatch post-commit so the ConversationSummaries projection (separate DB
-  # connection) can read the committed row when it processes these events.
-  defp handle_commit({:ok, {conversation, events}}) do
-    Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
-    {:ok, conversation}
-  end
+  defp handle_commit({:ok, conversation}), do: {:ok, conversation}
 
   defp handle_commit({:error, reason}), do: {:error, reason}
 

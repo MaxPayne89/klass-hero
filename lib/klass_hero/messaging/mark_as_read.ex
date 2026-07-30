@@ -10,7 +10,6 @@ defmodule KlassHero.Messaging.MarkAsRead do
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Participant
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -43,9 +42,7 @@ defmodule KlassHero.Messaging.MarkAsRead do
       end)
 
     case result do
-      {:ok, {participant, events}} ->
-        Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
-
+      {:ok, participant} ->
         Logger.debug("Marked as read",
           conversation_id: conversation_id,
           user_id: user_id,

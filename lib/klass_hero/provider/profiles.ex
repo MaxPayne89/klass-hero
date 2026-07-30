@@ -108,9 +108,8 @@ defmodule KlassHero.Provider.Profiles do
   def verify_provider(provider_id, admin_id) do
     context_span entity: "provider_profile" do
       with {:ok, profile} <- get_provider_profile(provider_id),
-           {:ok, verified} <- ProviderProfile.verify(profile, admin_id),
-           {:ok, {persisted, _events}} <- persist_with_verification_event(profile, verified, admin_id, :verified) do
-        {:ok, persisted}
+           {:ok, verified} <- ProviderProfile.verify(profile, admin_id) do
+        persist_with_verification_event(profile, verified, admin_id, :verified)
       end
     end
   end
@@ -119,9 +118,8 @@ defmodule KlassHero.Provider.Profiles do
   def unverify_provider(provider_id, admin_id) do
     context_span entity: "provider_profile" do
       with {:ok, profile} <- get_provider_profile(provider_id),
-           {:ok, unverified} <- ProviderProfile.unverify(profile),
-           {:ok, {persisted, _events}} <- persist_with_verification_event(profile, unverified, admin_id, :unverified) do
-        {:ok, persisted}
+           {:ok, unverified} <- ProviderProfile.unverify(profile) do
+        persist_with_verification_event(profile, unverified, admin_id, :unverified)
       end
     end
   end

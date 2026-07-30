@@ -53,27 +53,42 @@ defmodule KlassHero.Shared.Outbox do
   the commit, so there is no moment where the write is durable and the events are
   not.
 
-  The events come back out with the result because some of them still have
-  same-context handlers on the `DomainEventBus` — the seven that do business
-  work — which stay synchronous and post-commit.
+  The events do not come back out. Staging is the only thing that reads them, and
+  it happens in here. `transact_with_events/2` is for the one caller that needs
+  them afterwards.
 
       def create_session(params) do
-        with {:ok, session} <- ProgramSession.new(attrs),
-             {:ok, {persisted, events}} <-
-               Outbox.transact(@context, fn ->
-                 with {:ok, persisted} <- insert_session(session) do
-                   {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
-                 end
-               end) do
-          Enum.each(events, &DomainEventBus.dispatch(@context, &1))
-          {:ok, persisted}
+        with {:ok, session} <- ProgramSession.new(attrs) do
+          Outbox.transact(@context, fn ->
+            with {:ok, persisted} <- insert_session(session) do
+              {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
+            end
+          end)
         end
       end
   """
   @spec transact(module(), (-> {:ok, result, [Event.t()]} | {:error, term()})) ::
+          {:ok, result} | {:error, term()}
+        when result: term()
+  def transact(context, fun) do
+    with {:ok, {result, _events}} <- transact_with_events(context, fun), do: {:ok, result}
+  end
+
+  @doc """
+  Like `transact/2`, but hands the staged events back alongside the result.
+
+  For a producer that must *announce* the change after the commit — today only
+  Participation, whose `Notifications` module turns each event into the tagged
+  tuple its LiveViews subscribe to. The announcement has to happen out here:
+  inside the transaction it would describe a change that has not committed.
+
+  Every other producer uses `transact/2`. The events have one reader, the outbox,
+  and it reads them in here.
+  """
+  @spec transact_with_events(module(), (-> {:ok, result, [Event.t()]} | {:error, term()})) ::
           {:ok, {result, [Event.t()]}} | {:error, term()}
         when result: term()
-  def transact(context, fun) when is_atom(context) and is_function(fun, 0) do
+  def transact_with_events(context, fun) when is_atom(context) and is_function(fun, 0) do
     # An `Ecto.Multi` rather than `Repo.transaction(fn -> ... Repo.rollback(reason) end)`
     # because producers run inside outer transactions: a critical event handler executes
     # within `ProcessedEventRepository.execute_atomically`'s Multi, and a nested

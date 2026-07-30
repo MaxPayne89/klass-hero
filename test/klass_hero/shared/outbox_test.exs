@@ -77,8 +77,8 @@ defmodule KlassHero.Shared.OutboxTest do
   end
 
   describe "transact/2" do
-    test "stages the events the callback returned and hands them back with the result" do
-      assert {:ok, {:the_entity, [_event]}} =
+    test "stages the events the callback returned and returns the result alone" do
+      assert {:ok, :the_entity} =
                Outbox.transact(KlassHero.ProgramCatalog, fn ->
                  {:ok, :the_entity, [event(:program_created, "prog-1", %{title: "Chess"})]}
                end)
@@ -88,6 +88,22 @@ defmodule KlassHero.Shared.OutboxTest do
 
     test "rolls back with the callback's own reason, so callers match what they matched before" do
       assert {:error, :nope} = Outbox.transact(KlassHero.ProgramCatalog, fn -> {:error, :nope} end)
+
+      assert [] = TestOutbox.staged()
+    end
+
+    # The one caller that needs them is Participation, which announces each event to
+    # its LiveViews after the commit — it cannot do that from a result it never sees.
+    test "transact_with_events/2 hands the staged events back alongside the result" do
+      assert {:ok, {:the_entity, [%Event{event_type: :program_created}]}} =
+               Outbox.transact_with_events(KlassHero.ProgramCatalog, fn ->
+                 {:ok, :the_entity, [event(:program_created, "prog-1", %{title: "Chess"})]}
+               end)
+    end
+
+    test "transact_with_events/2 rolls back with the callback's own reason" do
+      assert {:error, :nope} =
+               Outbox.transact_with_events(KlassHero.ProgramCatalog, fn -> {:error, :nope} end)
 
       assert [] = TestOutbox.staged()
     end

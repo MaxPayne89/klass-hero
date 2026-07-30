@@ -39,7 +39,6 @@ defmodule KlassHero.ProgramCatalog do
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
-  alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.ErrorIds
   alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Pagination.PageResult
@@ -68,8 +67,7 @@ defmodule KlassHero.ProgramCatalog do
         end
       end)
       |> case do
-        {:ok, {program, events}} ->
-          dispatch_all(events, "program_created", program.id)
+        {:ok, program} ->
           {:ok, program}
 
         {:error, changeset} ->
@@ -107,8 +105,7 @@ defmodule KlassHero.ProgramCatalog do
       end
     end)
     |> case do
-      {:ok, {updated, events}} ->
-        dispatch_all(events, "program_updated", updated.id)
+      {:ok, updated} ->
         {:ok, updated}
 
       {:error, changeset} ->
@@ -407,22 +404,5 @@ defmodule KlassHero.ProgramCatalog do
       registration_start_date: program.registration_start_date,
       registration_end_date: program.registration_end_date
     })
-  end
-
-  # Same-context handlers only; cross-context delivery committed with the write.
-  # Still fire-and-forget: a LiveView notifier failing must not undo a saved program.
-  defp dispatch_all(events, name, program_id) do
-    Enum.each(events, fn event ->
-      case DomainEventBus.dispatch(@context, event) do
-        :ok ->
-          :ok
-
-        {:error, failures} ->
-          Logger.error("[ProgramCatalog] #{name} event dispatch had failures",
-            program_id: program_id,
-            errors: inspect(failures)
-          )
-      end
-    end)
   end
 end
