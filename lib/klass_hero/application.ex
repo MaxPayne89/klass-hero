@@ -67,18 +67,7 @@ defmodule KlassHero.Application do
         id: :accounts_domain_event_bus
       ),
       Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.Family,
-         handlers: [
-           {:child_data_anonymized,
-            {KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle}, priority: 10},
-           {:invite_family_ready,
-            {KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle}, priority: 10},
-           {:child_created, {KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10},
-           {:child_updated, {KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10}
-         ]},
+        {DomainEventBus, context: KlassHero.Family, handlers: []},
         id: :family_domain_event_bus
       ),
       Supervisor.child_spec(

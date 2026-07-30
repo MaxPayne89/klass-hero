@@ -159,25 +159,26 @@ defmodule KlassHero.Family.AnonymizeDataForUserTest do
       assert {:ok, :no_data} = Family.anonymize_data_for_user(user.id)
     end
 
-    test "propagates publish failure while child data remains anonymized" do
+    # The old contract was the inverse of this one: publishing happened after each
+    # child was anonymized, so a publish failure left the data anonymized and the
+    # downstream contexts un-notified, and the test pinned that split.
+    #
+    # The GDPR cascade's gate was asking "were the downstream contexts told?" and
+    # answering it with a dispatch result. Staging inside each child's own
+    # transaction answers it at commit, so the two cannot come apart — a child is
+    # anonymized only if the event saying so is durable.
+    test "each anonymized child stages the event announcing it" do
       user = AccountsFixtures.user_fixture()
       parent = insert(:parent_profile_schema, identity_id: user.id)
 
-      {child, _parent} =
-        insert_child_with_guardian(
-          parent: parent,
-          first_name: "Emma",
-          last_name: "Smith"
-        )
+      {child, _parent} = insert_child_with_guardian(parent: parent, first_name: "Emma", last_name: "Smith")
 
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
+      assert {:ok, %{children_anonymized: 1}} = Family.anonymize_data_for_user(user.id)
 
-      assert {:error, :pubsub_down} = Family.anonymize_data_for_user(user.id)
+      assert %{first_name: "Anonymized"} = Repo.get!(Child, child.id)
 
-      # Child data was anonymized before publish was attempted
-      reloaded = Repo.get!(Child, child.id)
-      assert reloaded.first_name == "Anonymized"
-      assert reloaded.last_name == "Child"
+      child_id = child.id
+      assert %{payload: %{child_id: ^child_id}} = assert_integration_event_published(:child_data_anonymized)
     end
   end
 end
