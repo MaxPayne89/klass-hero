@@ -1,19 +1,23 @@
-# Deploy to Fly.io after CI passes
+# Deploy every push to `main` to the dev environment.
 # See https://fly.io/docs/launch/continuous-deployment-with-github-actions/
+#
+# Triggers on push rather than on a successful CI run: CI no longer runs on main at all
+# (#1198), and a `workflow_run` gate on a workflow that never fires means no deploy, with no
+# failing check to notice. Ungated by intent — dev is a QA environment, deploy-dev-branch.yml
+# is already deliberately ungated for the same reason, and the gate that matters now is the
+# `required_status_checks` rule on the `main` ruleset, which blocks the merge rather than the
+# deploy.
 
 name: Fly Deploy
 
 on:
-  workflow_run:
-    workflows: ["CI"]
+  push:
     branches: [main]
-    types: [completed]
 
 jobs:
   deploy:
     name: Deploy to dev
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     concurrency: deploy-klass-hero-dev
     environment:
       name: dev

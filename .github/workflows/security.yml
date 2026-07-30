@@ -1,17 +1,29 @@
 name: Security
 
+# The weekly run replaces the old `push: branches: [main]` trigger (#1198), and is strictly
+# better on both axes:
+#
+#   - It keeps the DEFAULT-BRANCH Sobelow analysis fresh, which is what the Security tab's
+#     alert state is built from. PR-scoped SARIF uploads only annotate the PR; without a
+#     run on main, alerts fixed on main never close and new ones never open.
+#   - It catches advisories that appear with no commit. mix_audit and hex.audit read remote
+#     advisory feeds, so a quiet week used to mean no dependency audit at all.
+#
+# 06:17 UTC Monday — deliberately off the top of the hour, where scheduled runs queue.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: ['**']
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
 
-# Supersede an in-flight run when a PR is pushed again. NOT on `main` — see the same
-# block in ci.yml for why.
+# Supersede an in-flight run when a PR is pushed again.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Keep the versions in sync with ci.yml and deps-cache.yml — they are part of the cache key
+# this workflow restores. See the note above ci.yml's env block.
 env:
   MIX_ENV: dev
   ELIXIR_VERSION: '1.20.2'
@@ -27,9 +39,13 @@ jobs:
   # (setup-beam + deps.get, ~15s) and paying for it twice bought nothing. They stay
   # independent of each other: the audit step is `if: always()` so a Sobelow finding
   # can't mask a dependency advisory. Which one failed is visible per-step.
+  # Both jobs cap `timeout-minutes` against the 360-minute default — see the note above
+  # ci.yml's jobs. Both run in well under a minute; these fetch remote advisory feeds, so
+  # the plausible hang is a request that never returns.
   audit:
     name: Sobelow & Dependency Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # actions/checkout@v7.0.1
       - name: Checkout code
@@ -44,7 +60,7 @@ jobs:
           version-type: strict
 
       # Restore-only, on CI's key. This workflow must never WRITE that key: its jobs
-      # finish in ~35s while CI's `deps` job takes ~55s, so a writing Security job would
+      # finish in ~35s while deps-cache.yml's job takes ~55s, so a writing Security job would
       # win the race and store a deps-only tree (35MB, no _build app build) over CI's
       # (70MB) — forcing every downstream CI job to recompile from scratch next run.
       #
@@ -90,6 +106,7 @@ jobs:
   hex-audit:
     name: hex.pm Advisory Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       # actions/checkout@v7.0.1
       - name: Checkout code

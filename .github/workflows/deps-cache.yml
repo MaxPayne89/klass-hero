@@ -1,0 +1,107 @@
+name: Dependency Cache
+
+# The ONLY writer of the `v2-<os>-mix-<otp>-<elixir>-<mix.lock hash>` cache key. Every job
+# in every other workflow restores it read-only, so the stored tree is deterministically
+# the both-env one this job produces, rather than whichever job won a race to save first.
+#
+# It exists as its own file, called by ci.yml via `workflow_call`, because it has to run on
+# two triggers that no single workflow covers:
+#
+#   - `workflow_call` from ci.yml, on pull_request. Seeds a `refs/pull/N/merge`-scoped cache
+#     that later pushes to the same PR restore.
+#   - `push` to main, so the DEFAULT-BRANCH-scoped cache stays fresh. This is the one that
+#     matters: a run restores caches from its own ref or the default branch only, so a
+#     PR-scoped write is invisible to every other PR and never promotes. Without a main-side
+#     write, main's cache would freeze at whatever mix.lock was current when CI stopped
+#     running there, and every later dep change would make all three PR jobs recompile the
+#     delta forever (#1198).
+#
+# One definition rather than a copy per trigger: two copies drift, and a main-side copy
+# missing e.g. the NIF force-rebuild below would poison the cache every PR restores.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  # The paths filter mirrors the cache key exactly: the key hashes mix.lock, and pins
+  # OTP_VERSION/ELIXIR_VERSION which live in the workflow files. So this fires only when the
+  # key actually changes — ~1 billable minute on a dep bump, zero on every other merge.
+  push:
+    branches: [main]
+    paths:
+      - 'mix.lock'
+      - '.github/workflows/*.yml'
+
+# Keep in sync with ci.yml and security.yml — see the note above their own env blocks.
+env:
+  ELIXIR_VERSION: '1.20.2'
+  OTP_VERSION: '29.0.2'
+  MIX_OS_DEPS_COMPILE_PARTITION_COUNT: '4'
+
+jobs:
+  deps:
+    name: Dependencies
+    runs-on: ubuntu-latest
+    # See the note above ci.yml's jobs: the 360-minute default makes a hang expensive.
+    timeout-minutes: 15
+
+    steps:
+      # actions/checkout@v7.0.1
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # erlef/setup-beam@v1.24.1
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+          version-type: strict
+
+      # actions/cache@v6.1.0 — the read-write form, unlike every other workflow's
+      # cache/restore. See the note at the top of this file.
+      - name: Restore dependencies cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            deps
+            _build
+          key: v2-${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            v2-${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      # Compile all deps once before the NIF force-rebuild. `mix deps.compile
+      # lazy_html --force` only rebuilds lazy_html itself — it does NOT
+      # trigger compilation of transitive deps (fine, elixir_make,
+      # cc_precompiler). On a warm cache they're already in _build/; on a
+      # cold cache (e.g. after a runtime bump invalidates the cache key)
+      # the --force step fails with "could not find an app file at
+      # _build/test/lib/fine/ebin/fine.app".
+      - name: Compile dependencies
+        run: mix deps.compile
+        env:
+          MIX_ENV: test
+
+      # Force-recompile NIF deps to prevent stale cache issues.
+      # The restore-keys fallback can provide a NIF binary from a
+      # previous version that doesn't match the current mix.lock.
+      - name: Recompile NIF dependencies
+        run: mix deps.compile lazy_html --force
+        env:
+          MIX_ENV: test
+
+      # Compile both envs so the cache this job seeds is useful to both. Only matters on
+      # a cold run — on a warm one the primary key already exists and nothing is saved.
+      #
+      # (The old comment here claimed dev was "needed by quality job (includes boundary
+      # checker)". The boundary library was removed in #986-#1002, and a probe showed
+      # quality rebuilds the dev tree regardless — see #1201.)
+      - name: Compile (dev)
+        run: mix compile
+
+      - name: Compile (test)
+        run: mix compile
+        env:
+          MIX_ENV: test
