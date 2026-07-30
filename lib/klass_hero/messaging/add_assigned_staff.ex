@@ -8,12 +8,10 @@ defmodule KlassHero.Messaging.AddAssignedStaff do
 
   The `ConversationSummaries` projection runs in its own GenServer on its
   own DB connection. Under PostgreSQL READ COMMITTED isolation it cannot
-  see uncommitted writes. If we dispatched inside `Repo.transaction`, the
-  projection might process the event before the parent transaction
-  committed and skip the upsert because the conversation row "doesn't
-  exist yet". The caller therefore collects events from this command (and
-  any sibling commands) inside the transaction and dispatches them after
-  `Repo.transaction` returns `{:ok, _}` — see `EventDispatchHelper.dispatch/2`.
+  see uncommitted writes, so it must not run before the conversation row
+  commits. This command therefore returns its events as data; the caller
+  stages them through `Outbox.transact/2`, and the delivery job runs after
+  the commit.
 
   ## Returns
 

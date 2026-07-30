@@ -307,7 +307,7 @@ defmodule KlassHero.Enrollment do
 
   Unlike `import_enrollment_csv/2`, the caller supplies a pre-resolved
   `program_id` (picked from the provider's own catalog). Runs the same
-  `:bulk_invites_imported` event path with `count: 1`, so the downstream
+  invite-email path, so the downstream
   email worker pipeline is reused verbatim.
 
   Returns:

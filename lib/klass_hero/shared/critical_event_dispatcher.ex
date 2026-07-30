@@ -73,9 +73,8 @@ defmodule KlassHero.Shared.CriticalEventDispatcher do
   @doc """
   Marks an event-handler pair as processed without running a handler.
 
-  Used by `EventDispatchHelper` when a critical domain event's handler already
-  succeeded synchronously via `DomainEventBus`. Inserts the `processed_events`
-  row so any subsequent Oban retry is a no-op.
+  Inserts the `processed_events` row for a handler that already succeeded, so any
+  subsequent Oban retry is a no-op.
 
   Idempotent — calling twice with the same args is safe.
   """

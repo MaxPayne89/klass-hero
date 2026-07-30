@@ -62,15 +62,25 @@ This command:
 
 Test modules covering event-driven projections (modules under `**/adapters/driven/projections/`) use `use KlassHero.DataCase, async: false`. Projection GenServers run DB queries during `init/1`'s `{:continue, :bootstrap}` before the test process can call `Ecto.Adapters.SQL.Sandbox.allow/3` on the spawned pid, so the only reliable fix is shared-sandbox mode (which `async: false` flips on automatically via `DataCase.setup_sandbox/1`). Don't add `Sandbox.allow` calls in these files — they're redundant under shared mode. This rule does NOT apply to macro-level tests like `test/klass_hero/shared/projection_test.exs`, which exercise the macro against `Agent`-backed fakes with no DB at all and stay `async: true`.
 
-## Domain-Event Subscriptions Are Process-Scoped
+## Assert the State Change, Not the Event
 
-`DomainEventBus.subscribe/4` is a test-only affordance — production registers handlers at boot via `handlers:` child-spec entries in `application.ex`. Each context's bus is a **globally-named singleton**, so a subscription is scoped to the process that made it: the handler fires only for dispatches from that process or a `Task` descendant of it (`:"$callers"`), and is dropped when the process exits. Boot-time (`handlers:`) registrations are exempt and always fire.
+There is no in-process event bus to subscribe to. Events are staged inside the producer's
+transaction and delivered by an Oban job, so a test cannot observe one by registering a
+handler and waiting for a message.
 
-That scoping is what makes `subscribe/4` safe in an `async: true` module. Before it existed, a subscriber heard *every* concurrent test's dispatch, so an under-specified `assert_receive` pattern could match a foreign test's event — the cause of #1136, which presented as a timeout but was actually a wrong-value match.
+Assert what the change *did*:
 
-Consequences when writing tests:
+- **For a same-context reaction**, call the producer and assert the resulting rows. A reaction
+  runs inside the producer's transaction, so it has already happened when the call returns —
+  no `assert_receive`, no timeout. `test/klass_hero/provider/verification/document_review_test.exs`
+  ("advances the vetting step that consumes the document type") is the pattern.
+- **For a staged event**, assert it through `KlassHero.EventTestHelper`
+  (`assert_integration_event_published/1,2`), which reads what `TestOutbox` recorded. That
+  asserts the producer emitted it, not that a consumer ran.
+- **For end-to-end delivery**, wrap the call in `Oban.Testing.with_testing_mode(:manual, fn -> ... end)`
+  and then `drain_queue(with_recursion: true)`. Without manual mode the suite's `testing: :inline`
+  executes the delivery job *at insert* — inside the producer's transaction — which is a
+  sequencing production never has.
 
-- **Subscribe inside `setup` or the test body, never `setup_all`.** `setup_all` runs in its own process, unrelated to each test's process, so its handlers can never fire. The same applies to `on_exit`.
-- **A handler that doesn't fire is silent.** If an `assert_receive` on a domain event times out, suspect process lineage before suspecting the production code. Run with `mix test --trace` at `:debug` log level — the bus logs how many handlers it skipped and why.
-- **Still pin test-unique data** (a generated `provider_id`, `user_id`, …) in the `assert_receive` pattern. Scoping makes a foreign event unreachable, but a discriminating pattern documents intent and survives future changes to the bus.
-- **Dispatches from another process need boot registration.** A handler that must observe events dispatched by an Oban job, an `EventSubscriber`, or a LiveView process cannot use `subscribe/4` — those processes are not in the subscriber's lineage.
+An `assert_receive` still belongs on the UI notifications (`Participation.Notifications` and
+friends), which are plain `Phoenix.PubSub` broadcasts carrying tagged tuples.

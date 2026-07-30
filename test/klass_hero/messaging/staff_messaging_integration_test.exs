@@ -4,10 +4,9 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   Verifies the full flow: assign staff → staff added to conversations →
   staff can send messages → unassign doesn't remove from existing threads.
 
-  Note: In the test environment the DomainEventBus uses TestEventPublisher, which
-  collects events without routing them to handlers. This test drives the
-  StaffAssignmentHandler directly to simulate what happens in production when
-  the integration event bus delivers the event.
+  Drives `StaffAssignmentHandler` directly rather than through the outbox: in test
+  the outbox records staged events instead of enqueueing them, so the delivery job
+  that would invoke the handler in production never runs.
   """
   use KlassHero.DataCase, async: false
 
@@ -52,9 +51,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
                  staff_member_id: ctx.staff.id
                })
 
-      # In the test environment, the DomainEventBus uses TestEventPublisher which
-      # only collects events without routing them to handlers. We invoke the handler
-      # directly, matching the integration event payload that would be published in prod.
+      # Invoked directly with the payload the delivery job would carry in production.
       assert :ok =
                StaffAssignmentHandler.handle_event(
                  build_assignment_event(
