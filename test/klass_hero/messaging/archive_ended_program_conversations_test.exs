@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversationsTest do
   alias KlassHero.Messaging.ArchiveEndedProgramConversations
 
   setup do
-    EventTestHelper.setup_test_events()
+    EventTestHelper.setup_test_integration_events()
     :ok
   end
 
@@ -91,7 +91,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversationsTest do
 
       assert {:ok, _result} = ArchiveEndedProgramConversations.execute()
 
-      EventTestHelper.assert_event_published(:conversations_archived, %{reason: :program_ended})
+      EventTestHelper.assert_integration_event_published(:conversations_archived, %{reason: :program_ended})
     end
 
     test "does not publish event when no conversations archived" do

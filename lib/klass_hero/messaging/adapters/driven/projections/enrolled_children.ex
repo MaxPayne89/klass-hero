@@ -15,10 +15,13 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   - `:enrollment_cancelled` — deletes rows for that enrollment
   - `:child_created` — updates child_first_name across rows
   - `:child_updated` — updates child_first_name across rows
-  - `:conversation_created` — broadcasts `:enrolled_children_changed` domain event for downstream projections
+  - `:conversation_created` — refreshes the downstream conversation summaries
 
-  After every state-changing operation, emits a `:enrolled_children_changed`
-  domain event so dependent projections (ConversationSummaries) can refresh.
+  After every state-changing operation, it hands the recomputed child names to
+  `ConversationSummaries` directly. This used to be a domain event broadcast over
+  PubSub between two projections in the same context — persistent state riding an
+  ephemeral channel, so a dropped message left the summary permanently stale with
+  nothing to retry it.
 
   ## Cross-Context Coupling
 
@@ -59,13 +62,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   import Ecto.Query
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
+  alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
-
-  @enrolled_children_changed_topic "messaging:enrolled_children_changed"
 
   @impl Projection
   def bootstrap_impl, do: bootstrap_from_write_tables()
@@ -279,21 +280,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   end
 
   defp emit_enrolled_children_changed(conversation_id, child_names) do
-    event =
-      DomainEvent.new(
-        :enrolled_children_changed,
-        conversation_id,
-        :conversation,
-        %{
-          conversation_id: conversation_id,
-          enrolled_child_names: child_names
-        }
-      )
-
-    Phoenix.PubSub.broadcast(
-      KlassHero.PubSub,
-      @enrolled_children_changed_topic,
-      {:domain_event, event}
-    )
+    ConversationSummaries.update_enrolled_child_names(conversation_id, child_names)
   end
 end

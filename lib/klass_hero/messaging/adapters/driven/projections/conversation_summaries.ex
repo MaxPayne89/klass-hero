@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   ## Architecture
 
-  Built on KlassHero.Shared.Projection + WithBootstrapRetry + WithDomainEvents.
+  Built on KlassHero.Shared.Projection + WithBootstrapRetry.
   The read side (the `KlassHero.Messaging` context) queries the table
   this projection writes.
 
@@ -42,12 +42,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       "integration:messaging:conversations_archived",
       "integration:messaging:message_data_anonymized",
       "integration:messaging:participant_added",
-      "integration:messaging:participant_removed",
-      "messaging:enrolled_children_changed"
+      "integration:messaging:participant_removed"
     ]
 
   use KlassHero.Shared.Projection.WithBootstrapRetry
-  use KlassHero.Shared.Projection.WithDomainEvents
 
   import Ecto.Query
 
@@ -57,11 +55,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.Message
+  alias KlassHero.Messaging.Notifications
   alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Projection
-  alias KlassHero.Shared.Projection.WithDomainEvents
 
   @broadcast_token_regex ~r/\[broadcast:[^\]]+\]/
 
@@ -140,13 +138,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_participant_removed(event)
   end
 
-  @impl WithDomainEvents
-  def handle_domain_event(:enrolled_children_changed, event) do
-    Logger.debug("ConversationSummaries projecting enrolled_children_changed",
-      conversation_id: event.aggregate_id
-    )
+  @doc """
+  Refreshes the enrolled-child names shown on a conversation's summary rows.
 
-    project_enrolled_children_changed(event)
+  Called directly by `EnrolledChildren` after it recomputes them. This used to be
+  a domain event broadcast over PubSub between two projections in the same
+  context — persistent state riding an ephemeral channel, so a dropped message
+  left the summary permanently stale with nothing to retry it.
+  """
+  @spec update_enrolled_child_names(String.t(), [String.t()]) :: :ok
+  def update_enrolled_child_names(conversation_id, child_names) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    from(s in ConversationSummary, where: s.conversation_id == ^conversation_id)
+    |> Repo.update_all(set: [enrolled_child_names: child_names, updated_at: now])
+
+    :ok
   end
 
   # Private Functions — Bootstrap
@@ -332,6 +339,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         )
       end)
     end)
+
+    # After the rows exist, so a list refetching on this sees them.
+    Enum.each(participant_ids, &Notifications.conversations_changed/1)
   end
 
   defp project_participant_added(event) do
@@ -462,25 +472,34 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     sent_at = Map.get(payload, :sent_at) || now
     has_attachments = (Map.get(payload, :attachments) || []) != []
 
-    Repo.transaction(fn ->
-      from(s in ConversationSummary,
-        where: s.conversation_id == ^conversation_id
-      )
-      |> Repo.update_all(
-        set: [
-          latest_message_content: content,
-          latest_message_sender_id: sender_id,
-          latest_message_at: sent_at,
-          has_attachments: has_attachments,
-          updated_at: now
-        ]
-      )
+    {:ok, {_count, user_ids}} =
+      Repo.transaction(fn ->
+        result =
+          from(s in ConversationSummary,
+            where: s.conversation_id == ^conversation_id,
+            select: s.user_id
+          )
+          |> Repo.update_all(
+            set: [
+              latest_message_content: content,
+              latest_message_sender_id: sender_id,
+              latest_message_at: sent_at,
+              has_attachments: has_attachments,
+              updated_at: now
+            ]
+          )
 
-      from(s in ConversationSummary,
-        where: s.conversation_id == ^conversation_id and s.user_id != ^sender_id
-      )
-      |> Repo.update_all(inc: [unread_count: 1])
-    end)
+        from(s in ConversationSummary,
+          where: s.conversation_id == ^conversation_id and s.user_id != ^sender_id
+        )
+        |> Repo.update_all(inc: [unread_count: 1])
+
+        result
+      end)
+
+    # Exactly the users whose row changed — `select:` returns them, so no second
+    # query and no chance of notifying someone this write did not touch.
+    Enum.each(user_ids, &Notifications.conversations_changed/1)
 
     try do
       maybe_project_system_note(payload)
@@ -572,22 +591,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         ]
       )
     end
-  end
-
-  defp project_enrolled_children_changed(event) do
-    conversation_id = event.payload.conversation_id
-    child_names = Map.get(event.payload, :enrolled_child_names, [])
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    from(s in ConversationSummary,
-      where: s.conversation_id == ^conversation_id
-    )
-    |> Repo.update_all(
-      set: [
-        enrolled_child_names: child_names,
-        updated_at: now
-      ]
-    )
   end
 
   # Private Functions — System Note Projection

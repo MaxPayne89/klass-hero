@@ -98,17 +98,13 @@ defmodule KlassHero.Shared.Projection do
 
       @impl true
       def init(opts) do
+        # No subscriptions: every event reaches a projection through the outbox job
+        # calling `project/1`. `@projection_topics` is now purely a declaration that
+        # `EventConsumerRegistry` reads. This process exists for `bootstrap` and
+        # `rebuild/1` only.
         if Keyword.get(opts, :skip_bootstrap, false) do
           {:ok, %{bootstrapped: false}}
         else
-          # Integration topics are delivered by the outbox job calling `project/1`, not
-          # by this process's mailbox. What is left to subscribe to is the handful of
-          # domain-event topics one projection uses to notify another (see
-          # `WithDomainEvents`), which still travel by PubSub.
-          for topic <- @projection_topics, not String.starts_with?(topic, "integration:") do
-            Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
-          end
-
           {:ok, %{bootstrapped: false}, {:continue, :bootstrap}}
         end
       end

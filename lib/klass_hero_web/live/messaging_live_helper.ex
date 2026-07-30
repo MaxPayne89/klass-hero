@@ -35,8 +35,6 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Attachment
-  alias KlassHero.Messaging.Message
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias Phoenix.LiveView.Socket
 
   require Logger
@@ -44,10 +42,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   @doc false
   defmacro __using__(:show) do
     quote do
-      alias KlassHero.Shared.Domain.Events.DomainEvent
       alias KlassHeroWeb.MessagingLiveHelper
-
-      require Logger
 
       @impl true
       def handle_event("send_message", params, socket) do
@@ -55,14 +50,8 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
       end
 
       @impl true
-      def handle_info({:domain_event, %DomainEvent{event_type: :message_sent} = event}, socket) do
-        MessagingLiveHelper.handle_message_sent_event(event, socket)
-      end
-
-      @impl true
-      def handle_info({:domain_event, %DomainEvent{event_type: :messages_read} = event}, socket) do
-        Logger.debug("Messages read by user", user_id: event.payload.user_id)
-        {:noreply, socket}
+      def handle_info({:message_sent, message_id}, socket) do
+        MessagingLiveHelper.handle_message_sent(message_id, socket)
       end
 
       @impl true
@@ -84,16 +73,10 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   defmacro __using__(:index) do
     quote do
-      alias KlassHero.Shared.Domain.Events.DomainEvent
       alias KlassHeroWeb.MessagingLiveHelper
 
       @impl true
-      def handle_info({:domain_event, %DomainEvent{event_type: :message_sent}}, socket) do
-        MessagingLiveHelper.refresh_conversations(socket)
-      end
-
-      @impl true
-      def handle_info({:domain_event, %DomainEvent{event_type: :conversation_created}}, socket) do
+      def handle_info(:conversations_changed, socket) do
         MessagingLiveHelper.refresh_conversations(socket)
       end
     end
@@ -249,33 +232,42 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
-  Handles incoming message_sent domain events; updates sender names if needed.
+  Streams a newly-sent message into the open conversation.
+
+  The message is read from the write model rather than rebuilt from an event
+  payload — the payload version was a hand-maintained shadow of `%Message{}` that
+  had to be kept in step with the schema, and it could not carry anything the
+  event did not think to include.
+
+  No conversation-id check: this view subscribes to exactly one conversation's
+  topic, so every message it receives is for the conversation it is showing.
   """
-  def handle_message_sent_event(%DomainEvent{payload: payload} = _event, socket) do
-    if payload.conversation_id == socket.assigns.conversation.id do
-      user_id = socket.assigns.current_scope.user.id
-      Messaging.mark_as_read(payload.conversation_id, user_id)
+  @spec handle_message_sent(String.t(), Socket.t()) :: {:noreply, Socket.t()}
+  def handle_message_sent(message_id, socket) do
+    case Messaging.get_message_by_id(message_id) do
+      {:ok, message} ->
+        user_id = socket.assigns.current_scope.user.id
+        Messaging.mark_as_read(message.conversation_id, user_id)
 
-      sender_names = socket.assigns.sender_names
-      sender_name = Map.get(sender_names, payload.sender_id)
-
-      socket =
-        if sender_name do
+        socket =
           socket
-        else
-          update_sender_names_for_new_message(socket, payload.sender_id)
-        end
+          |> ensure_sender_name(message.sender_id)
+          |> assign(:messages_empty?, false)
+          |> stream_insert(:messages, message, at: -1)
 
-      message = build_message_from_event(payload)
+        {:noreply, socket}
 
-      socket =
-        socket
-        |> assign(:messages_empty?, false)
-        |> stream_insert(:messages, message, at: -1)
+      # Deleted between the notification and this read — nothing to render.
+      {:error, :not_found} ->
+        {:noreply, socket}
+    end
+  end
 
-      {:noreply, socket}
+  defp ensure_sender_name(socket, sender_id) do
+    if Map.has_key?(socket.assigns.sender_names, sender_id) do
+      socket
     else
-      {:noreply, socket}
+      update_sender_names_for_new_message(socket, sender_id)
     end
   end
 
@@ -382,41 +374,6 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
       _ ->
         {MapSet.new(staff_ids), nil}
     end
-  end
-
-  defp build_message_from_event(payload) do
-    attachments = build_attachments_from_event(payload.message_id, Map.get(payload, :attachments, []))
-
-    %Message{
-      id: payload.message_id,
-      conversation_id: payload.conversation_id,
-      sender_id: payload.sender_id,
-      content: payload.content,
-      message_type: payload.message_type,
-      inserted_at: payload.sent_at,
-      attachments: attachments
-    }
-  end
-
-  defp build_attachments_from_event(message_id, attachments) when is_list(attachments) do
-    Enum.map(attachments, fn att ->
-      %Attachment{
-        id: att.id,
-        message_id: message_id,
-        file_url: att.file_url,
-        original_filename: att.original_filename,
-        content_type: att.content_type,
-        file_size_bytes: att.file_size_bytes
-      }
-    end)
-  end
-
-  defp build_attachments_from_event(_message_id, other) do
-    Logger.warning("Unexpected attachments format in event payload",
-      received: inspect(other)
-    )
-
-    []
   end
 
   defp update_sender_names_for_new_message(socket, sender_id) do

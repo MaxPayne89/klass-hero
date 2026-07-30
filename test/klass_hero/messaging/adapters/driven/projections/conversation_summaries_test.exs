@@ -4,6 +4,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   import Ecto.Query
   import KlassHero.Factory
 
+  alias KlassHero.Messaging
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Conversation
@@ -468,6 +469,72 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert summary_1.latest_message_content == "Hello Bob!"
       assert summary_1.latest_message_sender_id == user_1.id
       assert summary_1.unread_count == 0
+    end
+  end
+
+  # The conversation list reads this table, so it must not be told to refetch
+  # before the rows are current. Notifying from the producer instead — where every
+  # other notification in this codebase is sent from — would race the job that
+  # runs this projection, and the list would re-render the rows it already had.
+  describe "notifying the conversation list" do
+    test "tells each participant only after their row is written" do
+      user_1 = user_fixture(name: "Alice Smith")
+      user_2 = user_fixture(name: "Bob Jones")
+      conversation_id = Ecto.UUID.generate()
+
+      for user <- [user_1, user_2] do
+        Phoenix.PubSub.subscribe(KlassHero.PubSub, Messaging.user_messages_topic(user.id))
+      end
+
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: Ecto.UUID.generate(),
+        participant_ids: [user_1.id, user_2.id]
+      })
+
+      # Two participants, one message each — and the rows are already readable.
+      assert_receive :conversations_changed
+      assert_receive :conversations_changed
+      refute_receive :conversations_changed, 50
+
+      assert Repo.aggregate(
+               from(s in ConversationSummary, where: s.conversation_id == ^conversation_id),
+               :count
+             ) == 2
+    end
+
+    test "a new message tells exactly the users whose summary row it touched" do
+      user_1 = user_fixture(name: "Alice Smith")
+      user_2 = user_fixture(name: "Bob Jones")
+      outsider = user_fixture(name: "Carol Nobody")
+      conversation_id = Ecto.UUID.generate()
+
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: Ecto.UUID.generate(),
+        participant_ids: [user_1.id, user_2.id]
+      })
+
+      for user <- [user_1, user_2, outsider] do
+        Phoenix.PubSub.subscribe(KlassHero.PubSub, Messaging.user_messages_topic(user.id))
+      end
+
+      dispatch(:message_sent, %{
+        conversation_id: conversation_id,
+        message_id: Ecto.UUID.generate(),
+        sender_id: user_1.id,
+        content: "Hello Bob!",
+        message_type: :text,
+        sent_at: now()
+      })
+
+      # Both participants — the sender's own list moves too, its latest-message
+      # preview changed. The outsider has no row, so no message.
+      assert_receive :conversations_changed
+      assert_receive :conversations_changed
+      refute_receive :conversations_changed, 50
     end
   end
 

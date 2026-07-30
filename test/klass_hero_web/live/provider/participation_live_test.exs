@@ -5,7 +5,6 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Participation
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.SessionNote
 

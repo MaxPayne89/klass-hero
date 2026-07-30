@@ -4,12 +4,10 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicyTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.EventTestHelper
   alias KlassHero.Messaging.EnforceRetentionPolicy
   alias KlassHero.MessagingFixtures
 
   setup do
-    EventTestHelper.setup_test_events()
     :ok
   end
 
@@ -76,7 +74,7 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicyTest do
       assert {:ok, _} = KlassHero.Messaging.get_conversation_by_id(active_conversation.id)
     end
 
-    test "publishes retention_enforced event" do
+    test "reports how much it deleted" do
       provider = insert(:provider_profile_schema)
       user = AccountsFixtures.user_fixture()
 
@@ -100,9 +98,10 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicyTest do
           content: "Message to delete"
         })
 
-      assert {:ok, _result} = EnforceRetentionPolicy.execute()
+      assert {:ok, result} = EnforceRetentionPolicy.execute()
 
-      EventTestHelper.assert_event_published(:retention_enforced)
+      assert result.messages_deleted >= 1
+      assert result.conversations_deleted >= 1
     end
 
     test "leaves active (non-archived) conversations untouched" do

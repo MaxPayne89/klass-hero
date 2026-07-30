@@ -217,7 +217,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
 
   describe "execute/4 — event publishing" do
     setup do
-      setup_test_events()
+      setup_test_integration_events()
       :ok
     end
 
@@ -230,7 +230,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert {:ok, conversation, message, _count} =
                BroadcastToProgram.execute(scope, program.id, "Announcement")
 
-      assert_event_published(:message_sent, %{
+      assert_integration_event_published(:message_sent, %{
         conversation_id: conversation.id,
         message_id: message.id,
         sender_id: scope.user.id,

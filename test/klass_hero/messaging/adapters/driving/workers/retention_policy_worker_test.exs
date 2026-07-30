@@ -4,11 +4,9 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.EventTestHelper
   alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
 
   setup do
-    EventTestHelper.setup_test_events()
     :ok
   end
 
@@ -76,12 +74,9 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
 
       # Verify conversation is deleted
       assert {:error, :not_found} = KlassHero.Messaging.get_conversation_by_id(expired_conversation.id)
-
-      # Verify event was published
-      EventTestHelper.assert_event_published(:retention_enforced)
     end
 
-    test "publishes retention_enforced event after cleanup" do
+    test "deletes the expired conversation's messages too" do
       provider = insert(:provider_profile_schema)
       user = AccountsFixtures.user_fixture()
 
@@ -109,9 +104,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorkerTest
 
       assert :ok = RetentionPolicyWorker.perform(job)
 
-      event = EventTestHelper.assert_event_published(:retention_enforced)
-      assert event.payload.messages_deleted >= 1
-      assert event.payload.conversations_deleted >= 1
+      assert {:error, :not_found} = KlassHero.Messaging.get_conversation_by_id(expired_conversation.id)
+      assert KlassHero.Messaging.list_messages_for_conversation(expired_conversation.id) == {:ok, [], false}
     end
   end
 end

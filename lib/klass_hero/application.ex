@@ -5,7 +5,6 @@ defmodule KlassHero.Application do
 
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInviteEmails
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteRegistered
-  alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcome
   alias KlassHero.Shared.DomainEventBus
@@ -75,15 +74,7 @@ defmodule KlassHero.Application do
         id: :enrollment_domain_event_bus
       ),
       Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.Messaging,
-         handlers: [
-           {:conversation_created, {NotifyLiveViews, :handle}},
-           {:message_sent, {NotifyLiveViews, :handle}},
-           {:messages_read, {NotifyLiveViews, :handle}},
-           {:conversations_archived, {NotifyLiveViews, :handle}},
-           {:retention_enforced, {NotifyLiveViews, :handle}}
-         ]},
+        {DomainEventBus, context: KlassHero.Messaging, handlers: []},
         id: :messaging_domain_event_bus
       ),
       Supervisor.child_spec(
