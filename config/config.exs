@@ -137,49 +137,6 @@ config :klass_hero, :contact,
   phone: nil,
   address: nil
 
-# Critical event handler registry — maps integration event topics to handlers
-# that must be durably delivered via Oban. Only critical event subscriptions
-# are registered here; non-critical events use PubSub-only delivery.
-config :klass_hero, :critical_event_handlers, %{
-  "integration:enrollment:invite_claimed" => [
-    {InviteClaimedHandler, :handle_event}
-  ],
-  "integration:family:invite_family_ready" => [
-    {InviteFamilyReadyHandler, :handle_event}
-  ],
-  "integration:provider:staff_member_invited" => [
-    {StaffInvitationHandler, :handle_event}
-  ],
-  "integration:provider:staff_assigned_to_program" => [
-    {StaffAssignmentHandler, :handle_event}
-  ],
-  "integration:provider:staff_unassigned_from_program" => [
-    {StaffAssignmentHandler, :handle_event}
-  ],
-  "integration:accounts:staff_invitation_sent" => [
-    {StaffInvitationStatusHandler, :handle_event}
-  ],
-  "integration:accounts:staff_invitation_failed" => [
-    {StaffInvitationStatusHandler, :handle_event}
-  ],
-  "integration:accounts:staff_user_registered" => [
-    {StaffInvitationStatusHandler, :handle_event}
-  ],
-  "integration:accounts:user_registered" => [
-    {FamilyEventHandler, :handle_event},
-    {ProviderEventHandler, :handle_event}
-  ],
-  "integration:accounts:user_confirmed" => [
-    {FamilyEventHandler, :handle_event},
-    {ProviderEventHandler, :handle_event}
-  ],
-  "integration:accounts:user_anonymized" => [
-    {FamilyEventHandler, :handle_event},
-    {ProviderEventHandler, :handle_event},
-    {MessagingEventHandler, :handle_event}
-  ]
-}
-
 # Default app timezone — used by Greeting + future per-user-tz extension.
 # Configure Enrollment bounded context
 config :klass_hero, :default_tz, "Europe/Berlin"

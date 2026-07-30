@@ -2,10 +2,15 @@ defmodule KlassHero.Shared.Projection do
   @moduledoc """
   Base macro for event-driven projections.
 
-  Injects a GenServer skeleton: `start_link/1`, `init/1`, `handle_continue(:bootstrap, _)`,
-  `handle_call(:rebuild, ...)`, an integration-event dispatcher, and a catch-all
-  `handle_info/2` warner. The calling module supplies `bootstrap_impl/0` and
-  `handle_event/2`.
+  Injects `project/1`, plus a GenServer skeleton for bootstrap: `start_link/1`,
+  `init/1`, `handle_continue(:bootstrap, _)`, `handle_call(:rebuild, ...)` and a
+  catch-all `handle_info/2` warner. The calling module supplies `bootstrap_impl/0`
+  and `handle_event/2`.
+
+  The process exists to bootstrap and rebuild, not to receive events: integration
+  events arrive as `project/1` calls from the outbox delivery job, in that job's
+  process. `:topics` therefore declares what this projection consumes for the
+  consumer registry to route, rather than what it subscribes to.
 
   ## Usage
 
@@ -96,7 +101,11 @@ defmodule KlassHero.Shared.Projection do
         if Keyword.get(opts, :skip_bootstrap, false) do
           {:ok, %{bootstrapped: false}}
         else
-          for topic <- @projection_topics do
+          # Integration topics are delivered by the outbox job calling `project/1`, not
+          # by this process's mailbox. What is left to subscribe to is the handful of
+          # domain-event topics one projection uses to notify another (see
+          # `WithDomainEvents`), which still travel by PubSub.
+          for topic <- @projection_topics, not String.starts_with?(topic, "integration:") do
             Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
           end
 
@@ -123,17 +132,6 @@ defmodule KlassHero.Shared.Projection do
         count = bootstrap_impl()
         Logger.info("#{inspect(__MODULE__)} rebuilt", count: count)
         {:reply, :ok, %{state | bootstrapped: true}}
-      end
-
-      @impl true
-      def handle_info({:integration_event, %IntegrationEvent{event_type: type} = event}, state) do
-        Logger.debug("#{inspect(__MODULE__)} projecting #{type}",
-          entity_id: event.entity_id,
-          event_id: event.event_id
-        )
-
-        handle_event(type, event)
-        {:noreply, state}
       end
 
       @impl true

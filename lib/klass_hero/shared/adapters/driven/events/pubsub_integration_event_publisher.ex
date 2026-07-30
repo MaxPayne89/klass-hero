@@ -4,34 +4,20 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
 
   Topic convention: `integration:{source_context}:{event_type}`. Messages are broadcast as
   `{:integration_event, %IntegrationEvent{}}` and received via `handle_info/2`.
-  Also enqueues one `CriticalEventWorker` Oban job per registered handler for critical events.
+
+  Since the outbox took over delivery, this carries LiveView notifications and nothing
+  else — every consumer that owns persistent state is called by the delivery job. A
+  dropped broadcast now costs a stale UI until the next render, not a lost event.
   """
 
   @behaviour KlassHero.Shared.ForPublishingIntegrationEvents
 
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventHandlerRegistry
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubBroadcaster
-  alias KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorker
-  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Tracing.Context
 
-  require Logger
-
   @impl true
-  def publish(%IntegrationEvent{} = event) do
-    topic = derive_topic(event)
-
-    case publish(event, topic) do
-      :ok ->
-        maybe_enqueue_critical_jobs(event, topic)
-        :ok
-
-      error ->
-        error
-    end
-  end
+  def publish(%IntegrationEvent{} = event), do: publish(event, derive_topic(event))
 
   @impl true
   def publish(%IntegrationEvent{} = event, topic) when is_binary(topic) do
@@ -67,43 +53,5 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
   @spec derive_topic(IntegrationEvent.t()) :: String.t()
   def derive_topic(%IntegrationEvent{source_context: ctx, event_type: event_type}) do
     build_topic(ctx, event_type)
-  end
-
-  # PubSub is fire-and-forget — enqueue one Oban job per handler for durable retry if PubSub fails.
-  defp maybe_enqueue_critical_jobs(%IntegrationEvent{} = event, topic) do
-    if IntegrationEvent.critical?(event) do
-      handlers = CriticalEventHandlerRegistry.handlers_for(topic)
-
-      Enum.each(handlers, fn {_module, _function} = handler_tuple ->
-        handler_ref = CriticalEventDispatcher.handler_ref(handler_tuple)
-
-        args =
-          CriticalEventSerializer.serialize(event)
-          |> Map.put("handler", handler_ref)
-
-        enqueue_critical_job(args, event, handler_ref)
-      end)
-    end
-  end
-
-  defp enqueue_critical_job(args, event, handler_ref) do
-    args = Context.inject_into_args(args)
-
-    case CriticalEventWorker.insert_job(args) do
-      {:ok, _job} ->
-        :ok
-
-      {:error, reason} ->
-        # PubSub already delivered, but durable fallback is now absent — alert operators.
-        Logger.error(
-          "Failed to enqueue durable delivery job for critical integration event " <>
-            "#{event.event_type} (#{event.event_id}), handler #{handler_ref}. " <>
-            "Durable delivery guarantee voided for this handler.",
-          event_id: event.event_id,
-          event_type: event.event_type,
-          handler: handler_ref,
-          reason: inspect(reason)
-        )
-    end
   end
 end

@@ -126,14 +126,5 @@ defmodule KlassHero.EventConsumerWiringTest do
       assert promoters |> Map.values() |> Enum.uniq() |> length() == map_size(promoters),
              "two contexts share a promoter: #{inspect(promoters)}"
     end
-
-    # Temporary, for the length of this PR: :critical_event_handlers still drives the
-    # old PubSub-plus-Oban path while producers are migrated. Delete with that config.
-    test "the superseded critical-handler map stays a subset of the registry" do
-      for {topic, handlers} <- Application.fetch_env!(:klass_hero, :critical_event_handlers), handler <- handlers do
-        assert handler in EventConsumerRegistry.consumers_for(topic),
-               "#{topic} routes to #{inspect(handler)} in :critical_event_handlers but not in :event_consumers"
-      end
-    end
   end
 end

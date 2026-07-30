@@ -31,6 +31,20 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
   end
 
+  defmodule IntegrationTopicProjection do
+    use Projection, topics: ["integration:test:event_a"]
+
+    @agent_name KlassHero.Shared.ProjectionTest.Agent
+
+    @impl Projection
+    def bootstrap_impl, do: 0
+
+    @impl Projection
+    def handle_event(type, event) do
+      Agent.update(@agent_name, fn s -> %{s | events: [{type, event} | s.events]} end)
+    end
+  end
+
   setup do
     {:ok, agent_pid} =
       Agent.start_link(fn -> %{bootstraps: 0, events: []} end, name: @agent_name)
@@ -76,31 +90,46 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
   end
 
-  describe "init/1 with default opts" do
-    test "subscribes to every topic in :topics" do
-      name = unique_name()
-      {:ok, pid} = TestProjection.start_link(name: name)
-      :sys.get_state(pid)
+  describe "project/1" do
+    test "routes the event to handle_event/2 in the caller's process" do
+      event = integration_event(:event_a)
 
-      # If subscription works, broadcasting to the topic delivers to the GenServer mailbox.
-      event = %IntegrationEvent{
-        event_id: Ecto.UUID.generate(),
-        event_type: :event_a,
-        source_context: :test,
-        entity_type: :thing,
-        entity_id: "id-1",
-        occurred_at: DateTime.utc_now(),
-        payload: %{},
-        metadata: %{},
-        version: 1
-      }
+      assert :ok = TestProjection.project(event)
 
-      Phoenix.PubSub.broadcast(KlassHero.PubSub, "test:projection:event_a", {:integration_event, event})
-      :sys.get_state(pid)
-
-      # If the event was received, handle_event was called and recorded it.
       assert [{:event_a, ^event}] = agent_state().events
     end
+
+    # The delivery job calls project/1 directly, so a projection must not also be
+    # subscribed to its integration topics — that would double-apply every event on
+    # whichever node happened to run the job.
+    test "is the only route in: an integration topic is not subscribed" do
+      {:ok, pid} = IntegrationTopicProjection.start_link(name: unique_name())
+      :sys.get_state(pid)
+
+      Phoenix.PubSub.broadcast(
+        KlassHero.PubSub,
+        "integration:test:event_a",
+        {:integration_event, integration_event(:event_a)}
+      )
+
+      :sys.get_state(pid)
+
+      assert [] = agent_state().events
+    end
+  end
+
+  defp integration_event(type) do
+    %IntegrationEvent{
+      event_id: Ecto.UUID.generate(),
+      event_type: type,
+      source_context: :test,
+      entity_type: :thing,
+      entity_id: "id-1",
+      occurred_at: DateTime.utc_now(),
+      payload: %{},
+      metadata: %{},
+      version: 1
+    }
   end
 
   describe ":retry_bootstrap message" do
