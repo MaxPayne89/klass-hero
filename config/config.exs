@@ -30,9 +30,6 @@ alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
 
-alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents,
-  as: ProgramCatalogPromoter
-
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
@@ -302,7 +299,6 @@ config :klass_hero, :event_promoters, %{
   KlassHero.Family => FamilyPromoter,
   KlassHero.Messaging => MessagingPromoter,
   KlassHero.Participation => ParticipationPromoter,
-  KlassHero.ProgramCatalog => ProgramCatalogPromoter,
   KlassHero.Provider => ProviderPromoter
 }
 

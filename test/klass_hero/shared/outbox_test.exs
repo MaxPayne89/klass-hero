@@ -20,8 +20,14 @@ defmodule KlassHero.Shared.OutboxTest do
     :ok
   end
 
-  defp domain_event(type, aggregate_id, payload) do
-    DomainEvent.new(type, aggregate_id, :program, payload)
+  # Family still promotes; ProgramCatalog's producers build the single struct
+  # directly now, so it can no longer demonstrate promotion.
+  defp domain_event(type, child_id) do
+    DomainEvent.new(type, child_id, :child, %{child_id: child_id})
+  end
+
+  defp event(type, entity_id, payload \\ %{}) do
+    IntegrationEvent.new(type, :program_catalog, :program, entity_id, payload)
   end
 
   defp staged_job_events do
@@ -32,14 +38,14 @@ defmodule KlassHero.Shared.OutboxTest do
 
   describe "promotion" do
     test "maps a domain event to its context's integration event" do
-      Outbox.stage(KlassHero.ProgramCatalog, domain_event(:program_created, "prog-1", %{title: "Chess"}))
+      Outbox.stage(KlassHero.Family, domain_event(:child_created, "child-1"))
 
-      assert [%IntegrationEvent{event_type: :program_created, source_context: :program_catalog, entity_id: "prog-1"}] =
+      assert [%IntegrationEvent{event_type: :child_created, source_context: :family, entity_id: "child-1"}] =
                TestOutbox.staged()
     end
 
     test "passes an integration event through untouched" do
-      event = IntegrationEvent.new(:program_created, :program_catalog, :program, "prog-1", %{title: "Chess"})
+      event = event(:program_created, "prog-1", %{title: "Chess"})
 
       Outbox.stage(KlassHero.ProgramCatalog, event)
 
@@ -49,22 +55,22 @@ defmodule KlassHero.Shared.OutboxTest do
     # A domain event with no promoter clause was never promoted under the bus either —
     # it simply had no registration. Staging nothing keeps that exact behaviour.
     test "stages nothing for an event type the context does not promote" do
-      Outbox.stage(KlassHero.ProgramCatalog, domain_event(:program_archived, "prog-1", %{}))
+      Outbox.stage(KlassHero.Family, domain_event(:child_archived, "child-1"))
 
       assert [] = TestOutbox.staged()
     end
 
     test "stages nothing for a context with no promoter at all" do
-      Outbox.stage(KlassHero.Admin, domain_event(:program_created, "prog-1", %{title: "Chess"}))
+      Outbox.stage(KlassHero.Admin, domain_event(:child_created, "child-1"))
 
       assert [] = TestOutbox.staged()
     end
 
     test "keeps the order the producer emitted" do
       Outbox.stage(KlassHero.ProgramCatalog, [
-        domain_event(:program_created, "prog-1", %{title: "First"}),
-        domain_event(:program_updated, "prog-2", %{title: "Second"}),
-        domain_event(:program_created, "prog-3", %{title: "Third"})
+        event(:program_created, "prog-1"),
+        event(:program_updated, "prog-2"),
+        event(:program_created, "prog-3")
       ])
 
       assert ["prog-1", "prog-2", "prog-3"] = Enum.map(TestOutbox.staged(), & &1.entity_id)
@@ -80,7 +86,7 @@ defmodule KlassHero.Shared.OutboxTest do
     test "stages an event a consumer is registered for" do
       Outbox.stage(
         KlassHero.ProgramCatalog,
-        IntegrationEvent.new(:program_created, :program_catalog, :program, "prog-1", %{})
+        event(:program_created, "prog-1")
       )
 
       assert [%IntegrationEvent{event_type: :program_created}] = TestOutbox.staged()
@@ -89,7 +95,7 @@ defmodule KlassHero.Shared.OutboxTest do
     test "stages nothing when no consumer is registered for the topic" do
       Outbox.stage(
         KlassHero.ProgramCatalog,
-        IntegrationEvent.new(:program_archived, :program_catalog, :program, "prog-1", %{})
+        event(:program_archived, "prog-1")
       )
 
       assert [] = TestOutbox.staged()
@@ -99,9 +105,9 @@ defmodule KlassHero.Shared.OutboxTest do
     # siblings staged in the same transaction.
     test "keeps the consumed events from a batch that also holds unconsumed ones" do
       Outbox.stage(KlassHero.ProgramCatalog, [
-        IntegrationEvent.new(:program_archived, :program_catalog, :program, "prog-1", %{}),
-        IntegrationEvent.new(:program_created, :program_catalog, :program, "prog-2", %{}),
-        IntegrationEvent.new(:program_archived, :program_catalog, :program, "prog-3", %{})
+        event(:program_archived, "prog-1"),
+        event(:program_created, "prog-2"),
+        event(:program_archived, "prog-3")
       ])
 
       assert ["prog-2"] = Enum.map(TestOutbox.staged(), & &1.entity_id)
@@ -112,7 +118,7 @@ defmodule KlassHero.Shared.OutboxTest do
     test "stages the events the callback returned and hands them back with the result" do
       assert {:ok, {:the_entity, [_event]}} =
                Outbox.transact(KlassHero.ProgramCatalog, fn ->
-                 {:ok, :the_entity, [domain_event(:program_created, "prog-1", %{title: "Chess"})]}
+                 {:ok, :the_entity, [event(:program_created, "prog-1", %{title: "Chess"})]}
                end)
 
       assert [%IntegrationEvent{event_type: :program_created}] = TestOutbox.staged()
@@ -162,8 +168,8 @@ defmodule KlassHero.Shared.OutboxTest do
         {:ok, :done} =
           Repo.transaction(fn ->
             Outbox.stage(KlassHero.ProgramCatalog, [
-              domain_event(:program_created, "prog-1", %{title: "Chess"}),
-              domain_event(:program_updated, "prog-1", %{title: "Chess Club"})
+              event(:program_created, "prog-1", %{title: "Chess"}),
+              event(:program_updated, "prog-1", %{title: "Chess Club"})
             ])
 
             :done
@@ -181,7 +187,7 @@ defmodule KlassHero.Shared.OutboxTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         {:error, :nope} =
           Repo.transaction(fn ->
-            Outbox.stage(KlassHero.ProgramCatalog, domain_event(:program_created, "prog-1", %{title: "Chess"}))
+            Outbox.stage(KlassHero.ProgramCatalog, event(:program_created, "prog-1", %{title: "Chess"}))
 
             Repo.rollback(:nope)
           end)

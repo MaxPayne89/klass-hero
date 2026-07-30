@@ -6,12 +6,13 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.ProgramCatalog.Domain.Events.ProgramEvents
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
-  # Every factory shares one contract: build a :program DomainEvent, let
-  # base_payload's program_id win over any caller-supplied value, and raise
-  # on a nil or blank program_id. The table drives that shared shape;
-  # factory-specific payload assertions live in their own describe below.
+  # Every factory shares one contract: build a :program_catalog event with
+  # stable identity fields, let base_payload's program_id win over any
+  # caller-supplied value, and raise on a nil or blank program_id. The table
+  # drives that shared shape; factory-specific payload assertions live in
+  # their own describe below.
   @factories [:program_created, :program_updated]
 
   for fun <- @factories do
@@ -21,10 +22,11 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
       test "builds a valid event with default payload" do
         event = apply(ProgramEvents, @fun, ["program-1"])
 
-        assert %DomainEvent{} = event
+        assert %IntegrationEvent{} = event
         assert event.event_type == @fun
-        assert event.aggregate_id == "program-1"
-        assert event.aggregate_type == :program
+        assert event.source_context == :program_catalog
+        assert event.entity_type == :program
+        assert event.entity_id == "program-1"
         assert event.payload.program_id == "program-1"
       end
 
@@ -39,7 +41,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
 
       test "raises for a nil or empty program_id" do
         for bad_id <- [nil, ""] do
-          assert_raise ArgumentError, fn ->
+          assert_raise ArgumentError, ~r/requires a non-empty program_id string/, fn ->
             apply(ProgramEvents, @fun, [bad_id])
           end
         end
