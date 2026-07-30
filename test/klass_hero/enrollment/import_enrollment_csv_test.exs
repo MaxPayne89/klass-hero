@@ -7,7 +7,7 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
   alias KlassHero.Enrollment.ImportEnrollmentCsv
   alias KlassHero.Repo
   # -- setup helpers ---------------------------------------------------------
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.DomainEventBus
 
   defp setup_provider_with_programs(_context) do
@@ -483,7 +483,7 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
       provider_id = provider.id
 
       assert_receive {:bulk_invites_imported,
-                      %DomainEvent{
+                      %IntegrationEvent{
                         event_type: :bulk_invites_imported,
                         payload: %{provider_id: ^provider_id, program_ids: ids, count: 2}
                       }},
@@ -515,7 +515,7 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
       # foreign event unreachable here (#1136); an unpinned `count: 1` payload would
       # otherwise match another provider's single-invite import.
       assert_receive {:bulk_invites_imported,
-                      %DomainEvent{
+                      %IntegrationEvent{
                         event_type: :bulk_invites_imported,
                         payload: %{provider_id: ^provider_id, program_ids: ids, count: 1}
                       }},
@@ -531,7 +531,7 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
 
       provider_id = provider.id
 
-      refute_receive {:bulk_invites_imported, %DomainEvent{payload: %{provider_id: ^provider_id}}},
+      refute_receive {:bulk_invites_imported, %IntegrationEvent{payload: %{provider_id: ^provider_id}}},
                      500
     end
   end

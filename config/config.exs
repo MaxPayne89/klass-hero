@@ -11,7 +11,6 @@ alias ExAws.Request.Req
 alias FunWithFlags.Notifications.PhoenixPubSub
 alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
-alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: EnrollmentPromoter
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
@@ -292,7 +291,6 @@ config :klass_hero, :event_consumers, %{
 # event model; until then this is the one place the mapping is declared rather
 # than implied by a bus registration.
 config :klass_hero, :event_promoters, %{
-  KlassHero.Enrollment => EnrollmentPromoter,
   KlassHero.Messaging => MessagingPromoter,
   KlassHero.Participation => ParticipationPromoter,
   KlassHero.Provider => ProviderPromoter
