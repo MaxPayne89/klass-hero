@@ -20,7 +20,7 @@ defmodule KlassHero.Provider.Verification.AutoVerifyIntegrationTest do
   alias KlassHero.Provider.Vetting
   alias KlassHero.Provider.VettingCase
   alias KlassHero.ProviderFixtures
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @individual_doc_types VerificationDocument.valid_document_types(:individual)
 
@@ -75,7 +75,7 @@ defmodule KlassHero.Provider.Verification.AutoVerifyIntegrationTest do
   end
 
   defp approved_event(provider_id, reviewer_id, document_type) do
-    DomainEvent.new(:verification_document_approved, Ecto.UUID.generate(), :verification_document, %{
+    IntegrationEvent.new(:verification_document_approved, :provider, :verification_document, Ecto.UUID.generate(), %{
       provider_id: provider_id,
       reviewer_id: reviewer_id,
       document_type: document_type,
@@ -84,7 +84,7 @@ defmodule KlassHero.Provider.Verification.AutoVerifyIntegrationTest do
   end
 
   defp rejected_event(provider_id, reviewer_id, document_type) do
-    DomainEvent.new(:verification_document_rejected, Ecto.UUID.generate(), :verification_document, %{
+    IntegrationEvent.new(:verification_document_rejected, :provider, :verification_document, Ecto.UUID.generate(), %{
       provider_id: provider_id,
       reviewer_id: reviewer_id,
       document_type: document_type,

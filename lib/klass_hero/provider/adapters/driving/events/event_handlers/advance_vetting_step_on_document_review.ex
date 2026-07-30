@@ -17,12 +17,12 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.VettingVerificationSync
   alias KlassHero.Provider.Vetting
   alias KlassHero.Provider.VettingCase
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   require Logger
 
-  @spec handle(DomainEvent.t()) :: :ok | {:error, term()}
-  def handle(%DomainEvent{event_type: :verification_document_approved, payload: payload}) do
+  @spec handle(IntegrationEvent.t()) :: :ok | {:error, term()}
+  def handle(%IntegrationEvent{event_type: :verification_document_approved, payload: payload}) do
     %{provider_id: provider_id, reviewer_id: reviewer_id, document_type: document_type, document_id: document_id} =
       payload
 
@@ -46,7 +46,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
     end
   end
 
-  def handle(%DomainEvent{event_type: :verification_document_rejected, payload: payload}) do
+  def handle(%IntegrationEvent{event_type: :verification_document_rejected, payload: payload}) do
     %{provider_id: provider_id, reviewer_id: reviewer_id, document_type: document_type} = payload
 
     with {:ok, case_} <- Vetting.get_case_for_provider(provider_id),

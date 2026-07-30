@@ -28,7 +28,6 @@ alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
-alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: ProviderPromoter
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
@@ -289,7 +288,6 @@ config :klass_hero, :event_consumers, %{
 # event model; until then this is the one place the mapping is declared rather
 # than implied by a bus registration.
 config :klass_hero, :event_promoters, %{
-  KlassHero.Provider => ProviderPromoter
 }
 
 # Configure Feature Flags bounded context

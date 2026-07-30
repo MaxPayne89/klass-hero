@@ -31,10 +31,10 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
-  alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
 
   defp build_invited_event(staff, provider, raw_token) do
-    ProviderIntegrationEvents.staff_member_invited(
+    ProviderEvents.staff_member_invited(
       staff.id,
       %{
         provider_id: staff.provider_id,

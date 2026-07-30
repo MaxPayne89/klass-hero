@@ -14,7 +14,7 @@ defmodule KlassHero.Provider.Verification do
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Storage
 
@@ -259,10 +259,11 @@ defmodule KlassHero.Provider.Verification do
   end
 
   defp dispatch_verification_event(event_name, doc, reviewer_id) do
-    DomainEvent.new(
+    IntegrationEvent.new(
       event_name,
-      doc.id,
+      :provider,
       :verification_document,
+      doc.id,
       %{
         provider_id: doc.provider_profile_id,
         reviewer_id: reviewer_id,

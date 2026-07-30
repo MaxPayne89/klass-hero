@@ -8,8 +8,9 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
   Note: Backpex operates directly on Ecto schemas and Repo, bypassing
   the Ports & Adapters layering used elsewhere. This is a pragmatic
   exception scoped to admin-only read + limited edit operations.
-  The `on_item_updated/2` callback bridges back into the domain layer
-  by publishing integration/domain events that projections depend on.
+  The `on_item_updated/2` callback bridges back into the domain layer by
+  routing the verification change through the context, which is what the
+  read-model projections depend on.
   """
 
   # Backpex requires FQ refs in `use` args — alias can't precede `use` per formatter rules
@@ -27,11 +28,11 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
   alias Backpex.Fields.Boolean
   alias Backpex.Fields.Text
   alias Backpex.Fields.Textarea
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
-  alias KlassHero.Shared.IntegrationEventPublishing
+  alias KlassHero.Provider
   alias KlassHeroWeb.Admin.Filters.VerifiedFilter
 
   require KlassHeroWeb.BackpexCompat
+  require Logger
 
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
@@ -115,53 +116,44 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
     ]
   end
 
-  # admin_changeset bypasses domain use cases; publish events so the
-  # ProgramListings projection stays in sync.
+  # admin_changeset bypasses the domain use cases, so route the change back
+  # through the context — that is what keeps the ProgramListings projection in
+  # sync (#1210).
   KlassHeroWeb.BackpexCompat.override :on_item_updated, 2 do
     @impl Backpex.LiveResource
     def on_item_updated(socket, item) do
       old_item = socket.assigns.item
 
-      maybe_publish_verification_event(old_item, item, socket)
+      record_verification_change(old_item, item, socket)
 
       socket
     end
   end
 
-  defp maybe_publish_verification_event(%{verified: same}, %{verified: same}, _socket), do: :ok
+  defp record_verification_change(%{verified: same}, %{verified: same}, _socket), do: :ok
 
-  defp maybe_publish_verification_event(_old, %{verified: true} = item, socket) do
+  # Re-runs the write Backpex just did, through the context, so the event is
+  # staged inside a transaction like every other producer's (#1210). Publishing
+  # it from here reached nobody: the outbox delivers `provider_verified`, and
+  # nothing has subscribed to its PubSub topic since #1207. Both facade
+  # functions are idempotent, so re-persisting the same values is safe.
+  defp record_verification_change(_old, %{verified: verified} = item, socket) do
     admin_id = socket.assigns.current_scope.user.id
 
-    IntegrationEvent.new(
-      :provider_verified,
-      :provider,
-      :provider,
-      item.id,
-      %{
-        provider_id: item.id,
-        business_name: item.business_name,
-        verified_at: item.verified_at,
-        admin_id: admin_id
-      }
-    )
-    |> IntegrationEventPublishing.publish()
+    case verification_result(verified, item.id, admin_id) do
+      {:ok, _profile} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.error("Admin verification change did not reach the domain: verified=#{verified}",
+          provider_id: item.id,
+          reason: inspect(reason)
+        )
+
+        :ok
+    end
   end
 
-  defp maybe_publish_verification_event(_old, %{verified: false} = item, socket) do
-    admin_id = socket.assigns.current_scope.user.id
-
-    IntegrationEvent.new(
-      :provider_unverified,
-      :provider,
-      :provider,
-      item.id,
-      %{
-        provider_id: item.id,
-        business_name: item.business_name,
-        admin_id: admin_id
-      }
-    )
-    |> IntegrationEventPublishing.publish()
-  end
+  defp verification_result(true, provider_id, admin_id), do: Provider.verify_provider(provider_id, admin_id)
+  defp verification_result(false, provider_id, admin_id), do: Provider.unverify_provider(provider_id, admin_id)
 end

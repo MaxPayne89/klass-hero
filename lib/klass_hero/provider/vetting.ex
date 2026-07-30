@@ -33,7 +33,7 @@ defmodule KlassHero.Provider.Vetting do
   alias KlassHero.Provider.VettingChecklist
   alias KlassHero.Provider.VettingStepView
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
@@ -661,7 +661,7 @@ defmodule KlassHero.Provider.Vetting do
   defp identity_event_for(:fail), do: :identity_verification_failed
 
   defp dispatch_identity_event(event_type, iv) do
-    DomainEvent.new(event_type, iv.id, :identity_verification, %{
+    IntegrationEvent.new(event_type, :provider, :identity_verification, iv.id, %{
       provider_id: iv.provider_id,
       identity_verification_id: iv.id,
       stripe_session_id: iv.stripe_session_id,
