@@ -1,260 +1,31 @@
 defmodule KlassHero.EventTestHelper do
   @moduledoc """
-  Test helpers for asserting on domain events.
-
-  Provides convenient functions for testing event publishing in your tests,
-  including integration test helpers for the full publish → subscribe → handle flow.
-
-  ## Unit Test Setup (TestEventPublisher)
-
-  For testing that events are published (without PubSub):
+  Test helpers for asserting on the integration events a write emitted.
 
       setup do
-        KlassHero.EventTestHelper.setup_test_events()
+        KlassHero.EventTestHelper.setup_test_integration_events()
         :ok
       end
 
-      test "publishes user_registered event" do
-        user = insert(:user)
-        EventPublisher.publish_user_registered(user)
+      test "staging an event" do
+        {:ok, user} = Accounts.register_user(attrs)
 
-        assert_event_published(:user_registered)
-        assert_event_published(:user_registered, %{email: user.email})
+        assert_integration_event_published(:user_registered)
+        assert_integration_event_published(:user_registered, %{email: user.email})
       end
 
-  ## Integration Test Setup (Real PubSub)
-
-  For testing the full EventSubscriber → Handler flow:
-
-      setup do
-        {:ok, subscriber} = start_test_subscriber(
-          topics: ["user:user_registered"],
-          test_pid: self()
-        )
-
-        on_exit(fn -> stop_test_subscriber(subscriber) end)
-        :ok
-      end
-
-      test "handler receives published event" do
-        event = DomainEvent.new(:user_registered, 1, :user, %{})
-        :ok = publish_via_pubsub(event)
-
-        handled_event = assert_event_handled(:user_registered)
-        assert handled_event.event_id == event.event_id
-      end
+  The domain-event half of this module is gone: LiveViews receive tagged tuples
+  now, so a test that wants to drive one `send/2`s the tuple, and a test that
+  wants to check a notification subscribes to the topic and asserts on the
+  message. Neither needs a helper.
   """
 
   import ExUnit.Assertions
 
-  alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
-  alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-
-  @doc """
-  Simulates PubSub fan-out by delivering `event` straight to a LiveView's
-  `handle_info/2`.
-
-  Bypasses the real publisher: use when a test needs to drive the LiveView's
-  event-handling branch directly rather than exercise publish → subscribe.
-  Owns the `{:domain_event, _}` envelope so tests don't repeat it.
-
-      event = ParticipationEvents.roster_seeded(session.id, program.id, 1)
-      emit_domain_event(view, event)
-  """
-  @spec emit_domain_event(%{pid: pid()}, DomainEvent.t()) :: :ok
-  def emit_domain_event(%{pid: pid}, %DomainEvent{} = event) when is_pid(pid) do
-    send(pid, {:domain_event, event})
-    :ok
-  end
-
-  @doc """
-  Initializes event collection for the current test.
-
-  Call this in your test setup block.
-  """
-  @spec setup_test_events() :: :ok
-  def setup_test_events do
-    TestEventPublisher.setup()
-  end
-
-  @doc """
-  Clears all collected events.
-
-  Useful if you need to reset event state mid-test.
-  """
-  @spec clear_events() :: :ok
-  def clear_events do
-    TestEventPublisher.clear()
-  end
-
-  @doc """
-  Returns all events published during the test.
-  """
-  @spec get_published_events() :: [DomainEvent.t()]
-  def get_published_events do
-    TestEventPublisher.get_events()
-  end
-
-  @doc """
-  Asserts that an event of the given type was published.
-
-  ## Examples
-
-      assert_event_published(:user_registered)
-      assert_event_published(:enrollment_confirmed)
-  """
-  @spec assert_event_published(atom()) :: DomainEvent.t()
-  def assert_event_published(event_type) when is_atom(event_type) do
-    events = get_published_events()
-
-    event =
-      Enum.find(events, fn %DomainEvent{event_type: type} ->
-        type == event_type
-      end)
-
-    assert event != nil,
-           "Expected event #{inspect(event_type)} to be published.\n" <>
-             "Published events: #{format_event_types(events)}"
-
-    event
-  end
-
-  @doc """
-  Asserts that an event of the given type was published with a payload matching
-  the expected fields.
-
-  The payload match is partial - only the specified fields are checked.
-
-  ## Examples
-
-      assert_event_published(:user_registered, %{email: "test@example.com"})
-      assert_event_published(:order_placed, %{total: 100, currency: "USD"})
-  """
-  @spec assert_event_published(atom(), map()) :: DomainEvent.t()
-  def assert_event_published(event_type, expected_payload) when is_atom(event_type) and is_map(expected_payload) do
-    events = get_published_events()
-
-    event =
-      Enum.find(events, fn %DomainEvent{event_type: type, payload: payload} ->
-        type == event_type && payload_matches?(payload, expected_payload)
-      end)
-
-    if event == nil do
-      matching_type_events =
-        Enum.filter(events, fn %DomainEvent{event_type: type} ->
-          type == event_type
-        end)
-
-      if matching_type_events == [] do
-        flunk(
-          "Expected event #{inspect(event_type)} to be published.\n" <>
-            "Published events: #{format_event_types(events)}"
-        )
-      else
-        flunk(
-          "Expected event #{inspect(event_type)} with payload matching:\n" <>
-            "  #{inspect(expected_payload)}\n\n" <>
-            "Found #{length(matching_type_events)} event(s) of type #{inspect(event_type)}:\n" <>
-            format_event_payloads(matching_type_events)
-        )
-      end
-    end
-
-    event
-  end
-
-  @doc """
-  Asserts that an event of the given type was published to `topic`.
-
-  Proves the real publish→subscribe coupling (#1108): the topic recorded here is
-  the exact string the event was broadcast on, so a subscriber listening on
-  `topic` would have received it. Returns the matching event.
-
-  ## Examples
-
-      assert_published_to(:child_checked_in, "participation:child_checked_in")
-  """
-  @spec assert_published_to(atom(), String.t()) :: DomainEvent.t()
-  def assert_published_to(event_type, topic) when is_atom(event_type) and is_binary(topic) do
-    published = TestEventPublisher.get_published()
-
-    match =
-      Enum.find(published, fn {%DomainEvent{event_type: type}, published_topic} ->
-        type == event_type and published_topic == topic
-      end)
-
-    assert match != nil,
-           "Expected #{inspect(event_type)} to be published to #{inspect(topic)}.\n" <>
-             "Published: #{format_published(published)}"
-
-    {event, _topic} = match
-    event
-  end
-
-  @doc """
-  Asserts that no events were published.
-
-  ## Examples
-
-      assert_no_events_published()
-  """
-  @spec assert_no_events_published() :: :ok
-  def assert_no_events_published do
-    events = get_published_events()
-
-    assert events == [],
-           "Expected no events to be published.\n" <>
-             "Published events: #{format_event_types(events)}"
-
-    :ok
-  end
-
-  @doc """
-  Asserts that exactly the given number of events were published.
-
-  ## Examples
-
-      assert_event_count(3)
-  """
-  @spec assert_event_count(non_neg_integer()) :: :ok
-  def assert_event_count(expected_count) when is_integer(expected_count) do
-    events = get_published_events()
-    actual_count = length(events)
-
-    assert actual_count == expected_count,
-           "Expected #{expected_count} event(s) to be published, but got #{actual_count}.\n" <>
-             "Published events: #{format_event_types(events)}"
-
-    :ok
-  end
-
-  defp payload_matches?(actual, expected) do
-    Enum.all?(expected, fn {key, value} ->
-      Map.get(actual, key) == value
-    end)
-  end
-
-  defp format_event_types([]), do: "(none)"
-  defp format_event_types(events), do: Enum.map_join(events, ", ", &inspect(&1.event_type))
-
-  defp format_published([]), do: "(none)"
-
-  defp format_published(published) do
-    Enum.map_join(published, ", ", fn {event, topic} ->
-      "#{inspect(event.event_type)}→#{inspect(topic)}"
-    end)
-  end
-
-  defp format_event_payloads(events) do
-    events
-    |> Enum.with_index(1)
-    |> Enum.map_join("\n", fn {event, idx} -> "  #{idx}. #{inspect(event.payload)}" end)
-  end
 
   # ===========================================================================
   # Integration Event Unit Test Helpers (TestIntegrationEventPublisher)
@@ -426,153 +197,26 @@ defmodule KlassHero.EventTestHelper do
     :ok
   end
 
-  # ===========================================================================
-  # Integration Test Helpers (Real PubSub) — Domain Events
-  # ===========================================================================
-
-  @doc """
-  Publishes an event via PubSub (bypassing TestEventPublisher).
-
-  For integration tests that need real PubSub broadcasting.
-
-  ## Options
-
-  - `:topic` - Override the topic (default: derived from event via `derive_topic/1`)
-  - `:pubsub` - PubSub server name (default: `KlassHero.PubSub`)
-
-  ## Example
-
-      event = DomainEvent.new(:user_registered, 1, :user, %{email: "test@example.com"})
-      :ok = publish_via_pubsub(event)
-
-      # Or with custom topic
-      :ok = publish_via_pubsub(event, topic: "custom:topic")
-  """
-  @spec publish_via_pubsub(DomainEvent.t(), keyword()) :: :ok | {:error, term()}
-  def publish_via_pubsub(%DomainEvent{} = event, opts \\ []) do
-    pubsub = Keyword.get(opts, :pubsub, KlassHero.PubSub)
-
-    topic =
-      Keyword.get_lazy(opts, :topic, fn ->
-        PubSubEventPublisher.derive_topic(event)
-      end)
-
-    Phoenix.PubSub.broadcast(pubsub, topic, {:domain_event, event})
+  defp payload_matches?(actual, expected) do
+    Enum.all?(expected, fn {key, value} ->
+      Map.get(actual, key) == value
+    end)
   end
 
-  @doc """
-  Asserts that an event was handled by the test handler.
+  defp format_event_types([]), do: "(none)"
+  defp format_event_types(events), do: Enum.map_join(events, ", ", &inspect(&1.event_type))
 
-  Waits for the handler to send `{:event_handled, event, handler_pid}`.
-  Returns the handled event on success.
+  defp format_published([]), do: "(none)"
 
-  ## Parameters
-
-  - `event_type` - The expected event type atom
-  - `timeout` - Maximum wait time in milliseconds (default: 500)
-
-  ## Example
-
-      handled_event = assert_event_handled(:user_registered)
-      assert handled_event.payload.email == "test@example.com"
-
-      # With custom timeout
-      assert_event_handled(:slow_event, 1000)
-  """
-  @spec assert_event_handled(atom(), timeout()) :: DomainEvent.t()
-  def assert_event_handled(event_type, timeout \\ 500) when is_atom(event_type) do
-    receive do
-      {:event_handled, %DomainEvent{event_type: ^event_type} = event, _pid} ->
-        event
-    after
-      timeout ->
-        flunk("Expected event #{inspect(event_type)} to be handled within #{timeout}ms")
-    end
+  defp format_published(published) do
+    Enum.map_join(published, ", ", fn {event, topic} ->
+      "#{inspect(event.event_type)}→#{inspect(topic)}"
+    end)
   end
 
-  @doc """
-  Asserts that an event was handled with a payload matching expected fields.
-
-  The payload match is partial - only the specified fields are checked.
-
-  ## Example
-
-      assert_event_handled(:user_registered, %{email: "test@example.com"})
-  """
-  @spec assert_event_handled(atom(), map(), timeout()) :: DomainEvent.t()
-  def assert_event_handled(event_type, expected_payload, timeout)
-      when is_atom(event_type) and is_map(expected_payload) do
-    receive do
-      {:event_handled, %DomainEvent{event_type: ^event_type, payload: payload} = event, _pid} ->
-        if payload_matches?(payload, expected_payload) do
-          event
-        else
-          flunk(
-            "Expected event #{inspect(event_type)} with payload matching:\n" <>
-              "  #{inspect(expected_payload)}\n\n" <>
-              "Got:\n  #{inspect(payload)}"
-          )
-        end
-    after
-      timeout ->
-        flunk("Expected event #{inspect(event_type)} to be handled within #{timeout}ms")
-    end
-  end
-
-  @doc """
-  Asserts that no events were handled within the timeout.
-
-  ## Parameters
-
-  - `timeout` - Wait time in milliseconds (default: 100)
-
-  ## Example
-
-      # Assert no events received
-      refute_event_handled()
-
-      # With longer timeout
-      refute_event_handled(200)
-  """
-  @spec refute_event_handled(timeout()) :: :ok
-  def refute_event_handled(timeout \\ 100) do
-    receive do
-      {:event_handled, %DomainEvent{event_type: event_type}, _pid} ->
-        flunk("Expected no events to be handled, but received #{inspect(event_type)}")
-    after
-      timeout -> :ok
-    end
-  end
-
-  # ===========================================================================
-  # Integration Event PubSub Helpers (Real PubSub)
-  # ===========================================================================
-
-  @doc """
-  Publishes an integration event via PubSub (bypassing TestIntegrationEventPublisher).
-
-  For integration tests that need real PubSub broadcasting of integration events.
-
-  ## Options
-
-  - `:topic` - Override the topic (default: derived from event via `derive_topic/1`)
-  - `:pubsub` - PubSub server name (default: `KlassHero.PubSub`)
-
-  ## Example
-
-      event = IntegrationEvent.new(:child_data_anonymized, :identity, :child, "uuid", %{})
-      :ok = publish_integration_event_via_pubsub(event)
-  """
-  @spec publish_integration_event_via_pubsub(IntegrationEvent.t(), keyword()) ::
-          :ok | {:error, term()}
-  def publish_integration_event_via_pubsub(%IntegrationEvent{} = event, opts \\ []) do
-    pubsub = Keyword.get(opts, :pubsub, KlassHero.PubSub)
-
-    topic =
-      Keyword.get_lazy(opts, :topic, fn ->
-        PubSubIntegrationEventPublisher.derive_topic(event)
-      end)
-
-    Phoenix.PubSub.broadcast(pubsub, topic, {:integration_event, event})
+  defp format_event_payloads(events) do
+    events
+    |> Enum.with_index(1)
+    |> Enum.map_join("\n", fn {event, idx} -> "  #{idx}. #{inspect(event.payload)}" end)
   end
 end

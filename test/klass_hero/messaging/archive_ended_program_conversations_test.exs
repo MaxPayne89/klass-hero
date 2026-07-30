@@ -98,7 +98,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversationsTest do
       assert {:ok, result} = ArchiveEndedProgramConversations.execute()
       assert result.count == 0
 
-      EventTestHelper.assert_no_events_published()
+      EventTestHelper.assert_no_integration_events_published()
     end
 
     test "respects config override via days_after_program_end opt" do

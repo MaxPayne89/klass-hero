@@ -47,7 +47,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorkerTest 
 
       assert :ok = MessageCleanupWorker.perform(job)
 
-      EventTestHelper.assert_no_events_published()
+      EventTestHelper.assert_no_integration_events_published()
     end
 
     test "archives conversations for ended programs and publishes event" do

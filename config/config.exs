@@ -40,7 +40,6 @@ alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegratio
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
-alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
@@ -306,11 +305,6 @@ config :klass_hero, :event_promoters, %{
   KlassHero.ProgramCatalog => ProgramCatalogPromoter,
   KlassHero.Provider => ProviderPromoter
 }
-
-# Configure Event Publisher (domain events — internal context communication)
-config :klass_hero, :event_publisher,
-  module: PubSubEventPublisher,
-  pubsub: KlassHero.PubSub
 
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter

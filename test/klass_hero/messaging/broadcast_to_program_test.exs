@@ -244,7 +244,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       assert {:ok, _conv, _msg, _count} =
                BroadcastToProgram.execute(scope, program.id, "Announcement")
 
-      published_types = Enum.map(get_published_events(), & &1.event_type)
+      published_types = Enum.map(get_published_integration_events(), & &1.event_type)
       refute :broadcast_sent in published_types
     end
   end
