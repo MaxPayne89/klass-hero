@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.0](https://github.com/MaxPayne89/klass-hero/compare/v0.65.1...v0.66.0) (2026-07-30)
+
+
+### Features
+
+* deliver events through a transactional outbox ([#1207](https://github.com/MaxPayne89/klass-hero/issues/1207)) ([bd46123](https://github.com/MaxPayne89/klass-hero/commit/bd46123a9c78c753582004c16b154251cb78a7cb))
+
+
+### Bug Fixes
+
+* bound the icon generator's Chrome invocation ([#1205](https://github.com/MaxPayne89/klass-hero/issues/1205)) ([7bb236a](https://github.com/MaxPayne89/klass-hero/commit/7bb236add05f2746cb8e714d31d2c1b83394c41d)), closes [#1203](https://github.com/MaxPayne89/klass-hero/issues/1203)
+* guard read-and-assess-issue against pull requests ([#1204](https://github.com/MaxPayne89/klass-hero/issues/1204)) ([1295eb2](https://github.com/MaxPayne89/klass-hero/commit/1295eb22d9bfca0a53c1b33ad9c3165e20f8f066))
+
 ## [0.65.1](https://github.com/MaxPayne89/klass-hero/compare/v0.65.0...v0.65.1) (2026-07-30)
 
 
