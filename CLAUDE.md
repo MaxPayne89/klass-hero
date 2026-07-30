@@ -90,18 +90,21 @@ See `.claude/rules/domain-architecture.md` for patterns. For context-specific de
 
 **CQRS reads:** Read models are maintained by projection GenServers (`adapters/driven/projections/`) that subscribe to events and denormalize into dedicated read tables, exposed as read-model DTOs (`domain/read_models/`). Program Catalog, Messaging, and Provider have these. Build new projections on `KlassHero.Shared.Projection` (base macro) — see `provider/adapters/driven/projections/provider_programs.ex` for the canonical example.
 
-> **Note:** Per-context *aggregate* port DI wiring (`config :klass_hero, :<context>, for_managing_*: Adapter`) is gone — those ports were ceremony (one prod impl). What survives is Shared's genuine env-swapped adapter seams, where a behaviour + config-selected impl is idiomatic Elixir DI, not DDD ceremony: `event_publisher`, `integration_event_publisher`, `feature_flags`, `storage` (each real-vs-test/stub), plus `:shared, for_tracking_processed_events`. Their slim behaviours live at the Shared root (`KlassHero.Shared.ForStoringFiles` etc.), not in a `domain/ports/` tree. Do not add new *aggregate* port-wiring — call collaborators directly or via an ACL module — but a new genuinely swappable external adapter may follow the Shared seam pattern.
+> **Note:** Per-context *aggregate* port DI wiring (`config :klass_hero, :<context>, for_managing_*: Adapter`) is gone — those ports were ceremony (one prod impl). What survives is Shared's genuine env-swapped adapter seams, where a behaviour + config-selected impl is idiomatic Elixir DI, not DDD ceremony: `outbox`, `feature_flags`, `storage` (each real-vs-test/stub), plus `:shared, for_tracking_processed_events`. Their slim behaviours live at the Shared root (`KlassHero.Shared.ForStoringFiles` etc.), not in a `domain/ports/` tree. Do not add new *aggregate* port-wiring — call collaborators directly or via an ACL module — but a new genuinely swappable external adapter may follow the Shared seam pattern.
 
-### Event System (Two-Tier)
+### Event System
 
-- **Domain events** (non-critical): Published via PubSub (`PubSubEventPublisher`). Used for real-time UI updates and non-essential side effects.
-- **Integration events** (critical): Routed through `critical_event_handlers` registry in `config/config.exs` to Oban-backed handlers for durable, at-least-once delivery. Used for cross-context workflows.
+One `Event` struct, one delivery mechanism. A producer stages its events **inside** the
+transaction that made them true (`Shared.Outbox.transact/2`), and an Oban job
+(`EventDeliveryWorker`) invokes the consumers registered for each event's topic. There is no
+in-process event bus: a same-context reaction is an ordinary function call, made inside the
+producer's transaction.
 
-Registry shape — topic strings keyed `integration:<context>:<event>` map to a list of `{Handler, :function}` tuples (fan-out supported):
+Consumers are registered in `config/config.exs` under `:event_consumers`, keyed by topic string
+`integration:<context>:<event>`, fanning out to a list of `{Module, :function}` tuples:
 
 ```elixir
-# config/config.exs
-config :klass_hero, :critical_event_handlers, %{
+config :klass_hero, :event_consumers, %{
   "integration:accounts:user_registered" => [
     {FamilyEventHandler, :handle_event},
     {ProviderEventHandler, :handle_event}
@@ -112,7 +115,13 @@ config :klass_hero, :critical_event_handlers, %{
 }
 ```
 
-When adding a new integration event: define the event struct, publish it from the use case, then register the handler(s) here. Handlers live under their own context's `adapters/driving/events/`.
+That registry is also the filter: `Outbox.stage/2` drops an event no one consumes rather than
+staging work for nobody. So adding an event means defining the struct, staging it from the use
+case, and registering its consumer here — an event with no entry is never delivered. Consumers
+live under their own context's `adapters/driving/events/`.
+
+**UI updates are not events.** A LiveView receives a plain tagged tuple over `Phoenix.PubSub`
+naming what changed (`{:session_changed, id}`), broadcast by whoever wrote the data.
 
 ### Feature Flags
 

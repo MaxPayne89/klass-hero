@@ -111,12 +111,13 @@ Each check produces concrete examples of what could break, not just style notes.
 - `send(pid, msg)` ↔ `handle_info(msg, _)`
 - `GenServer.cast(pid, msg)` ↔ `handle_cast(msg, _)`
 - `GenServer.call(pid, msg)` ↔ `handle_call(msg, _, _)`
-- Domain events: `EventPublishing.publish(event, topic)` ↔ subscriber pattern + topic-derivation functions
+- Events: `Outbox.stage/2` ↔ the `:event_consumers` entry for the event's topic
+- UI notifications: `Phoenix.PubSub.broadcast/3` ↔ the LiveView `handle_info/2` clause matching the tagged tuple
 
 **How to verify:**
 1. For each diff hunk that modifies a producer call, extract the new topic / message shape
 2. Grep the codebase for the previous topic string OR for matching `handle_info`/`handle_cast` clauses
-3. **For shared topic-derivation / dispatch functions (e.g. `derive_topic/1`, `handle/1` registered against multiple event types):** enumerate every event type routed through the changed function (read `lib/klass_hero/application.ex` `handlers:` lists and `config/config.exs` `:critical_event_handlers`) and trace the topic / message shape produced for each one BEFORE and AFTER. The PR #872 class hides here — the diff's narrative example may only show one event type while the function actually fans out to several.
+3. **For shared topic-derivation / dispatch functions (e.g. `Event.topic/1`, a `handle_event/1` registered against multiple event types):** enumerate every event type routed through the changed function (read `config/config.exs` `:event_consumers`) and trace the topic / message shape produced for each one BEFORE and AFTER. The PR #872 class hides here — the diff's narrative example may only show one event type while the function actually fans out to several.
 4. Verify each match still pattern-matches the new shape; flag mismatches
 5. For PubSub topics: if a topic string changed, check that ALL subscribers updated to the new string in the same diff
 6. For `handle_info` envelope changes: check that the matching `send`/`broadcast` shape is in the diff
@@ -170,20 +171,20 @@ Each check produces concrete examples of what could break, not just style notes.
 
 ## Check 7: Event / Handler Registration Drift
 
-**Rule:** Changes to `lib/klass_hero/application.ex` (`DomainEventBus` handler specs), `config/config.exs` (`critical_event_handlers` registry, scope configs), or any supervision-tree child spec are silently-breaking — the supervision tree reads these at startup and code reloading does not refresh them. Removing or replacing a handler severs side effects.
+**Rule:** Changes to `config/config.exs` (`:event_consumers` registry, scope configs), `lib/klass_hero/application.ex`, or any supervision-tree child spec are silently-breaking — the supervision tree and the consumer registry are read at startup and code reloading does not refresh them. Removing a consumer severs a side effect *and* stops the event being staged at all, since `Outbox.stage/2` filters on the same registry.
 
 **How to verify:**
 1. Check the diff for changes to:
-   - `lib/klass_hero/application.ex` — `handlers:` lists per context
-   - `config/config.exs` — `:critical_event_handlers` map, `:scopes` config (per-context DI/port keys were removed in the #986–#1002 flatten; only `:shared, for_tracking_processed_events` remains)
+   - `config/config.exs` — `:event_consumers` map, `:scopes` config (per-context DI/port keys were removed in the #986–#1002 flatten; only `:shared, for_tracking_processed_events` remains)
+   - `lib/klass_hero/application.ex` — supervision-tree children
    - Any child spec changes in the supervision tree
 2. For each removed/changed handler entry, identify what side effect is no longer fired
 3. For any remaining `Application.compile_env!(:klass_hero, [...])` reference whose config key is removed — it will raise at compile time
 
 **Violations to flag:**
-- A `{:event_type, {Handler, :fn}}` removed from `application.ex` without a replacement — side effect dropped
 - A config key removed from `config.exs` while a corresponding `Application.compile_env!` reference remains in code
-- A `critical_event_handlers` entry removed — durable cross-context delivery dropped
+- An `:event_consumers` entry removed — durable cross-context delivery dropped, and the event stops being staged
+- A same-context reaction moved out of its producer's transaction — the write can now commit without it
 
 **Severity:** `error` (handler/DI drift is always a silent breakage); `warning` if the registration is for an event type the diff also removed entirely.
 

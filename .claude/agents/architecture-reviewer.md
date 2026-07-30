@@ -136,15 +136,15 @@ business logic and no Ecto/Phoenix/Repo dependencies.
 
 ## Check 8: Event struct purity & placement
 
-**Rule:** Domain and integration event structs live in `domain/events/` and are pure
-(no Ecto/Phoenix/Repo/Oban). Integration events are published to the
-`critical_event_handlers` registry; domain events via PubSub.
+**Rule:** Event structs live in `domain/events/` and are pure (no Ecto/Phoenix/Repo/Oban).
+Consumers are registered per topic under `:event_consumers` in `config/config.exs`.
 
 **How to verify:**
 1. For each file in `domain/events/`
 2. Confirm pure struct definitions, no infra dependencies
-3. If a new integration event is introduced, confirm a handler is registered in
-   `config/config.exs` under `:critical_event_handlers`
+3. If a new event is introduced, confirm a consumer is registered in `config/config.exs`
+   under `:event_consumers`. That registry is also the staging filter — an unregistered
+   event is silently dropped by `Outbox.stage/2` rather than delivered.
 
 ---
 
