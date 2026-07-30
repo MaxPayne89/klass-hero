@@ -47,6 +47,23 @@ jobs:
           restore-keys: |
             v2-${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
+      # TEMPORARY PROBE — remove before merge. Answers: does the restored cache
+      # actually contain a dev-env app build, or only a test-env one?
+      - name: PROBE cache contents after restore
+        run: |
+          echo "== _build envs present =="; ls -1 _build 2>/dev/null || echo "NO _build"
+          echo "== dep count per env =="
+          echo "dev:  $(ls -1 _build/dev/lib  2>/dev/null | wc -l)"
+          echo "test: $(ls -1 _build/test/lib 2>/dev/null | wc -l)"
+          echo "== klass_hero app build, dev =="
+          ls -la _build/dev/lib/klass_hero/.mix/ 2>/dev/null || echo "ABSENT"
+          echo "== klass_hero app build, test =="
+          ls -la _build/test/lib/klass_hero/.mix/ 2>/dev/null || echo "ABSENT"
+          echo "== mtimes (source vs manifest) =="
+          stat -c '%y %n' mix.exs mix.lock config/config.exs config/dev.exs 2>/dev/null
+          stat -c '%y %n' _build/dev/lib/klass_hero/.mix/compile.elixir 2>/dev/null || true
+          stat -c '%y %n' _build/test/lib/klass_hero/.mix/compile.elixir 2>/dev/null || true
+
       - name: Install dependencies
         run: mix deps.get
 
@@ -113,9 +130,32 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
+      # TEMPORARY PROBE — remove before merge. Three compiles in sequence isolate
+      # WHY this job rebuilds all 397 lib files despite a primary-key cache hit.
+      #
+      #   A (plain, same flags as the deps job) | B (plain, repeat) | C (+WAE)
+      #   ---------------------------------------------------------------------
+      #   0    | 0    | 397  -> the --warnings-as-errors flag is the sole trigger
+      #   397  | 0    | 0    -> restore-time staleness; first compile settles it
+      #   397  | 0    | 397  -> both effects present, independently
+      #   397  | 397  | 397  -> not incremental at all; manifest never trusted
+      - name: PROBE cache contents after restore
+        run: |
+          echo "== klass_hero app build, dev =="
+          ls -la _build/dev/lib/klass_hero/.mix/ 2>/dev/null || echo "ABSENT"
+          echo "== mtimes (source vs manifest) =="
+          stat -c '%y %n' mix.exs mix.lock config/config.exs config/dev.exs 2>/dev/null
+          stat -c '%y %n' _build/dev/lib/klass_hero/.mix/compile.elixir 2>/dev/null || true
+
+      - name: 'PROBE A: plain compile (same flags as the deps job)'
+        run: mix compile
+
+      - name: 'PROBE B: plain compile again (expect: 0 files)'
+        run: mix compile
+
       # Dev env compile: catches warnings + runs boundary checker.
       # Near-instant when cache hits from deps job.
-      - name: Compile with warnings as errors
+      - name: 'PROBE C: Compile with warnings as errors'
         run: mix compile --warnings-as-errors
 
       - name: Check code formatting
