@@ -22,12 +22,12 @@ defmodule KlassHero.Messaging.RemoveAssignedStaff do
   """
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @type removal :: %{conversation_id: String.t()}
 
   @spec execute(String.t(), String.t()) ::
-          {:ok, {[removal()], [DomainEvent.t()]}} | {:error, term()}
+          {:ok, {[removal()], [Event.t()]}} | {:error, term()}
   def execute(program_id, staff_user_id) do
     program_id
     |> KlassHero.Messaging.list_active_program_conversation_ids_with_participant(staff_user_id)
