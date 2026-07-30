@@ -19,6 +19,16 @@ env:
   MIX_OS_DEPS_COMPILE_PARTITION_COUNT: '4'
 
 jobs:
+  # The ONLY job that writes the cache. Every other job restores it read-only, so the
+  # stored tree is deterministically the both-env one this job produces, rather than
+  # whichever job happened to win a race to save first.
+  #
+  # Nothing `needs:` this job. On a warm run it hits the primary key and therefore saves
+  # nothing — meaning downstream jobs restore byte-identical content whether or not it
+  # ran, and gating them on it was ~55s of pure serialisation. It earns its place only on
+  # a cold cache (a mix.lock change), where it is the single writer that seeds the next
+  # run. The cost of that: on a cold run the other jobs each compile deps independently,
+  # in parallel, and none of them seeds the cache.
   deps:
     name: Dependencies
     runs-on: ubuntu-latest
@@ -70,9 +80,12 @@ jobs:
         env:
           MIX_ENV: test
 
-      # Compile both envs so downstream jobs get cache hits.
-      # Dev: needed by quality job (includes boundary checker).
-      # Test: needed by test job (avoids recompilation).
+      # Compile both envs so the cache this job seeds is useful to both. Only matters on
+      # a cold run — on a warm one the primary key already exists and nothing is saved.
+      #
+      # (The old comment here claimed dev was "needed by quality job (includes boundary
+      # checker)". The boundary library was removed in #986-#1002, and a probe showed
+      # quality rebuilds the dev tree regardless — see the commit message.)
       - name: Compile (dev)
         run: mix compile
 
@@ -84,7 +97,6 @@ jobs:
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
-    needs: deps
 
     steps:
       # actions/checkout@v7.0.1
@@ -99,9 +111,10 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # actions/cache@v6.1.0
+      # Restore-only — the `deps` job is the sole writer. See its comment.
+      # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
       - name: Restore dependencies cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
@@ -113,8 +126,15 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
-      # Dev env compile: catches warnings + runs boundary checker.
-      # Near-instant when cache hits from deps job.
+      # ~16s, not "near-instant": the first `mix compile` after a cache restore always
+      # rebuilds the whole tree, because a fresh checkout gives every source a newer mtime
+      # than the restored manifest. Subsequent compiles in the same job are free.
+      #
+      # This step must stay the FIRST compile in the job. `mix lint_translations` below
+      # ends up recompiling everything too (gettext.extract calls
+      # `Mix.Task.run("compile", ["--force-elixir"])`), so running it first would leave
+      # nothing for --warnings-as-errors to process — silently turning the warning gate
+      # into a no-op. The duplicate compile is the price of keeping the gate real.
       - name: Compile with warnings as errors
         run: mix compile --warnings-as-errors
 
@@ -146,7 +166,6 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    needs: deps
     if: >-
       github.head_ref != 'release-please--branches--main' &&
       !startsWith(github.event.head_commit.message, 'chore: release main')
@@ -182,9 +201,10 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # actions/cache@v6.1.0
+      # Restore-only — the `deps` job is the sole writer. See its comment.
+      # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
       - name: Restore dependencies cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
@@ -207,7 +227,6 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    needs: deps
     if: >-
       github.head_ref != 'release-please--branches--main' &&
       !startsWith(github.event.head_commit.message, 'chore: release main')
@@ -243,9 +262,10 @@ jobs:
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # actions/cache@v6.1.0
+      # Restore-only — the `deps` job is the sole writer. See its comment.
+      # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
       - name: Restore dependencies cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
