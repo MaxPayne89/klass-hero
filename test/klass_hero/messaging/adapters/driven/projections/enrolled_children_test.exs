@@ -11,7 +11,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @test_server_name :enrolled_children_projection_test
-  @enrollment_created_topic "integration:enrollment:enrollment_created"
 
   setup do
     pid = start_supervised!({EnrolledChildren, name: @test_server_name})
@@ -101,13 +100,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
           }
         )
 
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        @enrollment_created_topic,
-        {:integration_event, event}
-      )
-
-      _ = :sys.get_state(@test_server_name)
+      EnrolledChildren.project(event)
 
       row =
         Repo.one(
@@ -148,13 +141,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
 
       log =
         capture_log(fn ->
-          Phoenix.PubSub.broadcast(
-            KlassHero.PubSub,
-            @enrollment_created_topic,
-            {:integration_event, event}
-          )
-
-          _ = :sys.get_state(@test_server_name)
+          EnrolledChildren.project(event)
         end)
 
       assert log =~ "child row not found"
@@ -209,10 +196,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
           }
         )
 
-      send(pid, {:integration_event, event})
-      :sys.get_state(pid)
+      assert :ok = EnrolledChildren.project(event)
 
-      # No retry scheduled by handle_event. State invariant preserved.
+      # Projecting is not a message to this process, so its bootstrap state is untouched.
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
     end
   end

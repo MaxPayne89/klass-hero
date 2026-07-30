@@ -41,9 +41,12 @@ defmodule KlassHero.ProgramCatalog do
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.ErrorIds
+  alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Pagination.PageResult
 
   require Logger
+
+  @context __MODULE__
 
   ## Writes
 
@@ -58,13 +61,15 @@ defmodule KlassHero.ProgramCatalog do
   @spec create_program(map()) :: {:ok, Program.t()} | {:error, Ecto.Changeset.t()}
   def create_program(attrs) when is_map(attrs) do
     context_span entity: "program" do
-      %Program{}
-      |> Program.create_changeset(attrs)
-      |> Repo.insert()
+      Outbox.transact(@context, fn ->
+        with {:ok, schema} <- Repo.insert(Program.create_changeset(%Program{}, attrs)) do
+          program = Program.load_value_objects(schema)
+          {:ok, program, [program_created_event(program)]}
+        end
+      end)
       |> case do
-        {:ok, program} ->
-          program = Program.load_value_objects(program)
-          dispatch_program_created(program)
+        {:ok, {program, events}} ->
+          dispatch_all(events, "program_created", program.id)
           {:ok, program}
 
         {:error, changeset} ->
@@ -95,13 +100,15 @@ defmodule KlassHero.ProgramCatalog do
   end
 
   defp do_update_program(current, attrs) do
-    current
-    |> Program.update_changeset(attrs)
-    |> Repo.update()
-    |> case do
-      {:ok, schema} ->
+    Outbox.transact(@context, fn ->
+      with {:ok, schema} <- Repo.update(Program.update_changeset(current, attrs)) do
         updated = Program.load_value_objects(schema)
-        dispatch_program_updated(updated)
+        {:ok, updated, [program_updated_event(updated)]}
+      end
+    end)
+    |> case do
+      {:ok, {updated, events}} ->
+        dispatch_all(events, "program_updated", updated.id)
         {:ok, updated}
 
       {:error, changeset} ->
@@ -366,7 +373,7 @@ defmodule KlassHero.ProgramCatalog do
     )
   end
 
-  defp dispatch_program_created(program) do
+  defp program_created_event(program) do
     program.id
     |> ProgramEvents.program_created(%{
       provider_id: program.provider_id,
@@ -378,10 +385,9 @@ defmodule KlassHero.ProgramCatalog do
       start_date: program.start_date,
       end_date: program.end_date
     })
-    |> dispatch("program_created", program.id)
   end
 
-  defp dispatch_program_updated(program) do
+  defp program_updated_event(program) do
     program.id
     |> ProgramEvents.program_updated(%{
       provider_id: program.provider_id,
@@ -401,20 +407,22 @@ defmodule KlassHero.ProgramCatalog do
       registration_start_date: program.registration_start_date,
       registration_end_date: program.registration_end_date
     })
-    |> dispatch("program_updated", program.id)
   end
 
-  # Fire-and-forget: dispatch failures are logged but never roll back the write.
-  defp dispatch(event, name, program_id) do
-    case DomainEventBus.dispatch(KlassHero.ProgramCatalog, event) do
-      :ok ->
-        :ok
+  # Same-context handlers only; cross-context delivery committed with the write.
+  # Still fire-and-forget: a LiveView notifier failing must not undo a saved program.
+  defp dispatch_all(events, name, program_id) do
+    Enum.each(events, fn event ->
+      case DomainEventBus.dispatch(@context, event) do
+        :ok ->
+          :ok
 
-      {:error, failures} ->
-        Logger.error("[ProgramCatalog] #{name} event dispatch had failures",
-          program_id: program_id,
-          errors: inspect(failures)
-        )
-    end
+        {:error, failures} ->
+          Logger.error("[ProgramCatalog] #{name} event dispatch had failures",
+            program_id: program_id,
+            errors: inspect(failures)
+          )
+      end
+    end)
   end
 end

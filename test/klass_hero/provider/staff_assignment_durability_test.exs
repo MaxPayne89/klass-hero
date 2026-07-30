@@ -1,17 +1,15 @@
 defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
   @moduledoc """
   Regression coverage for #1004: the `staff_assigned_to_program` /
-  `staff_unassigned_from_program` integration events are built `:critical`, so
-  they must resolve to a durable Oban handler in the registry — and their
-  payload must survive the Oban `serialize → jsonb → deserialize` round trip.
+  `staff_unassigned_from_program` integration events must reach Messaging's handler,
+  and their payload must survive the Oban `serialize → jsonb → deserialize` round
+  trip.
 
   These are the two pieces the fix adds:
 
-  1. **Wiring** — both topics resolve to Messaging's `StaffAssignmentHandler`
-     via the real `:critical_event_handlers` config (mirrors the "factory →
-     topic → registry" block in `critical_event_handler_registry_test.exs`).
-     The generic "critical event + registered handler ⇒ Oban job enqueued" step
-     is already proven by `pubsub_integration_event_publisher_test.exs`.
+  1. **Wiring** — both topics resolve to Messaging's `StaffAssignmentHandler` via
+     the real `:event_consumers` config. Durability is no longer conditional on an
+     event being marked critical: being in that table is the whole condition.
 
   2. **Serialization safety** — the payload carries only string/UUID fields
      (the `assigned_at`/`unassigned_at` `DateTime`s are trimmed at the promotion
@@ -21,8 +19,8 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
 
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventHandlerRegistry
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
+  alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
 
   @assigned_payload %{
@@ -38,9 +36,9 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
       assert PubSubIntegrationEventPublisher.derive_topic(event) ==
                "integration:provider:staff_assigned_to_program"
 
-      assert CriticalEventHandlerRegistry.handlers_for("integration:provider:staff_assigned_to_program") == [
-               {StaffAssignmentHandler, :handle_event}
-             ]
+      assert {StaffAssignmentHandler, :handle_event} in EventConsumerRegistry.consumers_for(
+               "integration:provider:staff_assigned_to_program"
+             )
     end
 
     test "staff_unassigned_from_program resolves to the Messaging handler" do
@@ -49,9 +47,9 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
       assert PubSubIntegrationEventPublisher.derive_topic(event) ==
                "integration:provider:staff_unassigned_from_program"
 
-      assert CriticalEventHandlerRegistry.handlers_for("integration:provider:staff_unassigned_from_program") == [
-               {StaffAssignmentHandler, :handle_event}
-             ]
+      assert {StaffAssignmentHandler, :handle_event} in EventConsumerRegistry.consumers_for(
+               "integration:provider:staff_unassigned_from_program"
+             )
     end
   end
 

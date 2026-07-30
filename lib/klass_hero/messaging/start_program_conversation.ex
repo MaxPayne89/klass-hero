@@ -14,8 +14,8 @@ defmodule KlassHero.Messaging.StartProgramConversation do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -46,7 +46,7 @@ defmodule KlassHero.Messaging.StartProgramConversation do
   defp create_new_conversation(scope, provider_id, program_id, owner_user_id) do
     attrs = %{type: :direct, provider_id: provider_id, program_id: program_id}
 
-    Repo.transaction(fn ->
+    Outbox.transact(@context, fn ->
       with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, owner_user_id),
            {:ok, {_staff_ids, staff_events}} <-
@@ -60,15 +60,14 @@ defmodule KlassHero.Messaging.StartProgramConversation do
             conversation.program_id
           )
 
-        {conversation, [created_event | staff_events]}
-      else
-        {:error, reason} -> Repo.rollback(reason)
+        {:ok, conversation, [created_event | staff_events]}
       end
     end)
     |> handle_commit(scope, provider_id, program_id)
   end
 
-  # Dispatch post-commit so the projection's separate DB connection sees the committed row.
+  # Cross-context delivery committed with the conversation; this is the same-context
+  # remainder — the LiveView notifier.
   defp handle_commit({:ok, {conversation, events}}, scope, provider_id, program_id) do
     Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 

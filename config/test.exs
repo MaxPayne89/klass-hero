@@ -4,6 +4,7 @@ alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
 alias KlassHero.Provider.StripeIdentity
 alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
+alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 alias Swoosh.Adapters.Test
@@ -51,6 +52,10 @@ config :klass_hero, :feature_flags, adapter: StubFeatureFlagsAdapter
 config :klass_hero, :integration_event_publisher,
   module: TestIntegrationEventPublisher,
   pubsub: KlassHero.PubSub
+
+# Record staged events rather than enqueueing them — see TestOutbox for why
+# `Oban, testing: :inline` makes that the safe default inside a transaction.
+config :klass_hero, :outbox, module: TestOutbox
 
 config :klass_hero, :resend_req_options,
   plug: {Req.Test, ResendEmailContentAdapter},

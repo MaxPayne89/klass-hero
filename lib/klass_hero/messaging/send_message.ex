@@ -14,8 +14,8 @@ defmodule KlassHero.Messaging.SendMessage do
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Storage
 
   require Logger
@@ -57,7 +57,7 @@ defmodule KlassHero.Messaging.SendMessage do
          :ok <- Shared.verify_participant(conversation_id, sender_id),
          :ok <- verify_broadcast_send_permission(conversation_id, sender_id, conversation),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),
-         {:ok, message_with_attachments} <-
+         {:ok, {message_with_attachments, events}} <-
            persist_message_and_attachments(
              conversation_id,
              sender_id,
@@ -66,7 +66,8 @@ defmodule KlassHero.Messaging.SendMessage do
              uploaded_files
            ) do
       update_sender_read_status(conversation_id, sender_id)
-      publish_event(message_with_attachments)
+      # The same event that was staged, not a second build of it.
+      Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 
       Logger.info("Message sent",
         message_id: message_with_attachments.id,
@@ -164,18 +165,17 @@ defmodule KlassHero.Messaging.SendMessage do
     }
 
     result =
-      Repo.transaction(fn ->
+      Outbox.transact(@context, fn ->
         with {:ok, message} <- KlassHero.Messaging.create_message(message_attrs),
              {:ok, attachments} <- create_attachments(message.id, uploaded_files) do
-          %{message | attachments: attachments}
-        else
-          {:error, reason} -> Repo.rollback(reason)
+          message = %{message | attachments: attachments}
+          {:ok, message, [message_sent_event(message)]}
         end
       end)
 
     case result do
-      {:ok, message_with_attachments} ->
-        {:ok, message_with_attachments}
+      {:ok, {_message, _events}} = ok ->
+        ok
 
       {:error, reason} ->
         cleanup_uploaded_files(uploaded_files)
@@ -294,19 +294,15 @@ defmodule KlassHero.Messaging.SendMessage do
     end
   end
 
-  defp publish_event(message) do
-    event =
-      MessagingEvents.message_sent(
-        message.conversation_id,
-        message.id,
-        message.sender_id,
-        message.content,
-        message.message_type,
-        message.inserted_at,
-        message.attachments
-      )
-
-    EventDispatchHelper.dispatch(event, @context)
-    :ok
+  defp message_sent_event(message) do
+    MessagingEvents.message_sent(
+      message.conversation_id,
+      message.id,
+      message.sender_id,
+      message.content,
+      message.message_type,
+      message.inserted_at,
+      message.attachments
+    )
   end
 end

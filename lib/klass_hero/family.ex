@@ -33,6 +33,7 @@ defmodule KlassHero.Family do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   @context __MODULE__
 
@@ -82,9 +83,9 @@ defmodule KlassHero.Family do
     context_span entity: "child" do
       {parent_id, child_attrs} = Map.pop(attrs, :parent_id)
 
-      case insert_child(child_attrs, parent_id) do
-        {:ok, child} ->
-          dispatch_child_created(child, parent_id)
+      case insert_child_with_event(child_attrs, parent_id) do
+        {:ok, {child, events}} ->
+          dispatch_all(events)
           {:ok, child}
 
         {:error, %Ecto.Changeset{} = changeset} ->
@@ -128,8 +129,8 @@ defmodule KlassHero.Family do
   def update_child(child_id, attrs) when is_binary(child_id) and is_map(attrs) do
     context_span entity: "child" do
       with {:ok, child} <- fetch_child(child_id),
-           {:ok, updated} <- child |> Child.changeset(attrs) |> Repo.update() do
-        dispatch_child_updated(updated)
+           {:ok, {updated, events}} <- update_child_with_event(child, attrs) do
+        dispatch_all(events)
         {:ok, updated}
       end
     end
@@ -277,17 +278,18 @@ defmodule KlassHero.Family do
     anonymized_attrs = Child.anonymized_attrs()
 
     Enum.reduce_while(children, {:ok, %{children_anonymized: 0, consents_deleted: 0}}, fn child, {:ok, acc} ->
-      with {:ok, consent_count} <- delete_all_consents_for_child(child.id),
-           {:ok, _anonymized} <- child |> Child.anonymize_changeset(anonymized_attrs) |> Repo.update(),
-           :ok <- dispatch_child_anonymized(child.id) do
-        {:cont,
-         {:ok,
-          %{
-            acc
-            | children_anonymized: acc.children_anonymized + 1,
-              consents_deleted: acc.consents_deleted + consent_count
-          }}}
-      else
+      case anonymize_child_with_event(child, anonymized_attrs) do
+        {:ok, {consent_count, events}} ->
+          dispatch_all(events)
+
+          {:cont,
+           {:ok,
+            %{
+              acc
+              | children_anonymized: acc.children_anonymized + 1,
+                consents_deleted: acc.consents_deleted + consent_count
+            }}}
+
         {:error, reason} ->
           require Logger
 
@@ -552,28 +554,52 @@ defmodule KlassHero.Family do
     end
   end
 
-  defp dispatch_child_created(child, parent_id) do
+  defp insert_child_with_event(child_attrs, parent_id) do
+    Outbox.transact(@context, fn ->
+      with {:ok, child} <- insert_child(child_attrs, parent_id) do
+        {:ok, child, [child_created_event(child, parent_id)]}
+      end
+    end)
+  end
+
+  defp update_child_with_event(child, attrs) do
+    Outbox.transact(@context, fn ->
+      with {:ok, updated} <- child |> Child.changeset(attrs) |> Repo.update() do
+        {:ok, updated, [child_updated_event(updated)]}
+      end
+    end)
+  end
+
+  # The GDPR cascade used to gate on the dispatch returning :ok — its way of asking
+  # "were the downstream contexts told?". Staging inside this child's own transaction
+  # answers that at commit instead, so the loop halts on a write that did not happen
+  # rather than on a notification that did not send.
+  defp anonymize_child_with_event(child, anonymized_attrs) do
+    Outbox.transact(@context, fn ->
+      with {:ok, consent_count} <- delete_all_consents_for_child(child.id),
+           {:ok, _anonymized} <- child |> Child.anonymize_changeset(anonymized_attrs) |> Repo.update() do
+        {:ok, consent_count, [FamilyEvents.child_data_anonymized(child.id)]}
+      end
+    end)
+  end
+
+  defp dispatch_all(events), do: Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+
+  defp child_created_event(child, parent_id) do
     FamilyEvents.child_created(child.id, %{
       child_id: child.id,
       parent_id: parent_id,
       first_name: child.first_name,
       last_name: child.last_name
     })
-    |> EventDispatchHelper.dispatch(@context)
   end
 
-  defp dispatch_child_updated(child) do
+  defp child_updated_event(child) do
     # Downstream contexts (e.g. Messaging) refresh local child name lookups.
     FamilyEvents.child_updated(child.id, %{
       child_id: child.id,
       first_name: child.first_name,
       last_name: child.last_name
     })
-    |> EventDispatchHelper.dispatch(@context)
-  end
-
-  defp dispatch_child_anonymized(child_id) do
-    FamilyEvents.child_data_anonymized(child_id)
-    |> EventDispatchHelper.dispatch_or_error(@context)
   end
 end

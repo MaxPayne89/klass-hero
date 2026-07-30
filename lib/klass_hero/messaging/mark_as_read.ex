@@ -11,6 +11,7 @@ defmodule KlassHero.Messaging.MarkAsRead do
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Participant
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -34,9 +35,16 @@ defmodule KlassHero.Messaging.MarkAsRead do
   def execute(conversation_id, user_id, read_at \\ nil) do
     read_at = read_at || DateTime.utc_now()
 
-    case KlassHero.Messaging.mark_participant_read(conversation_id, user_id, read_at) do
-      {:ok, participant} ->
-        publish_event(conversation_id, user_id, read_at)
+    result =
+      Outbox.transact(@context, fn ->
+        with {:ok, participant} <- KlassHero.Messaging.mark_participant_read(conversation_id, user_id, read_at) do
+          {:ok, participant, [MessagingEvents.messages_read(conversation_id, user_id, read_at)]}
+        end
+      end)
+
+    case result do
+      {:ok, {participant, events}} ->
+        Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 
         Logger.debug("Marked as read",
           conversation_id: conversation_id,
@@ -49,11 +57,5 @@ defmodule KlassHero.Messaging.MarkAsRead do
       {:error, :not_found} ->
         {:error, :not_participant}
     end
-  end
-
-  defp publish_event(conversation_id, user_id, read_at) do
-    event = MessagingEvents.messages_read(conversation_id, user_id, read_at)
-    EventDispatchHelper.dispatch(event, @context)
-    :ok
   end
 end

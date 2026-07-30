@@ -22,8 +22,8 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -71,7 +71,7 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
   defp create_new_conversation(scope, provider_id, target_user_id, opts) do
     program_id = Keyword.get(opts, :program_id)
 
-    Repo.transaction(fn ->
+    Outbox.transact(@context, fn ->
       attrs =
         %{type: :direct, provider_id: provider_id}
         |> Shared.maybe_put_program_id(program_id)
@@ -89,15 +89,14 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
             conversation.program_id
           )
 
-        {conversation, [created_event | staff_events]}
-      else
-        {:error, reason} -> Repo.rollback(reason)
+        {:ok, conversation, [created_event | staff_events]}
       end
     end)
     |> handle_commit(scope, provider_id)
   end
 
-  # Events dispatched after commit so the projection (separate DB connection) sees the row.
+  # Cross-context delivery committed with the conversation; this is the same-context
+  # remainder — the LiveView notifier.
   defp handle_commit({:ok, {conversation, events}}, scope, provider_id) do
     Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 

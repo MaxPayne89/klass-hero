@@ -39,8 +39,11 @@ defmodule KlassHero.Provider.Assignments do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.DomainEventBus
+  alias KlassHero.Shared.Outbox
 
   require Logger
+
+  @context KlassHero.Provider
 
   @doc """
   Assigns a staff member to a program.
@@ -62,10 +65,9 @@ defmodule KlassHero.Provider.Assignments do
       with {:ok, staff_member} <- Provider.get_staff_member(attrs.staff_member_id, provider_id),
            :ok <- ensure_program_owned(attrs.program_id, provider_id),
            assignment_attrs = build_assignment_attrs(attrs, staff_member),
-           {:ok, assignment} <- insert_program_staff_assignment(assignment_attrs) do
-        assignment
-        |> ProviderEvents.staff_assigned_to_program(staff_member)
-        |> dispatch_assignment_event()
+           {:ok, {assignment, events}} <-
+             assign_with_event(assignment_attrs, staff_member) do
+        dispatch_all(events)
 
         Logger.info("Staff member assigned to program",
           staff_member_id: assignment.staff_member_id,
@@ -90,11 +92,9 @@ defmodule KlassHero.Provider.Assignments do
       when is_binary(program_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "program_staff_assignment" do
       with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id, provider_id),
-           {:ok, assignment} <-
-             unassign_program_staff_assignment(program_id, staff_member_id, provider_id) do
-        assignment
-        |> ProviderEvents.staff_unassigned_from_program(staff_member)
-        |> dispatch_assignment_event()
+           {:ok, {assignment, events}} <-
+             unassign_with_event(program_id, staff_member_id, provider_id, staff_member) do
+        dispatch_all(events)
 
         Logger.info("Staff member unassigned from program",
           staff_member_id: staff_member_id,
@@ -313,13 +313,28 @@ defmodule KlassHero.Provider.Assignments do
     end
   end
 
-  # Dispatches the domain event on the Provider bus. PromoteIntegrationEvents
-  # then promotes it to a :critical integration event delivered belt-and-suspenders
-  # (PubSub + durable Oban via the critical_event_handlers registry for
-  # integration:provider:staff_(un)assigned_*; the event-id idempotency gate
-  # prevents double execution). The bus is keyed on the Provider context module,
-  # so dispatch explicitly through `Provider`, not this sub-module.
-  defp dispatch_assignment_event(event), do: DomainEventBus.dispatch(Provider, event)
+  # The assignment and the event announcing it commit together; the outbox job then
+  # delivers to everything routed from integration:provider:staff_(un)assigned_*,
+  # with the event-id idempotency gate preventing double execution on retry. The bus
+  # is keyed on the Provider context module, so `dispatch_all/1` below dispatches
+  # through `Provider`, not this sub-module.
+  defp assign_with_event(assignment_attrs, staff_member) do
+    Outbox.transact(@context, fn ->
+      with {:ok, assignment} <- insert_program_staff_assignment(assignment_attrs) do
+        {:ok, assignment, [ProviderEvents.staff_assigned_to_program(assignment, staff_member)]}
+      end
+    end)
+  end
+
+  defp unassign_with_event(program_id, staff_member_id, provider_id, staff_member) do
+    Outbox.transact(@context, fn ->
+      with {:ok, assignment} <- unassign_program_staff_assignment(program_id, staff_member_id, provider_id) do
+        {:ok, assignment, [ProviderEvents.staff_unassigned_from_program(assignment, staff_member)]}
+      end
+    end)
+  end
+
+  defp dispatch_all(events), do: Enum.each(events, &DomainEventBus.dispatch(@context, &1))
 
   # An INSERT can't carry a query scope, so the row's tenancy key is taken from
   # the ownership-proven staff member rather than the caller's attrs — the same

@@ -12,7 +12,6 @@ defmodule KlassHero.Messaging.AnonymizeUserDataTest do
   alias KlassHero.Messaging.AnonymizeUserData
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
-  alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "execute/1" do
     setup do
@@ -117,41 +116,9 @@ defmodule KlassHero.Messaging.AnonymizeUserDataTest do
       assert second_result.participants_updated == 0
     end
 
-    test "succeeds even when integration event publish fails" do
-      user = AccountsFixtures.user_fixture()
-      conversation = insert(:conversation_schema)
-
-      insert(:participant_schema,
-        conversation_id: conversation.id,
-        user_id: user.id,
-        left_at: nil
-      )
-
-      insert(:message_schema,
-        conversation_id: conversation.id,
-        sender_id: user.id,
-        content: "Original message"
-      )
-
-      # Clear integration events from fixture setup (user registration triggers one)
-      clear_integration_events()
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      # Use case returns {:ok, _} — publish failure is swallowed with a warning log
-      assert {:ok, result} = AnonymizeUserData.execute(user.id)
-      assert result.messages_anonymized == 1
-      assert result.participants_updated == 1
-
-      # DB changes persisted despite publish failure
-      message = Repo.one!(from(m in Message, where: m.sender_id == ^user.id))
-      assert message.content == "[deleted]"
-
-      participant =
-        Repo.one!(from(p in Participant, where: p.user_id == ^user.id))
-
-      refute is_nil(participant.left_at)
-
-      assert_no_integration_events_published()
-    end
+    # The "publish failed but the write survived" case this file used to assert no
+    # longer exists: staging happens inside the transaction, so an event that cannot
+    # be staged takes its write with it. That coupling is asserted directly in
+    # KlassHero.Shared.OutboxTest.
   end
 end

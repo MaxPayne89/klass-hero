@@ -35,27 +35,22 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
     pid = start_supervised!({ConversationSummaries, name: @projection_name})
     _ = :sys.get_state(@projection_name)
 
-    # In test env the integration-event publisher captures to process state
-    # (see TestIntegrationEventPublisher). For an end-to-end inbox flow we
-    # must replay those captured events to the PubSub topic the projection
-    # is subscribed to.
+    # In test env events are recorded rather than delivered (see TestOutbox). For an
+    # end-to-end inbox flow we replay them into the projection the way the delivery
+    # job would.
     setup_test_integration_events()
 
     {:ok, projection: pid}
   end
 
   defp flush_to_projection do
+    topics = ConversationSummaries.topics()
+
     get_published_integration_events()
-    |> Enum.each(fn event ->
-      Phoenix.PubSub.broadcast(
-        KlassHero.PubSub,
-        "integration:messaging:#{event.event_type}",
-        {:integration_event, event}
-      )
-    end)
+    |> Enum.filter(&("integration:#{&1.source_context}:#{&1.event_type}" in topics))
+    |> Enum.each(&ConversationSummaries.project/1)
 
     clear_integration_events()
-    _ = :sys.get_state(@projection_name)
     :ok
   end
 

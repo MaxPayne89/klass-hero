@@ -13,8 +13,8 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -80,7 +80,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
   end
 
   defp create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
-    Repo.transaction(fn ->
+    Outbox.transact(@context, fn ->
       attrs =
         %{type: :direct, provider_id: provider_id}
         |> Shared.maybe_put_program_id(program_id)
@@ -107,9 +107,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
             conversation.program_id
           )
 
-        {conversation, [created_event | staff_events]}
-      else
-        {:error, reason} -> Repo.rollback(reason)
+        {:ok, conversation, [created_event | staff_events]}
       end
     end)
     |> handle_commit()

@@ -13,6 +13,7 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -102,9 +103,22 @@ defmodule KlassHero.Enrollment.ClaimInvite do
       consent_photo_marketing: invite.consent_photo_marketing,
       consent_photo_social_media: invite.consent_photo_social_media
     })
-    |> EventDispatchHelper.dispatch_or_ok(
-      KlassHero.Enrollment,
-      %ClaimResult{user_type: user_type, user: user, invite: invite}
-    )
+    |> stage_and_dispatch(%ClaimResult{user_type: user_type, user: user, invite: invite})
+  end
+
+  # This one has no local write to join a transaction: the invite is marked registered
+  # by MarkInviteRegistered, a priority-5 handler the dispatch below triggers, and
+  # Promote sat behind it at priority 10. So the order is dispatch first, then stage.
+  # Collapsing the two into one transaction means inlining that handler, which belongs
+  # with deleting the bus.
+  #
+  # Staging is deliberately not gated on the dispatch result: the bus ran every
+  # registered handler regardless of what an earlier one returned, so gating here
+  # would newly let a MarkInviteRegistered failure suppress the whole cross-context
+  # onboarding chain. The dispatch result still decides what the caller gets back.
+  defp stage_and_dispatch(event, result) do
+    dispatch_result = EventDispatchHelper.dispatch_or_ok(event, KlassHero.Enrollment, result)
+    Outbox.stage(KlassHero.Enrollment, event)
+    dispatch_result
   end
 end

@@ -40,9 +40,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
     pid
   end
 
-  describe "handle_info/2 session_completed event" do
+  describe "project/1 session_completed event" do
     test "inserts a new row on first event for a provider+program" do
-      pid = start_projection!()
+      start_projection!()
 
       provider_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
@@ -54,9 +54,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
           program_title: "Art Class"
         )
 
-      send(pid, {:integration_event, event})
-      # Synchronize -- :sys.get_state blocks until all messages in the mailbox are processed
-      :sys.get_state(pid)
+      ProviderSessionStats.project(event)
 
       stats = Repo.all(from(s in SessionStatsSchema, where: s.provider_id == ^provider_id))
 
@@ -67,7 +65,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
     end
 
     test "increments count on subsequent events for same provider+program" do
-      pid = start_projection!()
+      start_projection!()
 
       provider_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
@@ -79,12 +77,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
           program_title: "Art Class"
         )
 
-      # Send 3 events
-      for _ <- 1..3 do
-        send(pid, {:integration_event, event})
-      end
-
-      :sys.get_state(pid)
+      for _ <- 1..3, do: ProviderSessionStats.project(event)
 
       stat =
         Repo.one!(
@@ -97,35 +90,21 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
     end
 
     test "tracks separate counts per program" do
-      pid = start_projection!()
+      start_projection!()
 
       provider_id = Ecto.UUID.generate()
       program_a = Ecto.UUID.generate()
       program_b = Ecto.UUID.generate()
 
-      send(
-        pid,
-        {:integration_event,
-         build_session_completed_event(
-           provider_id: provider_id,
-           program_id: program_a,
-           program_title: "Art"
-         )}
+      ProviderSessionStats.project(
+        build_session_completed_event(provider_id: provider_id, program_id: program_a, program_title: "Art")
       )
 
       for _ <- 1..2 do
-        send(
-          pid,
-          {:integration_event,
-           build_session_completed_event(
-             provider_id: provider_id,
-             program_id: program_b,
-             program_title: "Music"
-           )}
+        ProviderSessionStats.project(
+          build_session_completed_event(provider_id: provider_id, program_id: program_b, program_title: "Music")
         )
       end
-
-      :sys.get_state(pid)
 
       stats =
         SessionStatsSchema
@@ -165,10 +144,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
           program_title: "Regression Class"
         )
 
-      send(pid, {:integration_event, event})
-      :sys.get_state(pid)
+      assert :ok = ProviderSessionStats.project(event)
 
-      # No retry scheduled by handle_event. State invariant preserved.
+      # Projecting is not a message to this process, so its bootstrap state is untouched.
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
     end
   end

@@ -21,9 +21,14 @@ defmodule KlassHero.ProjectionSupervisor do
     Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
   end
 
-  @impl true
-  def init(_init_arg) do
-    children = [
+  @doc """
+  Every projection module. Public so the consumer-registry coverage test can check
+  each one's `topics/0` is routed — a projection missing from the registry receives
+  nothing and looks exactly like a read table that is merely behind.
+  """
+  @spec projections() :: [module()]
+  def projections do
+    [
       ProgramListings,
       EnrolledChildren,
       ConversationSummaries,
@@ -31,7 +36,10 @@ defmodule KlassHero.ProjectionSupervisor do
       ProviderPrograms,
       ProviderSessionDetails
     ]
+  end
 
-    Supervisor.init(children, strategy: :one_for_one, max_restarts: 10, max_seconds: 60)
+  @impl true
+  def init(_init_arg) do
+    Supervisor.init(projections(), strategy: :one_for_one, max_restarts: 10, max_seconds: 60)
   end
 end

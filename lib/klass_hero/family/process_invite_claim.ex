@@ -9,7 +9,7 @@ defmodule KlassHero.Family.ProcessInviteClaim do
 
   alias KlassHero.Family
   alias KlassHero.Family.Domain.Events.FamilyEvents
-  alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -32,13 +32,23 @@ defmodule KlassHero.Family.ProcessInviteClaim do
     invite_id = Map.fetch!(attrs, :invite_id)
     program_id = Map.fetch!(attrs, :program_id)
 
-    # PubSub dispatch is non-transactional; Oban retries are safe because ensure_parent_profile
-    # and find_or_create_child are idempotent — they find existing records, no duplicates created.
-    with {:ok, parent} <- ensure_parent_profile(user_id, invite_id),
-         {:ok, child} <- find_or_create_child(parent.id, attrs),
-         :ok <- publish_family_ready(invite_id, user_id, child.id, parent.id, program_id) do
-      {:ok, %{parent: parent, child: child}}
-    else
+    # One transaction: the parent, the child, and the event saying the family is ready
+    # commit together. Oban retries stay safe because ensure_parent_profile and
+    # find_or_create_child are idempotent — they find existing records rather than
+    # duplicating them.
+    result =
+      Outbox.transact(KlassHero.Family, fn ->
+        with {:ok, parent} <- ensure_parent_profile(user_id, invite_id),
+             {:ok, child} <- find_or_create_child(parent.id, attrs) do
+          event = family_ready_event(invite_id, user_id, child.id, parent.id, program_id)
+          {:ok, %{parent: parent, child: child}, [event]}
+        end
+      end)
+
+    case result do
+      {:ok, {family, _events}} ->
+        {:ok, family}
+
       {:error, reason} ->
         Logger.error("[ProcessInviteClaim] Failed",
           invite_id: invite_id,
@@ -117,7 +127,7 @@ defmodule KlassHero.Family.ProcessInviteClaim do
   defp map_nut_allergy(true), do: "Nut allergy"
   defp map_nut_allergy(_), do: nil
 
-  defp publish_family_ready(invite_id, user_id, child_id, parent_id, program_id) do
+  defp family_ready_event(invite_id, user_id, child_id, parent_id, program_id) do
     FamilyEvents.invite_family_ready(invite_id, %{
       invite_id: invite_id,
       user_id: user_id,
@@ -125,6 +135,5 @@ defmodule KlassHero.Family.ProcessInviteClaim do
       parent_id: parent_id,
       program_id: program_id
     })
-    |> EventDispatchHelper.dispatch_or_error(KlassHero.Family)
   end
 end

@@ -6,7 +6,6 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberInvitationTest do
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHero.ProviderFixtures
-  alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   setup do
     provider = ProviderFixtures.provider_profile_fixture()
@@ -113,11 +112,29 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberInvitationTest do
     end
   end
 
-  describe "execute/1 — emit failure compensation" do
-    test "compensates to :failed when event publishing fails", %{provider: provider} do
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
+  # The old contract here was a compensation: publishing happened after the staff
+  # member was committed, so a publish failure left a :pending row that nothing would
+  # ever invite, and the code wrote :failed over it to make that visible.
+  #
+  # Staging inside the write removes the state being compensated for. The event
+  # cannot fail separately from the row, so there is no half-invited staff member to
+  # repair — and the :failed status keeps its real cause, the staff_invitation_failed
+  # event Accounts emits when the email itself does not send.
+  describe "execute/1 — a staff member and its invitation event are one write" do
+    test "creates no staff member when the provider it belongs to is missing" do
+      assert {:error, :not_found} =
+               Provider.create_staff_member(%{
+                 provider_id: Ecto.UUID.generate(),
+                 first_name: "Jane",
+                 last_name: "Doe",
+                 email: "jane@example.com"
+               })
 
-      assert {:error, :invitation_emission_failed} =
+      assert [] = Repo.all(from(s in StaffMember, where: s.email == "jane@example.com"))
+    end
+
+    test "a created staff member always has its invitation event staged", %{provider: provider} do
+      assert {:ok, _staff, _token} =
                Provider.create_staff_member(%{
                  provider_id: provider.id,
                  first_name: "Jane",
@@ -125,15 +142,10 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberInvitationTest do
                  email: "jane@example.com"
                })
 
-      # Verify compensation: staff member persisted in :failed, not orphaned as :pending
-      [schema] =
-        Repo.all(
-          from(s in StaffMember,
-            where: s.provider_id == ^provider.id and s.email == "jane@example.com"
-          )
-        )
+      assert %{invitation_status: :pending} =
+               Repo.one!(from(s in StaffMember, where: s.email == "jane@example.com"))
 
-      assert schema.invitation_status == :failed
+      assert_integration_event_published(:staff_member_invited)
     end
   end
 end

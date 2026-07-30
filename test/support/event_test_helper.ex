@@ -47,15 +47,13 @@ defmodule KlassHero.EventTestHelper do
 
   import ExUnit.Assertions
 
-  alias KlassHero.Shared.Adapters.Driven.Events.EventSubscriber
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
+  alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-  alias KlassHero.TestableEventHandler
-  alias KlassHero.TestableIntegrationEventHandler
 
   @doc """
   Simulates PubSub fan-out by delivering `event` straight to a LiveView's
@@ -270,6 +268,7 @@ defmodule KlassHero.EventTestHelper do
   @spec setup_test_integration_events() :: :ok
   def setup_test_integration_events do
     TestIntegrationEventPublisher.setup()
+    TestOutbox.setup()
   end
 
   @doc """
@@ -278,14 +277,20 @@ defmodule KlassHero.EventTestHelper do
   @spec clear_integration_events() :: :ok
   def clear_integration_events do
     TestIntegrationEventPublisher.clear()
+    TestOutbox.setup()
   end
 
   @doc """
-  Returns all integration events published during the test.
+  Every integration event the code under test emitted, by either route.
+
+  A producer either publishes post-commit (the old path) or stages inside its
+  transaction (the outbox). Both mean the same thing to a test — *this write emitted
+  this event* — so both are collected here while contexts are migrated one at a
+  time. The publisher half goes when the last producer moves.
   """
   @spec get_published_integration_events() :: [IntegrationEvent.t()]
   def get_published_integration_events do
-    TestIntegrationEventPublisher.get_events()
+    TestIntegrationEventPublisher.get_events() ++ TestOutbox.staged()
   end
 
   @doc """
@@ -369,7 +374,7 @@ defmodule KlassHero.EventTestHelper do
   """
   @spec assert_integration_published_to(atom(), String.t()) :: IntegrationEvent.t()
   def assert_integration_published_to(event_type, topic) when is_atom(event_type) and is_binary(topic) do
-    published = TestIntegrationEventPublisher.get_published()
+    published = TestIntegrationEventPublisher.get_published() ++ staged_with_topics()
 
     match =
       Enum.find(published, fn {%IntegrationEvent{event_type: type}, published_topic} ->
@@ -382,6 +387,14 @@ defmodule KlassHero.EventTestHelper do
 
     {event, _topic} = match
     event
+  end
+
+  # Staged events carry no topic of their own — the delivery job derives it the same
+  # way the publisher did, so deriving it here compares like with like.
+  defp staged_with_topics do
+    for %IntegrationEvent{source_context: context, event_type: type} = event <- TestOutbox.staged() do
+      {event, "integration:#{context}:#{type}"}
+    end
   end
 
   @doc """
@@ -416,82 +429,6 @@ defmodule KlassHero.EventTestHelper do
   # ===========================================================================
   # Integration Test Helpers (Real PubSub) — Domain Events
   # ===========================================================================
-
-  @doc """
-  Starts a test EventSubscriber with TestableEventHandler.
-
-  The subscriber uses the real PubSub for message passing, enabling
-  integration tests of the full publish → subscribe → handle flow.
-
-  Returns `{:ok, subscriber_pid}` on success.
-
-  ## Options
-
-  - `:topics` - (required) List of topic strings to subscribe to
-  - `:test_pid` - PID to receive `{:event_handled, event, handler_pid}` messages (default: `self()`)
-  - `:behavior` - Handler behavior: `:ok` | `:ignore` | `{:error, reason}` | `:crash` (default: `:ok`)
-  - `:pubsub` - PubSub server name (default: `KlassHero.PubSub`)
-
-  ## Example
-
-      {:ok, subscriber} = start_test_subscriber(
-        topics: ["user:user_registered", "user:user_confirmed"],
-        test_pid: self(),
-        behavior: :ok
-      )
-
-      on_exit(fn -> stop_test_subscriber(subscriber) end)
-  """
-  @spec start_test_subscriber(keyword()) :: {:ok, pid()} | {:error, term()}
-  def start_test_subscriber(opts) do
-    topics = Keyword.fetch!(opts, :topics)
-    test_pid = Keyword.get(opts, :test_pid, self())
-    behavior = Keyword.get(opts, :behavior, :ok)
-    pubsub = Keyword.get(opts, :pubsub, KlassHero.PubSub)
-
-    # Generate unique name to avoid conflicts with production subscriber
-    name = :"test_subscriber_#{:erlang.unique_integer([:positive])}"
-
-    subscriber_opts = [
-      handler: TestableEventHandler,
-      topics: topics,
-      pubsub: pubsub,
-      name: name
-    ]
-
-    case GenServer.start_link(EventSubscriber, subscriber_opts, name: name) do
-      {:ok, pid} ->
-        # Configure the handler with the subscriber's PID as the key
-        TestableEventHandler.configure(pid,
-          test_pid: test_pid,
-          behavior: behavior
-        )
-
-        {:ok, pid}
-
-      error ->
-        error
-    end
-  end
-
-  @doc """
-  Stops a test subscriber and cleans up its configuration.
-
-  ## Example
-
-      stop_test_subscriber(subscriber)
-  """
-  @spec stop_test_subscriber(pid()) :: :ok
-  def stop_test_subscriber(pid) when is_pid(pid) do
-    if Process.alive?(pid) do
-      TestableEventHandler.clear_config(pid)
-      GenServer.stop(pid, :normal, 1000)
-    end
-
-    :ok
-  catch
-    :exit, _ -> :ok
-  end
 
   @doc """
   Publishes an event via PubSub (bypassing TestEventPublisher).
@@ -637,49 +574,5 @@ defmodule KlassHero.EventTestHelper do
       end)
 
     Phoenix.PubSub.broadcast(pubsub, topic, {:integration_event, event})
-  end
-
-  @doc """
-  Starts a test EventSubscriber (integration mode) with TestableIntegrationEventHandler.
-
-  Returns `{:ok, subscriber_pid}` on success.
-
-  ## Options
-
-  - `:topics` - (required) List of topic strings to subscribe to
-  - `:test_pid` - PID to receive messages (default: `self()`)
-  - `:behavior` - Handler behavior (default: `:ok`)
-  - `:pubsub` - PubSub server name (default: `KlassHero.PubSub`)
-  """
-  @spec start_test_integration_subscriber(keyword()) :: {:ok, pid()} | {:error, term()}
-  def start_test_integration_subscriber(opts) do
-    topics = Keyword.fetch!(opts, :topics)
-    test_pid = Keyword.get(opts, :test_pid, self())
-    behavior = Keyword.get(opts, :behavior, :ok)
-    pubsub = Keyword.get(opts, :pubsub, KlassHero.PubSub)
-
-    name = :"test_integration_subscriber_#{:erlang.unique_integer([:positive])}"
-
-    subscriber_opts = [
-      handler: TestableIntegrationEventHandler,
-      topics: topics,
-      pubsub: pubsub,
-      name: name,
-      message_tag: :integration_event,
-      event_label: "Integration event"
-    ]
-
-    case GenServer.start_link(EventSubscriber, subscriber_opts, name: name) do
-      {:ok, pid} ->
-        TestableEventHandler.configure(pid,
-          test_pid: test_pid,
-          behavior: behavior
-        )
-
-        {:ok, pid}
-
-      error ->
-        error
-    end
   end
 end

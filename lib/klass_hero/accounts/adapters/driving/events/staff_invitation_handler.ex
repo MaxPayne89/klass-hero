@@ -20,7 +20,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   alias KlassHero.Accounts.UserNotifier
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-  alias KlassHero.Shared.IntegrationEventPublishing
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -82,9 +82,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   defp emit_sent(staff_member_id, provider_id) do
     staff_member_id
     |> AccountsIntegrationEvents.staff_invitation_sent(%{provider_id: provider_id})
-    |> IntegrationEventPublishing.publish_critical("staff_invitation_sent",
-      staff_member_id: staff_member_id
-    )
+    |> then(&Outbox.stage(KlassHero.Accounts, &1))
   end
 
   defp emit_failed(staff_member_id, provider_id, reason) do
@@ -93,8 +91,6 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
       provider_id: provider_id,
       reason: reason
     })
-    |> IntegrationEventPublishing.publish_critical("staff_invitation_failed",
-      staff_member_id: staff_member_id
-    )
+    |> then(&Outbox.stage(KlassHero.Accounts, &1))
   end
 end
