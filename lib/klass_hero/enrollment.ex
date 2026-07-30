@@ -950,6 +950,30 @@ defmodule KlassHero.Enrollment do
     |> Repo.insert()
   end
 
+  @doc """
+  Marks a claimed invite registered, re-reading it first so the decision is made on
+  the row as it stands now.
+
+  `ClaimInvite` checks claimability before it opens its transaction; this is the same
+  check made again inside it. Two concurrent claims of one token both pass the first
+  check, and the loser must be told the invite is spoken for rather than be handed a
+  changeset error for an invalid `:registered -> :registered` transition.
+
+  Returns `{:error, :already_claimed}` for an invite that has moved past `:invite_sent`,
+  matching what a sequential second claim gets.
+  """
+  @spec register_claimed_invite(String.t()) ::
+          {:ok, BulkEnrollmentInvite.t()} | {:error, :not_found | :already_claimed | term()}
+  def register_claimed_invite(invite_id) when is_binary(invite_id) do
+    with {:ok, invite} <- get_invite(invite_id),
+         {:ok, invite} <- BulkEnrollmentInvite.ensure_claimable(invite) do
+      transition_invite(invite, %{
+        status: :registered,
+        registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      })
+    end
+  end
+
   @doc "Applies a validated status transition to an invite (refetched by id)."
   def transition_invite(%{id: id}, attrs) when is_map(attrs) do
     case Repo.get(BulkEnrollmentInvite, id) do

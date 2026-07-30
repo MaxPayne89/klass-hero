@@ -110,20 +110,15 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   # staging followed it ungated, so a staging failure left a registered invite no
   # consumer ever heard about.
   #
-  # `ensure_claimable/1` has already proven the invite is :invite_sent, so the
-  # handler's idempotent status branches had nothing left to guard.
+  # `register_claimed_invite/1` re-checks claimability on the row as it stands inside
+  # this transaction. `ensure_claimable/1` ran back at the top of `execute/1`, and two
+  # concurrent claims of one token both clear it — the loser has to be told the invite
+  # is spoken for, not handed a transition error.
   defp register_and_stage(event, invite, result) do
     Outbox.transact(KlassHero.Enrollment, fn ->
-      with {:ok, _registered} <- mark_registered(invite) do
+      with {:ok, _registered} <- Enrollment.register_claimed_invite(invite.id) do
         {:ok, result, [event]}
       end
     end)
-  end
-
-  defp mark_registered(invite) do
-    Enrollment.transition_invite(invite, %{
-      status: :registered,
-      registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
-    })
   end
 end

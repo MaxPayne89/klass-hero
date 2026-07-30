@@ -15,6 +15,7 @@ defmodule KlassHero.Enrollment.ClaimInviteAtomicityTest do
   import KlassHero.AccountsFixtures
   import KlassHero.Factory
 
+  alias KlassHero.Enrollment
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimInvite
   alias KlassHero.Repo
@@ -80,5 +81,23 @@ defmodule KlassHero.Enrollment.ClaimInviteAtomicityTest do
 
     assert %{status: :registered, registered_at: %DateTime{}} = Repo.get!(BulkEnrollmentInvite, invite.id)
     assert [%{event_type: :invite_claimed}] = TestOutbox.staged()
+  end
+
+  # The claim checks claimability twice: once before opening the transaction, once
+  # inside it. Two concurrent claims of one token both clear the first check, so the
+  # loser reaches the write with a row that has already moved on. It has to be told
+  # the invite is spoken for — a bare transition would reject :registered -> :registered
+  # with a changeset error, which `InviteClaimController` has no clause for.
+  #
+  # Exercised through the in-transaction check directly, since the two requests cannot
+  # be interleaved deterministically from a single sandboxed connection.
+  test "the loser of a concurrent claim is told the invite is already claimed", %{invite: invite, token: token} do
+    assert {:ok, _first} = ClaimInvite.execute(token)
+
+    assert {:error, :already_claimed} = Enrollment.register_claimed_invite(invite.id)
+  end
+
+  test "registering an invite that vanished reports not_found" do
+    assert {:error, :not_found} = Enrollment.register_claimed_invite(Ecto.UUID.generate())
   end
 end
