@@ -8,7 +8,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
   import KlassHero.EventTestHelper
   import KlassHero.Factory
 
-  alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
+  alias KlassHero.Accounts.Domain.Events.AccountsEvents
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
   alias KlassHero.Family.Child
@@ -43,9 +43,9 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
       )
 
       event =
-        AccountsIntegrationEvents.user_anonymized(
-          user.id,
-          %{anonymized_email: "deleted_#{user.id}@anonymized.local"}
+        AccountsEvents.user_anonymized(
+          %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
+          %{previous_email: user.email}
         )
 
       assert :ok == FamilyEventHandler.handle_event(event)
@@ -69,9 +69,9 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
       {child, _parent} = insert_child_with_guardian(parent: parent)
 
       event =
-        AccountsIntegrationEvents.user_anonymized(
-          user.id,
-          %{anonymized_email: "deleted_#{user.id}@anonymized.local"}
+        AccountsEvents.user_anonymized(
+          %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
+          %{previous_email: user.email}
         )
 
       assert :ok == FamilyEventHandler.handle_event(event)
@@ -84,9 +84,9 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
       user = AccountsFixtures.user_fixture()
 
       event =
-        AccountsIntegrationEvents.user_anonymized(
-          user.id,
-          %{anonymized_email: "deleted_#{user.id}@anonymized.local"}
+        AccountsEvents.user_anonymized(
+          %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
+          %{previous_email: user.email}
         )
 
       assert :ok == FamilyEventHandler.handle_event(event)

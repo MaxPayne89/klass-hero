@@ -33,7 +33,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
 
   Argument order is event-first for clean piping:
 
-      UserEvents.user_registered(user)
+      AccountsEvents.user_registered(user)
       |> EventDispatchHelper.dispatch(KlassHero.Accounts)
   """
   @spec dispatch(DomainEventBus.dispatchable(), module()) :: :ok

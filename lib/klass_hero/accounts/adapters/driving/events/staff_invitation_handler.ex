@@ -15,7 +15,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
 
   alias KlassHero.Accounts
-  alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
+  alias KlassHero.Accounts.Domain.Events.AccountsEvents
   alias KlassHero.Accounts.User
   alias KlassHero.Accounts.UserNotifier
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
@@ -81,13 +81,13 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
 
   defp emit_sent(staff_member_id, provider_id) do
     staff_member_id
-    |> AccountsIntegrationEvents.staff_invitation_sent(%{provider_id: provider_id})
+    |> AccountsEvents.staff_invitation_sent(%{provider_id: provider_id})
     |> then(&Outbox.stage(KlassHero.Accounts, &1))
   end
 
   defp emit_failed(staff_member_id, provider_id, reason) do
     staff_member_id
-    |> AccountsIntegrationEvents.staff_invitation_failed(%{
+    |> AccountsEvents.staff_invitation_failed(%{
       provider_id: provider_id,
       reason: reason
     })

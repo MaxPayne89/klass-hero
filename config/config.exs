@@ -9,7 +9,6 @@ import Config
 
 alias ExAws.Request.Req
 alias FunWithFlags.Notifications.PhoenixPubSub
-alias KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: AccountsPromoter
 alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
 alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: EnrollmentPromoter
@@ -294,7 +293,6 @@ config :klass_hero, :event_consumers, %{
 # event model; until then this is the one place the mapping is declared rather
 # than implied by a bus registration.
 config :klass_hero, :event_promoters, %{
-  KlassHero.Accounts => AccountsPromoter,
   KlassHero.Enrollment => EnrollmentPromoter,
   KlassHero.Family => FamilyPromoter,
   KlassHero.Messaging => MessagingPromoter,
