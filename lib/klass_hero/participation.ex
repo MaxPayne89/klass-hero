@@ -71,12 +71,7 @@ defmodule KlassHero.Participation do
         |> Map.put(:status, :scheduled)
 
       with {:ok, session} <- ProgramSession.new(session_attrs),
-           {:ok, {persisted, events}} <-
-             Outbox.transact(@context, fn ->
-               with {:ok, persisted} <- insert_session(session) do
-                 {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
-               end
-             end) do
+           {:ok, {persisted, events}} <- insert_session_with_event(session) do
         dispatch_all(events)
         {:ok, persisted}
       end
@@ -138,12 +133,7 @@ defmodule KlassHero.Participation do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
            {:ok, started} <- ProgramSession.start(session),
-           {:ok, {persisted, events}} <-
-             Outbox.transact(@context, fn ->
-               with {:ok, persisted} <- update_session(started) do
-                 {:ok, persisted, [ParticipationEvents.session_started(persisted)]}
-               end
-             end) do
+           {:ok, {persisted, events}} <- update_session_with_event(started, &ParticipationEvents.session_started/1) do
         dispatch_all(events)
         {:ok, persisted}
       end
@@ -159,13 +149,7 @@ defmodule KlassHero.Participation do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
            {:ok, completed} <- ProgramSession.complete(session),
-           {:ok, {persisted, events}} <-
-             Outbox.transact(@context, fn ->
-               with {:ok, persisted} <- update_session(completed),
-                    {:ok, absence_events} <- mark_remaining_as_absent(persisted) do
-                 {:ok, persisted, absence_events ++ [session_completed_event(persisted)]}
-               end
-             end) do
+           {:ok, {persisted, events}} <- complete_session_with_events(completed) do
         dispatch_all(events)
         {:ok, persisted}
       end
@@ -849,15 +833,7 @@ defmodule KlassHero.Participation do
 
     with {:ok, record} <- fetch_record(record_id),
          {:ok, updated} <- domain_fn.(record, actor_id, notes),
-         {:ok, {persisted, events}} <-
-           Outbox.transact(@context, fn ->
-             with {:ok, persisted} <- update_record(updated) do
-               # Best-effort: attendance already succeeded; a session fetch failure
-               # enriches the event less, it does not fail the write.
-               session = resolve_session_best_effort(nil, persisted.session_id)
-               {:ok, persisted, [event_fn.(persisted, session)]}
-             end
-           end) do
+         {:ok, {persisted, events}} <- update_record_with_event(updated, event_fn) do
       dispatch_all(events)
       {:ok, persisted}
     end
@@ -866,13 +842,7 @@ defmodule KlassHero.Participation do
   defp bulk_check_in_record(record_id, checked_in_by, notes, session) do
     with {:ok, record} <- fetch_record(record_id),
          {:ok, checked_in} <- ParticipationRecord.check_in(record, checked_in_by, notes),
-         {:ok, {{persisted, resolved}, events}} <-
-           Outbox.transact(@context, fn ->
-             with {:ok, persisted} <- update_record(checked_in) do
-               resolved = resolve_session_best_effort(session, persisted.session_id)
-               {:ok, {persisted, resolved}, [check_in_event(persisted, resolved)]}
-             end
-           end) do
+         {:ok, {{persisted, resolved}, events}} <- check_in_record_with_event(checked_in, session) do
       dispatch_all(events)
       {:ok, persisted, resolved}
     else
@@ -1071,6 +1041,53 @@ defmodule KlassHero.Participation do
   defp check_in_event(record, %ProgramSession{} = session), do: ParticipationEvents.child_checked_in(record, session)
 
   defp check_in_event(record, nil), do: ParticipationEvents.child_checked_in(record)
+
+  defp insert_session_with_event(session) do
+    Outbox.transact(@context, fn ->
+      with {:ok, persisted} <- insert_session(session) do
+        {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
+      end
+    end)
+  end
+
+  defp update_session_with_event(session, event_fn) do
+    Outbox.transact(@context, fn ->
+      with {:ok, persisted} <- update_session(session) do
+        {:ok, persisted, [event_fn.(persisted)]}
+      end
+    end)
+  end
+
+  # The absences and the completion are one fact: a completed session whose
+  # registered children were never marked absent is a half-finished write.
+  defp complete_session_with_events(completed) do
+    Outbox.transact(@context, fn ->
+      with {:ok, persisted} <- update_session(completed),
+           {:ok, absence_events} <- mark_remaining_as_absent(persisted) do
+        {:ok, persisted, absence_events ++ [session_completed_event(persisted)]}
+      end
+    end)
+  end
+
+  defp update_record_with_event(updated, event_fn) do
+    Outbox.transact(@context, fn ->
+      with {:ok, persisted} <- update_record(updated) do
+        # Best-effort: attendance already succeeded; a session fetch failure enriches
+        # the event less, it does not fail the write.
+        session = resolve_session_best_effort(nil, persisted.session_id)
+        {:ok, persisted, [event_fn.(persisted, session)]}
+      end
+    end)
+  end
+
+  defp check_in_record_with_event(checked_in, session) do
+    Outbox.transact(@context, fn ->
+      with {:ok, persisted} <- update_record(checked_in) do
+        resolved = resolve_session_best_effort(session, persisted.session_id)
+        {:ok, {persisted, resolved}, [check_in_event(persisted, resolved)]}
+      end
+    end)
+  end
 
   # Seeds one session's roster and stages its roster_seeded event in the same
   # transaction, so a seeded row can never exist without the event describing it.
