@@ -20,6 +20,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.ClaimInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
+  alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Enrollment.EnrollmentPolicy
   alias KlassHero.Enrollment.ImportEnrollmentCsv
@@ -31,7 +32,6 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Family
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
 
   @active_statuses ~w(pending confirmed)
@@ -348,13 +348,26 @@ defmodule KlassHero.Enrollment do
   def resend_invite(invite_id, provider_id) when is_binary(invite_id) and is_binary(provider_id) do
     with {:ok, invite} <- get_invite(invite_id),
          {:ok, invite} <- authorize_invite_owner(invite, provider_id),
-         {:ok, invite} <- BulkEnrollmentInvite.ensure_resendable(invite),
-         {:ok, reset} <- reset_invite_for_resend(invite) do
-      # Dedicated event distinguishes single resend from bulk import; EnqueueInviteEmails
-      # assigns a fresh token + enqueues the job.
-      reset.provider_id
-      |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
-      |> EventDispatchHelper.dispatch_or_ok(__MODULE__, reset)
+         {:ok, invite} <- BulkEnrollmentInvite.ensure_resendable(invite) do
+      resend_with_fresh_token(invite)
+    end
+  end
+
+  # The reset clears the old token, so it must not survive a failure to issue a new
+  # one — that would leave an invite whose link is dead and whose email never sends.
+  # Previously the reset committed first and only the reporting was gated on what
+  # followed, so the caller could be told a resend failed that had already half-happened.
+  defp resend_with_fresh_token(invite) do
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:reset, fn _repo, _changes -> reset_invite_for_resend(invite) end)
+    |> Ecto.Multi.run(:enqueue, fn _repo, %{reset: reset} ->
+      with :ok <- EnqueueInviteEmails.execute_for_invite(reset.program_id, reset.provider_id, reset.id),
+           do: {:ok, :enqueued}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{reset: reset}} -> {:ok, reset}
+      {:error, _step, reason, _changes} -> {:error, reason}
     end
   end
 

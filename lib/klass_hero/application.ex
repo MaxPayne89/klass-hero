@@ -3,7 +3,6 @@ defmodule KlassHero.Application do
 
   use Application
 
-  alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInviteEmails
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcome
   alias KlassHero.Shared.DomainEventBus
@@ -37,8 +36,8 @@ defmodule KlassHero.Application do
     domain_event_buses() ++ projections()
   end
 
-  # Only the two contexts that still register a handler get a bus. The other five
-  # ran with `handlers: []` — every dispatch to them looked up an empty list.
+  # Provider is the last context still routing through the bus. The rest call their
+  # reactions directly, inside the transaction that made them true.
   defp domain_event_buses do
     [
       Supervisor.child_spec(
@@ -51,15 +50,6 @@ defmodule KlassHero.Application do
            {:identity_verification_failed, {AdvanceVettingStepOnIdentityOutcome, :handle}}
          ]},
         id: :provider_domain_event_bus
-      ),
-      Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.Enrollment,
-         handlers: [
-           {:bulk_invites_imported, {EnqueueInviteEmails, :handle}},
-           {:invite_resend_requested, {EnqueueInviteEmails, :handle}}
-         ]},
-        id: :enrollment_domain_event_bus
       )
     ]
   end

@@ -7,8 +7,6 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
   alias KlassHero.Enrollment.ImportEnrollmentCsv
   alias KlassHero.Repo
   # -- setup helpers ---------------------------------------------------------
-  alias KlassHero.Shared.Domain.Events.Event
-  alias KlassHero.Shared.DomainEventBus
 
   defp setup_provider_with_programs(_context) do
     provider = insert(:provider_profile_schema)
@@ -128,10 +126,7 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
 
       assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
-      # Trigger: EnqueueInviteEmails handler runs via DomainEventBus
-      # Why: the bulk_invites_imported event should fire after persist,
-      #      causing the handler to assign tokens synchronously
-      # Outcome: every invite has a non-nil invite_token
+      # EnqueueInviteEmails runs inline at the end of the import.
       invites = Repo.all(BulkEnrollmentInvite)
       assert Enum.all?(invites, fn inv -> inv.invite_token != nil end)
     end
@@ -179,10 +174,8 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
       assert alice_invite.guardian_email == "alice@test.com"
       assert alice_invite.school_grade == 2
       assert alice_invite.school_name == "BIS"
-      # Trigger: event handler + Oban inline worker run synchronously in test
-      # Why: bulk_invites_imported event fires after persist, handler assigns
-      #      tokens, and Oban inline worker sends email + transitions status
-      # Outcome: status is "invite_sent" (not "pending") by the time we read
+      # EnqueueInviteEmails tokens the invite and the inline Oban worker sends the
+      # email, so the status has already moved past :pending by the time we read.
       assert alice_invite.status == :invite_sent
 
       assert bob_invite.program_id == program2.id
@@ -443,31 +436,16 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
     end
   end
 
-  # -- event firing ------------------------------------------------------------
+  # -- invite emails -----------------------------------------------------------
 
-  describe "execute/2 - event firing" do
+  # An import tokens and emails the pending invites of the programs it created rows
+  # in — and only those. This used to be asserted on the shape of the
+  # `bulk_invites_imported` event; the event has no reader now, so assert what a
+  # guardian would notice instead: whether a token was issued and a job enqueued.
+  describe "execute/2 - invite emails" do
     setup :setup_provider_with_programs
 
-    # Subscribe an anonymous handler on the Enrollment DomainEventBus that
-    # forwards every :bulk_invites_imported event to the test process.
-    # EventDispatchHelper.dispatch runs handlers synchronously in the caller's
-    # process, so this delivers reliably without async/PubSub timing concerns.
-    setup do
-      test_pid = self()
-
-      DomainEventBus.subscribe(
-        KlassHero.Enrollment,
-        :bulk_invites_imported,
-        fn event ->
-          send(test_pid, {:bulk_invites_imported, event})
-          :ok
-        end
-      )
-
-      :ok
-    end
-
-    test "fires bulk_invites_imported with success-only program_ids when created > 0", %{
+    test "tokens every imported invite when all rows succeed", %{
       provider: provider,
       program1: program1,
       program2: program2
@@ -480,26 +458,27 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
 
       assert {:ok, %{created: 2, failed: []}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
-      provider_id = provider.id
-
-      assert_receive {:bulk_invites_imported,
-                      %Event{
-                        event_type: :bulk_invites_imported,
-                        payload: %{provider_id: ^provider_id, program_ids: ids, count: 2}
-                      }},
-                     1_000
-
-      assert program1.id in ids
-      assert program2.id in ids
-      assert length(ids) == 2
+      assert [_, _] = tokened_invites()
+      assert MapSet.new(tokened_invites(), & &1.program_id) == MapSet.new([program1.id, program2.id])
     end
 
-    test "fires event with only programs that had at least one success", %{
+    test "leaves a program alone when none of its rows succeeded", %{
       provider: provider,
       program1: program1,
       program2: program2
     } do
-      # program1 row succeeds; program2 row fails validation (missing first name).
+      # A pending invite already waiting in program2, from some earlier import.
+      {:ok, _} =
+        KlassHero.Enrollment.create_invite(%{
+          program_id: program2.id,
+          provider_id: provider.id,
+          child_first_name: "Waiting",
+          child_last_name: "Child",
+          child_date_of_birth: ~D[2016-01-01],
+          guardian_email: "waiting@x.com"
+        })
+
+      # program1's row succeeds; program2's fails validation (missing first name).
       csv =
         build_csv([
           %{first: "Alice", last: "A", email: "alice@x.com", program: program1.title},
@@ -509,30 +488,20 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
       assert {:ok, %{created: 1, failed: [%{category: :validation}]}} =
                ImportEnrollmentCsv.execute(provider.id, csv)
 
-      provider_id = provider.id
-
-      # provider_id is pinned as defence in depth. Owner-scoped delivery already makes a
-      # foreign event unreachable here (#1136); an unpinned `count: 1` payload would
-      # otherwise match another provider's single-invite import.
-      assert_receive {:bulk_invites_imported,
-                      %Event{
-                        event_type: :bulk_invites_imported,
-                        payload: %{provider_id: ^provider_id, program_ids: ids, count: 1}
-                      }},
-                     1_000
-
-      assert ids == [program1.id]
+      assert [%{program_id: tokened}] = tokened_invites()
+      assert tokened == program1.id
     end
 
-    test "does NOT fire event when created == 0", %{provider: provider} do
+    test "tokens nothing when no row succeeded", %{provider: provider} do
       csv = build_csv([%{first: ""}, %{first: "", email: "x@y.com"}])
 
       assert {:ok, %{created: 0}} = ImportEnrollmentCsv.execute(provider.id, csv)
 
-      provider_id = provider.id
+      assert [] = tokened_invites()
+    end
 
-      refute_receive {:bulk_invites_imported, %Event{payload: %{provider_id: ^provider_id}}},
-                     500
+    defp tokened_invites do
+      Repo.all(from(i in BulkEnrollmentInvite, where: not is_nil(i.invite_token)))
     end
   end
 

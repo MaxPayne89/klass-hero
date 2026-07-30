@@ -4,17 +4,15 @@ defmodule KlassHero.Enrollment.InviteSingleParticipant do
 
   Mirrors the validate → authorise → dedup → persist → publish tail of
   `ImportEnrollmentCsv`, but for a single row with a pre-resolved
-  `program_id`. Emits `:bulk_invites_imported` with `count: 1` so the
-  existing `EnqueueInviteEmails` handler picks the new invite up on the
-  next dispatch — no handler changes needed.
+  `program_id`. Shares the same `EnqueueInviteEmails` call, which tokens every
+  pending invite in the program — the new one included.
   """
 
   alias KlassHero.Enrollment
   alias KlassHero.Enrollment.ChangesetErrors
-  alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
+  alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Enrollment.ProviderProgramContext
   alias KlassHero.Enrollment.SingleInviteForm
-  alias KlassHero.Shared.EventDispatchHelper
 
   require Logger
 
@@ -32,7 +30,7 @@ defmodule KlassHero.Enrollment.InviteSingleParticipant do
          :ok <- authorize_program(row.program_id, context.programs_by_title),
          :ok <- check_duplicate(row),
          {:ok, invite} <- persist(row, provider_id) do
-      publish_event(provider_id, invite.program_id)
+      enqueue_invite_email(provider_id, invite.program_id)
 
       Logger.info("[InviteSingleParticipant] Invite created",
         invite_id: invite.id,
@@ -101,8 +99,7 @@ defmodule KlassHero.Enrollment.InviteSingleParticipant do
     end
   end
 
-  defp publish_event(provider_id, program_id) do
-    EnrollmentEvents.bulk_invites_imported(provider_id, [program_id], 1)
-    |> EventDispatchHelper.dispatch(KlassHero.Enrollment)
+  defp enqueue_invite_email(provider_id, program_id) do
+    EnqueueInviteEmails.execute([program_id], provider_id)
   end
 end
