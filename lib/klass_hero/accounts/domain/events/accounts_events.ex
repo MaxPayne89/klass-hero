@@ -29,7 +29,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   producers hold one and not the other.
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @typedoc "Payload for `:staff_invitation_sent` events."
   @type staff_invitation_sent_payload :: %{
@@ -149,7 +149,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   def staff_user_registered(user_id, payload \\ %{}, opts \\ [])
 
   def staff_user_registered(user_id, payload, opts) when is_binary(user_id) and byte_size(user_id) > 0 do
-    IntegrationEvent.new(
+    Event.new(
       :staff_user_registered,
       @source_context,
       @entity_type,
@@ -167,7 +167,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   # Caller-supplied payload overrides the derived fields, but never the identity:
   # `user_id` is what consumers key on, so it is put last.
   defp build(event_type, user_id, base_payload, payload, opts) do
-    IntegrationEvent.new(
+    Event.new(
       event_type,
       @source_context,
       @entity_type,
@@ -178,7 +178,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   end
 
   defp staff_event(event_type, staff_member_id, payload, opts) do
-    IntegrationEvent.new(
+    Event.new(
       event_type,
       @source_context,
       @staff_entity_type,

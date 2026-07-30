@@ -20,7 +20,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   on a nil or blank id.
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @typedoc "Payload for `:child_created` events."
   @type child_created_payload :: %{
@@ -90,7 +90,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   Critical by default: it is part of the GDPR deletion cascade and must not be lost.
 
       iex> event = FamilyEvents.child_data_anonymized("child-uuid")
-      iex> IntegrationEvent.critical?(event)
+      iex> Event.critical?(event)
       true
   """
   def child_data_anonymized(child_id, payload \\ %{}, opts \\ [])
@@ -125,7 +125,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   end
 
   defp build(event_type, entity_type, id_key, id, payload, opts) do
-    IntegrationEvent.new(
+    Event.new(
       event_type,
       @source_context,
       entity_type,

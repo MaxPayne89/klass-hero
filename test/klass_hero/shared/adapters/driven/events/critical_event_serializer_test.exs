@@ -2,12 +2,12 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   describe "round-trip" do
     test "serialize then deserialize produces equivalent struct" do
       event =
-        IntegrationEvent.new(
+        Event.new(
           :child_data_anonymized,
           :family,
           :child,
@@ -32,7 +32,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
 
     test "serialized form includes version and source_context" do
       event =
-        IntegrationEvent.new(:test, :enrollment, :invite, "id", %{}, version: 3)
+        Event.new(:test, :enrollment, :invite, "id", %{}, version: 3)
 
       serialized = CriticalEventSerializer.serialize(event)
 
@@ -43,7 +43,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
 
   describe "payload key atomization" do
     test "restores atom keys after JSON round-trip" do
-      event = IntegrationEvent.new(:test, :test_context, :test, "id", %{user_id: 1, name: "Alice"})
+      event = Event.new(:test, :test_context, :test, "id", %{user_id: 1, name: "Alice"})
       serialized = CriticalEventSerializer.serialize(event)
 
       # Simulate JSON round-trip (keys become strings)
@@ -55,7 +55,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
     end
 
     test "handles nested payload maps" do
-      event = IntegrationEvent.new(:test, :test_context, :test, "id", %{address: %{city: "Berlin", zip: "10115"}})
+      event = Event.new(:test, :test_context, :test, "id", %{address: %{city: "Berlin", zip: "10115"}})
       serialized = CriticalEventSerializer.serialize(event)
       json_cycled = Jason.decode!(Jason.encode!(serialized))
       deserialized = CriticalEventSerializer.deserialize(json_cycled)
@@ -64,7 +64,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
     end
 
     test "atomizes keys inside maps nested in lists" do
-      event = IntegrationEvent.new(:test, :test_context, :test, "id", %{items: [%{name: "Alice"}, %{name: "Bob"}]})
+      event = Event.new(:test, :test_context, :test, "id", %{items: [%{name: "Alice"}, %{name: "Bob"}]})
       serialized = CriticalEventSerializer.serialize(event)
       json_cycled = Jason.decode!(Jason.encode!(serialized))
       deserialized = CriticalEventSerializer.deserialize(json_cycled)
@@ -76,7 +76,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
   describe "metadata round-trip" do
     test "restores metadata atom keys after JSON round-trip" do
       event =
-        IntegrationEvent.new(:test, :test_context, :test, "id", %{},
+        Event.new(:test, :test_context, :test, "id", %{},
           criticality: :critical,
           correlation_id: "corr-1",
           causation_id: "cause-1"
@@ -93,7 +93,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
 
     test "preserves string keys for trace context fields after round-trip" do
       event =
-        IntegrationEvent.new(:test_event, :enrollment, :invite, "id-1", %{}, criticality: :normal)
+        Event.new(:test_event, :enrollment, :invite, "id-1", %{}, criticality: :normal)
 
       event_with_trace =
         %{

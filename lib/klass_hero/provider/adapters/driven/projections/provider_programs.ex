@@ -39,7 +39,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
 
   @default_status "active"
@@ -48,7 +48,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
   def bootstrap_impl, do: bootstrap_from_write_table()
 
   @impl Projection
-  def handle_event(event_type, %IntegrationEvent{} = event) when event_type in [:program_created, :program_updated] do
+  def handle_event(event_type, %Event{} = event) when event_type in [:program_created, :program_updated] do
     upsert_from_event(event)
   end
 
@@ -80,7 +80,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
     end
   end
 
-  defp upsert_from_event(%IntegrationEvent{} = event) do
+  defp upsert_from_event(%Event{} = event) do
     payload = event.payload
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 

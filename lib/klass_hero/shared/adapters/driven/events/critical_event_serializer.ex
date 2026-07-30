@@ -2,19 +2,19 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   @moduledoc """
   Serializes and deserializes event structs for Oban job args.
 
-  Handles the round-trip of `IntegrationEvent` structs through JSON. Atom
+  Handles the round-trip of `Event` structs through JSON. Atom
   fields are converted to strings on serialization and restored via
   `String.to_existing_atom/1` on deserialization (safe because all event types
   and payload keys are domain-defined and already loaded).
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @doc """
   Serializes an event struct into a JSON-safe map.
   """
-  @spec serialize(IntegrationEvent.t()) :: map()
-  def serialize(%IntegrationEvent{} = event) do
+  @spec serialize(Event.t()) :: map()
+  def serialize(%Event{} = event) do
     %{
       "event_id" => event.event_id,
       "event_type" => Atom.to_string(event.event_type),
@@ -34,9 +34,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   Atom fields are restored via `String.to_existing_atom/1`. Payload keys
   are atomized recursively.
   """
-  @spec deserialize(map()) :: IntegrationEvent.t()
+  @spec deserialize(map()) :: Event.t()
   def deserialize(data) when is_map(data) do
-    %IntegrationEvent{
+    %Event{
       event_id: data["event_id"],
       event_type: to_existing_atom(data["event_type"]),
       source_context: to_existing_atom(data["source_context"]),

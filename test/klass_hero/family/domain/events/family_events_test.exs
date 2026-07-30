@@ -4,7 +4,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Family.Domain.Events.FamilyEvents
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # Every family event factory shares one contract: build a :family event with
   # stable identity fields, let the id argument win over any caller-supplied
@@ -28,13 +28,13 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
       test "builds an event with the right type, entity, and criticality" do
         event = apply(FamilyEvents, @fun, ["id-1"])
 
-        assert %IntegrationEvent{} = event
+        assert %Event{} = event
         assert event.event_type == @fun
         assert event.source_context == :family
         assert event.entity_id == "id-1"
         assert event.entity_type == @entity_type
         assert Map.get(event.payload, @id) == "id-1"
-        assert IntegrationEvent.critical?(event) == @critical
+        assert Event.critical?(event) == @critical
       end
 
       test "the id argument wins over a caller-supplied one and preserves extras" do

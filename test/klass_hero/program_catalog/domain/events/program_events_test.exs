@@ -6,7 +6,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.ProgramCatalog.Domain.Events.ProgramEvents
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # Every factory shares one contract: build a :program_catalog event with
   # stable identity fields, let base_payload's program_id win over any
@@ -22,7 +22,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
       test "builds a valid event with default payload" do
         event = apply(ProgramEvents, @fun, ["program-1"])
 
-        assert %IntegrationEvent{} = event
+        assert %Event{} = event
         assert event.event_type == @fun
         assert event.source_context == :program_catalog
         assert event.entity_type == :program

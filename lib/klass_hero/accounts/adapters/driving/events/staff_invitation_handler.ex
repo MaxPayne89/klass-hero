@@ -19,7 +19,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   alias KlassHero.Accounts.User
   alias KlassHero.Accounts.UserNotifier
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -28,7 +28,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   def subscribed_events, do: [:staff_member_invited]
 
   @impl true
-  def handle_event(%IntegrationEvent{event_type: :staff_member_invited, payload: payload}) do
+  def handle_event(%Event{event_type: :staff_member_invited, payload: payload}) do
     payload = MapperHelpers.normalize_keys(payload)
 
     case Map.fetch(payload, :email) do

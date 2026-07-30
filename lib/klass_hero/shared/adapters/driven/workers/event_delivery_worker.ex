@@ -38,7 +38,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
   alias KlassHero.Shared.CriticalEventDispatcher
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Tracing.Context
 
   require Logger
@@ -54,9 +54,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   # No broadcast: `integration:` topics have no subscribers. Projections stopped
   # subscribing in PR 3, and no LiveView ever did — those now receive tagged
   # tuples from whoever wrote the data they read.
-  defp deliver(%IntegrationEvent{} = event, job) do
+  defp deliver(%Event{} = event, job) do
     Context.attach_from_event(event)
-    topic = IntegrationEvent.topic(event)
+    topic = Event.topic(event)
 
     topic
     |> EventConsumerRegistry.consumers_for()

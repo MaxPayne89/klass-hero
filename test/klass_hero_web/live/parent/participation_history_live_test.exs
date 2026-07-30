@@ -10,7 +10,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
 
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.Notifications
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   setup :register_and_log_in_parent
 
@@ -168,7 +168,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       # review_session_note/1 dispatches these in the parent's own process.
       for event_type <- [:session_note_approved, :session_note_rejected] do
         event =
-          IntegrationEvent.new(event_type, :participation, :session_note, Ecto.UUID.generate(), %{
+          Event.new(event_type, :participation, :session_note, Ecto.UUID.generate(), %{
             child_id: child.id,
             note_id: Ecto.UUID.generate()
           })
@@ -183,7 +183,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       foreign_record_id = Ecto.UUID.generate()
 
       foreign_event =
-        IntegrationEvent.new(:child_checked_in, :participation, :participation_record, foreign_record_id, %{
+        Event.new(:child_checked_in, :participation, :participation_record, foreign_record_id, %{
           record_id: foreign_record_id,
           child_id: Ecto.UUID.generate()
         })

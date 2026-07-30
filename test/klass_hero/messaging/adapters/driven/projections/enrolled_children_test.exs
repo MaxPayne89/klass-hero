@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @test_server_name :enrolled_children_projection_test
 
@@ -85,7 +85,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
       enrollment_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :enrollment_created,
           :enrollment,
           :enrollment,
@@ -124,7 +124,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
       enrollment_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :enrollment_created,
           :enrollment,
           :enrollment,
@@ -181,7 +181,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
       enrollment_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :enrollment_created,
           :enrollment,
           :enrollment,

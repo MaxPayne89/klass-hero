@@ -8,13 +8,13 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
 
   alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
   alias KlassHero.Enrollment.EnqueueInviteEmails, as: UseCase
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Tracing.Context
 
   require Logger
 
-  @spec handle(IntegrationEvent.t()) :: :ok
-  def handle(%IntegrationEvent{event_type: :bulk_invites_imported} = event) do
+  @spec handle(Event.t()) :: :ok
+  def handle(%Event{event_type: :bulk_invites_imported} = event) do
     %{provider_id: provider_id, program_ids: program_ids, count: count} = event.payload
 
     Logger.info("[EnqueueInviteEmails] Processing bulk import event",
@@ -40,8 +40,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInvi
     :ok
   end
 
-  @spec handle(IntegrationEvent.t()) :: :ok
-  def handle(%IntegrationEvent{event_type: :invite_resend_requested} = event) do
+  @spec handle(Event.t()) :: :ok
+  def handle(%Event{event_type: :invite_resend_requested} = event) do
     %{provider_id: provider_id, invite_id: invite_id, program_id: program_id} = event.payload
 
     Logger.info("[EnqueueInviteEmails] Processing resend request",

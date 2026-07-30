@@ -24,7 +24,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Messaging.CreateDirectConversation
   alias KlassHero.Provider.ProviderProfile
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @projection_name :inbox_e2e_projection
 
@@ -138,7 +138,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      assignment_event = %IntegrationEvent{
+      assignment_event = %Event{
         event_id: Ecto.UUID.generate(),
         event_type: :staff_assigned_to_program,
         source_context: :provider,
@@ -204,7 +204,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       flush_to_projection()
 
       # Now unassign the staff
-      unassignment_event = %IntegrationEvent{
+      unassignment_event = %Event{
         event_id: Ecto.UUID.generate(),
         event_type: :staff_unassigned_from_program,
         source_context: :provider,
@@ -277,7 +277,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
              "ACT 1: staff should see the conversation after initial create"
 
       # ACT 2 — unassign staff; conversation disappears from inbox
-      unassignment_event = %IntegrationEvent{
+      unassignment_event = %Event{
         event_id: Ecto.UUID.generate(),
         event_type: :staff_unassigned_from_program,
         source_context: :provider,
@@ -302,7 +302,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
              "ACT 2: staff should NOT see the conversation after unassignment"
 
       # ACT 3 — re-assign the SAME staff; conversation must re-appear
-      reassignment_event = %IntegrationEvent{
+      reassignment_event = %Event{
         event_id: Ecto.UUID.generate(),
         event_type: :staff_assigned_to_program,
         source_context: :provider,

@@ -6,7 +6,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # Unique name to avoid conflicts with the supervision tree.
   @test_server_name :program_listings_projection_test
@@ -123,7 +123,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       provider_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :program_created,
           :program_catalog,
           :program,
@@ -161,7 +161,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       provider_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :program_created,
           :program_catalog,
           :program,
@@ -204,7 +204,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       )
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :program_updated,
           :program_catalog,
           :program,
@@ -257,7 +257,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       provider_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :program_updated,
           :program_catalog,
           :program,
@@ -299,7 +299,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       other_listing = insert_listing(title: "Other Program", provider_id: other_provider_id, provider_verified: false)
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :provider_verified,
           :provider,
           :provider,
@@ -327,7 +327,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       other_listing = insert_listing(title: "Other Program", provider_id: other_provider_id, provider_verified: true)
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :provider_unverified,
           :provider,
           :provider,
@@ -366,7 +366,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       provider_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :program_created,
           :program_catalog,
           :program,

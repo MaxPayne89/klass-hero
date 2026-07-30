@@ -2,7 +2,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   describe "handle_event/1" do
     test "delegates to SeedSessionRoster for session_created events" do
@@ -15,7 +15,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
         )
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :session_created,
           :participation,
           :session,
@@ -34,7 +34,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
 
     test "ignores non-session_created events" do
       event =
-        IntegrationEvent.new(
+        Event.new(
           :session_started,
           :participation,
           :session,

@@ -3,18 +3,18 @@ defmodule KlassHero.Shared.Domain.Events.CriticalPayloadGuardTest do
   Guards that `:critical` event payloads carry only JSON scalars so they
   survive jsonb serialization intact (see #1010). The guard lives in
   `EventMetadata.validate_critical_payload!/2` and is invoked from both
-  `DomainEvent.new/5` and `IntegrationEvent.new/6`.
+  `DomainEvent.new/5` and `Event.new/6`.
   """
   use ExUnit.Case, async: true
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   defp new_domain(payload, opts \\ [criticality: :critical]) do
-    IntegrationEvent.new(:test_event, :test_context, :test, "agg-1", payload, opts)
+    Event.new(:test_event, :test_context, :test, "agg-1", payload, opts)
   end
 
   defp new_integration(payload, opts \\ [criticality: :critical]) do
-    IntegrationEvent.new(:test_event, :test_ctx, :test, "id-1", payload, opts)
+    Event.new(:test_event, :test_ctx, :test, "id-1", payload, opts)
   end
 
   describe "critical events reject non-scalar payload values" do
@@ -57,7 +57,7 @@ defmodule KlassHero.Shared.Domain.Events.CriticalPayloadGuardTest do
       assert error.message =~ "outer.when"
     end
 
-    test "applies to IntegrationEvent too" do
+    test "applies to Event too" do
       assert_raise ArgumentError, ~r/not a JSON scalar/, fn ->
         new_integration(%{happened_at: DateTime.utc_now()})
       end
@@ -79,7 +79,7 @@ defmodule KlassHero.Shared.Domain.Events.CriticalPayloadGuardTest do
     end
 
     test "allows an empty payload" do
-      assert %IntegrationEvent{} = new_domain(%{})
+      assert %Event{} = new_domain(%{})
     end
   end
 
@@ -90,7 +90,7 @@ defmodule KlassHero.Shared.Domain.Events.CriticalPayloadGuardTest do
     end
 
     test "defaults to :normal (exempt) when criticality is unset" do
-      event = IntegrationEvent.new(:test_event, :test_context, :test, "agg-1", %{status: :pending})
+      event = Event.new(:test_event, :test_context, :test, "agg-1", %{status: :pending})
       assert event.payload.status == :pending
     end
   end

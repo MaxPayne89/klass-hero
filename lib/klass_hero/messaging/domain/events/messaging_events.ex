@@ -14,7 +14,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   Oban's jsonb round trip (see #1010).
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @source_context :messaging
   @entity_type :conversation
@@ -30,9 +30,9 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           provider_id :: String.t(),
           participant_ids :: [String.t()],
           program_id :: String.t() | nil
-        ) :: IntegrationEvent.t()
+        ) :: Event.t()
   def conversation_created(conversation_id, type, provider_id, participant_ids, program_id \\ nil) do
-    IntegrationEvent.new(
+    Event.new(
       :conversation_created,
       @source_context,
       @entity_type,
@@ -60,9 +60,9 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           message_type :: :text | :system,
           sent_at :: DateTime.t() | nil,
           attachments :: [map()]
-        ) :: IntegrationEvent.t()
+        ) :: Event.t()
   def message_sent(conversation_id, message_id, sender_id, content, message_type, sent_at \\ nil, attachments \\ []) do
-    IntegrationEvent.new(
+    Event.new(
       :message_sent,
       @source_context,
       @entity_type,
@@ -92,9 +92,9 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           conversation_id :: String.t(),
           user_id :: String.t(),
           read_at :: DateTime.t()
-        ) :: IntegrationEvent.t()
+        ) :: Event.t()
   def messages_read(conversation_id, user_id, read_at) do
-    IntegrationEvent.new(
+    Event.new(
       :messages_read,
       @source_context,
       @entity_type,
@@ -109,9 +109,9 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   @spec conversation_archived(
           conversation_id :: String.t(),
           reason :: :program_ended | :manual
-        ) :: IntegrationEvent.t()
+        ) :: Event.t()
   def conversation_archived(conversation_id, reason) do
-    IntegrationEvent.new(
+    Event.new(
       :conversation_archived,
       @source_context,
       @entity_type,
@@ -131,9 +131,9 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           conversation_ids :: [String.t()],
           reason :: :program_ended | :retention_policy,
           count :: non_neg_integer()
-        ) :: IntegrationEvent.t()
+        ) :: Event.t()
   def conversations_archived(conversation_ids, reason, count) do
-    IntegrationEvent.new(
+    Event.new(
       :conversations_archived,
       @source_context,
       @entity_type,
@@ -149,9 +149,9 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   participations ended). Part of the GDPR deletion cascade, so it must not be
   lost.
   """
-  @spec message_data_anonymized(user_id :: String.t()) :: IntegrationEvent.t()
+  @spec message_data_anonymized(user_id :: String.t()) :: Event.t()
   def message_data_anonymized(user_id) when is_binary(user_id) and byte_size(user_id) > 0 do
-    IntegrationEvent.new(
+    Event.new(
       :message_data_anonymized,
       @source_context,
       :user,
@@ -179,7 +179,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           conversation_id :: String.t(),
           participant_user_ids :: [String.t()],
           source :: participant_added_source()
-        ) :: IntegrationEvent.t()
+        ) :: Event.t()
   def participant_added(conversation_id, [_ | _] = participant_user_ids, source) do
     participant_event(:participant_added, conversation_id, participant_user_ids, source)
   end
@@ -202,7 +202,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
           conversation_id :: String.t(),
           participant_user_ids :: [String.t()],
           source :: participant_removed_source()
-        ) :: IntegrationEvent.t()
+        ) :: Event.t()
   def participant_removed(conversation_id, [_ | _] = participant_user_ids, source) do
     participant_event(:participant_removed, conversation_id, participant_user_ids, source)
   end
@@ -212,7 +212,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   end
 
   defp participant_event(event_type, conversation_id, participant_user_ids, source) do
-    IntegrationEvent.new(
+    Event.new(
       event_type,
       @source_context,
       @entity_type,

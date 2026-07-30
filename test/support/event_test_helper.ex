@@ -21,7 +21,7 @@ defmodule KlassHero.EventTestHelper do
   import ExUnit.Assertions
 
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @doc """
   Initializes integration event collection for the current test.
@@ -44,7 +44,7 @@ defmodule KlassHero.EventTestHelper do
   @doc """
   Every integration event the code under test staged.
   """
-  @spec get_published_integration_events() :: [IntegrationEvent.t()]
+  @spec get_published_integration_events() :: [Event.t()]
   def get_published_integration_events do
     TestOutbox.staged()
   end
@@ -56,12 +56,12 @@ defmodule KlassHero.EventTestHelper do
 
       assert_integration_event_published(:child_data_anonymized)
   """
-  @spec assert_integration_event_published(atom()) :: IntegrationEvent.t()
+  @spec assert_integration_event_published(atom()) :: Event.t()
   def assert_integration_event_published(event_type) when is_atom(event_type) do
     events = get_published_integration_events()
 
     event =
-      Enum.find(events, fn %IntegrationEvent{event_type: type} ->
+      Enum.find(events, fn %Event{event_type: type} ->
         type == event_type
       end)
 
@@ -82,19 +82,19 @@ defmodule KlassHero.EventTestHelper do
 
       assert_integration_event_published(:child_data_anonymized, %{child_id: "uuid"})
   """
-  @spec assert_integration_event_published(atom(), map()) :: IntegrationEvent.t()
+  @spec assert_integration_event_published(atom(), map()) :: Event.t()
   def assert_integration_event_published(event_type, expected_payload)
       when is_atom(event_type) and is_map(expected_payload) do
     events = get_published_integration_events()
 
     event =
-      Enum.find(events, fn %IntegrationEvent{event_type: type, payload: payload} ->
+      Enum.find(events, fn %Event{event_type: type, payload: payload} ->
         type == event_type && payload_matches?(payload, expected_payload)
       end)
 
     if event == nil do
       matching_type_events =
-        Enum.filter(events, fn %IntegrationEvent{event_type: type} ->
+        Enum.filter(events, fn %Event{event_type: type} ->
           type == event_type
         end)
 
@@ -128,12 +128,12 @@ defmodule KlassHero.EventTestHelper do
 
       assert_integration_published_to(:invite_claimed, "integration:enrollment:invite_claimed")
   """
-  @spec assert_integration_published_to(atom(), String.t()) :: IntegrationEvent.t()
+  @spec assert_integration_published_to(atom(), String.t()) :: Event.t()
   def assert_integration_published_to(event_type, topic) when is_atom(event_type) and is_binary(topic) do
     published = staged_with_topics()
 
     match =
-      Enum.find(published, fn {%IntegrationEvent{event_type: type}, published_topic} ->
+      Enum.find(published, fn {%Event{event_type: type}, published_topic} ->
         type == event_type and published_topic == topic
       end)
 
@@ -148,7 +148,7 @@ defmodule KlassHero.EventTestHelper do
   # Staged events carry no topic of their own — the delivery job derives one, so
   # deriving it here through the same function compares like with like.
   defp staged_with_topics do
-    for event <- TestOutbox.staged(), do: {event, IntegrationEvent.topic(event)}
+    for event <- TestOutbox.staged(), do: {event, Event.topic(event)}
   end
 
   @doc """

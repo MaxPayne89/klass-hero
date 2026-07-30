@@ -4,7 +4,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents, as: Events
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # Every id-and-payload factory shares one contract: build an event with stable
   # identity fields, let the id argument win over any caller-supplied one
@@ -27,7 +27,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
       test "builds an event with stable identity fields" do
         event = apply(Events, @fun, ["id-1"])
 
-        assert %IntegrationEvent{} = event
+        assert %Event{} = event
         assert event.event_type == @fun
         assert event.source_context == :enrollment
         assert event.entity_type == @entity
@@ -73,7 +73,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
     test "creates an event with correct type and payload" do
       event = Events.bulk_invites_imported("provider-1", ["prog-1", "prog-2"], 5)
 
-      assert %IntegrationEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :bulk_invites_imported
       assert event.source_context == :enrollment
       assert event.entity_type == :provider
@@ -88,7 +88,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
 
       event = Events.bulk_invites_imported("provider-1", ["prog-1"], 3, correlation_id: correlation_id)
 
-      assert IntegrationEvent.correlation_id(event) == correlation_id
+      assert Event.correlation_id(event) == correlation_id
     end
 
     test "raises for a blank provider_id, non-list program_ids, or non-integer count" do
@@ -113,7 +113,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
 
       event = Events.invite_resend_requested(provider_id, invite_id, program_id)
 
-      assert %IntegrationEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :invite_resend_requested
       assert event.source_context == :enrollment
       assert event.entity_type == :invite
@@ -134,7 +134,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
           correlation_id: correlation_id
         )
 
-      assert IntegrationEvent.correlation_id(event) == correlation_id
+      assert Event.correlation_id(event) == correlation_id
     end
 
     test "raises when any of the three ids is blank" do

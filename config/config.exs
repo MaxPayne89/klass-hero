@@ -24,7 +24,6 @@ alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionR
 alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
-
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
@@ -287,7 +286,6 @@ config :klass_hero, :event_consumers, %{
 # event model; until then this is the one place the mapping is declared rather
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter
-
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}
 
 config :klass_hero, :messaging,

@@ -6,7 +6,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Provider.Domain.Events.ProviderEvents
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # The provider integration-event factories share one contract: build a
   # critical event with stable identity fields, let the base payload's id win
@@ -28,7 +28,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEventsTest do
       test "creates event with correct type, source_context, and entity_type" do
         event = apply(ProviderEvents, @fun, ["id-1"])
 
-        assert %IntegrationEvent{} = event
+        assert %Event{} = event
         assert event.event_type == @fun
         assert event.source_context == :provider
         assert event.entity_type == @entity
@@ -46,13 +46,13 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEventsTest do
       test "marks event as critical by default" do
         event = apply(ProviderEvents, @fun, ["id-1"])
 
-        assert IntegrationEvent.critical?(event)
+        assert Event.critical?(event)
       end
 
       test "allows overriding criticality via opts" do
         event = apply(ProviderEvents, @fun, ["id-1", %{}, [criticality: :normal]])
 
-        refute IntegrationEvent.critical?(event)
+        refute Event.critical?(event)
       end
 
       test "raises for a nil or blank id" do

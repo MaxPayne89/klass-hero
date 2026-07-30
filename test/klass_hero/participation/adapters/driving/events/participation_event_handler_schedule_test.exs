@@ -12,7 +12,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
   alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @weekdays ~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday)
 
@@ -35,7 +35,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
   end
 
   defp program_event(type, program_id) do
-    IntegrationEvent.new(type, :program_catalog, :program, program_id, %{program_id: program_id})
+    Event.new(type, :program_catalog, :program, program_id, %{program_id: program_id})
   end
 
   defp session_count(program_id) do
@@ -82,7 +82,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
       insert(:enrollment_schema, program_id: program.id, child_id: child.id, status: :confirmed)
 
       event =
-        IntegrationEvent.new(:enrollment_created, :enrollment, :enrollment, Ecto.UUID.generate(), %{
+        Event.new(:enrollment_created, :enrollment, :enrollment, Ecto.UUID.generate(), %{
           child_id: child.id,
           program_id: program.id
         })

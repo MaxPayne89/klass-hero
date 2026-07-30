@@ -9,10 +9,10 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   defp build_session_completed_event(attrs) do
-    %IntegrationEvent{
+    %Event{
       event_id: Ecto.UUID.generate(),
       event_type: :session_completed,
       source_context: :participation,

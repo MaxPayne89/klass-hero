@@ -22,7 +22,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
   does not stage them.
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @source_context :enrollment
 
@@ -97,7 +97,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
 
   def bulk_invites_imported(provider_id, program_ids, count, opts)
       when is_binary(provider_id) and byte_size(provider_id) > 0 and is_list(program_ids) and is_integer(count) do
-    IntegrationEvent.new(
+    Event.new(
       :bulk_invites_imported,
       @source_context,
       :provider,
@@ -128,7 +128,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
   def invite_resend_requested(provider_id, invite_id, program_id, opts)
       when is_binary(provider_id) and provider_id != "" and is_binary(invite_id) and invite_id != "" and
              is_binary(program_id) and program_id != "" do
-    IntegrationEvent.new(
+    Event.new(
       :invite_resend_requested,
       @source_context,
       :invite,
@@ -145,7 +145,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
   end
 
   defp build(event_type, entity_type, id_key, id, payload, opts) do
-    IntegrationEvent.new(
+    Event.new(
       event_type,
       @source_context,
       entity_type,

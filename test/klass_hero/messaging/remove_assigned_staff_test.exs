@@ -9,7 +9,7 @@ defmodule KlassHero.Messaging.RemoveAssignedStaffTest do
   alias KlassHero.Messaging.Participant
   alias KlassHero.Messaging.RemoveAssignedStaff
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   setup do
     setup_test_integration_events()
@@ -44,7 +44,7 @@ defmodule KlassHero.Messaging.RemoveAssignedStaffTest do
       refute KlassHero.Messaging.participant?(conv_b, staff.id)
 
       assert length(events) == 2
-      assert Enum.all?(events, &match?(%IntegrationEvent{event_type: :participant_removed}, &1))
+      assert Enum.all?(events, &match?(%Event{event_type: :participant_removed}, &1))
 
       event_conv_ids = events |> Enum.map(& &1.entity_id) |> Enum.sort()
       assert event_conv_ids == Enum.sort([conv_a, conv_b])

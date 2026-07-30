@@ -14,7 +14,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestOutbox do
 
   @behaviour KlassHero.Shared.ForStagingEvents
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @key :test_staged_events
 
@@ -30,7 +30,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestOutbox do
   @doc """
   Every event staged by the current test process, in staging order.
   """
-  @spec staged() :: [IntegrationEvent.t()]
+  @spec staged() :: [Event.t()]
   def staged, do: Process.get(@key, [])
 
   @impl true

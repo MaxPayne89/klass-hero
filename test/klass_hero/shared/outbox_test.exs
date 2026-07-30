@@ -11,7 +11,7 @@ defmodule KlassHero.Shared.OutboxTest do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Outbox
 
   setup do
@@ -20,7 +20,7 @@ defmodule KlassHero.Shared.OutboxTest do
   end
 
   defp event(type, entity_id, payload \\ %{}) do
-    IntegrationEvent.new(type, :program_catalog, :program, entity_id, payload)
+    Event.new(type, :program_catalog, :program, entity_id, payload)
   end
 
   defp staged_job_events do
@@ -41,7 +41,7 @@ defmodule KlassHero.Shared.OutboxTest do
         event(:program_created, "prog-1")
       )
 
-      assert [%IntegrationEvent{event_type: :program_created}] = TestOutbox.staged()
+      assert [%Event{event_type: :program_created}] = TestOutbox.staged()
     end
 
     test "stages nothing when no consumer is registered for the topic" do
@@ -83,7 +83,7 @@ defmodule KlassHero.Shared.OutboxTest do
                  {:ok, :the_entity, [event(:program_created, "prog-1", %{title: "Chess"})]}
                end)
 
-      assert [%IntegrationEvent{event_type: :program_created}] = TestOutbox.staged()
+      assert [%Event{event_type: :program_created}] = TestOutbox.staged()
     end
 
     test "rolls back with the callback's own reason, so callers match what they matched before" do

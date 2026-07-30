@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Domain.Events.IntegrationEvent do
+defmodule KlassHero.Shared.Domain.Events.Event do
   @moduledoc """
   Base structure for cross-context integration events.
 
@@ -20,7 +20,7 @@ defmodule KlassHero.Shared.Domain.Events.IntegrationEvent do
 
   ## Message Format
 
-  Subscribers receive: `{:integration_event, %IntegrationEvent{}}`
+  Subscribers receive: `{:integration_event, %Event{}}`
 
   ## Event Criticality
 
@@ -87,14 +87,14 @@ defmodule KlassHero.Shared.Domain.Events.IntegrationEvent do
 
   ## Examples
 
-      iex> event = IntegrationEvent.new(:child_data_anonymized, :identity, :child, "uuid", %{child_id: "uuid"})
+      iex> event = Event.new(:child_data_anonymized, :identity, :child, "uuid", %{child_id: "uuid"})
       iex> event.event_type
       :child_data_anonymized
       iex> event.source_context
       :identity
 
-      iex> event = IntegrationEvent.new(:child_data_anonymized, :identity, :child, "uuid", %{}, criticality: :critical)
-      iex> IntegrationEvent.critical?(event)
+      iex> event = Event.new(:child_data_anonymized, :identity, :child, "uuid", %{}, criticality: :critical)
+      iex> Event.critical?(event)
       true
   """
   @spec new(atom(), atom(), atom(), String.t() | integer(), map(), keyword()) :: t()

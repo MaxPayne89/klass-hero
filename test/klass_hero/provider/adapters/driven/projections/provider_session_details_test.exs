@@ -9,7 +9,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @test_server_name :test_provider_session_details
 
@@ -427,13 +427,13 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
   # Projects in the test process, exactly as the delivery job does — no broadcast,
   # no mailbox fence, the projection GenServer is not in this path.
   defp broadcast(event_type, entity_id, payload) do
-    event = IntegrationEvent.new(event_type, :participation, :session, entity_id, payload)
+    event = Event.new(event_type, :participation, :session, entity_id, payload)
 
     ProviderSessionDetails.project(event)
   end
 
   defp broadcast_provider(event_type, entity_id, payload) do
-    event = IntegrationEvent.new(event_type, :provider, :staff, entity_id, payload)
+    event = Event.new(event_type, :provider, :staff, entity_id, payload)
 
     ProviderSessionDetails.project(event)
   end
@@ -504,7 +504,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       session_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :session_created,
           :participation,
           :session,

@@ -9,7 +9,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   alias KlassHero.Provider.Vetting
   alias KlassHero.Provider.VettingCase
   alias KlassHero.ProviderFixtures
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # Derived from the engine so a new document step is approved here automatically.
   @individual_doc_types VerificationDocument.valid_document_types(:individual)
@@ -113,7 +113,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   end
 
   defp passed_event(provider_id) do
-    IntegrationEvent.new(:identity_verification_passed, :provider, :identity_verification, Ecto.UUID.generate(), %{
+    Event.new(:identity_verification_passed, :provider, :identity_verification, Ecto.UUID.generate(), %{
       provider_id: provider_id,
       identity_verification_id: Ecto.UUID.generate(),
       stripe_session_id: "vs_x",
@@ -122,7 +122,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   end
 
   defp failed_event(provider_id) do
-    IntegrationEvent.new(:identity_verification_failed, :provider, :identity_verification, Ecto.UUID.generate(), %{
+    Event.new(:identity_verification_failed, :provider, :identity_verification, Ecto.UUID.generate(), %{
       provider_id: provider_id,
       identity_verification_id: Ecto.UUID.generate(),
       stripe_session_id: "vs_x",

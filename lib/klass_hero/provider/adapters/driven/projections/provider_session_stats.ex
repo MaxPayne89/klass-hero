@@ -27,14 +27,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
   alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
 
   @impl Projection
   def bootstrap_impl, do: bootstrap_counts()
 
   @impl Projection
-  def handle_event(:session_completed, %IntegrationEvent{} = event) do
+  def handle_event(:session_completed, %Event{} = event) do
     %{provider_id: provider_id, program_id: program_id, program_title: program_title} =
       event.payload
 

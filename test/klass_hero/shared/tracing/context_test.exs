@@ -3,7 +3,7 @@
 defmodule KlassHero.Shared.Tracing.ContextTest.Helpers do
   use KlassHero.Shared.Tracing
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Tracing.Context
 
   def inject_in_span do
@@ -26,21 +26,21 @@ defmodule KlassHero.Shared.Tracing.ContextTest.Helpers do
 
   def inject_into_domain_event do
     span "test.operation" do
-      event = IntegrationEvent.new(:test_event, :test_context, :test, "123", %{})
+      event = Event.new(:test_event, :test_context, :test, "123", %{})
       Context.inject_into_event(event)
     end
   end
 
   def inject_into_integration_event do
     span "test.operation" do
-      event = IntegrationEvent.new(:test_event, :test, :entity, "123", %{})
+      event = Event.new(:test_event, :test, :entity, "123", %{})
       Context.inject_into_event(event)
     end
   end
 
   def attach_from_event_in_child_span do
     span "publisher.span" do
-      event = IntegrationEvent.new(:test_event, :test_context, :test, "123", %{})
+      event = Event.new(:test_event, :test_context, :test, "123", %{})
       enriched = Context.inject_into_event(event)
 
       task =
@@ -142,7 +142,7 @@ defmodule KlassHero.Shared.Tracing.ContextTest do
       assert enriched.event_type == :test_event
     end
 
-    test "merges trace context into IntegrationEvent metadata" do
+    test "merges trace context into Event metadata" do
       enriched = Helpers.inject_into_integration_event()
 
       assert Map.has_key?(enriched.metadata, "traceparent")

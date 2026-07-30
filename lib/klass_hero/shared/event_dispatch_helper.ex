@@ -11,8 +11,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
   """
 
   alias KlassHero.Shared.CriticalEventDispatcher
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Domain.Events.EventMetadata
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.DomainEventBus
 
   require Logger
@@ -35,8 +35,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       AccountsEvents.user_registered(user)
       |> EventDispatchHelper.dispatch(KlassHero.Accounts)
   """
-  @spec dispatch(IntegrationEvent.t(), module()) :: :ok
-  def dispatch(%IntegrationEvent{} = event, context) do
+  @spec dispatch(Event.t(), module()) :: :ok
+  def dispatch(%Event{} = event, context) do
     if EventMetadata.critical?(event) do
       dispatch_critical(event, context)
     else
@@ -59,8 +59,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       FamilyEvents.invite_family_ready(invite_id, payload)
       |> EventDispatchHelper.dispatch_or_error(KlassHero.Family)
   """
-  @spec dispatch_or_error(IntegrationEvent.t(), module()) :: :ok | {:error, term()}
-  def dispatch_or_error(%IntegrationEvent{} = event, context) do
+  @spec dispatch_or_error(Event.t(), module()) :: :ok | {:error, term()}
+  def dispatch_or_error(%Event{} = event, context) do
     if EventMetadata.critical?(event) do
       {:ok, results} = DomainEventBus.dispatch_critical(context, event)
       find_first_failure(results)
@@ -80,7 +80,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
       |> EventDispatchHelper.dispatch_or_ok(KlassHero.Enrollment, reset)
   """
-  @spec dispatch_or_ok(IntegrationEvent.t(), module(), value) :: {:ok, value} | {:error, term()}
+  @spec dispatch_or_ok(Event.t(), module(), value) :: {:ok, value} | {:error, term()}
         when value: term()
   def dispatch_or_ok(event, context, value) do
     case dispatch_or_error(event, context) do

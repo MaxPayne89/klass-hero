@@ -23,7 +23,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @assignment %ProgramStaffAssignment{
     provider_id: "prov-1",
@@ -38,7 +38,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
     test "staff_assigned_to_program resolves to the Messaging handler" do
       event = ProviderEvents.staff_assigned_to_program(@assignment, @staff_member)
 
-      assert IntegrationEvent.topic(event) ==
+      assert Event.topic(event) ==
                "integration:provider:staff_assigned_to_program"
 
       assert {StaffAssignmentHandler, :handle_event} in EventConsumerRegistry.consumers_for(
@@ -49,7 +49,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
     test "staff_unassigned_from_program resolves to the Messaging handler" do
       event = ProviderEvents.staff_unassigned_from_program(@assignment, @staff_member)
 
-      assert IntegrationEvent.topic(event) ==
+      assert Event.topic(event) ==
                "integration:provider:staff_unassigned_from_program"
 
       assert {StaffAssignmentHandler, :handle_event} in EventConsumerRegistry.consumers_for(

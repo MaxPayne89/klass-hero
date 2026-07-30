@@ -6,7 +6,7 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
   alias KlassHero.Shared.CriticalEventDispatcher
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.EventDispatchHelper
 
@@ -70,11 +70,11 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
   end
 
   defmodule CriticalSuccessHandler do
-    def handle(%IntegrationEvent{} = _event), do: :ok
+    def handle(%Event{} = _event), do: :ok
   end
 
   defmodule CriticalFailHandler do
-    def handle(%IntegrationEvent{} = _event), do: {:error, :handler_broke}
+    def handle(%Event{} = _event), do: {:error, :handler_broke}
   end
 
   describe "dispatch/2 with critical events" do
@@ -94,7 +94,7 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
     end
 
     test "marks handler as processed when critical event succeeds", %{context: context} do
-      event = IntegrationEvent.new(:critical_test, :test_context, :test, "agg-1", %{}, criticality: :critical)
+      event = Event.new(:critical_test, :test_context, :test, "agg-1", %{}, criticality: :critical)
 
       assert :ok = EventDispatchHelper.dispatch(event, context)
 
@@ -103,7 +103,7 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
     end
 
     test "does NOT mark as processed for normal events", %{context: context} do
-      event = IntegrationEvent.new(:critical_test, :test_context, :test, "agg-1", %{})
+      event = Event.new(:critical_test, :test_context, :test, "agg-1", %{})
 
       assert :ok = EventDispatchHelper.dispatch(event, context)
 
@@ -131,7 +131,7 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
 
     test "enqueues Oban job for failed handler and marks successful one", %{context: context} do
       event =
-        IntegrationEvent.new(:critical_fail_test, :test_context, :test, "agg-1", %{data: "val"}, criticality: :critical)
+        Event.new(:critical_fail_test, :test_context, :test, "agg-1", %{data: "val"}, criticality: :critical)
 
       assert :ok = EventDispatchHelper.dispatch(event, context)
 
@@ -165,7 +165,7 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
 
     test "does NOT enqueue Oban job — caller owns error handling", %{context: context} do
       event =
-        IntegrationEvent.new(:critical_or_error_test, :test_context, :test, "agg-1", %{}, criticality: :critical)
+        Event.new(:critical_or_error_test, :test_context, :test, "agg-1", %{}, criticality: :critical)
 
       assert {:error, _reason} = EventDispatchHelper.dispatch_or_error(event, context)
 
@@ -196,6 +196,6 @@ defmodule KlassHero.Shared.EventDispatchHelperTest do
   end
 
   defp build_event(type, opts \\ []) do
-    IntegrationEvent.new(type, :test_context, :test, 1, %{}, opts)
+    Event.new(type, :test_context, :test, 1, %{}, opts)
   end
 end

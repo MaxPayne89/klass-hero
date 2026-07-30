@@ -6,7 +6,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   setup do
     setup_test_integration_events()
@@ -192,7 +192,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   end
 
   defp build_assignment_event(provider_id, program_id, staff_user_id) do
-    %IntegrationEvent{
+    %Event{
       event_id: Ecto.UUID.generate(),
       event_type: :staff_assigned_to_program,
       source_context: :provider,
@@ -210,7 +210,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   end
 
   defp build_unassignment_event(provider_id, program_id, staff_user_id) do
-    %IntegrationEvent{
+    %Event{
       event_id: Ecto.UUID.generate(),
       event_type: :staff_unassigned_from_program,
       source_context: :provider,

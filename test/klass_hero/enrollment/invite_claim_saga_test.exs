@@ -11,7 +11,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
   this test:
 
   1. Swaps the integration event publisher to the real PubSub publisher
-     so that PromoteIntegrationEvents handlers actually broadcast events
+     so that the events a claim stages are visible to assertions
   2. Grants Ecto Sandbox access to the EventSubscriber processes so they
      can access the database within the test's transaction
   3. Polls for the expected terminal state ("enrolled")
@@ -33,7 +33,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
   alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
-  alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
+  alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
 
   @saga_subscribers [
     # Handles integration:enrollment:invite_claimed -> creates parent + child
@@ -104,13 +104,13 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       invite_data = create_claimable_invite(context)
 
       # Trigger: test config uses TestOutbox (process dictionary storage)
-      # Why: PromoteIntegrationEvents handlers must actually broadcast to PubSub so the
+      # Why: the claim must actually stage its events so the
       #      EventSubscriber GenServers receive the events and drive the saga forward
       # Outcome: swap to real PubSub publisher for this test, restore in on_exit
       original_config = Application.get_env(:klass_hero, :integration_event_publisher)
 
       Application.put_env(:klass_hero, :integration_event_publisher,
-        module: PubSubIntegrationEventPublisher,
+        module: PubSubEventPublisher,
         pubsub: KlassHero.PubSub
       )
 

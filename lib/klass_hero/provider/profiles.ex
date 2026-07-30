@@ -235,7 +235,7 @@ defmodule KlassHero.Provider.Profiles do
     |> Repo.update()
   end
 
-  # These two build an IntegrationEvent directly rather than promoting a domain one —
+  # These two build an Event directly rather than promoting a domain one —
   # the pre-existing bypass of the bus, and the shape everything ends up in.
   defp persist_with_verification_event(original, updated, admin_id, decision) do
     Outbox.transact(@context, fn ->

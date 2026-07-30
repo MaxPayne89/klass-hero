@@ -15,7 +15,7 @@ defmodule KlassHero.Shared.ForHandlingEvents do
         def subscribed_events, do: [:child_data_anonymized]
 
         @impl true
-        def handle_event(%IntegrationEvent{event_type: :child_data_anonymized} = event) do
+        def handle_event(%Event{event_type: :child_data_anonymized} = event) do
           :ok
         end
 
@@ -23,12 +23,12 @@ defmodule KlassHero.Shared.ForHandlingEvents do
       end
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @doc """
   Handles an integration event. Returns `:ok`, `{:error, reason}`, or `:ignore`.
   """
-  @callback handle_event(IntegrationEvent.t()) :: :ok | {:error, term()} | :ignore
+  @callback handle_event(Event.t()) :: :ok | {:error, term()} | :ignore
 
   @doc """
   Returns the list of event types this handler subscribes to.

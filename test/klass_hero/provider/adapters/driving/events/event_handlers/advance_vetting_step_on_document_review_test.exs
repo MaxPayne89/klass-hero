@@ -10,7 +10,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   alias KlassHero.Provider.Vetting
   alias KlassHero.Provider.VettingCase
   alias KlassHero.ProviderFixtures
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # The individual track's document steps, derived from the engine so a new document
   # step is exercised here automatically (see Vetting.track(:individual)).
@@ -93,7 +93,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   end
 
   defp approved_event(provider_id, reviewer_id, document_type) do
-    IntegrationEvent.new(:verification_document_approved, :provider, :verification_document, Ecto.UUID.generate(), %{
+    Event.new(:verification_document_approved, :provider, :verification_document, Ecto.UUID.generate(), %{
       provider_id: provider_id,
       reviewer_id: reviewer_id,
       document_type: document_type,
@@ -102,7 +102,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettin
   end
 
   defp rejected_event(provider_id, reviewer_id, document_type) do
-    IntegrationEvent.new(:verification_document_rejected, :provider, :verification_document, Ecto.UUID.generate(), %{
+    Event.new(:verification_document_rejected, :provider, :verification_document, Ecto.UUID.generate(), %{
       provider_id: provider_id,
       reviewer_id: reviewer_id,
       document_type: document_type,

@@ -9,7 +9,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEvents do
     scheduling changes (its payload carries the meeting/date fields)
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @source_context :program_catalog
   @entity_type :program
@@ -37,7 +37,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEvents do
   end
 
   defp build(event_type, program_id, payload, opts) do
-    IntegrationEvent.new(
+    Event.new(
       event_type,
       @source_context,
       @entity_type,

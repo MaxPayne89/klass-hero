@@ -16,7 +16,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
 
   alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
   alias KlassHero.Provider.Domain.Events.ProviderEvents
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   setup do
     setup_test_integration_events()
@@ -147,7 +147,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
 
   describe "handle_event/1 — unknown events" do
     test "ignores unknown events" do
-      event = IntegrationEvent.new(:unknown, :some_context, :some_entity, "some-id", %{})
+      event = Event.new(:unknown, :some_context, :some_entity, "some-id", %{})
       assert :ignore = StaffInvitationHandler.handle_event(event)
     end
   end

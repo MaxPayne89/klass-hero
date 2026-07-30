@@ -27,7 +27,7 @@ defmodule KlassHero.Shared.Outbox do
 
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @doc """
   Stages one or more events for durable delivery, in the order given.
@@ -36,7 +36,7 @@ defmodule KlassHero.Shared.Outbox do
   accepted for symmetry with `transact/2` and for call-site readability; the
   event carries its own source context.
   """
-  @spec stage(module(), IntegrationEvent.t() | [IntegrationEvent.t()]) :: :ok
+  @spec stage(module(), Event.t() | [Event.t()]) :: :ok
   def stage(context, events) when is_atom(context) do
     events
     |> List.wrap()
@@ -70,8 +70,8 @@ defmodule KlassHero.Shared.Outbox do
         end
       end
   """
-  @spec transact(module(), (-> {:ok, result, [IntegrationEvent.t()]} | {:error, term()})) ::
-          {:ok, {result, [IntegrationEvent.t()]}} | {:error, term()}
+  @spec transact(module(), (-> {:ok, result, [Event.t()]} | {:error, term()})) ::
+          {:ok, {result, [Event.t()]}} | {:error, term()}
         when result: term()
   def transact(context, fun) when is_atom(context) and is_function(fun, 0) do
     # An `Ecto.Multi` rather than `Repo.transaction(fn -> ... Repo.rollback(reason) end)`
@@ -107,8 +107,8 @@ defmodule KlassHero.Shared.Outbox do
 
   # Per event, not per batch: one unrouted event must not strand the siblings
   # staged in the same transaction.
-  defp consumed?(%IntegrationEvent{} = event) do
-    event |> IntegrationEvent.topic() |> EventConsumerRegistry.consumers_for() != []
+  defp consumed?(%Event{} = event) do
+    event |> Event.topic() |> EventConsumerRegistry.consumers_for() != []
   end
 
   defp adapter, do: Application.fetch_env!(:klass_hero, :outbox)[:module]

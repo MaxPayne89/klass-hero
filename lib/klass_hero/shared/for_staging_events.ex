@@ -8,10 +8,10 @@ defmodule KlassHero.Shared.ForStagingEvents do
   silently dropped, which is the failure this seam exists to remove.
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @doc """
   Stages events for delivery, in the order given. Raises if they cannot be staged.
   """
-  @callback stage([IntegrationEvent.t()]) :: :ok
+  @callback stage([Event.t()]) :: :ok
 end

@@ -2,7 +2,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandle
   use ExUnit.Case, async: true
 
   alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   describe "subscribed_events/0" do
     test "subscribes to participant_policy_set" do
@@ -13,7 +13,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandle
   describe "handle_event/1" do
     test "acknowledges participant_policy_set event with :ok" do
       event =
-        IntegrationEvent.new(
+        Event.new(
           :participant_policy_set,
           :enrollment,
           :participant_policy,
@@ -26,7 +26,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandle
 
     test "ignores unknown events" do
       event =
-        IntegrationEvent.new(
+        Event.new(
           :unknown_event,
           :enrollment,
           :participant_policy,

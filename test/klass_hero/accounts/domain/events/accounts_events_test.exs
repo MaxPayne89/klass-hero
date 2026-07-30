@@ -2,7 +2,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Accounts.Domain.Events.AccountsEvents
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # The staff factories take an id, because their producers hold one and not a
   # user. They share one contract: build a critical event with stable identity
@@ -24,13 +24,13 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       test "builds a critical event with stable identity fields" do
         event = apply(AccountsEvents, @fun, ["id-1"])
 
-        assert %IntegrationEvent{} = event
+        assert %Event{} = event
         assert event.event_type == @fun
         assert event.source_context == :accounts
         assert event.entity_type == @entity
         assert event.entity_id == "id-1"
         assert Map.get(event.payload, @id) == "id-1"
-        assert IntegrationEvent.critical?(event)
+        assert Event.critical?(event)
       end
 
       test "the id argument wins over a caller-supplied one and preserves extras" do
@@ -44,7 +44,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       test "allows overriding criticality via opts" do
         event = apply(AccountsEvents, @fun, ["id-1", %{}, [criticality: :normal]])
 
-        refute IntegrationEvent.critical?(event)
+        refute Event.critical?(event)
       end
 
       test "raises for a nil or blank id" do
@@ -87,7 +87,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
       event = AccountsEvents.user_registered(user)
 
-      assert %IntegrationEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :user_registered
       assert event.source_context == :accounts
       assert event.entity_type == :user
@@ -151,7 +151,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
       event = AccountsEvents.user_confirmed(user)
 
-      assert %IntegrationEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :user_confirmed
       assert event.source_context == :accounts
       assert event.entity_type == :user
@@ -215,7 +215,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
       event = AccountsEvents.user_anonymized(user, %{previous_email: "old@example.com"})
 
-      assert %IntegrationEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :user_anonymized
       assert event.source_context == :accounts
       assert event.entity_type == :user

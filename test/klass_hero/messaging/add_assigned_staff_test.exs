@@ -9,7 +9,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   setup do
     setup_test_integration_events()
@@ -54,7 +54,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       assert KlassHero.Messaging.participant?(conversation_id, staff_a.id)
       assert KlassHero.Messaging.participant?(conversation_id, staff_b.id)
 
-      assert [%IntegrationEvent{} = event] = events
+      assert [%Event{} = event] = events
       assert event.event_type == :participant_added
       assert event.entity_id == conversation_id
       assert event.entity_type == :conversation
