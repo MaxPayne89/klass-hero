@@ -5,7 +5,7 @@ defmodule KlassHero.Application do
 
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInviteEmails
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteRegistered
-  alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
+  alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcome
   alias KlassHero.Shared.DomainEventBus
@@ -68,12 +68,9 @@ defmodule KlassHero.Application do
         {DomainEventBus,
          context: KlassHero.Enrollment,
          handlers: [
-           {:participant_policy_set, {NotifyLiveViews, :handle}},
            {:bulk_invites_imported, {EnqueueInviteEmails, :handle}},
            {:invite_resend_requested, {EnqueueInviteEmails, :handle}},
-           {:invite_claimed, {MarkInviteRegistered, :handle}, priority: 5},
-           {:invite_deleted, {NotifyLiveViews, :handle}},
-           {:enrollment_confirmed, {NotifyLiveViews, :handle}}
+           {:invite_claimed, {MarkInviteRegistered, :handle}, priority: 5}
          ]},
         id: :enrollment_domain_event_bus
       ),
@@ -81,13 +78,11 @@ defmodule KlassHero.Application do
         {DomainEventBus,
          context: KlassHero.Messaging,
          handlers: [
-           {:conversation_created,
-            {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:message_sent, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:messages_read, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:conversations_archived,
-            {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:retention_enforced, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}}
+           {:conversation_created, {NotifyLiveViews, :handle}},
+           {:message_sent, {NotifyLiveViews, :handle}},
+           {:messages_read, {NotifyLiveViews, :handle}},
+           {:conversations_archived, {NotifyLiveViews, :handle}},
+           {:retention_enforced, {NotifyLiveViews, :handle}}
          ]},
         id: :messaging_domain_event_bus
       ),

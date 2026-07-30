@@ -66,23 +66,25 @@ defmodule KlassHero.Enrollment.ConfirmEnrollmentTest do
                KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: provider.id})
     end
 
-    test "publishes an :enrollment_confirmed event on success with provider-scoped payload" do
-      setup_test_events()
-
+    test "notifies the confirming provider's own topic, and no other" do
       provider = insert(:provider_profile_schema)
+      other_provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
       schema = insert(:enrollment_schema, program_id: program.id, status: :pending)
+
+      for id <- [provider.id, other_provider.id] do
+        Phoenix.PubSub.subscribe(
+          KlassHero.PubSub,
+          KlassHero.Enrollment.provider_scoped_topic(:enrollment_confirmed, id)
+        )
+      end
 
       assert {:ok, _} =
                KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: provider.id})
 
-      event =
-        assert_event_published(:enrollment_confirmed, %{
-          provider_id: provider.id,
-          program_id: program.id
-        })
-
-      assert event.aggregate_id == schema.id
+      enrollment_id = schema.id
+      assert_receive {:enrollment_confirmed, ^enrollment_id}
+      refute_receive {:enrollment_confirmed, _}, 50
     end
   end
 

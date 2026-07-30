@@ -20,10 +20,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
     case ProgramCatalog.get_program_by_id(program_id) do
       {:ok, program} ->
         if connected?(socket) do
-          Phoenix.PubSub.subscribe(
-            KlassHero.PubSub,
-            "enrollment:participant_policy_set"
-          )
+          Phoenix.PubSub.subscribe(KlassHero.PubSub, Enrollment.participant_policy_topic())
         end
 
         team_task =
@@ -95,10 +92,11 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   end
 
   @impl true
-  def handle_info({:domain_event, %{event_type: :participant_policy_set, payload: payload}}, socket) do
-    if payload.program_id == socket.assigns.program.id do
+  # One shared topic carries every program's policy changes, so filter here.
+  def handle_info({:participant_policy_set, program_id}, socket) do
+    if program_id == socket.assigns.program.id do
       participant_policy =
-        case Enrollment.get_participant_policy(payload.program_id) do
+        case Enrollment.get_participant_policy(program_id) do
           {:ok, policy} -> ParticipantPolicyPresenter.to_view(policy)
           {:error, :not_found} -> nil
         end

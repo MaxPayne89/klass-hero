@@ -1,16 +1,10 @@
 defmodule KlassHero.Enrollment.DeleteInviteTest do
   use KlassHero.DataCase, async: true
 
-  import KlassHero.EventTestHelper
   import KlassHero.Factory
 
-  setup do
-    setup_test_events()
-    :ok
-  end
-
   describe "execute/2" do
-    test "deletes an invite and publishes :invite_deleted" do
+    test "deletes an invite" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
 
@@ -28,19 +22,11 @@ defmodule KlassHero.Enrollment.DeleteInviteTest do
 
       assert :ok = KlassHero.Enrollment.delete_invite(invite.id, provider.id)
       assert KlassHero.Enrollment.list_program_invites(program.id) == {:ok, []}
-
-      assert_event_published(:invite_deleted, %{
-        invite_id: invite.id,
-        program_id: program.id,
-        provider_id: provider.id
-      })
     end
 
-    test "returns error for non-existent invite and publishes nothing" do
+    test "returns error for non-existent invite" do
       assert {:error, :not_found} =
                KlassHero.Enrollment.delete_invite(Ecto.UUID.generate(), Ecto.UUID.generate())
-
-      assert_no_events_published()
     end
 
     test "returns error when provider does not own the invite and publishes nothing" do
@@ -62,8 +48,6 @@ defmodule KlassHero.Enrollment.DeleteInviteTest do
 
       assert {:error, :not_found} = KlassHero.Enrollment.delete_invite(invite.id, other_provider.id)
       assert KlassHero.Enrollment.list_program_invites(program.id) != {:ok, []}
-
-      assert_no_events_published()
     end
   end
 end

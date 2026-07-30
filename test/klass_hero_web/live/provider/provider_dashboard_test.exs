@@ -17,7 +17,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.DomainEvent
 
   setup :register_and_log_in_provider
 
@@ -1531,15 +1530,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       })
       |> Repo.update!()
 
-      event =
-        DomainEvent.new(
-          :enrollment_confirmed,
-          enrollment.id,
-          :enrollment,
-          %{provider_id: provider.id}
-        )
-
-      emit_domain_event(view, event)
+      send(view.pid, {:enrollment_confirmed, enrollment.id})
       _ = render(view)
 
       refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
@@ -1563,15 +1554,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
       # DB row deliberately left :pending. Only in-memory removal can drop the
       # card — a refresh would re-query and the still-pending row would reappear.
-      event =
-        DomainEvent.new(
-          :enrollment_confirmed,
-          enrollment.id,
-          :enrollment,
-          %{provider_id: provider.id, enrollment_id: enrollment.id}
-        )
-
-      emit_domain_event(view, event)
+      send(view.pid, {:enrollment_confirmed, enrollment.id})
       _ = render(view)
 
       refute has_element?(view, "#pending-enrollment-#{enrollment.id}")
@@ -1601,16 +1584,8 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
       refute has_element?(view, "#pending-enrollment-#{unseen.id}")
 
-      # Event carries an id NOT in assigns → miss → fallback refresh re-queries.
-      event =
-        DomainEvent.new(
-          :enrollment_confirmed,
-          Ecto.UUID.generate(),
-          :enrollment,
-          %{provider_id: provider.id, enrollment_id: Ecto.UUID.generate()}
-        )
-
-      emit_domain_event(view, event)
+      # Message carries an id NOT in assigns → miss → fallback refresh re-queries.
+      send(view.pid, {:enrollment_confirmed, Ecto.UUID.generate()})
       _ = render(view)
 
       assert has_element?(view, "#pending-enrollment-#{unseen.id}")
