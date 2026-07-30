@@ -31,13 +31,13 @@ jobs:
     name: Sobelow & Dependency Audit
     runs-on: ubuntu-latest
     steps:
-      # actions/checkout@v6.0.2
+      # actions/checkout@v7.0.1
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # erlef/setup-beam@v1.23.0
+      # erlef/setup-beam@v1.24.1
       - name: Set up Elixir
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
@@ -48,9 +48,9 @@ jobs:
       # win the race and store a deps-only tree (35MB, no _build app build) over CI's
       # (70MB) — forcing every downstream CI job to recompile from scratch next run.
       #
-      # actions/cache/restore@v5.0.4 (same commit as actions/cache, sub-action path)
+      # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
       - name: Restore dependencies cache
-        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
@@ -68,9 +68,9 @@ jobs:
       - name: Run Sobelow
         run: mix sobelow --config
 
-      # github/codeql-action@v4.34.1
+      # github/codeql-action@v4.37.3
       - name: Upload SARIF results
-        uses: github/codeql-action/upload-sarif@cb06a0a8527b2c6970741b3a0baa15231dc74a4c
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81
         if: always()
         with:
           sarif_file: results/sobelow.sarif
@@ -91,22 +91,22 @@ jobs:
     name: hex.pm Advisory Audit
     runs-on: ubuntu-latest
     steps:
-      # actions/checkout@v6.0.2
+      # actions/checkout@v7.0.1
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # erlef/setup-beam@v1.23.0
+      # erlef/setup-beam@v1.24.1
       - name: Set up Elixir
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
       # Restore-only — see the note on the `audit` job above.
-      # actions/cache/restore@v5.0.4
+      # actions/cache/restore@v6.1.0
       - name: Restore dependencies cache
-        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps

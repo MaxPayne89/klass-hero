@@ -24,21 +24,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # actions/checkout@v6.0.2
+      # actions/checkout@v7.0.1
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # erlef/setup-beam@v1.23.0
+      # erlef/setup-beam@v1.24.1
       - name: Set up Elixir
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # actions/cache@v5.0.4
+      # actions/cache@v6.1.0
       - name: Restore dependencies cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
@@ -87,21 +87,21 @@ jobs:
     needs: deps
 
     steps:
-      # actions/checkout@v6.0.2
+      # actions/checkout@v7.0.1
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # erlef/setup-beam@v1.23.0
+      # erlef/setup-beam@v1.24.1
       - name: Set up Elixir
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # actions/cache@v5.0.4
+      # actions/cache@v6.1.0
       - name: Restore dependencies cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
@@ -170,21 +170,21 @@ jobs:
       MIX_ENV: test
 
     steps:
-      # actions/checkout@v6.0.2
+      # actions/checkout@v7.0.1
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # erlef/setup-beam@v1.23.0
+      # erlef/setup-beam@v1.24.1
       - name: Set up Elixir
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # actions/cache@v5.0.4
+      # actions/cache@v6.1.0
       - name: Restore dependencies cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
@@ -231,21 +231,21 @@ jobs:
       MIX_ENV: test
 
     steps:
-      # actions/checkout@v6.0.2
+      # actions/checkout@v7.0.1
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
-      # erlef/setup-beam@v1.23.0
+      # erlef/setup-beam@v1.24.1
       - name: Set up Elixir
-        uses: erlef/setup-beam@ee09b1e59bb240681c382eb1f0abc6a04af72764
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
           version-type: strict
 
-      # actions/cache@v5.0.4
+      # actions/cache@v6.1.0
       - name: Restore dependencies cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             deps
@@ -263,19 +263,19 @@ jobs:
       - name: Build assets
         run: mix assets.setup && mix assets.build
 
-      # nanasess/setup-chromedriver@v2.4.0
+      # nanasess/setup-chromedriver@v3.0.0
       - name: Install ChromeDriver
-        uses: nanasess/setup-chromedriver@c75c3d53d445b96d41dbf2355797b470953c6c30
+        uses: nanasess/setup-chromedriver@e913548694400f275b4070efcd90f47dbbc8914c
 
       # Use the alias rather than duplicating its body: it sets WALLABY_E2E, without which
       # config/test.exs binds no HTTP socket and every browser test fails to connect.
       - name: Run E2E tests
         run: mix test.e2e
 
-      # actions/upload-artifact@v4.6.2
+      # actions/upload-artifact@v7.0.1
       - name: Upload E2E screenshots
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: e2e-screenshots
           path: tmp/e2e_screenshots/
@@ -297,9 +297,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # actions/checkout@v6.0.2
+      # actions/checkout@v7.0.1
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       # Node and Google Chrome both ship on the runner image, and the generator
       # has no npm dependencies — hence no setup-node and no install step.
