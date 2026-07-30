@@ -35,9 +35,7 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   Builds a metadata map from keyword options.
 
   Always includes `:criticality` (defaulting to `:normal`), plus
-  `:correlation_id` and `:causation_id` when present. Additional keys
-  can be pulled from `opts` via the `extra_keys` list — for example,
-  `DomainEvent` passes `[:user_id]` to include a user reference.
+  `:correlation_id` and `:causation_id` when present.
   """
   @spec build_metadata(keyword()) :: map()
   def build_metadata(opts) do

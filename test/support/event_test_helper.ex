@@ -119,10 +119,10 @@ defmodule KlassHero.EventTestHelper do
   @doc """
   Asserts that an integration event of the given type was published to `topic`.
 
-  Proves the real producer/consumer topic coupling (#1122): the topic recorded
-  here is the exact `integration:<context>:<event>` string the event was routed
-  on, so the `critical_event_handlers` registry entry keyed by `topic` would have
-  received it. Returns the matching event.
+  Proves the real producer/consumer topic coupling (#1122): the topic is derived
+  through the same function the delivery job uses, so the `:event_consumers`
+  entry keyed by `topic` is the one that would have received it. Returns the
+  matching event.
 
   ## Examples
 

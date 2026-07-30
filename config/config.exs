@@ -133,9 +133,9 @@ config :klass_hero, :default_tz, "Europe/Berlin"
 # outbox delivery job; see EventConsumerRegistry for why handlers and projections
 # are the same kind of entry.
 #
-# This supersedes :critical_event_handlers above, which routes only the subset a
-# human marked critical and is deleted at the end of this PR. A test asserts the
-# old map stays a subset of this one until then.
+# Being in this table is also what decides whether an event is staged at all:
+# `Shared.Outbox` drops one no consumer is registered for, since the delivery
+# job would have nothing to do with it.
 config :klass_hero, :event_consumers, %{
   # Accounts
   "integration:accounts:user_registered" => [
@@ -281,9 +281,6 @@ config :klass_hero, :event_consumers, %{
   ]
 }
 
-# Which module maps a context's domain events to integration events. Read by
-# Shared.Outbox inside the producer's transaction. Goes away with the two-tier
-# event model; until then this is the one place the mapping is declared rather
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}

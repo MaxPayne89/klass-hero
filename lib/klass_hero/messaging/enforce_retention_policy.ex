@@ -7,7 +7,6 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicy do
   2. Deletes all messages from conversations that have exceeded their retention period
   3. Deletes the expired conversations themselves (cascade-deletes attachment records)
   4. Cleans up S3 files for the deleted attachments
-  5. Publishes a retention_enforced event
 
   The S3 cleanup must happen AFTER the transaction succeeds, because the attachment
   records are cascade-deleted when messages are removed. We collect URLs before the
