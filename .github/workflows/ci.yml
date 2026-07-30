@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [ '**' ]
 
+# Supersede an in-flight run when a PR is pushed again. NOT on `main`: fly-deploy.yml
+# waits on this workflow via `workflow_run`, so cancelling a main run silently drops a
+# dev deploy.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   ELIXIR_VERSION: '1.20.2'
   OTP_VERSION: '29.0.2'
@@ -123,10 +130,26 @@ jobs:
       - name: Gettext catalog check (structure + DE completeness)
         run: mix lint_translations
 
+  # Release-please's Release PR only ever touches .release-please-manifest.json,
+  # CHANGELOG.md and mix.exs's `version:` — content already tested on main. Running the
+  # full suite plus a browser E2E pass for a version bump costs ~9 billable minutes twice
+  # (once on the PR, once on the squash commit). `quality` deliberately still runs: format
+  # and credo over a bumped mix.exs are cheap and catch a malformed version.
+  #
+  # paths-ignore can't express this — mix.exs is in the changed set, and ignoring mix.exs
+  # would blind CI to real dependency changes.
+  #
+  # Duplicated on `e2e` below because Actions does not support YAML anchors. Keep in sync.
+  #
+  # NOTE: if required status checks are ever added to the `main` ruleset, verify GitHub's
+  # skipped-vs-required semantics before relying on both together.
   test:
     name: Tests
     runs-on: ubuntu-latest
     needs: deps
+    if: >-
+      github.head_ref != 'release-please--branches--main' &&
+      !startsWith(github.event.head_commit.message, 'chore: release main')
 
     services:
       postgres:
@@ -180,10 +203,14 @@ jobs:
       - name: Run tests
         run: mix test --include slow
 
+  # Skip condition mirrors `test` above — see the rationale there.
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: deps
+    if: >-
+      github.head_ref != 'release-please--branches--main' &&
+      !startsWith(github.event.head_commit.message, 'chore: release main')
 
     services:
       postgres:

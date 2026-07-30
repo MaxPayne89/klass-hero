@@ -4,6 +4,13 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened]
 
+# Unconditional, unlike ci.yml/security.yml: this workflow only ever runs on
+# pull_request, so there is no `main` run to protect. Retitling a PR twice in quick
+# succession should supersede, not queue.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   pull-requests: read
 
