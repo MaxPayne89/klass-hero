@@ -30,10 +30,16 @@ before doing anything else.
 ## 2. Fetch it
 
 ```bash
-gh issue view <number> --json title,body,labels,state,comments,assignees
+gh issue view <number> --json title,body,labels,state,comments,assignees,url
 ```
 
 If the issue does not exist or the command fails, report the error and stop.
+
+GitHub numbers issues and pull requests from one shared counter, and `gh issue view`
+returns a PR under that number without complaint. Confirm `url` ends `/issues/<n>`
+before trusting the result — a `/pull/` path, or a `state` of `MERGED` that no issue
+can hold, means you have a pull request. Say so and stop.
+
 Read the comments too — prior discussion often already names the deeper problem.
 
 ## 3. Do the legwork
