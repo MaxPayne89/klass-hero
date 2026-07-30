@@ -424,30 +424,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     end
   end
 
-  # Broadcasts a :participation/:session event and blocks on :sys.get_state so the
-  # projection has processed it before assertions run.
+  # Projects in the test process, exactly as the delivery job does — no broadcast,
+  # no mailbox fence, the projection GenServer is not in this path.
   defp broadcast(event_type, entity_id, payload) do
     event = IntegrationEvent.new(event_type, :participation, :session, entity_id, payload)
 
-    Phoenix.PubSub.broadcast(
-      KlassHero.PubSub,
-      "integration:participation:#{event_type}",
-      {:integration_event, event}
-    )
-
-    :sys.get_state(@test_server_name)
+    ProviderSessionDetails.project(event)
   end
 
   defp broadcast_provider(event_type, entity_id, payload) do
     event = IntegrationEvent.new(event_type, :provider, :staff, entity_id, payload)
 
-    Phoenix.PubSub.broadcast(
-      KlassHero.PubSub,
-      "integration:provider:#{event_type}",
-      {:integration_event, event}
-    )
-
-    :sys.get_state(@test_server_name)
+    ProviderSessionDetails.project(event)
   end
 
   defp insert_program_session(attrs) do
@@ -530,9 +518,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
           }
         )
 
-      send(pid, {:integration_event, event})
-      :sys.get_state(pid)
+      assert :ok = ProviderSessionDetails.project(event)
 
+      # Projecting is not a message to this process, so its bootstrap state is untouched.
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
     end
   end

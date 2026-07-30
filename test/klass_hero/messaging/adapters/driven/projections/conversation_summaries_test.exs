@@ -1200,9 +1200,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
           subject: nil
         })
 
-      send(pid, {:integration_event, event})
-      :sys.get_state(pid)
+      assert :ok = ConversationSummaries.project(event)
 
+      # Projecting is not a message to this process, so its bootstrap state is untouched.
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
     end
   end
@@ -1258,17 +1258,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
     IntegrationEvent.new(event_type, :messaging, entity_type, entity_id, payload)
   end
 
-  # Broadcasts a prebuilt event on its contract topic
-  # (integration:{source_context}:{event_type}), then blocks on :sys.get_state so
-  # the module-level projection GenServer finishes processing before assertions run.
+  # Projects in the test process, exactly as the delivery job does — no broadcast,
+  # no mailbox fence, the projection GenServer is not in this path.
   defp dispatch(%IntegrationEvent{} = event) do
-    Phoenix.PubSub.broadcast(
-      KlassHero.PubSub,
-      "integration:#{event.source_context}:#{event.event_type}",
-      {:integration_event, event}
-    )
-
-    :sys.get_state(@test_server_name)
+    ConversationSummaries.project(event)
     event
   end
 

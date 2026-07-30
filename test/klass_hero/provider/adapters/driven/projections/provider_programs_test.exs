@@ -35,13 +35,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
     pid
   end
 
-  defp send_event!(pid, event_type, payload) do
-    send(pid, {:integration_event, build_event(event_type, payload)})
-    # Synchronize -- :sys.get_state blocks until the GenServer drains its mailbox
-    :sys.get_state(pid)
+  # Projects in the test process, exactly as the delivery job does — no mailbox, so
+  # no fence. `pid` stays in the signature because these tests still need the
+  # projection started for its read table to exist.
+  defp send_event!(_pid, event_type, payload) do
+    ProviderPrograms.project(build_event(event_type, payload))
   end
 
-  describe "handle_info/2 :program_created event" do
+  describe "project/1 :program_created event" do
     test "upserts a new row with provider_id, name, and status" do
       pid = start_projection!()
       program_id = Ecto.UUID.generate()
@@ -60,7 +61,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
     end
   end
 
-  describe "handle_info/2 :program_updated event" do
+  describe "project/1 :program_updated event" do
     test "updates existing row's name without creating duplicates" do
       pid = start_projection!()
       program_id = Ecto.UUID.generate()

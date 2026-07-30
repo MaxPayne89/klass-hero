@@ -141,7 +141,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      dispatch("integration:program_catalog:program_created", event)
+      dispatch(event)
 
       listing = Repo.get(ProgramListing, program_id)
       assert listing != nil
@@ -175,11 +175,11 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      dispatch("integration:program_catalog:program_created", event)
+      dispatch(event)
       original = Repo.get!(ProgramListing, program_id)
 
       # Re-dispatch the same event.
-      dispatch("integration:program_catalog:program_created", event)
+      dispatch(event)
 
       # Row still exists with preserved inserted_at.
       listing = Repo.get!(ProgramListing, program_id)
@@ -231,7 +231,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      dispatch("integration:program_catalog:program_updated", event)
+      dispatch(event)
 
       listing = Repo.get(ProgramListing, program_id)
       assert listing.title == "Updated Soccer Camp"
@@ -274,7 +274,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      dispatch("integration:program_catalog:program_updated", event)
+      dispatch(event)
 
       listing = Repo.get(ProgramListing, program_id)
       assert listing != nil
@@ -307,7 +307,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           %{provider_id: provider_id, business_name: "Test Business"}
         )
 
-      dispatch("integration:provider:provider_verified", event)
+      dispatch(event)
 
       assert Repo.get(ProgramListing, listing_1.id).provider_verified == true
       assert Repo.get(ProgramListing, listing_2.id).provider_verified == true
@@ -335,7 +335,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           %{provider_id: provider_id, business_name: "Test Business"}
         )
 
-      dispatch("integration:provider:provider_unverified", event)
+      dispatch(event)
 
       assert Repo.get(ProgramListing, listing_1.id).provider_verified == false
       assert Repo.get(ProgramListing, listing_2.id).provider_verified == false
@@ -380,20 +380,17 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
           }
         )
 
-      send(pid, {:integration_event, event})
-      :sys.get_state(pid)
+      assert :ok = ProgramListings.project(event)
+      assert Repo.get(ProgramListing, program_id)
 
-      # No retry was scheduled by handle_event; state invariant preserved.
+      # Projecting is not a message to this process, so its bootstrap state is untouched.
       assert %{bootstrapped: true, retry_count: 0} = :sys.get_state(pid)
     end
   end
 
-  # Broadcasts an integration event on `topic`, then blocks on :sys.get_state so
-  # the projection GenServer has finished processing before assertions run.
-  defp dispatch(topic, event) do
-    Phoenix.PubSub.broadcast(KlassHero.PubSub, topic, {:integration_event, event})
-    :sys.get_state(@test_server_name)
-  end
+  # Projects in the test process, exactly as the delivery job does. No broadcast and
+  # no mailbox fence: the projection GenServer is not in this path at all.
+  defp dispatch(event), do: ProgramListings.project(event)
 
   defp insert_listing(attrs) do
     Repo.insert!(struct!(ProgramListing, Keyword.put_new(attrs, :id, Ecto.UUID.generate())))
