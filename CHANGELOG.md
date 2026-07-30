@@ -5,6 +5,23 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.65.1](https://github.com/MaxPayne89/klass-hero/compare/v0.65.0...v0.65.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* rescue orphaned Oban jobs and widen the critical-event retry window ([#1193](https://github.com/MaxPayne89/klass-hero/issues/1193)) ([90f1bc9](https://github.com/MaxPayne89/klass-hero/commit/90f1bc9e88377601e5861ff572f111f1cad61d0b)), closes [#1191](https://github.com/MaxPayne89/klass-hero/issues/1191)
+
+
+### Performance Improvements
+
+* run all CI jobs in parallel instead of behind the deps job ([#1201](https://github.com/MaxPayne89/klass-hero/issues/1201)) ([10157f4](https://github.com/MaxPayne89/klass-hero/commit/10157f41c25b5808e7829c580ffe4468e3c66bfb))
+
+
+### Code Refactoring
+
+* replace the in-memory verified-provider projection with a facade read ([#1196](https://github.com/MaxPayne89/klass-hero/issues/1196)) ([8abfff2](https://github.com/MaxPayne89/klass-hero/commit/8abfff2aeeb42240c323dcfdc39bc4cdc75007d6))
+
 ## [0.65.0](https://github.com/MaxPayne89/klass-hero/compare/v0.64.0...v0.65.0) (2026-07-29)
 
 
