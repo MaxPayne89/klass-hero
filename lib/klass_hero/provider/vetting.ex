@@ -184,14 +184,20 @@ defmodule KlassHero.Provider.Vetting do
     end
   end
 
+  # `:ok` explicitly, not whatever Logger returns: the callers match on `:ok` inside an
+  # `Ecto.Multi` step, so anything else here would roll back a review that succeeded.
   defp log_no_document_step(provider_id, document_type) do
     Logger.warning(
       "No vetting step consumes document_type=#{inspect(document_type)} for provider #{provider_id}; ignoring"
     )
+
+    :ok
   end
 
   defp log_no_identity_step(provider_id) do
     Logger.warning("No Stripe Identity step in track for provider #{provider_id}; ignoring identity outcome")
+
+    :ok
   end
 
   @doc """

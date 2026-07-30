@@ -6,10 +6,9 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   1. Upserts the `program_staff_participants` projection (sets active=true).
   2. Adds the staff user as a participant to every active program conversation
      where they are not already an active participant. The participant inserts
-     and one `:participant_added` domain event per back-filled conversation
-     are collected inside a single `Repo.transaction`; events dispatch
-     *after* the transaction commits so the `ConversationSummaries` projection
-     can read-your-own-writes on a separate DB connection.
+     and one `:participant_added` event per back-filled conversation are staged
+     inside a single transaction, so the delivery job reaches the
+     `ConversationSummaries` projection only after the rows it describes commit.
 
   On unassignment:
   1. Deactivates the projection entry (sets active=false).
