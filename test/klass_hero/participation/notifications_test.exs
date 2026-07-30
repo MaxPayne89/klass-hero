@@ -3,7 +3,7 @@ defmodule KlassHero.Participation.NotificationsTest do
 
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.Notifications
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   # Every session-lifecycle event says the same thing to a LiveView — "this session
   # is not what you rendered" — so they collapse to one message rather than nine.
@@ -26,7 +26,7 @@ defmodule KlassHero.Participation.NotificationsTest do
   end
 
   defp event(type, payload) do
-    DomainEvent.new(type, Ecto.UUID.generate(), ParticipationEvents.aggregate_type_for(type), payload)
+    IntegrationEvent.new(type, :participation, ParticipationEvents.entity_type_for(type), Ecto.UUID.generate(), payload)
   end
 
   describe "session lifecycle" do

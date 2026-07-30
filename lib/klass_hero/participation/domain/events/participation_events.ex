@@ -15,13 +15,15 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   - `session_note_approved` - A session note was approved by a parent
   - `session_note_rejected` - A session note was rejected by a parent
 
-  All events are returned as `DomainEvent` structs.
+  All events are returned as `IntegrationEvent` structs.
   """
 
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionNote
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+
+  @source_context :participation
 
   @type session_note_payload :: %{
           note_id: String.t(),
@@ -31,31 +33,29 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
           parent_id: String.t() | nil
         }
 
-  # Single source of truth for event routing (#1108). Each event's aggregate_type
-  # is looked up here rather than hand-written at each call site, and subscription
-  # topics on the `Participation` facade derive from the same map — so renaming an
-  # atom moves the publisher and every LiveView subscriber together.
-  @event_aggregates %{
-    session_created: :participation,
-    sessions_generated: :participation,
-    session_started: :participation,
-    session_completed: :participation,
-    session_cancelled: :participation,
-    roster_seeded: :participation,
-    child_checked_in: :participation,
-    child_checked_out: :participation,
-    child_marked_absent: :participation,
+  # Each event's entity_type is looked up here rather than hand-written at each
+  # call site, so a new factory cannot invent one.
+  @event_entities %{
+    session_created: :session,
+    sessions_generated: :program,
+    session_started: :session,
+    session_completed: :session,
+    session_cancelled: :session,
+    roster_seeded: :session,
+    child_checked_in: :participation_record,
+    child_checked_out: :participation_record,
+    child_marked_absent: :participation_record,
     session_note_submitted: :session_note,
     session_note_approved: :session_note,
     session_note_rejected: :session_note
   }
 
-  @doc "Returns the aggregate_type registered for an event type. Raises if unknown."
-  @spec aggregate_type_for(atom()) :: atom()
-  def aggregate_type_for(event_type), do: Map.fetch!(@event_aggregates, event_type)
+  @doc "Returns the entity_type registered for an event type. Raises if unknown."
+  @spec entity_type_for(atom()) :: atom()
+  def entity_type_for(event_type), do: Map.fetch!(@event_entities, event_type)
 
   @doc "Creates a session_created event."
-  @spec session_created(ProgramSession.t(), keyword()) :: DomainEvent.t()
+  @spec session_created(ProgramSession.t(), keyword()) :: IntegrationEvent.t()
   def session_created(%ProgramSession{} = session, opts \\ []) do
     payload = %{
       session_id: session.id,
@@ -77,7 +77,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   once for the whole batch, and the roster is seeded in a single pass instead of
   re-querying enrollments per session.
   """
-  @spec sessions_generated(String.t(), [map()], keyword()) :: DomainEvent.t()
+  @spec sessions_generated(String.t(), [map()], keyword()) :: IntegrationEvent.t()
   def sessions_generated(program_id, sessions, opts \\ []) when is_binary(program_id) and is_list(sessions) do
     payload = %{
       program_id: program_id,
@@ -97,7 +97,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc "Creates a session_cancelled event."
-  @spec session_cancelled(ProgramSession.t(), keyword()) :: DomainEvent.t()
+  @spec session_cancelled(ProgramSession.t(), keyword()) :: IntegrationEvent.t()
   def session_cancelled(%ProgramSession{} = session, opts \\ []) do
     payload = %{
       session_id: session.id,
@@ -110,7 +110,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc "Creates a session_started event."
-  @spec session_started(ProgramSession.t(), keyword()) :: DomainEvent.t()
+  @spec session_started(ProgramSession.t(), keyword()) :: IntegrationEvent.t()
   def session_started(%ProgramSession{} = session, opts \\ []) do
     payload = %{
       session_id: session.id,
@@ -122,7 +122,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc "Creates a session_completed event."
-  @spec session_completed(ProgramSession.t(), keyword()) :: DomainEvent.t()
+  @spec session_completed(ProgramSession.t(), keyword()) :: IntegrationEvent.t()
   def session_completed(%ProgramSession{} = session, opts \\ []) do
     {extra, event_opts} = Keyword.pop(opts, :extra_payload, %{})
 
@@ -138,7 +138,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc "Creates a roster_seeded event."
-  @spec roster_seeded(String.t(), String.t(), non_neg_integer(), keyword()) :: DomainEvent.t()
+  @spec roster_seeded(String.t(), String.t(), non_neg_integer(), keyword()) :: IntegrationEvent.t()
   def roster_seeded(session_id, program_id, count, opts \\ []) when is_binary(session_id) and is_binary(program_id) do
     payload = %{
       session_id: session_id,
@@ -150,12 +150,12 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc deprecated: "Use child_checked_in/2 with ProgramSession to include program_id in payload"
-  @spec child_checked_in(ParticipationRecord.t()) :: DomainEvent.t()
+  @spec child_checked_in(ParticipationRecord.t()) :: IntegrationEvent.t()
   def child_checked_in(%ParticipationRecord{} = record) do
     child_checked_in(record, [])
   end
 
-  @spec child_checked_in(ParticipationRecord.t(), keyword()) :: DomainEvent.t()
+  @spec child_checked_in(ParticipationRecord.t(), keyword()) :: IntegrationEvent.t()
   def child_checked_in(%ParticipationRecord{} = record, opts) when is_list(opts) do
     payload = %{
       record_id: record.id,
@@ -172,7 +172,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   def child_checked_in(%ParticipationRecord{} = record, nil), do: child_checked_in(record, [])
 
   @doc "Creates a child_checked_in event with program_id from the session."
-  @spec child_checked_in(ParticipationRecord.t(), ProgramSession.t()) :: DomainEvent.t()
+  @spec child_checked_in(ParticipationRecord.t(), ProgramSession.t()) :: IntegrationEvent.t()
   def child_checked_in(%ParticipationRecord{} = record, %ProgramSession{} = session) do
     payload = %{
       record_id: record.id,
@@ -181,7 +181,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
       checked_in_by: record.check_in_by,
       checked_in_at: record.check_in_at,
       notes: record.check_in_notes,
-      # program_id from session enables NotifyLiveViews to route PubSub broadcasts per provider.
+      # program_id from session is how the notifier resolves which provider to tell.
       program_id: session.program_id
     }
 
@@ -189,12 +189,12 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc deprecated: "Use child_checked_out/2 with ProgramSession to include program_id in payload"
-  @spec child_checked_out(ParticipationRecord.t()) :: DomainEvent.t()
+  @spec child_checked_out(ParticipationRecord.t()) :: IntegrationEvent.t()
   def child_checked_out(%ParticipationRecord{} = record) do
     child_checked_out(record, [])
   end
 
-  @spec child_checked_out(ParticipationRecord.t(), keyword()) :: DomainEvent.t()
+  @spec child_checked_out(ParticipationRecord.t(), keyword()) :: IntegrationEvent.t()
   def child_checked_out(%ParticipationRecord{} = record, opts) when is_list(opts) do
     payload = %{
       record_id: record.id,
@@ -211,7 +211,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   def child_checked_out(%ParticipationRecord{} = record, nil), do: child_checked_out(record, [])
 
   @doc "Creates a child_checked_out event with program_id from the session."
-  @spec child_checked_out(ParticipationRecord.t(), ProgramSession.t()) :: DomainEvent.t()
+  @spec child_checked_out(ParticipationRecord.t(), ProgramSession.t()) :: IntegrationEvent.t()
   def child_checked_out(%ParticipationRecord{} = record, %ProgramSession{} = session) do
     payload = %{
       record_id: record.id,
@@ -227,12 +227,12 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc deprecated: "Use child_marked_absent/2 with ProgramSession to include program_id in payload"
-  @spec child_marked_absent(ParticipationRecord.t()) :: DomainEvent.t()
+  @spec child_marked_absent(ParticipationRecord.t()) :: IntegrationEvent.t()
   def child_marked_absent(%ParticipationRecord{} = record) do
     child_marked_absent(record, [])
   end
 
-  @spec child_marked_absent(ParticipationRecord.t(), keyword()) :: DomainEvent.t()
+  @spec child_marked_absent(ParticipationRecord.t(), keyword()) :: IntegrationEvent.t()
   def child_marked_absent(%ParticipationRecord{} = record, opts) when is_list(opts) do
     payload = %{
       record_id: record.id,
@@ -246,7 +246,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   def child_marked_absent(%ParticipationRecord{} = record, nil), do: child_marked_absent(record, [])
 
   @doc "Creates a child_marked_absent event with program_id from the session."
-  @spec child_marked_absent(ParticipationRecord.t(), ProgramSession.t()) :: DomainEvent.t()
+  @spec child_marked_absent(ParticipationRecord.t(), ProgramSession.t()) :: IntegrationEvent.t()
   def child_marked_absent(%ParticipationRecord{} = record, %ProgramSession{} = session) do
     payload = %{
       record_id: record.id,
@@ -259,7 +259,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc "Creates a session_note_submitted event."
-  @spec session_note_submitted(SessionNote.t(), keyword()) :: DomainEvent.t()
+  @spec session_note_submitted(SessionNote.t(), keyword()) :: IntegrationEvent.t()
   def session_note_submitted(%SessionNote{} = note, opts \\ []) do
     payload = session_note_payload(note)
 
@@ -267,7 +267,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc "Creates a session_note_approved event."
-  @spec session_note_approved(SessionNote.t(), keyword()) :: DomainEvent.t()
+  @spec session_note_approved(SessionNote.t(), keyword()) :: IntegrationEvent.t()
   def session_note_approved(%SessionNote{} = note, opts \\ []) do
     payload = session_note_payload(note)
 
@@ -275,18 +275,18 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @doc "Creates a session_note_rejected event."
-  @spec session_note_rejected(SessionNote.t(), keyword()) :: DomainEvent.t()
+  @spec session_note_rejected(SessionNote.t(), keyword()) :: IntegrationEvent.t()
   def session_note_rejected(%SessionNote{} = note, opts \\ []) do
     payload = session_note_payload(note)
 
     new_event(:session_note_rejected, note.id, payload, opts)
   end
 
-  # Builds a DomainEvent, deriving aggregate_type from the registry so no call site
-  # hand-writes it (#1108).
-  @spec new_event(atom(), String.t(), map(), keyword()) :: DomainEvent.t()
-  defp new_event(event_type, aggregate_id, payload, opts) do
-    DomainEvent.new(event_type, aggregate_id, aggregate_type_for(event_type), payload, opts)
+  # Builds the event, deriving entity_type from the registry so no call site
+  # hand-writes it.
+  @spec new_event(atom(), String.t(), map(), keyword()) :: IntegrationEvent.t()
+  defp new_event(event_type, entity_id, payload, opts) do
+    IntegrationEvent.new(event_type, @source_context, entity_type_for(event_type), entity_id, payload, opts)
   end
 
   @spec session_note_payload(SessionNote.t()) :: session_note_payload()

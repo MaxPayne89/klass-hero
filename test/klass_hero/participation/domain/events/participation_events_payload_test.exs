@@ -44,14 +44,14 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
   end
 
   describe "session_created/2" do
-    test "sets event_type, aggregate_id, and aggregate_type" do
+    test "sets event_type, entity_id, and entity_type" do
       session = build_session()
 
       event = ParticipationEvents.session_created(session)
 
       assert event.event_type == :session_created
-      assert event.aggregate_id == session.id
-      assert event.aggregate_type == :participation
+      assert event.entity_id == session.id
+      assert event.entity_type == :session
     end
 
     test "payload includes session fields" do
@@ -76,7 +76,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       event = ParticipationEvents.session_started(session)
 
       assert event.event_type == :session_started
-      assert event.aggregate_id == session.id
+      assert event.entity_id == session.id
       assert event.payload.session_id == session.id
       assert event.payload.program_id == session.program_id
       assert %DateTime{} = event.payload.started_at
@@ -90,7 +90,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       event = ParticipationEvents.session_completed(session)
 
       assert event.event_type == :session_completed
-      assert event.aggregate_id == session.id
+      assert event.entity_id == session.id
       assert event.payload.session_id == session.id
       assert event.payload.program_id == session.program_id
       assert %DateTime{} = event.payload.completed_at
@@ -111,15 +111,15 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
   end
 
   describe "roster_seeded/4" do
-    test "sets event_type, aggregate_id, and seeded_count in payload" do
+    test "sets event_type, entity_id, and seeded_count in payload" do
       session_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
 
       event = ParticipationEvents.roster_seeded(session_id, program_id, 12)
 
       assert event.event_type == :roster_seeded
-      assert event.aggregate_id == session_id
-      assert event.aggregate_type == :participation
+      assert event.entity_id == session_id
+      assert event.entity_type == :session
       assert event.payload.session_id == session_id
       assert event.payload.program_id == program_id
       assert event.payload.seeded_count == 12
@@ -127,14 +127,14 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
   end
 
   describe "session_note_submitted/2" do
-    test "sets event_type, aggregate_id as note id, and aggregate_type as :session_note" do
+    test "sets event_type, entity_id as note id, and entity_type as :session_note" do
       note = build_note()
 
       event = ParticipationEvents.session_note_submitted(note)
 
       assert event.event_type == :session_note_submitted
-      assert event.aggregate_id == note.id
-      assert event.aggregate_type == :session_note
+      assert event.entity_id == note.id
+      assert event.entity_type == :session_note
     end
 
     test "payload contains all session note fields" do
@@ -157,7 +157,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       event = ParticipationEvents.session_note_approved(note)
 
       assert event.event_type == :session_note_approved
-      assert event.aggregate_id == note.id
+      assert event.entity_id == note.id
       assert event.payload.note_id == note.id
       assert event.payload.provider_id == note.provider_id
     end
@@ -170,7 +170,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       event = ParticipationEvents.session_note_rejected(note)
 
       assert event.event_type == :session_note_rejected
-      assert event.aggregate_id == note.id
+      assert event.entity_id == note.id
       assert event.payload.note_id == note.id
       assert event.payload.provider_id == note.provider_id
     end
