@@ -32,6 +32,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
   alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
   alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
 
   @saga_subscribers [
@@ -113,8 +114,15 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
         pubsub: KlassHero.PubSub
       )
 
+      # The saga now crosses both transports: Enrollment stages `invite_claimed` in the
+      # outbox, Family still publishes `invite_family_ready`. Both have to be real for
+      # the chain to run end to end; the second swap goes when the last producer moves.
+      original_outbox = Application.get_env(:klass_hero, :outbox)
+      Application.put_env(:klass_hero, :outbox, module: ObanOutbox)
+
       on_exit(fn ->
         Application.put_env(:klass_hero, :integration_event_publisher, original_config)
+        Application.put_env(:klass_hero, :outbox, original_outbox)
       end)
 
       # Trigger: EventSubscriber GenServers run in separate processes outside the test
@@ -134,21 +142,26 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       token: token,
       invite: invite
     } do
-      # Step 1: Claim the invite — this triggers the synchronous domain event bus
+      # Step 1: Claim the invite. MarkInviteRegistered runs synchronously on the bus;
+      # the cross-context event is staged in the same transaction, not published.
+      #
+      # Manual mode, then an explicit drain, is what makes this test model production:
+      # under the suite's `testing: :inline`, staging would execute the delivery job
+      # inside the producer's transaction, which is a sequencing production never has.
       assert {:ok, %ClaimResult{user_type: :new_user, user: user}} =
-               Enrollment.claim_invite(token)
+               Oban.Testing.with_testing_mode(:manual, fn -> Enrollment.claim_invite(token) end)
 
-      # Step 2: Verify synchronous effects (domain event handlers on Enrollment bus)
-      # MarkInviteRegistered runs synchronously via DomainEventBus.dispatch
-      # PromoteIntegrationEvents also runs synchronously, broadcasting to PubSub
+      # Step 2: Verify the synchronous effect of the bus handler.
       updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :registered
       assert updated.registered_at != nil
 
-      # Step 3: Wait for async effects (integration events via PubSub)
-      # Family InviteClaimedHandler creates parent + child, publishes :invite_family_ready
-      # Family PromoteIntegrationEvents broadcasts to PubSub
-      # Enrollment InviteFamilyReadyHandler creates enrollment, transitions invite to enrolled
+      # Step 3: Deliver the staged event, as a queue worker would after the commit.
+      # with_recursion so events staged by the handlers this drains are drained too.
+      Oban.drain_queue(queue: :critical_events, with_recursion: true)
+
+      # Step 4: The remainder still travels by PubSub — Family publishes
+      # :invite_family_ready, and Enrollment's subscriber creates the enrollment.
       assert_eventually(
         fn ->
           final = Repo.get!(BulkEnrollmentInvite, invite.id)

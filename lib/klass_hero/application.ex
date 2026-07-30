@@ -103,22 +103,10 @@ defmodule KlassHero.Application do
          context: KlassHero.Enrollment,
          handlers: [
            {:participant_policy_set, {NotifyLiveViews, :handle}},
-           {:participant_policy_set,
-            {KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10},
            {:bulk_invites_imported, {EnqueueInviteEmails, :handle}},
            {:invite_resend_requested, {EnqueueInviteEmails, :handle}},
            {:invite_claimed, {MarkInviteRegistered, :handle}, priority: 5},
-           {:invite_claimed,
-            {KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10},
            {:invite_deleted, {NotifyLiveViews, :handle}},
-           {:enrollment_cancelled,
-            {KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10},
-           {:enrollment_created,
-            {KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle},
-            priority: 10},
            {:enrollment_confirmed, {NotifyLiveViews, :handle}}
          ]},
         id: :enrollment_domain_event_bus

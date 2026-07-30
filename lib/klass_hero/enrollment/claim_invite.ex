@@ -13,6 +13,7 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -102,9 +103,19 @@ defmodule KlassHero.Enrollment.ClaimInvite do
       consent_photo_marketing: invite.consent_photo_marketing,
       consent_photo_social_media: invite.consent_photo_social_media
     })
-    |> EventDispatchHelper.dispatch_or_ok(
-      KlassHero.Enrollment,
-      %ClaimResult{user_type: user_type, user: user, invite: invite}
-    )
+    |> stage_and_dispatch(%ClaimResult{user_type: user_type, user: user, invite: invite})
+  end
+
+  # This one has no local write to join a transaction: the invite is marked registered
+  # by MarkInviteRegistered, a priority-5 handler the dispatch below triggers. So the
+  # order is dispatch first (that handler runs and its failure still gates the result),
+  # then stage for cross-context delivery — which is the order the bus produced before,
+  # with Promote registered at priority 10 behind it. Collapsing the two into one
+  # transaction means inlining that handler, which belongs with deleting the bus.
+  defp stage_and_dispatch(event, result) do
+    with {:ok, result} <- EventDispatchHelper.dispatch_or_ok(event, KlassHero.Enrollment, result) do
+      Outbox.stage(KlassHero.Enrollment, event)
+      {:ok, result}
+    end
   end
 end

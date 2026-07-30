@@ -85,20 +85,32 @@ defmodule KlassHero.Shared.Outbox do
           {:ok, {result, [stageable()]}} | {:error, term()}
         when result: term()
   def transact(context, fun) when is_atom(context) and is_function(fun, 0) do
-    Repo.transaction(fn ->
+    # An `Ecto.Multi` rather than `Repo.transaction(fn -> ... Repo.rollback(reason) end)`
+    # because producers run inside outer transactions: a critical event handler executes
+    # within `ProcessedEventRepository.execute_atomically`'s Multi, and a nested
+    # `Repo.rollback` aborts *that* Multi with "rolling back unexpectedly" instead of
+    # just this write. A failing `Multi.run` step expresses the same intent with no
+    # rollback call to escape.
+    Ecto.Multi.new()
+    |> Ecto.Multi.run(:work, fn _repo, _changes ->
       # Deliberately no catch-all: a producer returning a bare {:ok, entity} is a
       # half-migrated call site, and raising on its first run beats staging nothing.
       case fun.() do
-        {:ok, result, events} ->
-          stage(context, events)
-          {result, events}
-
-        # Rolling back with the caller's own reason keeps `with {:ok, _} <- ...`
-        # chains matching the same error shapes they matched before the outbox.
-        {:error, reason} ->
-          Repo.rollback(reason)
+        {:ok, result, events} -> {:ok, {result, events}}
+        {:error, reason} -> {:error, reason}
       end
     end)
+    |> Ecto.Multi.run(:stage, fn _repo, %{work: {_result, events}} ->
+      stage(context, events)
+      {:ok, :staged}
+    end)
+    |> Repo.transaction()
+    |> case do
+      {:ok, %{work: work}} -> {:ok, work}
+      # The caller's own reason, so `with {:ok, _} <- ...` chains keep matching the
+      # same error shapes they matched before the outbox.
+      {:error, :work, reason, _changes} -> {:error, reason}
+    end
   end
 
   defp stage_all([]), do: :ok

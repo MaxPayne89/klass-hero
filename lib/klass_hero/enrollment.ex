@@ -32,6 +32,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   @active_statuses ~w(pending confirmed)
 
@@ -57,10 +58,24 @@ defmodule KlassHero.Enrollment do
     end
   end
 
+  # No identity_id: the caller is the invite saga, which knows the parent profile but
+  # not the user behind it. Resolve it, because `enrollment_created` carries
+  # parent_user_id and Messaging's enrolled-children read table requires it — passing
+  # the missing key through produced an event that crashed that projection on every
+  # invite-claimed enrollment.
   defp do_create_enrollment(params) do
     params
     |> build_enrollment_attrs(params[:parent_id])
-    |> persist_and_dispatch(params[:identity_id])
+    |> persist_and_dispatch(params[:identity_id] || parent_user_id(params[:parent_id]))
+  end
+
+  defp parent_user_id(nil), do: nil
+
+  defp parent_user_id(parent_id) do
+    case Family.get_parents_by_ids([parent_id]) do
+      [%{identity_id: identity_id}] -> identity_id
+      [] -> nil
+    end
   end
 
   defp fetch_parent(identity_id) do
@@ -109,9 +124,11 @@ defmodule KlassHero.Enrollment do
   end
 
   defp persist_and_dispatch(attrs, identity_id) do
-    case create_enrollment_with_capacity_check(attrs, attrs[:program_id]) do
-      {:ok, enrollment} ->
-        dispatch_enrollment_created(enrollment, identity_id)
+    case create_enrollment_with_capacity_check(attrs, attrs[:program_id], identity_id) do
+      {:ok, {enrollment, events}} ->
+        # Fire-and-forget — a failed same-context handler must not roll back a
+        # successful enrollment. Cross-context delivery committed with it.
+        Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
         {:ok, enrollment}
 
       error ->
@@ -119,8 +136,7 @@ defmodule KlassHero.Enrollment do
     end
   end
 
-  # Fire-and-forget — a failed handler must not roll back a successful enrollment.
-  defp dispatch_enrollment_created(enrollment, identity_id) do
+  defp enrollment_created_event(enrollment, identity_id) do
     EnrollmentEvents.enrollment_created(enrollment.id, %{
       enrollment_id: enrollment.id,
       child_id: enrollment.child_id,
@@ -129,7 +145,6 @@ defmodule KlassHero.Enrollment do
       program_id: enrollment.program_id,
       status: enrollment.status
     })
-    |> EventDispatchHelper.dispatch(__MODULE__)
   end
 
   @doc """
@@ -146,23 +161,9 @@ defmodule KlassHero.Enrollment do
       with {:ok, reason} <- Enrollment.ensure_reason_present(reason),
            {:ok, enrollment} <- get_enrollment(enrollment_id),
            {:ok, cancelled} <- Enrollment.cancel(enrollment, reason),
-           {:ok, persisted} <-
-             update_enrollment(enrollment_id, %{
-               status: cancelled.status,
-               cancelled_at: cancelled.cancelled_at,
-               cancellation_reason: cancelled.cancellation_reason
-             }) do
-        persisted.id
-        |> EnrollmentEvents.enrollment_cancelled(%{
-          enrollment_id: persisted.id,
-          program_id: persisted.program_id,
-          child_id: persisted.child_id,
-          parent_id: persisted.parent_id,
-          admin_id: admin_id,
-          reason: reason,
-          cancelled_at: persisted.cancelled_at
-        })
-        |> EventDispatchHelper.dispatch_or_ok(__MODULE__, persisted)
+           {:ok, {persisted, events}} <- cancel_with_event(enrollment_id, cancelled, admin_id, reason) do
+        Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
+        {:ok, persisted}
       end
     end
   end
@@ -244,14 +245,44 @@ defmodule KlassHero.Enrollment do
   """
   def set_participant_policy(attrs) when is_map(attrs) do
     context_span entity: "participant_policy" do
-      with {:ok, policy} <- upsert_participant_policy(attrs) do
-        policy.program_id
-        |> EnrollmentEvents.participant_policy_set()
-        |> EventDispatchHelper.dispatch(__MODULE__)
-
+      with {:ok, {policy, events}} <- upsert_policy_with_event(attrs) do
+        Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
         {:ok, policy}
       end
     end
+  end
+
+  defp cancel_with_event(enrollment_id, cancelled, admin_id, reason) do
+    Outbox.transact(__MODULE__, fn ->
+      fields = %{
+        status: cancelled.status,
+        cancelled_at: cancelled.cancelled_at,
+        cancellation_reason: cancelled.cancellation_reason
+      }
+
+      with {:ok, persisted} <- update_enrollment(enrollment_id, fields) do
+        event =
+          EnrollmentEvents.enrollment_cancelled(persisted.id, %{
+            enrollment_id: persisted.id,
+            program_id: persisted.program_id,
+            child_id: persisted.child_id,
+            parent_id: persisted.parent_id,
+            admin_id: admin_id,
+            reason: reason,
+            cancelled_at: persisted.cancelled_at
+          })
+
+        {:ok, persisted, [event]}
+      end
+    end)
+  end
+
+  defp upsert_policy_with_event(attrs) do
+    Outbox.transact(__MODULE__, fn ->
+      with {:ok, policy} <- upsert_participant_policy(attrs) do
+        {:ok, policy, [EnrollmentEvents.participant_policy_set(policy.program_id)]}
+      end
+    end)
   end
 
   defp upsert_participant_policy(attrs) do
@@ -625,9 +656,16 @@ defmodule KlassHero.Enrollment do
   # (`SELECT FOR UPDATE`) inside a transaction to prevent TOCTOU races where concurrent
   # requests could both pass the capacity check. Falls through to a plain insert when
   # program_id is nil (no policy to lock).
-  defp create_enrollment_with_capacity_check(attrs, nil), do: create_enrollment_record(attrs)
+  defp create_enrollment_with_capacity_check(attrs, nil, identity_id) do
+    Outbox.transact(__MODULE__, fn ->
+      with {:ok, enrollment} <- create_enrollment_record(attrs) do
+        {:ok, enrollment, [enrollment_created_event(enrollment, identity_id)]}
+      end
+    end)
+  end
 
-  defp create_enrollment_with_capacity_check(attrs, program_id) when is_map(attrs) and is_binary(program_id) do
+  defp create_enrollment_with_capacity_check(attrs, program_id, identity_id)
+       when is_map(attrs) and is_binary(program_id) do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:lock_and_check, fn repo, _changes ->
       query = from(p in EnrollmentPolicy, where: p.program_id == ^program_id, lock: "FOR UPDATE")
@@ -642,9 +680,16 @@ defmodule KlassHero.Enrollment do
       end
     end)
     |> Ecto.Multi.run(:create, fn _repo, _changes -> create_enrollment_record(attrs) end)
+    # Staged in the same Multi as the capacity lock, so an enrollment and the event
+    # announcing it cannot disagree about whether it happened.
+    |> Ecto.Multi.run(:stage, fn _repo, %{create: enrollment} ->
+      event = enrollment_created_event(enrollment, identity_id)
+      Outbox.stage(__MODULE__, [event])
+      {:ok, [event]}
+    end)
     |> Repo.transaction()
     |> case do
-      {:ok, %{create: enrollment}} -> {:ok, enrollment}
+      {:ok, %{create: enrollment, stage: events}} -> {:ok, {enrollment, events}}
       {:error, :lock_and_check, :program_full, _} -> {:error, :program_full}
       {:error, :create, reason, _} -> {:error, reason}
     end
