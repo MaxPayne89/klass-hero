@@ -18,8 +18,14 @@ defmodule KlassHero.Participation.BulkCheckInTest do
   alias KlassHero.Participation.ParticipationRecord
 
   setup do
-    EventTestHelper.setup_test_events()
+    EventTestHelper.setup_test_integration_events()
     :ok
+  end
+
+  # The user fixtures stage `user_registered`, so filter to the event under test
+  # rather than asserting on everything the process emitted.
+  defp check_in_events do
+    Enum.filter(EventTestHelper.get_published_integration_events(), &(&1.event_type == :child_checked_in))
   end
 
   describe "execute/1" do
@@ -191,15 +197,15 @@ defmodule KlassHero.Participation.BulkCheckInTest do
         checked_in_by: staff_id
       })
 
-      EventTestHelper.assert_event_published(:child_checked_in, %{
-        record_id: record_a.id,
-        checked_in_by: staff_id
-      })
+      staged = check_in_events()
 
-      EventTestHelper.assert_event_published(:child_checked_in, %{
-        record_id: record_b.id,
-        checked_in_by: staff_id
-      })
+      for record <- [record_a, record_b] do
+        assert Enum.any?(
+                 staged,
+                 &(&1.payload.record_id == record.id and &1.payload.checked_in_by == staff_id)
+               ),
+               "expected a child_checked_in for #{record.id}"
+      end
     end
 
     test "does not publish events for failed check-ins" do
@@ -221,7 +227,7 @@ defmodule KlassHero.Participation.BulkCheckInTest do
         checked_in_by: staff_id
       })
 
-      EventTestHelper.assert_no_events_published()
+      assert check_in_events() == []
     end
   end
 end

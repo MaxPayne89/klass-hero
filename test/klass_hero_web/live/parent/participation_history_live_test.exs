@@ -8,17 +8,16 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Participation
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Notifications
   alias KlassHero.Shared.Domain.Events.DomainEvent
 
   setup :register_and_log_in_parent
 
-  # Mirrors the prod publish path: broadcast the {:domain_event, _} envelope on the
-  # child-scoped topic. Only a view subscribed to that child's topic receives it.
-  defp broadcast_on_child_topic(%DomainEvent{payload: %{child_id: child_id}} = event) do
-    Phoenix.PubSub.broadcast(KlassHero.PubSub, Participation.child_topic(child_id), {:domain_event, event})
-  end
+  # The production path itself, not an imitation of it: the notifier derives the
+  # child topic and the message shape, so a change to either fails here rather
+  # than silently passing against a hand-written broadcast.
+  defp broadcast_on_child_topic(event), do: Notifications.notify(event)
 
   defp create_child_with_note(%{parent: parent, user: user}) do
     {child, _parent} =

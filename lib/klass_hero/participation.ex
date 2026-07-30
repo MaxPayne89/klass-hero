@@ -22,8 +22,8 @@ defmodule KlassHero.Participation do
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
-  alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionNote
@@ -32,7 +32,6 @@ defmodule KlassHero.Participation do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
-  alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.ErrorIds
   alias KlassHero.Shared.Outbox
 
@@ -72,7 +71,7 @@ defmodule KlassHero.Participation do
 
       with {:ok, session} <- ProgramSession.new(session_attrs),
            {:ok, {persisted, events}} <- insert_session_with_event(session) do
-        dispatch_all(events)
+        Notifications.notify_all(events)
         {:ok, persisted}
       end
     end
@@ -117,7 +116,7 @@ defmodule KlassHero.Participation do
           end)
 
         # Same-context handlers only; cross-context delivery committed with the writes above.
-        dispatch_all(events)
+        Notifications.notify_all(events)
 
         {:ok, %{generated: length(inserted), cancelled: length(cancelled), revived: revived}}
       end
@@ -134,7 +133,7 @@ defmodule KlassHero.Participation do
       with {:ok, session} <- fetch_session(session_id),
            {:ok, started} <- ProgramSession.start(session),
            {:ok, {persisted, events}} <- update_session_with_event(started, &ParticipationEvents.session_started/1) do
-        dispatch_all(events)
+        Notifications.notify_all(events)
         {:ok, persisted}
       end
     end
@@ -150,7 +149,7 @@ defmodule KlassHero.Participation do
       with {:ok, session} <- fetch_session(session_id),
            {:ok, completed} <- ProgramSession.complete(session),
            {:ok, {persisted, events}} <- complete_session_with_events(completed) do
-        dispatch_all(events)
+        Notifications.notify_all(events)
         {:ok, persisted}
       end
     end
@@ -424,40 +423,21 @@ defmodule KlassHero.Participation do
   def session_statuses, do: ProgramSession.valid_statuses()
 
   @doc """
-  Returns the PubSub topics a LiveView should subscribe to for a subscription
-  group (`:session_note` or `:attendance`).
-
-  Topics derive from `ParticipationEvents`' event registry (#1108), so renaming an
-  event atom moves the publisher and every subscriber together — no hand-typed
-  topic strings in LiveViews.
-  """
-  @spec participation_topics(atom()) :: [String.t()]
-  def participation_topics(group) do
-    for event_type <- ParticipationEvents.subscription_event_types(group), do: event_topic(event_type)
-  end
-
-  @doc "Returns the PubSub topic a single event type is published on."
-  @spec event_topic(atom()) :: String.t()
-  def event_topic(event_type) do
-    NotifyLiveViews.build_topic(ParticipationEvents.aggregate_type_for(event_type), event_type)
-  end
-
-  @doc """
   Returns the provider-scoped participation topic — the single topic carrying all
-  of a provider's participation events. Provider/staff LiveViews subscribe to it;
-  `NotifyLiveViews` publishes to it. One builder, so the two sides can't drift.
+  of a provider's participation traffic, session notes included. Provider and staff
+  LiveViews subscribe to it; `Notifications` publishes to it. One builder, so the
+  two sides can't drift.
   """
   @spec provider_topic(String.t()) :: String.t()
-  defdelegate provider_topic(provider_id), to: NotifyLiveViews
+  defdelegate provider_topic(provider_id), to: Notifications
 
   @doc """
   Returns the child-scoped participation topic — the single topic carrying one
-  child's attendance and session-note events. Parent LiveViews subscribe to it
-  per child; `NotifyLiveViews` publishes to it. One builder, so the two sides
-  can't drift (#1121).
+  child's attendance and session notes. Parent LiveViews subscribe to it per child;
+  `Notifications` publishes to it (#1121).
   """
   @spec child_topic(String.t()) :: String.t()
-  defdelegate child_topic(child_id), to: NotifyLiveViews
+  defdelegate child_topic(child_id), to: Notifications
 
   @doc """
   Seeds a session roster with the program's enrolled children. Best-effort: always returns `:ok`.
@@ -478,7 +458,7 @@ defmodule KlassHero.Participation do
         program_id: program_id
       )
 
-      dispatch_all(roster_events)
+      Notifications.notify_all(roster_events)
 
       :ok
     end
@@ -512,7 +492,7 @@ defmodule KlassHero.Participation do
 
       for session_id <- session_ids do
         {:ok, {_count, events}} = seed_roster_records(session_id, program_id, child_ids)
-        dispatch_all(events)
+        Notifications.notify_all(events)
       end
 
       Logger.info(
@@ -561,7 +541,7 @@ defmodule KlassHero.Participation do
         program_id: program_id
       )
 
-      dispatch_all(backfill_events)
+      Notifications.notify_all(backfill_events)
 
       :ok
     end
@@ -722,10 +702,7 @@ defmodule KlassHero.Participation do
            true <- ParticipationRecord.allows_session_note?(record),
            {:ok, note} <- build_note(record, provider_id, content),
            {:ok, persisted} <- insert_note(note) do
-        log_publish_result(
-          DomainEventBus.dispatch(@context, ParticipationEvents.session_note_submitted(persisted)),
-          persisted.id
-        )
+        Notifications.notify(ParticipationEvents.session_note_submitted(persisted))
 
         {:ok, persisted}
       else
@@ -750,7 +727,7 @@ defmodule KlassHero.Participation do
       with {:ok, note} <- fetch_note_by_parent(note_id, parent_id),
            {:ok, reviewed} <- apply_review_decision(note, decision, reason),
            {:ok, persisted} <- update_note(reviewed) do
-        log_publish_result(publish_review_event(persisted, decision), persisted.id)
+        Notifications.notify(review_event(persisted, decision))
         {:ok, persisted}
       end
     end
@@ -770,10 +747,7 @@ defmodule KlassHero.Participation do
            {:ok, note} <- fetch_note_by_provider(note_id, provider_id),
            {:ok, revised} <- SessionNote.revise(note, content),
            {:ok, persisted} <- update_note(revised) do
-        log_publish_result(
-          DomainEventBus.dispatch(@context, ParticipationEvents.session_note_submitted(persisted)),
-          persisted.id
-        )
+        Notifications.notify(ParticipationEvents.session_note_submitted(persisted))
 
         {:ok, persisted}
       else
@@ -834,7 +808,7 @@ defmodule KlassHero.Participation do
     with {:ok, record} <- fetch_record(record_id),
          {:ok, updated} <- domain_fn.(record, actor_id, notes),
          {:ok, {persisted, events}} <- update_record_with_event(updated, event_fn) do
-      dispatch_all(events)
+      Notifications.notify_all(events)
       {:ok, persisted}
     end
   end
@@ -843,7 +817,7 @@ defmodule KlassHero.Participation do
     with {:ok, record} <- fetch_record(record_id),
          {:ok, checked_in} <- ParticipationRecord.check_in(record, checked_in_by, notes),
          {:ok, {{persisted, resolved}, events}} <- check_in_record_with_event(checked_in, session) do
-      dispatch_all(events)
+      Notifications.notify_all(events)
       {:ok, persisted, resolved}
     else
       {:error, reason} -> {:error, record_id, reason}
@@ -1104,35 +1078,8 @@ defmodule KlassHero.Participation do
     [ParticipationEvents.sessions_generated(program_id, sessions)]
   end
 
-  # Same-context handlers still on the bus (NotifyLiveViews and the business ones).
-  # Cross-context delivery already committed with the write.
-  defp dispatch_all(events) do
-    Enum.each(events, fn event ->
-      case DomainEventBus.dispatch(@context, event) do
-        :ok ->
-          :ok
-
-        {:error, failures} ->
-          Logger.warning("[Participation] #{event.event_type} handler failures: #{inspect(failures)}",
-            aggregate_id: event.aggregate_id
-          )
-      end
-    end)
-  end
-
-  defp publish_review_event(note, :approve) do
-    DomainEventBus.dispatch(@context, ParticipationEvents.session_note_approved(note))
-  end
-
-  defp publish_review_event(note, :reject) do
-    DomainEventBus.dispatch(@context, ParticipationEvents.session_note_rejected(note))
-  end
-
-  defp log_publish_result(:ok, _id), do: :ok
-
-  defp log_publish_result({:error, reason}, id) do
-    Logger.warning("[Participation] PubSub publish failed", id: id, reason: inspect(reason))
-  end
+  defp review_event(note, :approve), do: ParticipationEvents.session_note_approved(note)
+  defp review_event(note, :reject), do: ParticipationEvents.session_note_rejected(note)
 
   # ============================================================================
   # Persistence — sessions

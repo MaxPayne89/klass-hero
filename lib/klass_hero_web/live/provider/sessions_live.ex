@@ -4,7 +4,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
@@ -56,11 +55,8 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       |> stream(:sessions, [])
 
     if connected?(socket) do
-      # Events are pre-routed to the provider topic by NotifyLiveViews; no client-side filtering needed.
-      Phoenix.PubSub.subscribe(
-        KlassHero.PubSub,
-        "participation:provider:#{provider_id}"
-      )
+      # Messages are pre-routed to the provider topic; no client-side filtering needed.
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.provider_topic(provider_id))
     end
 
     sessions_result =
@@ -187,8 +183,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   end
 
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id}}, socket)
-      when event_type in [:session_started, :session_completed, :session_created, :session_cancelled, :roster_seeded] do
+  def handle_info({:session_changed, session_id}, socket) do
     {:noreply, update_session_in_stream(socket, session_id)}
   end
 
@@ -197,7 +192,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   # The batch may also belong to a program created after mount, so refresh the
   # title map or its sessions would render under the generic fallback.
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: :sessions_generated}}, socket) do
+  def handle_info({:sessions_generated, _program_id}, socket) do
     programs = ProgramCatalog.list_programs_for_provider(socket.assigns.provider_id)
 
     socket =
@@ -210,20 +205,19 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     {:noreply, socket}
   end
 
+  # Every attendance kind moves the session's checked-in count this view renders,
+  # not only check-in.
   @impl true
-  def handle_info(
-        {:domain_event, %DomainEvent{event_type: :child_checked_in, payload: %{session_id: session_id}}},
-        socket
-      ) do
+  def handle_info({:attendance_changed, %{session_id: session_id}}, socket) do
     {:noreply, update_session_in_stream(socket, session_id)}
   end
 
-  # The provider topic carries every participation event for this provider, not
-  # only the ones this view renders — child_checked_out and child_marked_absent
-  # already arrive here. Without this, an unmatched event is a FunctionClauseError
-  # that takes the LiveView down. Mirrors ParticipationLive and StaffParticipationLive.
+  # The provider topic carries every participation message for this provider, not
+  # only the ones this view renders — session notes already arrive here. Without
+  # this, an unmatched message is a FunctionClauseError that takes the LiveView
+  # down. Mirrors ParticipationLive and StaffParticipationLive.
   @impl true
-  def handle_info({:domain_event, %DomainEvent{}}, socket), do: {:noreply, socket}
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   defp program_names(programs), do: Map.new(programs, &{&1.id, &1.title})
 

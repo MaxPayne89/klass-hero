@@ -9,8 +9,8 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
   import KlassHero.Factory
 
   alias KlassHero.Participation
-  alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.SessionNote
 
   describe "execute/1" do
@@ -189,34 +189,46 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
     end
   end
 
-  describe "session_note PubSub topics (#1108)" do
-    # Proves publisher and subscriber meet: publish each session-note event through
-    # the real handler, then assert the topic it was actually broadcast on is one the
-    # LiveViews subscribe to (`Participation.participation_topics(:session_note)`).
-    # Both sides derive from the event registry, so a rename that touches only one
-    # side fails here instead of silently in production. Supersedes #924's literal
-    # pins now that TestEventPublisher records the topic.
+  describe "session-note PubSub topics" do
+    # Proves publisher and subscriber meet: notify each session-note event through
+    # the real notifier while subscribed to the exact topic the provider and staff
+    # LiveViews subscribe to. Both sides call `Participation.provider_topic/1`, so a
+    # change to it moves them together; a change to only one fails here instead of
+    # silently in production.
+    #
+    # Notes used to fan out on three registry-derived `session_note:<event>` topics,
+    # which carried every provider's notes to every subscribed view. They now route
+    # by the `provider_id` already in the payload.
 
     setup do
-      setup_test_events()
-      %{note: build(:session_note)}
+      note = build(:session_note)
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.provider_topic(note.provider_id))
+      %{note: note}
     end
 
-    @topic_cases [
-      {:session_note_submitted, "session_note:session_note_submitted"},
-      {:session_note_approved, "session_note:session_note_approved"},
-      {:session_note_rejected, "session_note:session_note_rejected"}
-    ]
+    @note_events [:session_note_submitted, :session_note_approved, :session_note_rejected]
 
-    for {event_type, expected_topic} <- @topic_cases do
-      test "#{event_type} is published to a topic the LiveViews subscribe to", %{note: note} do
-        event = apply(ParticipationEvents, unquote(event_type), [note])
+    for event_type <- @note_events do
+      test "#{event_type} reaches the provider topic the LiveViews subscribe to", %{note: note} do
+        ParticipationEvents
+        |> apply(unquote(event_type), [note])
+        |> Notifications.notify()
 
-        NotifyLiveViews.handle(event)
-
-        assert_published_to(unquote(event_type), unquote(expected_topic))
-        assert unquote(expected_topic) in Participation.participation_topics(:session_note)
+        assert_receive :session_notes_changed
       end
+    end
+
+    test "a note never reaches another provider's topic", %{note: note} do
+      other_provider_id = Ecto.UUID.generate()
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.provider_topic(other_provider_id))
+
+      note
+      |> ParticipationEvents.session_note_submitted()
+      |> Notifications.notify()
+
+      # One message, for this note's own provider — not two.
+      assert_receive :session_notes_changed
+      refute_receive :session_notes_changed, 50
     end
   end
 end

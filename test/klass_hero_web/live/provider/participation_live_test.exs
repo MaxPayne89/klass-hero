@@ -833,7 +833,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       Phoenix.PubSub.broadcast(
         KlassHero.PubSub,
         Participation.provider_topic(provider.id),
-        {:domain_event, ParticipationEvents.child_checked_in(record, [])}
+        {:attendance_changed,
+         %{record_id: record.id, session_id: session.id, child_id: record.child_id, kind: :checked_in}}
       )
 
       assert render(view) =~ "edit-btn-#{record.id}"
