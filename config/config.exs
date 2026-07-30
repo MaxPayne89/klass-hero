@@ -14,10 +14,19 @@ alias KlassHero.Accounts.Scope
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
+alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
+alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
+alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
+alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
+alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
+alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
+alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
+alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
+alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
@@ -164,40 +173,188 @@ config :klass_hero, :critical_event_handlers, %{
 # Configure Enrollment bounded context
 config :klass_hero, :default_tz, "Europe/Berlin"
 
-# Enrollment context needs no port wiring: it is conventional Phoenix (context module
-# + Ecto schemas calling Repo directly). Its outbound cross-context ACLs, the invite
-# email notifier, and the user-account resolver are called by KlassHero.Enrollment and
-# its internal orchestrators directly, not via dependency injection.
+# Every consumer of every integration event topic, in delivery order. Read by the
+# outbox delivery job; see EventConsumerRegistry for why handlers and projections
+# are the same kind of entry.
+#
+# This supersedes :critical_event_handlers above, which routes only the subset a
+# human marked critical and is deleted at the end of this PR. A test asserts the
+# old map stays a subset of this one until then.
+config :klass_hero, :event_consumers, %{
+  # Accounts
+  "integration:accounts:user_registered" => [
+    {FamilyEventHandler, :handle_event},
+    {ProviderEventHandler, :handle_event}
+  ],
+  "integration:accounts:user_confirmed" => [
+    {FamilyEventHandler, :handle_event},
+    {ProviderEventHandler, :handle_event}
+  ],
+  "integration:accounts:user_anonymized" => [
+    {FamilyEventHandler, :handle_event},
+    {ProviderEventHandler, :handle_event},
+    {MessagingEventHandler, :handle_event}
+  ],
+  "integration:accounts:staff_invitation_sent" => [
+    {StaffInvitationStatusHandler, :handle_event}
+  ],
+  "integration:accounts:staff_invitation_failed" => [
+    {StaffInvitationStatusHandler, :handle_event}
+  ],
+  "integration:accounts:staff_user_registered" => [
+    {StaffInvitationStatusHandler, :handle_event}
+  ],
+
+  # Family
+  "integration:family:child_data_anonymized" => [
+    {ParticipationEventHandler, :handle_event}
+  ],
+  "integration:family:invite_family_ready" => [
+    {InviteFamilyReadyHandler, :handle_event}
+  ],
+  "integration:family:child_created" => [
+    {EnrolledChildren, :project}
+  ],
+  "integration:family:child_updated" => [
+    {EnrolledChildren, :project}
+  ],
+
+  # Program Catalog
+  "integration:program_catalog:program_created" => [
+    {ParticipationEventHandler, :handle_event},
+    {ProgramListings, :project},
+    {ProviderPrograms, :project}
+  ],
+  "integration:program_catalog:program_updated" => [
+    {ParticipationEventHandler, :handle_event},
+    {ProgramListings, :project},
+    {ProviderPrograms, :project}
+  ],
+
+  # Enrollment
+  "integration:enrollment:enrollment_created" => [
+    {ParticipationEventHandler, :handle_event},
+    {EnrolledChildren, :project}
+  ],
+  "integration:enrollment:enrollment_cancelled" => [
+    {EnrolledChildren, :project}
+  ],
+  "integration:enrollment:participant_policy_set" => [
+    {EnrollmentEventHandler, :handle_event}
+  ],
+  "integration:enrollment:invite_claimed" => [
+    {InviteClaimedHandler, :handle_event}
+  ],
+
+  # Provider
+  "integration:provider:staff_member_invited" => [
+    {StaffInvitationHandler, :handle_event}
+  ],
+  "integration:provider:staff_assigned_to_program" => [
+    {StaffAssignmentHandler, :handle_event},
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:provider:staff_unassigned_from_program" => [
+    {StaffAssignmentHandler, :handle_event},
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:provider:provider_verified" => [
+    {ProgramListings, :project}
+  ],
+  "integration:provider:provider_unverified" => [
+    {ProgramListings, :project}
+  ],
+
+  # Participation
+  "integration:participation:session_created" => [
+    {SeedSessionRosterHandler, :handle_event},
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:participation:sessions_generated" => [
+    {SeedSessionRosterHandler, :handle_event},
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:participation:session_started" => [
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:participation:session_completed" => [
+    {ProviderSessionDetails, :project},
+    {ProviderSessionStats, :project}
+  ],
+  "integration:participation:session_cancelled" => [
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:participation:roster_seeded" => [
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:participation:child_checked_in" => [
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:participation:child_checked_out" => [
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:participation:child_marked_absent" => [
+    {ProviderSessionDetails, :project}
+  ],
+
+  # Messaging
+  "integration:messaging:conversation_created" => [
+    {ConversationSummaries, :project},
+    {EnrolledChildren, :project}
+  ],
+  "integration:messaging:message_sent" => [
+    {ConversationSummaries, :project}
+  ],
+  "integration:messaging:messages_read" => [
+    {ConversationSummaries, :project}
+  ],
+  "integration:messaging:conversation_archived" => [
+    {ConversationSummaries, :project}
+  ],
+  "integration:messaging:conversations_archived" => [
+    {ConversationSummaries, :project}
+  ],
+  "integration:messaging:message_data_anonymized" => [
+    {ConversationSummaries, :project}
+  ],
+  "integration:messaging:participant_added" => [
+    {ConversationSummaries, :project}
+  ],
+  "integration:messaging:participant_removed" => [
+    {ConversationSummaries, :project}
+  ]
+}
 
 # Configure Event Publisher (domain events — internal context communication)
 config :klass_hero, :event_publisher,
   module: PubSubEventPublisher,
   pubsub: KlassHero.PubSub
 
-# Family context needs no port wiring: it is conventional Phoenix (context module
-# + Ecto schemas calling Repo directly). Its outbound cross-context ACLs are
-# called by KlassHero.Family directly, not via dependency injection.
-
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter
 
 # Configure Integration Event Publisher (cross-context communication)
 config :klass_hero, :integration_event_publisher,
+  # Enrollment context needs no port wiring: it is conventional Phoenix (context module
+  # + Ecto schemas calling Repo directly). Its outbound cross-context ACLs, the invite
+  # email notifier, and the user-account resolver are called by KlassHero.Enrollment and
+  # its internal orchestrators directly, not via dependency injection.
+  # Messaging context needs no port wiring: it is conventional Phoenix (context module
+  # + Ecto schemas calling Repo directly). Its outbound cross-context ACL resolvers and
+  # the program-staff projection repository are called by name, not via dependency injection.
   module: PubSubIntegrationEventPublisher,
   pubsub: KlassHero.PubSub
 
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}
 
-# Messaging context needs no port wiring: it is conventional Phoenix (context module
-# + Ecto schemas calling Repo directly). Its outbound cross-context ACL resolvers and
-# the program-staff projection repository are called by name, not via dependency injection.
 config :klass_hero, :messaging,
   retention: [
     days_after_program_end: 30,
+    # Family context needs no port wiring: it is conventional Phoenix (context module
+    # + Ecto schemas calling Repo directly). Its outbound cross-context ACLs are
+    # called by KlassHero.Family directly, not via dependency injection.
     retention_period_days: 30
   ]
-
-# Participation context needs no port wiring (conventional Phoenix; ACL adapters called directly).
 
 config :klass_hero, :resend_req_options, []
 
@@ -222,6 +379,7 @@ config :klass_hero, :storage,
   adapter: S3StorageAdapter,
   bucket: "klass-hero-dev"
 
+# Participation context needs no port wiring (conventional Phoenix; ACL adapters called directly).
 config :klass_hero,
   ecto_repos: [KlassHero.Repo],
   generators: [timestamp_type: :utc_datetime]

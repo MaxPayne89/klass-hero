@@ -67,6 +67,25 @@ defmodule KlassHero.Shared.Projection do
 
       @projection_topics topics
 
+      @doc """
+      Topics this projection consumes. Read by the consumer-registry coverage test.
+      """
+      @spec topics() :: [String.t()]
+      def topics, do: @projection_topics
+
+      @doc """
+      Projects one integration event in the caller's process.
+
+      The entry point the outbox delivery job calls, which is why it takes the
+      whole event rather than `(type, event)` — it makes a projection shaped like
+      every other consumer in the registry.
+      """
+      @spec project(IntegrationEvent.t()) :: :ok
+      def project(%IntegrationEvent{event_type: type} = event) do
+        handle_event(type, event)
+        :ok
+      end
+
       def start_link(opts \\ []) do
         name = Keyword.get(opts, :name, __MODULE__)
         GenServer.start_link(__MODULE__, opts, name: name)
