@@ -19,7 +19,7 @@ defmodule KlassHero.ObanConfigTest do
     end
 
     # Pruner defaults to max_age: 60 *seconds*, which deletes a permanently-failed critical event's
-    # row before anyone can open the dashboard. CriticalEventWorker retries for roughly 4.5 hours, so
+    # row before anyone can open the dashboard. EventDeliveryWorker retries for roughly 4.5 hours, so
     # the row has to outlive that span by enough to be triaged the next morning.
     test "keeps finished job rows long enough to triage" do
       opts = plugin_opts(Oban.Plugins.Pruner)

@@ -90,36 +90,4 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
       assert Repo.get_by(ProcessedEvent, event_id: event_id, handler_ref: handler_ref)
     end
   end
-
-  describe "mark_processed/2" do
-    test "inserts row without running a handler" do
-      event_id = Ecto.UUID.generate()
-      handler_ref = "Elixir.TestModule:handle"
-
-      assert :ok = ProcessedEventRepository.mark_processed(event_id, handler_ref)
-      assert Repo.get_by(ProcessedEvent, event_id: event_id, handler_ref: handler_ref)
-    end
-
-    test "is idempotent" do
-      event_id = Ecto.UUID.generate()
-      handler_ref = "Elixir.TestModule:handle"
-
-      assert :ok = ProcessedEventRepository.mark_processed(event_id, handler_ref)
-      assert :ok = ProcessedEventRepository.mark_processed(event_id, handler_ref)
-    end
-  end
-
-  describe "enqueue_durable_retry/2" do
-    test "serializes event and inserts Oban job" do
-      event = Event.new(:test_retry, :test_context, :test, "agg-1", %{data: "value"})
-      handler_ref = "Elixir.TestModule:handle"
-
-      # Trigger: use manual mode so Oban doesn't execute the job immediately
-      # Why: inline mode would try to run the worker, which requires a real handler module
-      # Outcome: job is inserted but not executed — we verify the enqueue succeeded
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        assert :ok = ProcessedEventRepository.enqueue_durable_retry(event, handler_ref)
-      end)
-    end
-  end
 end

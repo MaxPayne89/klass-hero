@@ -11,10 +11,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
   use KlassHero.Shared.Interaction
 
   alias KlassHero.Repo
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
-  alias KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorker
-  alias KlassHero.Shared.Tracing.Context
 
   require Logger
 
@@ -34,40 +31,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
         end
       end)
       |> unwrap_transaction_result()
-    end
-  end
-
-  @impl true
-  def mark_processed(event_id, handler_ref) when is_binary(event_id) and is_binary(handler_ref) do
-    db_interaction operation: :mark_processed, entity: "processed_event" do
-      insert_processed_event(event_id, handler_ref)
-      :ok
-    end
-  rescue
-    error ->
-      # Handler already succeeded — swallow DB failure and log; Oban may re-execute but idempotent handlers tolerate it.
-      Logger.error(
-        "Failed to mark event as processed: #{Exception.message(error)}",
-        event_id: event_id,
-        handler_ref: handler_ref,
-        stacktrace: Exception.format_stacktrace(__STACKTRACE__)
-      )
-
-      :ok
-  end
-
-  @impl true
-  def enqueue_durable_retry(event, handler_ref) when is_binary(handler_ref) do
-    db_interaction operation: :enqueue_durable_retry, entity: "processed_event" do
-      args =
-        CriticalEventSerializer.serialize(event)
-        |> Map.put("handler", handler_ref)
-        |> Context.inject_into_args()
-
-      case CriticalEventWorker.insert_job(args) do
-        {:ok, _job} -> :ok
-        {:error, _reason} = error -> error
-      end
     end
   end
 
