@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.1](https://github.com/MaxPayne89/klass-hero/compare/v0.66.0...v0.66.1) (2026-07-30)
+
+
+### Code Refactoring
+
+* deliver UI updates as tagged tuples, not domain events ([#1208](https://github.com/MaxPayne89/klass-hero/issues/1208)) ([7e0956c](https://github.com/MaxPayne89/klass-hero/commit/7e0956c638446201b838b0c16eb1f76837447d62))
+
 ## [0.66.0](https://github.com/MaxPayne89/klass-hero/compare/v0.65.1...v0.66.0) (2026-07-30)
 
 
