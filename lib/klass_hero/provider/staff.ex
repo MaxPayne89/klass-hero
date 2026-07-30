@@ -20,9 +20,9 @@ defmodule KlassHero.Provider.Staff do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.CommandResult
-  alias KlassHero.Shared.IntegrationEventPublishing
+  alias KlassHero.Shared.Outbox
 
-  require Logger
+  @context KlassHero.Provider
 
   # Linkage and invitation state are owned by create_staff_with_invitation/the
   # accept/self-staff flows — never by caller attrs. Stripping them (both atom
@@ -155,13 +155,10 @@ defmodule KlassHero.Provider.Staff do
       # Ownership guard (IDOR, see @doc) — mirrors update_staff_member/3 above.
       with {:ok, staff} <- get_staff_member(staff_member_id, provider_id),
            {:ok, _transitioned} <- StaffMember.transition_invitation(staff, :pending),
+           {:ok, provider} <- Profiles.get_provider_profile(provider_id),
            {raw_token, token_hash} = StaffMember.generate_invitation_token(),
-           {:ok, persisted} <-
-             persist_staff_invitation_fields(staff, %{
-               invitation_status: :pending,
-               invitation_token_hash: token_hash
-             }) do
-        emit_or_compensate_staff_invitation(persisted, raw_token)
+           {:ok, {persisted, _events}} <- reissue_invitation(staff, provider, token_hash, raw_token) do
+        {:ok, persisted, raw_token}
       end
     end
   end
@@ -361,8 +358,9 @@ defmodule KlassHero.Provider.Staff do
       |> Map.put(:invitation_token_hash, token_hash)
 
     with {:ok, _validated} <- StaffMember.new(attrs_with_invitation),
-         {:ok, persisted} <- insert_staff_member(attrs_with_invitation) do
-      emit_or_compensate_staff_invitation(persisted, raw_token)
+         {:ok, provider} <- Profiles.get_provider_profile(attrs.provider_id),
+         {:ok, {persisted, _events}} <- insert_invited_staff(attrs_with_invitation, provider, raw_token) do
+      {:ok, persisted, raw_token}
     else
       result -> CommandResult.wrap_validation_errors(result)
     end
@@ -434,50 +432,39 @@ defmodule KlassHero.Provider.Staff do
     end
   end
 
-  defp emit_or_compensate_staff_invitation(persisted, raw_token) do
-    case emit_staff_invitation(persisted, raw_token) do
-      :ok -> {:ok, persisted, raw_token}
-      {:error, reason} -> compensate_staff_invitation(persisted, reason)
-    end
+  defp insert_invited_staff(attrs, provider, raw_token) do
+    Outbox.transact(@context, fn ->
+      with {:ok, persisted} <- insert_staff_member(attrs) do
+        {:ok, persisted, [staff_invited_event(persisted, provider, raw_token)]}
+      end
+    end)
   end
 
-  # Emits the :staff_member_invited integration event (raw token in payload so
-  # the Accounts handler can build the invitation URL without token-storage knowledge).
-  defp emit_staff_invitation(staff_member, raw_token) do
-    with {:ok, provider} <- Profiles.get_provider_profile(staff_member.provider_id) do
-      staff_member.id
-      |> ProviderIntegrationEvents.staff_member_invited(%{
-        provider_id: staff_member.provider_id,
-        email: staff_member.email,
-        first_name: staff_member.first_name,
-        last_name: staff_member.last_name,
-        business_name: provider.business_name,
-        raw_token: raw_token
-      })
-      |> IntegrationEventPublishing.publish_critical("staff_member_invited",
-        staff_member_id: staff_member.id,
-        provider_id: staff_member.provider_id
-      )
-    end
+  defp reissue_invitation(staff, provider, token_hash, raw_token) do
+    Outbox.transact(@context, fn ->
+      fields = %{invitation_status: :pending, invitation_token_hash: token_hash}
+
+      with {:ok, persisted} <- persist_staff_invitation_fields(staff, fields) do
+        {:ok, persisted, [staff_invited_event(persisted, provider, raw_token)]}
+      end
+    end)
   end
 
-  defp compensate_staff_invitation(staff_member, reason) do
-    Logger.warning("[Provider] Staff invitation emission failed, compensating",
-      staff_member_id: staff_member.id,
-      reason: inspect(reason)
-    )
-
-    with {:ok, _failed} <- StaffMember.transition_invitation(staff_member, :failed),
-         {:ok, _persisted} <- persist_staff_invitation_fields(staff_member, %{invitation_status: :failed}) do
-      {:error, :invitation_emission_failed}
-    else
-      _ ->
-        Logger.error("[Provider] Staff invitation compensation failed",
-          staff_member_id: staff_member.id
-        )
-
-        {:error, :invitation_emission_failed}
-    end
+  # The :staff_member_invited integration event carries the raw token so the Accounts
+  # handler can build the invitation URL without token-storage knowledge.
+  #
+  # The provider is fetched before the write rather than during event construction:
+  # the event is staged inside the staff member's own transaction, so anything the
+  # event needs has to be in hand before that transaction opens.
+  defp staff_invited_event(staff_member, provider, raw_token) do
+    ProviderIntegrationEvents.staff_member_invited(staff_member.id, %{
+      provider_id: staff_member.provider_id,
+      email: staff_member.email,
+      first_name: staff_member.first_name,
+      last_name: staff_member.last_name,
+      business_name: provider.business_name,
+      raw_token: raw_token
+    })
   end
 
   # Selection ordering for the staff-context switcher (#969): last-selected row

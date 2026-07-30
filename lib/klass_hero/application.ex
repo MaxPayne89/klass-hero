@@ -89,8 +89,6 @@ defmodule KlassHero.Application do
            {:verification_document_rejected, {AdvanceVettingStepOnDocumentReview, :handle}},
            {:identity_verification_passed, {AdvanceVettingStepOnIdentityOutcome, :handle}},
            {:identity_verification_failed, {AdvanceVettingStepOnIdentityOutcome, :handle}},
-           {:staff_assigned_to_program,
-            {KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle}},
            {:staff_unassigned_from_program,
             {KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, :handle}}
          ]},

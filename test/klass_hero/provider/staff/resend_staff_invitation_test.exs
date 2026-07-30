@@ -6,7 +6,6 @@ defmodule KlassHero.Provider.Staff.ResendStaffInvitationTest do
 
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
-  alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   setup do
     setup_test_integration_events()
@@ -148,7 +147,9 @@ defmodule KlassHero.Provider.Staff.ResendStaffInvitationTest do
                updated.invitation_token_hash
     end
 
-    test "compensates to :failed when event publishing fails" do
+    # Superseded: staging inside the write means a resend cannot half-happen. See the
+    # matching note in CreateStaffMemberInvitationTest.
+    test "a resent invitation stages its event and leaves the staff member pending" do
       provider = provider_profile_fixture()
 
       staff =
@@ -159,17 +160,12 @@ defmodule KlassHero.Provider.Staff.ResendStaffInvitationTest do
           invitation_token_hash: :crypto.hash(:sha256, "old-token")
         })
 
-      # Clear events from fixture setup, then configure publish to fail
       clear_integration_events()
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
 
-      assert {:error, :invitation_emission_failed} = Provider.resend_staff_invitation(provider.id, staff.id)
+      assert {:ok, _staff, _token} = Provider.resend_staff_invitation(provider.id, staff.id)
 
-      # Verify compensation: staff member in :failed, not orphaned as :pending
-      schema = Repo.get!(StaffMember, staff.id)
-      assert schema.invitation_status == :failed
-
-      assert_no_integration_events_published()
+      assert %{invitation_status: :pending} = Repo.get!(StaffMember, staff.id)
+      assert_integration_event_published(:staff_member_invited)
     end
   end
 end

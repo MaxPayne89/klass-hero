@@ -16,9 +16,11 @@ defmodule KlassHero.Provider.Profiles do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.CommandResult
-  alias KlassHero.Shared.IntegrationEventPublishing
+  alias KlassHero.Shared.Outbox
 
   # Fields a caller may change via update_provider_profile/2 (all other keys stripped).
+  @context KlassHero.Provider
+
   @profile_update_fields ~w(description logo_url)a
 
   # Scalar fields re-cast when persisting a transitioned profile struct. identity_id
@@ -107,8 +109,7 @@ defmodule KlassHero.Provider.Profiles do
     context_span entity: "provider_profile" do
       with {:ok, profile} <- get_provider_profile(provider_id),
            {:ok, verified} <- ProviderProfile.verify(profile, admin_id),
-           {:ok, persisted} <- persist_provider_profile(profile, verified),
-           :ok <- publish_verification_event(persisted, admin_id, :verified) do
+           {:ok, {persisted, _events}} <- persist_with_verification_event(profile, verified, admin_id, :verified) do
         {:ok, persisted}
       end
     end
@@ -119,8 +120,7 @@ defmodule KlassHero.Provider.Profiles do
     context_span entity: "provider_profile" do
       with {:ok, profile} <- get_provider_profile(provider_id),
            {:ok, unverified} <- ProviderProfile.unverify(profile),
-           {:ok, persisted} <- persist_provider_profile(profile, unverified),
-           :ok <- publish_verification_event(persisted, admin_id, :unverified) do
+           {:ok, {persisted, _events}} <- persist_with_verification_event(profile, unverified, admin_id, :unverified) do
         {:ok, persisted}
       end
     end
@@ -235,15 +235,17 @@ defmodule KlassHero.Provider.Profiles do
     |> Repo.update()
   end
 
-  defp publish_verification_event(profile, admin_id, :verified) do
-    profile
-    |> ProviderEvents.provider_verified(admin_id)
-    |> IntegrationEventPublishing.publish()
+  # These two build an IntegrationEvent directly rather than promoting a domain one —
+  # the pre-existing bypass of the bus, and the shape everything ends up in.
+  defp persist_with_verification_event(original, updated, admin_id, decision) do
+    Outbox.transact(@context, fn ->
+      with {:ok, persisted} <- persist_provider_profile(original, updated) do
+        {:ok, persisted, [verification_event(persisted, admin_id, decision)]}
+      end
+    end)
   end
 
-  defp publish_verification_event(profile, admin_id, :unverified) do
-    profile
-    |> ProviderEvents.provider_unverified(admin_id)
-    |> IntegrationEventPublishing.publish()
-  end
+  defp verification_event(profile, admin_id, :verified), do: ProviderEvents.provider_verified(profile, admin_id)
+
+  defp verification_event(profile, admin_id, :unverified), do: ProviderEvents.provider_unverified(profile, admin_id)
 end

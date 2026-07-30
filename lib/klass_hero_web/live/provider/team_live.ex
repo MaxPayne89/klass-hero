@@ -255,14 +255,6 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> assign(staff_form: to_form(changeset, as: :staff_member_schema))
          |> put_flash(:error, gettext("Please fix the errors below."))}
 
-      {:error, :invitation_emission_failed} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("Staff member created, but the invitation could not be sent. Try resending from the team list.")
-         )}
-
       {:error, changeset} ->
         {:noreply, assign(socket, staff_form: to_form(changeset, as: :staff_member_schema))}
     end
