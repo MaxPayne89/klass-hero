@@ -106,25 +106,5 @@ defmodule KlassHero.EventConsumerWiringTest do
         assert String.starts_with?(topic, "integration:")
       end
     end
-
-    # Caught a real bug: the formatter's auto-alias plugin collapsed two contexts'
-    # PromoteIntegrationEvents onto one bare alias, so Accounts silently pointed at
-    # Enrollment's promoter and would have staged nothing for every Accounts event.
-    test "every context has its own promoter, and it promotes" do
-      promoters = Application.fetch_env!(:klass_hero, :event_promoters)
-
-      for {context, promoter} <- promoters do
-        Code.ensure_loaded!(promoter)
-
-        assert function_exported?(promoter, :promote, 1),
-               "#{inspect(context)} maps to #{inspect(promoter)}, which does not export promote/1"
-
-        assert promoter |> Module.split() |> Enum.take(2) == context |> Module.split() |> Enum.take(2),
-               "#{inspect(context)} maps to #{inspect(promoter)}, which belongs to another context"
-      end
-
-      assert promoters |> Map.values() |> Enum.uniq() |> length() == map_size(promoters),
-             "two contexts share a promoter: #{inspect(promoters)}"
-    end
   end
 end

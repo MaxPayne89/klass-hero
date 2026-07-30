@@ -287,9 +287,6 @@ config :klass_hero, :event_consumers, %{
 # Shared.Outbox inside the producer's transaction. Goes away with the two-tier
 # event model; until then this is the one place the mapping is declared rather
 # than implied by a bus registration.
-config :klass_hero, :event_promoters, %{
-}
-
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter
 

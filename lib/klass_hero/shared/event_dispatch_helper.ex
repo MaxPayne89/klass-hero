@@ -11,7 +11,6 @@ defmodule KlassHero.Shared.EventDispatchHelper do
   """
 
   alias KlassHero.Shared.CriticalEventDispatcher
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.EventMetadata
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.DomainEventBus
@@ -36,8 +35,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       AccountsEvents.user_registered(user)
       |> EventDispatchHelper.dispatch(KlassHero.Accounts)
   """
-  @spec dispatch(DomainEventBus.dispatchable(), module()) :: :ok
-  def dispatch(event, context) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
+  @spec dispatch(IntegrationEvent.t(), module()) :: :ok
+  def dispatch(%IntegrationEvent{} = event, context) do
     if EventMetadata.critical?(event) do
       dispatch_critical(event, context)
     else
@@ -60,8 +59,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       FamilyEvents.invite_family_ready(invite_id, payload)
       |> EventDispatchHelper.dispatch_or_error(KlassHero.Family)
   """
-  @spec dispatch_or_error(DomainEventBus.dispatchable(), module()) :: :ok | {:error, term()}
-  def dispatch_or_error(event, context) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
+  @spec dispatch_or_error(IntegrationEvent.t(), module()) :: :ok | {:error, term()}
+  def dispatch_or_error(%IntegrationEvent{} = event, context) do
     if EventMetadata.critical?(event) do
       {:ok, results} = DomainEventBus.dispatch_critical(context, event)
       find_first_failure(results)
@@ -81,7 +80,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
       |> EventDispatchHelper.dispatch_or_ok(KlassHero.Enrollment, reset)
   """
-  @spec dispatch_or_ok(DomainEventBus.dispatchable(), module(), value) :: {:ok, value} | {:error, term()}
+  @spec dispatch_or_ok(IntegrationEvent.t(), module(), value) :: {:ok, value} | {:error, term()}
         when value: term()
   def dispatch_or_ok(event, context, value) do
     case dispatch_or_error(event, context) do

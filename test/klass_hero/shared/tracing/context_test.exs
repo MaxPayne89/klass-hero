@@ -3,7 +3,6 @@
 defmodule KlassHero.Shared.Tracing.ContextTest.Helpers do
   use KlassHero.Shared.Tracing
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Tracing.Context
 
@@ -27,7 +26,7 @@ defmodule KlassHero.Shared.Tracing.ContextTest.Helpers do
 
   def inject_into_domain_event do
     span "test.operation" do
-      event = DomainEvent.new(:test_event, "123", :test, %{})
+      event = IntegrationEvent.new(:test_event, :test_context, :test, "123", %{})
       Context.inject_into_event(event)
     end
   end
@@ -41,7 +40,7 @@ defmodule KlassHero.Shared.Tracing.ContextTest.Helpers do
 
   def attach_from_event_in_child_span do
     span "publisher.span" do
-      event = DomainEvent.new(:test_event, "123", :test, %{})
+      event = IntegrationEvent.new(:test_event, :test_context, :test, "123", %{})
       enriched = Context.inject_into_event(event)
 
       task =

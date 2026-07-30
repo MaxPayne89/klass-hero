@@ -2,7 +2,7 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   @moduledoc """
   Shared metadata accessors and builders for domain and integration events.
 
-  Both `DomainEvent` and `IntegrationEvent` carry a `:metadata` map with
+  Both event structs carry a `:metadata` map with
   optional fields like `:criticality`, `:correlation_id`, and `:causation_id`.
   This module centralises the accessor functions and the metadata construction
   logic so that both event structs stay in sync without duplicating code.
@@ -39,14 +39,11 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   can be pulled from `opts` via the `extra_keys` list — for example,
   `DomainEvent` passes `[:user_id]` to include a user reference.
   """
-  @spec build_metadata(keyword(), [atom()]) :: map()
-  def build_metadata(opts, extra_keys \\ []) do
+  @spec build_metadata(keyword()) :: map()
+  def build_metadata(opts) do
     %{criticality: Keyword.get(opts, :criticality, :normal)}
     |> maybe_add(:correlation_id, opts)
     |> maybe_add(:causation_id, opts)
-    |> then(fn base ->
-      Enum.reduce(extra_keys, base, fn key, acc -> maybe_add(acc, key, opts) end)
-    end)
   end
 
   defp maybe_add(map, key, opts) do

@@ -2,38 +2,20 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   @moduledoc """
   Serializes and deserializes event structs for Oban job args.
 
-  Handles the round-trip of `DomainEvent` and `IntegrationEvent` structs
-  through JSON. Atom fields are converted to strings on serialization and
-  restored via `String.to_existing_atom/1` on deserialization (safe because
-  all event types and payload keys are domain-defined and already loaded).
+  Handles the round-trip of `IntegrationEvent` structs through JSON. Atom
+  fields are converted to strings on serialization and restored via
+  `String.to_existing_atom/1` on deserialization (safe because all event types
+  and payload keys are domain-defined and already loaded).
   """
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
-
-  @domain_kind "domain"
-  @integration_kind "integration"
 
   @doc """
   Serializes an event struct into a JSON-safe map.
   """
-  @spec serialize(DomainEvent.t() | IntegrationEvent.t()) :: map()
-  def serialize(%DomainEvent{} = event) do
-    %{
-      "event_kind" => @domain_kind,
-      "event_id" => event.event_id,
-      "event_type" => Atom.to_string(event.event_type),
-      "aggregate_id" => event.aggregate_id,
-      "aggregate_type" => Atom.to_string(event.aggregate_type),
-      "occurred_at" => DateTime.to_iso8601(event.occurred_at),
-      "payload" => stringify_keys(event.payload),
-      "metadata" => serialize_metadata(event.metadata)
-    }
-  end
-
+  @spec serialize(IntegrationEvent.t()) :: map()
   def serialize(%IntegrationEvent{} = event) do
     %{
-      "event_kind" => @integration_kind,
       "event_id" => event.event_id,
       "event_type" => Atom.to_string(event.event_type),
       "source_context" => Atom.to_string(event.source_context),
@@ -52,20 +34,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   Atom fields are restored via `String.to_existing_atom/1`. Payload keys
   are atomized recursively.
   """
-  @spec deserialize(map()) :: DomainEvent.t() | IntegrationEvent.t()
-  def deserialize(%{"event_kind" => @domain_kind} = data) do
-    %DomainEvent{
-      event_id: data["event_id"],
-      event_type: to_existing_atom(data["event_type"]),
-      aggregate_id: data["aggregate_id"],
-      aggregate_type: to_existing_atom(data["aggregate_type"]),
-      occurred_at: parse_datetime!(data["occurred_at"]),
-      payload: atomize_keys(data["payload"]),
-      metadata: deserialize_metadata(data["metadata"])
-    }
-  end
-
-  def deserialize(%{"event_kind" => @integration_kind} = data) do
+  @spec deserialize(map()) :: IntegrationEvent.t()
+  def deserialize(data) when is_map(data) do
     %IntegrationEvent{
       event_id: data["event_id"],
       event_type: to_existing_atom(data["event_type"]),
@@ -77,17 +47,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
       metadata: deserialize_metadata(data["metadata"]),
       version: data["version"]
     }
-  end
-
-  def deserialize(%{"event_kind" => kind}) do
-    raise ArgumentError,
-          "Unknown event_kind #{inspect(kind)} in critical event job args. " <>
-            ~s(Expected "domain" or "integration".)
-  end
-
-  def deserialize(data) when is_map(data) do
-    raise ArgumentError,
-          "Missing event_kind in critical event job args: #{inspect(Map.keys(data))}"
   end
 
   defp stringify_keys(%_{} = struct), do: struct

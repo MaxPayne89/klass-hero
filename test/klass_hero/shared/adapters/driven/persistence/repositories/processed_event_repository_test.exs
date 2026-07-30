@@ -7,7 +7,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   describe "execute_atomically/3" do
     test "runs handler and inserts row on success" do
@@ -111,7 +111,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
 
   describe "enqueue_durable_retry/2" do
     test "serializes event and inserts Oban job" do
-      event = DomainEvent.new(:test_retry, "agg-1", :test, %{data: "value"})
+      event = IntegrationEvent.new(:test_retry, :test_context, :test, "agg-1", %{data: "value"})
       handler_ref = "Elixir.TestModule:handle"
 
       # Trigger: use manual mode so Oban doesn't execute the job immediately

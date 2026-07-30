@@ -7,12 +7,11 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorkerTest do
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorker
   alias KlassHero.Shared.CriticalEventDispatcher
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   describe "perform/1 with domain events" do
     test "deserializes event and dispatches via CriticalEventDispatcher" do
-      event = DomainEvent.new(:test_handled, "agg-1", :test_aggregate, %{data: "value"})
+      event = IntegrationEvent.new(:test_handled, :test_context, :test_aggregate, "agg-1", %{data: "value"})
 
       args =
         CriticalEventSerializer.serialize(event)
@@ -38,7 +37,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorkerTest do
     end
 
     test "returns error when handler fails (triggers Oban retry)" do
-      event = DomainEvent.new(:test_failed, "agg-1", :test_aggregate, %{})
+      event = IntegrationEvent.new(:test_failed, :test_context, :test_aggregate, "agg-1", %{})
 
       args =
         CriticalEventSerializer.serialize(event)
@@ -80,7 +79,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorkerTest do
 
   describe "perform/1 retry logging" do
     test "logs warning on non-final failure" do
-      event = DomainEvent.new(:test_warn, "agg-1", :test_aggregate, %{})
+      event = IntegrationEvent.new(:test_warn, :test_context, :test_aggregate, "agg-1", %{})
 
       args =
         CriticalEventSerializer.serialize(event)
@@ -101,7 +100,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CriticalEventWorkerTest do
     end
 
     test "logs error on permanent failure (final attempt)" do
-      event = DomainEvent.new(:test_perm_fail, "agg-1", :test_aggregate, %{})
+      event = IntegrationEvent.new(:test_perm_fail, :test_context, :test_aggregate, "agg-1", %{})
 
       args =
         CriticalEventSerializer.serialize(event)

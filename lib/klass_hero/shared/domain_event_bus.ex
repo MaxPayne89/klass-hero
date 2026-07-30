@@ -51,22 +51,14 @@ defmodule KlassHero.Shared.DomainEventBus do
 
   ## Dispatching
 
-      DomainEventBus.dispatch(KlassHero.Family, %DomainEvent{event_type: :child_updated, ...})
+      DomainEventBus.dispatch(KlassHero.Family, %IntegrationEvent{event_type: :child_updated, ...})
   """
 
   use GenServer
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   require Logger
-
-  @typedoc """
-  Either event struct, while the two tiers are being collapsed into one (ADR-0014
-  PR 5). The bus reads only `event_type`, so it never cared which it was; the
-  union is temporary and narrows to one struct once `DomainEvent` is deleted.
-  """
-  @type dispatchable :: DomainEvent.t() | IntegrationEvent.t()
 
   @default_priority 100
 
@@ -93,7 +85,7 @@ defmodule KlassHero.Shared.DomainEventBus do
   @doc """
   Subscribes a handler function to a specific event type on the given context's bus.
 
-  The handler function receives a `%DomainEvent{}` and should return `:ok`.
+  The handler function receives an event and should return `:ok`.
 
   ## Options
 
@@ -115,7 +107,7 @@ defmodule KlassHero.Shared.DomainEventBus do
   For a durable, always-on handler, register via the `handlers:` option on
   `start_link/1` instead; those are exempt from owner scoping and always fire.
   """
-  @spec subscribe(module(), atom(), (DomainEvent.t() -> :ok | {:error, term()}), keyword()) ::
+  @spec subscribe(module(), atom(), (IntegrationEvent.t() -> :ok | {:error, term()}), keyword()) ::
           :ok
   def subscribe(context, event_type, handler_fn, opts \\ []) when is_atom(event_type) and is_function(handler_fn, 1) do
     GenServer.call(process_name(context), {:subscribe, event_type, handler_fn, opts, self()})
@@ -128,9 +120,8 @@ defmodule KlassHero.Shared.DomainEventBus do
   sorted by priority (lower number first). Returns `:ok` when all handlers
   succeed, or `{:error, failures}` if any handler returns an error or crashes.
   """
-  @spec dispatch(module(), dispatchable()) :: :ok | {:error, [term()]}
-  def dispatch(context, event) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
-    %{event_type: event_type} = event
+  @spec dispatch(module(), IntegrationEvent.t()) :: :ok | {:error, [term()]}
+  def dispatch(context, %IntegrationEvent{event_type: event_type} = event) do
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
 
     handlers
@@ -149,10 +140,9 @@ defmodule KlassHero.Shared.DomainEventBus do
   Handler identity is `{Module, :function}` for init-time registered handlers
   or `:anonymous` for runtime lambda subscriptions.
   """
-  @spec dispatch_critical(module(), dispatchable()) ::
+  @spec dispatch_critical(module(), IntegrationEvent.t()) ::
           {:ok, list({{module(), atom()} | :anonymous, :ok | {:error, term()}})}
-  def dispatch_critical(context, event) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
-    %{event_type: event_type} = event
+  def dispatch_critical(context, %IntegrationEvent{event_type: event_type} = event) do
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
 
     {:ok,

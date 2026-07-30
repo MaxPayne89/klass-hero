@@ -2,7 +2,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubBroadcasterTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubBroadcaster
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   describe "broadcast/3" do
@@ -10,19 +9,19 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubBroadcasterTest do
       topic = "broadcaster_test:#{:erlang.unique_integer([:positive])}"
       Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
 
-      event = DomainEvent.new(:test_event, "agg-1", :test_agg, %{foo: "bar"})
+      event = IntegrationEvent.new(:test_event, :test_context, :test_agg, "agg-1", %{foo: "bar"})
 
       assert :ok =
                PubSubBroadcaster.broadcast(event, topic,
                  config_key: :event_publisher,
                  message_tag: :domain_event,
                  log_label: "event",
-                 extra_metadata: [aggregate_id: event.aggregate_id]
+                 extra_metadata: [aggregate_id: event.entity_id]
                )
 
       assert_receive {:domain_event, received}
       assert received.event_type == :test_event
-      assert received.aggregate_id == "agg-1"
+      assert received.entity_id == "agg-1"
     end
 
     test "uses the correct message tag in broadcast tuple" do
@@ -48,7 +47,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubBroadcasterTest do
       topic = "broadcaster_test:#{:erlang.unique_integer([:positive])}"
       Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
 
-      event = DomainEvent.new(:minimal_event, "agg-2", :test_agg, %{})
+      event = IntegrationEvent.new(:minimal_event, :test_context, :test_agg, "agg-2", %{})
 
       assert :ok =
                PubSubBroadcaster.broadcast(event, topic,

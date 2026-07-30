@@ -7,11 +7,10 @@ defmodule KlassHero.Shared.Domain.Events.CriticalPayloadGuardTest do
   """
   use ExUnit.Case, async: true
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   defp new_domain(payload, opts \\ [criticality: :critical]) do
-    DomainEvent.new(:test_event, "agg-1", :test, payload, opts)
+    IntegrationEvent.new(:test_event, :test_context, :test, "agg-1", payload, opts)
   end
 
   defp new_integration(payload, opts \\ [criticality: :critical]) do
@@ -80,7 +79,7 @@ defmodule KlassHero.Shared.Domain.Events.CriticalPayloadGuardTest do
     end
 
     test "allows an empty payload" do
-      assert %DomainEvent{} = new_domain(%{})
+      assert %IntegrationEvent{} = new_domain(%{})
     end
   end
 
@@ -91,7 +90,7 @@ defmodule KlassHero.Shared.Domain.Events.CriticalPayloadGuardTest do
     end
 
     test "defaults to :normal (exempt) when criticality is unset" do
-      event = DomainEvent.new(:test_event, "agg-1", :test, %{status: :pending})
+      event = IntegrationEvent.new(:test_event, :test_context, :test, "agg-1", %{status: :pending})
       assert event.payload.status == :pending
     end
   end

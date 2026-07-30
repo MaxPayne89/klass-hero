@@ -11,18 +11,12 @@ defmodule KlassHero.Shared.OutboxTest do
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Outbox
-  alias KlassHero.StubPromoter
 
   setup do
     TestOutbox.setup()
     :ok
-  end
-
-  defp domain_event(type, id) do
-    DomainEvent.new(type, id, :program, %{})
   end
 
   defp event(type, entity_id, payload \\ %{}) do
@@ -34,56 +28,6 @@ defmodule KlassHero.Shared.OutboxTest do
   end
 
   defp worker_name, do: "KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker"
-
-  # Registered rather than borrowed from a real context: the outbox's contract is
-  # "consult this context's promoter", and these tests should not break each time
-  # a context stops promoting.
-  describe "promotion" do
-    setup do
-      original = Application.get_env(:klass_hero, :event_promoters, %{})
-      Application.put_env(:klass_hero, :event_promoters, Map.put(original, KlassHero.ProgramCatalog, StubPromoter))
-      on_exit(fn -> Application.put_env(:klass_hero, :event_promoters, original) end)
-    end
-
-    test "maps a domain event to its context's integration event" do
-      Outbox.stage(KlassHero.ProgramCatalog, domain_event(:program_created, "prog-1"))
-
-      assert [%IntegrationEvent{event_type: :program_created, source_context: :program_catalog, entity_id: "prog-1"}] =
-               TestOutbox.staged()
-    end
-
-    test "passes an integration event through untouched" do
-      event = event(:program_created, "prog-1", %{title: "Chess"})
-
-      Outbox.stage(KlassHero.ProgramCatalog, event)
-
-      assert [^event] = TestOutbox.staged()
-    end
-
-    # A domain event with no promoter clause was never promoted under the bus either —
-    # it simply had no registration. Staging nothing keeps that exact behaviour.
-    test "stages nothing for an event type the context does not promote" do
-      Outbox.stage(KlassHero.ProgramCatalog, domain_event(:program_archived, "prog-1"))
-
-      assert [] = TestOutbox.staged()
-    end
-
-    test "stages nothing for a context with no promoter at all" do
-      Outbox.stage(KlassHero.Admin, domain_event(:program_created, "prog-1"))
-
-      assert [] = TestOutbox.staged()
-    end
-
-    test "keeps the order the producer emitted" do
-      Outbox.stage(KlassHero.ProgramCatalog, [
-        event(:program_created, "prog-1"),
-        event(:program_updated, "prog-2"),
-        event(:program_created, "prog-3")
-      ])
-
-      assert ["prog-1", "prog-2", "prog-3"] = Enum.map(TestOutbox.staged(), & &1.entity_id)
-    end
-  end
 
   # The promoter used to decide this by omission: an event type with no `promote/1`
   # clause staged nothing. Asking the routing table asks the same question of the
@@ -107,6 +51,16 @@ defmodule KlassHero.Shared.OutboxTest do
       )
 
       assert [] = TestOutbox.staged()
+    end
+
+    test "keeps the order the producer emitted" do
+      Outbox.stage(KlassHero.ProgramCatalog, [
+        event(:program_created, "prog-1"),
+        event(:program_updated, "prog-2"),
+        event(:program_created, "prog-3")
+      ])
+
+      assert ["prog-1", "prog-2", "prog-3"] = Enum.map(TestOutbox.staged(), & &1.entity_id)
     end
 
     # Filtering per event, not per batch: one unrouted event must not strand the
