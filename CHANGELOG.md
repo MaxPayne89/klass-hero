@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.2](https://github.com/MaxPayne89/klass-hero/compare/v0.66.1...v0.66.2) (2026-07-30)
+
+
+### Code Refactoring
+
+* collapse the two event structs into one, delete promotion ([#1211](https://github.com/MaxPayne89/klass-hero/issues/1211)) ([401b980](https://github.com/MaxPayne89/klass-hero/commit/401b980d7f179083739de93906e4e1466c365fce))
+
 ## [0.66.1](https://github.com/MaxPayne89/klass-hero/compare/v0.66.0...v0.66.1) (2026-07-30)
 
 
