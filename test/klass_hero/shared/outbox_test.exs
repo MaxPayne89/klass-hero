@@ -2,7 +2,9 @@ defmodule KlassHero.Shared.OutboxTest do
   use KlassHero.DataCase, async: true
 
   import Ecto.Query
+  import KlassHero.Factory
 
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
@@ -63,6 +65,43 @@ defmodule KlassHero.Shared.OutboxTest do
       ])
 
       assert ["prog-1", "prog-2", "prog-3"] = Enum.map(TestOutbox.staged(), & &1.entity_id)
+    end
+  end
+
+  describe "transact/2" do
+    test "stages the events the callback returned and hands them back with the result" do
+      assert {:ok, {:the_entity, [_event]}} =
+               Outbox.transact(KlassHero.ProgramCatalog, fn ->
+                 {:ok, :the_entity, [domain_event(:program_created, "prog-1", %{title: "Chess"})]}
+               end)
+
+      assert [%IntegrationEvent{event_type: :program_created}] = TestOutbox.staged()
+    end
+
+    test "rolls back with the callback's own reason, so callers match what they matched before" do
+      assert {:error, :nope} = Outbox.transact(KlassHero.ProgramCatalog, fn -> {:error, :nope} end)
+
+      assert [] = TestOutbox.staged()
+    end
+
+    test "a write in the callback is undone when a later step fails" do
+      provider = insert(:provider_profile_schema)
+
+      assert {:error, :changed_my_mind} =
+               Outbox.transact(KlassHero.ProgramCatalog, fn ->
+                 Repo.delete!(provider)
+                 {:error, :changed_my_mind}
+               end)
+
+      assert Repo.get(ProviderProfile, provider.id)
+    end
+
+    # A half-migrated producer returning {:ok, entity} must fail loudly on its first
+    # run rather than quietly staging nothing.
+    test "raises when the callback does not return events" do
+      assert_raise CaseClauseError, fn ->
+        Outbox.transact(KlassHero.ProgramCatalog, fn -> {:ok, :the_entity} end)
+      end
     end
   end
 

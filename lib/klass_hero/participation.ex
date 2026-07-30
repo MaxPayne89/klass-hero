@@ -34,6 +34,7 @@ defmodule KlassHero.Participation do
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.DomainEventBus
   alias KlassHero.Shared.ErrorIds
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -70,8 +71,13 @@ defmodule KlassHero.Participation do
         |> Map.put(:status, :scheduled)
 
       with {:ok, session} <- ProgramSession.new(session_attrs),
-           {:ok, persisted} <- insert_session(session) do
-        DomainEventBus.dispatch(@context, ParticipationEvents.session_created(persisted))
+           {:ok, {persisted, events}} <-
+             Outbox.transact(@context, fn ->
+               with {:ok, persisted} <- insert_session(session) do
+                 {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
+               end
+             end) do
+        dispatch_all(events)
         {:ok, persisted}
       end
     end
@@ -102,18 +108,21 @@ defmodule KlassHero.Participation do
         today = Date.utc_today()
         upcoming = Enum.reject(dates, &Date.before?(&1, today))
 
-        {:ok, {inserted, cancelled, revived}} =
-          Repo.transaction(fn ->
+        {:ok, {{inserted, cancelled, revived}, events}} =
+          Outbox.transact(@context, fn ->
             revived = revive_generated_sessions(program, upcoming)
             inserted = insert_generated_sessions(program, upcoming)
             cancelled = cancel_orphaned_sessions(program, upcoming, today)
 
-            {inserted, cancelled, revived}
+            events =
+              sessions_generated_events(program_id, inserted) ++
+                Enum.map(cancelled, &ParticipationEvents.session_cancelled/1)
+
+            {:ok, {inserted, cancelled, revived}, events}
           end)
 
-        # Dispatched after commit, fire-and-forget, as every other write path here.
-        publish_sessions_generated(program_id, inserted)
-        Enum.each(cancelled, &DomainEventBus.dispatch(@context, ParticipationEvents.session_cancelled(&1)))
+        # Same-context handlers only; cross-context delivery committed with the writes above.
+        dispatch_all(events)
 
         {:ok, %{generated: length(inserted), cancelled: length(cancelled), revived: revived}}
       end
@@ -129,8 +138,13 @@ defmodule KlassHero.Participation do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
            {:ok, started} <- ProgramSession.start(session),
-           {:ok, persisted} <- update_session(started) do
-        DomainEventBus.dispatch(@context, ParticipationEvents.session_started(persisted))
+           {:ok, {persisted, events}} <-
+             Outbox.transact(@context, fn ->
+               with {:ok, persisted} <- update_session(started) do
+                 {:ok, persisted, [ParticipationEvents.session_started(persisted)]}
+               end
+             end) do
+        dispatch_all(events)
         {:ok, persisted}
       end
     end
@@ -145,9 +159,14 @@ defmodule KlassHero.Participation do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
            {:ok, completed} <- ProgramSession.complete(session),
-           {:ok, persisted} <- update_session(completed),
-           :ok <- mark_remaining_as_absent(persisted) do
-        publish_session_completed(persisted)
+           {:ok, {persisted, events}} <-
+             Outbox.transact(@context, fn ->
+               with {:ok, persisted} <- update_session(completed),
+                    {:ok, absence_events} <- mark_remaining_as_absent(persisted) do
+                 {:ok, persisted, absence_events ++ [session_completed_event(persisted)]}
+               end
+             end) do
+        dispatch_all(events)
         {:ok, persisted}
       end
     end
@@ -467,7 +486,7 @@ defmodule KlassHero.Participation do
       child_ids = EnrolledChildrenResolver.list_enrolled_child_ids(program_id)
 
       # max_capacity is not checked: capacity is an enrollment-time concern, not a roster gate.
-      {:ok, count} = seed_records(session_id, child_ids)
+      {:ok, {count, roster_events}} = seed_roster_records(session_id, program_id, child_ids)
 
       Logger.info(
         "[Participation] Seeded roster — enrolled=#{length(child_ids)} inserted=#{count} skipped=#{length(child_ids) - count}",
@@ -475,7 +494,7 @@ defmodule KlassHero.Participation do
         program_id: program_id
       )
 
-      safe_publish_roster_seeded(session_id, program_id, count)
+      dispatch_all(roster_events)
 
       :ok
     end
@@ -508,8 +527,8 @@ defmodule KlassHero.Participation do
       child_ids = EnrolledChildrenResolver.list_enrolled_child_ids(program_id)
 
       for session_id <- session_ids do
-        {:ok, count} = seed_records(session_id, child_ids)
-        safe_publish_roster_seeded(session_id, program_id, count)
+        {:ok, {_count, events}} = seed_roster_records(session_id, program_id, child_ids)
+        dispatch_all(events)
       end
 
       Logger.info(
@@ -543,7 +562,14 @@ defmodule KlassHero.Participation do
   def backfill_roster_for_enrollment(child_id, program_id) when is_binary(child_id) and is_binary(program_id) do
     context_span entity: "participation_record" do
       session_ids = upcoming_scheduled_session_ids(program_id)
-      {:ok, seeded_ids} = seed_child_records(session_ids, child_id)
+
+      # One event per session that actually gained a row, so each session's
+      # read-model count moves by exactly the number of rows it gained.
+      {:ok, {seeded_ids, backfill_events}} =
+        Outbox.transact(@context, fn ->
+          {:ok, seeded_ids} = seed_child_records(session_ids, child_id)
+          {:ok, seeded_ids, Enum.map(seeded_ids, &ParticipationEvents.roster_seeded(&1, program_id, 1))}
+        end)
 
       Logger.info(
         "[Participation] Backfilled roster — upcoming=#{length(session_ids)} inserted=#{length(seeded_ids)}",
@@ -551,9 +577,7 @@ defmodule KlassHero.Participation do
         program_id: program_id
       )
 
-      # One event per session that actually gained a row, so each session's
-      # read-model count moves by exactly the number of rows it gained.
-      Enum.each(seeded_ids, &safe_publish_roster_seeded(&1, program_id, 1))
+      dispatch_all(backfill_events)
 
       :ok
     end
@@ -825,23 +849,16 @@ defmodule KlassHero.Participation do
 
     with {:ok, record} <- fetch_record(record_id),
          {:ok, updated} <- domain_fn.(record, actor_id, notes),
-         {:ok, persisted} <- update_record(updated) do
-      # Best-effort: attendance already succeeded; session fetch failure must not surface as an error.
-      session =
-        case fetch_session(persisted.session_id) do
-          {:ok, session} ->
-            session
-
-          {:error, reason} ->
-            Logger.warning("[Participation] Session fetch failed for event enrichment",
-              session_id: persisted.session_id,
-              reason: reason
-            )
-
-            nil
-        end
-
-      DomainEventBus.dispatch(@context, event_fn.(persisted, session))
+         {:ok, {persisted, events}} <-
+           Outbox.transact(@context, fn ->
+             with {:ok, persisted} <- update_record(updated) do
+               # Best-effort: attendance already succeeded; a session fetch failure
+               # enriches the event less, it does not fail the write.
+               session = resolve_session_best_effort(nil, persisted.session_id)
+               {:ok, persisted, [event_fn.(persisted, session)]}
+             end
+           end) do
+      dispatch_all(events)
       {:ok, persisted}
     end
   end
@@ -849,10 +866,15 @@ defmodule KlassHero.Participation do
   defp bulk_check_in_record(record_id, checked_in_by, notes, session) do
     with {:ok, record} <- fetch_record(record_id),
          {:ok, checked_in} <- ParticipationRecord.check_in(record, checked_in_by, notes),
-         {:ok, persisted} <- update_record(checked_in) do
-      session = resolve_session_best_effort(session, persisted.session_id)
-      publish_bulk_check_in(persisted, session)
-      {:ok, persisted, session}
+         {:ok, {{persisted, resolved}, events}} <-
+           Outbox.transact(@context, fn ->
+             with {:ok, persisted} <- update_record(checked_in) do
+               resolved = resolve_session_best_effort(session, persisted.session_id)
+               {:ok, {persisted, resolved}, [check_in_event(persisted, resolved)]}
+             end
+           end) do
+      dispatch_all(events)
+      {:ok, persisted, resolved}
     else
       {:error, reason} -> {:error, record_id, reason}
     end
@@ -887,14 +909,10 @@ defmodule KlassHero.Participation do
 
     {:ok, _count} = mark_records_absent(Enum.map(registered, & &1.id))
 
-    Enum.each(registered, fn record ->
-      DomainEventBus.dispatch(
-        @context,
-        ParticipationEvents.child_marked_absent(%{record | status: :absent}, session)
-      )
-    end)
+    events =
+      Enum.map(registered, &ParticipationEvents.child_marked_absent(%{&1 | status: :absent}, session))
 
-    :ok
+    {:ok, events}
   end
 
   defp validate_correction_reason(:admin, %{reason: reason}) when is_binary(reason) do
@@ -1030,10 +1048,9 @@ defmodule KlassHero.Participation do
   # Event publishing helpers
   # ============================================================================
 
-  defp publish_session_completed(session) do
+  defp session_completed_event(session) do
     extra_payload = resolve_provider_details(session.program_id)
-    event = ParticipationEvents.session_completed(session, extra_payload: extra_payload)
-    DomainEventBus.dispatch(@context, event)
+    ParticipationEvents.session_completed(session, extra_payload: extra_payload)
   end
 
   defp resolve_provider_details(program_id) do
@@ -1051,12 +1068,39 @@ defmodule KlassHero.Participation do
     end
   end
 
-  defp publish_bulk_check_in(record, %ProgramSession{} = session) do
-    DomainEventBus.dispatch(@context, ParticipationEvents.child_checked_in(record, session))
+  defp check_in_event(record, %ProgramSession{} = session), do: ParticipationEvents.child_checked_in(record, session)
+
+  defp check_in_event(record, nil), do: ParticipationEvents.child_checked_in(record)
+
+  # Seeds one session's roster and stages its roster_seeded event in the same
+  # transaction, so a seeded row can never exist without the event describing it.
+  defp seed_roster_records(session_id, program_id, child_ids) do
+    Outbox.transact(@context, fn ->
+      {:ok, count} = seed_records(session_id, child_ids)
+      {:ok, count, [ParticipationEvents.roster_seeded(session_id, program_id, count)]}
+    end)
   end
 
-  defp publish_bulk_check_in(record, nil) do
-    DomainEventBus.dispatch(@context, ParticipationEvents.child_checked_in(record))
+  defp sessions_generated_events(_program_id, []), do: []
+
+  defp sessions_generated_events(program_id, sessions) do
+    [ParticipationEvents.sessions_generated(program_id, sessions)]
+  end
+
+  # Same-context handlers still on the bus (NotifyLiveViews and the business ones).
+  # Cross-context delivery already committed with the write.
+  defp dispatch_all(events) do
+    Enum.each(events, fn event ->
+      case DomainEventBus.dispatch(@context, event) do
+        :ok ->
+          :ok
+
+        {:error, failures} ->
+          Logger.warning("[Participation] #{event.event_type} handler failures: #{inspect(failures)}",
+            aggregate_id: event.aggregate_id
+          )
+      end
+    end)
   end
 
   defp publish_review_event(note, :approve) do
@@ -1065,31 +1109,6 @@ defmodule KlassHero.Participation do
 
   defp publish_review_event(note, :reject) do
     DomainEventBus.dispatch(@context, ParticipationEvents.session_note_rejected(note))
-  end
-
-  defp safe_publish_roster_seeded(session_id, program_id, count) do
-    event = ParticipationEvents.roster_seeded(session_id, program_id, count)
-
-    case DomainEventBus.dispatch(@context, event) do
-      :ok ->
-        :ok
-
-      {:error, failures} ->
-        Logger.warning(
-          "[Participation] Roster-seeded event dispatch had handler failures: #{inspect(failures)}",
-          session_id: session_id,
-          program_id: program_id
-        )
-    end
-  rescue
-    error ->
-      Logger.error(
-        "[Participation] Roster seeded but event dispatch failed: #{Exception.message(error)}",
-        session_id: session_id,
-        program_id: program_id,
-        step: "event_dispatch",
-        stacktrace: Exception.format_stacktrace(__STACKTRACE__)
-      )
   end
 
   defp log_publish_result(:ok, _id), do: :ok
@@ -1320,12 +1339,6 @@ defmodule KlassHero.Participation do
       |> Repo.update_all(set: [status: :cancelled, updated_at: now_utc()])
 
     cancelled
-  end
-
-  defp publish_sessions_generated(_program_id, []), do: :ok
-
-  defp publish_sessions_generated(program_id, sessions) do
-    DomainEventBus.dispatch(@context, ParticipationEvents.sessions_generated(program_id, sessions))
   end
 
   defp now_utc, do: DateTime.utc_now() |> DateTime.truncate(:second)

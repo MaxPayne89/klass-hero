@@ -35,6 +35,7 @@ defmodule KlassHero.Shared.Outbox do
   commit a state change whose events were dropped.
   """
 
+  alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -52,6 +53,52 @@ defmodule KlassHero.Shared.Outbox do
     |> List.wrap()
     |> Enum.flat_map(&to_integration_events(context, &1))
     |> stage_all()
+  end
+
+  @doc """
+  Runs `fun` in a transaction and stages the events it produced inside that same
+  transaction.
+
+  The shape every migrated producer uses. `fun` does the writes and returns the
+  entity together with the events describing them; those events are staged before
+  the commit, so there is no moment where the write is durable and the events are
+  not.
+
+  The events come back out with the result because some of them still have
+  same-context handlers on the `DomainEventBus` — `NotifyLiveViews` and the seven
+  that do business work — which stay synchronous and post-commit.
+
+      def create_session(params) do
+        with {:ok, session} <- ProgramSession.new(attrs),
+             {:ok, {persisted, events}} <-
+               Outbox.transact(@context, fn ->
+                 with {:ok, persisted} <- insert_session(session) do
+                   {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
+                 end
+               end) do
+          Enum.each(events, &DomainEventBus.dispatch(@context, &1))
+          {:ok, persisted}
+        end
+      end
+  """
+  @spec transact(module(), (-> {:ok, result, [stageable()]} | {:error, term()})) ::
+          {:ok, {result, [stageable()]}} | {:error, term()}
+        when result: term()
+  def transact(context, fun) when is_atom(context) and is_function(fun, 0) do
+    Repo.transaction(fn ->
+      # Deliberately no catch-all: a producer returning a bare {:ok, entity} is a
+      # half-migrated call site, and raising on its first run beats staging nothing.
+      case fun.() do
+        {:ok, result, events} ->
+          stage(context, events)
+          {result, events}
+
+        # Rolling back with the caller's own reason keeps `with {:ok, _} <- ...`
+        # chains matching the same error shapes they matched before the outbox.
+        {:error, reason} ->
+          Repo.rollback(reason)
+      end
+    end)
   end
 
   defp stage_all([]), do: :ok
