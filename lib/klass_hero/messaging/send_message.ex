@@ -14,8 +14,8 @@ defmodule KlassHero.Messaging.SendMessage do
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Storage
 
   require Logger
@@ -164,17 +164,16 @@ defmodule KlassHero.Messaging.SendMessage do
     }
 
     result =
-      Repo.transaction(fn ->
+      Outbox.transact(@context, fn ->
         with {:ok, message} <- KlassHero.Messaging.create_message(message_attrs),
              {:ok, attachments} <- create_attachments(message.id, uploaded_files) do
-          %{message | attachments: attachments}
-        else
-          {:error, reason} -> Repo.rollback(reason)
+          message = %{message | attachments: attachments}
+          {:ok, message, [message_sent_event(message)]}
         end
       end)
 
     case result do
-      {:ok, message_with_attachments} ->
+      {:ok, {message_with_attachments, _events}} ->
         {:ok, message_with_attachments}
 
       {:error, reason} ->
@@ -295,18 +294,19 @@ defmodule KlassHero.Messaging.SendMessage do
   end
 
   defp publish_event(message) do
-    event =
-      MessagingEvents.message_sent(
-        message.conversation_id,
-        message.id,
-        message.sender_id,
-        message.content,
-        message.message_type,
-        message.inserted_at,
-        message.attachments
-      )
-
-    EventDispatchHelper.dispatch(event, @context)
+    EventDispatchHelper.dispatch(message_sent_event(message), @context)
     :ok
+  end
+
+  defp message_sent_event(message) do
+    MessagingEvents.message_sent(
+      message.conversation_id,
+      message.id,
+      message.sender_id,
+      message.content,
+      message.message_type,
+      message.inserted_at,
+      message.attachments
+    )
   end
 end

@@ -20,8 +20,8 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
   alias KlassHero.Messaging.SendMessage
   alias KlassHero.Messaging.Shared
   alias KlassHero.ProgramCatalog
-  alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -128,17 +128,16 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
     # De-dupe: provider user may also be enrolled as a parent.
     candidate_ids = Enum.uniq([scope.user.id | parent_user_ids])
 
-    Repo.transaction(fn ->
+    Outbox.transact(@context, fn ->
       with {:ok, inserted} <- KlassHero.Messaging.add_participants(conversation.id, candidate_ids),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, conversation.program_id, scope.user.id) do
-        build_broadcast_event(conversation.id, inserted) ++ staff_events
-      else
-        {:error, reason} -> Repo.rollback(reason)
+        events = build_broadcast_event(conversation.id, inserted) ++ staff_events
+        {:ok, events, events}
       end
     end)
     |> case do
-      {:ok, events} ->
+      {:ok, {events, _staged}} ->
         Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
         :ok
 

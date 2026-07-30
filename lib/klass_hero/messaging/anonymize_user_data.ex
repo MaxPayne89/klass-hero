@@ -12,8 +12,8 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
   """
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Repo
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -44,14 +44,13 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
   end
 
   defp run_anonymization_transaction(user_id) do
-    Repo.transaction(fn ->
+    Outbox.transact(@context, fn ->
       with {:ok, msg_count} <-
              tag_step(:anonymize_messages, KlassHero.Messaging.anonymize_messages_for_sender(user_id)),
            {:ok, part_count} <-
              tag_step(:mark_as_left, KlassHero.Messaging.mark_all_participations_left(user_id)) do
-        %{messages_anonymized: msg_count, participants_updated: part_count}
-      else
-        {:error, reason} -> Repo.rollback(reason)
+        result = %{messages_anonymized: msg_count, participants_updated: part_count}
+        {:ok, result, [MessagingEvents.user_data_anonymized(user_id)]}
       end
     end)
   end
@@ -59,8 +58,8 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
   defp tag_step(_step, {:ok, _} = result), do: result
   defp tag_step(step, {:error, reason}), do: {:error, {step, reason}}
 
-  defp handle_result({:ok, result}, user_id) do
-    EventDispatchHelper.dispatch(MessagingEvents.user_data_anonymized(user_id), @context)
+  defp handle_result({:ok, {result, events}}, user_id) do
+    Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 
     Logger.info("Anonymized messaging data for user",
       user_id: user_id,

@@ -52,6 +52,7 @@ defmodule KlassHero.EventTestHelper do
   alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
+  alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.TestableEventHandler
@@ -270,6 +271,7 @@ defmodule KlassHero.EventTestHelper do
   @spec setup_test_integration_events() :: :ok
   def setup_test_integration_events do
     TestIntegrationEventPublisher.setup()
+    TestOutbox.setup()
   end
 
   @doc """
@@ -278,14 +280,20 @@ defmodule KlassHero.EventTestHelper do
   @spec clear_integration_events() :: :ok
   def clear_integration_events do
     TestIntegrationEventPublisher.clear()
+    TestOutbox.setup()
   end
 
   @doc """
-  Returns all integration events published during the test.
+  Every integration event the code under test emitted, by either route.
+
+  A producer either publishes post-commit (the old path) or stages inside its
+  transaction (the outbox). Both mean the same thing to a test — *this write emitted
+  this event* — so both are collected here while contexts are migrated one at a
+  time. The publisher half goes when the last producer moves.
   """
   @spec get_published_integration_events() :: [IntegrationEvent.t()]
   def get_published_integration_events do
-    TestIntegrationEventPublisher.get_events()
+    TestIntegrationEventPublisher.get_events() ++ TestOutbox.staged()
   end
 
   @doc """
@@ -369,7 +377,7 @@ defmodule KlassHero.EventTestHelper do
   """
   @spec assert_integration_published_to(atom(), String.t()) :: IntegrationEvent.t()
   def assert_integration_published_to(event_type, topic) when is_atom(event_type) and is_binary(topic) do
-    published = TestIntegrationEventPublisher.get_published()
+    published = TestIntegrationEventPublisher.get_published() ++ staged_with_topics()
 
     match =
       Enum.find(published, fn {%IntegrationEvent{event_type: type}, published_topic} ->
@@ -382,6 +390,14 @@ defmodule KlassHero.EventTestHelper do
 
     {event, _topic} = match
     event
+  end
+
+  # Staged events carry no topic of their own — the delivery job derives it the same
+  # way the publisher did, so deriving it here compares like with like.
+  defp staged_with_topics do
+    for %IntegrationEvent{source_context: context, event_type: type} = event <- TestOutbox.staged() do
+      {event, "integration:#{context}:#{type}"}
+    end
   end
 
   @doc """

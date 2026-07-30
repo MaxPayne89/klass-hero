@@ -1,5 +1,8 @@
 defmodule KlassHero.Shared.OutboxTest do
-  use KlassHero.DataCase, async: true
+  # async: false — the ObanOutbox describe swaps the :outbox adapter in application
+  # env, which every other test reads. Concurrent tests would suddenly enqueue for
+  # real (and, under inline mode, execute) instead of recording.
+  use KlassHero.DataCase, async: false
 
   import Ecto.Query
   import KlassHero.Factory

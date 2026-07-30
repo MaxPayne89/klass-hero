@@ -12,6 +12,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Shared.EventDispatchHelper
+  alias KlassHero.Shared.Outbox
 
   require Logger
 
@@ -51,16 +52,21 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
       retention_period_days: retention_days
     )
 
-    case KlassHero.Messaging.archive_ended_program_conversations(
-           cutoff_date,
-           retention_days
-         ) do
-      {:ok, %{count: 0} = result} ->
+    archived =
+      Outbox.transact(@context, fn ->
+        with {:ok, result} <-
+               KlassHero.Messaging.archive_ended_program_conversations(cutoff_date, retention_days) do
+          {:ok, result, archived_events(result)}
+        end
+      end)
+
+    case archived do
+      {:ok, {%{count: 0} = result, _events}} ->
         Logger.debug("No conversations to archive for ended programs")
         {:ok, result}
 
-      {:ok, %{count: count, conversation_ids: ids} = result} ->
-        publish_event(ids, count)
+      {:ok, {%{count: count} = result, events}} ->
+        Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
 
         Logger.info("Archived conversations for ended programs",
           count: count,
@@ -71,10 +77,12 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
     end
   end
 
-  defp publish_event(conversation_ids, count) do
-    event = MessagingEvents.conversations_archived(conversation_ids, :program_ended, count)
-    EventDispatchHelper.dispatch(event, @context)
-    :ok
+  # Nothing archived, nothing to announce — and staging an empty batch would give the
+  # delivery job a job with no work in it.
+  defp archived_events(%{count: 0}), do: []
+
+  defp archived_events(%{count: count, conversation_ids: ids}) do
+    [MessagingEvents.conversations_archived(ids, :program_ended, count)]
   end
 
   defp default_days_after_program_end do
