@@ -107,6 +107,26 @@ defmodule KlassHero.EventConsumerWiringTest do
       end
     end
 
+    # Caught a real bug: the formatter's auto-alias plugin collapsed two contexts'
+    # PromoteIntegrationEvents onto one bare alias, so Accounts silently pointed at
+    # Enrollment's promoter and would have staged nothing for every Accounts event.
+    test "every context has its own promoter, and it promotes" do
+      promoters = Application.fetch_env!(:klass_hero, :event_promoters)
+
+      for {context, promoter} <- promoters do
+        Code.ensure_loaded!(promoter)
+
+        assert function_exported?(promoter, :promote, 1),
+               "#{inspect(context)} maps to #{inspect(promoter)}, which does not export promote/1"
+
+        assert promoter |> Module.split() |> Enum.take(2) == context |> Module.split() |> Enum.take(2),
+               "#{inspect(context)} maps to #{inspect(promoter)}, which belongs to another context"
+      end
+
+      assert promoters |> Map.values() |> Enum.uniq() |> length() == map_size(promoters),
+             "two contexts share a promoter: #{inspect(promoters)}"
+    end
+
     # Temporary, for the length of this PR: :critical_event_handlers still drives the
     # old PubSub-plus-Oban path while producers are migrated. Delete with that config.
     test "the superseded critical-handler map stays a subset of the registry" do

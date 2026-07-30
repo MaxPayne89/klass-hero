@@ -9,26 +9,37 @@ import Config
 
 alias ExAws.Request.Req
 alias FunWithFlags.Notifications.PhoenixPubSub
+alias KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: AccountsPromoter
 alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
+alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: EnrollmentPromoter
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
+alias KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: FamilyPromoter
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
+alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: MessagingPromoter
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
+alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: ParticipationPromoter
 alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
 alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
+
+alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents,
+  as: ProgramCatalogPromoter
+
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
+alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: ProviderPromoter
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
+alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
@@ -325,6 +336,20 @@ config :klass_hero, :event_consumers, %{
   ]
 }
 
+# Which module maps a context's domain events to integration events. Read by
+# Shared.Outbox inside the producer's transaction. Goes away with the two-tier
+# event model; until then this is the one place the mapping is declared rather
+# than implied by a bus registration.
+config :klass_hero, :event_promoters, %{
+  KlassHero.Accounts => AccountsPromoter,
+  KlassHero.Enrollment => EnrollmentPromoter,
+  KlassHero.Family => FamilyPromoter,
+  KlassHero.Messaging => MessagingPromoter,
+  KlassHero.Participation => ParticipationPromoter,
+  KlassHero.ProgramCatalog => ProgramCatalogPromoter,
+  KlassHero.Provider => ProviderPromoter
+}
+
 # Configure Event Publisher (domain events — internal context communication)
 config :klass_hero, :event_publisher,
   module: PubSubEventPublisher,
@@ -356,6 +381,8 @@ config :klass_hero, :messaging,
     retention_period_days: 30
   ]
 
+# Durable delivery for staged events. See Shared.Outbox.
+config :klass_hero, :outbox, module: ObanOutbox
 config :klass_hero, :resend_req_options, []
 
 config :klass_hero, :scopes,
