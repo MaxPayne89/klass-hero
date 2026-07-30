@@ -2,7 +2,6 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Participation
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 
@@ -30,10 +29,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
       |> stream(:sessions, [])
 
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(
-        KlassHero.PubSub,
-        "participation:provider:#{provider_id}"
-      )
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.provider_topic(provider_id))
     end
 
     {:ok, socket}
@@ -126,30 +122,28 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   end
 
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: session_id}}, socket)
-      when event_type in [:session_started, :session_completed, :session_created, :session_cancelled, :roster_seeded] do
+  def handle_info({:session_changed, session_id}, socket) do
     {:noreply, update_session_in_stream(socket, session_id)}
   end
 
   # A generated batch spans many dates and is keyed on the program, so reload the
   # day being viewed rather than patching individual rows.
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: :sessions_generated}}, socket) do
+  def handle_info({:sessions_generated, _program_id}, socket) do
     {:noreply, load_sessions(socket)}
   end
 
+  # Every attendance kind moves the session's checked-in count this view renders,
+  # not only check-in.
   @impl true
-  def handle_info(
-        {:domain_event, %DomainEvent{event_type: :child_checked_in, payload: %{session_id: session_id}}},
-        socket
-      ) do
+  def handle_info({:attendance_changed, %{session_id: session_id}}, socket) do
     {:noreply, update_session_in_stream(socket, session_id)}
   end
 
-  # The provider topic carries every participation event for this provider, not
+  # The provider topic carries every participation message for this provider, not
   # only the ones this view renders.
   @impl true
-  def handle_info({:domain_event, %DomainEvent{}}, socket), do: {:noreply, socket}
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   defp load_sessions(socket) do
     provider_id = socket.assigns.provider_id

@@ -34,28 +34,6 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsTest do
     end
   end
 
-  describe "subscription_event_types/1" do
-    test ":attendance group" do
-      assert ParticipationEvents.subscription_event_types(:attendance) ==
-               [:child_checked_in, :child_checked_out, :child_marked_absent]
-    end
-
-    test ":session_note group" do
-      assert ParticipationEvents.subscription_event_types(:session_note) ==
-               [:session_note_submitted, :session_note_approved, :session_note_rejected]
-    end
-
-    test "every subscription-group atom is a registered event type" do
-      registered = Map.new(@aggregate_table) |> Map.keys() |> MapSet.new()
-
-      for group <- [:attendance, :session_note],
-          event_type <- ParticipationEvents.subscription_event_types(group) do
-        assert MapSet.member?(registered, event_type),
-               "#{event_type} in group #{group} is not in @event_aggregates"
-      end
-    end
-  end
-
   describe "constructors derive aggregate_type from the registry" do
     test "attendance event carries :participation" do
       record = %ParticipationRecord{id: "rec-1", session_id: "sess-1", child_id: "child-1"}

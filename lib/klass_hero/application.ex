@@ -5,7 +5,6 @@ defmodule KlassHero.Application do
 
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.EnqueueInviteEmails
   alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteRegistered
-  alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnDocumentReview
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.AdvanceVettingStepOnIdentityOutcome
   alias KlassHero.Shared.DomainEventBus
@@ -68,55 +67,18 @@ defmodule KlassHero.Application do
         {DomainEventBus,
          context: KlassHero.Enrollment,
          handlers: [
-           {:participant_policy_set, {NotifyLiveViews, :handle}},
            {:bulk_invites_imported, {EnqueueInviteEmails, :handle}},
            {:invite_resend_requested, {EnqueueInviteEmails, :handle}},
-           {:invite_claimed, {MarkInviteRegistered, :handle}, priority: 5},
-           {:invite_deleted, {NotifyLiveViews, :handle}},
-           {:enrollment_confirmed, {NotifyLiveViews, :handle}}
+           {:invite_claimed, {MarkInviteRegistered, :handle}, priority: 5}
          ]},
         id: :enrollment_domain_event_bus
       ),
       Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.Messaging,
-         handlers: [
-           {:conversation_created,
-            {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:message_sent, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:messages_read, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:conversations_archived,
-            {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:retention_enforced, {KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}}
-         ]},
+        {DomainEventBus, context: KlassHero.Messaging, handlers: []},
         id: :messaging_domain_event_bus
       ),
       Supervisor.child_spec(
-        {DomainEventBus,
-         context: KlassHero.Participation,
-         handlers: [
-           {:session_created, {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:sessions_generated,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:session_cancelled,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:session_started, {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:session_completed,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:child_checked_in,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:child_checked_out,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:child_marked_absent,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:session_note_submitted,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:session_note_approved,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:session_note_rejected,
-            {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}},
-           {:roster_seeded, {KlassHero.Participation.Adapters.Driving.Events.EventHandlers.NotifyLiveViews, :handle}}
-         ]},
+        {DomainEventBus, context: KlassHero.Participation, handlers: []},
         id: :participation_domain_event_bus
       )
     ]

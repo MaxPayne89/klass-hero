@@ -2,7 +2,6 @@ import Config
 
 alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
 alias KlassHero.Provider.StripeIdentity
-alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
@@ -41,12 +40,6 @@ config :klass_hero, KlassHeroWeb.Endpoint,
 
 # Oban runs inline in tests so critical event handlers execute synchronously
 config :klass_hero, Oban, testing: :inline
-
-# Use test event publishers for testing
-config :klass_hero, :event_publisher,
-  module: TestEventPublisher,
-  pubsub: KlassHero.PubSub
-
 config :klass_hero, :feature_flags, adapter: StubFeatureFlagsAdapter
 
 config :klass_hero, :integration_event_publisher,

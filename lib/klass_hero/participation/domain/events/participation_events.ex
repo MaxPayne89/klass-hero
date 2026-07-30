@@ -50,20 +50,9 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
     session_note_rejected: :session_note
   }
 
-  # The event_types each LiveView group subscribes to. Kept alongside the registry
-  # so the facade can build the exact topic strings subscribers need.
-  @subscription_groups %{
-    attendance: [:child_checked_in, :child_checked_out, :child_marked_absent],
-    session_note: [:session_note_submitted, :session_note_approved, :session_note_rejected]
-  }
-
   @doc "Returns the aggregate_type registered for an event type. Raises if unknown."
   @spec aggregate_type_for(atom()) :: atom()
   def aggregate_type_for(event_type), do: Map.fetch!(@event_aggregates, event_type)
-
-  @doc "Returns the ordered event types a subscription group listens for."
-  @spec subscription_event_types(atom()) :: [atom()]
-  def subscription_event_types(group), do: Map.fetch!(@subscription_groups, group)
 
   @doc "Creates a session_created event."
   @spec session_created(ProgramSession.t(), keyword()) :: DomainEvent.t()

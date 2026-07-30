@@ -7,7 +7,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorkerTest 
   alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 
   setup do
-    EventTestHelper.setup_test_events()
+    EventTestHelper.setup_test_integration_events()
     :ok
   end
 
@@ -47,7 +47,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorkerTest 
 
       assert :ok = MessageCleanupWorker.perform(job)
 
-      EventTestHelper.assert_no_events_published()
+      EventTestHelper.assert_no_integration_events_published()
     end
 
     test "archives conversations for ended programs and publishes event" do
@@ -67,7 +67,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorkerTest 
 
       assert :ok = MessageCleanupWorker.perform(job)
 
-      EventTestHelper.assert_event_published(:conversations_archived, %{reason: :program_ended})
+      EventTestHelper.assert_integration_event_published(:conversations_archived, %{reason: :program_ended})
     end
 
     test "ignores non-integer days_after_program_end values" do

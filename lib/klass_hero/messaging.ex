@@ -35,7 +35,6 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
-  alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
 
   alias KlassHero.Messaging.{
     AnonymizeUserData,
@@ -62,6 +61,7 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.EmailReply
   alias KlassHero.Messaging.InboundEmail
   alias KlassHero.Messaging.Message
+  alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
 
@@ -709,7 +709,7 @@ defmodule KlassHero.Messaging do
   Used by LiveViews to subscribe to real-time updates for a specific conversation.
   """
   @spec conversation_topic(String.t()) :: String.t()
-  defdelegate conversation_topic(conversation_id), to: NotifyLiveViews
+  defdelegate conversation_topic(conversation_id), to: Notifications
 
   @doc """
   Returns the PubSub topic for a user's message notifications.
@@ -717,7 +717,7 @@ defmodule KlassHero.Messaging do
   Used by LiveViews to subscribe to new conversation and message notifications.
   """
   @spec user_messages_topic(String.t()) :: String.t()
-  defdelegate user_messages_topic(user_id), to: NotifyLiveViews
+  defdelegate user_messages_topic(user_id), to: Notifications
 
   # === Persistence — conversations ===
 
@@ -1212,11 +1212,12 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Fetches a message by id."
+  @doc "Fetches a message by id, with its attachments."
   @spec get_message_by_id(String.t()) :: {:ok, Message.t()} | {:error, :not_found}
   def get_message_by_id(id) do
     MessageQueries.base()
     |> MessageQueries.by_id(id)
+    |> MessageQueries.preload_assocs([:attachments])
     |> Repo.one()
     |> case do
       nil -> {:error, :not_found}

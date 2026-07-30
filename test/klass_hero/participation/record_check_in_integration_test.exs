@@ -12,14 +12,23 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
 
   use KlassHero.DataCase, async: true
 
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Shared.Adapters.Driven.Events.TestEventPublisher
 
   setup do
-    TestEventPublisher.setup()
+    setup_test_integration_events()
     :ok
+  end
+
+  # The user fixtures below stage `user_registered`, so filter to the events this
+  # test is about rather than asserting on everything the process emitted.
+  defp attendance_events do
+    Enum.filter(
+      get_published_integration_events(),
+      &(&1.event_type in [:child_checked_in, :child_checked_out])
+    )
   end
 
   describe "RecordCheckIn integration" do
@@ -39,8 +48,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       assert record.check_in_notes == "Arrived on time"
       assert %DateTime{} = record.check_in_at
 
-      # Dual-topic publishing: one publish per topic (generic + provider-specific)
-      events = TestEventPublisher.get_events()
+      events = get_published_integration_events()
       assert Enum.any?(events, &(&1.event_type == :child_checked_in))
 
       event = Enum.find(events, &(&1.event_type == :child_checked_in))
@@ -65,7 +73,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       assert record.status == :checked_in
       assert record.check_in_notes == nil
 
-      events = TestEventPublisher.get_events()
+      events = attendance_events()
       event = hd(events)
       assert event.payload.notes == nil
     end
@@ -80,7 +88,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
         })
 
       assert {:error, :not_found} = result
-      assert TestEventPublisher.get_events() == []
+      assert attendance_events() == []
     end
 
     test "returns error when checking in already checked-in record" do
@@ -100,7 +108,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
         })
 
       assert {:error, :invalid_status_transition} = result
-      assert TestEventPublisher.get_events() == []
+      assert attendance_events() == []
     end
   end
 
@@ -127,8 +135,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       assert record.check_out_notes == "Picked up by parent"
       assert %DateTime{} = record.check_out_at
 
-      # Dual-topic publishing: one publish per topic (generic + provider-specific)
-      events = TestEventPublisher.get_events()
+      events = attendance_events()
       assert Enum.any?(events, &(&1.event_type == :child_checked_out))
 
       event = Enum.find(events, &(&1.event_type == :child_checked_out))
@@ -159,7 +166,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       assert record.status == :checked_out
       assert record.check_out_notes == nil
 
-      events = TestEventPublisher.get_events()
+      events = attendance_events()
       event = hd(events)
       assert event.payload.notes == nil
     end
@@ -174,7 +181,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
         })
 
       assert {:error, :not_found} = result
-      assert TestEventPublisher.get_events() == []
+      assert attendance_events() == []
     end
 
     test "returns error when checking out a registered record" do
@@ -188,7 +195,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
         })
 
       assert {:error, :invalid_status_transition} = result
-      assert TestEventPublisher.get_events() == []
+      assert attendance_events() == []
     end
   end
 
@@ -218,7 +225,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       assert check_out_record.status == :checked_out
 
       # Verify both events were published (dual-topic: each event appears per topic)
-      events = TestEventPublisher.get_events()
+      events = attendance_events()
       assert Enum.any?(events, &(&1.event_type == :child_checked_in))
       assert Enum.any?(events, &(&1.event_type == :child_checked_out))
 

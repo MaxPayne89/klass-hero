@@ -85,7 +85,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/staff/sessions")
       refute has_element?(view, "button[phx-value-session_id='#{future.id}']")
 
-      emit_domain_event(view, ParticipationEvents.roster_seeded(future.id, program.id, 1))
+      send(view.pid, {:session_changed, future.id})
 
       refute has_element?(view, "button[phx-value-session_id='#{future.id}']")
     end

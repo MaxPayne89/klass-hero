@@ -16,7 +16,6 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL
   alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Queries.EnrollmentQueries
-  alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.NotifyLiveViews
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
@@ -25,6 +24,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.EnrollmentPolicy
   alias KlassHero.Enrollment.ImportEnrollmentCsv
   alias KlassHero.Enrollment.InviteSingleParticipant
+  alias KlassHero.Enrollment.Notifications
   alias KlassHero.Enrollment.ParticipantPolicy
   alias KlassHero.Enrollment.ParticipantPolicyForm
   alias KlassHero.Enrollment.SingleInviteForm
@@ -183,7 +183,7 @@ defmodule KlassHero.Enrollment do
            {:ok, confirmed} <- Enrollment.confirm(enrollment),
            {:ok, persisted} <-
              update_enrollment(enrollment_id, %{status: confirmed.status, confirmed_at: confirmed.confirmed_at}) do
-        dispatch_confirmation_event(persisted, provider_id)
+        notify_confirmation(persisted, provider_id)
       end
     end
   end
@@ -206,23 +206,12 @@ defmodule KlassHero.Enrollment do
     end
   end
 
-  defp dispatch_confirmation_event(%Enrollment{} = persisted, provider_id) do
-    dispatch_result =
-      persisted.id
-      |> EnrollmentEvents.enrollment_confirmed(%{
-        enrollment_id: persisted.id,
-        program_id: persisted.program_id,
-        provider_id: provider_id,
-        child_id: persisted.child_id,
-        parent_id: persisted.parent_id,
-        confirmed_at: persisted.confirmed_at
-      })
-      |> EventDispatchHelper.dispatch_or_error(__MODULE__)
-
-    case dispatch_result do
-      :ok -> {:ok, persisted}
-      {:error, _} = err -> err
-    end
+  # Previously gated on `dispatch_or_error`, whose only handler was the LiveView
+  # notifier — which swallowed every failure and returned :ok. The gate could not
+  # fail, so it is gone rather than reproduced.
+  defp notify_confirmation(%Enrollment{} = persisted, provider_id) do
+    Notifications.enrollment_confirmed(persisted.id, provider_id)
+    {:ok, persisted}
   end
 
   @doc """
@@ -245,8 +234,8 @@ defmodule KlassHero.Enrollment do
   """
   def set_participant_policy(attrs) when is_map(attrs) do
     context_span entity: "participant_policy" do
-      with {:ok, {policy, events}} <- upsert_policy_with_event(attrs) do
-        Enum.each(events, &EventDispatchHelper.dispatch(&1, __MODULE__))
+      with {:ok, {policy, _events}} <- upsert_policy_with_event(attrs) do
+        Notifications.participant_policy_set(policy.program_id)
         {:ok, policy}
       end
     end
@@ -393,17 +382,8 @@ defmodule KlassHero.Enrollment do
   """
   def delete_invite(invite_id, provider_id) when is_binary(invite_id) and is_binary(provider_id) do
     with {:ok, invite} <- get_invite(invite_id),
-         {:ok, _invite} <- authorize_invite_owner(invite, provider_id),
-         :ok <- delete_invite_record(invite_id) do
-      invite.id
-      |> EnrollmentEvents.invite_deleted(%{
-        invite_id: invite.id,
-        program_id: invite.program_id,
-        provider_id: invite.provider_id
-      })
-      |> EventDispatchHelper.dispatch(__MODULE__)
-
-      :ok
+         {:ok, _invite} <- authorize_invite_owner(invite, provider_id) do
+      delete_invite_record(invite_id)
     end
   end
 
@@ -593,12 +573,20 @@ defmodule KlassHero.Enrollment do
   end
 
   @doc """
-  Returns the provider-scoped PubSub topic for an Enrollment domain event.
+  Returns the provider-scoped PubSub topic for an Enrollment notification.
 
-  Subscribers (e.g. `DashboardLive`) call this to subscribe to the same
-  topic the publisher (`Enrollment.NotifyLiveViews`) derives.
+  Subscribers (e.g. `Provider.OverviewLive`) call this to subscribe to the same
+  topic `Notifications` publishes on.
   """
-  defdelegate provider_scoped_topic(event_type, provider_id), to: NotifyLiveViews
+  defdelegate provider_scoped_topic(event_type, provider_id), to: Notifications
+
+  @doc """
+  Returns the shared PubSub topic carrying participant-policy changes.
+
+  One topic for every program, so subscribers filter on the program id the
+  message carries.
+  """
+  defdelegate participant_policy_topic, to: Notifications
 
   @doc """
   Counts active (pending/confirmed) enrollments for a parent in the given month (defaults to current month).

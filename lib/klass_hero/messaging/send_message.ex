@@ -13,8 +13,8 @@ defmodule KlassHero.Messaging.SendMessage do
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Message
+  alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Shared.EventDispatchHelper
   alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Storage
 
@@ -57,7 +57,7 @@ defmodule KlassHero.Messaging.SendMessage do
          :ok <- Shared.verify_participant(conversation_id, sender_id),
          :ok <- verify_broadcast_send_permission(conversation_id, sender_id, conversation),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),
-         {:ok, {message_with_attachments, events}} <-
+         {:ok, {message_with_attachments, _events}} <-
            persist_message_and_attachments(
              conversation_id,
              sender_id,
@@ -66,8 +66,7 @@ defmodule KlassHero.Messaging.SendMessage do
              uploaded_files
            ) do
       update_sender_read_status(conversation_id, sender_id)
-      # The same event that was staged, not a second build of it.
-      Enum.each(events, &EventDispatchHelper.dispatch(&1, @context))
+      Notifications.message_sent(conversation_id, message_with_attachments.id)
 
       Logger.info("Message sent",
         message_id: message_with_attachments.id,

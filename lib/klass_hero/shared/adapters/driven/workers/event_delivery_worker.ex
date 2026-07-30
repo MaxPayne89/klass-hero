@@ -52,22 +52,17 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
     |> first_error()
   end
 
+  # No broadcast: `integration:` topics have no subscribers. Projections stopped
+  # subscribing in PR 3, and no LiveView ever did — those now receive tagged
+  # tuples from whoever wrote the data they read.
   defp deliver(%IntegrationEvent{} = event, job) do
     Context.attach_from_event(event)
     topic = PubSubIntegrationEventPublisher.derive_topic(event)
 
-    result =
-      topic
-      |> EventConsumerRegistry.consumers_for()
-      |> Enum.map(&run_consumer(&1, event, topic, job))
-      |> first_error()
-
-    # After the consumers, so a LiveView reacting to this refreshes from read
-    # tables the job has already updated. Sent even when a consumer failed —
-    # UI freshness should not wait on a projection, and the retry re-sends it.
-    PubSubIntegrationEventPublisher.publish(event, topic)
-
-    result
+    topic
+    |> EventConsumerRegistry.consumers_for()
+    |> Enum.map(&run_consumer(&1, event, topic, job))
+    |> first_error()
   end
 
   defp run_consumer({module, function} = consumer, event, topic, job) do

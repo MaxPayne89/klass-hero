@@ -11,7 +11,6 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
 
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Theme
@@ -45,12 +44,10 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       |> assign(:record_note_map, %{})
 
     if connected?(socket) do
-      # Attendance updates arrive on the provider-scoped topic (the publisher routes
-      # per provider); session-note topics derive from the event registry (#1108).
-      provider_topic = Participation.provider_topic(provider_id)
-
-      for topic <- [provider_topic | Participation.participation_topics(:session_note)],
-          do: Phoenix.PubSub.subscribe(KlassHero.PubSub, topic)
+      # One topic for everything this provider does — attendance and session notes
+      # alike. Notes used to arrive on their own registry-derived topics, which
+      # carried every provider's notes, not just this one's.
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.provider_topic(provider_id))
     end
 
     {:ok, load_session_data(socket)}
@@ -236,20 +233,19 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   end
 
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id}}, socket)
-      when event_type in [:child_checked_in, :child_checked_out, :child_marked_absent] do
+  def handle_info({:attendance_changed, %{record_id: record_id}}, socket) do
     {:noreply, update_participation_record(socket, record_id)}
   end
 
+  # Submitted adds a note, approved/rejected removes one — all three refresh.
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
-      when event_type in [:session_note_submitted, :session_note_approved, :session_note_rejected] do
+  def handle_info(:session_notes_changed, socket) do
     {:noreply, load_session_data(socket)}
   end
 
   @impl true
-  def handle_info({:domain_event, _event}, socket) do
-    # The provider-scoped topic also carries session-lifecycle events this view
+  def handle_info(_message, socket) do
+    # The provider-scoped topic also carries session-lifecycle messages this view
     # doesn't act on. Ignore them rather than crash on an unmatched message.
     {:noreply, socket}
   end

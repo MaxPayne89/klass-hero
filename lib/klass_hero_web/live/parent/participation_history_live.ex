@@ -3,7 +3,6 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
 
   alias KlassHero.Family
   alias KlassHero.Participation
-  alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -110,27 +109,26 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
   end
 
   # Ownership is guaranteed by the child-scoped subscription (#1121) — we only
-  # receive events for this parent's children, so no membership check is needed.
+  # receive messages for this parent's children, so no membership check is needed.
+  # A check-in is the only kind that puts a record at the top of the list.
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: event_type, aggregate_id: record_id}}, socket)
-      when event_type in [:child_checked_in, :child_checked_out, :child_marked_absent] do
-    opts = if event_type == :child_checked_in, do: [at: 0], else: []
+  def handle_info({:attendance_changed, %{record_id: record_id, kind: kind}}, socket) do
+    opts = if kind == :checked_in, do: [at: 0], else: []
     {:noreply, load_and_stream_record(socket, record_id, opts)}
   end
 
-  # Any session-note lifecycle event refreshes the pending list — submitted adds one,
+  # Any session-note change refreshes the pending list — submitted adds one,
   # approved/rejected removes one (e.g. reviewed from another device/tab).
   @impl true
-  def handle_info({:domain_event, %DomainEvent{event_type: event_type}}, socket)
-      when event_type in [:session_note_submitted, :session_note_approved, :session_note_rejected] do
+  def handle_info(:session_notes_changed, socket) do
     {:noreply, load_pending_notes(socket)}
   end
 
-  # publish_to_child_topic/1 fans out ANY child_id-bearing event to this LiveView's
-  # subscribed child topics. Ignore the ones with no display effect here rather than
-  # crashing on an unmatched message (a new child_id event must not break the page).
+  # The child topic carries anything scoped to this child. Ignore the messages with
+  # no display effect here rather than crashing on an unmatched one (a new
+  # child-scoped message must not break the page).
   @impl true
-  def handle_info({:domain_event, %DomainEvent{}}, socket), do: {:noreply, socket}
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   defp load_participation_history(socket) do
     parent_id = socket.assigns.parent_id

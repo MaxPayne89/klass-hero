@@ -160,8 +160,10 @@ defmodule KlassHeroWeb.Provider.MessagesLive.ShowTest do
 
       assert_push_event(view, "clear_message_input", %{})
 
-      html = render(view)
-      refute html =~ "Hello from provider!"
+      # Scoped to the input, not the page: the sender's own view streams the
+      # message back over PubSub, so the content is legitimately on the page.
+      refute render(view) |> LazyHTML.from_fragment() |> LazyHTML.filter("#message-input") |> LazyHTML.text() =~
+               "Hello from provider!"
     end
   end
 

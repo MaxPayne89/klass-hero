@@ -218,23 +218,10 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       # Session initially shows Start button
       assert has_element?(view, "button", "Start Session")
 
-      # Simulate PubSub event (matching actual broadcast format)
-      event =
-        ParticipationEvents.session_started(
-          struct!(ProgramSession, %{
-            id: session.id,
-            program_id: program.id,
-            session_date: Date.utc_today(),
-            start_time: ~T[15:00:00],
-            end_time: ~T[17:00:00],
-            status: :in_progress
-          })
-        )
-
       # Transition the session in DB so the re-fetch picks it up
       {:ok, _} = Participation.start_session(session.id)
 
-      emit_domain_event(view, event)
+      send(view.pid, {:session_changed, session.id})
 
       # After PubSub update, should show in_progress actions
       assert has_element?(view, "a", "Manage Participation")
@@ -259,16 +246,9 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       # Session initially visible
       assert has_element?(view, "button", "Start Session")
 
-      event =
-        ParticipationEvents.roster_seeded(
-          session.id,
-          program.id,
-          1
-        )
+      send(view.pid, {:session_changed, session.id})
 
-      emit_domain_event(view, event)
-
-      # Session still present in stream after roster_seeded event (no crash)
+      # Session still present in the stream afterwards (no crash)
       assert has_element?(view, "button", "Start Session")
     end
   end
@@ -520,19 +500,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/provider/sessions")
 
       # Simulate PubSub event for a session created today
-      event =
-        ParticipationEvents.session_created(
-          struct!(ProgramSession, %{
-            id: session.id,
-            program_id: program.id,
-            session_date: Date.utc_today(),
-            start_time: ~T[09:00:00],
-            end_time: ~T[11:00:00],
-            status: :scheduled
-          })
-        )
-
-      emit_domain_event(view, event)
+      send(view.pid, {:session_changed, session.id})
 
       # Session for today should appear in stream
       assert has_element?(view, "button", "Start Session")
@@ -561,19 +529,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       refute has_element?(view, "button", "Start Session")
 
       # Send a session_created event with tomorrow's date
-      event =
-        ParticipationEvents.session_created(
-          struct!(ProgramSession, %{
-            id: session.id,
-            program_id: program.id,
-            session_date: tomorrow,
-            start_time: ~T[09:00:00],
-            end_time: ~T[11:00:00],
-            status: :scheduled
-          })
-        )
-
-      emit_domain_event(view, event)
+      send(view.pid, {:session_changed, session.id})
 
       # Session is for tomorrow but we're viewing today — should NOT appear
       refute has_element?(view, "button", "Start Session")
@@ -595,17 +551,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
       # A schedule edit cancels every orphaned date at once, so this event routinely
       # concerns a day other than the one on screen.
-      event =
-        ParticipationEvents.session_cancelled(
-          struct!(ProgramSession, %{
-            id: session.id,
-            program_id: program.id,
-            session_date: tomorrow,
-            start_time: ~T[09:00:00]
-          })
-        )
-
-      emit_domain_event(view, event)
+      send(view.pid, {:session_changed, session.id})
 
       refute has_element?(view, "button", "Start Session")
     end
@@ -616,27 +562,9 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions")
 
-      # child_marked_absent already reaches the provider topic and this view
-      # renders no clause for it — without a catch-all that is a FunctionClauseError.
-      record =
-        struct!(ParticipationRecord, %{
-          id: Ecto.UUID.generate(),
-          session_id: Ecto.UUID.generate(),
-          child_id: Ecto.UUID.generate(),
-          status: :absent
-        })
-
-      session =
-        struct!(ProgramSession, %{
-          id: record.session_id,
-          program_id: program.id,
-          session_date: Date.utc_today(),
-          start_time: ~T[09:00:00]
-        })
-
-      event = ParticipationEvents.child_marked_absent(record, session)
-
-      emit_domain_event(view, event)
+      # Session notes reach the provider topic and this view renders no clause for
+      # them — without a catch-all that is a FunctionClauseError.
+      send(view.pid, :session_notes_changed)
 
       assert render(view) =~ "Select Date"
     end
