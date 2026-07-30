@@ -11,7 +11,6 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.CreateDirectConversation
   alias KlassHero.Provider.ProviderProfile
-  alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 
   describe "execute/3" do
     test "creates new conversation with participants" do
@@ -114,39 +113,6 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       assert event.entity_id == conversation.id
       assert event.payload.participant_user_ids == [staff_user.id]
       assert event.payload.source == "initial_staff"
-    end
-
-    test "post-commit dispatch contract: publish failure does NOT roll back the conversation" do
-      # Why this matters: events are dispatched *after* Repo.transaction commits,
-      # so a publish failure (e.g. PubSub down) cannot poison the user's flow.
-      # The persisted state stays consistent; Oban retries the publish for
-      # critical events.
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
-      target_user = AccountsFixtures.user_fixture()
-      staff_user = AccountsFixtures.user_fixture()
-
-      ProgramStaffParticipantRepository.upsert_active(%{
-        provider_id: provider.id,
-        program_id: program.id,
-        staff_user_id: staff_user.id
-      })
-
-      TestIntegrationEventPublisher.configure_publish_error(:pubsub_down)
-
-      assert {:ok, conversation} =
-               CreateDirectConversation.execute(
-                 scope,
-                 provider.id,
-                 target_user.id,
-                 program_id: program.id
-               )
-
-      # Conversation persists despite the publish failure
-      assert KlassHero.Messaging.participant?(conversation.id, scope.user.id)
-      assert KlassHero.Messaging.participant?(conversation.id, target_user.id)
-      assert KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
     test "does not add staff when no program_id provided" do

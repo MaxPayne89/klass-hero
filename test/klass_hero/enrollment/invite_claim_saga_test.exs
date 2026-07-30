@@ -103,7 +103,7 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
       # Outcome: create test data FIRST with test publisher, then swap to real PubSub
       invite_data = create_claimable_invite(context)
 
-      # Trigger: test config uses TestIntegrationEventPublisher (process dictionary storage)
+      # Trigger: test config uses TestOutbox (process dictionary storage)
       # Why: PromoteIntegrationEvents handlers must actually broadcast to PubSub so the
       #      EventSubscriber GenServers receive the events and drive the saga forward
       # Outcome: swap to real PubSub publisher for this test, restore in on_exit

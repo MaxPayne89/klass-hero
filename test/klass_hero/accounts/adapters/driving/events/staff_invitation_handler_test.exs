@@ -4,7 +4,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
 
   Calls handle_event/1 directly (no PubSub) and asserts on:
   - Email delivery via Swoosh test adapter
-  - Integration event emission via TestIntegrationEventPublisher
+  - Integration event emission via TestOutbox
   """
 
   use KlassHero.DataCase, async: true

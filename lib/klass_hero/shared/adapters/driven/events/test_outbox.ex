@@ -2,8 +2,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestOutbox do
   @moduledoc """
   Records staged events in the process dictionary instead of enqueueing them.
 
-  Mirrors `TestIntegrationEventPublisher`, and for the same reason: most tests
-  assert *what a producer emitted*, not what its consumers then did. Recording
+  Most tests assert *what a producer emitted*, not what its consumers then
+  did, and this is the only place that answer lives now. Recording
   also keeps `Oban, testing: :inline` from executing a delivery job **inside** the
   producer's transaction, which would run consumers before the write they describe
   had committed — a semantics the production path never has.

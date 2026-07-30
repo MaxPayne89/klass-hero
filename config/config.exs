@@ -31,7 +31,6 @@ alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
-alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
@@ -286,21 +285,8 @@ config :klass_hero, :event_consumers, %{
 # Which module maps a context's domain events to integration events. Read by
 # Shared.Outbox inside the producer's transaction. Goes away with the two-tier
 # event model; until then this is the one place the mapping is declared rather
-# than implied by a bus registration.
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter
-
-# Configure Integration Event Publisher (cross-context communication)
-config :klass_hero, :integration_event_publisher,
-  # Enrollment context needs no port wiring: it is conventional Phoenix (context module
-  # + Ecto schemas calling Repo directly). Its outbound cross-context ACLs, the invite
-  # email notifier, and the user-account resolver are called by KlassHero.Enrollment and
-  # its internal orchestrators directly, not via dependency injection.
-  # Messaging context needs no port wiring: it is conventional Phoenix (context module
-  # + Ecto schemas calling Repo directly). Its outbound cross-context ACL resolvers and
-  # the program-staff projection repository are called by name, not via dependency injection.
-  module: PubSubIntegrationEventPublisher,
-  pubsub: KlassHero.PubSub
 
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}
 
