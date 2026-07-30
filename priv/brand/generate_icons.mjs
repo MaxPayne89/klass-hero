@@ -15,7 +15,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -117,6 +117,96 @@ function findChrome() {
   return found
 }
 
+// Chrome can hang instead of exiting, and the sync spawn helpers default to a
+// timeout of 0 — wait forever. That combination stalled a ~1s rasterise for 30
+// minutes of CI (#1203) with no output and nothing to act on. 60s against an
+// observed ~1s is generous enough that a loaded runner never trips it.
+const RASTERIZE_TIMEOUT_MS = 60_000
+const RASTERIZE_ATTEMPTS = 2
+
+// `timeout`'s killSignal reaches only the process we spawned, so a killed Chrome
+// leaves its renderer and zygote children running — measured: one orphan per
+// attempt. `detached` makes Chrome a process-group leader so the whole group can be
+// reaped by signalling -pid.
+//
+// The signal-0 probe first is what makes that safe: if a future Node ignored
+// `detached`, the child would sit in our own group, the probe would raise ESRCH, and
+// we would skip rather than signal a group we do not own.
+function reapGroup(pid) {
+  if (!pid) return
+
+  try {
+    process.kill(-pid, 0)
+  } catch {
+    return // ESRCH — no group of ours to reap, which is the normal exit path.
+  }
+
+  try {
+    process.kill(-pid, 'SIGKILL')
+  } catch {
+    // Raced with the group exiting on its own. Nothing left to do.
+  }
+}
+
+function runChrome(chrome, { page, out, size }) {
+  const result = spawnSync(
+    chrome,
+    [
+      '--headless=new',
+      // Ubuntu 23.10+ sets apparmor_restrict_unprivileged_userns=1, so Chrome's
+      // namespace sandbox cannot start on the CI image. Opt-in rather than
+      // unconditional: local runs keep the sandbox. The only content rendered is
+      // a data: URI built by the caller, and the flag does not alter output bytes.
+      ...(process.env.CHROME_NO_SANDBOX ? ['--no-sandbox'] : []),
+      // Startup work that can block on the network but cannot affect rasterisation —
+      // the component updater and background fetches are the best remaining
+      // explanation for the #1203 stall, though an unreproducible hang means that
+      // stays a hypothesis. The timeout below is the actual guarantee.
+      //
+      // Notably absent, both tried and rejected:
+      //   --user-data-dir  hangs macOS Chrome outright — every location, precreated
+      //     or not, sandboxed or not, old headless or new. The default profile is
+      //     what works, even alongside a running Chrome.
+      //   --virtual-time-budget  the usual headless-screenshot advice, but it lets
+      //     Chrome capture before the data: URI <img> decodes, trading a loud hang
+      //     for a silently blank icon.
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-component-update',
+      '--disable-crash-reporter',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--hide-scrollbars',
+      '--force-device-scale-factor=1',
+      '--default-background-color=00000000',
+      `--screenshot=${out}`,
+      `--window-size=${size},${size}`,
+      page
+    ],
+    // SIGKILL, not the default SIGTERM: a wedged Chrome may never service a polite
+    // signal, and the whole point of the timeout is a bounded exit.
+    {
+      stdio: 'ignore',
+      timeout: RASTERIZE_TIMEOUT_MS,
+      killSignal: 'SIGKILL',
+      detached: true // see reapGroup above
+    }
+  )
+
+  // spawnSync reports rather than throws, so both failure shapes are handled here:
+  // `error` for the timeout, a non-zero `status` for a Chrome that exited badly.
+  if (result.error || result.status !== 0) {
+    reapGroup(result.pid)
+
+    throw (
+      result.error ??
+      new Error(
+        `Chrome exited ${result.signal ? `on ${result.signal}` : `with status ${result.status}`} rasterising ${size}px`
+      )
+    )
+  }
+}
+
 function rasterize(chrome, svg, size, tmp) {
   const page = path.join(tmp, `page-${size}.html`)
   const out = path.join(tmp, `out-${size}.png`)
@@ -129,25 +219,26 @@ function rasterize(chrome, svg, size, tmp) {
       `</body>`
   )
 
-  execFileSync(
-    chrome,
-    [
-      '--headless=new',
-      // Ubuntu 23.10+ sets apparmor_restrict_unprivileged_userns=1, so Chrome's
-      // namespace sandbox cannot start on the CI image. Opt-in rather than
-      // unconditional: local runs keep the sandbox. The only content rendered is
-      // a data: URI built two lines up, and the flag does not alter output bytes.
-      ...(process.env.CHROME_NO_SANDBOX ? ['--no-sandbox'] : []),
-      '--disable-gpu',
-      '--hide-scrollbars',
-      '--force-device-scale-factor=1',
-      '--default-background-color=00000000',
-      `--screenshot=${out}`,
-      `--window-size=${size},${size}`,
-      page
-    ],
-    { stdio: 'ignore' }
-  )
+  for (let attempt = 1; attempt <= RASTERIZE_ATTEMPTS; attempt++) {
+    // A timed-out Chrome can leave a partial screenshot behind, and --screenshot
+    // does not truncate what it cannot finish writing.
+    fs.rmSync(out, { force: true })
+
+    try {
+      runChrome(chrome, { page, out, size })
+      break
+    } catch (error) {
+      if (attempt === RASTERIZE_ATTEMPTS) {
+        throw new Error(
+          `Chrome failed to rasterise ${size}px after ${RASTERIZE_ATTEMPTS} attempts: ${error.message}`
+        )
+      }
+      // stderr, because stdout is the artifact listing this script emits.
+      console.error(
+        `  ! ${size}px rasterise failed (attempt ${attempt}/${RASTERIZE_ATTEMPTS}), retrying: ${error.message}`
+      )
+    }
+  }
 
   const png = fs.readFileSync(out)
   assertPngSize(png, size)
