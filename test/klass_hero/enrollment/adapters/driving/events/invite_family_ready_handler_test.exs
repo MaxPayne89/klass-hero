@@ -6,7 +6,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
   alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   defp create_registered_invite(_context) do
     provider = insert(:provider_profile_schema)
@@ -56,7 +56,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
       child: child
     } do
       event =
-        IntegrationEvent.new(
+        Event.new(
           :invite_family_ready,
           :family,
           :invite,
@@ -88,7 +88,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
       |> Repo.update!()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :invite_family_ready,
           :family,
           :invite,
@@ -107,7 +107,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
 
     test "returns :ok for nonexistent invite" do
       event =
-        IntegrationEvent.new(
+        Event.new(
           :invite_family_ready,
           :family,
           :invite,
@@ -125,7 +125,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
     end
 
     test "ignores unrelated events" do
-      event = IntegrationEvent.new(:something_else, :other, :thing, "id", %{})
+      event = Event.new(:something_else, :other, :thing, "id", %{})
       assert :ignore = InviteFamilyReadyHandler.handle_event(event)
     end
   end

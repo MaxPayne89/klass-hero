@@ -14,22 +14,14 @@ defmodule KlassHero.EventTestHelper do
         assert_integration_event_published(:user_registered, %{email: user.email})
       end
 
-  The domain-event half of this module is gone: LiveViews receive tagged tuples
-  now, so a test that wants to drive one `send/2`s the tuple, and a test that
-  wants to check a notification subscribes to the topic and asserts on the
-  message. Neither needs a helper.
+  "Emitted" now means one thing: staged for delivery. There is no publish path
+  left to be the other half of the answer.
   """
 
   import ExUnit.Assertions
 
-  alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
-  alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
-
-  # ===========================================================================
-  # Integration Event Unit Test Helpers (TestIntegrationEventPublisher)
-  # ===========================================================================
+  alias KlassHero.Shared.Domain.Events.Event
 
   @doc """
   Initializes integration event collection for the current test.
@@ -38,7 +30,6 @@ defmodule KlassHero.EventTestHelper do
   """
   @spec setup_test_integration_events() :: :ok
   def setup_test_integration_events do
-    TestIntegrationEventPublisher.setup()
     TestOutbox.setup()
   end
 
@@ -47,21 +38,15 @@ defmodule KlassHero.EventTestHelper do
   """
   @spec clear_integration_events() :: :ok
   def clear_integration_events do
-    TestIntegrationEventPublisher.clear()
     TestOutbox.setup()
   end
 
   @doc """
-  Every integration event the code under test emitted, by either route.
-
-  A producer either publishes post-commit (the old path) or stages inside its
-  transaction (the outbox). Both mean the same thing to a test — *this write emitted
-  this event* — so both are collected here while contexts are migrated one at a
-  time. The publisher half goes when the last producer moves.
+  Every integration event the code under test staged.
   """
-  @spec get_published_integration_events() :: [IntegrationEvent.t()]
+  @spec get_published_integration_events() :: [Event.t()]
   def get_published_integration_events do
-    TestIntegrationEventPublisher.get_events() ++ TestOutbox.staged()
+    TestOutbox.staged()
   end
 
   @doc """
@@ -71,12 +56,12 @@ defmodule KlassHero.EventTestHelper do
 
       assert_integration_event_published(:child_data_anonymized)
   """
-  @spec assert_integration_event_published(atom()) :: IntegrationEvent.t()
+  @spec assert_integration_event_published(atom()) :: Event.t()
   def assert_integration_event_published(event_type) when is_atom(event_type) do
     events = get_published_integration_events()
 
     event =
-      Enum.find(events, fn %IntegrationEvent{event_type: type} ->
+      Enum.find(events, fn %Event{event_type: type} ->
         type == event_type
       end)
 
@@ -97,19 +82,19 @@ defmodule KlassHero.EventTestHelper do
 
       assert_integration_event_published(:child_data_anonymized, %{child_id: "uuid"})
   """
-  @spec assert_integration_event_published(atom(), map()) :: IntegrationEvent.t()
+  @spec assert_integration_event_published(atom(), map()) :: Event.t()
   def assert_integration_event_published(event_type, expected_payload)
       when is_atom(event_type) and is_map(expected_payload) do
     events = get_published_integration_events()
 
     event =
-      Enum.find(events, fn %IntegrationEvent{event_type: type, payload: payload} ->
+      Enum.find(events, fn %Event{event_type: type, payload: payload} ->
         type == event_type && payload_matches?(payload, expected_payload)
       end)
 
     if event == nil do
       matching_type_events =
-        Enum.filter(events, fn %IntegrationEvent{event_type: type} ->
+        Enum.filter(events, fn %Event{event_type: type} ->
           type == event_type
         end)
 
@@ -134,21 +119,21 @@ defmodule KlassHero.EventTestHelper do
   @doc """
   Asserts that an integration event of the given type was published to `topic`.
 
-  Proves the real producer/consumer topic coupling (#1122): the topic recorded
-  here is the exact `integration:<context>:<event>` string the event was routed
-  on, so the `critical_event_handlers` registry entry keyed by `topic` would have
-  received it. Returns the matching event.
+  Proves the real producer/consumer topic coupling (#1122): the topic is derived
+  through the same function the delivery job uses, so the `:event_consumers`
+  entry keyed by `topic` is the one that would have received it. Returns the
+  matching event.
 
   ## Examples
 
       assert_integration_published_to(:invite_claimed, "integration:enrollment:invite_claimed")
   """
-  @spec assert_integration_published_to(atom(), String.t()) :: IntegrationEvent.t()
+  @spec assert_integration_published_to(atom(), String.t()) :: Event.t()
   def assert_integration_published_to(event_type, topic) when is_atom(event_type) and is_binary(topic) do
-    published = TestIntegrationEventPublisher.get_published() ++ staged_with_topics()
+    published = staged_with_topics()
 
     match =
-      Enum.find(published, fn {%IntegrationEvent{event_type: type}, published_topic} ->
+      Enum.find(published, fn {%Event{event_type: type}, published_topic} ->
         type == event_type and published_topic == topic
       end)
 
@@ -160,12 +145,10 @@ defmodule KlassHero.EventTestHelper do
     event
   end
 
-  # Staged events carry no topic of their own — the delivery job derives it the same
-  # way the publisher did, so deriving it here compares like with like.
+  # Staged events carry no topic of their own — the delivery job derives one, so
+  # deriving it here through the same function compares like with like.
   defp staged_with_topics do
-    for %IntegrationEvent{source_context: context, event_type: type} = event <- TestOutbox.staged() do
-      {event, "integration:#{context}:#{type}"}
-    end
+    for event <- TestOutbox.staged(), do: {event, Event.topic(event)}
   end
 
   @doc """

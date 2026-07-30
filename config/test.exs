@@ -2,7 +2,6 @@ import Config
 
 alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
 alias KlassHero.Provider.StripeIdentity
-alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
@@ -41,10 +40,6 @@ config :klass_hero, KlassHeroWeb.Endpoint,
 # Oban runs inline in tests so critical event handlers execute synchronously
 config :klass_hero, Oban, testing: :inline
 config :klass_hero, :feature_flags, adapter: StubFeatureFlagsAdapter
-
-config :klass_hero, :integration_event_publisher,
-  module: TestIntegrationEventPublisher,
-  pubsub: KlassHero.PubSub
 
 # Record staged events rather than enqueueing them — see TestOutbox for why
 # `Oban, testing: :inline` makes that the safe default inside a transaction.

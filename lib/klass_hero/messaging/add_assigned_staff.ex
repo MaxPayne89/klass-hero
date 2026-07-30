@@ -18,17 +18,17 @@ defmodule KlassHero.Messaging.AddAssignedStaff do
   ## Returns
 
   - `{:ok, {added_user_ids, events}}` — `events` is a list of zero or one
-    `DomainEvent` structs. Empty when no eligible staff exist or when
+    `Event` structs. Empty when no eligible staff exist or when
     `program_id` is `nil`.
   - `{:error, reason}` — when the participant batch insert fails.
   """
 
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @spec execute(String.t(), String.t() | nil, String.t()) ::
-          {:ok, {[String.t()], [DomainEvent.t()]}} | {:error, term()}
+          {:ok, {[String.t()], [Event.t()]}} | {:error, term()}
   def execute(_conversation_id, nil, _excluded_user_id), do: {:ok, {[], []}}
 
   def execute(conversation_id, program_id, excluded_user_id) do

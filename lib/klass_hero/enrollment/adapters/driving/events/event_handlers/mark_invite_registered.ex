@@ -8,12 +8,12 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.MarkInviteR
   """
 
   alias KlassHero.Enrollment
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   require Logger
 
-  @spec handle(DomainEvent.t()) :: :ok | {:error, term()}
-  def handle(%DomainEvent{event_type: :invite_claimed} = event) do
+  @spec handle(Event.t()) :: :ok | {:error, term()}
+  def handle(%Event{event_type: :invite_claimed} = event) do
     %{invite_id: invite_id} = event.payload
 
     case Enrollment.get_invite(invite_id) do

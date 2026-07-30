@@ -7,7 +7,7 @@ defmodule KlassHero.Accounts do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Accounts.Domain.Events.{AccountsIntegrationEvents, UserEvents}
+  alias KlassHero.Accounts.Domain.Events.AccountsEvents
   alias KlassHero.Accounts.{PersonaGrant, User, UserNotifier, UserToken}
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
@@ -40,7 +40,7 @@ defmodule KlassHero.Accounts do
   defp register(attrs, changeset_fn) when is_map(attrs) do
     Outbox.transact(__MODULE__, fn ->
       with {:ok, user} <- %User{} |> changeset_fn.(attrs) |> Repo.insert() do
-        {:ok, user, [UserEvents.user_registered(user, %{registration_source: "web"})]}
+        {:ok, user, [AccountsEvents.user_registered(user, %{registration_source: "web"})]}
       end
     end)
     |> case do
@@ -214,7 +214,7 @@ defmodule KlassHero.Accounts do
   def emit_staff_user_registered(user_id, staff_member_id, provider_id)
       when is_binary(user_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     user_id
-    |> AccountsIntegrationEvents.staff_user_registered(%{
+    |> AccountsEvents.staff_user_registered(%{
       staff_member_id: staff_member_id,
       provider_id: provider_id
     })
@@ -230,18 +230,7 @@ defmodule KlassHero.Accounts do
   """
   def update_user_email(%User{} = user, token) when is_binary(token) do
     context_span entity: "user" do
-      previous_email = user.email
-
-      case apply_email_change(user, token) do
-        {:ok, updated_user} ->
-          UserEvents.user_email_changed(updated_user, %{previous_email: previous_email})
-          |> EventDispatchHelper.dispatch(__MODULE__)
-
-          {:ok, updated_user}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      apply_email_change(user, token)
     end
   end
 
@@ -391,7 +380,7 @@ defmodule KlassHero.Accounts do
     Outbox.transact(__MODULE__, fn ->
       with {:ok, {confirmed_user, tokens}} <-
              user |> User.confirm_changeset() |> update_user_and_delete_all_tokens() do
-        event = UserEvents.user_confirmed(confirmed_user, %{confirmation_method: "magic_link"})
+        event = AccountsEvents.user_confirmed(confirmed_user, %{confirmation_method: "magic_link"})
         {:ok, {confirmed_user, tokens}, [event]}
       end
     end)
@@ -472,7 +461,7 @@ defmodule KlassHero.Accounts do
 
       Outbox.transact(__MODULE__, fn ->
         with {:ok, anonymized_user} <- anonymize(user) do
-          event = UserEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
+          event = AccountsEvents.user_anonymized(anonymized_user, %{previous_email: previous_email})
           {:ok, anonymized_user, [event]}
         end
       end)

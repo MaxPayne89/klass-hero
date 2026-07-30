@@ -2,7 +2,7 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsInviteClaimedTest d
   use ExUnit.Case, async: true
 
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   describe "invite_claimed/3" do
     test "creates a domain event with correct structure" do
@@ -21,10 +21,10 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsInviteClaimedTest d
 
       event = EnrollmentEvents.invite_claimed(invite_id, payload)
 
-      assert %DomainEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :invite_claimed
-      assert event.aggregate_id == invite_id
-      assert event.aggregate_type == :invite
+      assert event.entity_id == invite_id
+      assert event.entity_type == :invite
       assert event.payload.invite_id == invite_id
     end
 

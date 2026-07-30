@@ -28,7 +28,7 @@ defmodule KlassHero.Shared.Projection do
         end
 
         @impl KlassHero.Shared.Projection
-        def handle_event(:some_event, %IntegrationEvent{} = event) do
+        def handle_event(:some_event, %Event{} = event) do
           # upsert into the read table
         end
       end
@@ -37,10 +37,10 @@ defmodule KlassHero.Shared.Projection do
   canonical example.
   """
 
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @callback bootstrap_impl() :: non_neg_integer()
-  @callback handle_event(event_type :: atom(), event :: IntegrationEvent.t()) :: any()
+  @callback handle_event(event_type :: atom(), event :: Event.t()) :: any()
 
   defmacro __before_compile__(_env) do
     quote do
@@ -63,7 +63,7 @@ defmodule KlassHero.Shared.Projection do
 
       use GenServer
 
-      alias KlassHero.Shared.Domain.Events.IntegrationEvent
+      alias KlassHero.Shared.Domain.Events.Event
       alias KlassHero.Shared.Projection
 
       require Logger
@@ -85,8 +85,8 @@ defmodule KlassHero.Shared.Projection do
       whole event rather than `(type, event)` — it makes a projection shaped like
       every other consumer in the registry.
       """
-      @spec project(IntegrationEvent.t()) :: :ok
-      def project(%IntegrationEvent{event_type: type} = event) do
+      @spec project(Event.t()) :: :ok
+      def project(%Event{event_type: type} = event) do
         handle_event(type, event)
         :ok
       end

@@ -4,7 +4,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
 
   Calls handle_event/1 directly (no PubSub) and asserts on:
   - Email delivery via Swoosh test adapter
-  - Integration event emission via TestIntegrationEventPublisher
+  - Integration event emission via TestOutbox
   """
 
   use KlassHero.DataCase, async: true
@@ -15,8 +15,8 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
   import Swoosh.TestAssertions
 
   alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
-  alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Shared.Domain.Events.Event
 
   setup do
     setup_test_integration_events()
@@ -26,7 +26,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
   defp build_staff_member_invited_event(attrs) do
     staff_member_id = Map.get(attrs, :staff_member_id, Ecto.UUID.generate())
 
-    ProviderIntegrationEvents.staff_member_invited(
+    ProviderEvents.staff_member_invited(
       staff_member_id,
       Map.delete(attrs, :staff_member_id)
     )
@@ -147,7 +147,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
 
   describe "handle_event/1 — unknown events" do
     test "ignores unknown events" do
-      event = IntegrationEvent.new(:unknown, :some_context, :some_entity, "some-id", %{})
+      event = Event.new(:unknown, :some_context, :some_entity, "some-id", %{})
       assert :ignore = StaffInvitationHandler.handle_event(event)
     end
   end
@@ -155,7 +155,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
   describe "handle_event/1 — malformed payloads" do
     test "returns error for missing email in payload" do
       event =
-        ProviderIntegrationEvents.staff_member_invited(Ecto.UUID.generate(), %{
+        ProviderEvents.staff_member_invited(Ecto.UUID.generate(), %{
           provider_id: Ecto.UUID.generate(),
           first_name: "Jane",
           business_name: "Test Co",

@@ -3,7 +3,7 @@ defmodule KlassHero.Messaging.Notifications do
   Tells mounted LiveViews that a piece of messaging state changed.
 
   Replaces the `NotifyLiveViews` bus handler. A LiveView receives a tagged tuple
-  naming what changed, never a `%DomainEvent{}`.
+  naming what changed, never an event struct.
 
       {:message_sent, message_id}   # conversation topic — the open thread
       :conversations_changed        # user topic — that user's conversation list

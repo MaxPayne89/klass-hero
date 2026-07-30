@@ -9,38 +9,27 @@ import Config
 
 alias ExAws.Request.Req
 alias FunWithFlags.Notifications.PhoenixPubSub
-alias KlassHero.Accounts.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: AccountsPromoter
 alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
-alias KlassHero.Enrollment.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: EnrollmentPromoter
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
-alias KlassHero.Family.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: FamilyPromoter
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
 alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
-alias KlassHero.Messaging.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: MessagingPromoter
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
-alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: ParticipationPromoter
 alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
 alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
-
-alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents,
-  as: ProgramCatalogPromoter
-
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
 alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
-alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.PromoteIntegrationEvents, as: ProviderPromoter
 alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
 alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
 alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
-alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
@@ -144,9 +133,9 @@ config :klass_hero, :default_tz, "Europe/Berlin"
 # outbox delivery job; see EventConsumerRegistry for why handlers and projections
 # are the same kind of entry.
 #
-# This supersedes :critical_event_handlers above, which routes only the subset a
-# human marked critical and is deleted at the end of this PR. A test asserts the
-# old map stays a subset of this one until then.
+# Being in this table is also what decides whether an event is staged at all:
+# `Shared.Outbox` drops one no consumer is registered for, since the delivery
+# job would have nothing to do with it.
 config :klass_hero, :event_consumers, %{
   # Accounts
   "integration:accounts:user_registered" => [
@@ -292,35 +281,8 @@ config :klass_hero, :event_consumers, %{
   ]
 }
 
-# Which module maps a context's domain events to integration events. Read by
-# Shared.Outbox inside the producer's transaction. Goes away with the two-tier
-# event model; until then this is the one place the mapping is declared rather
-# than implied by a bus registration.
-config :klass_hero, :event_promoters, %{
-  KlassHero.Accounts => AccountsPromoter,
-  KlassHero.Enrollment => EnrollmentPromoter,
-  KlassHero.Family => FamilyPromoter,
-  KlassHero.Messaging => MessagingPromoter,
-  KlassHero.Participation => ParticipationPromoter,
-  KlassHero.ProgramCatalog => ProgramCatalogPromoter,
-  KlassHero.Provider => ProviderPromoter
-}
-
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter
-
-# Configure Integration Event Publisher (cross-context communication)
-config :klass_hero, :integration_event_publisher,
-  # Enrollment context needs no port wiring: it is conventional Phoenix (context module
-  # + Ecto schemas calling Repo directly). Its outbound cross-context ACLs, the invite
-  # email notifier, and the user-account resolver are called by KlassHero.Enrollment and
-  # its internal orchestrators directly, not via dependency injection.
-  # Messaging context needs no port wiring: it is conventional Phoenix (context module
-  # + Ecto schemas calling Repo directly). Its outbound cross-context ACL resolvers and
-  # the program-staff projection repository are called by name, not via dependency injection.
-  module: PubSubIntegrationEventPublisher,
-  pubsub: KlassHero.PubSub
-
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}
 
 config :klass_hero, :messaging,

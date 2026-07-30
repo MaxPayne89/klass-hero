@@ -21,7 +21,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   describe "staff messaging end-to-end" do
     setup do
@@ -127,7 +127,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   end
 
   defp build_assignment_event(provider_id, program_id, staff_member_id, staff_user_id) do
-    %IntegrationEvent{
+    %Event{
       event_id: Ecto.UUID.generate(),
       event_type: :staff_assigned_to_program,
       source_context: :provider,
@@ -145,7 +145,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   end
 
   defp build_unassignment_event(provider_id, program_id, staff_member_id, staff_user_id) do
-    %IntegrationEvent{
+    %Event{
       event_id: Ecto.UUID.generate(),
       event_type: :staff_unassigned_from_program,
       source_context: :provider,

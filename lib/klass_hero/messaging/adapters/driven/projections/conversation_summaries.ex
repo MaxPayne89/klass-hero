@@ -58,7 +58,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   alias KlassHero.Messaging.Notifications
   alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
 
   @broadcast_token_regex ~r/\[broadcast:[^\]]+\]/
@@ -67,7 +67,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   def bootstrap_impl, do: bootstrap_from_write_tables()
 
   @impl Projection
-  def handle_event(:conversation_created, %IntegrationEvent{} = event) do
+  def handle_event(:conversation_created, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting conversation_created",
       conversation_id: event.entity_id,
       event_id: event.event_id
@@ -76,7 +76,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_conversation_created(event)
   end
 
-  def handle_event(:message_sent, %IntegrationEvent{} = event) do
+  def handle_event(:message_sent, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting message_sent",
       conversation_id: event.entity_id,
       event_id: event.event_id
@@ -85,7 +85,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_message_sent(event)
   end
 
-  def handle_event(:messages_read, %IntegrationEvent{} = event) do
+  def handle_event(:messages_read, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting messages_read",
       conversation_id: event.entity_id,
       event_id: event.event_id
@@ -94,7 +94,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_messages_read(event)
   end
 
-  def handle_event(:conversation_archived, %IntegrationEvent{} = event) do
+  def handle_event(:conversation_archived, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting conversation_archived",
       conversation_id: event.entity_id,
       event_id: event.event_id
@@ -103,7 +103,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_conversation_archived(event)
   end
 
-  def handle_event(:conversations_archived, %IntegrationEvent{} = event) do
+  def handle_event(:conversations_archived, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting conversations_archived",
       event_id: event.event_id
     )
@@ -111,7 +111,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_conversations_archived(event)
   end
 
-  def handle_event(:message_data_anonymized, %IntegrationEvent{} = event) do
+  def handle_event(:message_data_anonymized, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting message_data_anonymized",
       user_id: event.entity_id,
       event_id: event.event_id
@@ -120,7 +120,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_message_data_anonymized(event)
   end
 
-  def handle_event(:participant_added, %IntegrationEvent{} = event) do
+  def handle_event(:participant_added, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting participant_added",
       conversation_id: event.entity_id,
       event_id: event.event_id
@@ -129,7 +129,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     project_participant_added(event)
   end
 
-  def handle_event(:participant_removed, %IntegrationEvent{} = event) do
+  def handle_event(:participant_removed, %Event{} = event) do
     Logger.debug("ConversationSummaries projecting participant_removed",
       conversation_id: event.entity_id,
       event_id: event.event_id

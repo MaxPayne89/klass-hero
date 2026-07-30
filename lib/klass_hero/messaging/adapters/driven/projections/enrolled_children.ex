@@ -65,22 +65,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
 
   @impl Projection
   def bootstrap_impl, do: bootstrap_from_write_tables()
 
   @impl Projection
-  def handle_event(:enrollment_created, %IntegrationEvent{} = event), do: project_enrollment_created(event)
+  def handle_event(:enrollment_created, %Event{} = event), do: project_enrollment_created(event)
 
-  def handle_event(:enrollment_cancelled, %IntegrationEvent{} = event), do: project_enrollment_cancelled(event)
+  def handle_event(:enrollment_cancelled, %Event{} = event), do: project_enrollment_cancelled(event)
 
-  def handle_event(:child_created, %IntegrationEvent{} = event), do: project_child_name_change(event)
+  def handle_event(:child_created, %Event{} = event), do: project_child_name_change(event)
 
-  def handle_event(:child_updated, %IntegrationEvent{} = event), do: project_child_name_change(event)
+  def handle_event(:child_updated, %Event{} = event), do: project_child_name_change(event)
 
-  def handle_event(:conversation_created, %IntegrationEvent{} = event), do: project_conversation_created(event)
+  def handle_event(:conversation_created, %Event{} = event), do: project_conversation_created(event)
 
   # Private — Bootstrap ───────────────────────────────────────────────────────
 

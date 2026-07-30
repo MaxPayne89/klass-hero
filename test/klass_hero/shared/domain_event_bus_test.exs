@@ -15,7 +15,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.DomainEventBus
 
   @test_context __MODULE__.TestContext
@@ -43,7 +43,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
   end
 
   defp build_event(event_type, payload \\ %{}) do
-    DomainEvent.new(event_type, "entity-1", :test, payload)
+    Event.new(event_type, :test_context, :test, "entity-1", payload)
   end
 
   defp handler_count(context, event_type) do
@@ -474,12 +474,12 @@ defmodule KlassHero.Shared.DomainEventBusTest do
 
   defmodule TestCriticalHandler do
     @moduledoc false
-    def handle(%DomainEvent{} = _event), do: :ok
+    def handle(%Event{} = _event), do: :ok
   end
 
   defmodule TestCriticalFailHandler do
     @moduledoc false
-    def handle(%DomainEvent{} = _event), do: {:error, :critical_fail}
+    def handle(%Event{} = _event), do: {:error, :critical_fail}
   end
 
   describe "dispatch_critical/2" do
@@ -495,7 +495,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
         id: make_ref()
       )
 
-      event = DomainEvent.new(:test_event, "agg-1", :test, %{})
+      event = Event.new(:test_event, :test_context, :test, "agg-1", %{})
 
       assert {:ok, results} = DomainEventBus.dispatch_critical(context, event)
       assert [{handler_identity, :ok}] = results
@@ -515,7 +515,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
         id: make_ref()
       )
 
-      event = DomainEvent.new(:test_event, "agg-1", :test, %{})
+      event = Event.new(:test_event, :test_context, :test, "agg-1", %{})
 
       assert {:ok, results} = DomainEventBus.dispatch_critical(context, event)
 
@@ -535,7 +535,7 @@ defmodule KlassHero.Shared.DomainEventBusTest do
       start_supervised!({DomainEventBus, context: context}, id: make_ref())
 
       DomainEventBus.subscribe(context, :test_event, fn _event -> :ok end)
-      event = DomainEvent.new(:test_event, "agg-1", :test, %{})
+      event = Event.new(:test_event, :test_context, :test, "agg-1", %{})
 
       assert {:ok, results} = DomainEventBus.dispatch_critical(context, event)
       assert [{:anonymous, :ok}] = results

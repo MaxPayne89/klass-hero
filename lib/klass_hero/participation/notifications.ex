@@ -4,7 +4,7 @@ defmodule KlassHero.Participation.Notifications do
 
   Replaces the `NotifyLiveViews` bus handler. The difference that matters is the
   wire format: a LiveView receives a tagged tuple naming what changed and the ids
-  it needs to refetch, never a `%DomainEvent{}`. Nothing in the web layer knows
+  it needs to refetch, never a `%Event{}`. Nothing in the web layer knows
   the event system exists.
 
       {:session_changed, session_id}
@@ -35,7 +35,7 @@ defmodule KlassHero.Participation.Notifications do
   """
 
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   require Logger
 
@@ -50,12 +50,12 @@ defmodule KlassHero.Participation.Notifications do
   @note_events [:session_note_submitted, :session_note_approved, :session_note_rejected]
 
   @doc "Notifies for each event in turn, preserving the order they were staged in."
-  @spec notify_all([DomainEvent.t()]) :: :ok
+  @spec notify_all([Event.t()]) :: :ok
   def notify_all(events), do: Enum.each(events, &notify/1)
 
   @doc "Notifies every topic that carries this event's UI message."
-  @spec notify(DomainEvent.t()) :: :ok
-  def notify(%DomainEvent{} = event) do
+  @spec notify(Event.t()) :: :ok
+  def notify(%Event{} = event) do
     case message(event) do
       nil -> :ok
       message -> Enum.each(topics(event), &broadcast(&1, message))
@@ -77,13 +77,13 @@ defmodule KlassHero.Participation.Notifications do
   # Matching the id out of the payload rather than fetching it: an event missing
   # the id its message is built from falls through to the catch-all and notifies
   # nobody, instead of broadcasting a tuple with a nil in it.
-  defp message(%DomainEvent{event_type: type, payload: %{session_id: session_id}}) when type in @session_events,
+  defp message(%Event{event_type: type, payload: %{session_id: session_id}}) when type in @session_events,
     do: {:session_changed, session_id}
 
-  defp message(%DomainEvent{event_type: :sessions_generated, payload: %{program_id: program_id}}),
+  defp message(%Event{event_type: :sessions_generated, payload: %{program_id: program_id}}),
     do: {:sessions_generated, program_id}
 
-  defp message(%DomainEvent{event_type: type, payload: payload}) when is_map_key(@attendance_kinds, type) do
+  defp message(%Event{event_type: type, payload: payload}) when is_map_key(@attendance_kinds, type) do
     {:attendance_changed,
      %{
        record_id: Map.get(payload, :record_id),
@@ -93,23 +93,23 @@ defmodule KlassHero.Participation.Notifications do
      }}
   end
 
-  defp message(%DomainEvent{event_type: type}) when type in @note_events, do: :session_notes_changed
+  defp message(%Event{event_type: type}) when type in @note_events, do: :session_notes_changed
 
-  defp message(%DomainEvent{}), do: nil
+  defp message(%Event{}), do: nil
 
-  defp topics(%DomainEvent{payload: payload} = event) do
+  defp topics(%Event{payload: payload} = event) do
     provider_topics(event) ++ child_topics(payload)
   end
 
   # Session notes know their provider; everything else has to ask the catalog.
-  defp provider_topics(%DomainEvent{event_type: type, payload: payload}) when type in @note_events do
+  defp provider_topics(%Event{event_type: type, payload: payload}) when type in @note_events do
     case Map.fetch(payload, :provider_id) do
       {:ok, provider_id} -> [provider_topic(provider_id)]
       :error -> []
     end
   end
 
-  defp provider_topics(%DomainEvent{payload: payload} = event) do
+  defp provider_topics(%Event{payload: payload} = event) do
     case Map.fetch(payload, :program_id) do
       {:ok, program_id} -> resolve_provider_topics(program_id, event)
       :error -> []

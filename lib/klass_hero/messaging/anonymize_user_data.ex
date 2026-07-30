@@ -50,7 +50,7 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
            {:ok, part_count} <-
              tag_step(:mark_as_left, KlassHero.Messaging.mark_all_participations_left(user_id)) do
         result = %{messages_anonymized: msg_count, participants_updated: part_count}
-        {:ok, result, [MessagingEvents.user_data_anonymized(user_id)]}
+        {:ok, result, [MessagingEvents.message_data_anonymized(user_id)]}
       end
     end)
   end

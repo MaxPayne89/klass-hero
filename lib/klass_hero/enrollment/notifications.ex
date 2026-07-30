@@ -3,7 +3,7 @@ defmodule KlassHero.Enrollment.Notifications do
   Tells mounted LiveViews that a piece of enrollment state changed.
 
   Replaces the `NotifyLiveViews` bus handler. A LiveView receives a tagged tuple
-  naming what changed and the id it needs to refetch, never a `%DomainEvent{}`.
+  naming what changed and the id it needs to refetch, never an event struct.
 
       {:enrollment_confirmed, enrollment_id}   # provider-scoped topic
       {:participant_policy_set, program_id}    # one shared topic

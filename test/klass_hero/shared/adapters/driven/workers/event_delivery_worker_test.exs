@@ -7,7 +7,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
   alias KlassHero.Shared.CriticalEventDispatcher
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   @topic "integration:test_context:thing_happened"
 
@@ -17,10 +17,10 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
     def calls, do: Agent.get(__MODULE__, &Enum.reverse/1)
     defp record(entry), do: Agent.update(__MODULE__, &[entry | &1])
 
-    def first(%IntegrationEvent{} = event), do: record({:first, event.entity_id})
-    def second(%IntegrationEvent{} = event), do: record({:second, event.entity_id})
+    def first(%Event{} = event), do: record({:first, event.entity_id})
+    def second(%Event{} = event), do: record({:second, event.entity_id})
 
-    def flaky(%IntegrationEvent{} = event) do
+    def flaky(%Event{} = event) do
       record({:flaky, event.entity_id})
       {:error, :not_today}
     end
@@ -40,7 +40,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
   end
 
   defp event(entity_id) do
-    IntegrationEvent.new(:thing_happened, :test_context, :thing, entity_id, %{})
+    Event.new(:thing_happened, :test_context, :thing, entity_id, %{})
   end
 
   defp job(events, attempt \\ 1) do

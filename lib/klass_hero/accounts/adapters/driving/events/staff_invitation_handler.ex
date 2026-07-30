@@ -12,14 +12,14 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   email-matched consent on the accept screen.
   """
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Accounts
-  alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
+  alias KlassHero.Accounts.Domain.Events.AccountsEvents
   alias KlassHero.Accounts.User
   alias KlassHero.Accounts.UserNotifier
   alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -28,7 +28,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   def subscribed_events, do: [:staff_member_invited]
 
   @impl true
-  def handle_event(%IntegrationEvent{event_type: :staff_member_invited, payload: payload}) do
+  def handle_event(%Event{event_type: :staff_member_invited, payload: payload}) do
     payload = MapperHelpers.normalize_keys(payload)
 
     case Map.fetch(payload, :email) do
@@ -81,13 +81,13 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
 
   defp emit_sent(staff_member_id, provider_id) do
     staff_member_id
-    |> AccountsIntegrationEvents.staff_invitation_sent(%{provider_id: provider_id})
+    |> AccountsEvents.staff_invitation_sent(%{provider_id: provider_id})
     |> then(&Outbox.stage(KlassHero.Accounts, &1))
   end
 
   defp emit_failed(staff_member_id, provider_id, reason) do
     staff_member_id
-    |> AccountsIntegrationEvents.staff_invitation_failed(%{
+    |> AccountsEvents.staff_invitation_failed(%{
       provider_id: provider_id,
       reason: reason
     })

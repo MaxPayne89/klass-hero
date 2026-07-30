@@ -27,14 +27,14 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
 
   alias KlassHero.Accounts
   alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
-  alias KlassHero.Accounts.Domain.Events.AccountsIntegrationEvents
+  alias KlassHero.Accounts.Domain.Events.AccountsEvents
   alias KlassHero.Accounts.Scope
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
-  alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
 
   defp build_invited_event(staff, provider, raw_token) do
-    ProviderIntegrationEvents.staff_member_invited(
+    ProviderEvents.staff_member_invited(
       staff.id,
       %{
         provider_id: staff.provider_id,
@@ -48,21 +48,21 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
   end
 
   defp build_sent_event(staff) do
-    AccountsIntegrationEvents.staff_invitation_sent(
+    AccountsEvents.staff_invitation_sent(
       staff.id,
       %{provider_id: staff.provider_id}
     )
   end
 
   defp build_failed_event(staff, reason \\ "delivery_error") do
-    AccountsIntegrationEvents.staff_invitation_failed(
+    AccountsEvents.staff_invitation_failed(
       staff.id,
       %{provider_id: staff.provider_id, reason: reason}
     )
   end
 
   defp build_registered_event(user_id, staff, opts) do
-    AccountsIntegrationEvents.staff_user_registered(
+    AccountsEvents.staff_user_registered(
       user_id,
       Map.merge(%{staff_member_id: staff.id, provider_id: staff.provider_id}, opts)
     )

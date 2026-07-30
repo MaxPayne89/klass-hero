@@ -12,7 +12,7 @@ defmodule KlassHero.Provider.Staff do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.ReadModels.StaffMembership
   alias KlassHero.Provider.Profiles
   alias KlassHero.Provider.ProviderProfile
@@ -457,7 +457,7 @@ defmodule KlassHero.Provider.Staff do
   # the event is staged inside the staff member's own transaction, so anything the
   # event needs has to be in hand before that transaction opens.
   defp staff_invited_event(staff_member, provider, raw_token) do
-    ProviderIntegrationEvents.staff_member_invited(staff_member.id, %{
+    ProviderEvents.staff_member_invited(staff_member.id, %{
       provider_id: staff_member.provider_id,
       email: staff_member.email,
       first_name: staff_member.first_name,

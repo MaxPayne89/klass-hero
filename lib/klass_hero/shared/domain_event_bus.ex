@@ -51,12 +51,12 @@ defmodule KlassHero.Shared.DomainEventBus do
 
   ## Dispatching
 
-      DomainEventBus.dispatch(KlassHero.Family, %DomainEvent{event_type: :child_updated, ...})
+      DomainEventBus.dispatch(KlassHero.Family, %Event{event_type: :child_updated, ...})
   """
 
   use GenServer
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   require Logger
 
@@ -85,7 +85,7 @@ defmodule KlassHero.Shared.DomainEventBus do
   @doc """
   Subscribes a handler function to a specific event type on the given context's bus.
 
-  The handler function receives a `%DomainEvent{}` and should return `:ok`.
+  The handler function receives an event and should return `:ok`.
 
   ## Options
 
@@ -107,7 +107,7 @@ defmodule KlassHero.Shared.DomainEventBus do
   For a durable, always-on handler, register via the `handlers:` option on
   `start_link/1` instead; those are exempt from owner scoping and always fire.
   """
-  @spec subscribe(module(), atom(), (DomainEvent.t() -> :ok | {:error, term()}), keyword()) ::
+  @spec subscribe(module(), atom(), (Event.t() -> :ok | {:error, term()}), keyword()) ::
           :ok
   def subscribe(context, event_type, handler_fn, opts \\ []) when is_atom(event_type) and is_function(handler_fn, 1) do
     GenServer.call(process_name(context), {:subscribe, event_type, handler_fn, opts, self()})
@@ -120,8 +120,8 @@ defmodule KlassHero.Shared.DomainEventBus do
   sorted by priority (lower number first). Returns `:ok` when all handlers
   succeed, or `{:error, failures}` if any handler returns an error or crashes.
   """
-  @spec dispatch(module(), DomainEvent.t()) :: :ok | {:error, [term()]}
-  def dispatch(context, %DomainEvent{event_type: event_type} = event) do
+  @spec dispatch(module(), Event.t()) :: :ok | {:error, [term()]}
+  def dispatch(context, %Event{event_type: event_type} = event) do
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
 
     handlers
@@ -140,9 +140,9 @@ defmodule KlassHero.Shared.DomainEventBus do
   Handler identity is `{Module, :function}` for init-time registered handlers
   or `:anonymous` for runtime lambda subscriptions.
   """
-  @spec dispatch_critical(module(), DomainEvent.t()) ::
+  @spec dispatch_critical(module(), Event.t()) ::
           {:ok, list({{module(), atom()} | :anonymous, :ok | {:error, term()}})}
-  def dispatch_critical(context, %DomainEvent{event_type: event_type} = event) do
+  def dispatch_critical(context, %Event{event_type: event_type} = event) do
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
 
     {:ok,

@@ -4,35 +4,37 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents, as: Events
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
-  # The id+payload factories share one contract: build a domain event with the
-  # right type/aggregate, let the base payload's id win over a caller-supplied id,
-  # and raise on a blank id. The table drives that shape; per-factory payload
-  # passthrough is covered below, and the multi-arg factories
-  # (bulk_invites_imported, invite_resend_requested) keep their own describes.
+  # Every id-and-payload factory shares one contract: build an event with stable
+  # identity fields, let the id argument win over any caller-supplied one
+  # (preserving extras), and raise on a blank id. The table drives that shape;
+  # the two multi-argument factories and enrollment_created's parent_user_id
+  # passthrough are kept below it.
   @factories [
-    %{fun: :participant_policy_set, id: :program_id},
-    %{fun: :enrollment_cancelled, id: :enrollment_id},
-    %{fun: :enrollment_confirmed, id: :enrollment_id},
-    %{fun: :enrollment_created, id: :enrollment_id}
+    %{fun: :invite_claimed, id: :invite_id, entity: :invite},
+    %{fun: :enrollment_cancelled, id: :enrollment_id, entity: :enrollment},
+    %{fun: :participant_policy_set, id: :program_id, entity: :participant_policy},
+    %{fun: :enrollment_created, id: :enrollment_id, entity: :enrollment}
   ]
 
-  for %{fun: fun, id: id} <- @factories do
+  for %{fun: fun, id: id, entity: entity} <- @factories do
     describe "#{fun}/3" do
       @fun fun
       @id id
+      @entity entity
 
-      test "builds a domain event with the right type and aggregate" do
+      test "builds an event with stable identity fields" do
         event = apply(Events, @fun, ["id-1"])
 
-        assert %DomainEvent{} = event
+        assert %Event{} = event
         assert event.event_type == @fun
-        assert event.aggregate_id == "id-1"
-        assert event.aggregate_type == :enrollment
+        assert event.source_context == :enrollment
+        assert event.entity_type == @entity
+        assert event.entity_id == "id-1"
       end
 
-      test "base payload id wins over caller-supplied and preserves extras" do
+      test "the id argument wins over a caller-supplied one and preserves extras" do
         payload = %{@id => "overridden", :extra => "data"}
         event = apply(Events, @fun, ["real-id", payload])
 
@@ -50,20 +52,8 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
     end
   end
 
-  describe "payload passthrough" do
-    test "enrollment_cancelled carries admin_id and reason" do
-      event =
-        Events.enrollment_cancelled("enr-1", %{
-          program_id: "prog-1",
-          admin_id: "admin-1",
-          reason: "Duplicate booking"
-        })
-
-      assert event.payload.admin_id == "admin-1"
-      assert event.payload.reason == "Duplicate booking"
-    end
-
-    test "enrollment_created carries child_id, parent_user_id, and program_id" do
+  describe "enrollment_created/3 payload" do
+    test "carries parent_user_id through to the integration event" do
       event =
         Events.enrollment_created("enr-1", %{
           child_id: "child-1",
@@ -73,93 +63,67 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
           status: :pending
         })
 
-      assert event.payload.child_id == "child-1"
       assert event.payload.parent_user_id == "puser-1"
-      assert event.payload.program_id == "prog-1"
-    end
-
-    test "enrollment_confirmed carries the canonical payload" do
-      confirmed_at = ~U[2026-01-01 12:00:00Z]
-
-      assert %DomainEvent{
-               event_type: :enrollment_confirmed,
-               aggregate_id: "enr-1",
-               aggregate_type: :enrollment,
-               payload: %{
-                 enrollment_id: "enr-1",
-                 program_id: "prog-1",
-                 child_id: "child-1",
-                 parent_id: "parent-1",
-                 confirmed_at: ^confirmed_at
-               }
-             } =
-               Events.enrollment_confirmed("enr-1", %{
-                 program_id: "prog-1",
-                 child_id: "child-1",
-                 parent_id: "parent-1",
-                 confirmed_at: confirmed_at
-               })
     end
   end
 
-  describe "bulk_invites_imported/3" do
-    test "creates event with correct type and payload" do
+  # These two cross no context boundary — they drive same-context bus handlers —
+  # so they take the arguments their producers hold rather than an id + payload.
+  describe "bulk_invites_imported/4" do
+    test "creates an event with correct type and payload" do
       event = Events.bulk_invites_imported("provider-1", ["prog-1", "prog-2"], 5)
 
-      assert %DomainEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :bulk_invites_imported
-      assert event.aggregate_type == :enrollment
-      assert event.aggregate_id == "provider-1"
+      assert event.source_context == :enrollment
+      assert event.entity_type == :provider
+      assert event.entity_id == "provider-1"
       assert event.payload.provider_id == "provider-1"
       assert event.payload.program_ids == ["prog-1", "prog-2"]
       assert event.payload.count == 5
     end
 
-    test "forwards opts to DomainEvent.new/5" do
+    test "forwards opts to the event" do
       correlation_id = Ecto.UUID.generate()
 
       event = Events.bulk_invites_imported("provider-1", ["prog-1"], 3, correlation_id: correlation_id)
 
-      assert DomainEvent.correlation_id(event) == correlation_id
+      assert Event.correlation_id(event) == correlation_id
     end
 
-    test "raises for a nil or empty provider_id" do
-      for bad_id <- [nil, ""] do
+    test "raises for a blank provider_id, non-list program_ids, or non-integer count" do
+      for args <- [
+            [nil, ["prog-1"], 1],
+            ["", ["prog-1"], 1],
+            ["provider-1", "not-a-list", 1],
+            ["provider-1", ["prog-1"], "5"]
+          ] do
         assert_raise ArgumentError, ~r/requires a non-empty provider_id string/, fn ->
-          Events.bulk_invites_imported(bad_id, ["prog-1"], 1)
+          apply(Events, :bulk_invites_imported, args)
         end
-      end
-    end
-
-    test "raises for non-list program_ids or non-integer count" do
-      assert_raise ArgumentError, ~r/requires a non-empty provider_id string/, fn ->
-        Events.bulk_invites_imported("provider-1", "not-a-list", 1)
-      end
-
-      assert_raise ArgumentError, ~r/requires a non-empty provider_id string/, fn ->
-        Events.bulk_invites_imported("provider-1", ["prog-1"], "5")
       end
     end
   end
 
   describe "invite_resend_requested/4" do
-    test "creates event with correct type and payload" do
+    test "creates an event with correct type and payload" do
       provider_id = Ecto.UUID.generate()
       invite_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
 
       event = Events.invite_resend_requested(provider_id, invite_id, program_id)
 
-      assert %DomainEvent{} = event
+      assert %Event{} = event
       assert event.event_type == :invite_resend_requested
-      assert event.aggregate_type == :enrollment
-      assert event.aggregate_id == invite_id
+      assert event.source_context == :enrollment
+      assert event.entity_type == :invite
+      assert event.entity_id == invite_id
       assert event.payload.provider_id == provider_id
       assert event.payload.invite_id == invite_id
       assert event.payload.program_id == program_id
     end
 
-    test "forwards opts to DomainEvent.new/5" do
+    test "forwards opts to the event" do
       correlation_id = Ecto.UUID.generate()
 
       event =
@@ -170,14 +134,14 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEventsTest do
           correlation_id: correlation_id
         )
 
-      assert DomainEvent.correlation_id(event) == correlation_id
+      assert Event.correlation_id(event) == correlation_id
     end
 
-    test "raises when any of provider_id, invite_id, or program_id is blank" do
-      valid = Ecto.UUID.generate()
+    test "raises when any of the three ids is blank" do
+      id = Ecto.UUID.generate()
 
-      for args <- [["", valid, valid], [valid, "", valid], [valid, valid, ""]] do
-        assert_raise ArgumentError, ~r/invite_resend_requested/, fn ->
+      for args <- [["", id, id], [id, "", id], [id, id, ""]] do
+        assert_raise ArgumentError, ~r/requires non-empty provider_id, invite_id, and program_id/, fn ->
           apply(Events, :invite_resend_requested, args)
         end
       end

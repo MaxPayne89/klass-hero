@@ -12,7 +12,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandlerTest do
 
   alias KlassHero.Family
   alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   defp build_invite_claimed_event(attrs) do
     invite_id = Map.get(attrs, :invite_id, Ecto.UUID.generate())
@@ -41,7 +41,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandlerTest do
         attrs
       )
 
-    IntegrationEvent.new(
+    Event.new(
       :invite_claimed,
       :enrollment,
       :invite,
@@ -122,7 +122,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandlerTest do
     end
 
     test "ignores unrelated events" do
-      event = IntegrationEvent.new(:something_else, :other, :thing, "id", %{})
+      event = Event.new(:something_else, :other, :thing, "id", %{})
       assert :ignore = InviteClaimedHandler.handle_event(event)
     end
   end

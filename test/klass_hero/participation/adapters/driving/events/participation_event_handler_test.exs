@@ -9,7 +9,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
   alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
   alias KlassHero.Participation.SessionNote
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   describe "handle_event/1 for :child_data_anonymized" do
     test "anonymizes all session notes for the child" do
@@ -20,7 +20,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
         )
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :child_data_anonymized,
           :identity,
           :child,
@@ -41,7 +41,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
       child_id = Ecto.UUID.generate()
 
       event =
-        IntegrationEvent.new(
+        Event.new(
           :child_data_anonymized,
           :identity,
           :child,
@@ -57,7 +57,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
   describe "handle_event/1 for unknown events" do
     test "ignores unrecognized event types" do
       event =
-        IntegrationEvent.new(
+        Event.new(
           :some_unknown_event,
           :unknown,
           :unknown,

@@ -9,10 +9,10 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   defp build_event(event_type, payload) do
-    %IntegrationEvent{
+    %Event{
       event_id: Ecto.UUID.generate(),
       event_type: event_type,
       source_context: :program_catalog,

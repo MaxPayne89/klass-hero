@@ -3,7 +3,7 @@ defmodule KlassHero.Shared.ProjectionTest do
 
   # TestProjection lives inside this file deliberately: the macro must be
   # exercised against a synthetic module backed by an Agent, not a real schema.
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
   alias KlassHero.Shared.ProjectionTest.AlwaysFailAgent
   alias KlassHero.Shared.ProjectionTest.FlakyAgent
@@ -116,7 +116,7 @@ defmodule KlassHero.Shared.ProjectionTest do
   end
 
   defp integration_event(type) do
-    %IntegrationEvent{
+    %Event{
       event_id: Ecto.UUID.generate(),
       event_type: type,
       source_context: :test,

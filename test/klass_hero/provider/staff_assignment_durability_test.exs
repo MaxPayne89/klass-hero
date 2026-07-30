@@ -12,28 +12,33 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
      event being marked critical: being in that table is the whole condition.
 
   2. **Serialization safety** — the payload carries only string/UUID fields
-     (the `assigned_at`/`unassigned_at` `DateTime`s are trimmed at the promotion
-     boundary), so it round-trips through `CriticalEventSerializer` losslessly.
+     (the `assigned_at`/`unassigned_at` `DateTime`s are never put in it), so it
+     round-trips through `CriticalEventSerializer` losslessly.
   """
   use ExUnit.Case, async: true
 
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
-  alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.StaffMember
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
-  alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
+  alias KlassHero.Shared.Domain.Events.Event
 
-  @assigned_payload %{
+  @assignment %ProgramStaffAssignment{
     provider_id: "prov-1",
     program_id: "prog-1",
-    staff_user_id: "user-1"
+    staff_member_id: "staff-1",
+    assigned_at: ~U[2026-01-01 12:00:00Z],
+    unassigned_at: ~U[2026-01-02 12:00:00Z]
   }
+  @staff_member %StaffMember{user_id: "user-1"}
 
   describe "durable-delivery wiring: factory → topic → registry" do
     test "staff_assigned_to_program resolves to the Messaging handler" do
-      event = ProviderIntegrationEvents.staff_assigned_to_program("staff-1", @assigned_payload)
+      event = ProviderEvents.staff_assigned_to_program(@assignment, @staff_member)
 
-      assert PubSubIntegrationEventPublisher.derive_topic(event) ==
+      assert Event.topic(event) ==
                "integration:provider:staff_assigned_to_program"
 
       assert {StaffAssignmentHandler, :handle_event} in EventConsumerRegistry.consumers_for(
@@ -42,9 +47,9 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
     end
 
     test "staff_unassigned_from_program resolves to the Messaging handler" do
-      event = ProviderIntegrationEvents.staff_unassigned_from_program("staff-1", @assigned_payload)
+      event = ProviderEvents.staff_unassigned_from_program(@assignment, @staff_member)
 
-      assert PubSubIntegrationEventPublisher.derive_topic(event) ==
+      assert Event.topic(event) ==
                "integration:provider:staff_unassigned_from_program"
 
       assert {StaffAssignmentHandler, :handle_event} in EventConsumerRegistry.consumers_for(
@@ -55,7 +60,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
 
   describe "serialization safety: no DateTime in the integration payload" do
     test "staff_assigned_to_program payload round-trips losslessly through the serializer" do
-      event = ProviderIntegrationEvents.staff_assigned_to_program("staff-1", @assigned_payload)
+      event = ProviderEvents.staff_assigned_to_program(@assignment, @staff_member)
 
       round_tripped =
         event
@@ -75,7 +80,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
     end
 
     test "staff_unassigned_from_program payload round-trips losslessly through the serializer" do
-      event = ProviderIntegrationEvents.staff_unassigned_from_program("staff-1", @assigned_payload)
+      event = ProviderEvents.staff_unassigned_from_program(@assignment, @staff_member)
 
       round_tripped =
         event

@@ -12,21 +12,11 @@ defmodule KlassHero.Shared.Outbox do
         session
       end)
 
-  ## Promotion happens here, in the transaction
+  ## Only what someone consumes is staged
 
-  Producers hand over the events they already build — domain events — and this
-  module maps them to integration events before staging, using the context's
-  promoter from `:event_promoters`. Promotion is pure, so doing it early costs
-  nothing and means the outbox only ever carries one kind of event.
-
-  A domain event whose context has no promoter, or whose type the promoter does
-  not map, stages nothing. That is exactly today's behaviour: an event with no
-  bus registration was never promoted either.
-
-  One consequence worth naming: `IntegrationEvent.new/6` validates the payload
-  (#1010), so a malformed payload now aborts the producer's transaction instead of
-  quietly losing the event after the write succeeded. That is the trade this seam
-  is for.
+  An event with no registered consumer is dropped rather than staged: it would
+  give the delivery job nothing to do. The routing table is the one place that
+  decides, so there is no second list to keep in agreement with it.
 
   ## Failure
 
@@ -36,22 +26,21 @@ defmodule KlassHero.Shared.Outbox do
   """
 
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.DomainEvent
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
-
-  @type stageable :: DomainEvent.t() | IntegrationEvent.t()
+  alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
+  alias KlassHero.Shared.Domain.Events.Event
 
   @doc """
   Stages one or more events for durable delivery, in the order given.
 
-  `context` is the producing context module (`KlassHero.Participation`), used to
-  find the promoter for domain events. Integration events pass straight through.
+  `context` is the producing context module (`KlassHero.Participation`). It is
+  accepted for symmetry with `transact/2` and for call-site readability; the
+  event carries its own source context.
   """
-  @spec stage(module(), stageable() | [stageable()]) :: :ok
+  @spec stage(module(), Event.t() | [Event.t()]) :: :ok
   def stage(context, events) when is_atom(context) do
     events
     |> List.wrap()
-    |> Enum.flat_map(&to_integration_events(context, &1))
+    |> Enum.filter(&consumed?/1)
     |> stage_all()
   end
 
@@ -65,8 +54,8 @@ defmodule KlassHero.Shared.Outbox do
   not.
 
   The events come back out with the result because some of them still have
-  same-context handlers on the `DomainEventBus` — `NotifyLiveViews` and the seven
-  that do business work — which stay synchronous and post-commit.
+  same-context handlers on the `DomainEventBus` — the seven that do business
+  work — which stay synchronous and post-commit.
 
       def create_session(params) do
         with {:ok, session} <- ProgramSession.new(attrs),
@@ -81,8 +70,8 @@ defmodule KlassHero.Shared.Outbox do
         end
       end
   """
-  @spec transact(module(), (-> {:ok, result, [stageable()]} | {:error, term()})) ::
-          {:ok, {result, [stageable()]}} | {:error, term()}
+  @spec transact(module(), (-> {:ok, result, [Event.t()]} | {:error, term()})) ::
+          {:ok, {result, [Event.t()]}} | {:error, term()}
         when result: term()
   def transact(context, fun) when is_atom(context) and is_function(fun, 0) do
     # An `Ecto.Multi` rather than `Repo.transaction(fn -> ... Repo.rollback(reason) end)`
@@ -116,19 +105,10 @@ defmodule KlassHero.Shared.Outbox do
   defp stage_all([]), do: :ok
   defp stage_all(events), do: adapter().stage(events)
 
-  defp to_integration_events(_context, %IntegrationEvent{} = event), do: [event]
-
-  defp to_integration_events(context, %DomainEvent{} = event) do
-    case promoter(context) do
-      nil -> []
-      module -> List.wrap(module.promote(event))
-    end
-  end
-
-  defp promoter(context) do
-    :klass_hero
-    |> Application.get_env(:event_promoters, %{})
-    |> Map.get(context)
+  # Per event, not per batch: one unrouted event must not strand the siblings
+  # staged in the same transaction.
+  defp consumed?(%Event{} = event) do
+    event |> Event.topic() |> EventConsumerRegistry.consumers_for() != []
   end
 
   defp adapter, do: Application.fetch_env!(:klass_hero, :outbox)[:module]

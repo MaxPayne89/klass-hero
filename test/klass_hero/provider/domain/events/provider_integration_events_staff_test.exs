@@ -1,12 +1,12 @@
-defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsTest do
+defmodule KlassHero.Provider.Domain.Events.ProviderEventsTest do
   @moduledoc """
-  Tests for the ProviderIntegrationEvents factory module.
+  Tests for the ProviderEvents factory module.
   """
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Provider.Domain.Events.ProviderIntegrationEvents
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Shared.Domain.Events.Event
 
   # The provider integration-event factories share one contract: build a
   # critical event with stable identity fields, let the base payload's id win
@@ -26,9 +26,9 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsTest do
       @entity entity
 
       test "creates event with correct type, source_context, and entity_type" do
-        event = apply(ProviderIntegrationEvents, @fun, ["id-1"])
+        event = apply(ProviderEvents, @fun, ["id-1"])
 
-        assert %IntegrationEvent{} = event
+        assert %Event{} = event
         assert event.event_type == @fun
         assert event.source_context == :provider
         assert event.entity_type == @entity
@@ -37,28 +37,28 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsTest do
 
       test "base_payload id wins over caller-supplied and preserves extras" do
         payload = %{@id => "overridden", extra: "data"}
-        event = apply(ProviderIntegrationEvents, @fun, ["real-id", payload])
+        event = apply(ProviderEvents, @fun, ["real-id", payload])
 
         assert Map.get(event.payload, @id) == "real-id"
         assert event.payload.extra == "data"
       end
 
       test "marks event as critical by default" do
-        event = apply(ProviderIntegrationEvents, @fun, ["id-1"])
+        event = apply(ProviderEvents, @fun, ["id-1"])
 
-        assert IntegrationEvent.critical?(event)
+        assert Event.critical?(event)
       end
 
       test "allows overriding criticality via opts" do
-        event = apply(ProviderIntegrationEvents, @fun, ["id-1", %{}, [criticality: :normal]])
+        event = apply(ProviderEvents, @fun, ["id-1", %{}, [criticality: :normal]])
 
-        refute IntegrationEvent.critical?(event)
+        refute Event.critical?(event)
       end
 
       test "raises for a nil or blank id" do
         for bad_id <- [nil, ""] do
           assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
-            apply(ProviderIntegrationEvents, @fun, [bad_id])
+            apply(ProviderEvents, @fun, [bad_id])
           end
         end
       end
@@ -68,7 +68,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderIntegrationEventsTest do
   describe "staff_member_invited/3 payload passthrough" do
     test "includes staff_member_id, provider_id, and email in payload" do
       event =
-        ProviderIntegrationEvents.staff_member_invited("staff-1", %{
+        ProviderEvents.staff_member_invited("staff-1", %{
           provider_id: "provider-1",
           email: "staff@example.com"
         })

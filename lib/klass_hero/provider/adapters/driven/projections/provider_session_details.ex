@@ -48,14 +48,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
 
   @impl Projection
   def bootstrap_impl, do: bootstrap_session_details()
 
   @impl Projection
-  def handle_event(:session_created, %IntegrationEvent{} = event) do
+  def handle_event(:session_created, %Event{} = event) do
     Logger.debug("ProviderSessionDetails projecting session_created",
       session_id: event.entity_id,
       event_id: event.event_id
@@ -66,26 +66,26 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   # The batch shares one program, so its title/provider/staff resolve once here
   # rather than once per session as the per-session clause above does.
-  def handle_event(:sessions_generated, %IntegrationEvent{payload: %{program_id: program_id, sessions: sessions}}) do
+  def handle_event(:sessions_generated, %Event{payload: %{program_id: program_id, sessions: sessions}}) do
     Enum.each(sessions, &project_session_created(Map.put(&1, :program_id, program_id)))
   end
 
-  def handle_event(:session_started, %IntegrationEvent{} = event) do
+  def handle_event(:session_started, %Event{} = event) do
     update_status(event.entity_id, :in_progress)
   end
 
-  def handle_event(:session_completed, %IntegrationEvent{} = event) do
+  def handle_event(:session_completed, %Event{} = event) do
     update_status(event.entity_id, :completed)
   end
 
-  def handle_event(:session_cancelled, %IntegrationEvent{} = event) do
+  def handle_event(:session_cancelled, %Event{} = event) do
     update_status(event.entity_id, :cancelled)
   end
 
   # `seeded_count` is the delta a seeding inserted, not a running total — a roster
   # is seeded once at session creation and again whenever a child enrols later, so
   # this accumulates rather than overwrites.
-  def handle_event(:roster_seeded, %IntegrationEvent{payload: %{seeded_count: seeded_count}} = event) do
+  def handle_event(:roster_seeded, %Event{payload: %{seeded_count: seeded_count}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     from(d in ProviderSessionDetailSchema, where: d.session_id == ^event.entity_id)
@@ -94,7 +94,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   end
 
   # Monotonic: once counted on check-in, a child stays counted for "how many showed up".
-  def handle_event(:child_checked_in, %IntegrationEvent{payload: %{session_id: session_id}} = event) do
+  def handle_event(:child_checked_in, %Event{payload: %{session_id: session_id}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     from(d in ProviderSessionDetailSchema, where: d.session_id == ^session_id)
@@ -103,23 +103,21 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   end
 
   # Intentional no-op: counter is monotonic; check-outs don't reduce "how many showed up".
-  def handle_event(:child_checked_out, %IntegrationEvent{} = event) do
+  def handle_event(:child_checked_out, %Event{} = event) do
     Logger.debug("ProviderSessionDetails ignoring child_checked_out (counter is monotonic)",
       record_id: event.entity_id
     )
   end
 
   # Intentional no-op: absences are the complement of check-in and don't affect the counter.
-  def handle_event(:child_marked_absent, %IntegrationEvent{} = event) do
+  def handle_event(:child_marked_absent, %Event{} = event) do
     Logger.debug("ProviderSessionDetails ignoring child_marked_absent (no effect on checked_in_count)",
       record_id: event.entity_id
     )
   end
 
   # Bulk update scoped to :scheduled rows only — historical rows retain pre-existing attribution.
-  def handle_event(:staff_assigned_to_program, %IntegrationEvent{
-        payload: %{staff_member_id: staff_id, program_id: program_id}
-      }) do
+  def handle_event(:staff_assigned_to_program, %Event{payload: %{staff_member_id: staff_id, program_id: program_id}}) do
     staff_name = lookup_staff_name(staff_id)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -136,7 +134,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   end
 
   # Historical rows retain pre-existing attribution as audit trail; only :scheduled rows are cleared.
-  def handle_event(:staff_unassigned_from_program, %IntegrationEvent{payload: %{program_id: program_id}}) do
+  def handle_event(:staff_unassigned_from_program, %Event{payload: %{program_id: program_id}}) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     from(d in ProviderSessionDetailSchema,

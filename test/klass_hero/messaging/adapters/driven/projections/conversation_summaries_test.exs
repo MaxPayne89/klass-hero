@@ -12,7 +12,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.IntegrationEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   # Use a unique name to avoid conflicts with the supervision tree
   @test_server_name :conversation_summaries_projection_test
@@ -1322,12 +1322,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   defp event(event_type, payload, opts \\ []) do
     entity_type = Keyword.get(opts, :entity_type, :conversation)
     entity_id = Keyword.get(opts, :entity_id, Map.get(payload, :conversation_id))
-    IntegrationEvent.new(event_type, :messaging, entity_type, entity_id, payload)
+    Event.new(event_type, :messaging, entity_type, entity_id, payload)
   end
 
   # Projects in the test process, exactly as the delivery job does — no broadcast,
   # no mailbox fence, the projection GenServer is not in this path.
-  defp dispatch(%IntegrationEvent{} = event) do
+  defp dispatch(%Event{} = event) do
     ConversationSummaries.project(event)
     event
   end

@@ -9,7 +9,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Repo
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.Event
 
   setup do
     setup_test_integration_events()
@@ -17,7 +17,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
   end
 
   describe "execute/3 — events-as-data contract" do
-    test "returns {:ok, {added_ids, [DomainEvent]}} and does NOT dispatch the event itself" do
+    test "returns {:ok, {added_ids, [Event]}} and does NOT dispatch the event itself" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
       owner = AccountsFixtures.user_fixture()
@@ -54,12 +54,12 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       assert KlassHero.Messaging.participant?(conversation_id, staff_a.id)
       assert KlassHero.Messaging.participant?(conversation_id, staff_b.id)
 
-      assert [%DomainEvent{} = event] = events
+      assert [%Event{} = event] = events
       assert event.event_type == :participant_added
-      assert event.aggregate_id == conversation_id
-      assert event.aggregate_type == :conversation
+      assert event.entity_id == conversation_id
+      assert event.entity_type == :conversation
       assert Enum.sort(event.payload.participant_user_ids) == Enum.sort([staff_a.id, staff_b.id])
-      assert event.payload.source == :initial_staff
+      assert event.payload.source == "initial_staff"
 
       # Critical: the command must NOT dispatch the event itself —
       # post-commit dispatch is the caller's responsibility so the projection

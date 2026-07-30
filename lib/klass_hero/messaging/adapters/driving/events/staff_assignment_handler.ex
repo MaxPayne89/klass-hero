@@ -18,7 +18,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
      are dispatched after the wrapping transaction commits.
   """
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
