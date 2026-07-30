@@ -51,7 +51,5 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublishe
 
   @doc false
   @spec derive_topic(IntegrationEvent.t()) :: String.t()
-  def derive_topic(%IntegrationEvent{source_context: ctx, event_type: event_type}) do
-    build_topic(ctx, event_type)
-  end
+  defdelegate derive_topic(event), to: IntegrationEvent, as: :topic
 end

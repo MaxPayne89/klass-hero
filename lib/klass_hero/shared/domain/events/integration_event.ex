@@ -117,6 +117,19 @@ defmodule KlassHero.Shared.Domain.Events.IntegrationEvent do
   end
 
   @doc """
+  The event's topic: `integration:{source_context}:{event_type}`.
+
+  A pure function of two fields, so it lives here rather than on any one of the
+  things that need it — the outbox asking "does anyone consume this?", the
+  delivery job asking "who?", and the publisher asking "where do I broadcast?"
+  must all derive the same string, and the surest way is one function.
+  """
+  @spec topic(t()) :: String.t()
+  def topic(%__MODULE__{source_context: source_context, event_type: event_type}) do
+    "integration:#{source_context}:#{event_type}"
+  end
+
+  @doc """
   Returns the criticality level of the event (defaults to :normal).
   """
   @spec criticality(t()) :: criticality()

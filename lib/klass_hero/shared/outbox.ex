@@ -36,6 +36,7 @@ defmodule KlassHero.Shared.Outbox do
   """
 
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
   alias KlassHero.Shared.Domain.Events.DomainEvent
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
@@ -52,6 +53,7 @@ defmodule KlassHero.Shared.Outbox do
     events
     |> List.wrap()
     |> Enum.flat_map(&to_integration_events(context, &1))
+    |> Enum.filter(&consumed?/1)
     |> stage_all()
   end
 
@@ -115,6 +117,12 @@ defmodule KlassHero.Shared.Outbox do
 
   defp stage_all([]), do: :ok
   defp stage_all(events), do: adapter().stage(events)
+
+  # Per event, not per batch: one unrouted event must not strand the siblings
+  # staged in the same transaction.
+  defp consumed?(%IntegrationEvent{} = event) do
+    event |> IntegrationEvent.topic() |> EventConsumerRegistry.consumers_for() != []
+  end
 
   defp to_integration_events(_context, %IntegrationEvent{} = event), do: [event]
 

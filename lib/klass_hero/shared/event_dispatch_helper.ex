@@ -12,6 +12,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
 
   alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.EventMetadata
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.DomainEventBus
 
   require Logger
@@ -34,9 +36,9 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       UserEvents.user_registered(user)
       |> EventDispatchHelper.dispatch(KlassHero.Accounts)
   """
-  @spec dispatch(DomainEvent.t(), module()) :: :ok
-  def dispatch(%DomainEvent{} = event, context) do
-    if DomainEvent.critical?(event) do
+  @spec dispatch(DomainEventBus.dispatchable(), module()) :: :ok
+  def dispatch(event, context) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
+    if EventMetadata.critical?(event) do
       dispatch_critical(event, context)
     else
       dispatch_normal(event, context)
@@ -58,9 +60,9 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       FamilyEvents.invite_family_ready(invite_id, payload)
       |> EventDispatchHelper.dispatch_or_error(KlassHero.Family)
   """
-  @spec dispatch_or_error(DomainEvent.t(), module()) :: :ok | {:error, term()}
-  def dispatch_or_error(%DomainEvent{} = event, context) do
-    if DomainEvent.critical?(event) do
+  @spec dispatch_or_error(DomainEventBus.dispatchable(), module()) :: :ok | {:error, term()}
+  def dispatch_or_error(event, context) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
+    if EventMetadata.critical?(event) do
       {:ok, results} = DomainEventBus.dispatch_critical(context, event)
       find_first_failure(results)
     else
@@ -79,9 +81,9 @@ defmodule KlassHero.Shared.EventDispatchHelper do
       |> EnrollmentEvents.invite_resend_requested(reset.id, reset.program_id)
       |> EventDispatchHelper.dispatch_or_ok(KlassHero.Enrollment, reset)
   """
-  @spec dispatch_or_ok(DomainEvent.t(), module(), value) :: {:ok, value} | {:error, term()}
+  @spec dispatch_or_ok(DomainEventBus.dispatchable(), module(), value) :: {:ok, value} | {:error, term()}
         when value: term()
-  def dispatch_or_ok(%DomainEvent{} = event, context, value) do
+  def dispatch_or_ok(event, context, value) do
     case dispatch_or_error(event, context) do
       :ok -> {:ok, value}
       {:error, _} = error -> error
@@ -96,7 +98,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
   end
 
   # Critical events: successful handlers are marked processed; failed handlers get Oban retry.
-  defp dispatch_critical(%DomainEvent{} = event, context) do
+  defp dispatch_critical(event, context) do
     {:ok, results} = DomainEventBus.dispatch_critical(context, event)
 
     Enum.each(results, fn
@@ -118,7 +120,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
     :ok
   end
 
-  defp dispatch_normal(%DomainEvent{} = event, context) do
+  defp dispatch_normal(event, context) do
     case DomainEventBus.dispatch(context, event) do
       :ok ->
         :ok
@@ -129,7 +131,7 @@ defmodule KlassHero.Shared.EventDispatchHelper do
     end
   end
 
-  defp enqueue_critical_retry(%DomainEvent{} = event, {_module, _function} = identity) do
+  defp enqueue_critical_retry(event, {_module, _function} = identity) do
     case CriticalEventDispatcher.enqueue_retry(event, identity) do
       :ok ->
         :ok
@@ -146,8 +148,8 @@ defmodule KlassHero.Shared.EventDispatchHelper do
     end
   end
 
-  defp log_dispatch_failure(%DomainEvent{} = event, failures) do
-    if DomainEvent.critical?(event) do
+  defp log_dispatch_failure(event, failures) do
+    if EventMetadata.critical?(event) do
       Logger.error("Critical event dispatch failed: event_type=#{event.event_type} failures=#{inspect(failures)}")
     else
       Logger.warning("Event dispatch failed: event_type=#{event.event_type} failures=#{inspect(failures)}")

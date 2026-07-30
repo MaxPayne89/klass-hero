@@ -71,6 +71,43 @@ defmodule KlassHero.Shared.OutboxTest do
     end
   end
 
+  # The promoter used to decide this by omission: an event type with no `promote/1`
+  # clause staged nothing. Asking the routing table asks the same question of the
+  # thing that already answers it — measured at the time of writing, all 38 event
+  # types produced anywhere in `lib/` have a registered consumer, so this filter
+  # drops nothing that exists today.
+  describe "staging what someone consumes" do
+    test "stages an event a consumer is registered for" do
+      Outbox.stage(
+        KlassHero.ProgramCatalog,
+        IntegrationEvent.new(:program_created, :program_catalog, :program, "prog-1", %{})
+      )
+
+      assert [%IntegrationEvent{event_type: :program_created}] = TestOutbox.staged()
+    end
+
+    test "stages nothing when no consumer is registered for the topic" do
+      Outbox.stage(
+        KlassHero.ProgramCatalog,
+        IntegrationEvent.new(:program_archived, :program_catalog, :program, "prog-1", %{})
+      )
+
+      assert [] = TestOutbox.staged()
+    end
+
+    # Filtering per event, not per batch: one unrouted event must not strand the
+    # siblings staged in the same transaction.
+    test "keeps the consumed events from a batch that also holds unconsumed ones" do
+      Outbox.stage(KlassHero.ProgramCatalog, [
+        IntegrationEvent.new(:program_archived, :program_catalog, :program, "prog-1", %{}),
+        IntegrationEvent.new(:program_created, :program_catalog, :program, "prog-2", %{}),
+        IntegrationEvent.new(:program_archived, :program_catalog, :program, "prog-3", %{})
+      ])
+
+      assert ["prog-2"] = Enum.map(TestOutbox.staged(), & &1.entity_id)
+    end
+  end
+
   describe "transact/2" do
     test "stages the events the callback returned and hands them back with the result" do
       assert {:ok, {:the_entity, [_event]}} =

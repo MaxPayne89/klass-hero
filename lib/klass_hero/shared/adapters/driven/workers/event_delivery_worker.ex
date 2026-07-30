@@ -37,7 +37,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
 
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
-  alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
   alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
   alias KlassHero.Shared.Tracing.Context
@@ -57,7 +56,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   # tuples from whoever wrote the data they read.
   defp deliver(%IntegrationEvent{} = event, job) do
     Context.attach_from_event(event)
-    topic = PubSubIntegrationEventPublisher.derive_topic(event)
+    topic = IntegrationEvent.topic(event)
 
     topic
     |> EventConsumerRegistry.consumers_for()

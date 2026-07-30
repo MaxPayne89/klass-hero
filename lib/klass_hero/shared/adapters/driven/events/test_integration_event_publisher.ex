@@ -107,7 +107,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher 
   def publish(%IntegrationEvent{} = event) do
     case Process.get(@error_key) do
       nil ->
-        store_event(event, derive_topic(event))
+        store_event(event, IntegrationEvent.topic(event))
         :ok
 
       reason ->
@@ -129,16 +129,12 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher 
 
   @impl true
   def publish_all(events) when is_list(events) do
-    Enum.each(events, &store_event(&1, derive_topic(&1)))
+    Enum.each(events, &store_event(&1, IntegrationEvent.topic(&1)))
     :ok
   end
 
   defp store_event(%IntegrationEvent{} = event, topic) do
     published = Process.get(@key, [])
     Process.put(@key, published ++ [{event, topic}])
-  end
-
-  defp derive_topic(%IntegrationEvent{source_context: source_context, event_type: event_type}) do
-    "integration:#{source_context}:#{event_type}"
   end
 end

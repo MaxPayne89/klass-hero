@@ -22,7 +22,6 @@ defmodule KlassHero.EventTestHelper do
 
   import ExUnit.Assertions
 
-  alias KlassHero.Shared.Adapters.Driven.Events.PubSubIntegrationEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestIntegrationEventPublisher
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
   alias KlassHero.Shared.Domain.Events.IntegrationEvent

@@ -57,8 +57,16 @@ defmodule KlassHero.Shared.DomainEventBus do
   use GenServer
 
   alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   require Logger
+
+  @typedoc """
+  Either event struct, while the two tiers are being collapsed into one (ADR-0014
+  PR 5). The bus reads only `event_type`, so it never cared which it was; the
+  union is temporary and narrows to one struct once `DomainEvent` is deleted.
+  """
+  @type dispatchable :: DomainEvent.t() | IntegrationEvent.t()
 
   @default_priority 100
 
@@ -120,8 +128,9 @@ defmodule KlassHero.Shared.DomainEventBus do
   sorted by priority (lower number first). Returns `:ok` when all handlers
   succeed, or `{:error, failures}` if any handler returns an error or crashes.
   """
-  @spec dispatch(module(), DomainEvent.t()) :: :ok | {:error, [term()]}
-  def dispatch(context, %DomainEvent{event_type: event_type} = event) do
+  @spec dispatch(module(), dispatchable()) :: :ok | {:error, [term()]}
+  def dispatch(context, event) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
+    %{event_type: event_type} = event
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
 
     handlers
@@ -140,9 +149,10 @@ defmodule KlassHero.Shared.DomainEventBus do
   Handler identity is `{Module, :function}` for init-time registered handlers
   or `:anonymous` for runtime lambda subscriptions.
   """
-  @spec dispatch_critical(module(), DomainEvent.t()) ::
+  @spec dispatch_critical(module(), dispatchable()) ::
           {:ok, list({{module(), atom()} | :anonymous, :ok | {:error, term()}})}
-  def dispatch_critical(context, %DomainEvent{event_type: event_type} = event) do
+  def dispatch_critical(context, event) when is_struct(event, DomainEvent) or is_struct(event, IntegrationEvent) do
+    %{event_type: event_type} = event
     handlers = GenServer.call(process_name(context), {:get_handlers, event_type})
 
     {:ok,
