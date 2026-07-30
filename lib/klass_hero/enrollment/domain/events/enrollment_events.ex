@@ -14,8 +14,6 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
     enrollment invite records for one or more programs.
   - `:invite_claimed` - Emitted when a guardian clicks an invite link and
     claims the enrollment invitation.
-  - `:invite_deleted` - Emitted when a provider deletes a bulk enrollment
-    invite from the staging table.
   - `:invite_resend_requested` - Emitted when a provider requests resending
     an enrollment invite email.
   - `:enrollment_cancelled` - Emitted when an admin cancels an enrollment.
@@ -131,34 +129,6 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
   def invite_claimed(invite_id, _payload, _opts) do
     raise ArgumentError,
           "invite_claimed/3 requires a non-empty invite_id string, got: #{inspect(invite_id)}"
-  end
-
-  @doc """
-  Creates an `:invite_deleted` event when a provider deletes a bulk enrollment invite.
-
-  ## Parameters
-
-  - `invite_id` - the deleted invite's ID
-  - `payload` - event data including program_id, provider_id
-  - `opts` - forwarded to `DomainEvent.new/5` (e.g. `:correlation_id`)
-  """
-  def invite_deleted(invite_id, payload \\ %{}, opts \\ [])
-
-  def invite_deleted(invite_id, payload, opts) when is_binary(invite_id) and byte_size(invite_id) > 0 do
-    base_payload = %{invite_id: invite_id}
-
-    DomainEvent.new(
-      :invite_deleted,
-      invite_id,
-      :invite,
-      Map.merge(payload, base_payload),
-      opts
-    )
-  end
-
-  def invite_deleted(invite_id, _payload, _opts) do
-    raise ArgumentError,
-          "invite_deleted/3 requires a non-empty invite_id string, got: #{inspect(invite_id)}"
   end
 
   @doc """
