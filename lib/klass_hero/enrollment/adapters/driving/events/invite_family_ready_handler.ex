@@ -20,7 +20,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
   - Duplicate enrollment -> transitions invite to enrolled without enrollment_id
   """
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Enrollment
   alias KlassHero.Shared.Domain.Events.IntegrationEvent

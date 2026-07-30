@@ -12,7 +12,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   email-matched consent on the accept screen.
   """
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Accounts
   alias KlassHero.Accounts.Domain.Events.AccountsEvents

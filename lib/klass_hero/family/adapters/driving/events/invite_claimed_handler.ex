@@ -9,7 +9,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler do
   duplicate child records from concurrent events.
   """
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker
   alias KlassHero.Shared.Domain.Events.IntegrationEvent

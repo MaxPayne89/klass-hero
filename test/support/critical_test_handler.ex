@@ -1,7 +1,7 @@
 defmodule KlassHero.Test.CriticalTestHandler do
   @moduledoc false
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Shared.Domain.Events.IntegrationEvent
 

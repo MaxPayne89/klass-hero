@@ -37,7 +37,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.RetryHelpers do
   Like `retry_with_backoff/2` but normalizes `{:ok, _}` to bare `:ok`.
 
   Use when the operation returns `{:ok, result}` but the caller needs bare `:ok`.
-  Typical for event handler contracts (ForHandlingEvents, ForHandlingIntegrationEvents)
+  Typical for event handler contracts (ForHandlingEvents, ForHandlingEvents)
   where handlers manage `:ignore` returns separately.
   """
   @spec retry_and_normalize(

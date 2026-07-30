@@ -19,7 +19,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSess
   The use case is best-effort — errors are logged and swallowed.
   """
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Participation
   alias KlassHero.Shared.Domain.Events.IntegrationEvent

@@ -1,25 +1,21 @@
 defmodule KlassHero.Shared.ForHandlingEvents do
   @moduledoc """
-  Behaviour for domain event handlers.
+  Behaviour for event handlers.
 
-  Implement this behaviour to create event handlers that react to domain events
-  published via PubSub (e.g. Accounts context broadcasting user lifecycle events).
-  For cross-context integration events, see `ForHandlingIntegrationEvents`.
+  Implement this behaviour to handle events the delivery job routes to you —
+  usually another context's, since an event is the public contract between
+  contexts.
 
   ## Example
 
-      defmodule MyApp.Family.UserEventHandler do
+      defmodule MyApp.Participation.ChildAnonymizedHandler do
         @behaviour KlassHero.Shared.ForHandlingEvents
 
         @impl true
-        def subscribed_events, do: [:user_registered, :user_confirmed]
+        def subscribed_events, do: [:child_data_anonymized]
 
         @impl true
-        def handle_event(%{event_type: :user_registered} = event) do
-          :ok
-        end
-
-        def handle_event(%{event_type: :user_confirmed} = _event) do
+        def handle_event(%IntegrationEvent{event_type: :child_data_anonymized} = event) do
           :ok
         end
 
@@ -27,17 +23,12 @@ defmodule KlassHero.Shared.ForHandlingEvents do
       end
   """
 
-  alias KlassHero.Shared.Domain.Events.DomainEvent
+  alias KlassHero.Shared.Domain.Events.IntegrationEvent
 
   @doc """
-  Handles a domain event.
-
-  Returns:
-  - `:ok` - Event handled successfully
-  - `{:error, reason}` - Handling failed (will be logged)
-  - `:ignore` - Event was intentionally ignored
+  Handles an integration event. Returns `:ok`, `{:error, reason}`, or `:ignore`.
   """
-  @callback handle_event(DomainEvent.t()) :: :ok | {:error, term()} | :ignore
+  @callback handle_event(IntegrationEvent.t()) :: :ok | {:error, term()} | :ignore
 
   @doc """
   Returns the list of event types this handler subscribes to.

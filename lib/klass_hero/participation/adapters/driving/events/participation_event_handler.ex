@@ -19,7 +19,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
   - Permanent errors → Log and return error
   """
 
-  @behaviour KlassHero.Shared.ForHandlingIntegrationEvents
+  @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Participation
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers
