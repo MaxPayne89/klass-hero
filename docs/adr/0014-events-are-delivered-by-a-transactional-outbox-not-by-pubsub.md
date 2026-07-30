@@ -20,14 +20,16 @@ Meanwhile three delivery defects were live in production:
   loses the event permanently. The dual PubSub+Oban "belt and suspenders" does not help: both belts
   fasten to the same buckle, since both are invoked from the same post-commit line. They protect
   against *subscriber* failure and nothing else.
-- **Unclustered multi-node PubSub.** `klass-hero-live` runs two Fly machines with
-  `DNS_CLUSTER_QUERY` unset, so `DNSCluster` starts as `:ignore` and every `Phoenix.PubSub`
-  broadcast is node-local. Each node carried its own copy of all 7 projections — including
-  `VerifiedProviders`' in-memory `MapSet` — which silently diverged whenever both machines were up.
-  This is a second, independent generator of the "missing in the UI, appears after restart" symptom
-  we had previously attributed only to missing dispatches on the write path.
 - **No `Oban.Plugins.Lifeline`.** With `auto_stop_machines = "suspend"`, a machine suspending
   mid-job leaves that job `executing` forever with nothing to rescue it.
+
+Node topology was investigated and cleared. `klass-hero-live` runs two Fly machines, and BEAM
+clustering is correctly configured: `rel/env.sh.eex` exports `DNS_CLUSTER_QUERY`,
+`RELEASE_DISTRIBUTION=name` and an IPv6 `proto_dist` at release boot — verified on the running node,
+where `Application.get_env(:klass_hero, :dns_cluster_query)` returns `"klass-hero-live.internal"`.
+PubSub does fan out across machines today. This is recorded because the delivery model below
+deliberately stops depending on that fan-out for anything durable, which is a change in *why*
+projections must be stateless, not a fix for an existing divergence.
 
 The corrective instinct — "events should be async, so make dispatch async" — is aimed one layer too
 high. Async *dispatch* would break the three places where synchronous execution is load-bearing
@@ -66,9 +68,13 @@ error propagation into the caller's `with`). What actually needs to be asynchron
   transaction. Batching them preserves today's inline in-order semantics exactly, which keeps "did
   this change behaviour?" answerable, and costs one insert per transaction instead of N.
 
-- **Projections are stateless — read tables only, no in-memory state.** This is what makes
-  correctness independent of node topology: the job writes the table once and both nodes read the
-  same rows. `VerifiedProviders`' `MapSet` becomes a query or a TTL cache.
+- **Projections are stateless — read tables only, no in-memory state.** This is a *consequence* of
+  the previous decision, not an independent one. Once the outbox job invokes projections directly
+  instead of broadcasting, delivery reaches one node — the node running the job. A read table is
+  shared, so that is fine; `VerifiedProviders`' in-memory `MapSet` is not, and the other machine's
+  copy would never update. The `MapSet` becomes a query or a TTL cache. The payoff beyond enabling
+  job-invoked delivery is that correctness stops depending on distribution at all: no netsplit,
+  misconfigured release env, or future topology change can reintroduce divergence.
 
 - **Projections read the write model; they do not fold events.** `project_participant_added` looks
   the conversation up in the `conversations` table rather than accumulating prior events. This is
@@ -76,8 +82,9 @@ error propagation into the caller's `with`). What actually needs to be asynchron
   test asserted and no document named. **It is now an invariant.** A projection that folds events
   instead is silently corrupted by the at-least-once, unordered delivery this ADR introduces.
 
-- **BEAM clustering is enabled**, but only so live UI updates reach users on either machine.
-  Correctness no longer depends on it — that is the point of the layering.
+- **Clustering stays as it is** — already correctly configured, and after this change it carries
+  only ephemeral UI fan-out. That is the intended layering: distribution is a liveness concern, never
+  a correctness one.
 
 - **`processed_events` stays.** Oban is at-least-once, so the idempotency gate is still required.
   `RetryHelpers` goes: Oban owns retry, and three stacked retry policies for one row insert is two
@@ -99,9 +106,11 @@ error propagation into the caller's `with`). What actually needs to be asynchron
   the 13. Criticality was assigned per-event by hand and is not a reliable proxy for "must not be
   lost".
 
-- **Fixing only the clustering.** One secret, and it does make PubSub fan out. Rejected as a
-  complete fix because it leaves correctness dependent on distribution: any netsplit or misconfigured
-  secret silently reintroduces divergence, and the commit→publish window is untouched.
+- **Leaning on clustering.** PubSub already fans out across machines, so in-memory projection state
+  is consistent today and job-invoked delivery could be replaced by a cluster-wide broadcast.
+  Rejected because a broadcast is durable only up to the broadcast: the job would be marked complete
+  the instant the message was sent, so a subscriber restarting at that moment still loses the event
+  with nothing to retry. That is the same hole the outbox exists to close, moved one hop later.
 
 - **Keeping both structs and dropping only the promotion layer.** Deletes the 30 translation
   handlers without collapsing the model. Rejected because every new event then needs a
@@ -132,12 +141,13 @@ independently valuable and revertable.
 
 | # | Change | Removes / fixes |
 |---|---|---|
-| 1 | `DNS_CLUSTER_QUERY` secret | #1189 — node-local live UI updates |
-| 2 | Stateless projections | #1189 — per-node read-table divergence |
-| 3 | UI tagged tuples | `NotifyLiveViews`, `WithDomainEvents`, `build_message_from_event`, 9 LiveViews |
-| 4 | Outbox + Lifeline + `max_attempts` | #1190, #1191; 11 `EventSubscriber` specs |
+| 1 | `Oban.Plugins.Lifeline` + raise `max_attempts` | #1191 — orphaned jobs never rescued |
+| 2 | Stateless projections | `VerifiedProviders`' in-memory `MapSet`; prerequisite for PR 3 |
+| 3 | Outbox + job-invoked consumers | #1190 — commit→publish window; 11 `EventSubscriber` specs |
+| 4 | UI tagged tuples | `NotifyLiveViews`, `WithDomainEvents`, `build_message_from_event`, 9 LiveViews |
 | 5 | One struct, kill promotion | `DomainEvent`, 30 handlers, 7 modules, 2 publishers, 4 behaviours |
 | 6 | Delete the bus, inline the 7 | 55 registrations, `subscribe/4` owner-scoping machinery |
 
-The three defects are live today and independent of the refactor: PRs 1, 2 and the Lifeline half of
-4 are worth landing whatever happens to the rest.
+PR 1 is a live defect fix independent of everything else and should land whatever happens to the
+rest. PR 4 is independent of 1–3 and can be reordered freely. PR 2 must precede PR 3, because
+job-invoked delivery reaches one node and an in-memory projection on the other would never update.
