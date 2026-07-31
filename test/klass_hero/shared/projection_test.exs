@@ -42,11 +42,19 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
   end
 
-  setup do
-    {:ok, agent_pid} =
-      Agent.start_link(fn -> %{bootstraps: 0, events: []} end, name: @agent_name)
+  # ExUnit's supervisor owns these Agents, so they are shut down in order before any
+  # on_exit callback runs and an already-stopped one is not an error.
+  #
+  # They used to be `Agent.start_link` plus `on_exit(fn -> if Process.alive?(pid), do:
+  # Agent.stop(pid) end)`. That is check-then-act: on_exit runs after the test process has
+  # exited, and a linked Agent is already dying by then, so the guard only sometimes won.
+  # When it lost, `GenServer.stop/3` exited `:noproc` and failed an otherwise-passing test.
+  defp start_agent!(name, initial_fun) do
+    start_supervised!(%{id: name, start: {Agent, :start_link, [initial_fun, [name: name]]}})
+  end
 
-    on_exit(fn -> if Process.alive?(agent_pid), do: Agent.stop(agent_pid) end)
+  setup do
+    start_agent!(@agent_name, fn -> %{bootstraps: 0, events: []} end)
     :ok
   end
 
@@ -226,10 +234,7 @@ defmodule KlassHero.Shared.ProjectionTest do
 
   describe "WithBootstrapRetry mixin" do
     setup do
-      {:ok, flaky_pid} =
-        Agent.start_link(fn -> 0 end, name: FlakyAgent)
-
-      on_exit(fn -> if Process.alive?(flaky_pid), do: Agent.stop(flaky_pid) end)
+      start_agent!(FlakyAgent, fn -> 0 end)
       :ok
     end
 
@@ -251,8 +256,7 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
 
     test "succeeds on first attempt without retry without crashing" do
-      {:ok, instant_pid} = Agent.start_link(fn -> 0 end, name: InstantSuccessAgent)
-      on_exit(fn -> if Process.alive?(instant_pid), do: Agent.stop(instant_pid) end)
+      start_agent!(InstantSuccessAgent, fn -> 0 end)
       {:ok, pid} = InstantSuccessProjection.start_link(name: unique_name())
 
       # Drain handle_continue. With the bug present, the GenServer crashes here
@@ -267,12 +271,7 @@ defmodule KlassHero.Shared.ProjectionTest do
     test "reraises after max_attempts consecutive failures" do
       import ExUnit.CaptureLog
 
-      {:ok, always_fail_pid} =
-        Agent.start_link(fn -> 0 end, name: AlwaysFailAgent)
-
-      on_exit(fn ->
-        if Process.alive?(always_fail_pid), do: Agent.stop(always_fail_pid)
-      end)
+      start_agent!(AlwaysFailAgent, fn -> 0 end)
 
       Process.flag(:trap_exit, true)
 
