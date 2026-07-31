@@ -12,9 +12,17 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
+  alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Outbox
 
   require Logger
+
+  @typedoc """
+  Every way a claim can fail. Closed on purpose: `InviteClaimController` renders this
+  set, and an `%Ecto.Changeset{}` reaching it raised `CaseClauseError` — a 500 on a link
+  from an invitation email (#1215). Widening this means widening the controller too.
+  """
+  @type error :: :not_found | :already_claimed | :registration_failed | :invite_transition_failed
 
   @doc """
   Claims an invite by its token.
@@ -24,10 +32,10 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   - `{:ok, %ClaimResult{user_type: :existing_user, user: user, invite: invite}}` — existing account found
   - `{:error, :not_found}` — invalid or expired token
   - `{:error, :already_claimed}` — invite already processed
+  - `{:error, :registration_failed}` — the guardian's account could not be created
+  - `{:error, :invite_transition_failed}` — the invite could not be marked registered
   """
-  @spec execute(binary()) ::
-          {:ok, ClaimResult.t()}
-          | {:error, :not_found | :already_claimed | term()}
+  @spec execute(binary()) :: {:ok, ClaimResult.t()} | {:error, error()}
   def execute(token) when is_binary(token) do
     with {:ok, invite} <- Enrollment.get_invite_by_token(token),
          {:ok, invite} <- BulkEnrollmentInvite.ensure_claimable(invite),
@@ -62,8 +70,49 @@ defmodule KlassHero.Enrollment.ClaimInvite do
     }
 
     case Accounts.register_user(attrs) do
-      {:ok, user} -> {:ok, :new_user, to_user_result(user)}
-      {:error, reason} -> {:error, reason}
+      {:ok, user} ->
+        {:ok, :new_user, to_user_result(user)}
+
+      {:error, %Ecto.Changeset{errors: errors}} ->
+        if EctoErrorHelpers.unique_conflict?(errors, :email) do
+          resolve_after_conflict(invite)
+        else
+          Logger.warning("[ClaimInvite] Guardian account rejected",
+            invite_id: invite.id,
+            errors: inspect(errors)
+          )
+
+          {:error, :registration_failed}
+        end
+    end
+  end
+
+  @doc """
+  Resolves the guardian after `Accounts.register_user/1` lost a uniqueness race.
+
+  `resolve_user/1` checks for an account and then creates one, and the two are not atomic —
+  a guardian who double-clicks their invite link, or whose email client prefetches the URL,
+  can register twice concurrently. The loser gets a duplicate-email changeset for an account
+  that, by then, genuinely exists; the right answer is the existing-user path, not an error.
+
+  Public for the same reason `Enrollment.register_claimed_invite/1` is: two requests cannot
+  be interleaved deterministically from one sandboxed connection, so the test drives this
+  step directly with the world already in the post-race state.
+  """
+  @spec resolve_after_conflict(BulkEnrollmentInvite.t()) ::
+          {:ok, :existing_user, map()} | {:error, :registration_failed}
+  def resolve_after_conflict(%BulkEnrollmentInvite{} = invite) do
+    case Accounts.get_user_by_email(invite.guardian_email) do
+      %{} = user ->
+        {:ok, :existing_user, to_user_result(user)}
+
+      nil ->
+        # The email was reported taken but no account answers to it. Nothing to recover to.
+        Logger.error("[ClaimInvite] Email conflict with no resolvable account",
+          invite_id: invite.id
+        )
+
+        {:error, :registration_failed}
     end
   end
 
@@ -71,13 +120,20 @@ defmodule KlassHero.Enrollment.ClaimInvite do
   # ClaimResult never leaks an %Accounts.User{} type across the context boundary.
   defp to_user_result(user), do: %{id: user.id, email: user.email, name: user.name}
 
+  # `User.name` must be 2..100 chars, but invite fields are looser: names are `max: 100`
+  # each with no minimum, and `guardian_email` is `max: 160`. So imported data can overflow
+  # (two names reach 201; the old email fallback reached 160) or underflow (a lone initial).
+  # The clamp rescues both overflows; an initial can't be rescued and fails the claim.
+  # The nameless case gets a placeholder, not the email — truncating an address to fit
+  # would store a mid-word fragment as somebody's name.
   defp guardian_name(invite) do
     case {invite.guardian_first_name, invite.guardian_last_name} do
-      {nil, nil} -> invite.guardian_email
+      {nil, nil} -> "Guardian"
       {first, nil} -> first
       {nil, last} -> last
       {first, last} -> "#{first} #{last}"
     end
+    |> String.slice(0, 100)
   end
 
   @spec build_and_publish(BulkEnrollmentInvite.t(), ClaimResult.user_type(), map()) ::

@@ -34,6 +34,8 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Outbox
 
+  require Logger
+
   @active_statuses ~w(pending confirmed)
 
   @doc """
@@ -963,14 +965,34 @@ defmodule KlassHero.Enrollment do
   matching what a sequential second claim gets.
   """
   @spec register_claimed_invite(String.t()) ::
-          {:ok, BulkEnrollmentInvite.t()} | {:error, :not_found | :already_claimed | term()}
+          {:ok, BulkEnrollmentInvite.t()}
+          | {:error, :not_found | :already_claimed | :invite_transition_failed}
   def register_claimed_invite(invite_id) when is_binary(invite_id) do
     with {:ok, invite} <- get_invite(invite_id),
          {:ok, invite} <- BulkEnrollmentInvite.ensure_claimable(invite) do
-      transition_invite(invite, %{
+      invite
+      |> transition_invite(%{
         status: :registered,
         registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
       })
+      |> case do
+        {:ok, invite} ->
+          {:ok, invite}
+
+        {:error, :not_found} = error ->
+          error
+
+        # `transition_invite/2` ends in a bare `Repo.update()`. The claimability case is
+        # already an atom above, but the changeset's other constraints would arrive at
+        # `InviteClaimController` raw — the exact shape that 500s (#1215).
+        {:error, %Ecto.Changeset{} = changeset} ->
+          Logger.error("[Enrollment] Invite transition failed unexpectedly",
+            invite_id: invite_id,
+            errors: inspect(changeset.errors)
+          )
+
+          {:error, :invite_transition_failed}
+      end
     end
   end
 

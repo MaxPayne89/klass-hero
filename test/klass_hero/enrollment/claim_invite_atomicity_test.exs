@@ -100,4 +100,26 @@ defmodule KlassHero.Enrollment.ClaimInviteAtomicityTest do
   test "registering an invite that vanished reports not_found" do
     assert {:error, :not_found} = Enrollment.register_claimed_invite(Ecto.UUID.generate())
   end
+
+  # `resolve_user/1` checks for an account and then creates one, and the two are not atomic.
+  # A guardian who double-clicks their invite link — or whose email client prefetches the URL —
+  # registers twice concurrently, and the loser gets a duplicate-email changeset. Before #1215
+  # that changeset reached `InviteClaimController`, which has no clause for it.
+  #
+  # Driven through the post-race step directly, for the same reason as the concurrent-claim
+  # test above: the two requests cannot be interleaved from one sandboxed connection.
+  test "the loser of a registration race resolves to the winner's account", %{invite: invite} do
+    assert {:ok, :existing_user, user} = ClaimInvite.resolve_after_conflict(invite)
+
+    assert user.email == invite.guardian_email
+  end
+
+  test "a reported conflict with no resolvable account gives up gracefully" do
+    orphan = %BulkEnrollmentInvite{
+      id: Ecto.UUID.generate(),
+      guardian_email: "no-such-guardian-#{System.unique_integer([:positive])}@example.com"
+    }
+
+    assert {:error, :registration_failed} = ClaimInvite.resolve_after_conflict(orphan)
+  end
 end

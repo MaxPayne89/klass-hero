@@ -3427,6 +3427,7 @@ msgstr ""
 msgid "Reviewing concerns or reports promptly and seriously"
 msgstr ""
 
+#: lib/klass_hero_web/controllers/invite_claim_controller.ex:57
 #: lib/klass_hero_web/live/booking_live.ex:197
 #, elixir-autogen, elixir-format
 msgid "Something went wrong. Please try again or contact support."
@@ -4853,6 +4854,7 @@ msgstr ""
 msgid "Remove attachment"
 msgstr ""
 
+#: lib/klass_hero_web/controllers/invite_claim_controller.ex:67
 #: lib/klass_hero_web/live/messaging_live_helper.ex:439
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:132
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:110
