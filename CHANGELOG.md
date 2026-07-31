@@ -5,6 +5,16 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.4](https://github.com/MaxPayne89/klass-hero/compare/v0.66.3...v0.66.4) (2026-07-31)
+
+
+### Bug Fixes
+
+* close every path that 500s an invite claim ([#1217](https://github.com/MaxPayne89/klass-hero/issues/1217)) ([296e35e](https://github.com/MaxPayne89/klass-hero/commit/296e35e46d38606b57944cc0bc88b193ec3fd41b))
+* record photo consent collected on an invite ([#1220](https://github.com/MaxPayne89/klass-hero/issues/1220)) ([ec40fbb](https://github.com/MaxPayne89/klass-hero/commit/ec40fbb5602720d40b2c6c3aebae19bc19a77214))
+* render the provider verification badge, drop the write-only column ([#1218](https://github.com/MaxPayne89/klass-hero/issues/1218)) ([34446a6](https://github.com/MaxPayne89/klass-hero/commit/34446a61f3aa7365d50cae4c998c910ed2ec6725)), closes [#1195](https://github.com/MaxPayne89/klass-hero/issues/1195)
+* serve the active locale in &lt;html lang&gt; and make language changes stick ([#1226](https://github.com/MaxPayne89/klass-hero/issues/1226)) ([ab21008](https://github.com/MaxPayne89/klass-hero/commit/ab210086e47b70ae83110470551d1d5fdef10d54)), closes [#1161](https://github.com/MaxPayne89/klass-hero/issues/1161)
+
 ## [0.66.3](https://github.com/MaxPayne89/klass-hero/compare/v0.66.2...v0.66.3) (2026-07-30)
 
 
