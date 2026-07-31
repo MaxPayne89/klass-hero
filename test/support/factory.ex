@@ -138,8 +138,7 @@ defmodule KlassHero.Factory do
       season: nil,
       registration_start_date: nil,
       registration_end_date: nil,
-      provider_id: Ecto.UUID.generate(),
-      provider_verified: false
+      provider_id: Ecto.UUID.generate()
     }
   end
 

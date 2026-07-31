@@ -47,7 +47,6 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       registration_start_date: program.registration_start_date,
       registration_end_date: program.registration_end_date,
       provider_id: program.provider_id,
-      provider_verified: false,
       inserted_at: program.inserted_at || now,
       updated_at: program.updated_at || now
     })

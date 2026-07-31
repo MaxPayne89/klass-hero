@@ -5,7 +5,11 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   ## Event Types
 
   - `provider_verified` / `provider_unverified` - An admin changed a provider's
-    verification status. Program Catalog's listing projection reads these.
+    verification status. **No consumer is registered for these since #1195**, so
+    `Outbox.stage/2` drops them rather than staging: Program Catalog's listing
+    projection used to subscribe, but program cards now read verification through
+    `Provider.get_trust_states/1` per render. They are still built here so that
+    registering a consumer in `config/config.exs` is all it takes to revive delivery.
   - `staff_member_invited` - A staff invitation was created (critical).
   - `staff_assigned_to_program` / `staff_unassigned_from_program` - A staff
     member's program assignment changed (critical). Messaging reacts by adding

@@ -65,6 +65,19 @@ Building either track on that engine would bolt per-step booleans onto the profi
   projections and Enrollment's `create_enrollment`) and the `ProviderProfile.verified` field do **not**
   change. `VerifyProvider` / `UnverifyProvider` keep emitting them; the new handler calls those same
   commands when a `VettingCase` crosses `:verified`. Every cross-context consumer stays untouched.
+
+  > **Superseded (2026-07-31, #1195).** The consumer list above no longer holds, and two thirds of it
+  > was already wrong when written: `verified_providers` was replaced by a facade read in #1196, and
+  > Enrollment's `create_enrollment` never referenced `verified` at all. #1195 removed the last
+  > consumer — Program Catalog's `program_listings` projection — along with the
+  > `program_listings.provider_verified` column it maintained. Program cards now read verification
+  > through `Provider.get_trust_states/1` per render, so Program Catalog reads Provider through the
+  > facade rather than denormalising it.
+  >
+  > **`ProviderProfile.verified` is unchanged and remains the published fact.** What changed is only
+  > how it is *distributed*: both events are still built by `VerifyProvider` / `UnverifyProvider`, but
+  > with no registered consumer `Outbox.stage/2` drops them before staging, so they are currently
+  > inert. Registering a consumer in `config/config.exs` revives delivery with no producer change.
 - **Migration is big-bang, not strangler** — there is no live vetting data to preserve, so one PR
   replaces the internal derivation outright (no parallel-run, no compat shim). "Big-bang" is scoped to
   the *provider-internal* machinery; it does not touch the integration-event contract above.

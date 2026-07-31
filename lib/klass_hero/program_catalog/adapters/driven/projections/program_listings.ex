@@ -2,8 +2,10 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   @moduledoc """
   Event-driven projection maintaining the `program_listings` read table.
 
-  Mirrors program data + provider verification status from write tables so
-  Program Catalog queries can serve denormalised reads without joins.
+  Mirrors program data from the write table so Program Catalog queries can serve
+  denormalised reads without joins. It holds *no* Provider state: since #1195,
+  provider name and vetting state are read from Provider's facade per render, so
+  this projection subscribes to Program Catalog's own events only.
 
   Built on `KlassHero.Shared.Projection` (base) + `Projection.WithBootstrapRetry`
   (linear-backoff retry on transient bootstrap failure).
@@ -11,9 +13,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   ## Event handling
 
   - `:program_created` — inserts a new listing row
-  - `:program_updated` — updates listing fields (preserves season + provider_verified)
-  - `:provider_verified` — bulk sets `provider_verified = true` for the provider's listings
-  - `:provider_unverified` — bulk sets `provider_verified = false`
+  - `:program_updated` — updates listing fields (preserves season)
 
   Bang functions (`Repo.insert!`, `Repo.update!`) are used intentionally — if a
   DB write fails, the GenServer crashes and the supervisor restarts it, triggering
@@ -24,18 +24,13 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   use KlassHero.Shared.Projection,
     topics: [
       "integration:program_catalog:program_created",
-      "integration:program_catalog:program_updated",
-      "integration:provider:provider_verified",
-      "integration:provider:provider_unverified"
+      "integration:program_catalog:program_updated"
     ]
 
   use KlassHero.Shared.Projection.WithBootstrapRetry
 
-  import Ecto.Query
-
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
-  alias KlassHero.Provider
   alias KlassHero.Repo
   alias KlassHero.Shared.Projection
 
@@ -59,7 +54,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     :provider_id
   ]
 
-  # Excludes season and provider_verified: season is bootstrap-only, provider_verified is set by verification events.
+  # Excludes season: it is bootstrap-only.
   @update_fields [
     :title,
     :description,
@@ -86,8 +81,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   @impl Projection
   def handle_event(:program_created, event), do: upsert_listing_from_event(event)
   def handle_event(:program_updated, event), do: update_listing_from_event(event)
-  def handle_event(:provider_verified, event), do: set_provider_verification(event.payload.provider_id, true)
-  def handle_event(:provider_unverified, event), do: set_provider_verification(event.payload.provider_id, false)
 
   defp bootstrap_from_write_table do
     programs = Repo.all(Program)
@@ -96,14 +89,12 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       0
     else
       now = DateTime.utc_now() |> DateTime.truncate(:second)
-      verified_ids = verified_provider_ids()
 
       entries =
         Enum.map(programs, fn program ->
           program
           |> Map.take(@shared_fields)
           |> Map.put(:id, program.id)
-          |> Map.put(:provider_verified, MapSet.member?(verified_ids, program.provider_id))
           |> Map.put(:inserted_at, program.inserted_at || now)
           |> Map.put(:updated_at, program.updated_at || now)
         end)
@@ -144,8 +135,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       season: Map.get(payload, :season),
       registration_start_date: Map.get(payload, :registration_start_date),
       registration_end_date: Map.get(payload, :registration_end_date),
-      provider_id: Map.get(payload, :provider_id),
-      provider_verified: false
+      provider_id: Map.get(payload, :provider_id)
     }
 
     %ProgramListing{}
@@ -157,8 +147,8 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   end
 
   # Upsert (not get-then-update) so events that race with bootstrap still project rather than being silently dropped.
-  # season and provider_verified are not in @update_fields: on conflict they are preserved; fresh inserts default
-  # to nil/false and are corrected by the next bootstrap.
+  # season is not in @update_fields: on conflict it is preserved; fresh inserts default to nil and are corrected
+  # by the next bootstrap.
   defp update_listing_from_event(event) do
     program_id = event.entity_id
     payload = event.payload
@@ -181,7 +171,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       registration_start_date: Map.get(payload, :registration_start_date),
       registration_end_date: Map.get(payload, :registration_end_date),
       provider_id: Map.get(payload, :provider_id),
-      provider_verified: false,
       season: nil
     }
 
@@ -191,20 +180,5 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
       on_conflict: {:replace, @update_fields},
       conflict_target: :id
     )
-  end
-
-  defp set_provider_verification(provider_id, verified) do
-    from(pl in ProgramListing, where: pl.provider_id == ^provider_id)
-    |> Repo.update_all(
-      set: [
-        provider_verified: verified,
-        updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
-      ]
-    )
-  end
-
-  defp verified_provider_ids do
-    {:ok, ids} = Provider.list_verified_provider_ids()
-    MapSet.new(ids)
   end
 end
