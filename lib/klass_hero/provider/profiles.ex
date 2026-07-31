@@ -181,12 +181,6 @@ defmodule KlassHero.Provider.Profiles do
     end
   end
 
-  @doc "Lists all verified provider IDs (used by projections at bootstrap)."
-  def list_verified_provider_ids do
-    ids = Repo.all(from p in ProviderProfile, where: p.verified == true, select: p.id)
-    {:ok, ids}
-  end
-
   @doc "Returns a changeset for tracking provider profile form changes (for `to_form()` / `phx-change`)."
   @spec change_provider_profile(ProviderProfile.t(), map()) :: Ecto.Changeset.t()
   def change_provider_profile(%ProviderProfile{} = provider, attrs \\ %{}) do

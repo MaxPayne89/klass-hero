@@ -303,19 +303,6 @@ defmodule KlassHero.ProviderTest do
     end
   end
 
-  describe "list_verified_provider_ids/0" do
-    test "returns verified provider IDs" do
-      setup_test_integration_events()
-      provider = ProviderFixtures.provider_profile_fixture()
-      admin = AccountsFixtures.user_fixture(%{is_admin: true})
-
-      {:ok, _} = Provider.verify_provider(provider.id, admin.id)
-
-      assert {:ok, ids} = Provider.list_verified_provider_ids()
-      assert provider.id in ids
-    end
-  end
-
   # Test Helpers
 
   defp create_pending_document(provider_id) do

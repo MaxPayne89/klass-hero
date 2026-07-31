@@ -52,6 +52,10 @@ defmodule KlassHeroWeb.HomeLive do
     {:noreply, push_navigate(socket, to: ~p"/programs/#{program_id}")}
   end
 
+  # No provider row here on purpose: the home page renders `mk_program_card`, a
+  # marketing card that shows no provider at all. Threading a name and trust state
+  # into it would recreate exactly the write-only data #1195 deleted. Surfacing
+  # verification here needs a design decision about the marketing card first.
   defp listing_to_card_map(%ProgramListing{} = program) do
     %{
       id: program.id,

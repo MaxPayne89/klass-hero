@@ -494,6 +494,41 @@ defmodule KlassHero.Provider.Vetting do
     end
   end
 
+  # ── Trust state for public surfaces ─────────────────────────────────────────
+
+  @typedoc "What a parent may be shown about a provider's vetting on a public surface."
+  @type trust_state :: :verified | :in_progress | :unverified
+
+  @doc """
+  Resolves display trust state for a batch of provider IDs.
+
+  Returns a map of `provider_id => trust_state`. Unknown IDs are omitted; a
+  provider with no Vetting Case reads as `:unverified`.
+
+  `ProviderProfile.verified` is the published boundary fact and wins over the
+  case's `lifecycle` in *both* directions, because an admin can flip it straight
+  from Backpex without the engine: an admin-verified provider is never shown as
+  mid-vetting, and an admin-unverified one is never shown as verified however far
+  its case got.
+  """
+  @spec get_trust_states([String.t()]) :: %{String.t() => trust_state()}
+  def get_trust_states([]), do: %{}
+
+  def get_trust_states(provider_ids) when is_list(provider_ids) do
+    from(p in ProviderProfile,
+      left_join: c in VettingCase,
+      on: c.provider_id == p.id,
+      where: p.id in ^provider_ids,
+      select: {p.id, p.verified, c.lifecycle}
+    )
+    |> Repo.all()
+    |> Map.new(fn {id, verified, lifecycle} -> {id, trust_state(verified, lifecycle)} end)
+  end
+
+  defp trust_state(true, _lifecycle), do: :verified
+  defp trust_state(false, :in_progress), do: :in_progress
+  defp trust_state(false, _lifecycle), do: :unverified
+
   # Builds a step's *displayed* status + reason by merging the engine step with its evidence.
   # `step.status` is authoritative for `:approved`; for everything else the evidence record
   # wins, because the engine resets document/identity steps to `:not_started` on rejection and

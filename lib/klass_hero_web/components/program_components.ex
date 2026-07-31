@@ -8,6 +8,7 @@ defmodule KlassHeroWeb.ProgramComponents do
   import KlassHeroWeb.UIComponents
 
   alias KlassHero.ProgramCatalog
+  alias KlassHero.Shared.NameUtils
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
 
@@ -212,6 +213,61 @@ defmodule KlassHeroWeb.ProgramComponents do
   end
 
   @doc """
+  Renders a provider's vetting state inline beside their name on a program card.
+
+  Deliberately compact — the roomier `verification_status_badge/1` in
+  `ProviderComponents` is a labelled pill built for the provider's own dashboard
+  header, which is too heavy to sit next to a name in a card.
+
+  `:unverified` renders nothing: a provider who has not completed vetting gets no
+  mark rather than a negative one.
+
+  ## Examples
+
+      <.provider_trust_mark state={:verified} />
+      <.provider_trust_mark state={:in_progress} />
+  """
+  attr :state, :atom, required: true, values: [:verified, :in_progress, :unverified]
+
+  def provider_trust_mark(%{state: :verified} = assigns) do
+    ~H"""
+    <span
+      data-testid="provider-trust-mark"
+      data-trust-state="verified"
+      class={[
+        "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium flex-shrink-0",
+        Theme.status_badge(:available),
+        Theme.rounded(:full)
+      ]}
+      title={gettext("This provider completed Klass Hero's verification checks")}
+    >
+      <.icon name="hero-check-badge-mini" class="w-3.5 h-3.5" />
+      <span>{gettext("Verified")}</span>
+    </span>
+    """
+  end
+
+  def provider_trust_mark(%{state: :in_progress} = assigns) do
+    ~H"""
+    <span
+      data-testid="provider-trust-mark"
+      data-trust-state="in_progress"
+      class={[
+        "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium flex-shrink-0",
+        Theme.status_badge(:limited),
+        Theme.rounded(:full)
+      ]}
+      title={gettext("This provider is working through Klass Hero's verification checks")}
+    >
+      <.icon name="hero-clock-mini" class="w-3.5 h-3.5" />
+      <span>{gettext("Verification in progress")}</span>
+    </span>
+    """
+  end
+
+  def provider_trust_mark(assigns), do: ~H""
+
+  @doc """
   Renders a program card with gradient header, favorite button, and program details.
 
   Supports two variants:
@@ -285,7 +341,7 @@ defmodule KlassHeroWeb.ProgramComponents do
           </div>
         </div>
 
-        <%!-- Provider info — renders when provider_name is populated (not yet wired to domain data) --%>
+        <%!-- Provider info — renders when provider_name is populated --%>
         <div
           :if={Map.get(@program, :provider_name)}
           class="flex items-center gap-2 mb-4 pb-3 border-b border-hero-grey-100"
@@ -294,25 +350,14 @@ defmodule KlassHeroWeb.ProgramComponents do
             "w-8 h-8 bg-hero-blue-100 text-hero-blue-600 flex items-center justify-center text-xs font-semibold",
             Theme.rounded(:full)
           ]}>
-            {Map.get(@program, :provider_avatar, "KH")}
+            {NameUtils.initials_from_name(@program.provider_name)}
           </div>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-1">
               <span class="text-sm font-medium text-hero-black truncate">
                 {@program.provider_name}
               </span>
-              <svg
-                :if={Map.get(@program, :is_verified, false)}
-                class="w-4 h-4 text-hero-blue-500 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clip-rule="evenodd"
-                />
-              </svg>
+              <.provider_trust_mark state={Map.get(@program, :verification_state, :unverified)} />
             </div>
             <div
               :if={Map.get(@program, :provider_location)}

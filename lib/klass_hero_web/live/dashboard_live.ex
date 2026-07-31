@@ -11,6 +11,7 @@ defmodule KlassHeroWeb.DashboardLive do
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHeroWeb.Helpers.Greeting
+  alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
@@ -233,14 +234,28 @@ defmodule KlassHeroWeb.DashboardLive do
   end
 
   defp build_family_program_items(active, expired) do
+    providers = ProviderDisplay.for_programs(Enum.map(active ++ expired, fn {_e, p} -> p end))
+
     active_items =
       Enum.map(active, fn {e, p} ->
-        %{id: e.id, enrollment: e, program: p, expired: false}
+        %{
+          id: e.id,
+          enrollment: e,
+          program: p,
+          provider: ProviderDisplay.fetch(providers, p),
+          expired: false
+        }
       end)
 
     expired_items =
       Enum.map(expired, fn {e, p} ->
-        %{id: e.id, enrollment: e, program: p, expired: true}
+        %{
+          id: e.id,
+          enrollment: e,
+          program: p,
+          provider: ProviderDisplay.fetch(providers, p),
+          expired: true
+        }
       end)
 
     active_items ++ expired_items
@@ -396,7 +411,7 @@ defmodule KlassHeroWeb.DashboardLive do
               <.program_card
                 :for={{dom_id, item} <- @streams.family_programs}
                 id={dom_id}
-                program={ProgramPresenter.to_card_view(item.program)}
+                program={ProgramPresenter.to_card_view(item.program, item.provider)}
                 variant={:detailed}
                 expired={item.expired}
                 phx-click="program_click"

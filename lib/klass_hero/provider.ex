@@ -71,9 +71,6 @@ defmodule KlassHero.Provider do
   @doc "Batch-resolves business names for provider IDs (used by cross-context consumers). Unknown IDs are omitted."
   defdelegate get_business_names(provider_ids), to: Profiles
 
-  @doc "Lists all verified provider IDs (used by projections at bootstrap)."
-  defdelegate list_verified_provider_ids, to: Profiles
-
   @doc "Returns a changeset for tracking provider profile form changes (for `to_form()` / `phx-change`)."
   defdelegate change_provider_profile(provider, attrs \\ %{}), to: Profiles
 
@@ -114,6 +111,15 @@ defmodule KlassHero.Provider do
 
   @doc "Whether the provider's identity step is engine-approved (drives the overview CTA banner)."
   defdelegate identity_step_approved?(provider_id), to: Vetting
+
+  @typedoc "What a public surface may show about a provider's vetting."
+  @type trust_state :: Vetting.trust_state()
+
+  @doc """
+  Batch-resolves what a public surface may show about providers' vetting:
+  `%{provider_id => :verified | :in_progress | :unverified}`. Unknown IDs omitted.
+  """
+  defdelegate get_trust_states(provider_ids), to: Vetting
 
   @doc "Lists identity verifications with provider business names for admin review (read-only)."
   defdelegate list_identity_verifications_for_admin(), to: Vetting

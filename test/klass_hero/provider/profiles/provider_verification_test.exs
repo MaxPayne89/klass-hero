@@ -14,6 +14,7 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.ProviderFixtures
 
   setup do
@@ -45,11 +46,15 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
       assert diff >= 0 and diff < 60
     end
 
-    test "publishes integration event", %{provider: provider, admin: admin} do
-      params = %{provider_id: provider.id, admin_id: admin.id}
-      {:ok, _} = Provider.verify_provider(params.provider_id, params.admin_id)
+    # The event is still *built* on this path, but since #1195 no consumer is
+    # registered for `integration:provider:provider_verified`, so `Outbox.stage/2`
+    # drops it before it reaches the outbox — asserting publication here would
+    # assert a no-op. The constructor's shape is covered directly instead; the
+    # observable outcome of the command is the `verified` fact above.
+    test "builds a provider_verified event carrying the provider's identity", %{provider: provider} do
+      {:ok, profile} = Provider.get_provider_profile(provider.id)
+      event = ProviderEvents.provider_verified(profile, "admin-1")
 
-      event = assert_integration_event_published(:provider_verified)
       assert event.entity_id == provider.id
       assert event.source_context == :provider
       assert event.payload.provider_id == provider.id
@@ -94,18 +99,12 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
       assert unverified.verified_at == nil
     end
 
-    test "publishes integration event", %{provider: provider, admin: admin} do
-      # First verify
-      Provider.verify_provider(provider.id, admin.id)
+    # See the sibling verify case: the event is built but has no registered consumer
+    # since #1195, so `Outbox.stage/2` drops it. Shape is asserted on the constructor.
+    test "builds a provider_unverified event carrying the provider's identity", %{provider: provider} do
+      {:ok, profile} = Provider.get_provider_profile(provider.id)
+      event = ProviderEvents.provider_unverified(profile, "admin-1")
 
-      # Clear events from verify operation
-      clear_integration_events()
-
-      # Then unverify
-      params = %{provider_id: provider.id, admin_id: admin.id}
-      {:ok, _} = Provider.unverify_provider(params.provider_id, params.admin_id)
-
-      event = assert_integration_event_published(:provider_unverified)
       assert event.entity_id == provider.id
       assert event.source_context == :provider
       assert event.payload.provider_id == provider.id

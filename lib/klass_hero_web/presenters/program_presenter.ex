@@ -52,12 +52,21 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   Used for the parent dashboard's Family Programs section and anywhere
   `<.program_card>` is rendered from real domain data.
 
+  `provider` is the caller's batch-resolved `%{name:, trust:}` for this program's
+  provider (see `Provider.get_business_names/1` + `Provider.get_trust_states/1`),
+  defaulting to an unnamed, unverified provider so the card degrades to hiding the
+  provider row rather than rendering a blank one.
+
   Returns a map matching the attrs expected by `ProgramComponents.program_card/1`.
   """
-  @spec to_card_view(Program.t()) :: map()
-  def to_card_view(%Program{} = program) do
+  @spec to_card_view(Program.t(), %{name: String.t() | nil, trust: atom()}) :: map()
+  def to_card_view(program, provider \\ %{name: nil, trust: :unverified})
+
+  def to_card_view(%Program{} = program, provider) do
     %{
       id: program.id,
+      provider_name: provider.name,
+      verification_state: provider.trust,
       title: program.title,
       description: program.description,
       category: humanize_category(program.category),

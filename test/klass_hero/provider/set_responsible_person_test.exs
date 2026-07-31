@@ -103,15 +103,21 @@ defmodule KlassHero.Provider.SetResponsiblePersonTest do
 
       refute reload(provider.id).verified
       assert reload(provider.id).responsible_person_name == "John Doe"
-      assert_integration_event_published(:provider_unverified)
     end
 
-    test "does not emit an unverify event when the business was never verified", %{provider: provider} do
+    # Previously asserted that no `:provider_unverified` event was emitted for a
+    # never-verified business. Since #1195 that topic has no consumer, so
+    # `Outbox.stage/2` drops it either way and the assertion could not fail —
+    # it now pins the state the reset actually produces instead.
+    test "applies the reset without unverifying a business that was never verified", %{provider: provider} do
       {:ok, :set} = Vetting.set_responsible_person(provider.id, "Jane Smith", "Owner")
-      clear_integration_events()
 
       assert {:ok, :changed} = Vetting.set_responsible_person(provider.id, "John Doe", "Director")
-      assert_no_integration_events_published()
+
+      refute reload(provider.id).verified
+      assert reload(provider.id).verified_at == nil
+      assert reload(provider.id).responsible_person_name == "John Doe"
+      assert :not_started = step_status(provider.id, :responsible_person_identity)
     end
   end
 

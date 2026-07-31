@@ -65,29 +65,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing_2.title == "Art Class"
       assert listing_2.category == "education"
     end
-
-    # `start_projections: false` means no projection runs during the suite, so while bootstrap asked a
-    # sibling GenServer for verification state it silently caught the :exit and marked every provider
-    # unverified — in tests always, and in any environment where that GenServer was down.
-    test "carries each program's provider verification state" do
-      verified_provider = insert(:provider_profile_schema, verified: true)
-      unverified_provider = insert(:provider_profile_schema)
-
-      verified_program = insert(:program_schema, title: "Verified", provider_id: verified_provider.id)
-      unverified_program = insert(:program_schema, title: "Unverified", provider_id: unverified_provider.id)
-
-      stop_supervised!(ProgramListings)
-
-      pid =
-        start_supervised!({ProgramListings, name: :"verification_test_#{System.unique_integer([:positive])}"},
-          id: :verification_bootstrap
-        )
-
-      :sys.get_state(pid)
-
-      assert Repo.get(ProgramListing, verified_program.id).provider_verified == true
-      assert Repo.get(ProgramListing, unverified_program.id).provider_verified == false
-    end
   end
 
   describe "rebuild/1" do
@@ -153,7 +130,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing.meeting_end_time == ~T[17:00:00]
       assert listing.start_date == ~D[2026-03-01]
       assert listing.end_date == ~D[2026-06-30]
-      assert listing.provider_verified == false
     end
 
     test "handles duplicate program_created event idempotently" do
@@ -199,8 +175,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
         title: "Old Title",
         category: "sports",
         season: "Spring 2026",
-        provider_id: provider_id,
-        provider_verified: false
+        provider_id: provider_id
       )
 
       event =
@@ -283,63 +258,6 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing.category == "education"
       assert listing.provider_id == provider_id
       assert listing.season == nil
-      assert listing.provider_verified == false
-    end
-  end
-
-  describe "handle provider_verified event" do
-    test "sets provider_verified to true for all listings of that provider" do
-      provider_id = Ecto.UUID.generate()
-
-      listing_1 = insert_listing(title: "Program A", provider_id: provider_id, provider_verified: false)
-      listing_2 = insert_listing(title: "Program B", provider_id: provider_id, provider_verified: false)
-
-      # Unrelated provider's listing must not be affected.
-      other_provider_id = Ecto.UUID.generate()
-      other_listing = insert_listing(title: "Other Program", provider_id: other_provider_id, provider_verified: false)
-
-      event =
-        Event.new(
-          :provider_verified,
-          :provider,
-          :provider,
-          provider_id,
-          %{provider_id: provider_id, business_name: "Test Business"}
-        )
-
-      dispatch(event)
-
-      assert Repo.get(ProgramListing, listing_1.id).provider_verified == true
-      assert Repo.get(ProgramListing, listing_2.id).provider_verified == true
-      assert Repo.get(ProgramListing, other_listing.id).provider_verified == false
-    end
-  end
-
-  describe "handle provider_unverified event" do
-    test "sets provider_verified to false for all listings of that provider" do
-      provider_id = Ecto.UUID.generate()
-
-      listing_1 = insert_listing(title: "Program A", provider_id: provider_id, provider_verified: true)
-      listing_2 = insert_listing(title: "Program B", provider_id: provider_id, provider_verified: true)
-
-      # Unrelated provider's listing must not be affected.
-      other_provider_id = Ecto.UUID.generate()
-      other_listing = insert_listing(title: "Other Program", provider_id: other_provider_id, provider_verified: true)
-
-      event =
-        Event.new(
-          :provider_unverified,
-          :provider,
-          :provider,
-          provider_id,
-          %{provider_id: provider_id, business_name: "Test Business"}
-        )
-
-      dispatch(event)
-
-      assert Repo.get(ProgramListing, listing_1.id).provider_verified == false
-      assert Repo.get(ProgramListing, listing_2.id).provider_verified == false
-      assert Repo.get(ProgramListing, other_listing.id).provider_verified == true
     end
   end
 

@@ -214,12 +214,11 @@ config :klass_hero, :event_consumers, %{
     {StaffAssignmentHandler, :handle_event},
     {ProviderSessionDetails, :project}
   ],
-  "integration:provider:provider_verified" => [
-    {ProgramListings, :project}
-  ],
-  "integration:provider:provider_unverified" => [
-    {ProgramListings, :project}
-  ],
+  # `integration:provider:provider_verified` / `provider_unverified` have no consumers
+  # since #1195: program cards read trust state from Provider's facade per render rather
+  # than from a denormalised column. The events are still produced (the `verified` fact
+  # and its audit trail are load-bearing); `Outbox.stage/2` drops them for want of a
+  # consumer. Register one here to revive delivery.
 
   # Participation
   "integration:participation:session_created" => [

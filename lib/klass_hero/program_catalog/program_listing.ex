@@ -4,8 +4,12 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
 
   Conventional Phoenix read side: the Ecto schema *is* the display DTO. It is
   write-only from the projection's perspective (`ProgramListings` maintains it
-  from program + provider events) and read-only from the context's perspective.
-  No user-facing changeset — the projection controls all writes.
+  from program events) and read-only from the context's perspective. No
+  user-facing changeset — the projection controls all writes.
+
+  Provider facts are deliberately absent: surfaces needing a provider's name or
+  vetting state read Provider's facade per render (`KlassHeroWeb.Helpers.ProviderDisplay`)
+  rather than having them denormalised here (#1195).
   """
 
   use Ecto.Schema
@@ -32,7 +36,6 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
     field :registration_start_date, :date
     field :registration_end_date, :date
     field :provider_id, :binary_id
-    field :provider_verified, :boolean, default: false
 
     timestamps()
   end
@@ -56,7 +59,6 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
           registration_start_date: Date.t() | nil,
           registration_end_date: Date.t() | nil,
           provider_id: Ecto.UUID.t() | nil,
-          provider_verified: boolean(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }

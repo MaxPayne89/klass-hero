@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.ProgramsLive do
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Shared.ErrorIds
+  alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
 
@@ -65,7 +66,8 @@ defmodule KlassHeroWeb.ProgramsLive do
     sorted_domain = apply_sort(filtered_domain, sort_by)
     program_ids = Enum.map(sorted_domain, & &1.id)
     capacities = ProgramCatalog.remaining_capacities(program_ids)
-    programs = Enum.map(sorted_domain, &program_to_map(&1, capacities))
+    providers = ProviderDisplay.for_programs(sorted_domain)
+    programs = Enum.map(sorted_domain, &program_to_map(&1, capacities, providers))
     duration_ms = System.monotonic_time(:millisecond) - start_time
 
     Logger.info(
@@ -110,12 +112,15 @@ defmodule KlassHeroWeb.ProgramsLive do
     {:noreply, socket}
   end
 
-  defp program_to_map(%ProgramListing{} = program, capacities) do
+  defp program_to_map(%ProgramListing{} = program, capacities, providers) do
     remaining = Map.get(capacities, program.id)
     spots_left = if remaining != :unlimited, do: remaining
+    provider = ProviderDisplay.fetch(providers, program)
 
     %{
       id: program.id,
+      provider_name: provider.name,
+      verification_state: provider.trust,
       title: program.title,
       description: program.description,
       category: ProgramPresenter.format_category_for_display(program.category),
@@ -186,7 +191,8 @@ defmodule KlassHeroWeb.ProgramsLive do
 
         program_ids = Enum.map(filtered_domain, & &1.id)
         capacities = ProgramCatalog.remaining_capacities(program_ids)
-        programs = Enum.map(filtered_domain, &program_to_map(&1, capacities))
+        providers = ProviderDisplay.for_programs(filtered_domain)
+        programs = Enum.map(filtered_domain, &program_to_map(&1, capacities, providers))
 
         Logger.info(
           "[ProgramsLive.load_more] Successfully loaded next page",

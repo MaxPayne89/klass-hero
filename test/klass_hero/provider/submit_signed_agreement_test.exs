@@ -116,7 +116,6 @@ defmodule KlassHero.Provider.SubmitSignedAgreementTest do
                })
 
       assert verified?(provider.id)
-      assert_integration_event_published(:provider_verified)
     end
 
     test "rejects a blank signer name", %{provider: provider} do

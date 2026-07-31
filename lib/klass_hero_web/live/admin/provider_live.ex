@@ -117,8 +117,8 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
   end
 
   # admin_changeset bypasses the domain use cases, so route the change back
-  # through the context — that is what keeps the ProgramListings projection in
-  # sync (#1210).
+  # through the context, keeping `verified`, `verified_at` and `verified_by_id`
+  # consistent and the write auditable like every other producer's (#1210).
   KlassHeroWeb.BackpexCompat.override :on_item_updated, 2 do
     @impl Backpex.LiveResource
     def on_item_updated(socket, item) do
@@ -132,10 +132,10 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
 
   defp record_verification_change(%{verified: same}, %{verified: same}, _socket), do: :ok
 
-  # Re-runs the write Backpex just did, through the context, so the event is
-  # staged inside a transaction like every other producer's (#1210). Publishing
-  # it from here reached nobody: the outbox delivers `provider_verified`, and
-  # nothing has subscribed to its PubSub topic since #1207. Both facade
+  # Re-runs the write Backpex just did, through the context, so verification goes
+  # through one path (#1210). Since #1195 nothing consumes `provider_verified`, so
+  # what this preserves is the audit trail and the single mutator — program cards
+  # read the `verified` fact directly via `Provider.get_trust_states/1`. Both facade
   # functions are idempotent, so re-persisting the same values is safe.
   defp record_verification_change(_old, %{verified: verified} = item, socket) do
     admin_id = socket.assigns.current_scope.user.id

@@ -223,7 +223,6 @@ defmodule KlassHeroWeb.HomeLiveTest do
         price: Decimal.new("100.00"),
         pricing_period: "per month",
         provider_id: Ecto.UUID.generate(),
-        provider_verified: false,
         inserted_at: now,
         updated_at: now
       })
