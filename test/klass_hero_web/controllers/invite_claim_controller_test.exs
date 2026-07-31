@@ -7,31 +7,38 @@ defmodule KlassHeroWeb.InviteClaimControllerTest do
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Repo
 
-  defp create_invite_with_token(_context) do
+  defp create_invite_with_token(_context), do: create_invite(%{})
+
+  defp create_invite(overrides) do
     provider = insert(:provider_profile_schema)
     program = insert(:program_schema, provider_id: provider.id)
     token = "controller-test-#{System.unique_integer([:positive])}"
     email = "controller-test-#{System.unique_integer([:positive])}@example.com"
 
-    {:ok, _} =
-      KlassHero.Enrollment.create_invite(%{
-        program_id: program.id,
-        provider_id: provider.id,
-        child_first_name: "Emma",
-        child_last_name: "Schmidt",
-        child_date_of_birth: ~D[2016-03-15],
-        guardian_email: email,
-        guardian_first_name: "Anna",
-        guardian_last_name: "Schmidt"
-      })
+    attrs =
+      Map.merge(
+        %{
+          program_id: program.id,
+          provider_id: provider.id,
+          child_first_name: "Emma",
+          child_last_name: "Schmidt",
+          child_date_of_birth: ~D[2016-03-15],
+          guardian_email: email,
+          guardian_first_name: "Anna",
+          guardian_last_name: "Schmidt"
+        },
+        overrides
+      )
 
-    invite = Repo.one!(BulkEnrollmentInvite)
+    {:ok, _} = KlassHero.Enrollment.create_invite(attrs)
 
-    invite
-    |> Ecto.Changeset.change(%{invite_token: token, status: :invite_sent})
-    |> Repo.update!()
+    invite =
+      BulkEnrollmentInvite
+      |> Repo.get_by!(guardian_email: attrs.guardian_email)
+      |> Ecto.Changeset.change(%{invite_token: token, status: :invite_sent})
+      |> Repo.update!()
 
-    %{invite: Repo.one!(BulkEnrollmentInvite), token: token, email: email}
+    %{invite: invite, token: token, email: attrs.guardian_email}
   end
 
   describe "GET /invites/:token" do
@@ -72,6 +79,37 @@ defmodule KlassHeroWeb.InviteClaimControllerTest do
 
       assert redirected_to(conn) == "/users/log-in"
       assert Phoenix.Flash.get(conn.assigns.flash, :info) =~ "already been used"
+    end
+  end
+
+  describe "GET /invites/:token when the account cannot be created" do
+    # A one-character guardian name clears the invite's own rules but falls under
+    # `User.name`'s `min: 2`, so no account can be built and there is none to recover to.
+    # Import now rejects such rows, but ones predating that validation still exist — hence
+    # the struct insert. `claim_invite/1` must report an atom the controller handles rather
+    # than leak a changeset and raise CaseClauseError.
+    test "redirects with a generic error rather than 500ing", %{conn: conn} do
+      unique = System.unique_integer([:positive])
+      token = "legacy-controller-#{unique}"
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      Repo.insert!(%BulkEnrollmentInvite{
+        program_id: program.id,
+        provider_id: provider.id,
+        child_first_name: "Emma",
+        child_last_name: "Schmidt",
+        child_date_of_birth: ~D[2016-03-15],
+        guardian_email: "legacy-controller-#{unique}@example.com",
+        guardian_first_name: "A",
+        invite_token: token,
+        status: :invite_sent
+      })
+
+      conn = get(conn, ~p"/invites/#{token}")
+
+      assert redirected_to(conn) == "/"
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "Something went wrong"
     end
   end
 end

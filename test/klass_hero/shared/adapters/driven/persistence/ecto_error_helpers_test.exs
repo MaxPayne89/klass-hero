@@ -187,4 +187,30 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpersTest do
       refute EctoErrorHelpers.constraint_violation?(errors, :email, :unique)
     end
   end
+
+  # `unsafe_validate_unique` and `unique_constraint` reject the same duplicate with
+  # differently-tagged errors depending on which race window the competing row lands in.
+  # Recovery code has to treat them alike, so both tags must be recognised — and nothing else.
+  @conflict_cases [
+    {"database constraint", [{:email, {"has already been taken", [constraint: :unique]}}], true},
+    {"pre-flight check", [{:email, {"has already been taken", [validation: :unsafe_unique]}}], true},
+    {"conflict alongside other errors",
+     [
+       {:name, {"should be at least %{count} character(s)", [count: 2, validation: :length]}},
+       {:email, {"has already been taken", [validation: :unsafe_unique]}}
+     ], true},
+    {"unrelated validation on the same field", [{:email, {"is invalid", [validation: :format]}}], false},
+    {"conflict on a different field", [{:identity_id, {"has already been taken", [constraint: :unique]}}], false},
+    {"foreign-key rather than unique", [{:email, {"does not exist", [constraint: :foreign]}}], false},
+    {"no errors at all", [], false}
+  ]
+
+  describe "unique_conflict?/2" do
+    test "recognises a uniqueness conflict from either mechanism, and nothing else" do
+      for {label, errors, expected} <- @conflict_cases do
+        assert EctoErrorHelpers.unique_conflict?(errors, :email) == expected,
+               "#{label}: expected unique_conflict?(#{inspect(errors)}, :email) to be #{expected}"
+      end
+    end
+  end
 end

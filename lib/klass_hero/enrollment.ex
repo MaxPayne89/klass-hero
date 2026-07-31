@@ -34,6 +34,8 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Outbox
 
+  require Logger
+
   @active_statuses ~w(pending confirmed)
 
   @doc """
@@ -951,26 +953,86 @@ defmodule KlassHero.Enrollment do
   end
 
   @doc """
-  Marks a claimed invite registered, re-reading it first so the decision is made on
-  the row as it stands now.
+  Marks a claimed invite registered, re-reading it under a row lock so the decision is
+  made on the row as it stands now and stays true until this transaction commits.
 
   `ClaimInvite` checks claimability before it opens its transaction; this is the same
   check made again inside it. Two concurrent claims of one token both pass the first
-  check, and the loser must be told the invite is spoken for rather than be handed a
-  changeset error for an invalid `:registered -> :registered` transition.
+  check, and the loser must be told the invite is spoken for.
+
+  The lock is what makes that reliable. Without it there are two reads — this one and
+  `transition_invite/2`'s own refetch — and Postgres runs at READ COMMITTED, so each
+  statement takes a fresh snapshot even inside one transaction. The claimability guard
+  would then be checked against a row the changeset is not built from: a claim committing
+  between the two reads let the guard pass and the transition still be rejected as
+  `:registered -> :registered`. `FOR UPDATE` makes the loser block until the winner
+  commits, so it re-reads `:registered` and gets `:already_claimed` before any changeset
+  exists. Only meaningful inside a transaction, which is how `ClaimInvite` calls it.
 
   Returns `{:error, :already_claimed}` for an invite that has moved past `:invite_sent`,
   matching what a sequential second claim gets.
   """
   @spec register_claimed_invite(String.t()) ::
-          {:ok, BulkEnrollmentInvite.t()} | {:error, :not_found | :already_claimed | term()}
+          {:ok, BulkEnrollmentInvite.t()}
+          | {:error, :not_found | :already_claimed | :invite_transition_failed}
   def register_claimed_invite(invite_id) when is_binary(invite_id) do
-    with {:ok, invite} <- get_invite(invite_id),
+    with {:ok, invite} <- get_invite_for_update(invite_id),
          {:ok, invite} <- BulkEnrollmentInvite.ensure_claimable(invite) do
-      transition_invite(invite, %{
+      invite
+      |> transition_invite(%{
         status: :registered,
         registered_at: DateTime.utc_now() |> DateTime.truncate(:second)
       })
+      |> case do
+        {:ok, invite} ->
+          {:ok, invite}
+
+        {:error, :not_found} = error ->
+          error
+
+        {:error, %Ecto.Changeset{} = changeset} ->
+          classify_transition_failure(changeset, invite_id)
+      end
+    end
+  end
+
+  defp get_invite_for_update(id) do
+    BulkEnrollmentInvite
+    |> where([i], i.id == ^id)
+    |> lock("FOR UPDATE")
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      invite -> {:ok, invite}
+    end
+  end
+
+  # `transition_invite/2` ends in a bare `Repo.update()`, so its changeset would otherwise
+  # arrive at `InviteClaimController` raw — the exact shape that 500s (#1215).
+  #
+  # A `:status` error means the row moved on after `ensure_claimable/1` saw it — someone
+  # else claimed the invite — so it earns the same answer a sequential second claim gets.
+  # `:already_claimed` tells the guardian "this invite has already been used" and sends
+  # them to log in, which is true and actionable; `:invite_transition_failed` only apologises.
+  #
+  # Keyed on the field, not the error tag, because the race produces the *untagged* variant:
+  # `validate_status_transition` matches `{_current, nil}` first, and `get_change/2` is nil
+  # when the cast value equals the stored one, so `:registered -> :registered` yields
+  # "status change is required for transitions" with no `validation:` opt at all.
+  defp classify_transition_failure(%Ecto.Changeset{errors: errors} = changeset, invite_id) do
+    if Enum.any?(errors, fn {field, _error} -> field == :status end) do
+      Logger.info("[Enrollment] Invite already claimed by a concurrent request",
+        invite_id: invite_id
+      )
+
+      {:error, :already_claimed}
+    else
+      Logger.error("[Enrollment] Invite transition failed unexpectedly",
+        invite_id: invite_id,
+        errors: inspect(changeset.errors)
+      )
+
+      {:error, :invite_transition_failed}
     end
   end
 

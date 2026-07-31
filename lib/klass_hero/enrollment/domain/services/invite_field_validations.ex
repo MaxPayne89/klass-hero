@@ -28,8 +28,13 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidations do
     |> validate_length(:child_last_name, max: 100)
     |> validate_length(:guardian_email, max: 160)
     |> validate_format(:guardian_email, @email_regex, message: "must be a valid email")
-    |> validate_length(:guardian_first_name, max: 100)
-    |> validate_length(:guardian_last_name, max: 100)
+    # `min: 2` mirrors `Accounts.User`'s `validate_length(:name, min: 2, max: 100)`, because
+    # claiming an invite builds that user's name from these two fields. Without it a CSV of
+    # initials imports cleanly and dead-ends the guardian weeks later, when the row is no
+    # longer in front of the person who could fix it. Guardian 2 is deliberately exempt —
+    # only guardian 1 becomes a user account.
+    |> validate_length(:guardian_first_name, min: 2, max: 100)
+    |> validate_length(:guardian_last_name, min: 2, max: 100)
     |> validate_length(:guardian2_email, max: 160)
     |> maybe_validate_guardian2_email()
     |> validate_length(:guardian2_first_name, max: 100)

@@ -100,4 +100,47 @@ defmodule KlassHero.Enrollment.ClaimInviteAtomicityTest do
   test "registering an invite that vanished reports not_found" do
     assert {:error, :not_found} = Enrollment.register_claimed_invite(Ecto.UUID.generate())
   end
+
+  # `resolve_user/1` checks for an account and then creates one, and the two are not atomic.
+  # A guardian who double-clicks their invite link — or whose email client prefetches the URL —
+  # registers twice concurrently, and the loser gets a duplicate-email changeset. Before #1215
+  # that changeset reached `InviteClaimController`, which has no clause for it.
+  #
+  # Driven through the post-race step directly, for the same reason as the concurrent-claim
+  # test above: the two requests cannot be interleaved from one sandboxed connection.
+  test "the loser of a registration race resolves to the winner's account", %{invite: invite} do
+    assert {:ok, :existing_user, user} = ClaimInvite.resolve_after_conflict(invite)
+
+    assert user.email == invite.guardian_email
+  end
+
+  # The row lock means a loser normally blocks, re-reads `:registered`, and is answered by
+  # `ensure_claimable/1` before a changeset exists. This pins the shape underneath it: a
+  # re-registration attempt is somebody else's claim, and the raw error it produces carries
+  # no `validation:` tag — `get_change/2` is nil when the value already matches, so
+  # `validate_status_transition` reports "status change is required", not an illegal
+  # transition. The classifier keys on the field for exactly that reason.
+  test "re-registering an already-registered invite errors on :status, untagged", %{invite: invite} do
+    {:ok, registered} = Enrollment.register_claimed_invite(invite.id)
+
+    assert {:error, %Ecto.Changeset{errors: errors}} =
+             Enrollment.transition_invite(registered, %{status: :registered})
+
+    assert Keyword.has_key?(errors, :status)
+  end
+
+  test "a second registration of one invite is reported as already claimed", %{invite: invite} do
+    assert {:ok, _} = Enrollment.register_claimed_invite(invite.id)
+
+    assert {:error, :already_claimed} = Enrollment.register_claimed_invite(invite.id)
+  end
+
+  test "a reported conflict with no resolvable account gives up gracefully" do
+    orphan = %BulkEnrollmentInvite{
+      id: Ecto.UUID.generate(),
+      guardian_email: "no-such-guardian-#{System.unique_integer([:positive])}@example.com"
+    }
+
+    assert {:error, :registration_failed} = ClaimInvite.resolve_after_conflict(orphan)
+  end
 end
