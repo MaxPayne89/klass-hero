@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.3](https://github.com/MaxPayne89/klass-hero/compare/v0.66.2...v0.66.3) (2026-07-30)
+
+
+### Code Refactoring
+
+* delete the domain event bus, inline the seven handlers ([#1213](https://github.com/MaxPayne89/klass-hero/issues/1213)) ([ffa58d5](https://github.com/MaxPayne89/klass-hero/commit/ffa58d5492480f1987b2c50b6fc7152f5758c719))
+
 ## [0.66.2](https://github.com/MaxPayne89/klass-hero/compare/v0.66.1...v0.66.2) (2026-07-30)
 
 
