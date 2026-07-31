@@ -20,7 +20,7 @@ defmodule KlassHeroWeb.Hooks.RestoreLocale do
 
   import Phoenix.Component
 
-  @default_locale "en"
+  alias KlassHeroWeb.Locale
 
   def on_mount(:restore_locale, _params, session, socket) do
     locale = determine_locale(session, socket)
@@ -31,6 +31,12 @@ defmodule KlassHeroWeb.Hooks.RestoreLocale do
   end
 
   defp determine_locale(session, socket) do
+    session
+    |> preferred_locale(socket)
+    |> Locale.validate()
+  end
+
+  defp preferred_locale(session, socket) do
     cond do
       # 1. Session locale (set by plug - includes query param for explicit user choice)
       session_locale = Map.get(session, "locale") ->
@@ -42,7 +48,7 @@ defmodule KlassHeroWeb.Hooks.RestoreLocale do
 
       # 3. Default
       true ->
-        @default_locale
+        Locale.default()
     end
   end
 

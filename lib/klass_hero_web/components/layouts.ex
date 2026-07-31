@@ -4,6 +4,15 @@ defmodule KlassHeroWeb.Layouts do
   """
   use KlassHeroWeb, :html
 
+  # Must precede embed_templates: aliases are lexically scoped and the templates
+  # compile at that call site, so root.html.heex would not resolve `Locale`.
+  alias KlassHeroWeb.Locale
+
+  # The root layout renders on dead render only — which is exactly what crawlers
+  # see — so the request path SetLocale assigned is enough here; no per-navigation
+  # LiveView hook is needed.
+  defp seo_path(assigns), do: assigns[:current_path] || "/"
+
   embed_templates "layouts/*"
 
   @doc """

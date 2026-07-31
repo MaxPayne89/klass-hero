@@ -462,22 +462,11 @@ defmodule KlassHeroWeb.UserLive.Settings do
     end
   end
 
+  # Handing this to the controller rather than writing it here is the whole fix
+  # for #1161: only the plug pipeline can write the session that SetLocale reads
+  # first, and only its redirect re-renders the root layout's <html lang>.
   def handle_event("update_locale", %{"user" => %{"locale" => locale}}, socket) do
-    user = socket.assigns.current_scope.user
-
-    case Accounts.update_user_locale(user, %{locale: locale}) do
-      {:ok, updated_user} ->
-        Gettext.put_locale(KlassHeroWeb.Gettext, locale)
-
-        {:noreply,
-         socket
-         |> assign(:current_scope, %{socket.assigns.current_scope | user: updated_user})
-         |> assign(:locale, locale)
-         |> put_flash(:info, gettext("Language preference updated successfully."))}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, gettext("Failed to update language preference."))}
-    end
+    {:noreply, redirect(socket, to: ~p"/locale/#{locale}?return_to=/users/settings")}
   end
 
   def handle_event("delete_account", %{"delete" => %{"password" => password}}, socket) do

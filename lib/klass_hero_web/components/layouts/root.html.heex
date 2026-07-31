@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang={assigns[:locale] || Locale.default()}>
   <head>
     {Application.get_env(:live_debugger, :live_debugger_tags)}
 
@@ -11,6 +11,13 @@
     <link rel="icon" href={~p"/favicon.ico"} sizes="32x32" />
     <link rel="icon" type="image/svg+xml" href={~p"/images/icon.svg"} sizes="any" />
     <link rel="apple-touch-icon" sizes="180x180" href={~p"/images/apple-touch-icon.png"} />
+    <%!-- Canonical always names an explicit ?locale= URL. The bare path serves
+          whichever language the session or Accept-Language implies, so it is the
+          x-default target rather than a canonical of its own. --%>
+    <link rel="canonical" href={Locale.url_for(seo_path(assigns), assigns[:locale])} />
+    <link rel="alternate" hreflang="en" href={Locale.url_for(seo_path(assigns), "en")} />
+    <link rel="alternate" hreflang="de" href={Locale.url_for(seo_path(assigns), "de")} />
+    <link rel="alternate" hreflang="x-default" href={Locale.url_for(seo_path(assigns), nil)} />
     <.live_title default="Klass Hero" suffix=" · Afterschool Activities & Camps">
       {assigns[:page_title]}
     </.live_title>
