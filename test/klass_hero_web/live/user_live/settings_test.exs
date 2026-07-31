@@ -282,4 +282,45 @@ defmodule KlassHeroWeb.UserLive.SettingsTest do
       assert message == "You must log in to access this page."
     end
   end
+
+  describe "language preference" do
+    setup %{conn: conn} do
+      user = user_fixture()
+
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "hands the change to the controller that can write the session", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      assert {:error, {:redirect, %{to: to}}} =
+               lv |> form("#locale_form", user: %{locale: "de"}) |> render_change()
+
+      assert to == "/locale/de?return_to=/users/settings"
+    end
+
+    # The bug in #1161: the LiveView wrote the database and its own socket, but
+    # SetLocale reads the session first and a LiveView cannot write one. The
+    # choice therefore evaporated on the very next page load.
+    test "the chosen language survives a page reload", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      {:error, {:redirect, %{to: to}}} =
+        lv |> form("#locale_form", user: %{locale: "de"}) |> render_change()
+
+      conn = get(conn, to)
+      assert redirected_to(conn) == "/users/settings"
+
+      reloaded =
+        conn
+        |> get(~p"/users/settings")
+        |> html_response(200)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query("html")
+        |> LazyHTML.attribute("lang")
+
+      assert reloaded == ["de"], "the language reverted on reload — the session was never written"
+      assert KlassHero.Repo.reload!(user).locale == "de"
+    end
+  end
 end

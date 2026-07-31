@@ -10,14 +10,18 @@ defmodule KlassHeroWeb.Plugs.SetLocale do
   5. Default: "en"
 
   The locale is stored in session and assigned to conn for use by LiveView hooks.
+
+  Because the session outranks the stored preference and only the plug pipeline
+  can write a session, a durable language change must go through
+  `KlassHeroWeb.LocaleController` — a LiveView writing the preference alone
+  leaves the session stale and the change is lost on the next request (#1161).
   """
 
   @behaviour Plug
 
   import Plug.Conn
 
-  @supported_locales ~w(en de)
-  @default_locale "en"
+  alias KlassHeroWeb.Locale
 
   @impl Plug
   def init(opts), do: opts
@@ -30,6 +34,10 @@ defmodule KlassHeroWeb.Plugs.SetLocale do
 
     conn
     |> assign(:locale, locale)
+    # Path only, no query string: the root layout builds canonical and hreflang
+    # URLs from it, and folding filter params in would mint a separate canonical
+    # for every permutation of /programs?category=…
+    |> assign(:current_path, conn.request_path)
     |> put_session(:locale, locale)
   end
 
@@ -39,10 +47,10 @@ defmodule KlassHeroWeb.Plugs.SetLocale do
       &session_locale/1,
       &user_locale/1,
       &accept_language_locale/1,
-      fn _ -> @default_locale end
+      fn _ -> Locale.default() end
     ]
     |> Enum.find_value(fn detector -> detector.(conn) end)
-    |> validate_locale()
+    |> Locale.validate()
   end
 
   defp query_param_locale(%{params: %{"locale" => locale}}), do: locale
@@ -71,7 +79,7 @@ defmodule KlassHeroWeb.Plugs.SetLocale do
     |> String.split(",")
     |> Enum.map(&String.trim/1)
     |> Enum.map(&extract_language_code/1)
-    |> Enum.find(&(&1 in @supported_locales))
+    |> Enum.find(&Locale.supported?/1)
   end
 
   defp extract_language_code(lang_entry) do
@@ -82,7 +90,4 @@ defmodule KlassHeroWeb.Plugs.SetLocale do
     |> List.first()
     |> String.downcase()
   end
-
-  defp validate_locale(locale) when locale in @supported_locales, do: locale
-  defp validate_locale(_), do: @default_locale
 end

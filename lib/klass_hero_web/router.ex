@@ -67,6 +67,10 @@ defmodule KlassHeroWeb.Router do
   scope "/", KlassHeroWeb do
     pipe_through :browser
 
+    # Language changes go through the plug pipeline because only it can write the
+    # session, and only its redirect re-renders the root layout's <html lang>.
+    get "/locale/:locale", LocaleController, :update
+
     live_session :marketing,
       layout: {KlassHeroWeb.Layouts, :marketing},
       on_mount: [

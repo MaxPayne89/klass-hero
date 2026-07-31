@@ -20,8 +20,8 @@ msgstr ""
 msgid "About"
 msgstr "Über uns"
 
-#: lib/klass_hero_web/components/layouts.ex:34
-#: lib/klass_hero_web/components/layouts.ex:46
+#: lib/klass_hero_web/components/layouts.ex:43
+#: lib/klass_hero_web/components/layouts.ex:55
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "Verbindung wird wiederhergestellt"
@@ -61,7 +61,7 @@ msgstr "Meine Daten herunterladen"
 msgid "Download a copy of all your personal data"
 msgstr "Laden Sie eine Kopie aller Ihrer persönlichen Daten herunter"
 
-#: lib/klass_hero_web/live/user_live/settings.ex:479
+#: lib/klass_hero_web/controllers/locale_controller.ex:41
 #, elixir-autogen, elixir-format
 msgid "Failed to update language preference."
 msgstr "Spracheinstellung konnte nicht aktualisiert werden."
@@ -78,7 +78,7 @@ msgstr "Startseite"
 msgid "Language Preference"
 msgstr "Spracheinstellung"
 
-#: lib/klass_hero_web/live/user_live/settings.ex:476
+#: lib/klass_hero_web/controllers/locale_controller.ex:31
 #, elixir-autogen, elixir-format
 msgid "Language preference updated successfully."
 msgstr "Spracheinstellung erfolgreich aktualisiert."
@@ -121,12 +121,12 @@ msgstr "Abmelden"
 msgid "Sign Up"
 msgstr "Registrieren"
 
-#: lib/klass_hero_web/components/layouts.ex:41
+#: lib/klass_hero_web/components/layouts.ex:50
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr "Etwas ist schief gelaufen!"
 
-#: lib/klass_hero_web/components/layouts.ex:29
+#: lib/klass_hero_web/components/layouts.ex:38
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr "Keine Internetverbindung gefunden"
@@ -637,7 +637,7 @@ msgstr "Auschecken fehlgeschlagen: %{reason}"
 msgid "Failed to complete session: %{reason}"
 msgstr "Sitzung konnte nicht abgeschlossen werden: %{reason}"
 
-#: lib/klass_hero_web/live/user_live/settings.ex:508
+#: lib/klass_hero_web/live/user_live/settings.ex:497
 #, elixir-autogen, elixir-format
 msgid "Failed to delete account. Please try again."
 msgstr "Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
@@ -700,7 +700,7 @@ msgstr "Einleitung"
 msgid "Invalid date format"
 msgstr "Ungültiges Datumsformat"
 
-#: lib/klass_hero_web/live/user_live/settings.ex:502
+#: lib/klass_hero_web/live/user_live/settings.ex:491
 #, elixir-autogen, elixir-format
 msgid "Invalid password."
 msgstr "Ungültiges Passwort."
@@ -1023,7 +1023,7 @@ msgstr "Sie müssen sich erneut authentifizieren, um sensible Aktionen auf Ihrem
 msgid "Your Privacy Rights"
 msgstr "Ihre Datenschutzrechte"
 
-#: lib/klass_hero_web/live/user_live/settings.ex:490
+#: lib/klass_hero_web/live/user_live/settings.ex:479
 #, elixir-autogen, elixir-format
 msgid "Your account has been deleted."
 msgstr "Ihr Konto wurde gelöscht."
@@ -2062,7 +2062,7 @@ msgstr "Bitte authentifizieren Sie sich erneut, um Ihre E-Mail-Adresse zu änder
 msgid "Please re-authenticate to change your password."
 msgstr "Bitte authentifizieren Sie sich erneut, um Ihr Passwort zu ändern."
 
-#: lib/klass_hero_web/live/user_live/settings.ex:496
+#: lib/klass_hero_web/live/user_live/settings.ex:485
 #, elixir-autogen, elixir-format
 msgid "Please re-authenticate to delete your account."
 msgstr "Bitte authentifizieren Sie sich erneut, um Ihr Konto zu löschen."
