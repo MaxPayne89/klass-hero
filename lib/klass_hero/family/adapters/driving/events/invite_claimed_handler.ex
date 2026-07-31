@@ -61,7 +61,9 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler do
       school_grade: Map.get(payload, :school_grade),
       school_name: Map.get(payload, :school_name),
       medical_conditions: Map.get(payload, :medical_conditions),
-      nut_allergy: Map.get(payload, :nut_allergy, false)
+      nut_allergy: Map.get(payload, :nut_allergy, false),
+      consent_photo_marketing: Map.get(payload, :consent_photo_marketing, false),
+      consent_photo_social_media: Map.get(payload, :consent_photo_social_media, false)
     }
   end
 

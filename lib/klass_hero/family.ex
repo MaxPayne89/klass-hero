@@ -214,7 +214,10 @@ defmodule KlassHero.Family do
 
       %Consent{}
       |> Consent.changeset(attrs)
-      |> Repo.insert()
+      # `mode: :savepoint` because callers run this inside a transaction (ProcessInviteClaim
+      # grants invite consents inside its Outbox.transact). Without it the constraint hit
+      # below aborts the enclosing transaction instead of being caught here — issue #1065.
+      |> Repo.insert(mode: :savepoint)
       |> case do
         {:ok, consent} ->
           {:ok, consent}

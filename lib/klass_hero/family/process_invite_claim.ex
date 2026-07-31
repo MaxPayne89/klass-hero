@@ -39,7 +39,8 @@ defmodule KlassHero.Family.ProcessInviteClaim do
     result =
       Outbox.transact(KlassHero.Family, fn ->
         with {:ok, parent} <- ensure_parent_profile(user_id, invite_id),
-             {:ok, child} <- find_or_create_child(parent.id, attrs) do
+             {:ok, child} <- find_or_create_child(parent.id, attrs),
+             :ok <- grant_invite_consents(parent.id, child.id, attrs) do
           event = family_ready_event(invite_id, user_id, child.id, parent.id, program_id)
           {:ok, %{parent: parent, child: child}, [event]}
         end
@@ -57,6 +58,43 @@ defmodule KlassHero.Family.ProcessInviteClaim do
         )
 
         {:error, reason}
+    end
+  end
+
+  @consent_fields %{
+    consent_photo_marketing: "photo_marketing",
+    consent_photo_social_media: "photo_social_media"
+  }
+
+  # The provider collects photo permission in the CSV and the parent's answer rides all the
+  # way here in the event payload, so it has to become a Consent record — previously it was
+  # read, staged, and then dropped, and no invite ever produced a consent.
+  #
+  # Only a `true` grants: a Consent row means "granted", and there is no representation for
+  # a decline, so absence is the safe reading of "did not agree".
+  #
+  # `:already_active` is success, not failure. This runs on an Oban worker that retries, and
+  # a second invite for the same child reuses that child — either way the consent may exist.
+  defp grant_invite_consents(parent_id, child_id, attrs) do
+    @consent_fields
+    |> Enum.filter(fn {field, _consent_type} -> Map.get(attrs, field) end)
+    |> Enum.reduce_while(:ok, fn {_field, consent_type}, :ok ->
+      case grant_one_consent(parent_id, child_id, consent_type) do
+        :ok -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp grant_one_consent(parent_id, child_id, consent_type) do
+    case Family.grant_consent(%{
+           parent_id: parent_id,
+           child_id: child_id,
+           consent_type: consent_type
+         }) do
+      {:ok, _consent} -> :ok
+      {:error, :already_active} -> :ok
+      {:error, reason} -> {:error, reason}
     end
   end
 

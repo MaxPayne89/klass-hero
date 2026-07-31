@@ -36,7 +36,9 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
          school_grade: args["school_grade"],
          school_name: args["school_name"],
          medical_conditions: args["medical_conditions"],
-         nut_allergy: args["nut_allergy"]
+         nut_allergy: args["nut_allergy"],
+         consent_photo_marketing: args["consent_photo_marketing"],
+         consent_photo_social_media: args["consent_photo_social_media"]
        }}
     end
   end

@@ -24,6 +24,56 @@ defmodule KlassHero.Family.ProcessInviteClaimTest do
     )
   end
 
+  # The provider collects photo permission in the CSV and it rides the whole way here in the
+  # event payload. It used to stop at the handler, which never copied it into the worker's
+  # args — so no invite claim ever produced a consent record.
+  describe "photo consent from the invite" do
+    test "grants each consent the parent agreed to" do
+      user = user_fixture()
+
+      attrs =
+        valid_attrs(user.id, %{
+          consent_photo_marketing: true,
+          consent_photo_social_media: true
+        })
+
+      assert {:ok, %{child: child}} = ProcessInviteClaim.execute(attrs)
+
+      assert Family.child_has_active_consent?(child.id, "photo_marketing")
+      assert Family.child_has_active_consent?(child.id, "photo_social_media")
+    end
+
+    test "records nothing for a consent the parent declined" do
+      user = user_fixture()
+
+      attrs =
+        valid_attrs(user.id, %{
+          consent_photo_marketing: true,
+          consent_photo_social_media: false
+        })
+
+      assert {:ok, %{child: child}} = ProcessInviteClaim.execute(attrs)
+
+      assert Family.child_has_active_consent?(child.id, "photo_marketing")
+      refute Family.child_has_active_consent?(child.id, "photo_social_media")
+    end
+
+    # The worker retries, and a second program's invite reuses the same child, so the grant
+    # runs again against a consent that already exists. `grant_consent/1` catches that
+    # constraint inside the enclosing transaction, which is why it needs `mode: :savepoint` —
+    # without it the violation aborts the whole transaction rather than being caught (#1065).
+    test "a replay grants no duplicates and does not poison the transaction" do
+      user = user_fixture()
+      attrs = valid_attrs(user.id, %{consent_photo_marketing: true})
+
+      assert {:ok, %{child: child}} = ProcessInviteClaim.execute(attrs)
+      assert {:ok, %{child: same_child}} = ProcessInviteClaim.execute(attrs)
+
+      assert same_child.id == child.id
+      assert Family.child_has_active_consent?(child.id, "photo_marketing")
+    end
+  end
+
   describe "execute/1" do
     test "creates parent profile and child for new user" do
       user = user_fixture()
