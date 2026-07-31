@@ -106,14 +106,61 @@ defmodule KlassHero.Enrollment.ClaimInviteTest do
       assert String.length(user.name) == 100
     end
 
-    test "a single-initial guardian name reports registration_failed" do
+    test "a single-initial guardian name is now rejected at import" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      assert {:error, changeset} =
+               KlassHero.Enrollment.create_invite(%{
+                 program_id: program.id,
+                 provider_id: provider.id,
+                 child_first_name: "Emma",
+                 child_last_name: "Schmidt",
+                 child_date_of_birth: ~D[2016-03-15],
+                 guardian_email: "initials-#{System.unique_integer([:positive])}@example.com",
+                 guardian_first_name: "A"
+               })
+
+      assert changeset.errors[:guardian_first_name]
+    end
+
+    # Rows imported before that validation existed are still in the database, so the claim
+    # path must keep failing them gracefully. Inserted as a struct to bypass the changeset,
+    # the same way import_enrollment_csv_test.exs seeds pre-validation rows.
+    test "a legacy invite with a single-initial name reports registration_failed" do
       %{token: token, invite: invite} =
-        create_invite(%{guardian_first_name: "A", guardian_last_name: nil})
+        create_legacy_invite(%{guardian_first_name: "A", guardian_last_name: nil})
 
       assert {:error, :registration_failed} = ClaimInvite.execute(token)
 
       # No half-created account left behind.
       assert KlassHero.Accounts.get_user_by_email(invite.guardian_email) == nil
     end
+  end
+
+  defp create_legacy_invite(overrides) do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    unique = System.unique_integer([:positive])
+    token = "legacy-claim-#{unique}"
+
+    invite =
+      Repo.insert!(
+        struct(
+          %BulkEnrollmentInvite{
+            program_id: program.id,
+            provider_id: provider.id,
+            child_first_name: "Emma",
+            child_last_name: "Schmidt",
+            child_date_of_birth: ~D[2016-03-15],
+            guardian_email: "legacy-claim-#{unique}@example.com",
+            invite_token: token,
+            status: :invite_sent
+          },
+          overrides
+        )
+      )
+
+    %{invite: invite, token: token}
   end
 end

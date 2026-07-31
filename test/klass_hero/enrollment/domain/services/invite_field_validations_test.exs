@@ -96,6 +96,38 @@ defmodule KlassHero.Enrollment.Domain.Services.InviteFieldValidationsTest do
     end
   end
 
+  # Only guardian 1 becomes an `Accounts.User`, whose name is `min: 2`. Guardian 2 and the
+  # child have no such floor, so the minimum is deliberately asymmetric.
+  @length_min_cases [
+    {:guardian_first_name, 2},
+    {:guardian_last_name, 2}
+  ]
+
+  describe "guardian name minimum length" do
+    test "rejects a name one character under its min, accepts it at the min" do
+      for {field, min} <- @length_min_cases do
+        under_cs = TestSchema.changeset(Map.put(@valid_attrs, field, filler(field, min - 1)))
+        at_cs = TestSchema.changeset(Map.put(@valid_attrs, field, filler(field, min)))
+
+        assert errors_on(under_cs)[field],
+               "expected length error on #{field} at #{min - 1} chars, got: #{inspect(errors_on(under_cs))}"
+
+        refute errors_on(at_cs)[field],
+               "expected no length error on #{field} at #{min} chars, got: #{inspect(errors_on(at_cs))}"
+      end
+    end
+
+    # A guardian known only by email is legitimate — `ClaimInvite` names them "Guardian".
+    # The minimum must not turn that into an import rejection.
+    test "leaves absent guardian names alone" do
+      cs =
+        TestSchema.changeset(Map.merge(@valid_attrs, %{guardian_first_name: nil, guardian_last_name: nil}))
+
+      refute errors_on(cs)[:guardian_first_name]
+      refute errors_on(cs)[:guardian_last_name]
+    end
+  end
+
   describe "guardian_email format" do
     # Format validation is a distinct semantic from length
     test "rejects an invalid format" do

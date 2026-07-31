@@ -114,6 +114,27 @@ defmodule KlassHero.Enrollment.ClaimInviteAtomicityTest do
     assert user.email == invite.guardian_email
   end
 
+  # The row lock means a loser normally blocks, re-reads `:registered`, and is answered by
+  # `ensure_claimable/1` before a changeset exists. This pins the shape underneath it: a
+  # re-registration attempt is somebody else's claim, and the raw error it produces carries
+  # no `validation:` tag — `get_change/2` is nil when the value already matches, so
+  # `validate_status_transition` reports "status change is required", not an illegal
+  # transition. The classifier keys on the field for exactly that reason.
+  test "re-registering an already-registered invite errors on :status, untagged", %{invite: invite} do
+    {:ok, registered} = Enrollment.register_claimed_invite(invite.id)
+
+    assert {:error, %Ecto.Changeset{errors: errors}} =
+             Enrollment.transition_invite(registered, %{status: :registered})
+
+    assert Keyword.has_key?(errors, :status)
+  end
+
+  test "a second registration of one invite is reported as already claimed", %{invite: invite} do
+    assert {:ok, _} = Enrollment.register_claimed_invite(invite.id)
+
+    assert {:error, :already_claimed} = Enrollment.register_claimed_invite(invite.id)
+  end
+
   test "a reported conflict with no resolvable account gives up gracefully" do
     orphan = %BulkEnrollmentInvite{
       id: Ecto.UUID.generate(),

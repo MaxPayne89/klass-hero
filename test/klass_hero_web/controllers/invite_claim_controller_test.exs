@@ -83,12 +83,28 @@ defmodule KlassHeroWeb.InviteClaimControllerTest do
   end
 
   describe "GET /invites/:token when the account cannot be created" do
-    # Invite names are validated `max: 100` with no minimum, but `User.name` is
-    # `min: 2` — so a CSV carrying initials produces a registration failure with
-    # no user to recover to. `claim_invite/1` must report it as an atom the
-    # controller handles, not raise CaseClauseError on a leaked changeset.
+    # A one-character guardian name clears the invite's own rules but falls under
+    # `User.name`'s `min: 2`, so no account can be built and there is none to recover to.
+    # Import now rejects such rows, but ones predating that validation still exist — hence
+    # the struct insert. `claim_invite/1` must report an atom the controller handles rather
+    # than leak a changeset and raise CaseClauseError.
     test "redirects with a generic error rather than 500ing", %{conn: conn} do
-      %{token: token} = create_invite(%{guardian_first_name: "A", guardian_last_name: nil})
+      unique = System.unique_integer([:positive])
+      token = "legacy-controller-#{unique}"
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      Repo.insert!(%BulkEnrollmentInvite{
+        program_id: program.id,
+        provider_id: provider.id,
+        child_first_name: "Emma",
+        child_last_name: "Schmidt",
+        child_date_of_birth: ~D[2016-03-15],
+        guardian_email: "legacy-controller-#{unique}@example.com",
+        guardian_first_name: "A",
+        invite_token: token,
+        status: :invite_sent
+      })
 
       conn = get(conn, ~p"/invites/#{token}")
 
