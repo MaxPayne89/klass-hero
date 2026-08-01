@@ -6,6 +6,11 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
   `ProcessInviteClaim` use case. The `family` queue runs with
   concurrency 1, serializing all invite processing globally
   to prevent duplicate child records from concurrent events.
+
+  When the last attempt fails, it also fails the invite. The guardian has already
+  been told their account exists by the time this runs, so giving up quietly left
+  them with an account, no child and no enrollment, and the invite frozen in
+  `:registered` (#1221).
   """
 
   use KlassHero.Shared.Tracing.TracedWorker,
@@ -58,9 +63,12 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
   # A provider reads this in the invites table, so it has to name what is wrong with the
   # row they uploaded. `inspect/1` of a changeset names it only to a developer.
   defp describe(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> ChangesetErrors.field_list()
-    |> Enum.map_join("; ", fn {field, message} -> "#{humanize_field(field)} #{message}" end)
+    case ChangesetErrors.field_list(changeset) do
+      # A changeset can be invalid with its errors on an association rather than a field,
+      # and an empty string here would render as a blank reason line rather than none.
+      [] -> inspect(changeset)
+      fields -> Enum.map_join(fields, "; ", fn {field, message} -> "#{humanize_field(field)} #{message}" end)
+    end
   end
 
   defp describe(reason), do: inspect(reason)
