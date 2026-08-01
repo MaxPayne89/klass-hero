@@ -5,6 +5,15 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.6](https://github.com/MaxPayne89/klass-hero/compare/v0.66.5...v0.66.6) (2026-08-01)
+
+
+### Bug Fixes
+
+* anonymise Provider-owned PII on account erasure ([#1236](https://github.com/MaxPayne89/klass-hero/issues/1236)) ([4ec02a4](https://github.com/MaxPayne89/klass-hero/commit/4ec02a43243234079cb47f5f6b0ae571b80e38cd)), closes [#1152](https://github.com/MaxPayne89/klass-hero/issues/1152)
+* make a failed invite claim visible and actionable ([#1235](https://github.com/MaxPayne89/klass-hero/issues/1235)) ([faa0aea](https://github.com/MaxPayne89/klass-hero/commit/faa0aea64f5dd48600cd32f30caa8ac13e72cca3)), closes [#1221](https://github.com/MaxPayne89/klass-hero/issues/1221)
+* rebuild every projection from the supervisor registry when seeding ([#1232](https://github.com/MaxPayne89/klass-hero/issues/1232)) ([f1d6207](https://github.com/MaxPayne89/klass-hero/commit/f1d6207db3e897e2b6a0e611eed84769e4ef2a34))
+
 ## [0.66.5](https://github.com/MaxPayne89/klass-hero/compare/v0.66.4...v0.66.5) (2026-08-01)
 
 
