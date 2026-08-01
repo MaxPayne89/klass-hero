@@ -11,62 +11,62 @@
 msgid ""
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2216
+#: lib/klass_hero_web/components/provider_components.ex:2225
 #, elixir-autogen, elixir-format
 msgid "Child first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2217
+#: lib/klass_hero_web/components/provider_components.ex:2226
 #, elixir-autogen, elixir-format
 msgid "Child last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2218
+#: lib/klass_hero_web/components/provider_components.ex:2227
 #, elixir-autogen, elixir-format
 msgid "Date of birth"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2229
+#: lib/klass_hero_web/components/provider_components.ex:2238
 #, elixir-autogen, elixir-format
 msgid "Grade"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2219
+#: lib/klass_hero_web/components/provider_components.ex:2228
 #, elixir-autogen, elixir-format
 msgid "Guardian email"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2220
+#: lib/klass_hero_web/components/provider_components.ex:2229
 #, elixir-autogen, elixir-format
 msgid "Guardian first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2221
+#: lib/klass_hero_web/components/provider_components.ex:2230
 #, elixir-autogen, elixir-format
 msgid "Guardian last name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2228
+#: lib/klass_hero_web/components/provider_components.ex:2237
 #, elixir-autogen, elixir-format
 msgid "Program"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2230
+#: lib/klass_hero_web/components/provider_components.ex:2239
 #, elixir-autogen, elixir-format
 msgid "School"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2222
+#: lib/klass_hero_web/components/provider_components.ex:2231
 #, elixir-autogen, elixir-format
 msgid "Second guardian email"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2224
+#: lib/klass_hero_web/components/provider_components.ex:2233
 #, elixir-autogen, elixir-format
 msgid "Second guardian first name"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:2226
+#: lib/klass_hero_web/components/provider_components.ex:2235
 #, elixir-autogen, elixir-format
 msgid "Second guardian last name"
 msgstr ""

@@ -14,6 +14,7 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
 
   alias KlassHero.Enrollment
   alias KlassHero.Family.ProcessInviteClaim
+  alias KlassHero.Shared.ChangesetErrors
 
   require Logger
 
@@ -38,7 +39,7 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
   # the schema. A rejected transition means the invite is already terminal — enrolled by a
   # retry Lifeline re-ran, or failed by an earlier pass — which is a fact, not a fault.
   defp fail_invite(invite_id, reason) when is_binary(invite_id) do
-    case Enrollment.transition_invite(%{id: invite_id}, %{status: :failed, error_details: inspect(reason)}) do
+    case Enrollment.transition_invite(%{id: invite_id}, %{status: :failed, error_details: describe(reason)}) do
       {:ok, _invite} ->
         :ok
 
@@ -53,6 +54,22 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
   end
 
   defp fail_invite(_invite_id, _reason), do: :ok
+
+  # A provider reads this in the invites table, so it has to name what is wrong with the
+  # row they uploaded. `inspect/1` of a changeset names it only to a developer.
+  defp describe(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> ChangesetErrors.field_list()
+    |> Enum.map_join("; ", fn {field, message} -> "#{humanize_field(field)} #{message}" end)
+  end
+
+  defp describe(reason), do: inspect(reason)
+
+  defp humanize_field(field) do
+    field
+    |> Atom.to_string()
+    |> String.replace("_", " ")
+  end
 
   # Oban JSON args use string keys and ISO date strings; convert to atom keys and Date.
   defp deserialize_args(args) do

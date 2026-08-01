@@ -138,14 +138,30 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorkerTest
       end
     end
 
-    test "fails the invite on the final attempt, recording the reason", ctx do
+    # error_details is read by a provider in the invites table, not by a developer in a
+    # log, so a raw inspect/1 of the changeset would be no more actionable than the
+    # silence it replaced.
+    test "fails the invite on the final attempt, recording a readable reason", ctx do
       args = failing_args(ctx.invite, ctx.program, ctx.user)
 
       assert {:error, _reason} = ProcessInviteClaimWorker.execute(job(args, @max_attempts))
 
       failed = reload(ctx.invite)
       assert failed.status == :failed
-      assert is_binary(failed.error_details)
+      assert failed.error_details =~ "date of birth"
+      assert failed.error_details =~ "can't be blank"
+      refute failed.error_details =~ "Ecto.Changeset"
+    end
+
+    test "records a reason for a failure that carries no changeset", ctx do
+      args =
+        ctx.invite
+        |> failing_args(ctx.program, ctx.user)
+        |> Map.put("child_date_of_birth", "not-a-date")
+
+      assert {:error, _reason} = ProcessInviteClaimWorker.execute(job(args, @max_attempts))
+
+      assert reload(ctx.invite).error_details =~ "not-a-date"
     end
 
     # Oban reads retry/discard off the return value; compensating must not look to it

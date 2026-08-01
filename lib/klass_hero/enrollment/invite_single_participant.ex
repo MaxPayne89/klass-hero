@@ -9,10 +9,10 @@ defmodule KlassHero.Enrollment.InviteSingleParticipant do
   """
 
   alias KlassHero.Enrollment
-  alias KlassHero.Enrollment.ChangesetErrors
   alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Enrollment.ProviderProgramContext
   alias KlassHero.Enrollment.SingleInviteForm
+  alias KlassHero.Shared.ChangesetErrors
 
   require Logger
 

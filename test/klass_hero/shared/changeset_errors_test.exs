@@ -1,9 +1,9 @@
-defmodule KlassHero.Enrollment.ChangesetErrorsTest do
+defmodule KlassHero.Shared.ChangesetErrorsTest do
   use ExUnit.Case, async: true
 
   import Ecto.Changeset
 
-  alias KlassHero.Enrollment.ChangesetErrors
+  alias KlassHero.Shared.ChangesetErrors
 
   # A small inline changeset module so these tests don't depend on a
   # persistence schema — the helper works on any Ecto.Changeset regardless
