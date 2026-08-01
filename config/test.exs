@@ -5,7 +5,7 @@ alias KlassHero.Provider.StripeIdentity
 alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
-alias Swoosh.Adapters.Test
+alias KlassHero.Test.StubMailerAdapter
 
 # The one source of truth for the test HTTP port, shared by the endpoint and Wallaby's
 # base_url below. Override with TEST_PORT when 4002 is taken (another worktree, or an
@@ -23,7 +23,9 @@ config :error_tracker, enabled: false
 # Disable fun_with_flags PubSub notifications in tests
 config :fun_with_flags, :cache_bust_notifications, enabled: false
 
-config :klass_hero, KlassHero.Mailer, adapter: Test
+# Delegates to Swoosh.Adapters.Test unless a test arms a failure — Swoosh has no
+# built-in way to make delivery fail, which left every send-failure path untestable.
+config :klass_hero, KlassHero.Mailer, adapter: StubMailerAdapter
 
 config :klass_hero, KlassHero.Repo,
   username: "postgres",

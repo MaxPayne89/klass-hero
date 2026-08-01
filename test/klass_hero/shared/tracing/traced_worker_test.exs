@@ -58,6 +58,13 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
     def execute(_job), do: {:ok, :some_result}
   end
 
+  defmodule CancelWorker do
+    use TracedWorker, queue: :test, max_attempts: 3
+
+    @impl TracedWorker
+    def execute(_job), do: {:cancel, "nothing a retry can fix"}
+  end
+
   # ---- Tests ----
 
   describe "span creation and attributes on success" do
@@ -172,6 +179,26 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
       )
     end
 
+    # A cancel is still a failure, just one no retry can fix. Before invite delivery
+    # started cancelling, that path returned {:error, _} and marked its span — leaving
+    # cancels unmarked would silently drop them out of every error-status query.
+    test "sets span status to error on cancel" do
+      job = build_job(%{attempt: 1, max_attempts: 3})
+      CancelWorker.perform(job)
+
+      worker_span = assert_span("Shared.Tracing.TracedWorkerTest.CancelWorker.execute/1")
+      assert span_status_code(worker_span) == :error
+    end
+
+    test "reports a cancelled job as not retrying" do
+      job = build_job(%{attempt: 1, max_attempts: 3})
+      CancelWorker.perform(job)
+
+      assert_span("Shared.Tracing.TracedWorkerTest.CancelWorker.execute/1",
+        "oban.will_retry": false
+      )
+    end
+
     test "sets span status to error on failure" do
       job = build_job()
       FailWorker.perform(job)
@@ -189,6 +216,22 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
       # On success, status is either :unset or :ok — never :error
       raw_status = span(worker_span, :status)
       assert raw_status == :undefined or span_status_code(worker_span) != :error
+    end
+  end
+
+  describe "final_attempt?/1" do
+    # `>=`, not `==`: Lifeline re-runs a job orphaned by a node crash, so an
+    # attempt can arrive already past the ceiling. Equality would read that as
+    # "retries remain" and skip the compensation the caller is gating on.
+    test "is true only once no attempts remain" do
+      cases = [{1, 3, false}, {2, 3, false}, {3, 3, true}, {4, 3, true}]
+
+      for {attempt, max_attempts, expected} <- cases do
+        job = build_job(%{attempt: attempt, max_attempts: max_attempts})
+
+        assert TracedWorker.final_attempt?(job) == expected,
+               "attempt #{attempt} of #{max_attempts}: expected #{expected}"
+      end
     end
   end
 end

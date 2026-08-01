@@ -2,10 +2,12 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
+  import Swoosh.TestAssertions
 
   alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Repo
+  alias KlassHero.Test.StubMailerAdapter
 
   defp create_pending_invite(_context) do
     provider = insert(:provider_profile_schema)
@@ -63,13 +65,88 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
                })
     end
 
-    test "returns error when invite has no token", %{invite: invite, program: program} do
+    # A retry re-reads the same nil token, so every remaining attempt is guaranteed
+    # waste — cancel instead of burning the retry budget, and fail the invite now so
+    # it surfaces as Failed rather than sitting :pending with no email forever.
+    test "cancels and fails an invite that has no token", %{invite: invite, program: program} do
       invite |> Ecto.Changeset.change(%{invite_token: nil}) |> Repo.update!()
 
-      assert {:error, "invite has no token"} =
+      assert {:cancel, "invite has no token"} =
                SendInviteEmailWorker.perform(%Oban.Job{
                  args: %{"invite_id" => invite.id, "program_name" => program.title}
                })
+
+      failed = Repo.get!(BulkEnrollmentInvite, invite.id)
+      assert failed.status == :failed
+      assert failed.error_details =~ "no token"
+    end
+  end
+
+  # #1233: this worker failed the invite on the *first* delivery error, then returned
+  # {:error, _} so Oban retried — and the retry hit the non-pending guard above and
+  # reported :ok. One transient blip permanently failed an invite and called it a
+  # success. These build %Oban.Job{} structs by hand because the behaviour under test
+  # is a decision about attempt vs max_attempts, which a drained queue cannot express.
+  describe "execute/1 compensation" do
+    setup :create_pending_invite
+
+    @max_attempts 3
+
+    defp job(invite, program, attempt) do
+      %Oban.Job{
+        args: %{"invite_id" => invite.id, "program_name" => program.title},
+        attempt: attempt,
+        max_attempts: @max_attempts
+      }
+    end
+
+    defp reload(invite), do: Repo.get!(BulkEnrollmentInvite, invite.id)
+
+    # pending -> :failed is a one-way door (:failed can only return to :pending), so
+    # failing while Oban would still retry destroys the send the next attempt makes.
+    test "leaves the invite pending while retries remain", %{invite: invite, program: program} do
+      StubMailerAdapter.fail_with({:network, :timeout})
+
+      for attempt <- 1..(@max_attempts - 1) do
+        assert {:error, _reason} = SendInviteEmailWorker.execute(job(invite, program, attempt))
+
+        assert reload(invite).status == :pending,
+               "attempt #{attempt} of #{@max_attempts} failed the invite before retries were exhausted"
+      end
+    end
+
+    # The whole point of retrying: the guardian gets the invite a blip nearly cost them.
+    test "delivers on the retry after a transient failure", %{invite: invite, program: program} do
+      StubMailerAdapter.fail_with({:network, :timeout})
+      assert {:error, _reason} = SendInviteEmailWorker.execute(job(invite, program, 1))
+
+      StubMailerAdapter.deliver_normally()
+      assert :ok = SendInviteEmailWorker.execute(job(invite, program, 2))
+
+      delivered = reload(invite)
+      assert delivered.status == :invite_sent
+      assert delivered.invite_sent_at != nil
+      assert_email_sent(fn email -> email.to == [{"Hans", "parent@example.com"}] end)
+    end
+
+    test "fails the invite once retries are exhausted", %{invite: invite, program: program} do
+      StubMailerAdapter.fail_with({:network, :timeout})
+
+      assert {:error, _reason} =
+               SendInviteEmailWorker.execute(job(invite, program, @max_attempts))
+
+      failed = reload(invite)
+      assert failed.status == :failed
+      assert failed.error_details =~ "Email delivery failed"
+    end
+
+    # Oban reads retry/discard off the return value; compensating must not look to it
+    # like the job succeeded, or the failure is invisible in the jobs table too.
+    test "still returns the error after compensating", %{invite: invite, program: program} do
+      StubMailerAdapter.fail_with({:network, :timeout})
+
+      assert {:error, _reason} =
+               SendInviteEmailWorker.execute(job(invite, program, @max_attempts))
     end
   end
 end

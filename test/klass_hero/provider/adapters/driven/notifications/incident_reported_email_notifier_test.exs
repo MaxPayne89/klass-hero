@@ -2,9 +2,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmail
   @moduledoc """
   Tests for the IncidentReportedEmailNotifier adapter.
 
-  Uses Swoosh.Adapters.Test (configured in test env) which returns
-  `{:ok, %{}}` from `Mailer.deliver/1`, so `send_incident_report/3`
-  returns `{:ok, email}`.
+  Delivery goes through `StubMailerAdapter` (configured in test env), which passes
+  to `Swoosh.Adapters.Test` unless a test arms a failure — so `Mailer.deliver/1`
+  returns `{:ok, %{}}` here and `send_incident_report/3` returns `{:ok, email}`.
   """
 
   # async: false — the interaction telemetry handler is global, so suite-wide
