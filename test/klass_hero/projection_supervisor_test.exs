@@ -11,24 +11,37 @@ defmodule KlassHero.ProjectionSupervisorTest do
   yet.
   """
 
-  use ExUnit.Case, async: true
+  # async: false on purpose. Finding the projections means asking whether each of the
+  # ~410 application modules exports the pair, and `Code.ensure_loaded?/1` has to load
+  # any module the suite has not touched yet. Every one of those loads serialises
+  # through the single code server, so run concurrently this burst stalls whichever
+  # process next needs a module — and an Oban worker blocked there is a worker holding
+  # a checked-out DB connection. That is how the first version of this file reliably
+  # timed out `ImportEnrollmentCsvTest`'s 5k-row smoke test at the 15s pool checkout.
+  # In the sync phase nothing else is running, so the same sweep costs ~200ms and
+  # bothers no one.
+  use ExUnit.Case, async: false
 
   alias KlassHero.ProjectionSupervisor
 
-  # `use KlassHero.Shared.Projection` is what defines both of these, so exporting
-  # the pair identifies a projection without the macro having to register itself.
-  defp projection_modules do
+  setup_all do
+    # `use KlassHero.Shared.Projection` is what defines both of these, so exporting the
+    # pair identifies a projection without the macro having to register itself — and
+    # without this test encoding a naming convention the guard would then fail to police.
     {:ok, modules} = :application.get_key(:klass_hero, :modules)
 
-    for module <- modules,
-        Code.ensure_loaded?(module),
-        function_exported?(module, :rebuild, 1),
-        function_exported?(module, :topics, 0),
-        do: module
+    found =
+      for module <- modules,
+          Code.ensure_loaded?(module),
+          function_exported?(module, :rebuild, 1),
+          function_exported?(module, :topics, 0),
+          do: module
+
+    %{projection_modules: found}
   end
 
-  test "every projection module is registered in projections/0" do
-    unregistered = projection_modules() -- ProjectionSupervisor.projections()
+  test "every projection module is registered in projections/0", %{projection_modules: found} do
+    unregistered = found -- ProjectionSupervisor.projections()
 
     assert unregistered == [],
            """
@@ -40,8 +53,8 @@ defmodule KlassHero.ProjectionSupervisorTest do
            """
   end
 
-  test "projections/0 names no module that has stopped being a projection" do
-    stale = ProjectionSupervisor.projections() -- projection_modules()
+  test "projections/0 names no module that has stopped being a projection", %{projection_modules: found} do
+    stale = ProjectionSupervisor.projections() -- found
 
     assert stale == [],
            """
