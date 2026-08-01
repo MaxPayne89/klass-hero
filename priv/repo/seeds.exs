@@ -12,16 +12,14 @@ alias KlassHero.Family.Child
 alias KlassHero.Family.ChildGuardian
 alias KlassHero.Family.Consent
 alias KlassHero.Family.ParentProfile
-alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Messaging.Conversation
 alias KlassHero.Messaging.Message
 alias KlassHero.Messaging.Participant
 alias KlassHero.Participation.ParticipationRecord
 alias KlassHero.Participation.ProgramSession
 alias KlassHero.Participation.SessionNote
-alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
-alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.VerifiedProviders
 alias KlassHero.ProgramCatalog.Program
+alias KlassHero.ProjectionSupervisor
 alias KlassHero.Provider.ProviderProfile
 alias KlassHero.Provider.StaffMember
 alias KlassHero.Provider.VerificationDocument
@@ -1499,13 +1497,14 @@ Logger.info("Created #{message_count} messages")
 # Why: projection GenServers only bootstrap on startup — seeding after startup leaves
 #      read tables empty (e.g. program_listings, conversation_summaries)
 # Outcome: all read tables rebuilt from authoritative write data
+#
+# Read off the supervisor's registry rather than listing modules here: a hand-kept
+# list drifted both ways (#1222) — one entry outlived its module, and four
+# projections were never rebuilt at all, leaving those read tables empty on every
+# seeded database.
 Logger.info("Rebuilding CQRS projections...")
 
-# Order matters: VerifiedProviders must be rebuilt first because ProgramListings
-# reads provider verification status from it during bootstrap
-VerifiedProviders.rebuild()
-ProgramListings.rebuild()
-ConversationSummaries.rebuild()
+ProjectionSupervisor.rebuild_all()
 
 Logger.info("Rebuilt CQRS projections")
 
