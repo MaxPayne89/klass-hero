@@ -255,11 +255,14 @@ defmodule KlassHero.Provider.Assignments do
 
   # Staff joined to their active lead assignment; callers narrow by program and
   # add their own select (single-record vs {program_id, staff} batch).
+  #
+  # `s.active` matters beyond tidiness: get_lead_instructor/1 feeds the public
+  # /programs/:id page, and deactivation is how GDPR erasure retires a staff row.
   defp lead_staff_query do
     from s in StaffMember,
       join: a in ProgramStaffAssignment,
       on: a.staff_member_id == s.id,
-      where: a.is_lead_instructor and is_nil(a.unassigned_at)
+      where: a.is_lead_instructor and is_nil(a.unassigned_at) and s.active
   end
 
   defp upsert_lead(repo, program_id, staff_member, provider_id) do

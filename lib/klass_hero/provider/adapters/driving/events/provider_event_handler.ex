@@ -8,8 +8,10 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler do
 
   - `:user_registered` - Creates provider profile if "provider" in intended_roles
   - `:user_confirmed` - Compensation path: creates provider profile if not yet created (idempotent)
-  - `:user_anonymized` - No-op for Provider context (provider profiles have no PII
-    beyond business_name which is retained for audit purposes)
+  - `:user_anonymized` - Scrubs the Provider-owned PII surfaces (staff member
+    name/email/bio/headshot, plus the denormalised reporter name on incident
+    reports). The provider profile itself is untouched: `business_name` is
+    business identity, retained for audit.
 
   ## Error Handling
 
@@ -27,7 +29,17 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler do
   def subscribed_events, do: [:user_registered, :user_confirmed, :user_anonymized]
 
   @impl true
-  def handle_event(%{event_type: :user_anonymized, entity_id: _user_id}), do: :ok
+  def handle_event(%{event_type: :user_anonymized, entity_id: user_id}) do
+    operation = fn -> Provider.anonymize_data_for_user(user_id) end
+
+    context = %{
+      operation_name: "anonymize provider data",
+      aggregate_id: user_id,
+      backoff_ms: 100
+    }
+
+    RetryHelpers.retry_and_normalize(operation, context)
+  end
 
   @impl true
   def handle_event(%{event_type: event_type, entity_id: user_id, payload: payload})

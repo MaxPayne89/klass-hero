@@ -126,6 +126,18 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
       {_provider, program, _staff} = setup_provider_program_staff()
       assert is_nil(Provider.get_lead_instructor(program.id))
     end
+
+    # An inactive staff member must not be advertised as leading a program —
+    # /programs/:id is public. Deactivation is also how GDPR erasure retires a
+    # staff row, so this is what keeps "Deleted User" off the public page.
+    test "ignores a lead who has been deactivated" do
+      {_provider, program, staff} = setup_provider_program_staff()
+      {:ok, _} = Provider.set_lead_instructor(program.id, staff.id, program.provider_id)
+
+      deactivate(staff)
+
+      assert is_nil(Provider.get_lead_instructor(program.id))
+    end
   end
 
   describe "list_lead_instructors_for_programs/1" do
@@ -149,5 +161,29 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
     test "returns an empty map for an empty list" do
       assert Provider.list_lead_instructors_for_programs([]) == %{}
     end
+
+    # Same invariant as get_lead_instructor/1, asserted separately: the two reads
+    # share lead_staff_query/0 but have their own selects.
+    test "omits programs whose lead has been deactivated" do
+      {provider, program_a, staff_a} = setup_provider_program_staff()
+      program_b = insert(:program_schema, provider_id: provider.id)
+      staff_b = insert(:staff_member_schema, provider_id: provider.id)
+
+      {:ok, _} = Provider.set_lead_instructor(program_a.id, staff_a.id, program_a.provider_id)
+      {:ok, _} = Provider.set_lead_instructor(program_b.id, staff_b.id, program_b.provider_id)
+
+      deactivate(staff_a)
+
+      result = Provider.list_lead_instructors_for_programs([program_a.id, program_b.id])
+
+      refute Map.has_key?(result, program_a.id)
+      assert result[program_b.id].id == staff_b.id
+    end
+  end
+
+  defp deactivate(staff) do
+    staff
+    |> Ecto.Changeset.change(active: false)
+    |> Repo.update!()
   end
 end

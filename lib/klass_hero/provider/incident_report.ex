@@ -140,6 +140,22 @@ defmodule KlassHero.Provider.IncidentReport do
   @doc "No-op changeset required by Backpex even when edit is disabled via `can?/3`."
   def admin_changeset(schema, _attrs, _metadata), do: change(schema)
 
+  @doc """
+  Canonical GDPR tombstone for a report whose reporter erased their account.
+  """
+  @spec anonymized_attrs() :: %{reporter_display_name: String.t()}
+  def anonymized_attrs, do: %{reporter_display_name: "Deleted User"}
+
+  @doc """
+  De-identifies a report during GDPR erasure, keeping the safety record itself.
+
+  `reporter_user_id` deliberately survives. Erasure anonymises the `users` row in
+  place rather than deleting it (`Accounts.anonymize_user/1`), so the `:restrict`
+  FK never fires and the link stays auditable while carrying no PII.
+  """
+  @spec anonymize_changeset(t()) :: Ecto.Changeset.t()
+  def anonymize_changeset(%__MODULE__{} = report), do: change(report, anonymized_attrs())
+
   defp validate_occurred_at_not_future(changeset) do
     validate_change(changeset, :occurred_at, fn :occurred_at, occurred_at ->
       case DateTime.compare(occurred_at, DateTime.utc_now()) do
