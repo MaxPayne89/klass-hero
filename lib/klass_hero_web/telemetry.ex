@@ -3,6 +3,8 @@ defmodule KlassHeroWeb.Telemetry do
 
   import Telemetry.Metrics
 
+  # Aliased away from `Oban` so it cannot shadow the real Oban module.
+  alias ErrorTracker.Integrations.Oban, as: ObanErrorReporting
   alias KlassHero.Shared.Interaction.TelemetryLogger
   alias KlassHero.Shared.Tracing.EctoSpanBridge
 
@@ -14,6 +16,11 @@ defmodule KlassHeroWeb.Telemetry do
   def init(_arg) do
     TelemetryLogger.attach()
     EctoSpanBridge.attach()
+    # Without this, no Oban failure from any worker has ever reached the error_tracker
+    # tables — a discarded job was discoverable only by querying the database by hand.
+    # This supervisor starts before {Oban, ...}, so the handler is attached before the
+    # first job can run. Context is narrowed by Shared.ErrorContextFilter (#1221).
+    ObanErrorReporting.attach()
 
     children = [
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}

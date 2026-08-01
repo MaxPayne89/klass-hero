@@ -15,6 +15,11 @@ test_port = String.to_integer(System.get_env("TEST_PORT") || "4002")
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
+# The suite deliberately fails Oban jobs; reporting each one would write error rows
+# for expected failures. `enabled?/0` gates before the insert, so the Oban telemetry
+# handler still attaches and simply no-ops. ErrorContextFilter is unit-tested directly.
+config :error_tracker, enabled: false
+
 # Disable fun_with_flags PubSub notifications in tests
 config :fun_with_flags, :cache_bust_notifications, enabled: false
 
@@ -35,9 +40,9 @@ config :klass_hero, KlassHero.Repo,
 config :klass_hero, KlassHeroWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: test_port],
   secret_key_base: "gY/oKuAYeC5ExhHrtu1JBwrpQdoGwtPOo3X9GdS7CFOnLe0eqRQ9w4cyV1MqvoYc",
+  # Oban runs inline in tests so critical event handlers execute synchronously
   server: System.get_env("WALLABY_E2E") == "true"
 
-# Oban runs inline in tests so critical event handlers execute synchronously
 config :klass_hero, Oban, testing: :inline
 config :klass_hero, :feature_flags, adapter: StubFeatureFlagsAdapter
 
