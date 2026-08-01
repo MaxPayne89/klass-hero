@@ -85,7 +85,13 @@ defmodule KlassHeroWeb.Admin.Components.SearchableSelect do
       </div>
 
       <%!-- Wrap in <form> because phx-change requires a form ancestor --%>
-      <form :if={!@selected} phx-change="search" phx-submit="noop" phx-target={@myself}>
+      <form
+        :if={!@selected}
+        id={"#{@id}-search-form"}
+        phx-change="search"
+        phx-submit="noop"
+        phx-target={@myself}
+      >
         <input
           type="text"
           placeholder={@placeholder}

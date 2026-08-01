@@ -77,6 +77,14 @@ defmodule KlassHeroWeb.Admin.SessionsLiveTest do
       assert has_element?(view, "#program-select")
     end
 
+    test "gives both searchable selects a recoverable search form", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/sessions")
+
+      # Two instances on one page, so the derived ids must stay distinct.
+      assert has_element?(view, "form#provider-select-search-form")
+      assert has_element?(view, "form#program-select-search-form")
+    end
+
     test "renders date inputs defaulting to today", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/admin/sessions")
       today = Date.utc_today() |> Date.to_iso8601()

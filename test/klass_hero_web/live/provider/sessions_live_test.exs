@@ -31,6 +31,10 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
       assert has_element?(view, "h2", "My Sessions")
       assert has_element?(view, "#date-select")
+
+      # The form id is what the client recovers the date by on reconnect. Pinned here so it
+      # survives independently of config/test.exs's missing_form_id: :raise gate.
+      assert has_element?(view, "form#date-select-form[phx-change=change_date]")
     end
 
     test "shows empty state when no sessions scheduled for today", %{conn: conn} do

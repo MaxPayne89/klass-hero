@@ -86,6 +86,13 @@ config :opentelemetry,
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
+# A form without an id cannot be recovered on reconnect, so treat it as a failure rather than
+# the LiveView default of a warning — it is the only test_warnings check that defaults to :warn,
+# which is how 142 of them accumulated unnoticed (#1228). `mix test --warnings-as-errors` does
+# not cover this: the check is a runtime IO.warn, not a compile warning.
+# :duplicate_id and :duplicate_live_component already default to :raise and need no entry here.
+config :phoenix_live_view, :test_warnings, missing_form_id: :raise
+
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
