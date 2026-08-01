@@ -88,6 +88,15 @@ defmodule KlassHeroWeb.Admin.Components.SearchableSelectTest do
 
       assert has_element?(view, "input[type=hidden][name=provider_id]")
     end
+
+    test "derives the search form id from the component id, so it can be recovered", %{conn: conn} do
+      {:ok, view, _html} = mount_harness(conn)
+
+      # Must not reuse @id itself — that belongs to the outer <div>, and a duplicate DOM id
+      # trips LiveViewTest's :duplicate_id check, which raises by default.
+      assert has_element?(view, "form#test-select-search-form[phx-change=search]")
+      assert has_element?(view, "div#test-select")
+    end
   end
 
   describe "filtering" do

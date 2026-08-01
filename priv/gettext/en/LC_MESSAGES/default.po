@@ -4376,7 +4376,7 @@ msgstr ""
 msgid "No programs assigned yet."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/components/searchable_select.ex:107
+#: lib/klass_hero_web/live/admin/components/searchable_select.ex:113
 #, elixir-autogen, elixir-format
 msgid "No results"
 msgstr ""

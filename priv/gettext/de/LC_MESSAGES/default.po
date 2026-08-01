@@ -4376,7 +4376,7 @@ msgstr "Noch keine Teilnahmeeinträge"
 msgid "No programs assigned yet."
 msgstr "Noch keine Programme zugewiesen."
 
-#: lib/klass_hero_web/live/admin/components/searchable_select.ex:107
+#: lib/klass_hero_web/live/admin/components/searchable_select.ex:113
 #, elixir-autogen, elixir-format
 msgid "No results"
 msgstr "Keine Ergebnisse"

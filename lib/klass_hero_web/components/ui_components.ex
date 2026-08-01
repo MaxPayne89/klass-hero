@@ -1295,6 +1295,10 @@ defmodule KlassHeroWeb.UIComponents do
   Commonly used for date-based filtering in lists and streams. Automatically
   handles date formatting for the HTML date input.
 
+  The wrapping form is given `"<id>-form"`. That id is what the client uses to recover the
+  form after a reconnect, so it is load-bearing, not decorative — without it the selected
+  date silently reverts to the mount default when the socket drops.
+
   ## Examples
 
       <.date_selector
@@ -1311,7 +1315,7 @@ defmodule KlassHeroWeb.UIComponents do
         value={@filter_date}
       />
   """
-  attr :id, :string, required: true, doc: "Input element ID"
+  attr :id, :string, required: true, doc: "Input element ID; the wrapping form gets `<id>-form`"
   attr :name, :string, required: true, doc: "Form field name"
   attr :value, :any, default: nil, doc: "Current date value (Date or ISO8601 string)"
   attr :label, :string, default: nil, doc: "Optional label text"
@@ -1322,6 +1326,7 @@ defmodule KlassHeroWeb.UIComponents do
   def date_selector(assigns) do
     ~H"""
     <form
+      id={"#{@id}-form"}
       phx-change={@phx_change}
       class={["flex flex-col sm:flex-row gap-4 items-start sm:items-center", @class]}
     >
