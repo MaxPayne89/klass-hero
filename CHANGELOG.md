@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.7](https://github.com/MaxPayne89/klass-hero/compare/v0.66.6...v0.66.7) (2026-08-01)
+
+
+### Bug Fixes
+
+* compensate an invite only once Oban retries are exhausted ([#1239](https://github.com/MaxPayne89/klass-hero/issues/1239)) ([cbe8ca2](https://github.com/MaxPayne89/klass-hero/commit/cbe8ca277efd77fd6899eed4cc195c829fa0ab7b))
+
 ## [0.66.6](https://github.com/MaxPayne89/klass-hero/compare/v0.66.5...v0.66.6) (2026-08-01)
 
 
