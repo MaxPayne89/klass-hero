@@ -256,8 +256,11 @@ jobs:
   # the gate into a no-op that passes on a database with empty read tables.
   #
   # Postgres only: seeds tolerate a dead MinIO (the Storage.upload call matches {:error, _}
-  # and warns), so no S3-compatible service is needed. That costs ~90s — a refused upload
-  # takes 7.7s of ExAws retry backoff, measured, times the 12 seeded verification documents.
+  # and warns), so no S3-compatible service is needed. That costs ~60s, measured on the
+  # runner: 12 seeded verification documents at ~5s each of ExAws retry backoff against a
+  # refused connection. It dominates this job — the seeding itself is ~4s — so if the job
+  # ever needs to get cheaper, that is the thing to cut, not the steps.
+  #
   # Paying it beats the alternatives: Actions service containers cannot express MinIO's
   # `command: server /data` (see docker-compose.yml), and hand-rolling `docker run` would
   # make a blocking gate depend on a service it does not even test.
