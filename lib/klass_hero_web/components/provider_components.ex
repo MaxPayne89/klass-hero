@@ -1993,6 +1993,15 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <.status_pill color={invite_status_color(invite.status)}>
                   {invite_status_label(invite.status)}
                 </.status_pill>
+                <%!-- Written by three places and shown by none until #1221: a red pill with no
+                      reason tells a provider that something is wrong but not what to do about it. --%>
+                <p
+                  :if={invite.status == :failed && invite.error_details}
+                  id={"invite-error-#{invite.id}"}
+                  class="mt-1 text-xs text-hero-grey-500 break-words"
+                >
+                  {invite.error_details}
+                </p>
               </td>
               <td class="px-3 py-3 text-right">
                 <div class="flex items-center justify-end gap-1">

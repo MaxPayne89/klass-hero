@@ -33,6 +33,7 @@ alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
+alias KlassHero.Shared.ErrorContextFilter
 alias Swoosh.Adapters.Local
 
 config :backpex,
@@ -43,7 +44,13 @@ config :backpex,
 # Europe/Berlin and other named zones with DST.
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
-config :error_tracker, repo: KlassHero.Repo, otp_app: :klass_hero, enabled: true
+# `filter` narrows what gets persisted: Oban job args reach here in full, and some
+# carry child health data. See KlassHero.Shared.ErrorContextFilter.
+config :error_tracker,
+  repo: KlassHero.Repo,
+  otp_app: :klass_hero,
+  enabled: true,
+  filter: ErrorContextFilter
 
 # Configure esbuild (the version is required)
 config :esbuild,

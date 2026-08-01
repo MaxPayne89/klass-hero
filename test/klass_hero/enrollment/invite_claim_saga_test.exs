@@ -1,66 +1,35 @@
 defmodule KlassHero.Enrollment.InviteClaimSagaTest do
   @moduledoc """
-  Integration test for the full invite claim saga.
+  Integration test for the full invite claim saga: token claim -> user creation ->
+  `invite_claimed` -> family creation -> `invite_family_ready` -> enrollment.
 
-  Verifies the end-to-end flow: token claim -> user creation ->
-  invite_claimed event -> registered status transition ->
-  integration event -> family creation -> enrollment creation.
-
-  Since integration events propagate asynchronously via PubSub
-  (through EventSubscriber GenServers started in the application tree),
-  this test:
-
-  1. Swaps the integration event publisher to the real PubSub publisher
-     so that the events a claim stages are visible to assertions
-  2. Grants Ecto Sandbox access to the EventSubscriber processes so they
-     can access the database within the test's transaction
-  3. Polls for the expected terminal state ("enrolled")
+  Every hop travels through the outbox (ADR-0014). Manual testing mode plus explicit
+  drains is what makes this resemble production: under the suite's `testing: :inline`,
+  staging executes the delivery job at insert — inside the producer's transaction — so
+  the whole chain collapses into one synchronous cascade in which no job is ever
+  retried, a sequencing production never has.
   """
+
   use KlassHero.DataCase, async: false
 
   import KlassHero.Factory
 
-  alias Ecto.Adapters.SQL.Sandbox
+  alias KlassHero.Accounts
   alias KlassHero.Enrollment
-  alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimResult
   alias KlassHero.Family
-  # EventSubscriber process names that participate in the saga.
-  # These GenServers receive PubSub integration events and access the DB.
-  alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
-  alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
-  alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
-  alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
-  alias KlassHero.Shared.Adapters.Driven.Events.PubSubEventPublisher
-
-  @saga_subscribers [
-    # Handles integration:enrollment:invite_claimed -> creates parent + child
-    InviteClaimedHandler,
-    # Handles integration:family:invite_family_ready -> creates enrollment
-    InviteFamilyReadyHandler,
-    # Handles integration:accounts:user_registered -> creates parent profile (may race)
-    FamilyEventHandler,
-    # Handles integration:accounts:user_registered -> creates provider profile stub
-    ProviderEventHandler
-  ]
 
   defp create_claimable_invite(_context) do
-    import Ecto.Query
-
     provider = insert(:provider_profile_schema)
-
-    program =
-      insert(:program_schema,
-        provider_id: provider.id
-      )
+    program = insert(:program_schema, provider_id: provider.id)
 
     token = "saga-test-#{System.unique_integer([:positive])}"
     email = "saga-test-#{System.unique_integer([:positive])}@example.com"
 
     {:ok, _} =
-      KlassHero.Enrollment.create_invite(%{
+      Enrollment.create_invite(%{
         program_id: program.id,
         provider_id: provider.id,
         child_first_name: "Emma",
@@ -73,115 +42,85 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
 
     invite =
       BulkEnrollmentInvite
-      |> where([i], i.guardian_email == ^email and i.program_id == ^program.id)
-      |> Repo.one!()
+      |> Repo.get_by!(guardian_email: email)
+      |> Ecto.Changeset.change(%{invite_token: token, status: :invite_sent})
+      |> Repo.update!()
 
-    # Transition invite to "invite_sent" with a token so it can be claimed
-    invite
-    |> Ecto.Changeset.change(%{invite_token: token, status: :invite_sent})
-    |> Repo.update!()
+    %{invite: invite, token: token, program: program, provider: provider, email: email}
+  end
 
-    updated_invite =
-      BulkEnrollmentInvite
-      |> where([i], i.id == ^invite.id)
-      |> Repo.one!()
+  setup context do
+    invite_data = create_claimable_invite(context)
 
-    %{
-      invite: updated_invite,
-      token: token,
-      program: program,
-      provider: provider,
-      email: email
-    }
+    # The suite records staged events instead of enqueueing them; this test needs the real
+    # delivery job, because the hops it asserts on are the ones that job invokes.
+    original_outbox = Application.get_env(:klass_hero, :outbox)
+    Application.put_env(:klass_hero, :outbox, module: ObanOutbox)
+    on_exit(fn -> Application.put_env(:klass_hero, :outbox, original_outbox) end)
+
+    invite_data
+  end
+
+  # Deliver the staged events, run the family hop they enqueue, then deliver whatever that
+  # hop staged in turn. `with_scheduled` drives a failing job through its retries instead
+  # of stopping at the first backoff.
+  defp run_saga do
+    Oban.drain_queue(queue: :critical_events, with_recursion: true)
+    Oban.drain_queue(queue: :family, with_recursion: true, with_scheduled: true)
+    Oban.drain_queue(queue: :critical_events, with_recursion: true)
   end
 
   describe "full invite claim saga" do
-    setup context do
-      # Trigger: provider_profile_schema factory calls unconfirmed_user_fixture(:provider)
-      # Why: with real PubSub, ProviderEventHandler receives user_registered and creates a
-      #      provider profile — then factory's Repo.insert! duplicates the identity_id → crash
-      # Outcome: create test data FIRST with test publisher, then swap to real PubSub
-      invite_data = create_claimable_invite(context)
+    test "claim_invite drives user -> registered -> family -> enrolled", ctx do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, %ClaimResult{user_type: :new_user, user: user}} = Enrollment.claim_invite(ctx.token)
 
-      # Trigger: test config uses TestOutbox (process dictionary storage)
-      # Why: the claim must actually stage its events so the
-      #      EventSubscriber GenServers receive the events and drive the saga forward
-      # Outcome: swap to real PubSub publisher for this test, restore in on_exit
-      original_config = Application.get_env(:klass_hero, :integration_event_publisher)
+        # Marking the invite registered and staging the claim are one transaction, so this
+        # holds before anything has been delivered.
+        registered = Repo.get!(BulkEnrollmentInvite, ctx.invite.id)
+        assert registered.status == :registered
+        assert registered.registered_at != nil
 
-      Application.put_env(:klass_hero, :integration_event_publisher,
-        module: PubSubEventPublisher,
-        pubsub: KlassHero.PubSub
-      )
+        run_saga()
 
-      # The saga now crosses both transports: Enrollment stages `invite_claimed` in the
-      # outbox, Family still publishes `invite_family_ready`. Both have to be real for
-      # the chain to run end to end; the second swap goes when the last producer moves.
-      original_outbox = Application.get_env(:klass_hero, :outbox)
-      Application.put_env(:klass_hero, :outbox, module: ObanOutbox)
+        final = Repo.get!(BulkEnrollmentInvite, ctx.invite.id)
+        assert final.status == :enrolled
+        assert final.enrolled_at != nil
+        assert final.enrollment_id != nil
 
-      on_exit(fn ->
-        Application.put_env(:klass_hero, :integration_event_publisher, original_config)
-        Application.put_env(:klass_hero, :outbox, original_outbox)
+        assert {:ok, parent} = Family.get_parent_by_identity(user.id)
+        assert Enum.any?(Family.get_children(parent.id), &(&1.first_name == "Emma"))
       end)
-
-      # Trigger: EventSubscriber GenServers run in separate processes outside the test
-      # Why: they need DB access to handle integration events (create parent, child, enrollment)
-      # Outcome: allow each subscriber to share the test process's sandboxed connection
-      Enum.each(@saga_subscribers, fn subscriber_name ->
-        case Process.whereis(subscriber_name) do
-          nil -> :ok
-          pid -> Sandbox.allow(KlassHero.Repo, self(), pid)
-        end
-      end)
-
-      invite_data
     end
 
-    test "claim_invite triggers the full saga: user -> registered -> family -> enrolled", %{
-      token: token,
-      invite: invite
-    } do
-      # Step 1: Claim the invite. Marking it registered and staging the cross-context
-      # event happen in one transaction.
-      #
-      # Manual mode, then an explicit drain, is what makes this test model production:
-      # under the suite's `testing: :inline`, staging would execute the delivery job
-      # inside the producer's transaction, which is a sequencing production never has.
-      assert {:ok, %ClaimResult{user_type: :new_user, user: user}} =
-               Oban.Testing.with_testing_mode(:manual, fn -> Enrollment.claim_invite(token) end)
+    # #1221, end to end. The guardian has already been told their account exists by the
+    # time this hop runs, so a failure here left them with an account, no child and no
+    # enrollment, and the invite stuck in :registered where no :failed filter could find it.
+    test "a claim the family hop cannot process ends failed, not stuck", ctx do
+      # Written past the invite changeset, which requires a first name. Both layers reject
+      # this, so reaching the state takes a deliberate write — `child_date_of_birth` is
+      # NOT NULL in the database and cannot be emptied at all. What is being exercised is
+      # the failure path, not a claim that this row is easy to produce. It fails the same
+      # way on every attempt, which is the part that matters.
+      ctx.invite
+      |> Ecto.Changeset.change(%{child_first_name: ""})
+      |> Repo.update!()
 
-      # Step 2: Verify the synchronous effect of the bus handler.
-      updated = Repo.get!(BulkEnrollmentInvite, invite.id)
-      assert updated.status == :registered
-      assert updated.registered_at != nil
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, %ClaimResult{user: user}} = Enrollment.claim_invite(ctx.token)
 
-      # Step 3: Deliver the staged event, as a queue worker would after the commit.
-      # with_recursion so events staged by the handlers this drains are drained too.
-      Oban.drain_queue(queue: :critical_events, with_recursion: true)
+        run_saga()
 
-      # Step 4: The remainder still travels by PubSub — Family publishes
-      # :invite_family_ready, and Enrollment's subscriber creates the enrollment.
-      assert_eventually(
-        fn ->
-          final = Repo.get!(BulkEnrollmentInvite, invite.id)
-          final.status == :enrolled
-        end,
-        timeout_ms: 5000,
-        interval_ms: 100
-      )
+        final = Repo.get!(BulkEnrollmentInvite, ctx.invite.id)
+        assert final.status == :failed
+        assert final.error_details =~ "first name"
 
-      # Verify terminal invite state
-      final = Repo.get!(BulkEnrollmentInvite, invite.id)
-      assert final.status == :enrolled
-      assert final.enrolled_at != nil
-      assert final.enrollment_id != nil
+        # The account is real and stays; only the enrollment never happened.
+        assert Accounts.get_user_by_email(ctx.email).id == user.id
 
-      # Verify family was created
-      assert {:ok, parent} = Family.get_parent_by_identity(user.id)
-      children = Family.get_children(parent.id)
-      assert [_ | _] = children
-      assert Enum.any?(children, &(&1.first_name == "Emma"))
+        {:ok, parent} = Family.get_parent_by_identity(user.id)
+        assert Family.get_children(parent.id) == []
+      end)
     end
   end
 end

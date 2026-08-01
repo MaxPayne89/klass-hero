@@ -26,11 +26,11 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsv do
 
   alias KlassHero.Enrollment
   alias KlassHero.Enrollment.BulkEnrollmentInvite
-  alias KlassHero.Enrollment.ChangesetErrors
   alias KlassHero.Enrollment.Domain.Services.CsvParser
   alias KlassHero.Enrollment.Domain.Services.ImportRowValidator
   alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Enrollment.ProviderProgramContext
+  alias KlassHero.Shared.ChangesetErrors
 
   require Logger
 

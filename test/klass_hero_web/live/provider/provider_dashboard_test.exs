@@ -13,6 +13,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   import Phoenix.LiveViewTest
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.ProviderFixtures
@@ -505,6 +506,34 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       view |> element("#roster-tab-invites") |> render_click()
 
       assert has_element?(view, "[phx-click=delete_invite]")
+    end
+
+    # #1221: a failed invite showed a red pill and nothing else, so the provider could see
+    # that something broke but not what, nor whether resending could possibly help.
+    test "shows why a failed invite failed", %{conn: conn, program: program} do
+      invite = Repo.one!(BulkEnrollmentInvite)
+
+      invite
+      |> Ecto.Changeset.change(%{status: :failed, error_details: "date of birth can't be blank"})
+      |> Repo.update!()
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#view-roster-#{program.id}") |> render_click()
+      view |> element("#roster-tab-invites") |> render_click()
+
+      assert has_element?(view, "#invite-error-#{invite.id}", "date of birth can't be blank")
+    end
+
+    test "shows no reason line for an invite that has not failed", %{conn: conn, program: program} do
+      invite = Repo.one!(BulkEnrollmentInvite)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#view-roster-#{program.id}") |> render_click()
+      view |> element("#roster-tab-invites") |> render_click()
+
+      refute has_element?(view, "#invite-error-#{invite.id}")
     end
   end
 

@@ -1,10 +1,13 @@
-defmodule KlassHero.Enrollment.ChangesetErrors do
+defmodule KlassHero.Shared.ChangesetErrors do
   @moduledoc """
-  Converts an `Ecto.Changeset`'s errors into the flat
-  `[{field :: atom, message :: String.t()}]` list that enrollment commands
-  surface to the LiveView layer. Expands `%{count}`-style placeholders so
-  messages like `"should be at most %{count} character(s)"` don't leak to
-  end users.
+  Converts an `Ecto.Changeset`'s errors into a flat
+  `[{field :: atom, message :: String.t()}]` list for anything that has to show a
+  validation failure to a person. Expands `%{count}`-style placeholders so messages
+  like `"should be at most %{count} character(s)"` don't leak to end users.
+
+  Lives in Shared rather than a context because it knows only about Ecto: Enrollment's
+  commands surface it to the LiveView layer, and Family writes it into the reason a
+  provider reads on a failed invite.
 
   Formatting must never raise — this helper is called on the error path
   where throwing would swallow the real validation errors. Unknown
