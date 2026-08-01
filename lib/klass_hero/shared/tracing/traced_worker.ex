@@ -51,6 +51,15 @@ defmodule KlassHero.Shared.Tracing.TracedWorker do
     :ok
   end
 
+  # A cancel is a failure the worker knows no retry can fix, so it belongs in the same
+  # error-status queries as a plain failure. Falling through to the no-op clause would
+  # make a job that gave up look, in the trace, exactly like one that succeeded.
+  def record_result({:cancel, _reason}, %Oban.Job{}) do
+    Tracing.set_attribute("oban.will_retry", false)
+    OpenTelemetry.Tracer.set_status(:error, "job cancelled")
+    :ok
+  end
+
   def record_result(_result, %Oban.Job{} = _job), do: :ok
 
   defmacro __using__(opts) do

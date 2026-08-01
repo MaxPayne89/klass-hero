@@ -58,6 +58,13 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
     def execute(_job), do: {:ok, :some_result}
   end
 
+  defmodule CancelWorker do
+    use TracedWorker, queue: :test, max_attempts: 3
+
+    @impl TracedWorker
+    def execute(_job), do: {:cancel, "nothing a retry can fix"}
+  end
+
   # ---- Tests ----
 
   describe "span creation and attributes on success" do
@@ -168,6 +175,26 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
       FailWorker.perform(job)
 
       assert_span("Shared.Tracing.TracedWorkerTest.FailWorker.execute/1",
+        "oban.will_retry": false
+      )
+    end
+
+    # A cancel is still a failure, just one no retry can fix. Before invite delivery
+    # started cancelling, that path returned {:error, _} and marked its span — leaving
+    # cancels unmarked would silently drop them out of every error-status query.
+    test "sets span status to error on cancel" do
+      job = build_job(%{attempt: 1, max_attempts: 3})
+      CancelWorker.perform(job)
+
+      worker_span = assert_span("Shared.Tracing.TracedWorkerTest.CancelWorker.execute/1")
+      assert span_status_code(worker_span) == :error
+    end
+
+    test "reports a cancelled job as not retrying" do
+      job = build_job(%{attempt: 1, max_attempts: 3})
+      CancelWorker.perform(job)
+
+      assert_span("Shared.Tracing.TracedWorkerTest.CancelWorker.execute/1",
         "oban.will_retry": false
       )
     end
