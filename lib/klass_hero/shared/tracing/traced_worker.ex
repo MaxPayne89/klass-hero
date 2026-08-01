@@ -29,11 +29,24 @@ defmodule KlassHero.Shared.Tracing.TracedWorker do
 
   @callback execute(Oban.Job.t()) :: :ok | {:ok, term()} | {:error, term()}
 
+  @doc """
+  True once Oban has no retries left for this job.
+
+  Workers gate compensating actions on this: a compensation applied while
+  retries remain destroys the state the next attempt would have healed.
+
+  `>=` rather than `==` because Lifeline re-runs a job orphaned by a node
+  crash, so an attempt can arrive already past the ceiling.
+  """
+  @spec final_attempt?(Oban.Job.t()) :: boolean()
+  def final_attempt?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}) do
+    attempt >= max_attempts
+  end
+
   @doc false
   @spec record_result(term(), Oban.Job.t()) :: :ok
   def record_result({:error, _reason}, %Oban.Job{} = job) do
-    will_retry = job.attempt < job.max_attempts
-    Tracing.set_attribute("oban.will_retry", will_retry)
+    Tracing.set_attribute("oban.will_retry", not final_attempt?(job))
     OpenTelemetry.Tracer.set_status(:error, "job failed")
     :ok
   end

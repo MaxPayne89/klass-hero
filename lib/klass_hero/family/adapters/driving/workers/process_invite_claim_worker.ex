@@ -30,15 +30,13 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
       :ok
     else
       {:error, reason} = error ->
-        if final_attempt?(job), do: fail_invite(args["invite_id"], reason)
+        # Only once Oban is done retrying. `registered -> :failed` is a one-way door —
+        # `:failed` can only go back to `:pending` — so failing the invite on an earlier
+        # attempt would destroy a claim that the next attempt heals.
+        if TracedWorker.final_attempt?(job), do: fail_invite(args["invite_id"], reason)
         error
     end
   end
-
-  # Only once Oban is done retrying. `registered -> :failed` is a one-way door — `:failed`
-  # can only go back to `:pending` — so failing the invite on an earlier attempt would
-  # destroy a claim that the next attempt heals.
-  defp final_attempt?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}), do: attempt >= max_attempts
 
   # The invite belongs to Enrollment, so this goes through its facade rather than touching
   # the schema. A rejected transition means the invite is already terminal — enrolled by a

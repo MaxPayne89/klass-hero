@@ -11,6 +11,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
   alias KlassHero.Shared.RateLimitedEmailWorker
+  alias KlassHero.Shared.Tracing.TracedWorker
 
   require Logger
 
@@ -53,7 +54,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
   end
 
   defp maybe_mark_permanently_failed(email_id, job) do
-    if job.attempt >= job.max_attempts do
+    if TracedWorker.final_attempt?(job) do
       case Messaging.update_inbound_email_content(email_id, %{content_status: "failed"}) do
         {:ok, _} ->
           Logger.error("Marked email #{email_id} content as permanently failed")

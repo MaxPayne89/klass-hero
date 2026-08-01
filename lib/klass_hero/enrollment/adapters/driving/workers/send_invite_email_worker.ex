@@ -15,7 +15,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
   require Logger
 
   @impl true
-  def execute(%Oban.Job{args: %{"invite_id" => invite_id, "program_name" => program_name}}) do
+  def execute(%Oban.Job{args: %{"invite_id" => invite_id, "program_name" => program_name}} = job) do
     case Enrollment.get_invite(invite_id) do
       {:error, :not_found} ->
         Logger.warning("[SendInviteEmailWorker] Invite not found", invite_id: invite_id)
@@ -30,16 +30,26 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
 
         :ok
 
-      {:ok, %BulkEnrollmentInvite{invite_token: nil}} ->
+      # Every retry re-reads the same nil token, so the remaining attempts are
+      # guaranteed waste — cancel rather than spend them. Failing the invite here is
+      # what makes it visible: left :pending it would sit forever with no email sent
+      # and nothing to show the provider. A resend mints a fresh token.
+      {:ok, %BulkEnrollmentInvite{invite_token: nil} = invite} ->
         Logger.warning("[SendInviteEmailWorker] Invite has no token", invite_id: invite_id)
-        {:error, "invite has no token"}
+
+        Enrollment.transition_invite(invite, %{
+          status: :failed,
+          error_details: "Invite link could not be generated (no token). Please resend."
+        })
+
+        {:cancel, "invite has no token"}
 
       {:ok, %BulkEnrollmentInvite{} = invite} ->
-        send_and_transition(invite, program_name)
+        send_and_transition(invite, program_name, job)
     end
   end
 
-  defp send_and_transition(invite, program_name) do
+  defp send_and_transition(invite, program_name, job) do
     invite_url = "#{base_url()}/invites/#{invite.invite_token}"
 
     case InviteEmailNotifier.send_invite(invite, program_name, invite_url) do
@@ -70,10 +80,16 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
           reason: inspect(reason)
         )
 
-        Enrollment.transition_invite(invite, %{
-          status: :failed,
-          error_details: "Email delivery failed: #{inspect(reason)}"
-        })
+        # Only once Oban is done retrying. `pending -> :failed` is a one-way door —
+        # `:failed` can only go back to `:pending` — and the non-pending guard above
+        # then turns every retry into a silent :ok, so failing early both destroys the
+        # send the next attempt makes and hides that it did (#1233).
+        if TracedWorker.final_attempt?(job) do
+          Enrollment.transition_invite(invite, %{
+            status: :failed,
+            error_details: "Email delivery failed: #{inspect(reason)}"
+          })
+        end
 
         {:error, reason}
     end

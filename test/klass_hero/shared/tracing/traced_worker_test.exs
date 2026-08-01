@@ -191,4 +191,20 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
       assert raw_status == :undefined or span_status_code(worker_span) != :error
     end
   end
+
+  describe "final_attempt?/1" do
+    # `>=`, not `==`: Lifeline re-runs a job orphaned by a node crash, so an
+    # attempt can arrive already past the ceiling. Equality would read that as
+    # "retries remain" and skip the compensation the caller is gating on.
+    test "is true only once no attempts remain" do
+      cases = [{1, 3, false}, {2, 3, false}, {3, 3, true}, {4, 3, true}]
+
+      for {attempt, max_attempts, expected} <- cases do
+        job = build_job(%{attempt: attempt, max_attempts: max_attempts})
+
+        assert TracedWorker.final_attempt?(job) == expected,
+               "attempt #{attempt} of #{max_attempts}: expected #{expected}"
+      end
+    end
+  end
 end

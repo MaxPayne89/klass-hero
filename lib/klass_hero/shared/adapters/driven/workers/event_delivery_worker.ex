@@ -78,7 +78,13 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   end
 
   # error once retries are exhausted (ErrorTracker alerts on it), warning while any remain.
-  defp log_consumer_failure(event, topic, handler_ref, reason, %Oban.Job{attempt: attempt, max_attempts: max_attempts}) do
+  defp log_consumer_failure(
+         event,
+         topic,
+         handler_ref,
+         reason,
+         %Oban.Job{attempt: attempt, max_attempts: max_attempts} = job
+       ) do
     metadata = [
       event_id: event.event_id,
       topic: topic,
@@ -88,7 +94,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
       max_attempts: max_attempts
     ]
 
-    if attempt >= max_attempts do
+    if TracedWorker.final_attempt?(job) do
       Logger.error(
         "Event delivery permanently failed after #{max_attempts} attempts: #{topic} -> #{handler_ref}",
         metadata

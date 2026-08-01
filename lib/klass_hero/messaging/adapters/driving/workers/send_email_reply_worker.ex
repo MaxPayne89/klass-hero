@@ -11,6 +11,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
 
   alias KlassHero.Messaging
   alias KlassHero.Shared.RateLimitedEmailWorker
+  alias KlassHero.Shared.Tracing.TracedWorker
 
   require Logger
 
@@ -74,7 +75,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
   end
 
   defp mark_reply_failed_if_final(reply_id, job) do
-    if job.attempt >= job.max_attempts do
+    if TracedWorker.final_attempt?(job) do
       case Messaging.update_email_reply_status(reply_id, "failed", %{}) do
         {:ok, _} ->
           Logger.error("Marked reply #{reply_id} as permanently failed")
