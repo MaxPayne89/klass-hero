@@ -1,9 +1,15 @@
 defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandlerTest do
   use KlassHero.DataCase, async: true
 
+  import KlassHero.AccountsFixtures, only: [user_fixture: 1]
+  import KlassHero.Factory
+  import KlassHero.ProviderFixtures
+
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
+  alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.StaffMember
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
 
@@ -47,7 +53,31 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandlerTest do
   end
 
   describe "handle_event/1 for :user_anonymized" do
-    test "returns :ok (no-op)" do
+    test "scrubs the Provider-owned PII surfaces for the user" do
+      user = user_fixture(intended_roles: [:staff, :provider])
+      provider = provider_profile_fixture(identity_id: user.id)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      staff =
+        staff_member_fixture(provider_id: provider.id, user_id: user.id, first_name: "Jane", email: "jane@example.com")
+
+      report =
+        incident_report_fixture(
+          provider_profile_id: provider.id,
+          reporter_user_id: user.id,
+          reporter_display_name: "Jane Whistleblower",
+          program_id: program.id
+        )
+
+      event = %{event_type: :user_anonymized, entity_id: user.id}
+      assert :ok = ProviderEventHandler.handle_event(event)
+
+      assert Repo.get(StaffMember, staff.id).email == nil
+      refute Repo.get(StaffMember, staff.id).active
+      refute Repo.get(IncidentReport, report.id).reporter_display_name =~ "Jane"
+    end
+
+    test "returns :ok when the user owns no Provider data" do
       event = %{event_type: :user_anonymized, entity_id: Ecto.UUID.generate()}
       assert :ok = ProviderEventHandler.handle_event(event)
     end

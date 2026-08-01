@@ -205,6 +205,53 @@ defmodule KlassHero.Provider.StaffMember do
     |> foreign_key_constraint(:user_id)
   end
 
+  @doc """
+  Canonical GDPR tombstone for a staff member whose user erased their account.
+
+  The name is split across both columns so `full_name/1` reads "Deleted User" and
+  `initials/1` reads "DU" with no special-casing downstream.
+  """
+  @spec anonymized_attrs() :: map()
+  def anonymized_attrs do
+    %{first_name: "Deleted", last_name: "User", email: nil, bio: nil, headshot_url: nil, active: false}
+  end
+
+  @doc """
+  Scrubs a staff member's PII and deactivates the row during GDPR erasure.
+
+  Deactivating rather than deleting keeps the provider's roster history intact,
+  and frees the partial unique index `staff_members_active_provider_user_index`
+  (which covers only `active = true AND user_id IS NOT NULL`).
+  """
+  @spec anonymize_changeset(t()) :: Ecto.Changeset.t()
+  def anonymize_changeset(%__MODULE__{} = staff) do
+    staff
+    |> change(anonymized_attrs())
+    |> revoke_invitation()
+  end
+
+  # Statuses carrying an invitation that could still be redeemed.
+  @outstanding_invitation_statuses [:pending, :sent]
+
+  # An outstanding invitation is a live credential: get_staff_member_by_token_hash/1
+  # (staff.ex) matches on invitation_token_hash + invitation_status == :sent and does
+  # NOT check `active`, so without this the invite link would still bind a fresh user
+  # account to an erased person's row.
+  #
+  # Deliberately bypasses @valid_invitation_transitions — erasure is an administrative
+  # terminal action, not a lifecycle step, and :pending => :expired is not a legal move.
+  # :accepted is left intact: already consumed, no live credential, and rewriting it
+  # would falsify roster history.
+  defp revoke_invitation(changeset) do
+    changeset = put_change(changeset, :invitation_token_hash, nil)
+
+    if get_field(changeset, :invitation_status) in @outstanding_invitation_statuses do
+      put_change(changeset, :invitation_status, :expired)
+    else
+      changeset
+    end
+  end
+
   defp validate_tags(changeset) do
     case get_change(changeset, :tags) do
       nil ->

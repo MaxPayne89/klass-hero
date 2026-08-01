@@ -19,6 +19,88 @@ defmodule KlassHero.Provider.StaffMemberTest do
     end
   end
 
+  describe "anonymize_changeset/1" do
+    @scrubbed_to_nil [:email, :bio, :headshot_url]
+
+    test "scrubs every PII field" do
+      staff = staff_member_with_pii()
+
+      {:ok, anonymized} = staff |> StaffMember.anonymize_changeset() |> Repo.update()
+
+      for field <- @scrubbed_to_nil do
+        assert Map.fetch!(anonymized, field) == nil,
+               "expected #{field} to be scrubbed to nil, got: #{inspect(Map.fetch!(anonymized, field))}"
+      end
+
+      assert StaffMember.full_name(anonymized) == "Deleted User"
+      assert StaffMember.initials(anonymized) == "DU"
+    end
+
+    test "deactivates the staff member" do
+      staff = staff_member_with_pii()
+      assert staff.active
+
+      {:ok, anonymized} = staff |> StaffMember.anonymize_changeset() |> Repo.update()
+
+      refute anonymized.active
+    end
+
+    test "keeps provider-owned, non-personal data" do
+      staff = staff_member_with_pii()
+
+      {:ok, anonymized} = staff |> StaffMember.anonymize_changeset() |> Repo.update()
+
+      assert anonymized.provider_id == staff.provider_id
+      assert anonymized.role == staff.role
+    end
+
+    test "always kills the invitation token, so the invite link cannot be redeemed" do
+      staff = staff_member_with_pii(invitation_status: :sent, invitation_token_hash: :crypto.strong_rand_bytes(32))
+
+      {:ok, anonymized} = staff |> StaffMember.anonymize_changeset() |> Repo.update()
+
+      assert anonymized.invitation_token_hash == nil
+      assert {:error, :not_found} = Provider.get_staff_member_by_token_hash(staff.invitation_token_hash)
+    end
+
+    # Only an *outstanding* invitation is expired. :accepted was already consumed —
+    # rewriting it would falsify roster history.
+    @invitation_outcomes [
+      {:pending, :expired},
+      {:sent, :expired},
+      {:accepted, :accepted},
+      {:failed, :failed},
+      {:expired, :expired}
+    ]
+
+    test "expires only the statuses that represent an outstanding invitation" do
+      for {initial, expected} <- @invitation_outcomes do
+        staff = staff_member_with_pii(invitation_status: initial)
+
+        {:ok, anonymized} = staff |> StaffMember.anonymize_changeset() |> Repo.update()
+
+        assert anonymized.invitation_status == expected,
+               "#{initial} should anonymize to #{expected}, got #{anonymized.invitation_status}"
+      end
+    end
+
+    defp staff_member_with_pii(attrs \\ []) do
+      staff_member_fixture(
+        Keyword.merge(
+          [
+            first_name: "Jane",
+            last_name: "Doe",
+            role: "Swim coach",
+            email: "jane.doe@example.com",
+            bio: "Twenty years teaching kids to swim.",
+            headshot_url: "https://example.com/jane.jpg"
+          ],
+          attrs
+        )
+      )
+    end
+  end
+
   describe "generate_invitation_token/0" do
     test "returns a raw token and its sha256 hash" do
       assert {raw, hash} = StaffMember.generate_invitation_token()

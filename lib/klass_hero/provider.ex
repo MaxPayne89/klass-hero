@@ -24,6 +24,7 @@ defmodule KlassHero.Provider do
       {:ok, members} = Provider.list_staff_members("provider-uuid")
   """
 
+  alias KlassHero.Provider.AnonymizeUserData
   alias KlassHero.Provider.Assignments
   alias KlassHero.Provider.Incidents
   alias KlassHero.Provider.Profiles
@@ -256,6 +257,15 @@ defmodule KlassHero.Provider do
 
   @doc "Returns true if the staff member's invitation has expired."
   defdelegate invitation_expired?(staff_member), to: StaffMember
+
+  @doc """
+  Anonymises all Provider-owned data for a user during GDPR account deletion.
+
+  Scrubs `staff_members` PII (deactivating the row and revoking any outstanding
+  invitation) and the denormalised reporter name on `incident_reports`. Returns
+  `{:ok, :no_data}` when the user owns neither.
+  """
+  defdelegate anonymize_data_for_user(user_id), to: AnonymizeUserData, as: :execute
 
   # --- Program ↔ staff assignments -----------------------------------------
 
