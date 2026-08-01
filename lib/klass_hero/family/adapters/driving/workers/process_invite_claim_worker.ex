@@ -12,15 +12,47 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
     queue: :family,
     max_attempts: 3
 
+  alias KlassHero.Enrollment
   alias KlassHero.Family.ProcessInviteClaim
 
+  require Logger
+
   @impl true
-  def execute(%Oban.Job{args: args}) do
+  def execute(%Oban.Job{args: args} = job) do
     with {:ok, attrs} <- deserialize_args(args),
          {:ok, _result} <- ProcessInviteClaim.execute(attrs) do
       :ok
+    else
+      {:error, reason} = error ->
+        if final_attempt?(job), do: fail_invite(args["invite_id"], reason)
+        error
     end
   end
+
+  # Only once Oban is done retrying. `registered -> :failed` is a one-way door — `:failed`
+  # can only go back to `:pending` — so failing the invite on an earlier attempt would
+  # destroy a claim that the next attempt heals.
+  defp final_attempt?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}), do: attempt >= max_attempts
+
+  # The invite belongs to Enrollment, so this goes through its facade rather than touching
+  # the schema. A rejected transition means the invite is already terminal — enrolled by a
+  # retry Lifeline re-ran, or failed by an earlier pass — which is a fact, not a fault.
+  defp fail_invite(invite_id, reason) when is_binary(invite_id) do
+    case Enrollment.transition_invite(%{id: invite_id}, %{status: :failed, error_details: inspect(reason)}) do
+      {:ok, _invite} ->
+        :ok
+
+      {:error, transition_error} ->
+        Logger.warning("[ProcessInviteClaimWorker] Invite already past :registered, not failing it",
+          invite_id: invite_id,
+          reason: inspect(transition_error)
+        )
+
+        :ok
+    end
+  end
+
+  defp fail_invite(_invite_id, _reason), do: :ok
 
   # Oban JSON args use string keys and ISO date strings; convert to atom keys and Date.
   defp deserialize_args(args) do
