@@ -6,23 +6,17 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
   with proper threading headers, delivers, and updates reply status.
   """
 
-  use Oban.Worker, queue: :email, max_attempts: 3
+  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
   use KlassHero.Shared.Interaction
 
   alias KlassHero.Messaging
-  alias KlassHero.Shared.RateLimitedEmailWorker
-  alias KlassHero.Shared.Tracing.TracedWorker
 
   require Logger
 
   @from Application.compile_env!(:klass_hero, [:mailer_defaults, :from])
 
-  # Custom backoff: 429 responses need longer delay than Oban's default.
-  @impl Oban.Worker
-  def backoff(%Oban.Job{} = job), do: RateLimitedEmailWorker.backoff(job)
-
-  @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"reply_id" => reply_id}} = job) do
+  @impl true
+  def execute(%Oban.Job{args: %{"reply_id" => reply_id}} = job) do
     with {:ok, reply} <- Messaging.get_email_reply_by_id(reply_id),
          {:ok, email} <- Messaging.get_inbound_email_by_id(reply.inbound_email_id) do
       now = DateTime.utc_now()

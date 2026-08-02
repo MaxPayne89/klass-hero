@@ -6,21 +6,15 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
   body_html, body_text, headers, and sets content_status to fetched/failed.
   """
 
-  use Oban.Worker, queue: :email, max_attempts: 3
+  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
-  alias KlassHero.Shared.RateLimitedEmailWorker
-  alias KlassHero.Shared.Tracing.TracedWorker
 
   require Logger
 
-  # Custom backoff: 429 responses need longer delay than Oban's default.
-  @impl Oban.Worker
-  def backoff(%Oban.Job{} = job), do: RateLimitedEmailWorker.backoff(job)
-
-  @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"email_id" => email_id, "resend_id" => resend_id}} = job) do
+  @impl true
+  def execute(%Oban.Job{args: %{"email_id" => email_id, "resend_id" => resend_id}} = job) do
     case ResendEmailContentAdapter.fetch_content(resend_id) do
       {:ok, content} ->
         attrs = %{
