@@ -37,6 +37,7 @@ alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
+alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
 alias KlassHero.Shared.ErrorContextFilter
 alias Swoosh.Adapters.Local
 
@@ -119,7 +120,11 @@ config :klass_hero, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"0 3 * * *", MessageCleanupWorker},
-       {"0 4 * * *", RetentionPolicyWorker}
+       {"0 4 * * *", RetentionPolicyWorker},
+       # Every 5 minutes, not daily: this is what makes a permanently-failed invite or
+       # email visible to the provider when the job died without running its own gate.
+       # A day's delay would leave the row looking pending for a day.
+       {"*/5 * * * *", CompensationSweepWorker}
      ]}
   ],
   # email: 1 — serialized to stay under Resend's 2 req/sec rate limit (per-node;

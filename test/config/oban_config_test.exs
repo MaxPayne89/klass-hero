@@ -9,6 +9,8 @@ defmodule KlassHero.ObanConfigTest do
 
   use ExUnit.Case, async: true
 
+  alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
+
   describe "oban plugins" do
     # A machine going away mid-job leaves that job `executing` with nothing to move it back.
     # fly.toml sets auto_stop_machines = "suspend" and min_machines_running = 0, so machines
@@ -29,10 +31,37 @@ defmodule KlassHero.ObanConfigTest do
       assert Keyword.get(opts, :max_age, 60) >= 86_400,
              "Pruner max_age is under a day — discarded jobs vanish before triage"
     end
+
+    # The sweep is the only thing that compensates a job which died without running its
+    # own gate. Dropped from the crontab it fails silently: nothing errors, invites and
+    # emails simply keep looking pending after the job that owned them is gone.
+    test "sweeps discarded jobs for uncompensated work" do
+      assert {_expression, CompensationSweepWorker} = crontab_entry(CompensationSweepWorker),
+             "CompensationSweepWorker is missing from the crontab — jobs that die without " <>
+               "running their compensation gate are never reconciled (#1234)"
+    end
+
+    # The sweep only ever sees a discarded job while its row survives, so the Pruner
+    # window is the sweep's window. Guarded together because tightening one silently
+    # shortens the other.
+    test "prunes no faster than the sweep can reach a discarded job" do
+      {expression, _worker} = crontab_entry(CompensationSweepWorker)
+      max_age = Oban.Plugins.Pruner |> plugin_opts() |> Keyword.get(:max_age, 60)
+
+      assert max_age > 3600,
+             "Pruner max_age (#{max_age}s) leaves too little room for the sweep at #{expression}"
+    end
   end
 
   # config/test.exs adds only `testing: :inline` and Config.Reader deep-merges, so the plugin list
   # read here is the one dev and prod actually run.
+  defp crontab_entry(worker) do
+    Oban.Plugins.Cron
+    |> plugin_opts()
+    |> Keyword.get(:crontab, [])
+    |> Enum.find(fn {_expression, scheduled} -> scheduled == worker end)
+  end
+
   defp plugin_opts(module) do
     :klass_hero
     |> Application.fetch_env!(Oban)
