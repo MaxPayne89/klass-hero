@@ -34,6 +34,10 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
       # guaranteed waste — cancel rather than spend them. Failing the invite here is
       # what makes it visible: left :pending it would sit forever with no email sent
       # and nothing to show the provider. A resend mints a fresh token.
+      # Not backstopped by the compensation sweep, and cannot be: a cancel lands the job in
+      # `cancelled`, not `discarded`, which is deliberately out of the sweep's scope because
+      # cancelling is a decision the code already handled rather than a death it did not see.
+      # So if this transition fails, nothing retries it. Accepted rather than overlooked.
       {:ok, %BulkEnrollmentInvite{invite_token: nil} = invite} ->
         Logger.warning("[SendInviteEmailWorker] Invite has no token", invite_id: invite_id)
 
