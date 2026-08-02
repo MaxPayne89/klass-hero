@@ -207,9 +207,49 @@ defmodule KlassHeroWeb.ParentComponentsTest do
       assert html =~ "Mon 14:00"
       assert html =~ "CodeKids Berlin"
     end
+
+    test "renders the cover as an object-cover img when cover_image_url is set", %{} do
+      html = render_family_program_card(cover_image_url: "https://example.com/cover.jpg")
+      doc = LazyHTML.from_fragment(html)
+
+      img = LazyHTML.query(doc, "img#pa-program-cover-1")
+
+      assert Enum.count(img) == 1
+      assert LazyHTML.attribute(img, "src") == ["https://example.com/cover.jpg"]
+      assert LazyHTML.attribute(img, "loading") == ["lazy"]
+      assert LazyHTML.attribute(img, "alt") == ["Code Camp"]
+      assert hd(LazyHTML.attribute(img, "class")) =~ "object-cover"
+
+      # The banner stacks the img beneath absolutely-positioned overlays; the
+      # kid-avatar stack must survive the switch from a background div to an img.
+      assert LazyHTML.text(LazyHTML.query(doc, ".absolute.bottom-2")) =~ "M"
+    end
+
+    test "renders the gradient fallback and no img when cover_image_url is nil", %{} do
+      html = render_family_program_card(cover_image_url: nil)
+      doc = LazyHTML.from_fragment(html)
+
+      assert Enum.empty?(LazyHTML.query(doc, "img#pa-program-cover-1"))
+      assert html =~ "linear-gradient"
+    end
   end
 
   ## ------------------------------------------------------------------ helpers
+
+  defp render_family_program_card(overrides) do
+    program =
+      Enum.into(overrides, %{
+        id: "1",
+        title: "Code Camp",
+        category: "Tech",
+        next: "Mon 14:00",
+        provider: "CodeKids Berlin",
+        status: :active,
+        kids: [%{name: "Mila", color: "#FFEAC9"}]
+      })
+
+    render_component(&ParentComponents.pa_family_program_card/1, %{program: program})
+  end
 
   defp render_pa_sidebar(opts) do
     assigns = %{

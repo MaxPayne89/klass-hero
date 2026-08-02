@@ -183,7 +183,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
       title: p.title,
       booked: Map.get(enrollment_counts, p.id, 0),
       status: derive_program_status(p, today),
-      cover: p.cover_image_url && "url(#{p.cover_image_url})"
+      cover_image_url: p.cover_image_url
     }
   end
 

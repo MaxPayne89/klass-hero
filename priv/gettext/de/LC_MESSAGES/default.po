@@ -2250,7 +2250,7 @@ msgstr "Zulässige Geschlechter"
 msgid "An unexpected error occurred during import."
 msgstr "Beim Import ist ein unerwarteter Fehler aufgetreten."
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:640
+#: lib/klass_hero_web/components/provider_layout_components.ex:654
 #: lib/klass_hero_web/live/admin/verifications_live.ex:438
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:53
 #, elixir-autogen, elixir-format
@@ -2512,7 +2512,7 @@ msgstr "Endzeit"
 
 #: lib/klass_hero_web/components/provider_components.ex:1751
 #: lib/klass_hero_web/components/provider_components.ex:2197
-#: lib/klass_hero_web/components/provider_layout_components.ex:630
+#: lib/klass_hero_web/components/provider_layout_components.ex:644
 #, elixir-autogen, elixir-format
 msgid "Enrolled"
 msgstr "Angemeldet"
@@ -5318,7 +5318,7 @@ msgstr "18+, amtlicher Ausweis vor Veröffentlichung verifiziert."
 msgid "A decade-plus coaching and running youth activity programs in Berlin. Built Prime Youth before founding Klass Hero."
 msgstr "Über zehn Jahre Erfahrung im Coaching und der Leitung von Jugendförderprogrammen in Berlin. Gründete Prime Youth, bevor er Klass Hero ins Leben rief."
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:605
+#: lib/klass_hero_web/components/provider_layout_components.ex:619
 #, elixir-autogen, elixir-format
 msgid "Accept"
 msgstr "Akzeptieren"
@@ -5609,7 +5609,7 @@ msgstr "Erstellen Sie Ihr"
 msgid "Data & privacy"
 msgstr "Daten & Datenschutz"
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:597
+#: lib/klass_hero_web/components/provider_layout_components.ex:611
 #, elixir-autogen, elixir-format
 msgid "Decline"
 msgstr "Ablehnen"
@@ -5644,7 +5644,7 @@ msgstr "Die Einnahmenverfolgung kommt bald."
 msgid "Earnings trend"
 msgstr "Einnahmenentwicklung"
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:481
+#: lib/klass_hero_web/components/provider_layout_components.ex:495
 #, elixir-autogen, elixir-format
 msgid "Edit program"
 msgstr "Programm bearbeiten"
@@ -6062,17 +6062,17 @@ msgstr "Verwalten Sie Ihr Konto, Ihre Einstellungen und Ihren Datenschutz an ein
 msgid "Mandatory child-protection course before going live."
 msgstr "Verpflichtender Kinderschutzkurs vor der Freischaltung."
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:548
+#: lib/klass_hero_web/components/provider_layout_components.ex:562
 #, elixir-autogen, elixir-format
 msgid "Mark absent"
 msgstr "Als abwesend markieren"
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:521
+#: lib/klass_hero_web/components/provider_layout_components.ex:535
 #, elixir-autogen, elixir-format
 msgid "Mark all present"
 msgstr "Alle als anwesend markieren"
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:548
+#: lib/klass_hero_web/components/provider_layout_components.ex:562
 #, elixir-autogen, elixir-format
 msgid "Mark present"
 msgstr "Als anwesend markieren"
@@ -6112,7 +6112,7 @@ msgstr "Neues Programm"
 msgid "Newest"
 msgstr "Neueste"
 
-#: lib/klass_hero_web/components/parent_components.ex:532
+#: lib/klass_hero_web/components/parent_components.ex:543
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Weiter"
@@ -6152,7 +6152,7 @@ msgstr "Derzeit keine ausstehenden Anfragen."
 msgid "No programs yet — add your first one from the Programs tab."
 msgstr "Noch keine Programme — fügen Sie Ihr erstes über den Tab „Programme“ hinzu."
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:525
+#: lib/klass_hero_web/components/provider_layout_components.ex:539
 #, elixir-autogen, elixir-format
 msgid "No registered children for this session."
 msgstr "Keine Kinder in dieser Sitzung angemeldet."
@@ -6194,7 +6194,7 @@ msgstr "Sobald Ihr Eintrag live ist und Sie die Hero-Verifizierung abgeschlossen
 msgid "Ongoing Quality"
 msgstr "Laufende Qualität"
 
-#: lib/klass_hero_web/components/parent_components.ex:538
+#: lib/klass_hero_web/components/parent_components.ex:549
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr "Offen"
@@ -6239,7 +6239,7 @@ msgstr "Eltern-Navigation (unten)"
 msgid "Parent navigation"
 msgstr "Elternnavigation"
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:532
+#: lib/klass_hero_web/components/provider_layout_components.ex:546
 #, elixir-autogen, elixir-format
 msgid "Parent: %{name}"
 msgstr "Elternteil: %{name}"
@@ -6645,7 +6645,7 @@ msgstr "Diese Woche"
 msgid "To modernize how Berlin"
 msgstr "Um zu modernisieren, wie Berlin"
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:511
+#: lib/klass_hero_web/components/provider_layout_components.ex:525
 #, elixir-autogen, elixir-format
 msgid "Today's check-ins"
 msgstr "Heutige Check-ins"
@@ -6670,7 +6670,7 @@ msgstr "Vertrauenswürdige Heroes"
 msgid "Try adjusting your search or filter criteria — there's plenty more in Berlin."
 msgstr "Versuchen Sie, Ihre Such- oder Filterkriterien anzupassen — in Berlin gibt es noch viel mehr."
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:588
+#: lib/klass_hero_web/components/provider_layout_components.ex:602
 #, elixir-autogen, elixir-format
 msgid "Unknown parent"
 msgstr "Unbekannter Elternteil"
