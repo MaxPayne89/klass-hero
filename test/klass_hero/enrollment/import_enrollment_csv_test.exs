@@ -585,7 +585,9 @@ defmodule KlassHero.Enrollment.ImportEnrollmentCsvTest do
       csv = build_csv(valid_rows ++ invalid_rows)
 
       {:ok, %{created: created, failed: failed}} =
-        ImportEnrollmentCsv.execute(provider.id, csv)
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          ImportEnrollmentCsv.execute(provider.id, csv)
+        end)
 
       assert created == 5_000
       assert length(failed) == 500
