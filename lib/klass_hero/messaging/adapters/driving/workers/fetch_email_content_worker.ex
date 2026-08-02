@@ -42,20 +42,24 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker d
       {:error, reason} ->
         Logger.warning("Content fetch failed for #{email_id} (attempt #{job.attempt}): #{inspect(reason)}")
 
-        maybe_mark_permanently_failed(email_id, job)
+        TracedWorker.compensate_if_final(__MODULE__, job, reason)
         {:error, reason}
     end
   end
 
-  defp maybe_mark_permanently_failed(email_id, job) do
-    if TracedWorker.final_attempt?(job) do
-      case Messaging.update_inbound_email_content(email_id, %{content_status: "failed"}) do
-        {:ok, _} ->
-          Logger.error("Marked email #{email_id} content as permanently failed")
+  # An error here means the email is gone, or its content was fetched after all by a
+  # duplicate attempt — the `:fetched`-is-absorbing guard rejects that overwrite. Neither
+  # is something a later sweep could fix, so both report `:ignore`.
+  @impl true
+  def compensate(%Oban.Job{args: %{"email_id" => email_id}}, _reason) do
+    case Messaging.update_inbound_email_content(email_id, %{content_status: "failed"}) do
+      {:ok, _email} ->
+        Logger.error("Marked email #{email_id} content as permanently failed")
+        :ok
 
-        {:error, mark_reason} ->
-          Logger.error("Failed to mark email #{email_id} as failed: #{inspect(mark_reason)}")
-      end
+      {:error, mark_reason} ->
+        Logger.error("Failed to mark email #{email_id} as failed: #{inspect(mark_reason)}")
+        :ignore
     end
   end
 end

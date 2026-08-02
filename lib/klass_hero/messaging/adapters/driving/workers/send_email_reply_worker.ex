@@ -34,13 +34,16 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
 
         {:error, reason} ->
           Logger.error("Reply delivery failed for #{reply_id}: #{inspect(reason)}")
-          mark_reply_failed_if_final(reply_id, job)
+          TracedWorker.compensate_if_final(__MODULE__, job, reason)
           {:error, reason}
       end
     else
+      # Ungated on purpose. This branch discards immediately rather than retrying, so
+      # gating on `final_attempt?/1` meant a first-attempt discard left the reply
+      # unmarked forever — a reply whose inbound email is missing never showed as failed.
       {:error, :not_found} ->
         Logger.error("Reply or email not found for reply #{reply_id}")
-        mark_reply_failed_if_final(reply_id, job)
+        compensate(job, :not_found)
         {:discard, :not_found}
     end
   end
@@ -68,15 +71,19 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker do
     end
   end
 
-  defp mark_reply_failed_if_final(reply_id, job) do
-    if TracedWorker.final_attempt?(job) do
-      case Messaging.update_email_reply_status(reply_id, "failed", %{}) do
-        {:ok, _} ->
-          Logger.error("Marked reply #{reply_id} as permanently failed")
+  # An error here means the reply is gone, or it was delivered after all by a duplicate
+  # attempt — the `:sent`-is-absorbing guard rejects that overwrite. Neither is something
+  # a later sweep could fix, so both report `:ignore`.
+  @impl true
+  def compensate(%Oban.Job{args: %{"reply_id" => reply_id}}, _reason) do
+    case Messaging.update_email_reply_status(reply_id, "failed", %{}) do
+      {:ok, _reply} ->
+        Logger.error("Marked reply #{reply_id} as permanently failed")
+        :ok
 
-        {:error, reason} ->
-          Logger.error("Failed to mark reply #{reply_id} as failed: #{inspect(reason)}")
-      end
+      {:error, reason} ->
+        Logger.error("Failed to mark reply #{reply_id} as failed: #{inspect(reason)}")
+        :ignore
     end
   end
 
