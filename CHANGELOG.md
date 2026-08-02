@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.66.8](https://github.com/MaxPayne89/klass-hero/compare/v0.66.7...v0.66.8) (2026-08-02)
+
+
+### Bug Fixes
+
+* compensate jobs that die without running their compensation gate ([#1244](https://github.com/MaxPayne89/klass-hero/issues/1244)) ([bbc232e](https://github.com/MaxPayne89/klass-hero/commit/bbc232e88f89d2893c283eed140f32a3e9e1ae46))
+* render program cover thumbnails with object-cover ([#1242](https://github.com/MaxPayne89/klass-hero/issues/1242)) ([f10b2e0](https://github.com/MaxPayne89/klass-hero/commit/f10b2e016444382d99a0d9616188aa4c45480e03)), closes [#1072](https://github.com/MaxPayne89/klass-hero/issues/1072)
+
 ## [0.66.7](https://github.com/MaxPayne89/klass-hero/compare/v0.66.6...v0.66.7) (2026-08-01)
 
 
