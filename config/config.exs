@@ -12,14 +12,18 @@ alias FunWithFlags.Notifications.PhoenixPubSub
 alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
+alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
 alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
+alias KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker
 alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
 alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
+alias KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Adapters.Driving.Workers.RetentionPolicyWorker
+alias KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker
 alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
 alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
@@ -33,6 +37,7 @@ alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
+alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
 alias KlassHero.Shared.ErrorContextFilter
 alias Swoosh.Adapters.Local
 
@@ -115,7 +120,11 @@ config :klass_hero, Oban,
     {Oban.Plugins.Cron,
      crontab: [
        {"0 3 * * *", MessageCleanupWorker},
-       {"0 4 * * *", RetentionPolicyWorker}
+       {"0 4 * * *", RetentionPolicyWorker},
+       # Every 5 minutes, not daily: this is what makes a permanently-failed invite or
+       # email visible to the provider when the job died without running its own gate.
+       # A day's delay would leave the row looking pending for a day.
+       {"*/5 * * * *", CompensationSweepWorker}
      ]}
   ],
   # email: 1 — serialized to stay under Resend's 2 req/sec rate limit (per-node;
@@ -125,6 +134,18 @@ config :klass_hero, Oban,
 # Base URL for constructing links in emails and event handlers
 # (avoids boundary violations from referencing KlassHeroWeb.Endpoint in domain code)
 config :klass_hero, :app_base_url, "http://localhost:4000"
+
+# Workers whose permanently-dead jobs the compensation sweep reconciles. A worker
+# implementing `compensate/2` but missing here is never swept — the gate inside its
+# attempt still runs, but the three routes that bypass it (Lifeline discarding an orphan,
+# a raise, an early `{:discard, _}`) go uncompensated. The sweep also filters on this list
+# in SQL, so an unlisted worker's discarded jobs are not re-examined every tick.
+config :klass_hero, :compensating_workers, [
+  ProcessInviteClaimWorker,
+  SendInviteEmailWorker,
+  FetchEmailContentWorker,
+  SendEmailReplyWorker
+]
 
 # Contact information — centralized, configurable per environment
 config :klass_hero, :contact,

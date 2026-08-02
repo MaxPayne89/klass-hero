@@ -108,6 +108,58 @@ defmodule KlassHero.Messaging.InboundEmailTest do
     end
   end
 
+  describe "content_changeset/2 transition guard" do
+    # `:fetched` is absorbing. Compensation for a permanently-failed fetch job can be
+    # replayed — by the sweep over discarded jobs, or by a Lifeline duplicate execution
+    # racing the original — and without this guard the replay overwrites content that
+    # was in fact fetched, leaving body_html populated next to content_status: :failed.
+    @transitions [
+      {:pending, :fetched, true},
+      {:pending, :failed, true},
+      {:failed, :fetched, true},
+      {:failed, :failed, true},
+      {:fetched, :fetched, true},
+      {:fetched, :failed, false}
+    ]
+
+    for {from, to, valid?} <- @transitions do
+      test "#{from} -> #{to} is #{if valid?, do: "allowed", else: "rejected"}" do
+        changeset =
+          InboundEmail.content_changeset(
+            %InboundEmail{content_status: unquote(from)},
+            %{content_status: unquote(to)}
+          )
+
+        assert changeset.valid? == unquote(valid?),
+               "expected #{unquote(from)} -> #{unquote(to)} to be " <>
+                 "#{if unquote(valid?), do: "allowed", else: "rejected"}"
+      end
+    end
+
+    test "names the rejected transition in the error" do
+      changeset =
+        InboundEmail.content_changeset(
+          %InboundEmail{content_status: :fetched},
+          %{content_status: :failed}
+        )
+
+      assert %{content_status: ["cannot transition from fetched to failed"]} = errors_on(changeset)
+    end
+
+    # The happy path writes body fields alongside the status, so the guard must not
+    # reject a changeset merely because it carries more than content_status.
+    test "allows content fields through on a permitted transition" do
+      changeset =
+        InboundEmail.content_changeset(
+          %InboundEmail{content_status: :pending},
+          %{content_status: :fetched, body_html: "<p>Hi</p>", body_text: "Hi"}
+        )
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :body_html) == "<p>Hi</p>"
+    end
+  end
+
   describe "mark_inbound_email_read/2" do
     test "marks an unread email as read, then is idempotent" do
       user = AccountsFixtures.user_fixture()

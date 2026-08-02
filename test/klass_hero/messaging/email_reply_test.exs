@@ -38,6 +38,53 @@ defmodule KlassHero.Messaging.EmailReplyTest do
     end
   end
 
+  describe "status_changeset/2 transition guard" do
+    # `:sent` is absorbing. Compensation marking a reply failed can be replayed — by the
+    # sweep over discarded jobs, or by a Lifeline duplicate racing the original — and
+    # without this guard the replay records a delivered reply as failed.
+    @transitions [
+      {:sending, :sent, true},
+      {:sending, :failed, true},
+      {:failed, :sent, true},
+      {:failed, :failed, true},
+      {:sent, :sent, true},
+      {:sent, :failed, false}
+    ]
+
+    for {from, to, valid?} <- @transitions do
+      test "#{from} -> #{to} is #{if valid?, do: "allowed", else: "rejected"}" do
+        changeset =
+          EmailReply.status_changeset(%EmailReply{status: unquote(from)}, %{status: unquote(to)})
+
+        assert changeset.valid? == unquote(valid?),
+               "expected #{unquote(from)} -> #{unquote(to)} to be " <>
+                 "#{if unquote(valid?), do: "allowed", else: "rejected"}"
+      end
+    end
+
+    test "names the rejected transition in the error" do
+      changeset = EmailReply.status_changeset(%EmailReply{status: :sent}, %{status: :failed})
+
+      assert %{status: ["cannot transition from sent to failed"]} = errors_on(changeset)
+    end
+
+    # The delivery path writes resend_message_id/sent_at alongside the status, so the
+    # guard must not reject a changeset merely for carrying more than :status.
+    test "allows delivery metadata through on a permitted transition" do
+      now = DateTime.utc_now()
+
+      changeset =
+        EmailReply.status_changeset(%EmailReply{status: :sending}, %{
+          status: :sent,
+          resend_message_id: "resend_abc",
+          sent_at: now
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, :resend_message_id) == "resend_abc"
+    end
+  end
+
   describe "create_email_reply/1 and status transitions" do
     setup do
       email = MessagingFixtures.inbound_email_fixture()

@@ -30,6 +30,32 @@ defmodule KlassHero.Shared.Tracing.TracedWorker do
   @callback execute(Oban.Job.t()) :: :ok | {:ok, term()} | {:error, term()}
 
   @doc """
+  Establishes the business fact that this job gave up permanently.
+
+  Implement it when giving up has a consequence someone must see — an invite that
+  has to show as `:failed`, an email that has to stop looking pending. The
+  in-attempt `final_attempt?/1` gate calls it, and so does the sweep over
+  discarded jobs, because a job can die without ever running the gate: Lifeline
+  discards an orphan at the attempt ceiling without invoking `perform/1`, a raise
+  bypasses the error branch the gate lives in, and an explicit `{:discard, _}` can
+  return before the final attempt.
+
+  Return `:ignore` — never `{:error, _}` — when there is nothing left to do,
+  including when the entity is already terminal or no longer exists. `:ignore`
+  records the compensation as done; `{:error, _}` rolls that record back and asks
+  the next sweep to try again, so using it for a permanent condition re-runs the
+  compensation every tick until the job row is pruned.
+
+  `reason` is whatever the failing attempt returned, and `nil` when it cannot be
+  known. Lifeline's discard writes no error at all, and for the other routes Oban
+  stores `Exception.format/3` or `Oban.PerformError`'s message — formatted strings
+  embedding `inspect/1` output, not the original term. Render it; never match on it.
+  """
+  @callback compensate(Oban.Job.t(), reason :: term() | nil) :: :ok | :ignore | {:error, term()}
+
+  @optional_callbacks compensate: 2
+
+  @doc """
   True once Oban has no retries left for this job.
 
   Workers gate compensating actions on this: a compensation applied while
@@ -41,6 +67,18 @@ defmodule KlassHero.Shared.Tracing.TracedWorker do
   @spec final_attempt?(Oban.Job.t()) :: boolean()
   def final_attempt?(%Oban.Job{attempt: attempt, max_attempts: max_attempts}) do
     attempt >= max_attempts
+  end
+
+  @doc """
+  Compensates now if this is the last attempt, otherwise leaves it to a later one.
+
+  The in-attempt fast path. A job that dies without reaching it — orphaned, raised,
+  or discarded early — is caught later by the sweep over discarded jobs, which calls
+  the same `compensate/2`.
+  """
+  @spec compensate_if_final(module(), Oban.Job.t(), term()) :: :ok | :ignore | {:error, term()}
+  def compensate_if_final(worker, %Oban.Job{} = job, reason) when is_atom(worker) do
+    if final_attempt?(job), do: worker.compensate(job, reason), else: :ok
   end
 
   @doc false

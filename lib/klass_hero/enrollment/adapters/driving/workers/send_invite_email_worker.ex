@@ -84,16 +84,30 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
         # `:failed` can only go back to `:pending` — and the non-pending guard above
         # then turns every retry into a silent :ok, so failing early both destroys the
         # send the next attempt makes and hides that it did (#1233).
-        if TracedWorker.final_attempt?(job) do
-          Enrollment.transition_invite(invite, %{
-            status: :failed,
-            error_details: "Email delivery failed: #{inspect(reason)}"
-          })
-        end
+        TracedWorker.compensate_if_final(__MODULE__, job, reason)
 
         {:error, reason}
     end
   end
+
+  # A rejected transition means the invite is already terminal — sent by a duplicate
+  # attempt, or failed by an earlier pass — which is a fact rather than something a later
+  # sweep could fix, so it reports `:ignore`.
+  @impl true
+  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}}, reason) do
+    case Enrollment.transition_invite(%{id: invite_id}, %{
+           status: :failed,
+           error_details: describe(reason)
+         }) do
+      {:ok, _invite} -> :ok
+      {:error, _reason} -> :ignore
+    end
+  end
+
+  # The sweep cannot recover the failing attempt's reason — a Lifeline discard records
+  # none — so the provider gets the fact without a cause rather than "nil".
+  defp describe(nil), do: "Email delivery failed and no retries remain"
+  defp describe(reason), do: "Email delivery failed: #{inspect(reason)}"
 
   # Reads URL config at runtime — referencing KlassHeroWeb.Endpoint directly would violate boundary rules.
   defp base_url do

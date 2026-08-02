@@ -33,14 +33,20 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
         # Only once Oban is done retrying. `registered -> :failed` is a one-way door —
         # `:failed` can only go back to `:pending` — so failing the invite on an earlier
         # attempt would destroy a claim that the next attempt heals.
-        if TracedWorker.final_attempt?(job), do: fail_invite(args["invite_id"], reason)
+        TracedWorker.compensate_if_final(__MODULE__, job, reason)
         error
     end
   end
 
   # The invite belongs to Enrollment, so this goes through its facade rather than touching
   # the schema. A rejected transition means the invite is already terminal — enrolled by a
-  # retry Lifeline re-ran, or failed by an earlier pass — which is a fact, not a fault.
+  # retry Lifeline re-ran, or failed by an earlier pass — which is a fact, not a fault, so
+  # it reports `:ignore` rather than an error the sweep would keep retrying.
+  @impl true
+  def compensate(%Oban.Job{args: args}, reason) do
+    fail_invite(args["invite_id"], reason)
+  end
+
   defp fail_invite(invite_id, reason) when is_binary(invite_id) do
     case Enrollment.transition_invite(%{id: invite_id}, %{status: :failed, error_details: describe(reason)}) do
       {:ok, _invite} ->
@@ -52,11 +58,11 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
           reason: inspect(transition_error)
         )
 
-        :ok
+        :ignore
     end
   end
 
-  defp fail_invite(_invite_id, _reason), do: :ok
+  defp fail_invite(_invite_id, _reason), do: :ignore
 
   # A provider reads this in the invites table, so it has to name what is wrong with the
   # row they uploaded. `inspect/1` of a changeset names it only to a developer.
@@ -68,6 +74,10 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
       fields -> Enum.map_join(fields, "; ", fn {field, message} -> "#{humanize_field(field)} #{message}" end)
     end
   end
+
+  # The sweep cannot recover the failing attempt's reason — a Lifeline discard records
+  # none — so the provider gets the fact without a cause rather than the string "nil".
+  defp describe(nil), do: "Processing failed and no retries remain"
 
   defp describe(reason), do: inspect(reason)
 
