@@ -64,5 +64,25 @@ defmodule KlassHero.Messaging.EmailReply do
     schema
     |> cast(attrs, [:status, :resend_message_id, :sent_at])
     |> validate_required([:status])
+    |> validate_status_transition()
+  end
+
+  # `:sent` is absorbing. Marking a reply failed is replayable — by the sweep over
+  # discarded Oban jobs, and by a Lifeline duplicate racing the original delivery — and a
+  # replay must not record a delivered reply as failed. `:failed -> :sent` stays open on
+  # purpose: a late delivery is ground truth and should heal a row the sweep failed
+  # pessimistically.
+  defp validate_status_transition(changeset) do
+    case {changeset.data.status, get_change(changeset, :status)} do
+      {:sent, target} when target not in [nil, :sent] ->
+        add_error(changeset, :status, "cannot transition from sent to #{target}",
+          validation: :status_transition,
+          from: :sent,
+          to: target
+        )
+
+      _unchanged_or_permitted ->
+        changeset
+    end
   end
 end

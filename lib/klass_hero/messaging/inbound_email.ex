@@ -93,5 +93,26 @@ defmodule KlassHero.Messaging.InboundEmail do
     schema
     |> cast(attrs, @content_fields)
     |> validate_required([:content_status])
+    |> validate_content_status_transition()
+  end
+
+  # `:fetched` is absorbing. Marking a fetch permanently failed is replayable — by the
+  # sweep over discarded jobs, and by a Lifeline duplicate racing the original — and a
+  # replay must not bury content that was in fact fetched under `content_status:
+  # :failed`, which would leave body_html populated next to a status saying it is not.
+  # Only that one edge is closed; `:failed -> :fetched` stays open so a later successful
+  # fetch still heals the row.
+  defp validate_content_status_transition(changeset) do
+    case {changeset.data.content_status, get_change(changeset, :content_status)} do
+      {:fetched, target} when target not in [nil, :fetched] ->
+        add_error(changeset, :content_status, "cannot transition from fetched to #{target}",
+          validation: :content_status_transition,
+          from: :fetched,
+          to: target
+        )
+
+      _unchanged_or_permitted ->
+        changeset
+    end
   end
 end
