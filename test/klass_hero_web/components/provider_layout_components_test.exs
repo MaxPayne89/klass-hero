@@ -178,6 +178,30 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
       assert html =~ ~s|aria-label="Edit program"|
       assert html =~ ~s|phx-value-program-id="abc"|
     end
+
+    test "renders the cover as an object-cover img when cover_image_url is set", %{} do
+      html = render_program_row(cover_image_url: "https://example.com/cover.jpg")
+      doc = LazyHTML.from_fragment(html)
+
+      img = LazyHTML.query(doc, "img#pv-program-cover-abc")
+
+      assert Enum.count(img) == 1
+      assert LazyHTML.attribute(img, "src") == ["https://example.com/cover.jpg"]
+      assert LazyHTML.attribute(img, "loading") == ["lazy"]
+      assert LazyHTML.attribute(img, "alt") == ["Football Stars"]
+
+      # object-cover is what keeps the thumbnail from rendering a top-left crop
+      # at natural size — the bug in #1072.
+      assert hd(LazyHTML.attribute(img, "class")) =~ "object-cover"
+    end
+
+    test "renders the gradient fallback and no img when cover_image_url is nil", %{} do
+      html = render_program_row(cover_image_url: nil)
+      doc = LazyHTML.from_fragment(html)
+
+      assert Enum.empty?(LazyHTML.query(doc, "img#pv-program-cover-abc"))
+      assert html =~ "linear-gradient"
+    end
   end
 
   describe "pv_roster/1" do
@@ -236,6 +260,12 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
   end
 
   ## ------------------------------------------------------------------ helpers
+
+  defp render_program_row(overrides) do
+    program = Enum.into(overrides, %{id: "abc", title: "Football Stars", status: :live})
+
+    render_component(&ProviderLayoutComponents.pv_program_row/1, %{program: program})
+  end
 
   defp render_pv_sidebar(opts) do
     assigns = %{active: Keyword.fetch!(opts, :active)}

@@ -494,17 +494,28 @@ defmodule KlassHeroWeb.ParentComponents do
   Enrolled-program tile with kid-avatar stack and category/title.
 
   `program` keys: `:id, :title, :category, :next, :provider, :status, :kids,
-  :cover` (CSS background string).
+  :cover_image_url` (a plain image URL, or nil for the gradient fallback).
   """
   attr :program, :map, required: true
 
   def pa_family_program_card(assigns) do
     ~H"""
     <.kh_card class="overflow-hidden hover:shadow-lg transition-all">
-      <div
-        class="h-24 relative"
-        style={"background: #{@program[:cover] || "linear-gradient(90deg,#33CFFF,#FFFF36)"}"}
-      >
+      <div class="h-24 relative overflow-hidden">
+        <img
+          :if={@program[:cover_image_url]}
+          id={"pa-program-cover-#{@program[:id]}"}
+          src={@program[:cover_image_url]}
+          alt={@program.title}
+          loading="lazy"
+          class="absolute inset-0 w-full h-full object-cover"
+        />
+        <div
+          :if={!@program[:cover_image_url]}
+          class="absolute inset-0"
+          style="background: linear-gradient(90deg,#33CFFF,#FFFF36)"
+        >
+        </div>
         <div :if={@program[:status]} class="absolute top-2 right-2">
           <.kh_pill tone={status_tone(@program[:status])}>
             {to_string(@program[:status])}

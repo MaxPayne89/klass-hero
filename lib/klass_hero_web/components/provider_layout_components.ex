@@ -455,6 +455,9 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
 
   @doc """
   Compact program-row primitive used by dashboard + sessions screens.
+
+  `program` keys: `:id, :title, :status, :cover_image_url` (a plain image URL,
+  or nil for the gradient fallback).
   """
   attr :program, :map, required: true
   attr :on_edit, :string, default: "edit_program"
@@ -463,10 +466,21 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     ~H"""
     <.kh_list_row hover>
       <:media>
-        <div
-          class="w-14 h-14 rounded-xl"
-          style={"background: #{@program[:cover] || "linear-gradient(135deg,#33CFFF,#FFFF36)"}"}
-        >
+        <div class="w-14 h-14 rounded-xl overflow-hidden">
+          <img
+            :if={@program[:cover_image_url]}
+            id={"pv-program-cover-#{@program[:id]}"}
+            src={@program[:cover_image_url]}
+            alt={@program.title}
+            loading="lazy"
+            class="w-full h-full object-cover"
+          />
+          <div
+            :if={!@program[:cover_image_url]}
+            class="w-full h-full"
+            style="background: linear-gradient(135deg,#33CFFF,#FFFF36)"
+          >
+          </div>
         </div>
       </:media>
       <:title>{@program.title}</:title>

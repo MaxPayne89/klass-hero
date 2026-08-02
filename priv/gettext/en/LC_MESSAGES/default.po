@@ -2250,7 +2250,7 @@ msgstr ""
 msgid "An unexpected error occurred during import."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:640
+#: lib/klass_hero_web/components/provider_layout_components.ex:654
 #: lib/klass_hero_web/live/admin/verifications_live.ex:438
 #: lib/klass_hero_web/live/parent/participation_history_live.html.heex:53
 #, elixir-autogen, elixir-format
@@ -2512,7 +2512,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1751
 #: lib/klass_hero_web/components/provider_components.ex:2197
-#: lib/klass_hero_web/components/provider_layout_components.ex:630
+#: lib/klass_hero_web/components/provider_layout_components.ex:644
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Enrolled"
 msgstr ""
@@ -5318,7 +5318,7 @@ msgstr ""
 msgid "A decade-plus coaching and running youth activity programs in Berlin. Built Prime Youth before founding Klass Hero."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:605
+#: lib/klass_hero_web/components/provider_layout_components.ex:619
 #, elixir-autogen, elixir-format
 msgid "Accept"
 msgstr ""
@@ -5609,7 +5609,7 @@ msgstr ""
 msgid "Data & privacy"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:597
+#: lib/klass_hero_web/components/provider_layout_components.ex:611
 #, elixir-autogen, elixir-format
 msgid "Decline"
 msgstr ""
@@ -5644,7 +5644,7 @@ msgstr ""
 msgid "Earnings trend"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:481
+#: lib/klass_hero_web/components/provider_layout_components.ex:495
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Edit program"
 msgstr ""
@@ -6062,17 +6062,17 @@ msgstr ""
 msgid "Mandatory child-protection course before going live."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:548
+#: lib/klass_hero_web/components/provider_layout_components.ex:562
 #, elixir-autogen, elixir-format
 msgid "Mark absent"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:521
+#: lib/klass_hero_web/components/provider_layout_components.ex:535
 #, elixir-autogen, elixir-format
 msgid "Mark all present"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:548
+#: lib/klass_hero_web/components/provider_layout_components.ex:562
 #, elixir-autogen, elixir-format
 msgid "Mark present"
 msgstr ""
@@ -6112,7 +6112,7 @@ msgstr ""
 msgid "Newest"
 msgstr ""
 
-#: lib/klass_hero_web/components/parent_components.ex:532
+#: lib/klass_hero_web/components/parent_components.ex:543
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr ""
@@ -6152,7 +6152,7 @@ msgstr ""
 msgid "No programs yet — add your first one from the Programs tab."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:525
+#: lib/klass_hero_web/components/provider_layout_components.ex:539
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No registered children for this session."
 msgstr ""
@@ -6194,7 +6194,7 @@ msgstr ""
 msgid "Ongoing Quality"
 msgstr ""
 
-#: lib/klass_hero_web/components/parent_components.ex:538
+#: lib/klass_hero_web/components/parent_components.ex:549
 #, elixir-autogen, elixir-format
 msgid "Open"
 msgstr ""
@@ -6239,7 +6239,7 @@ msgstr ""
 msgid "Parent navigation"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:532
+#: lib/klass_hero_web/components/provider_layout_components.ex:546
 #, elixir-autogen, elixir-format
 msgid "Parent: %{name}"
 msgstr ""
@@ -6645,7 +6645,7 @@ msgstr ""
 msgid "To modernize how Berlin"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:511
+#: lib/klass_hero_web/components/provider_layout_components.ex:525
 #, elixir-autogen, elixir-format
 msgid "Today's check-ins"
 msgstr ""
@@ -6670,7 +6670,7 @@ msgstr ""
 msgid "Try adjusting your search or filter criteria — there's plenty more in Berlin."
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_layout_components.ex:588
+#: lib/klass_hero_web/components/provider_layout_components.ex:602
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Unknown parent"
 msgstr ""
