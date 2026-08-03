@@ -5,8 +5,8 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLiveTest do
   import KlassHero.ProviderFixtures
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
+  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Repo
 
   defp insert_owned_program!(provider_id, name) do
@@ -14,7 +14,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLiveTest do
 
     program_id = Ecto.UUID.generate()
 
-    Repo.insert!(%ProviderProgramProjectionSchema{
+    Repo.insert!(%ProviderProgram{
       program_id: program_id,
       provider_id: provider_id,
       name: name,

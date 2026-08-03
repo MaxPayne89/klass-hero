@@ -33,7 +33,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
   import Ecto.Query
 
   alias KlassHero.ProgramCatalog.Program
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
+  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
@@ -64,7 +64,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
 
       {count, _} =
         Repo.insert_all(
-          ProviderProgramProjectionSchema,
+          ProviderProgram,
           rows,
           on_conflict: {:replace, [:provider_id, :name, :updated_at]},
           conflict_target: [:program_id]
@@ -87,7 +87,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
     }
 
     Repo.insert_all(
-      ProviderProgramProjectionSchema,
+      ProviderProgram,
       [attrs],
       on_conflict: {:replace, [:provider_id, :name, :updated_at]},
       conflict_target: [:program_id]

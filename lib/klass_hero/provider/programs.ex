@@ -11,8 +11,8 @@ defmodule KlassHero.Provider.Programs do
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProgramRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionStatsRepository
-  alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
   alias KlassHero.Provider.Domain.ReadModels.SessionDetail
+  alias KlassHero.Provider.ProviderProgram
 
   @doc "Returns the total session count across all of a provider's programs."
   @spec get_total_session_count(String.t()) :: non_neg_integer()

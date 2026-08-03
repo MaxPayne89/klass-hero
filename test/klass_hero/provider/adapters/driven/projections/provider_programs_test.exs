@@ -6,8 +6,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
+  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -47,7 +47,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
     # Program Catalog never had. Pin the column list so a speculative field can't
     # reappear without a deliberate change here.
     test "projects exactly the columns a consumer reads" do
-      assert ProviderProgramProjectionSchema.__schema__(:fields) ==
+      assert ProviderProgram.__schema__(:fields) ==
                [:program_id, :provider_id, :name, :inserted_at, :updated_at]
     end
   end
@@ -64,7 +64,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
         title: "Drawing Club"
       })
 
-      row = Repo.get(ProviderProgramProjectionSchema, program_id)
+      row = Repo.get(ProviderProgram, program_id)
       assert row.provider_id == provider_id
       assert row.name == "Drawing Club"
     end
@@ -88,9 +88,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
         title: "New name"
       })
 
-      assert Repo.aggregate(ProviderProgramProjectionSchema, :count) == 1
+      assert Repo.aggregate(ProviderProgram, :count) == 1
 
-      row = Repo.get(ProviderProgramProjectionSchema, program_id)
+      row = Repo.get(ProviderProgram, program_id)
       assert row.name == "New name"
     end
   end
@@ -111,12 +111,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
       pid = start_projection!()
 
       # Sanity check: bootstrap was skipped, so the read table should still be empty
-      assert Repo.get(ProviderProgramProjectionSchema, program.id) == nil
+      assert Repo.get(ProviderProgram, program.id) == nil
 
       name = Process.info(pid, :registered_name) |> elem(1)
       assert :ok = ProviderPrograms.rebuild(name)
 
-      row = Repo.get(ProviderProgramProjectionSchema, program.id)
+      row = Repo.get(ProviderProgram, program.id)
       assert row != nil
       assert row.program_id == program.id
       assert row.provider_id == provider.id

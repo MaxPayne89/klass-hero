@@ -4,8 +4,8 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Repo
 
   defp insert_provider_program!(attrs) do
@@ -19,7 +19,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
       updated_at: now
     }
 
-    Repo.insert!(struct(ProviderProgramProjectionSchema, Map.merge(defaults, attrs)))
+    Repo.insert!(struct(ProviderProgram, Map.merge(defaults, attrs)))
   end
 
   # Trigger: a submit test needs both the projection (for ownership check) and

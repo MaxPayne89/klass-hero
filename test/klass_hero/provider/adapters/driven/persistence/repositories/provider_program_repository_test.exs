@@ -2,8 +2,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderProgramRepository
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
-  alias KlassHero.Provider.Domain.ReadModels.ProviderProgram
+  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Repo
 
   defp insert_row!(attrs) do
@@ -17,7 +16,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
       updated_at: now
     }
 
-    Repo.insert!(struct(ProviderProgramProjectionSchema, Map.merge(defaults, attrs)))
+    Repo.insert!(struct(ProviderProgram, Map.merge(defaults, attrs)))
   end
 
   describe "get_by_id/1" do

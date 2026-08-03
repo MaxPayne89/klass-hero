@@ -3,10 +3,10 @@ defmodule KlassHero.ProviderFixtures do
   Test helpers for creating entities in the Provider bounded context.
   """
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
   alias KlassHero.Provider.Vetting
@@ -227,7 +227,7 @@ defmodule KlassHero.ProviderFixtures do
     attrs_map = Map.new(attrs)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    Repo.insert!(%ProviderProgramProjectionSchema{
+    Repo.insert!(%ProviderProgram{
       program_id: attrs_map[:program_id] || Ecto.UUID.generate(),
       provider_id: attrs_map[:provider_id] || raise("provider_id is required"),
       name: attrs_map[:name] || "Test Program #{System.unique_integer([:positive])}",
