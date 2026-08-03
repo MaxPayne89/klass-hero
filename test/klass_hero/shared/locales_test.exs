@@ -39,13 +39,14 @@ defmodule KlassHero.Shared.LocalesTest do
   end
 
   describe "supported?/1" do
-    # The false cases are non-strings and case/region variants of supported
-    # locales — none can ever become supported, so adding a language cannot
-    # invalidate them. `unsupported_locale/0` derives the one plain code.
+    # Every false case is a non-string or a case/region variant of a supported
+    # locale — none can ever itself become supported, so adding a language
+    # cannot silently invert what these assert. Naming a plain code like "fr"
+    # would. (The plain-code path is covered in KlassHeroWeb.LocaleTest, which
+    # is where the helper deriving one lives.)
     @cases [
       {"en", true},
       {"de", true},
-      {KlassHeroWeb.I18nHelpers.unsupported_locale(), false},
       {"", false},
       {"EN", false},
       {"de-DE", false},
