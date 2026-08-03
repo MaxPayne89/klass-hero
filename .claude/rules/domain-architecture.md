@@ -23,10 +23,12 @@ Domain contexts under `lib/klass_hero/`, each with a public API module `<context
 context.ex                  # Public API — the ONLY module other contexts call
 context/
 ├── <entity>.ex             # Schema-as-struct (see below)
+├── <read_table>.ex         # Projection read-table schema — IS the DTO, no changeset
 ├── <use_case>.ex           # Command/query modules at the root
 ├── domain/
 │   ├── events/             # Domain & integration event structs
-│   └── read_models/        # CQRS read-model DTOs (no logic)
+│   └── read_models/        # Query-shaped structs over WRITE tables only (no logic,
+│                           #   no schema twin) — see "CQRS Read Models"
 └── adapters/
     ├── driven/{projections,persistence,acl,notifications}/
     └── driving/{events,workers}/
@@ -46,7 +48,9 @@ An entity is **one module** that is simultaneously:
 The flatten deleted aggregate ports, mappers, and DI wiring. Subdirectories remain only where indirection earns its place:
 
 - `adapters/driven/projections/` — CQRS projection GenServers
-- `adapters/driven/persistence/` — Ecto schemas/repos for **projection read tables only**
+- `adapters/driven/persistence/queries/` — composable query builders over a context's own
+  **write-side** tables (Messaging's `conversation_queries.ex`, `message_queries.ex`). Only
+  earns its place when the bindings are genuinely composed by more than one caller
 - `adapters/driven/acl/` — cross-context read adapters (anti-corruption layer)
 - `adapters/driven/notifications/` — email/notification senders
 - `adapters/driving/events/` — event handlers reacting to other contexts' events
@@ -72,7 +76,16 @@ Directionality still classifies the surviving event code:
 ## CQRS Read Models
 
 - Projection GenServers in `adapters/driven/projections/` subscribe to events and denormalize into dedicated read tables.
-- Read-model DTOs in `domain/read_models/` are display-optimized structs with no business logic.
+- **Three read-side kinds, three homes.** Getting this wrong is what produced #1254/#1258, so pick deliberately:
+
+  | Kind | Home | Shape | Example |
+  |---|---|---|---|
+  | Projection read **table** | context root | Ecto schema **is** the DTO; **no changeset** — the projection owns every write | `provider/provider_program.ex`, `messaging/enrolled_child.ex` |
+  | Query-shaped struct over **write** tables | `domain/read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/domain/read_models/staff_membership.ex` |
+  | Event-maintained table with **no** projection | context root + an ops submodule | schema **keeps** its changeset, because a handler writes it directly | `messaging/program_staff_participant.ex` + `messaging/staff_participants.ex` |
+
+- **Queries go in the context module or a context-root submodule** (`provider/programs.ex`, `messaging/staff_participants.ex`) — never behind a per-table repository wrapper. A read-only module that just wraps `where`/`order_by`/`Repo.all` is indirection without a payer.
+- No mappers, and no separate DTO twinned with a projection schema. If you are writing a `to_dto/1`, the two modules should be one.
 - Build new projections on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
 - Canonical example: `provider/adapters/driven/projections/provider_programs.ex`. Program Catalog and Messaging also have projections.
 
