@@ -13,14 +13,16 @@ defmodule KlassHeroWeb.RootLayoutI18nTest do
   use KlassHeroWeb.ConnCase, async: true
 
   describe "html lang attribute" do
-    for locale <- ~w(en de) do
+    for locale <- KlassHeroWeb.Locale.supported() do
       test "declares lang=#{locale} when the request resolves to #{locale}", %{conn: conn} do
         assert lang_of(conn, "/?locale=#{unquote(locale)}") == unquote(locale)
       end
     end
 
     test "falls back to the default locale for an unsupported one", %{conn: conn} do
-      assert lang_of(conn, "/?locale=fr") == KlassHeroWeb.Locale.default()
+      unsupported = KlassHeroWeb.I18nHelpers.unsupported_locale()
+
+      assert lang_of(conn, "/?locale=#{unsupported}") == KlassHeroWeb.Locale.default()
     end
 
     test "declares a lang on an authenticated route too, not just marketing pages", %{conn: conn} do
@@ -44,13 +46,12 @@ defmodule KlassHeroWeb.RootLayoutI18nTest do
       assert hrefs(doc, ~s(link[rel="canonical"])) == [absolute("/programs?locale=de")]
     end
 
-    # A bare path serves whatever the visitor's session or Accept-Language says,
-    # which is exactly what x-default is for; the two locale URLs are stable.
-    @alternates [
-      {"en", "/programs?locale=en"},
-      {"de", "/programs?locale=de"},
-      {"x-default", "/programs"}
-    ]
+    # Derived from the supported set, so adding a locale extends this coverage
+    # instead of leaving the new one silently unasserted. A bare path serves
+    # whatever the visitor's session or Accept-Language says, which is exactly
+    # what x-default is for, so it is the one entry that is not a locale.
+    @alternates Enum.map(KlassHeroWeb.Locale.supported(), &{&1, "/programs?locale=#{&1}"}) ++
+                  [{"x-default", "/programs"}]
 
     for {hreflang, path} <- @alternates do
       test "declares the #{hreflang} alternate", %{doc: doc} do
@@ -62,7 +63,8 @@ defmodule KlassHeroWeb.RootLayoutI18nTest do
     test "every declared URL is absolute — a relative hreflang is ignored", %{doc: doc} do
       urls = hrefs(doc, ~s(link[rel="canonical"])) ++ hrefs(doc, ~s(link[rel="alternate"]))
 
-      assert length(urls) == 4
+      # one canonical + one alternate per locale + x-default
+      assert length(urls) == length(KlassHeroWeb.Locale.supported()) + 2
       assert Enum.all?(urls, &String.starts_with?(&1, "http")), "found a relative URL in #{inspect(urls)}"
     end
 

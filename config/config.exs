@@ -42,6 +42,18 @@ alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
 alias KlassHero.Shared.ErrorContextFilter
 alias Swoosh.Adapters.Local
 
+# The supported-locale set, declared once. Config owns it because config.exs is
+# evaluated before the app compiles and so can never read a module — a domain
+# module holding the literal could not feed the Gettext key below. Two `config`
+# calls consume these bindings (Quokka sorts them elsewhere in this file); they
+# cannot drift because there is only one binding.
+#
+# Adding a locale means this line, `priv/gettext/<locale>/`, and a `label/1` +
+# `flag/1` clause in `KlassHeroWeb.Locale`. All four are asserted together by
+# "every supported locale is fully wired" in `locale_test.exs`.
+supported_locales = ~w(en de)
+default_locale = "en"
+
 config :backpex,
   translator_function: {KlassHeroWeb.CoreComponents, :translate_backpex},
   error_translator_function: {KlassHeroWeb.CoreComponents, :translate_error}
@@ -99,12 +111,14 @@ config :klass_hero, KlassHeroWeb.Endpoint,
     layout: false
   ],
   pubsub_server: KlassHero.PubSub,
-  # Configure Gettext for internationalization
   live_view: [signing_salt: "JU2osypv"]
 
+# `:locales` is not a Gettext option — the backend derives its own set from the
+# .po files on disk. It lives under this key because `mix lint_translations`
+# reads it here to decide which locales require translations.
 config :klass_hero, KlassHeroWeb.Gettext,
-  default_locale: "en",
-  locales: ~w(en de)
+  default_locale: default_locale,
+  locales: supported_locales
 
 # Configure Oban for background jobs
 config :klass_hero, Oban,
@@ -316,6 +330,12 @@ config :klass_hero, :event_consumers, %{
 
 # Configure Feature Flags bounded context
 config :klass_hero, :feature_flags, adapter: FunWithFlagsAdapter
+
+# Read by `KlassHero.Shared.Locales`, which is what application code calls.
+config :klass_hero, :locales,
+  supported: supported_locales,
+  default: default_locale
+
 config :klass_hero, :mailer_defaults, from: {"KlassHero", "noreply@mail.klasshero.com"}
 
 config :klass_hero, :messaging,

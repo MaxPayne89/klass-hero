@@ -26,7 +26,7 @@ msgstr ""
 msgid "Attempting to reconnect"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:172
+#: lib/klass_hero_web/live/user_live/settings.ex:173
 #, elixir-autogen, elixir-format
 msgid "Choose your preferred language for the interface"
 msgstr ""
@@ -51,12 +51,12 @@ msgstr ""
 msgid "Dashboard"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:263
+#: lib/klass_hero_web/live/user_live/settings.ex:252
 #, elixir-autogen, elixir-format
 msgid "Download My Data"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:259
+#: lib/klass_hero_web/live/user_live/settings.ex:248
 #, elixir-autogen, elixir-format
 msgid "Download a copy of all your personal data"
 msgstr ""
@@ -73,7 +73,7 @@ msgstr ""
 msgid "Home"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:169
+#: lib/klass_hero_web/live/user_live/settings.ex:170
 #, elixir-autogen, elixir-format
 msgid "Language Preference"
 msgstr ""
@@ -131,7 +131,7 @@ msgstr ""
 msgid "We can't find the internet"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:257
+#: lib/klass_hero_web/live/user_live/settings.ex:246
 #, elixir-autogen, elixir-format
 msgid "Your Data"
 msgstr ""
@@ -399,7 +399,7 @@ msgstr ""
 msgid "✓ No hidden fees"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:419
+#: lib/klass_hero_web/live/user_live/settings.ex:408
 #, elixir-autogen, elixir-format
 msgid "A link to confirm your email change has been sent to the new address."
 msgstr ""
@@ -446,7 +446,7 @@ msgstr ""
 msgid "Cancellation & Refund Policy"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:111
+#: lib/klass_hero_web/live/user_live/settings.ex:112
 #, elixir-autogen, elixir-format
 msgid "Change Email"
 msgstr ""
@@ -461,7 +461,7 @@ msgstr ""
 msgid "Changes to This Policy"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:109
+#: lib/klass_hero_web/live/user_live/settings.ex:110
 #, elixir-autogen, elixir-format
 msgid "Changing..."
 msgstr ""
@@ -496,7 +496,7 @@ msgstr ""
 msgid "Confirm and stay logged in"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:147
+#: lib/klass_hero_web/live/user_live/settings.ex:148
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr ""
@@ -557,24 +557,19 @@ msgstr ""
 msgid "Data Sharing"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:278
+#: lib/klass_hero_web/live/user_live/settings.ex:267
 #, elixir-autogen, elixir-format
 msgid "Delete Account"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:310
+#: lib/klass_hero_web/live/user_live/settings.ex:299
 #, elixir-autogen, elixir-format
 msgid "Delete My Account"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:300
+#: lib/klass_hero_web/live/user_live/settings.ex:289
 #, elixir-autogen, elixir-format
 msgid "Deleting..."
-msgstr ""
-
-#: lib/klass_hero_web/live/user_live/settings.ex:209
-#, elixir-autogen, elixir-format
-msgid "Deutsch"
 msgstr ""
 
 #: lib/klass_hero_web/live/terms_of_service_live.ex:222
@@ -590,25 +585,20 @@ msgstr ""
 #: lib/klass_hero_web/live/user_live/login.ex:60
 #: lib/klass_hero_web/live/user_live/login.ex:89
 #: lib/klass_hero_web/live/user_live/registration.ex:48
-#: lib/klass_hero_web/live/user_live/settings.ex:102
+#: lib/klass_hero_web/live/user_live/settings.ex:103
 #: lib/klass_hero_web/live/user_live/staff_invitation.ex:66
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:348
+#: lib/klass_hero_web/live/user_live/settings.ex:337
 #, elixir-autogen, elixir-format
 msgid "Email change link is invalid or it has expired."
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:345
+#: lib/klass_hero_web/live/user_live/settings.ex:334
 #, elixir-autogen, elixir-format
 msgid "Email changed successfully."
-msgstr ""
-
-#: lib/klass_hero_web/live/user_live/settings.ex:191
-#, elixir-autogen, elixir-format
-msgid "English"
 msgstr ""
 
 #: lib/klass_hero_web/live/user_live/registration.ex:71
@@ -616,7 +606,7 @@ msgstr ""
 msgid "Enroll children in programs"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:294
+#: lib/klass_hero_web/live/user_live/settings.ex:283
 #, elixir-autogen, elixir-format
 msgid "Enter your password to confirm"
 msgstr ""
@@ -637,7 +627,7 @@ msgstr ""
 msgid "Failed to complete session: %{reason}"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:497
+#: lib/klass_hero_web/live/user_live/settings.ex:486
 #, elixir-autogen, elixir-format
 msgid "Failed to delete account. Please try again."
 msgstr ""
@@ -700,7 +690,7 @@ msgstr ""
 msgid "Invalid date format"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:491
+#: lib/klass_hero_web/live/user_live/settings.ex:480
 #, elixir-autogen, elixir-format
 msgid "Invalid password."
 msgstr ""
@@ -781,7 +771,7 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:140
+#: lib/klass_hero_web/live/user_live/settings.ex:141
 #, elixir-autogen, elixir-format
 msgid "New password"
 msgstr ""
@@ -810,7 +800,7 @@ msgid "Other"
 msgstr ""
 
 #: lib/klass_hero_web/live/user_live/login.ex:96
-#: lib/klass_hero_web/live/user_live/settings.ex:119
+#: lib/klass_hero_web/live/user_live/settings.ex:120
 #: lib/klass_hero_web/live/user_live/staff_invitation.ex:73
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -871,14 +861,14 @@ msgstr ""
 msgid "Register"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:151
+#: lib/klass_hero_web/live/user_live/settings.ex:152
 #, elixir-autogen, elixir-format
 msgid "Save Password"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:381
 #: lib/klass_hero_web/live/settings/children_live.ex:743
-#: lib/klass_hero_web/live/user_live/settings.ex:150
+#: lib/klass_hero_web/live/user_live/settings.ex:151
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Saving..."
 msgstr ""
@@ -942,7 +932,7 @@ msgstr ""
 msgid "Terms of Service"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:281
+#: lib/klass_hero_web/live/user_live/settings.ex:270
 #, elixir-autogen, elixir-format
 msgid "This action cannot be undone. Your account data will be anonymized and you will be logged out."
 msgstr ""
@@ -1023,7 +1013,7 @@ msgstr ""
 msgid "Your Privacy Rights"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:479
+#: lib/klass_hero_web/live/user_live/settings.ex:468
 #, elixir-autogen, elixir-format
 msgid "Your account has been deleted."
 msgstr ""
@@ -1126,7 +1116,7 @@ msgstr ""
 #: lib/klass_hero_web/live/settings/children_live.ex:23
 #: lib/klass_hero_web/live/settings/children_live.ex:348
 #: lib/klass_hero_web/live/settings_live.ex:79
-#: lib/klass_hero_web/live/user_live/settings.ex:235
+#: lib/klass_hero_web/live/user_live/settings.ex:224
 #, elixir-autogen, elixir-format
 msgid "Children Profiles"
 msgstr ""
@@ -1247,7 +1237,7 @@ msgid "Medical Information"
 msgstr ""
 
 #: lib/klass_hero_web/live/settings_live.ex:73
-#: lib/klass_hero_web/live/user_live/settings.ex:221
+#: lib/klass_hero_web/live/user_live/settings.ex:210
 #, elixir-autogen, elixir-format
 msgid "My Family"
 msgstr ""
@@ -1531,58 +1521,58 @@ msgstr ""
 msgid "activities completed"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:81
+#: lib/klass_hero_web/live/user_live/settings.ex:82
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Account Security"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:164
+#: lib/klass_hero_web/live/user_live/settings.ex:165
 #, elixir-autogen, elixir-format
 msgid "Customize your experience"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:271
+#: lib/klass_hero_web/live/user_live/settings.ex:260
 #, elixir-autogen, elixir-format
 msgid "Danger Zone"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:249
+#: lib/klass_hero_web/live/user_live/settings.ex:238
 #, elixir-autogen, elixir-format
 msgid "Data & Privacy"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:251
+#: lib/klass_hero_web/live/user_live/settings.ex:240
 #, elixir-autogen, elixir-format
 msgid "Download your data or delete your account"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:90
+#: lib/klass_hero_web/live/user_live/settings.ex:91
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Email Address"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:83
+#: lib/klass_hero_web/live/user_live/settings.ex:84
 #, elixir-autogen, elixir-format
 msgid "Manage your email and password"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:70
+#: lib/klass_hero_web/live/user_live/settings.ex:71
 #, elixir-autogen, elixir-format
 msgid "Member since"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:47
-#: lib/klass_hero_web/live/user_live/settings.ex:163
+#: lib/klass_hero_web/live/user_live/settings.ex:48
+#: lib/klass_hero_web/live/user_live/settings.ex:164
 #, elixir-autogen, elixir-format
 msgid "Preferences"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:34
+#: lib/klass_hero_web/live/user_live/settings.ex:35
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:30
+#: lib/klass_hero_web/live/user_live/settings.ex:31
 #, elixir-autogen, elixir-format
 msgid "Quick Navigation"
 msgstr ""
@@ -1967,7 +1957,7 @@ msgstr ""
 msgid "Manage your children's information and consents"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:223
+#: lib/klass_hero_web/live/user_live/settings.ex:212
 #, elixir-autogen, elixir-format
 msgid "Manage your children's profiles"
 msgstr ""
@@ -2052,17 +2042,17 @@ msgstr ""
 msgid "Please complete your profile before making a booking."
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:428
+#: lib/klass_hero_web/live/user_live/settings.ex:417
 #, elixir-autogen, elixir-format
 msgid "Please re-authenticate to change your email."
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:460
+#: lib/klass_hero_web/live/user_live/settings.ex:449
 #, elixir-autogen, elixir-format
 msgid "Please re-authenticate to change your password."
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:485
+#: lib/klass_hero_web/live/user_live/settings.ex:474
 #, elixir-autogen, elixir-format
 msgid "Please re-authenticate to delete your account."
 msgstr ""
@@ -5323,8 +5313,8 @@ msgstr ""
 msgid "Accept"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:15
-#: lib/klass_hero_web/live/user_live/settings.ex:17
+#: lib/klass_hero_web/live/user_live/settings.ex:16
+#: lib/klass_hero_web/live/user_live/settings.ex:18
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Account"
 msgstr ""
@@ -5510,7 +5500,7 @@ msgstr ""
 msgid "Check our FAQ — most questions are answered there."
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:37
+#: lib/klass_hero_web/live/user_live/settings.ex:38
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Children"
 msgstr ""
@@ -5604,7 +5594,7 @@ msgstr ""
 msgid "Create your"
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:52
+#: lib/klass_hero_web/live/user_live/settings.ex:53
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Data & privacy"
 msgstr ""
@@ -6052,7 +6042,7 @@ msgstr ""
 msgid "Manage less."
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:20
+#: lib/klass_hero_web/live/user_live/settings.ex:21
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Manage your account, preferences, and privacy in one place."
 msgstr ""
@@ -6450,7 +6440,7 @@ msgstr ""
 msgid "Secure weekly payouts. Insights into your business and opportunities to expand your impact."
 msgstr ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:42
+#: lib/klass_hero_web/live/user_live/settings.ex:43
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Security"
 msgstr ""
@@ -6935,7 +6925,7 @@ msgid_plural "programs"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/live/user_live/settings.ex:18
+#: lib/klass_hero_web/live/user_live/settings.ex:19
 #, elixir-autogen, elixir-format, fuzzy
 msgid "settings"
 msgstr ""

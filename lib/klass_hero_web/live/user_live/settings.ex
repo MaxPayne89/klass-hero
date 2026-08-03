@@ -5,6 +5,7 @@ defmodule KlassHeroWeb.UserLive.Settings do
 
   alias KlassHero.Accounts
   alias KlassHeroWeb.Helpers.FamilyHelpers
+  alias KlassHeroWeb.Locale
   alias KlassHeroWeb.Presenters.ChildPresenter
 
   on_mount {KlassHeroWeb.UserAuth, :require_sudo_mode}
@@ -172,41 +173,29 @@ defmodule KlassHeroWeb.UserLive.Settings do
                 {gettext("Choose your preferred language for the interface")}
               </p>
               <.form for={@locale_form} id="locale_form" phx-change="update_locale">
+                <%!-- Labels are endonyms, so they are not translated — see
+                      KlassHeroWeb.Locale. --%>
                 <div class="flex flex-wrap gap-3">
-                  <label class={[
-                    "flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors",
-                    if(@current_scope.user.locale == "en",
-                      do: "border-[var(--brand-primary)] bg-hero-pink-50",
-                      else: "border-[var(--border-light)] hover:border-[var(--border-medium)]"
-                    )
-                  ]}>
+                  <label
+                    :for={locale <- Locale.supported()}
+                    id={"locale-option-#{locale}"}
+                    class={[
+                      "flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors",
+                      if(@current_scope.user.locale == locale,
+                        do: "border-[var(--brand-primary)] bg-hero-pink-50",
+                        else: "border-[var(--border-light)] hover:border-[var(--border-medium)]"
+                      )
+                    ]}
+                  >
                     <input
                       type="radio"
                       name="user[locale]"
-                      value="en"
-                      checked={@current_scope.user.locale == "en"}
+                      value={locale}
+                      checked={@current_scope.user.locale == locale}
                       class="hidden"
                     />
-                    <span class="text-2xl">🇬🇧</span>
-                    <span class="font-semibold text-hero-black">{gettext("English")}</span>
-                  </label>
-
-                  <label class={[
-                    "flex items-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer transition-colors",
-                    if(@current_scope.user.locale == "de",
-                      do: "border-[var(--brand-primary)] bg-hero-pink-50",
-                      else: "border-[var(--border-light)] hover:border-[var(--border-medium)]"
-                    )
-                  ]}>
-                    <input
-                      type="radio"
-                      name="user[locale]"
-                      value="de"
-                      checked={@current_scope.user.locale == "de"}
-                      class="hidden"
-                    />
-                    <span class="text-2xl">🇩🇪</span>
-                    <span class="font-semibold text-hero-black">{gettext("Deutsch")}</span>
+                    <span class="text-2xl">{Locale.flag(locale)}</span>
+                    <span class="font-semibold text-hero-black">{Locale.label(locale)}</span>
                   </label>
                 </div>
               </.form>

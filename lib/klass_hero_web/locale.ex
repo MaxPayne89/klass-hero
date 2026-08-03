@@ -1,37 +1,59 @@
 defmodule KlassHeroWeb.Locale do
   @moduledoc """
-  The supported-locale whitelist, in one place.
+  Everything the web layer needs to know about locales.
 
-  This unifies the web layer's copies — the `SetLocale` plug, the `RestoreLocale`
-  hook, and (implicitly) the hardcoded `lang="en"` in the root layout, which had
-  drifted far enough to claim English on every German page (#1161).
+  The *set* is not declared here — `KlassHero.Shared.Locales` owns it, sourced
+  from one binding in `config/config.exs` that also feeds the Gettext key
+  `mix lint_translations` reads (#1227). Before that, this module and
+  `KlassHero.Accounts.User.locale_changeset/2` each kept their own copy, and they
+  disagreed in a way nothing surfaced: adding a locale here alone left the
+  changeset rejecting what this module accepted, so choosing it failed with
+  "Failed to update language preference." and no explanation anywhere.
 
-  `KlassHero.Accounts.User.locale_changeset/2` deliberately keeps its own list:
-  the domain cannot depend on a web module. The two agree today, so adding a
-  locale here without adding it there would leave the changeset rejecting what
-  this module accepts.
+  What lives here is the web's own answers about locales:
 
-  `validate/1` coerces rather than fails. Every caller receives a locale from
-  untrusted input — a `?locale=` param, a session cookie written by an older
-  release, a `users.locale` column holding a value since retired — and the right
-  response to all of them is to render the default, not to raise.
+  - `validate/1` coerces rather than fails. Every caller receives a locale from
+    untrusted input — a `?locale=` param, a session cookie written by an older
+    release, a `users.locale` column holding a value since retired — and the
+    right response to all of them is to render the default, not to raise. The
+    changeset is the strict half of that pair and rejects instead.
+  - `label/1` and `flag/1` are display metadata, which has no business in the
+    domain. Labels are endonyms — a language's own name for itself — so they are
+    deliberately not run through Gettext: an English speaker sees "Deutsch" too.
+  - `url_for/2` builds the canonical and hreflang URLs.
   """
 
-  @supported ~w(en de)
-  @default "en"
+  alias KlassHero.Shared.Locales
 
   @doc "Every locale the app can render."
-  def supported, do: @supported
+  defdelegate supported(), to: Locales
 
   @doc "The locale used when nothing better is known."
-  def default, do: @default
-
-  @doc "Coerces any term to a supported locale, falling back to `default/0`."
-  def validate(locale) when locale in @supported, do: locale
-  def validate(_locale), do: @default
+  defdelegate default(), to: Locales
 
   @doc "Whether the given term is a locale the app can render."
-  def supported?(locale), do: locale in @supported
+  defdelegate supported?(locale), to: Locales
+
+  @doc "Coerces any term to a supported locale, falling back to `default/0`."
+  def validate(locale) do
+    if Locales.supported?(locale), do: locale, else: Locales.default()
+  end
+
+  @doc """
+  The locale's own name for itself, or `nil` if it has none.
+
+  Returning `nil` rather than raising keeps a half-configured locale off the
+  settings page instead of crashing it. The "every supported locale is fully
+  wired" test in `locale_test.exs` is what makes the omission loud.
+  """
+  def label("en"), do: "English"
+  def label("de"), do: "Deutsch"
+  def label(_locale), do: nil
+
+  @doc "The locale's flag, or `nil` if it has none. See `label/1`."
+  def flag("en"), do: "🇬🇧"
+  def flag("de"), do: "🇩🇪"
+  def flag(_locale), do: nil
 
   @doc """
   The absolute URL serving `path` in `locale`, for `rel=canonical` and

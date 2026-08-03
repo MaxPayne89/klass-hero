@@ -16,6 +16,7 @@ defmodule KlassHeroWeb.I18nHelpers do
   alias KlassHero.Accounts.User
   alias KlassHero.AccountsFixtures
   alias KlassHero.Repo
+  alias KlassHero.Shared.Locales
   alias Phoenix.LiveViewTest.View
 
   @doc """
@@ -268,22 +269,25 @@ defmodule KlassHeroWeb.I18nHelpers do
   @doc """
   Returns a list of supported locales for the application.
 
-  ## Examples
-
-      supported_locales() # => ["en", "de"]
+  Delegates to `KlassHero.Shared.Locales`, which owns the set (#1227) — these
+  used to read the Gettext config with a hardcoded `["en", "de"]` fallback that
+  would silently mask a config problem.
   """
-  def supported_locales do
-    Application.get_env(:klass_hero, KlassHeroWeb.Gettext)[:locales] || ["en", "de"]
-  end
+  defdelegate supported_locales(), to: Locales, as: :supported
+
+  @doc "Returns the default locale for the application. See `supported_locales/0`."
+  defdelegate default_locale(), to: Locales, as: :default
 
   @doc """
-  Returns the default locale for the application.
+  A locale code the app is guaranteed not to support.
 
-  ## Examples
-
-      default_locale() # => "en"
+  For exercising the coercion and rejection paths. Derived rather than
+  hardcoded: tests used to name "fr", which quietly becomes wrong the day French
+  is added — the same class of drift #1227 removed from the production code.
+  Raises rather than returning a supported locale, so callers cannot go vacuous.
   """
-  def default_locale do
-    Application.get_env(:klass_hero, KlassHeroWeb.Gettext)[:default_locale] || "en"
+  def unsupported_locale do
+    Enum.find(~w(zz qq xx), &(&1 not in Locales.supported())) ||
+      raise "every candidate unsupported locale is now configured as supported"
   end
 end
