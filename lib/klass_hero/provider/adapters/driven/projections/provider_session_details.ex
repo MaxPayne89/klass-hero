@@ -46,7 +46,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   import Ecto.Query
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
@@ -88,7 +88,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   def handle_event(:roster_seeded, %Event{payload: %{seeded_count: seeded_count}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(d in ProviderSessionDetailSchema, where: d.session_id == ^event.entity_id)
+    from(d in SessionDetail, where: d.session_id == ^event.entity_id)
     |> Repo.update_all(inc: [total_count: seeded_count], set: [updated_at: now])
     |> warn_if_missing("roster_seeded", session_id: event.entity_id, seeded_count: seeded_count)
   end
@@ -97,7 +97,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   def handle_event(:child_checked_in, %Event{payload: %{session_id: session_id}} = event) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(d in ProviderSessionDetailSchema, where: d.session_id == ^session_id)
+    from(d in SessionDetail, where: d.session_id == ^session_id)
     |> Repo.update_all(inc: [checked_in_count: 1], set: [updated_at: now])
     |> warn_if_missing("child_checked_in", session_id: session_id, record_id: event.entity_id)
   end
@@ -121,7 +121,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     staff_name = lookup_staff_name(staff_id)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(d in ProviderSessionDetailSchema,
+    from(d in SessionDetail,
       where: d.program_id == ^program_id and d.status == :scheduled
     )
     |> Repo.update_all(
@@ -137,7 +137,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   def handle_event(:staff_unassigned_from_program, %Event{payload: %{program_id: program_id}}) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(d in ProviderSessionDetailSchema,
+    from(d in SessionDetail,
       where: d.program_id == ^program_id and d.status == :scheduled
     )
     |> Repo.update_all(
@@ -237,7 +237,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
         {count, _} =
           Repo.insert_all(
-            ProviderSessionDetailSchema,
+            SessionDetail,
             attrs_list,
             on_conflict: {:replace_all_except, [:session_id, :inserted_at, :cover_staff_id, :cover_staff_name]},
             conflict_target: [:session_id]
@@ -297,7 +297,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     }
 
     Repo.insert_all(
-      ProviderSessionDetailSchema,
+      SessionDetail,
       [attrs],
       on_conflict:
         {:replace_all_except,
@@ -317,7 +317,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   defp update_status(session_id, status) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    from(d in ProviderSessionDetailSchema, where: d.session_id == ^session_id)
+    from(d in SessionDetail, where: d.session_id == ^session_id)
     |> Repo.update_all(set: [status: status, updated_at: now])
     |> warn_if_missing("status transition", session_id: session_id, target_status: status)
   end

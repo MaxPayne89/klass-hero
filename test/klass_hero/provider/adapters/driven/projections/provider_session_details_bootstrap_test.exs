@@ -4,9 +4,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
   @tag :bootstrap
@@ -32,7 +32,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
     start_supervised!({ProviderSessionDetails, name: :bootstrap_test})
     :ok = ProviderSessionDetails.rebuild(:bootstrap_test)
 
-    row = Repo.get(ProviderSessionDetailSchema, session_schema.id)
+    row = Repo.get(SessionDetail, session_schema.id)
 
     assert row != nil
     assert row.program_title == "Judo"
@@ -83,7 +83,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
     start_supervised!({ProviderSessionDetails, name: :bootstrap_test_staff})
     :ok = ProviderSessionDetails.rebuild(:bootstrap_test_staff)
 
-    row = Repo.get(ProviderSessionDetailSchema, session_schema.id)
+    row = Repo.get(SessionDetail, session_schema.id)
 
     assert row != nil
     assert row.current_assigned_staff_id == staff.id
@@ -149,7 +149,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
     # Only one row for the session (no duplicate-conflict crash)
     rows =
       Repo.all(
-        from d in ProviderSessionDetailSchema,
+        from d in SessionDetail,
           where: d.session_id == ^session_schema.id
       )
 

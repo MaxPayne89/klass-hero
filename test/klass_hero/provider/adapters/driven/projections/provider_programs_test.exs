@@ -6,8 +6,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
 
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgramProjectionSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
+  alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -42,8 +42,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
     ProviderPrograms.project(build_event(event_type, payload))
   end
 
+  describe "read table shape" do
+    # Guards #736: `status` was projected as the constant "active" for a concept
+    # Program Catalog never had. Pin the column list so a speculative field can't
+    # reappear without a deliberate change here.
+    test "projects exactly the columns a consumer reads" do
+      assert ProviderProgram.__schema__(:fields) ==
+               [:program_id, :provider_id, :name, :inserted_at, :updated_at]
+    end
+  end
+
   describe "project/1 :program_created event" do
-    test "upserts a new row with provider_id, name, and status" do
+    test "upserts a new row with provider_id and name" do
       pid = start_projection!()
       program_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
@@ -54,10 +64,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
         title: "Drawing Club"
       })
 
-      row = Repo.get(ProviderProgramProjectionSchema, program_id)
+      row = Repo.get(ProviderProgram, program_id)
       assert row.provider_id == provider_id
       assert row.name == "Drawing Club"
-      assert row.status == "active"
     end
   end
 
@@ -79,9 +88,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
         title: "New name"
       })
 
-      assert Repo.aggregate(ProviderProgramProjectionSchema, :count) == 1
+      assert Repo.aggregate(ProviderProgram, :count) == 1
 
-      row = Repo.get(ProviderProgramProjectionSchema, program_id)
+      row = Repo.get(ProviderProgram, program_id)
       assert row.name == "New name"
     end
   end
@@ -102,17 +111,16 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
       pid = start_projection!()
 
       # Sanity check: bootstrap was skipped, so the read table should still be empty
-      assert Repo.get(ProviderProgramProjectionSchema, program.id) == nil
+      assert Repo.get(ProviderProgram, program.id) == nil
 
       name = Process.info(pid, :registered_name) |> elem(1)
       assert :ok = ProviderPrograms.rebuild(name)
 
-      row = Repo.get(ProviderProgramProjectionSchema, program.id)
+      row = Repo.get(ProviderProgram, program.id)
       assert row != nil
       assert row.program_id == program.id
       assert row.provider_id == provider.id
       assert row.name == "Rebuild Target Program"
-      assert row.status == "active"
     end
   end
 end

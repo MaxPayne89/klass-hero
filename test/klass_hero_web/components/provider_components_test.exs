@@ -3,7 +3,7 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
 
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
+  alias KlassHero.Provider.SessionDetail
 
   describe "programs_table/1" do
     test "renders a Sessions button per row" do

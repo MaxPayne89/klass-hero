@@ -10,8 +10,8 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
   import Swoosh.TestAssertions
 
   alias KlassHero.Accounts.User
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Provider.SubmitIncidentReport
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
@@ -118,7 +118,7 @@ defmodule KlassHero.Provider.Incidents.SubmitIncidentReportTest do
       session = insert(:program_session_schema, program_id: pg)
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      Repo.insert!(%ProviderSessionDetailSchema{
+      Repo.insert!(%SessionDetail{
         session_id: session.id,
         program_id: pg,
         program_title: "Art Club",
