@@ -10,7 +10,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderProgram
       program_id: row.program_id,
       provider_id: row.provider_id,
       name: row.name,
-      status: row.status,
       inserted_at: row.inserted_at,
       updated_at: row.updated_at
     }

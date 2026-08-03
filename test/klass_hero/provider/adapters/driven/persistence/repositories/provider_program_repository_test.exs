@@ -13,7 +13,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.ProviderPr
       program_id: Ecto.UUID.generate(),
       provider_id: Ecto.UUID.generate(),
       name: "Drawing Club",
-      status: "published",
       inserted_at: now,
       updated_at: now
     }

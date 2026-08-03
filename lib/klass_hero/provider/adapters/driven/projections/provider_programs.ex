@@ -20,10 +20,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
 
   - `:program_created` — upsert row keyed by `program_id`
   - `:program_updated` — upsert row keyed by `program_id` (replaces mutable fields)
-
-  Programs in the Program Catalog have no first-class status field today, so this
-  projection records every program as `"active"`. The column exists to support
-  future filtering (archived/draft) without requiring a migration.
   """
 
   use KlassHero.Shared.Projection,
@@ -41,8 +37,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
-
-  @default_status "active"
 
   @impl Projection
   def bootstrap_impl, do: bootstrap_from_write_table()
@@ -65,14 +59,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
 
       rows =
         Enum.map(programs, fn program ->
-          Map.merge(program, %{status: @default_status, inserted_at: now, updated_at: now})
+          Map.merge(program, %{inserted_at: now, updated_at: now})
         end)
 
       {count, _} =
         Repo.insert_all(
           ProviderProgramProjectionSchema,
           rows,
-          on_conflict: {:replace, [:provider_id, :name, :status, :updated_at]},
+          on_conflict: {:replace, [:provider_id, :name, :updated_at]},
           conflict_target: [:program_id]
         )
 
@@ -88,7 +82,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
       program_id: event.entity_id,
       provider_id: Map.fetch!(payload, :provider_id),
       name: extract_name(payload),
-      status: extract_status(payload),
       inserted_at: now,
       updated_at: now
     }
@@ -96,7 +89,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
     Repo.insert_all(
       ProviderProgramProjectionSchema,
       [attrs],
-      on_conflict: {:replace, [:provider_id, :name, :status, :updated_at]},
+      on_conflict: {:replace, [:provider_id, :name, :updated_at]},
       conflict_target: [:program_id]
     )
   end
@@ -109,11 +102,4 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms do
 
     raise ArgumentError, "Program payload missing :title or :name field"
   end
-
-  defp extract_status(%{status: status}) when is_binary(status), do: status
-
-  defp extract_status(%{status: status}) when is_atom(status) and status not in [nil, true, false],
-    do: Atom.to_string(status)
-
-  defp extract_status(_), do: @default_status
 end

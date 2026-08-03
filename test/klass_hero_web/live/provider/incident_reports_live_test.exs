@@ -18,7 +18,6 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLiveTest do
       program_id: program_id,
       provider_id: provider_id,
       name: name,
-      status: "active",
       inserted_at: now,
       updated_at: now
     })

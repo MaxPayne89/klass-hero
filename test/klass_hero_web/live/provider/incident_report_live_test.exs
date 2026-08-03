@@ -15,7 +15,6 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
       program_id: Ecto.UUID.generate(),
       provider_id: attrs[:provider_id],
       name: "Some Program",
-      status: "active",
       inserted_at: now,
       updated_at: now
     }

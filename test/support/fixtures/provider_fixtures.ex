@@ -220,7 +220,7 @@ defmodule KlassHero.ProviderFixtures do
   @doc """
   Inserts a `provider_programs` projection row for testing.
 
-  Accepts `program_id`, `provider_id`, `name`, `status`. Defaults provided.
+  Accepts `program_id`, `provider_id`, `name`. Defaults provided.
   Returns the inserted schema struct.
   """
   def provider_program_projection_fixture(attrs \\ %{}) do
@@ -231,7 +231,6 @@ defmodule KlassHero.ProviderFixtures do
       program_id: attrs_map[:program_id] || Ecto.UUID.generate(),
       provider_id: attrs_map[:provider_id] || raise("provider_id is required"),
       name: attrs_map[:name] || "Test Program #{System.unique_integer([:positive])}",
-      status: attrs_map[:status] || "active",
       inserted_at: now,
       updated_at: now
     })

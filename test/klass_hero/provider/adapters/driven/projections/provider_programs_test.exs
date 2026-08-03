@@ -42,8 +42,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
     ProviderPrograms.project(build_event(event_type, payload))
   end
 
+  describe "read table shape" do
+    # Guards #736: `status` was projected as the constant "active" for a concept
+    # Program Catalog never had. Pin the column list so a speculative field can't
+    # reappear without a deliberate change here.
+    test "projects exactly the columns a consumer reads" do
+      assert ProviderProgramProjectionSchema.__schema__(:fields) ==
+               [:program_id, :provider_id, :name, :inserted_at, :updated_at]
+    end
+  end
+
   describe "project/1 :program_created event" do
-    test "upserts a new row with provider_id, name, and status" do
+    test "upserts a new row with provider_id and name" do
       pid = start_projection!()
       program_id = Ecto.UUID.generate()
       provider_id = Ecto.UUID.generate()
@@ -57,7 +67,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
       row = Repo.get(ProviderProgramProjectionSchema, program_id)
       assert row.provider_id == provider_id
       assert row.name == "Drawing Club"
-      assert row.status == "active"
     end
   end
 
@@ -112,7 +121,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
       assert row.program_id == program.id
       assert row.provider_id == provider.id
       assert row.name == "Rebuild Target Program"
-      assert row.status == "active"
     end
   end
 end

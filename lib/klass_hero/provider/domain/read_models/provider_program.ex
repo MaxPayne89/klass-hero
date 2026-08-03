@@ -11,18 +11,16 @@ defmodule KlassHero.Provider.Domain.ReadModels.ProviderProgram do
           program_id: String.t(),
           provider_id: String.t(),
           name: String.t(),
-          status: String.t(),
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
 
-  @enforce_keys [:program_id, :provider_id, :name, :status]
+  @enforce_keys [:program_id, :provider_id, :name]
 
   defstruct [
     :program_id,
     :provider_id,
     :name,
-    :status,
     :inserted_at,
     :updated_at
   ]

@@ -14,7 +14,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderProgram
   schema "provider_programs" do
     field :provider_id, :binary_id
     field :name, :string
-    field :status, :string
 
     timestamps(type: :utc_datetime)
   end
