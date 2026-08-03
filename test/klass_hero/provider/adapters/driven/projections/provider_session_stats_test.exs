@@ -6,8 +6,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
 
   import Ecto.Query
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
+  alias KlassHero.Provider.SessionStats
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -56,7 +56,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
 
       ProviderSessionStats.project(event)
 
-      stats = Repo.all(from(s in SessionStatsSchema, where: s.provider_id == ^provider_id))
+      stats = Repo.all(from(s in SessionStats, where: s.provider_id == ^provider_id))
 
       assert [stat] = stats
       assert stat.program_id == program_id
@@ -81,7 +81,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
 
       stat =
         Repo.one!(
-          from(s in SessionStatsSchema,
+          from(s in SessionStats,
             where: s.provider_id == ^provider_id and s.program_id == ^program_id
           )
         )
@@ -107,7 +107,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
       end
 
       stats =
-        SessionStatsSchema
+        SessionStats
         |> where([s], s.provider_id == ^provider_id)
         |> order_by([s], asc: s.program_title)
         |> Repo.all()

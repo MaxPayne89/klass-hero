@@ -25,7 +25,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
   import Ecto.Query
 
   alias KlassHero.Provider.Adapters.Driven.ACL.ParticipationSessionStatsACL
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
+  alias KlassHero.Provider.SessionStats
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
@@ -64,7 +64,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
           end)
 
         {count, _} =
-          Repo.insert_all(SessionStatsSchema, entries,
+          Repo.insert_all(SessionStats, entries,
             on_conflict: {:replace_all_except, [:id, :inserted_at]},
             conflict_target: [:provider_id, :program_id]
           )
@@ -80,7 +80,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
   defp upsert_session_count(provider_id, program_id, program_title) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    %SessionStatsSchema{}
+    %SessionStats{}
     |> Ecto.Changeset.change(%{
       id: Ecto.UUID.generate(),
       provider_id: provider_id,
@@ -92,7 +92,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats do
     })
     |> Repo.insert!(
       on_conflict:
-        from(s in SessionStatsSchema,
+        from(s in SessionStats,
           update: [
             set: [
               sessions_completed_count: fragment("? + 1", s.sessions_completed_count),
