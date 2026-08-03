@@ -290,6 +290,24 @@ defmodule KlassHeroWeb.UserLive.SettingsTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
+    # The radios are generated from Locale.supported/0, so a locale added to the
+    # config without display metadata renders a blank, unlabelled option rather
+    # than not rendering at all — assert the label and flag are actually there.
+    test "offers exactly one labelled option per supported locale", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      for locale <- KlassHeroWeb.Locale.supported() do
+        assert has_element?(lv, "#locale-option-#{locale}"),
+               "no radio rendered for supported locale #{locale}"
+
+        assert has_element?(lv, "#locale-option-#{locale} input[value='#{locale}']")
+
+        assert lv
+               |> element("#locale-option-#{locale}")
+               |> render() =~ KlassHeroWeb.Locale.label(locale)
+      end
+    end
+
     test "hands the change to the controller that can write the session", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/settings")
 

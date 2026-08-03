@@ -17,6 +17,7 @@ defmodule KlassHero.Accounts.User do
   alias KlassHero.Accounts.User
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Shared.Locales
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -238,16 +239,19 @@ defmodule KlassHero.Accounts.User do
     }
   end
 
-  @supported_locales ~w(en de)
-
   @doc """
-  A user changeset for changing locale preference. Validates against #{inspect(@supported_locales)}.
+  A user changeset for changing locale preference.
+
+  Validates against `KlassHero.Shared.Locales.supported/0` — the same set the web
+  layer reads, so a locale the UI offers can always be stored (#1227). Rejects
+  rather than coerces: an unsupported locale should render as the default, but
+  never be written to a profile.
   """
   def locale_changeset(user, attrs) do
     user
     |> cast(attrs, [:locale])
     |> validate_required([:locale])
-    |> validate_inclusion(:locale, @supported_locales)
+    |> validate_inclusion(:locale, Locales.supported())
   end
 
   @doc """

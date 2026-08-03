@@ -19,7 +19,7 @@ defmodule KlassHeroWeb.LocaleControllerTest do
   alias KlassHero.Repo
 
   describe "update/2 session handling" do
-    for locale <- ~w(en de) do
+    for locale <- KlassHeroWeb.Locale.supported() do
       test "stores #{locale} in the session", %{conn: conn} do
         conn = get(conn, ~p"/locale/#{unquote(locale)}")
 
@@ -28,7 +28,7 @@ defmodule KlassHeroWeb.LocaleControllerTest do
     end
 
     test "coerces an unsupported locale to the default rather than storing it", %{conn: conn} do
-      conn = get(conn, ~p"/locale/fr")
+      conn = get(conn, ~p"/locale/#{KlassHeroWeb.I18nHelpers.unsupported_locale()}")
 
       assert get_session(conn, :locale) == KlassHeroWeb.Locale.default()
     end
@@ -56,7 +56,7 @@ defmodule KlassHeroWeb.LocaleControllerTest do
     # The path segment lands in conn.params before the :browser pipeline runs, so
     # SetLocale has already switched the process locale by the time the flash is
     # built — the confirmation arrives in the language just chosen, not the old one.
-    for locale <- ~w(en de) do
+    for locale <- KlassHeroWeb.Locale.supported() do
       test "confirms the change in the newly chosen language (#{locale})", %{conn: conn, user: user} do
         conn = conn |> log_in_user(user) |> get(~p"/locale/#{unquote(locale)}")
 

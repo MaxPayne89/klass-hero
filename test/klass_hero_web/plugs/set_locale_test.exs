@@ -16,18 +16,23 @@ defmodule KlassHeroWeb.Plugs.SetLocaleTest do
   alias KlassHeroWeb.Plugs.SetLocale
 
   describe "precedence" do
+    # Derived, not the literal "fr" this used to name: the day French is added,
+    # a hardcoded example of an "unsupported" locale silently becomes a
+    # supported one and the test asserts the opposite of what it reads (#1227).
+    @unsupported KlassHeroWeb.I18nHelpers.unsupported_locale()
+
     # {description, param, session, stored preference, accept-language, expected}
     @precedence [
       {"the query param outranks everything", "de", "en", "en", "en-GB", "de"},
       {"the session outranks the stored preference", nil, "de", "en", "en-GB", "de"},
       {"the stored preference outranks the browser", nil, nil, "de", "en-GB", "de"},
       {"the browser is consulted last", nil, nil, nil, "de-DE,de;q=0.9,en;q=0.8", "de"},
-      {"an unsupported browser language falls back", nil, nil, nil, "fr-FR,fr;q=0.9", "en"},
+      {"an unsupported browser language falls back", nil, nil, nil, "#{@unsupported}-XX,#{@unsupported};q=0.9", "en"},
       {"nothing at all falls back", nil, nil, nil, nil, "en"},
       # An explicit but unsupported request resets to the default rather than
       # falling through to the session — asking for a language we don't have is
       # a clearer signal than the session it replaces.
-      {"an unsupported query param outranks a valid session", "fr", "de", nil, nil, "en"}
+      {"an unsupported query param outranks a valid session", @unsupported, "de", nil, nil, "en"}
     ]
 
     for {description, param, session, preference, accept_language, expected} <- @precedence do
