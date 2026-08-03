@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.67.0](https://github.com/MaxPayne89/klass-hero/compare/v0.66.8...v0.67.0) (2026-08-03)
+
+
+### Features
+
+* dead-letter permanently undelivered integration events ([#1250](https://github.com/MaxPayne89/klass-hero/issues/1250)) ([f617f5a](https://github.com/MaxPayne89/klass-hero/commit/f617f5ab28db305dff4cdabdc0387481eadd95f9)), closes [#1247](https://github.com/MaxPayne89/klass-hero/issues/1247)
+
+
+### Bug Fixes
+
+* drop speculative status column and retire Provider's mapper layer ([#1253](https://github.com/MaxPayne89/klass-hero/issues/1253)) ([535c301](https://github.com/MaxPayne89/klass-hero/commit/535c3018a466632c07d444fd89ddb1afc9b3b99e))
+
 ## [0.66.8](https://github.com/MaxPayne89/klass-hero/compare/v0.66.7...v0.66.8) (2026-08-02)
 
 
