@@ -8,6 +8,7 @@ defmodule KlassHero.Provider.Domain.ReadModels.IncidentReportSummary do
   """
 
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
 
   @typedoc "A denormalized incident report row for the per-program incidents view."
   @type t :: %__MODULE__{
@@ -43,4 +44,25 @@ defmodule KlassHero.Provider.Domain.ReadModels.IncidentReportSummary do
     :occurred_at,
     :reporter_display_name
   ]
+
+  @doc """
+  Builds a summary from an `IncidentReport`.
+
+  Narrowing, not copying: `reporter_user_id` is dropped (see the moduledoc) and
+  UUIDs are stringified for display.
+  """
+  @spec from_report(IncidentReport.t()) :: t()
+  def from_report(%IncidentReport{} = report) do
+    %__MODULE__{
+      id: to_string(report.id),
+      provider_id: to_string(report.provider_profile_id),
+      program_id: MapperHelpers.maybe_to_string(report.program_id),
+      session_id: MapperHelpers.maybe_to_string(report.session_id),
+      category: report.category,
+      severity: report.severity,
+      description: report.description,
+      occurred_at: report.occurred_at,
+      reporter_display_name: report.reporter_display_name
+    }
+  end
 end

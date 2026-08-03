@@ -9,7 +9,6 @@ defmodule KlassHero.Provider.Incidents do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.SessionDetail
@@ -36,7 +35,7 @@ defmodule KlassHero.Provider.Incidents do
 
     (program_direct ++ session_linked)
     |> Enum.sort_by(& &1.occurred_at, {:desc, DateTime})
-    |> Enum.map(&IncidentReportSummaryMapper.from_schema/1)
+    |> Enum.map(&IncidentReportSummary.from_report/1)
   end
 
   @doc "Retrieves a single incident report by ID (used by the notification worker)."
