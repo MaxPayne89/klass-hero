@@ -5,6 +5,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
 
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.UndeliveredEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
   alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.Event
@@ -45,10 +46,26 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
 
   defp job(events, attempt \\ 1) do
     %Oban.Job{
+      id: 4242,
       args: %{"events" => Enum.map(events, &CriticalEventSerializer.serialize/1)},
       attempt: attempt,
-      max_attempts: 10
+      max_attempts: 10,
+      discarded_at: DateTime.utc_now()
     }
+  end
+
+  defp handler_ref(consumer), do: CriticalEventDispatcher.handler_ref(consumer)
+
+  defp mark_processed(event, consumer) do
+    Repo.insert!(%ProcessedEvent{
+      event_id: event.event_id,
+      handler_ref: handler_ref(consumer),
+      processed_at: DateTime.utc_now()
+    })
+  end
+
+  defp undelivered(event) do
+    Repo.get_by(UndeliveredEvent, event_id: event.event_id)
   end
 
   test "delivers each event to every consumer of its topic", ctx do
@@ -130,5 +147,86 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
 
     assert :ok = EventDeliveryWorker.perform(job([event("thing-1")]))
     assert [] = Recorder.calls()
+  end
+
+  describe "compensate/2" do
+    test "records the event and the consumers that never received it", ctx do
+      route([{Recorder, :first}, {Recorder, :second}], ctx)
+      event = event("thing-1")
+
+      assert :ok = EventDeliveryWorker.compensate(job([event]), "boom")
+
+      row = undelivered(event)
+      assert row.topic == @topic
+      assert row.job_id == 4242
+      assert row.discarded_at
+      assert row.missed_consumers == [handler_ref({Recorder, :first}), handler_ref({Recorder, :second})]
+    end
+
+    # Replay hands these args straight back to the worker, so the whole envelope has
+    # to survive — not just the event's own payload.
+    test "keeps the serialized envelope so the event can be replayed", ctx do
+      route([{Recorder, :first}], ctx)
+      event = event("thing-1")
+
+      assert :ok = EventDeliveryWorker.compensate(job([event]), nil)
+
+      assert undelivered(event).payload == CriticalEventSerializer.serialize(event)
+    end
+
+    # The loss is partial: `processed_events` keeps the consumers that did run, and a
+    # retry only ever re-runs the rest. Recording the ones that succeeded would
+    # overstate what was lost.
+    test "records only the consumers still outstanding", ctx do
+      route([{Recorder, :first}, {Recorder, :second}], ctx)
+      event = event("thing-1")
+      mark_processed(event, {Recorder, :first})
+
+      assert :ok = EventDeliveryWorker.compensate(job([event]), "boom")
+
+      assert undelivered(event).missed_consumers == [handler_ref({Recorder, :second})]
+    end
+
+    test "records nothing for an event every consumer received", ctx do
+      route([{Recorder, :first}], ctx)
+      event = event("thing-1")
+      mark_processed(event, {Recorder, :first})
+
+      assert :ignore = EventDeliveryWorker.compensate(job([event]), "boom")
+
+      refute undelivered(event)
+    end
+
+    test "records only the undelivered events of a job that lost some of them", ctx do
+      route([{Recorder, :first}], ctx)
+      delivered = event("a")
+      lost = event("b")
+      mark_processed(delivered, {Recorder, :first})
+
+      assert :ok = EventDeliveryWorker.compensate(job([delivered, lost]), "boom")
+
+      refute undelivered(delivered)
+      assert undelivered(lost)
+    end
+
+    # A topic whose consumers were all removed from config since the event was staged.
+    test "records nothing for an event that is no longer routed anywhere", ctx do
+      route([], ctx)
+
+      assert :ignore = EventDeliveryWorker.compensate(job([event("thing-1")]), "boom")
+    end
+
+    # The sweep can reach the same dead job twice; the unique index refuses the
+    # duplicate rather than the compensation having to remember.
+    test "does not duplicate a row when the same job is compensated twice", ctx do
+      route([{Recorder, :first}], ctx)
+      event = event("thing-1")
+      job = job([event])
+
+      assert :ok = EventDeliveryWorker.compensate(job, "boom")
+      assert :ok = EventDeliveryWorker.compensate(job, "boom")
+
+      assert [_one] = Repo.all(from(u in UndeliveredEvent, where: u.event_id == ^event.event_id))
+    end
   end
 end

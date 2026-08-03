@@ -10,10 +10,25 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
 
   use KlassHero.Shared.Interaction
 
+  import Ecto.Query
+
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
 
   require Logger
+
+  @doc """
+  Handler refs that have already processed `event_id`.
+
+  Not part of `ForTrackingProcessedEvents`: that behaviour is about executing a
+  handler atomically, and this is a plain read of what the table now knows. Its
+  one caller is `EventDeliveryWorker.compensate/2`, working out which consumers a
+  dead job never reached.
+  """
+  @spec processed_handler_refs(String.t()) :: [String.t()]
+  def processed_handler_refs(event_id) when is_binary(event_id) do
+    Repo.all(from(p in ProcessedEvent, where: p.event_id == ^event_id, select: p.handler_ref))
+  end
 
   @impl true
   def execute_atomically(event_id, handler_ref, handler_fn)

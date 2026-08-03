@@ -38,6 +38,7 @@ alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
 alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
 alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
+alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
 alias KlassHero.Shared.ErrorContextFilter
 alias Swoosh.Adapters.Local
 
@@ -144,7 +145,12 @@ config :klass_hero, :compensating_workers, [
   ProcessInviteClaimWorker,
   SendInviteEmailWorker,
   FetchEmailContentWorker,
-  SendEmailReplyWorker
+  SendEmailReplyWorker,
+  # The odd one out: its compensating fact is a negative one — a dead-letter record
+  # saying these consumers never reacted and now never will. It compensates only
+  # here, never inside its own attempt, because the routes an in-attempt gate cannot
+  # see are exactly the ones that lose an event silently.
+  EventDeliveryWorker
 ]
 
 # Contact information — centralized, configurable per environment
