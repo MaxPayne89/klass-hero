@@ -3,7 +3,7 @@ defmodule KlassHero.Messaging.ResolverQueries do
   Queries for resolving staff information via ACL adapters.
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
+  alias KlassHero.Messaging.StaffParticipants
 
   @doc """
   Returns the user IDs of active staff assigned to a program.
@@ -16,6 +16,6 @@ defmodule KlassHero.Messaging.ResolverQueries do
   """
   @spec get_active_staff_user_ids(String.t()) :: [String.t()]
   def get_active_staff_user_ids(program_id) do
-    ProgramStaffParticipantRepository.get_active_staff_user_ids(program_id)
+    StaffParticipants.get_active_staff_user_ids(program_id)
   end
 end

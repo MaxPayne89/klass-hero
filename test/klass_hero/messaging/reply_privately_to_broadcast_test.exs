@@ -6,8 +6,8 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.ReplyPrivatelyToBroadcast
+  alias KlassHero.Messaging.StaffParticipants
 
   describe "execute/2" do
     setup do
@@ -210,7 +210,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
       staff_user = AccountsFixtures.user_fixture()
 
       :ok =
-        ProgramStaffParticipantRepository.upsert_active(%{
+        StaffParticipants.upsert_active(%{
           provider_id: ctx.provider.id,
           program_id: ctx.program.id,
           staff_user_id: staff_user.id
@@ -232,7 +232,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
 
     test "does not error when provider owner is also assigned as program staff", ctx do
       :ok =
-        ProgramStaffParticipantRepository.upsert_active(%{
+        StaffParticipants.upsert_active(%{
           provider_id: ctx.provider.id,
           program_id: ctx.program.id,
           staff_user_id: ctx.provider_user.id
@@ -251,7 +251,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
       staff_user = AccountsFixtures.user_fixture()
 
       :ok =
-        ProgramStaffParticipantRepository.upsert_active(%{
+        StaffParticipants.upsert_active(%{
           provider_id: ctx.provider.id,
           program_id: ctx.program.id,
           staff_user_id: staff_user.id

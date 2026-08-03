@@ -4,10 +4,10 @@ defmodule KlassHero.Messaging.SendMessageTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.SendMessage
+  alias KlassHero.Messaging.StaffParticipants
 
   describe "execute/4" do
     test "sends message successfully for participant" do
@@ -149,7 +149,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
 
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -194,7 +194,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
       broadcast = insert_broadcast(provider, program)
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
-      # Note: NO call to ProgramStaffParticipantRepository.upsert_active/1 — the
+      # Note: NO call to StaffParticipants.upsert_active/1 — the
       # projection is intentionally empty for this staff/program combo.
 
       assert {:ok, message} =

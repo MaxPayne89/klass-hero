@@ -50,10 +50,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   import Ecto.Query
 
   alias KlassHero.Accounts
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.ProgramCatalog
@@ -632,7 +632,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   # summary rows receive the same child list as parent-side rows.
   defp resolve_enrolled_child_names(%{type: type, program_id: program_id}, participant_user_ids)
        when type in ["direct", :direct] and not is_nil(program_id) and participant_user_ids != [] do
-    from(e in EnrolledChildrenSchema,
+    from(e in EnrolledChild,
       where:
         e.parent_user_id in ^participant_user_ids and
           e.program_id == ^program_id and

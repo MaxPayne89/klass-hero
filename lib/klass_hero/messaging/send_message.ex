@@ -7,7 +7,6 @@ defmodule KlassHero.Messaging.SendMessage do
   updates sender's last_read_at, and publishes a message_sent event.
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
   alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderUserResolver
   alias KlassHero.Messaging.Attachment
@@ -15,6 +14,7 @@ defmodule KlassHero.Messaging.SendMessage do
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Shared
+  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Storage
 
@@ -264,7 +264,7 @@ defmodule KlassHero.Messaging.SendMessage do
   defp staff_assigned?(nil, _sender_id), do: false
 
   defp staff_assigned?(program_id, sender_id) do
-    staff_user_ids = ProgramStaffParticipantRepository.get_active_staff_user_ids(program_id)
+    staff_user_ids = StaffParticipants.get_active_staff_user_ids(program_id)
     sender_id in staff_user_ids
   end
 

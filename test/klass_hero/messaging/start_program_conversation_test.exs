@@ -6,8 +6,8 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Messaging.StartProgramConversation
 
   describe "execute/3" do
@@ -17,7 +17,7 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
       program = insert(:program_schema, provider_id: provider.id)
       staff_user = AccountsFixtures.user_fixture()
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id

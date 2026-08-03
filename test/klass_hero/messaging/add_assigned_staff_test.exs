@@ -5,9 +5,9 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -24,13 +24,13 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       staff_a = AccountsFixtures.user_fixture()
       staff_b = AccountsFixtures.user_fixture()
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_a.id
       })
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_b.id
@@ -76,13 +76,13 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       owner = AccountsFixtures.user_fixture()
       staff = AccountsFixtures.user_fixture()
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: owner.id
       })
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff.id
@@ -139,7 +139,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       program = insert(:program_schema, provider_id: provider.id)
       owner = AccountsFixtures.user_fixture()
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: owner.id

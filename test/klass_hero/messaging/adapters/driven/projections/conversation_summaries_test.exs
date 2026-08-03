@@ -5,10 +5,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   import KlassHero.Factory
 
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
@@ -147,7 +147,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
       insert_participant(conversation_id, user_id: provider_user.id, joined_at: now())
 
-      Repo.insert!(%EnrolledChildrenSchema{
+      Repo.insert!(%EnrolledChild{
         id: Ecto.UUID.generate(),
         parent_user_id: parent_user.id,
         program_id: program.id,

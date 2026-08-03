@@ -1,7 +1,7 @@
-defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepositoryTest do
+defmodule KlassHero.Messaging.StaffParticipantsTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
+  alias KlassHero.Messaging.StaffParticipants
 
   @provider_id Ecto.UUID.generate()
   @program_id Ecto.UUID.generate()
@@ -11,28 +11,28 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
       staff_user_id = Ecto.UUID.generate()
 
       assert :ok =
-               ProgramStaffParticipantRepository.upsert_active(%{
+               StaffParticipants.upsert_active(%{
                  provider_id: @provider_id,
                  program_id: @program_id,
                  staff_user_id: staff_user_id
                })
 
       assert [^staff_user_id] =
-               ProgramStaffParticipantRepository.get_active_staff_user_ids(@program_id)
+               StaffParticipants.get_active_staff_user_ids(@program_id)
     end
 
     test "reactivates previously deactivated participant" do
       staff_user_id = Ecto.UUID.generate()
       attrs = %{provider_id: @provider_id, program_id: @program_id, staff_user_id: staff_user_id}
 
-      :ok = ProgramStaffParticipantRepository.upsert_active(attrs)
-      :ok = ProgramStaffParticipantRepository.deactivate(@program_id, staff_user_id)
-      assert [] = ProgramStaffParticipantRepository.get_active_staff_user_ids(@program_id)
+      :ok = StaffParticipants.upsert_active(attrs)
+      :ok = StaffParticipants.deactivate(@program_id, staff_user_id)
+      assert [] = StaffParticipants.get_active_staff_user_ids(@program_id)
 
-      :ok = ProgramStaffParticipantRepository.upsert_active(attrs)
+      :ok = StaffParticipants.upsert_active(attrs)
 
       assert [^staff_user_id] =
-               ProgramStaffParticipantRepository.get_active_staff_user_ids(@program_id)
+               StaffParticipants.get_active_staff_user_ids(@program_id)
     end
   end
 
@@ -41,19 +41,19 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
       staff_user_id = Ecto.UUID.generate()
 
       :ok =
-        ProgramStaffParticipantRepository.upsert_active(%{
+        StaffParticipants.upsert_active(%{
           provider_id: @provider_id,
           program_id: @program_id,
           staff_user_id: staff_user_id
         })
 
-      :ok = ProgramStaffParticipantRepository.deactivate(@program_id, staff_user_id)
-      assert [] = ProgramStaffParticipantRepository.get_active_staff_user_ids(@program_id)
+      :ok = StaffParticipants.deactivate(@program_id, staff_user_id)
+      assert [] = StaffParticipants.get_active_staff_user_ids(@program_id)
     end
 
     test "is a no-op for non-existent participant" do
       assert :ok =
-               ProgramStaffParticipantRepository.deactivate(
+               StaffParticipants.deactivate(
                  Ecto.UUID.generate(),
                  Ecto.UUID.generate()
                )
@@ -66,22 +66,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramSt
       staff2 = Ecto.UUID.generate()
 
       :ok =
-        ProgramStaffParticipantRepository.upsert_active(%{
+        StaffParticipants.upsert_active(%{
           provider_id: @provider_id,
           program_id: @program_id,
           staff_user_id: staff1
         })
 
       :ok =
-        ProgramStaffParticipantRepository.upsert_active(%{
+        StaffParticipants.upsert_active(%{
           provider_id: @provider_id,
           program_id: @program_id,
           staff_user_id: staff2
         })
 
-      :ok = ProgramStaffParticipantRepository.deactivate(@program_id, staff2)
+      :ok = StaffParticipants.deactivate(@program_id, staff2)
 
-      active = ProgramStaffParticipantRepository.get_active_staff_user_ids(@program_id)
+      active = StaffParticipants.get_active_staff_user_ids(@program_id)
       assert active == [staff1]
     end
   end
