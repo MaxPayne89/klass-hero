@@ -13,11 +13,15 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   alias KlassHero.Messaging
   alias KlassHero.MessagingFixtures
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.JobCompensation
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.UndeliveredEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
+  alias KlassHero.Shared.Domain.Events.Event
 
   @registered "KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker"
   @unregistered "KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker"
+  @delivery "KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker"
 
   describe "execute/1" do
     test "compensates a discarded job and records that it did" do
@@ -89,6 +93,34 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
     end
   end
 
+  # The registration in `:compensating_workers` is the whole mechanism here: without
+  # it the sweep's SQL filter never returns the job, whatever `compensate/2` does.
+  describe "undelivered events" do
+    test "dead-letters an event delivery that gave up permanently" do
+      event = Event.new(:user_registered, :accounts, :user, Ecto.UUID.generate(), %{})
+      job = discarded_job(@delivery, %{"events" => [CriticalEventSerializer.serialize(event)]})
+
+      assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
+
+      row = Repo.get_by(UndeliveredEvent, event_id: event.event_id)
+      assert row.topic == "integration:accounts:user_registered"
+      assert row.job_id == job.id
+      assert row.missed_consumers != []
+      assert Repo.get_by(JobCompensation, job_id: job.id)
+    end
+
+    for {age_days, kept?} <- [{89, true}, {91, false}] do
+      test "a record staged #{age_days} days ago is #{if kept?, do: "kept", else: "pruned"}" do
+        event_id = stale_record(unquote(age_days))
+
+        assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
+
+        assert Repo.get_by(UndeliveredEvent, event_id: event_id) != nil == unquote(kept?),
+               "expected a #{unquote(age_days)}-day-old record to be #{unquote(if kept?, do: "kept", else: "pruned")}"
+      end
+    end
+  end
+
   describe "reason_from/1" do
     test "returns the last recorded error string" do
       job = %Oban.Job{
@@ -114,6 +146,28 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   defp reply_status(reply) do
     {:ok, reloaded} = Messaging.get_email_reply_by_id(reply.id)
     reloaded.status
+  end
+
+  # Written straight to the table rather than produced by a compensation: the prune
+  # only cares how old a record is, and staging one by its real route would mean
+  # back-dating the `oban_jobs` row it came from as well.
+  defp stale_record(age_days) do
+    event_id = Ecto.UUID.generate()
+    staged_at = DateTime.add(DateTime.utc_now(), -age_days, :day)
+
+    Repo.insert_all(UndeliveredEvent, [
+      %{
+        event_id: event_id,
+        topic: "integration:accounts:user_registered",
+        payload: %{},
+        missed_consumers: ["Elixir.Whoever:handle_event"],
+        job_id: 1,
+        discarded_at: staged_at,
+        inserted_at: staged_at
+      }
+    ])
+
+    event_id
   end
 
   # Written straight to the table: Oban's own insert path cannot leave a row in a

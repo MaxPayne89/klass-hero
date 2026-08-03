@@ -37,6 +37,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
 
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.UndeliveredEventRepository
   alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Tracing.Context
@@ -105,4 +107,69 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   end
 
   defp first_error(results), do: Enum.find(results, :ok, &match?({:error, _reason}, &1))
+
+  @doc """
+  Dead-letters whatever this job never managed to deliver.
+
+  The fact established here is a negative one: these consumers did not react, and
+  now never will. It is written by the sweep over discarded jobs rather than by
+  the in-attempt gate, because the three routes that skip that gate — a Lifeline
+  orphan, a raise, an early `{:discard, _}` — are exactly the ones a log line
+  cannot see, and nothing user-facing is waiting on this row within the five
+  minutes the sweep takes.
+
+  The loss is partial. `processed_events` keeps the consumers that did run, so an
+  event whose consumers all succeeded is recorded as nothing at all, and one that
+  half-landed records only the half that did not.
+
+  `missed_consumers` is resolved against the registry as it stands *now*, not as
+  it stood when the event was staged: a consumer deleted from `:event_consumers`
+  in between is not something anyone can still replay to.
+  """
+  @impl true
+  def compensate(%Oban.Job{args: %{"events" => raw_events}} = job, _reason) do
+    raw_events
+    |> Enum.map(&CriticalEventSerializer.deserialize/1)
+    |> Enum.flat_map(&undelivered_row(&1, job))
+    |> record()
+  end
+
+  # `:ignore`, never `{:error, _}`: nothing was lost, and an error would roll back
+  # the compensation marker and re-run this every sweep until the job row is pruned.
+  defp record([]), do: :ignore
+  defp record(rows), do: UndeliveredEventRepository.record_all(rows)
+
+  defp undelivered_row(%Event{} = event, %Oban.Job{} = job) do
+    topic = Event.topic(event)
+    processed = ProcessedEventRepository.processed_handler_refs(event.event_id)
+
+    case missed_consumers(topic, processed) do
+      [] ->
+        []
+
+      missed ->
+        [
+          %{
+            event_id: event.event_id,
+            topic: topic,
+            payload: CriticalEventSerializer.serialize(event),
+            missed_consumers: missed,
+            job_id: job.id,
+            discarded_at: job.discarded_at,
+            inserted_at: DateTime.utc_now()
+          }
+        ]
+    end
+  end
+
+  # Registry order is delivery order, and it is kept: reading the row should tell you
+  # which consumer was reached and which one the failure stopped at.
+  defp missed_consumers(topic, processed) do
+    delivered = MapSet.new(processed)
+
+    for consumer <- EventConsumerRegistry.consumers_for(topic),
+        ref = CriticalEventDispatcher.handler_ref(consumer),
+        not MapSet.member?(delivered, ref),
+        do: ref
+  end
 end

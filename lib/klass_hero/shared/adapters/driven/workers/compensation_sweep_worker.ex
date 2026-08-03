@@ -34,6 +34,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
 
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensationRepository
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.UndeliveredEventRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.JobCompensation
   alias KlassHero.Shared.CompensatingWorkerRegistry
 
@@ -42,6 +43,11 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
   # Bounds one tick's work. Reaching it is reported rather than swallowed: a saturated
   # batch means the backlog is growing faster than the schedule drains it.
   @batch_limit 500
+
+  # Dead-lettered events keep whatever personal data their payload carried, so they
+  # expire on a rule rather than on nobody getting round to it. Long enough that any
+  # realistic "what did we lose?" investigation still finds the payload.
+  @undelivered_retention_days 90
 
   @impl true
   def execute(%Oban.Job{}) do
@@ -52,7 +58,20 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
     end
 
     Enum.each(pending, &compensate_job/1)
+    prune_undelivered_events()
     :ok
+  end
+
+  # Rides the 5-minute tick rather than a cron of its own: an indexed delete over a
+  # table that is empty in the healthy case costs nothing, and the alternative is a
+  # second schedule to keep in agreement with this one.
+  defp prune_undelivered_events do
+    cutoff = DateTime.add(DateTime.utc_now(), -@undelivered_retention_days, :day)
+
+    case UndeliveredEventRepository.prune(cutoff) do
+      0 -> :ok
+      pruned -> Logger.info("Pruned #{pruned} undelivered event(s) past #{@undelivered_retention_days} days")
+    end
   end
 
   defp uncompensated_jobs do
