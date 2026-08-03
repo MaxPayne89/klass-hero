@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.67.1](https://github.com/MaxPayne89/klass-hero/compare/v0.67.0...v0.67.1) (2026-08-03)
+
+
+### Code Refactoring
+
+* give the supported-locale set a single declaration ([#1260](https://github.com/MaxPayne89/klass-hero/issues/1260)) ([76c83c0](https://github.com/MaxPayne89/klass-hero/commit/76c83c066123d8dda7c1d14a21e2211d5855e21b))
+* make projection read paths one consistent shape ([#1259](https://github.com/MaxPayne89/klass-hero/issues/1259)) ([8785ad6](https://github.com/MaxPayne89/klass-hero/commit/8785ad6e41df78d91c3730dc07c8c003d936f261))
+
 ## [0.67.0](https://github.com/MaxPayne89/klass-hero/compare/v0.66.8...v0.67.0) (2026-08-03)
 
 
