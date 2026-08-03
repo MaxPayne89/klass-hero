@@ -31,7 +31,6 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
 
@@ -545,10 +544,12 @@ defmodule KlassHero.Messaging do
   """
   @spec list_email_replies(String.t()) :: {:ok, [EmailReply.t()]}
   def list_email_replies(inbound_email_id) do
+    # Secondary sort by id keeps ordering deterministic when timestamps collide.
     replies =
-      EmailReplyQueries.base()
-      |> EmailReplyQueries.by_email(inbound_email_id)
-      |> EmailReplyQueries.order_by_oldest()
+      from(r in EmailReply,
+        where: r.inbound_email_id == ^inbound_email_id,
+        order_by: [asc: r.inserted_at, asc: r.id]
+      )
       |> Repo.all()
 
     {:ok, replies}

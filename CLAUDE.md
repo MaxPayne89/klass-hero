@@ -63,7 +63,8 @@ context/
 └── adapters/
     ├── driven/
     │   ├── projections/     # CQRS projection GenServers (maintain read tables)
-    │   ├── persistence/     # Composable query builders over WRITE-side tables
+    │   ├── persistence/queries/  # Composable query builders over WRITE-side tables
+    │   │                         #   (only when >1 caller genuinely composes them)
     │   └── acl/             # Cross-context read adapters (anti-corruption layer)
     └── driving/
         ├── events/          # Event handlers (react to other contexts' events)
