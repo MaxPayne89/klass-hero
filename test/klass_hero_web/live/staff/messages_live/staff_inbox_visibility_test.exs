@@ -19,10 +19,10 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Messaging.CreateDirectConversation
+  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -71,7 +71,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -181,7 +181,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -247,7 +247,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id

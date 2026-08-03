@@ -61,9 +61,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
@@ -112,7 +112,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
         end)
 
       {count, _} =
-        Repo.insert_all(EnrolledChildrenSchema, rows,
+        Repo.insert_all(EnrolledChild, rows,
           on_conflict: {:replace, [:child_first_name, :updated_at]},
           conflict_target: [:parent_user_id, :program_id, :child_id]
         )
@@ -134,7 +134,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     # Without this, rows stay nil until a child_updated fires (never for unedited children).
     child_first_name = resolve_child_first_name(child_id)
 
-    %EnrolledChildrenSchema{}
+    %EnrolledChild{}
     |> Ecto.Changeset.change(%{
       id: Ecto.UUID.generate(),
       parent_user_id: parent_user_id,
@@ -177,7 +177,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     program_id = payload.program_id
 
     parent_user_id =
-      from(e in EnrolledChildrenSchema,
+      from(e in EnrolledChild,
         where: e.child_id == ^child_id and e.program_id == ^program_id,
         select: e.parent_user_id,
         limit: 1
@@ -185,7 +185,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
       |> Repo.one()
 
     if parent_user_id do
-      from(e in EnrolledChildrenSchema,
+      from(e in EnrolledChild,
         where: e.child_id == ^child_id and e.program_id == ^program_id
       )
       |> Repo.delete_all()
@@ -201,14 +201,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     affected =
-      from(e in EnrolledChildrenSchema,
+      from(e in EnrolledChild,
         where: e.child_id == ^child_id,
         select: {e.parent_user_id, e.program_id}
       )
       |> Repo.all()
 
     if affected != [] do
-      from(e in EnrolledChildrenSchema, where: e.child_id == ^child_id)
+      from(e in EnrolledChild, where: e.child_id == ^child_id)
       |> Repo.update_all(set: [child_first_name: first_name, updated_at: now])
 
       affected
@@ -268,7 +268,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   end
 
   defp get_child_names(parent_user_id, program_id) do
-    from(e in EnrolledChildrenSchema,
+    from(e in EnrolledChild,
       where:
         e.parent_user_id == ^parent_user_id and
           e.program_id == ^program_id and

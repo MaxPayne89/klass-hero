@@ -143,5 +143,32 @@ defmodule KlassHero.Messaging.EmailReplyTest do
       assert {:ok, replies} = Messaging.list_email_replies(email.id)
       assert Enum.map(replies, & &1.id) |> Enum.sort() == Enum.sort([first.id, second.id])
     end
+
+    # Oldest-first, with id as the tiebreak — asserted as an invariant rather than a
+    # fixed list, because two replies created in one test can share a timestamp.
+    test "returns replies oldest first" do
+      email = MessagingFixtures.inbound_email_fixture()
+      user = AccountsFixtures.user_fixture()
+
+      for body <- ~w(1 2 3) do
+        {:ok, _} =
+          Messaging.create_email_reply(%{inbound_email_id: email.id, body: body, sent_by_id: user.id})
+      end
+
+      assert {:ok, replies} = Messaging.list_email_replies(email.id)
+      assert length(replies) == 3
+      assert replies == Enum.sort_by(replies, &{&1.inserted_at, &1.id})
+    end
+
+    test "does not return replies belonging to another email" do
+      mine = MessagingFixtures.inbound_email_fixture()
+      theirs = MessagingFixtures.inbound_email_fixture()
+      user = AccountsFixtures.user_fixture()
+
+      {:ok, _} =
+        Messaging.create_email_reply(%{inbound_email_id: theirs.id, body: "x", sent_by_id: user.id})
+
+      assert {:ok, []} = Messaging.list_email_replies(mine.id)
+    end
   end
 end

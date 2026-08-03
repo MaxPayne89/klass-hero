@@ -4,8 +4,8 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   import KlassHero.EventTestHelper
   import KlassHero.Factory
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
+  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Shared.Domain.Events.Event
 
   setup do
@@ -23,7 +23,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
       assert :ok = StaffAssignmentHandler.handle_event(event)
 
       assert [^staff_user_id] =
-               ProgramStaffParticipantRepository.get_active_staff_user_ids(program.id)
+               StaffParticipants.get_active_staff_user_ids(program.id)
     end
 
     test "skips when staff_user_id is nil" do
@@ -127,7 +127,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
       program_id = Ecto.UUID.generate()
       staff_user_id = Ecto.UUID.generate()
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider_id,
         program_id: program_id,
         staff_user_id: staff_user_id
@@ -136,7 +136,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
       event = build_unassignment_event(provider_id, program_id, staff_user_id)
       assert :ok = StaffAssignmentHandler.handle_event(event)
 
-      assert [] = ProgramStaffParticipantRepository.get_active_staff_user_ids(program_id)
+      assert [] = StaffParticipants.get_active_staff_user_ids(program_id)
     end
 
     test "removes staff from active program conversations and emits :participant_removed per conversation" do
@@ -145,7 +145,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
       parent_user = KlassHero.AccountsFixtures.user_fixture()
       staff_user = KlassHero.AccountsFixtures.user_fixture()
 
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id

@@ -31,8 +31,6 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationSummaryQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.EmailReplyQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
 
@@ -546,10 +544,12 @@ defmodule KlassHero.Messaging do
   """
   @spec list_email_replies(String.t()) :: {:ok, [EmailReply.t()]}
   def list_email_replies(inbound_email_id) do
+    # Secondary sort by id keeps ordering deterministic when timestamps collide.
     replies =
-      EmailReplyQueries.base()
-      |> EmailReplyQueries.by_email(inbound_email_id)
-      |> EmailReplyQueries.order_by_oldest()
+      from(r in EmailReply,
+        where: r.inbound_email_id == ^inbound_email_id,
+        order_by: [asc: r.inserted_at, asc: r.id]
+      )
       |> Repo.all()
 
     {:ok, replies}
@@ -977,9 +977,12 @@ defmodule KlassHero.Messaging do
   @doc "True if any summary row for the conversation carries the given system-note token."
   @spec has_system_note?(String.t(), String.t()) :: boolean()
   def has_system_note?(conversation_id, token) do
-    ConversationSummaryQueries.base()
-    |> ConversationSummaryQueries.by_conversation(conversation_id)
-    |> ConversationSummaryQueries.has_system_note_key(token)
+    # The PostgreSQL `?` key-exists operator is backed by the GIN index on system_notes.
+    from(s in ConversationSummary,
+      where:
+        s.conversation_id == ^conversation_id and
+          fragment("? \\? ?", s.system_notes, ^token)
+    )
     |> Repo.exists?()
   end
 

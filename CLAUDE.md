@@ -53,14 +53,18 @@ context/
 │                           #   the struct consumers pattern-match, AND the functional
 │                           #   core (validators, state machines). No mappers, no ports.
 │                           #   e.g. provider/staff_member.ex, family/child.ex
+├── <read_table>.ex         # Projection read-table schema: IS the DTO, no changeset
+│                           #   e.g. provider/provider_program.ex, messaging/enrolled_child.ex
 ├── <use_case>.ex           # Command/query modules at the root (e.g. claim_invite.ex)
 ├── domain/
 │   ├── events/             # Domain & integration event structs
-│   └── read_models/        # CQRS read-model DTOs (display-optimized, no logic)
+│   └── read_models/        # Query-shaped structs over WRITE tables only — no schema
+│                           #   twin, no read table (e.g. read_models/staff_membership.ex)
 └── adapters/
     ├── driven/
     │   ├── projections/     # CQRS projection GenServers (maintain read tables)
-    │   ├── persistence/     # Ecto schemas/repos for PROJECTION read tables only
+    │   ├── persistence/queries/  # Composable query builders over WRITE-side tables
+    │   │                         #   (only when >1 caller genuinely composes them)
     │   └── acl/             # Cross-context read adapters (anti-corruption layer)
     └── driving/
         ├── events/          # Event handlers (react to other contexts' events)
@@ -88,7 +92,7 @@ See `.claude/rules/domain-architecture.md` for patterns. For context-specific de
 
 **Context boundaries:** Not tooling-enforced (`boundary` library removed). Cross-context isolation is a convention — call other contexts only through their root module's public API (e.g. `KlassHero.Family`), never reach into their internals. For cross-context *reads*, use an ACL adapter under `adapters/driven/acl/` or subscribe an event handler to build a local read model — never call another context's Repo/schemas directly.
 
-**CQRS reads:** Read models are maintained by projection GenServers (`adapters/driven/projections/`) that subscribe to events and denormalize into dedicated read tables, exposed as read-model DTOs (`domain/read_models/`). Program Catalog, Messaging, and Provider have these. Build new projections on `KlassHero.Shared.Projection` (base macro) — see `provider/adapters/driven/projections/provider_programs.ex` for the canonical example.
+**CQRS reads:** Read models are maintained by projection GenServers (`adapters/driven/projections/`) that subscribe to events and denormalize into dedicated read tables. A read table's Ecto schema lives at the context root and **is** the DTO — no separate struct, no mapper, no per-table repository; queries go in the context module or a context-root submodule (`provider/programs.ex`, `messaging/staff_participants.ex`). Program Catalog, Messaging, and Provider have these. Build new projections on `KlassHero.Shared.Projection` (base macro) — see `provider/adapters/driven/projections/provider_programs.ex` for the canonical example. See `.claude/rules/domain-architecture.md` for the three read-side kinds and where each lives.
 
 > **Note:** Per-context *aggregate* port DI wiring (`config :klass_hero, :<context>, for_managing_*: Adapter`) is gone — those ports were ceremony (one prod impl). What survives is Shared's genuine env-swapped adapter seams, where a behaviour + config-selected impl is idiomatic Elixir DI, not DDD ceremony: `outbox`, `feature_flags`, `storage` (each real-vs-test/stub), plus `:shared, for_tracking_processed_events`. Their slim behaviours live at the Shared root (`KlassHero.Shared.ForStoringFiles` etc.), not in a `domain/ports/` tree. Do not add new *aggregate* port-wiring — call collaborators directly or via an ACL module — but a new genuinely swappable external adapter may follow the Shared seam pattern.
 

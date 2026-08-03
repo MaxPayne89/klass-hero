@@ -42,9 +42,9 @@ defmodule KlassHero.Factory do
   alias KlassHero.Participation.SessionNote
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.SessionStatsSchema
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.SessionStats
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
 
@@ -518,17 +518,17 @@ defmodule KlassHero.Factory do
   # =============================================================================
 
   @doc """
-  Factory for creating SessionStatsSchema Ecto schemas (read model, no FK constraints).
+  Factory for `KlassHero.Provider.SessionStats` rows (read model, no FK constraints).
 
-  Used in repository tests for the denormalized provider_session_stats table.
+  Backs tests over the denormalized provider_session_stats table.
 
   ## Examples
 
-      schema = insert(:session_stats_schema)
-      schema = insert(:session_stats_schema, sessions_completed_count: 5)
+      schema = insert(:session_stats)
+      schema = insert(:session_stats, sessions_completed_count: 5)
   """
-  def session_stats_schema_factory do
-    %SessionStatsSchema{
+  def session_stats_factory do
+    %SessionStats{
       id: Ecto.UUID.generate(),
       provider_id: Ecto.UUID.generate(),
       program_id: Ecto.UUID.generate(),

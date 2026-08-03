@@ -96,7 +96,7 @@ defmodule KlassHero.Provider.Incidents.NotifyIncidentReportedTest do
     } do
       # Trigger: program exists in :programs table (FK satisfied) but the
       #         provider-local projection row was never inserted
-      # Why: ProviderProgramRepository.get_by_id returns {:error, :not_found}
+      # Why: Programs.get_provider_program/1 returns {:error, :not_found}
       #      whenever the provider_programs projection row is missing
       # Outcome: use case must not fail — falls back to "a program" label
       unprojected_program = insert(:program_schema, provider_id: provider.id)

@@ -20,9 +20,9 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.RemoveAssignedStaff
+  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers
   alias KlassHero.Shared.Outbox
 
@@ -56,7 +56,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_assignment_with_retry(payload) do
     operation = fn ->
-      ProgramStaffParticipantRepository.upsert_active(%{
+      StaffParticipants.upsert_active(%{
         provider_id: payload.provider_id,
         program_id: payload.program_id,
         staff_user_id: payload.staff_user_id
@@ -76,7 +76,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_unassignment_with_retry(payload) do
     operation = fn ->
-      ProgramStaffParticipantRepository.deactivate(payload.program_id, payload.staff_user_id)
+      StaffParticipants.deactivate(payload.program_id, payload.staff_user_id)
       remove_staff_from_existing_conversations(payload.program_id, payload.staff_user_id)
     end
 

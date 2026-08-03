@@ -16,8 +16,8 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   alias KlassHero.Accounts.User
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Repositories.ProgramStaffParticipantRepository
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
+  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.Event
@@ -63,7 +63,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
                )
 
       # 2. Verify projection was populated
-      staff_ids = ProgramStaffParticipantRepository.get_active_staff_user_ids(ctx.program.id)
+      staff_ids = StaffParticipants.get_active_staff_user_ids(ctx.program.id)
       assert ctx.staff_user.id in staff_ids
 
       # 3. Create a conversation — staff should be auto-added (new conversations
@@ -104,7 +104,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
       refute KlassHero.Messaging.participant?(conversation.id, ctx.staff_user.id)
 
       # 7. And projection is deactivated
-      assert [] = ProgramStaffParticipantRepository.get_active_staff_user_ids(ctx.program.id)
+      assert [] = StaffParticipants.get_active_staff_user_ids(ctx.program.id)
     end
   end
 

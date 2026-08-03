@@ -12,7 +12,6 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   """
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
   alias KlassHero.Provider.Adapters.Driving.Workers.NotifyIncidentReportedWorker
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.Programs
@@ -70,7 +69,7 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
     do: {:error, [program_id: "does not belong to this provider"]}
 
   defp validate_ownership(%{session_id: sid, provider_profile_id: prov_id}) when is_binary(sid) do
-    case SessionDetailsRepository.get_by_id(sid) do
+    case Programs.get_session_detail(sid) do
       {:ok, %{provider_id: ^prov_id}} -> :ok
       _ -> {:error, [session_id: "does not belong to this provider"]}
     end

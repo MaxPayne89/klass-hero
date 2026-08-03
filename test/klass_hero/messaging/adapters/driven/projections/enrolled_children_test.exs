@@ -5,8 +5,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
   import ExUnit.CaptureLog
   import KlassHero.Factory
 
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Schemas.EnrolledChildrenSchema
   alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
+  alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -38,7 +38,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
       EnrolledChildren.rebuild(@test_server_name)
 
       rows =
-        from(e in EnrolledChildrenSchema,
+        from(e in EnrolledChild,
           where: e.parent_user_id == ^user.id and e.program_id == ^program.id
         )
         |> Repo.all()
@@ -67,7 +67,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
       EnrolledChildren.rebuild(@test_server_name)
 
       count =
-        from(e in EnrolledChildrenSchema, where: e.parent_user_id == ^user.id)
+        from(e in EnrolledChild, where: e.parent_user_id == ^user.id)
         |> Repo.aggregate(:count)
 
       assert count == 0
@@ -104,7 +104,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
 
       row =
         Repo.one(
-          from(e in EnrolledChildrenSchema,
+          from(e in EnrolledChild,
             where: e.parent_user_id == ^user.id and e.program_id == ^program.id
           )
         )
@@ -148,7 +148,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
 
       row =
         Repo.one(
-          from(e in EnrolledChildrenSchema,
+          from(e in EnrolledChild,
             where: e.parent_user_id == ^user.id and e.program_id == ^program.id
           )
         )
