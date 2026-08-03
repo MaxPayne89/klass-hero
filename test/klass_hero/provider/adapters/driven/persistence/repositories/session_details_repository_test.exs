@@ -2,12 +2,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDet
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDetailsRepository
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
-  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
   defp insert_row(attrs) do
-    %ProviderSessionDetailSchema{}
+    %SessionDetail{}
     |> Ecto.Changeset.change(attrs)
     |> Repo.insert!()
   end

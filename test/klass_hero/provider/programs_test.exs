@@ -10,8 +10,7 @@ defmodule KlassHero.Provider.ProgramsTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
-  alias KlassHero.Provider.Domain.ReadModels.SessionDetail
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
   describe "list_program_sessions/2" do
@@ -72,7 +71,7 @@ defmodule KlassHero.Provider.ProgramsTest do
   end
 
   defp insert_row(attrs) do
-    %ProviderSessionDetailSchema{}
+    %SessionDetail{}
     |> Ecto.Changeset.change(attrs)
     |> Repo.insert!()
   end

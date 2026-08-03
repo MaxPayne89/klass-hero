@@ -10,9 +10,9 @@ defmodule KlassHero.Provider.Incidents do
   import Ecto.Query, warn: false
 
   alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.IncidentReportSummaryMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Provider.SubmitIncidentReport
   alias KlassHero.Repo
 
@@ -57,7 +57,7 @@ defmodule KlassHero.Provider.Incidents do
   # Session-linked reports match through the provider_session_details projection.
   defp list_incidents_session_linked(provider_id, program_id) do
     from(r in IncidentReport,
-      join: s in ProviderSessionDetailSchema,
+      join: s in SessionDetail,
       on: s.session_id == r.session_id,
       where:
         r.provider_profile_id == ^provider_id and

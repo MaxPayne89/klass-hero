@@ -5,9 +5,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
   import ExUnit.CaptureLog
   import KlassHero.Factory
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
   alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -39,7 +39,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         end_time: ~T[16:00:00]
       })
 
-      row = Repo.get(ProviderSessionDetailSchema, session_id)
+      row = Repo.get(SessionDetail, session_id)
 
       assert row != nil
       assert row.program_id == program.id
@@ -88,7 +88,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
         end_time: ~T[11:00:00]
       })
 
-      row = Repo.get(ProviderSessionDetailSchema, session_id)
+      row = Repo.get(SessionDetail, session_id)
 
       assert row != nil
       assert row.current_assigned_staff_id == staff.id
@@ -117,7 +117,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       cover_staff_id = Ecto.UUID.generate()
 
       Repo.update_all(
-        from(d in ProviderSessionDetailSchema, where: d.session_id == ^session_id),
+        from(d in SessionDetail, where: d.session_id == ^session_id),
         set: [
           status: :in_progress,
           checked_in_count: 5,
@@ -130,7 +130,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       # Replay the same event.
       broadcast(:session_created, session_id, payload)
 
-      row = Repo.get(ProviderSessionDetailSchema, session_id)
+      row = Repo.get(SessionDetail, session_id)
 
       assert row != nil
       assert row.status == :in_progress
@@ -158,7 +158,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
           })
         end)
 
-      assert Repo.get(ProviderSessionDetailSchema, session_id) == nil
+      assert Repo.get(SessionDetail, session_id) == nil
       assert log =~ "session_created skipped: program not found"
       assert log =~ session_id
       assert log =~ unknown_program_id
@@ -456,18 +456,18 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       updated_at: now
     }
 
-    Repo.insert_all(ProviderSessionDetailSchema, [Map.merge(base, Map.new(attrs))])
+    Repo.insert_all(SessionDetail, [Map.merge(base, Map.new(attrs))])
   end
 
   defp reload(session_id) do
-    Repo.get(ProviderSessionDetailSchema, session_id)
+    Repo.get(SessionDetail, session_id)
   end
 
   defp insert_seed_session(_ctx) do
     session_id = Ecto.UUID.generate()
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    Repo.insert_all(ProviderSessionDetailSchema, [
+    Repo.insert_all(SessionDetail, [
       %{
         session_id: session_id,
         program_id: Ecto.UUID.generate(),

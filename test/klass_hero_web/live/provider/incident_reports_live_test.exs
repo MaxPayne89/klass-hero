@@ -5,8 +5,8 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLiveTest do
   import KlassHero.ProviderFixtures
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
   alias KlassHero.Provider.ProviderProgram
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
   defp insert_owned_program!(provider_id, name) do
@@ -30,7 +30,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLiveTest do
   defp put_provider_session_detail!(session_id, program_id, provider_id) do
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    Repo.insert!(%ProviderSessionDetailSchema{
+    Repo.insert!(%SessionDetail{
       session_id: session_id,
       program_id: program_id,
       program_title: "Test Program",

@@ -3,23 +3,21 @@ defmodule KlassHero.Provider.Adapters.Driven.Persistence.Repositories.SessionDet
 
   import Ecto.Query
 
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Mappers.ProviderSessionDetailMapper
-  alias KlassHero.Provider.Adapters.Driven.Persistence.Schemas.ProviderSessionDetailSchema
+  alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
   def list_by_program(provider_id, program_id) when is_binary(provider_id) and is_binary(program_id) do
-    from(d in ProviderSessionDetailSchema,
+    from(d in SessionDetail,
       where: d.provider_id == ^provider_id and d.program_id == ^program_id,
       order_by: [asc: d.session_date, asc: d.start_time]
     )
     |> Repo.all()
-    |> Enum.map(&ProviderSessionDetailMapper.to_read_model/1)
   end
 
   def get_by_id(session_id) when is_binary(session_id) do
-    case Repo.get(ProviderSessionDetailSchema, session_id) do
+    case Repo.get(SessionDetail, session_id) do
       nil -> {:error, :not_found}
-      row -> {:ok, ProviderSessionDetailMapper.to_read_model(row)}
+      row -> {:ok, row}
     end
   end
 end
