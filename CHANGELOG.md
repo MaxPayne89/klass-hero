@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.67.2](https://github.com/MaxPayne89/klass-hero/compare/v0.67.1...v0.67.2) (2026-08-04)
+
+
+### Code Refactoring
+
+* delete MapperHelpers instead of rehoming it ([#1264](https://github.com/MaxPayne89/klass-hero/issues/1264)) ([f5e250b](https://github.com/MaxPayne89/klass-hero/commit/f5e250b8546996de64238d85cbc64077981964eb))
+
 ## [0.67.1](https://github.com/MaxPayne89/klass-hero/compare/v0.67.0...v0.67.1) (2026-08-03)
 
 

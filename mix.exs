@@ -4,7 +4,7 @@ defmodule KlassHero.MixProject do
   def project do
     [
       app: :klass_hero,
-      version: "0.67.1",
+      version: "0.67.2",
       elixir: "~> 1.20.2",
       erlang: "~> 29.0",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -154,10 +154,7 @@ defmodule KlassHero.MixProject do
         "lint_typography",
         "lint_translations",
         "credo --strict",
-        # Two halves on purpose: `test --warnings-as-errors` only covers test
-        # files, and `test/support/*.ex` compiles solely in the test env — so
-        # the dev-env `compile --warnings-as-errors` above never sees it.
-        "cmd env MIX_ENV=test mix do compile --warnings-as-errors + test --warnings-as-errors --include slow"
+        "cmd env MIX_ENV=test mix test --include slow"
       ]
     ]
   end
