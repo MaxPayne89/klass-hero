@@ -32,20 +32,30 @@ context.ex                  # Public API — the ONLY module other contexts call
 context/
 ├── <entity>.ex             # Schema-as-struct: Ecto schema + struct + functional core
 │                           #   (validators, state machines). e.g. provider/staff_member.ex
+├── <read_table>.ex         # Projection read-table schema: IS the DTO, no changeset —
+│                           #   the projection owns every write. e.g. program_catalog/program_listing.ex
 ├── <use_case>.ex           # Flat command/query modules at root (e.g. enrollment/claim_invite.ex)
 │                           #   some contexts also use application/commands|queries/
 ├── domain/
 │   ├── events/             # Domain & integration event structs (pure)
-│   └── read_models/        # CQRS read-model DTOs (display structs, no logic)
+│   └── read_models/        # Query-shaped plain structs over WRITE tables (no logic,
+│                           #   no Ecto schema, no read table of their own)
 └── adapters/
     ├── driven/{projections,persistence,acl,notifications}/
     └── driving/{events,workers}/
 ```
 
 **Survivors** (legitimate subdirs): `adapters/driven/projections/` + `domain/read_models/`
-(CQRS), `adapters/driven/persistence/` (projection read-tables only),
-`adapters/driven/acl/` (cross-context reads), `adapters/driven/notifications/`,
-`adapters/driving/events/`, `adapters/driving/workers/`, `domain/events/`.
+(CQRS), `adapters/driven/persistence/queries/` (composable query builders over the context's
+own **write-side** tables), `adapters/driven/acl/` (cross-context reads),
+`adapters/driven/notifications/`, `adapters/driving/events/`, `adapters/driving/workers/`,
+`domain/events/`.
+
+Projection read **tables** do NOT live under `persistence/` — their schema sits at the
+context root and is the DTO (see the tree above). `persistence/{repositories,schemas}/`
+survives in **Shared only**, for the event and job infrastructure tables
+(`processed_events`, `job_compensations`, `undelivered_events`); no bounded context has a
+repository left.
 
 **Removed** (flag if reintroduced): `domain/models/`, `domain/ports/`,
 `application/use_cases/`, persistence mappers for aggregates, `use Boundary`,
@@ -63,6 +73,11 @@ validators returning `{:error, [message]}`, state machines, formatters).
 1. For each new/changed entity module at a context root (`lib/klass_hero/<ctx>/<entity>.ex`)
 2. Confirm it `use Ecto.Schema` and defines changeset function(s)
 3. Confirm pure logic lives in the same module (not split into a separate `domain/models/` struct)
+
+**Not an entity — skip it:** a projection read-table schema also sits at the context root and
+also `use Ecto.Schema`, but has **no changeset on purpose** (the projection owns every write).
+Its moduledoc says so. Do NOT flag a missing changeset there — that is the correct shape, not a
+violation. e.g. `program_catalog/program_listing.ex`, `provider/provider_program.ex`.
 
 **Violations to flag:**
 - A new aggregate split into `domain/models/<x>.ex` (struct) + `adapters/.../schemas/<x>_schema.ex` (schema) + a mapper — this is the removed DDD pattern
