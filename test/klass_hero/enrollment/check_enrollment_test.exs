@@ -60,7 +60,9 @@ defmodule KlassHero.Enrollment.CheckEnrollmentTest do
       assert KlassHero.Enrollment.enrolled?(program.id, parent.identity_id) == false
     end
 
-    test "returns false when no enrollment exists for the identity" do
+    # Sole coverage of the nil branch in resolve_parent_id/1: an identity with no Family
+    # parent profile cannot be enrolled, so the lookup answers false rather than raising.
+    test "returns false for an identity that has no parent profile" do
       program = insert(:program_schema)
       unknown_identity_id = Ecto.UUID.generate()
 

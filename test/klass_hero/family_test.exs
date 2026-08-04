@@ -177,4 +177,69 @@ defmodule KlassHero.FamilyTest do
       assert {:error, :not_found} = Family.get_child_by_id(Ecto.UUID.generate())
     end
   end
+
+  # The batch lookups below were only exercised through Enrollment's ChildInfoACL and
+  # ParentInfoACL until those folded into direct facade calls (#1269). Family owns them,
+  # so the coverage lives here.
+
+  describe "get_children_by_ids/1" do
+    test "returns the children for the given ids" do
+      parent = create_parent_for_children()
+
+      emma =
+        create_child_linked_to_parent(parent, %{first_name: "Emma", last_name: "Smith", date_of_birth: ~D[2015-06-15]})
+
+      liam =
+        create_child_linked_to_parent(parent, %{first_name: "Liam", last_name: "Jones", date_of_birth: ~D[2016-01-20]})
+
+      result = Family.get_children_by_ids([emma.id, liam.id])
+
+      assert result |> Enum.map(& &1.first_name) |> Enum.sort() == ["Emma", "Liam"]
+    end
+
+    test "returns an empty list for empty input" do
+      assert Family.get_children_by_ids([]) == []
+    end
+
+    test "silently excludes ids with no matching child" do
+      parent = create_parent_for_children()
+
+      child =
+        create_child_linked_to_parent(parent, %{first_name: "Emma", last_name: "Smith", date_of_birth: ~D[2015-06-15]})
+
+      assert [%Child{} = only] = Family.get_children_by_ids([child.id, Ecto.UUID.generate()])
+      assert only.id == child.id
+    end
+
+    # Callers pass ids straight through from client input, so a malformed one must not
+    # blow up the query — Ecto.UUID.dump/1 filters it out before the `in` clause.
+    test "drops ids that are not valid UUIDs" do
+      assert Family.get_children_by_ids(["not-a-uuid"]) == []
+    end
+  end
+
+  describe "get_parents_by_ids/1" do
+    test "returns the parent profiles for the given ids" do
+      parent = create_parent_for_children()
+
+      assert [%ParentProfile{} = result] = Family.get_parents_by_ids([parent.id])
+      assert result.id == parent.id
+      assert result.identity_id == parent.identity_id
+    end
+
+    test "returns an empty list for empty input" do
+      assert Family.get_parents_by_ids([]) == []
+    end
+
+    test "silently excludes ids with no matching parent" do
+      parent = create_parent_for_children()
+
+      assert [%ParentProfile{} = only] = Family.get_parents_by_ids([parent.id, Ecto.UUID.generate()])
+      assert only.id == parent.id
+    end
+
+    test "drops ids that are not valid UUIDs" do
+      assert Family.get_parents_by_ids(["not-a-uuid"]) == []
+    end
+  end
 end

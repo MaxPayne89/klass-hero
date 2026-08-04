@@ -24,7 +24,7 @@ defmodule KlassHero.ProgramCatalog do
 
   import Ecto.Query
 
-  alias KlassHero.ProgramCatalog.Adapters.Driven.ACL.EnrollmentCapacityACL
+  alias KlassHero.Enrollment
   alias KlassHero.ProgramCatalog.CursorCodec
   alias KlassHero.ProgramCatalog.Domain.Events.ProgramEvents
 
@@ -321,11 +321,11 @@ defmodule KlassHero.ProgramCatalog do
   def trending_searches(nil), do: TrendingSearches.list()
   def trending_searches(limit), do: TrendingSearches.list(limit)
 
-  @doc "Returns remaining enrollment capacity for a program via Enrollment ACL."
-  defdelegate remaining_capacity(program_id), to: EnrollmentCapacityACL
+  @doc "Returns remaining enrollment capacity for a program. Enrollment owns capacity."
+  defdelegate remaining_capacity(program_id), to: Enrollment
 
   @doc "Returns a map of `program_id => remaining_count | :unlimited` for multiple programs."
-  defdelegate remaining_capacities(program_ids), to: EnrollmentCapacityACL
+  defdelegate remaining_capacities(program_ids), to: Enrollment, as: :get_remaining_capacities
 
   ## Internals
 
