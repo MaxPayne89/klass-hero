@@ -17,7 +17,6 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
-  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Domain.Events.Event
 
   require Logger
@@ -27,21 +26,16 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   @impl true
   def handle_event(%Event{event_type: :staff_invitation_sent, payload: payload}) do
-    payload = MapperHelpers.normalize_keys(payload)
-
     transition_and_persist(payload, :sent, fn transitioned ->
       %{transitioned | invitation_sent_at: DateTime.utc_now()}
     end)
   end
 
   def handle_event(%Event{event_type: :staff_invitation_failed, payload: payload}) do
-    payload = MapperHelpers.normalize_keys(payload)
     transition_and_persist(payload, :failed)
   end
 
   def handle_event(%Event{event_type: :staff_user_registered, payload: payload}) do
-    payload = MapperHelpers.normalize_keys(payload)
-
     # Uses the same accept flow as the synchronous path (ADR-0005: never creates a ProviderProfile).
     with {:ok, user_id} <- Map.fetch(payload, :user_id),
          {:ok, staff_member_id} <- Map.fetch(payload, :staff_member_id),

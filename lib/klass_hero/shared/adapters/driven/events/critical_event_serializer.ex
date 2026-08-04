@@ -6,6 +6,17 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   fields are converted to strings on serialization and restored via
   `String.to_existing_atom/1` on deserialization (safe because all event types
   and payload keys are domain-defined and already loaded).
+
+  ## Payload keys are atomized here, and only here
+
+  `deserialize/1` atomizes payload keys recursively, so a consumer reached through
+  `EventDeliveryWorker` always receives an atom-keyed payload and must not
+  re-normalize one. A handler that defends against string keys is dead code: an
+  unknown key raises in here, before the event ever reaches it.
+
+  Stated because the opposite was assumed once — handlers carried their own
+  shallow `normalize_keys/1` long after this became the single normalization
+  point, and it read as load-bearing (#1256).
   """
 
   alias KlassHero.Shared.Domain.Events.Event
