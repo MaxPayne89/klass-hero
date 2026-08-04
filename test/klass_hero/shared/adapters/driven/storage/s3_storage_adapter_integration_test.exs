@@ -19,7 +19,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapterIntegrationTe
   `S3StorageAdapter` against a real S3 backend is developer-run only, and the
   adapter is therefore unverified on every PR.
 
-  Before wiring MinIO into CI, fix `KlassHero.StorageIntegrationCase` first —
+  Before wiring MinIO into CI, fix `KlassHero.StorageIntegrationCase` first (#1276) —
   `setup_minio_buckets/0` overwrites the `:storage` app env and never restores it,
   so these tests would leak the MinIO adapter into every later test that reads it.
   """
