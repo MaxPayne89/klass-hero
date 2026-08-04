@@ -18,7 +18,6 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   alias KlassHero.Accounts.Domain.Events.AccountsEvents
   alias KlassHero.Accounts.User
   alias KlassHero.Accounts.UserNotifier
-  alias KlassHero.Shared.Adapters.Driven.Persistence.MapperHelpers
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Outbox
 
@@ -29,8 +28,6 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
 
   @impl true
   def handle_event(%Event{event_type: :staff_member_invited, payload: payload}) do
-    payload = MapperHelpers.normalize_keys(payload)
-
     case Map.fetch(payload, :email) do
       {:ok, email} ->
         deliver_invitation(payload, Accounts.get_user_by_email(email))
