@@ -7,18 +7,24 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapterIntegrationTe
 
   ## Running These Tests
 
-      mix test test/klass_hero/shared/adapters/driven/storage/s3_storage_adapter_integration_test.exs --include integration
-
-  ## Requirements
-
   MinIO must be running via docker-compose:
 
       docker compose up -d minio
+      mix test test/klass_hero/shared/adapters/driven/storage/s3_storage_adapter_integration_test.exs --include minio
+
+  ## Not a CI gate
+
+  CI defines only a `postgres` service, so these never run there and nothing opts
+  `:minio` in. That is a deliberate decision (#1267), not an oversight: coverage of
+  `S3StorageAdapter` against a real S3 backend is developer-run only, and the
+  adapter is therefore unverified on every PR.
+
+  Before wiring MinIO into CI, fix `KlassHero.StorageIntegrationCase` first —
+  `setup_minio_buckets/0` overwrites the `:storage` app env and never restores it,
+  so these tests would leak the MinIO adapter into every later test that reads it.
   """
 
   use KlassHero.StorageIntegrationCase
-
-  @moduletag :integration
 
   setup do
     setup_minio_buckets()
