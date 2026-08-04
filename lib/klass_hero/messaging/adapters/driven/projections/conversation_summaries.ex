@@ -27,8 +27,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   - `:message_sent` — updates latest_message fields, increments unread_count
     for non-sender participants
   - `:messages_read` — resets unread_count to 0, updates last_read_at
-  - `:conversation_archived` — sets archived_at for all rows of a conversation
-  - `:conversations_archived` — same as above but for multiple conversations
+  - `:conversations_archived` — sets archived_at for all rows of the archived conversations
   - `:message_data_anonymized` — updates other_participant_name to "Deleted User"
     for rows where the anonymized user was the other participant
   """
@@ -38,7 +37,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       "integration:messaging:conversation_created",
       "integration:messaging:message_sent",
       "integration:messaging:messages_read",
-      "integration:messaging:conversation_archived",
       "integration:messaging:conversations_archived",
       "integration:messaging:message_data_anonymized",
       "integration:messaging:participant_added",
@@ -92,15 +90,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     )
 
     project_messages_read(event)
-  end
-
-  def handle_event(:conversation_archived, %Event{} = event) do
-    Logger.debug("ConversationSummaries projecting conversation_archived",
-      conversation_id: event.entity_id,
-      event_id: event.event_id
-    )
-
-    project_conversation_archived(event)
   end
 
   def handle_event(:conversations_archived, %Event{} = event) do
@@ -322,7 +311,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
           # fields (latest_message_*, has_attachments, system_notes,
           # enrolled_child_names) and archived_at MUST be preserved —
           # those are owned by other event handlers (:message_sent,
-          # :messages_read, :conversation_archived).
+          # :messages_read, :conversations_archived).
           on_conflict:
             {:replace,
              [
@@ -531,27 +520,18 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     )
   end
 
-  defp project_conversation_archived(event) do
-    payload = event.payload
-    conversation_id = payload.conversation_id
-    archived_at = Map.get(payload, :archived_at)
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    from(s in ConversationSummary,
-      where: s.conversation_id == ^conversation_id
-    )
-    |> Repo.update_all(
-      set: [
-        archived_at: archived_at,
-        updated_at: now
-      ]
-    )
-  end
-
   defp project_conversations_archived(event) do
-    payload = event.payload
-    conversation_ids = Map.get(payload, :conversation_ids, [])
-    archived_at = Map.get(payload, :archived_at)
+    # Destructured, not `Map.get`-ed: `project/1` discards this function's return, so a
+    # defaulting read would write `archived_at: nil` and silently leave archived
+    # conversations in every inbox — the bug #1216 fixed.
+    %{conversation_ids: conversation_ids} = event.payload
+
+    # Both values arrive as ISO8601 *strings*, not %DateTime{}: the outbox stores the
+    # event as Oban jsonb and `CriticalEventSerializer.deserialize/1` atomizes keys only.
+    # Safe here because `update_all` casts them into the `:utc_datetime` column; a
+    # consumer doing DateTime arithmetic on them would not be.
+    archived_at = legacy_archived_at(event)
+
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     if conversation_ids != [] do
@@ -565,6 +545,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         ]
       )
     end
+  end
+
+  # Producers before #1216 staged this event without `archived_at`. Such an event can only
+  # be delivered in the window between that deploy and the queue draining, and its
+  # `occurred_at` was stamped in the archiving transaction itself — close enough to the
+  # value the row got, and far better than dropping the event into the dead-letter table
+  # and leaving the conversation in every inbox. Delete this clause once no pre-#1216
+  # event can still be queued.
+  defp legacy_archived_at(%Event{payload: %{archived_at: archived_at}}), do: archived_at
+
+  defp legacy_archived_at(%Event{} = event) do
+    Logger.warning("conversations_archived carried no archived_at; falling back to occurred_at",
+      event_id: event.event_id
+    )
+
+    event.occurred_at
   end
 
   defp project_message_data_anonymized(event) do

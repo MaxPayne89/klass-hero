@@ -104,41 +104,34 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   end
 
   @doc """
-  Creates a conversation_archived event (single conversation).
-  """
-  @spec conversation_archived(
-          conversation_id :: String.t(),
-          reason :: :program_ended | :manual
-        ) :: Event.t()
-  def conversation_archived(conversation_id, reason) do
-    Event.new(
-      :conversation_archived,
-      @source_context,
-      @entity_type,
-      conversation_id,
-      %{conversation_id: conversation_id, reason: reason}
-    )
-  end
-
-  @doc """
   Creates a conversations_archived event for bulk archive operations.
 
   Published when multiple conversations are archived at once (e.g. program
   ended). Its entity id is a bulk-operation identifier rather than any one
   conversation.
+
+  `archived_at` is the timestamp the producer wrote to the conversation rows, not
+  the moment the event was built: the read-side projection copies it verbatim, so
+  the two tables agree.
   """
   @spec conversations_archived(
           conversation_ids :: [String.t()],
           reason :: :program_ended | :retention_policy,
-          count :: non_neg_integer()
+          count :: non_neg_integer(),
+          archived_at :: DateTime.t()
         ) :: Event.t()
-  def conversations_archived(conversation_ids, reason, count) do
+  def conversations_archived(conversation_ids, reason, count, archived_at) do
     Event.new(
       :conversations_archived,
       @source_context,
       @entity_type,
       "bulk_archive_#{DateTime.to_unix(DateTime.utc_now())}",
-      %{conversation_ids: conversation_ids, reason: reason, count: count}
+      %{
+        conversation_ids: conversation_ids,
+        reason: reason,
+        count: count,
+        archived_at: archived_at
+      }
     )
   end
 

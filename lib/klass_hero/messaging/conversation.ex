@@ -74,14 +74,6 @@ defmodule KlassHero.Messaging.Conversation do
     |> optimistic_lock(:lock_version)
   end
 
-  @doc "Changeset for archiving a conversation."
-  def archive_changeset(schema, attrs) do
-    schema
-    |> cast(attrs, [:archived_at, :retention_until, :lock_version])
-    |> validate_required([:archived_at, :retention_until])
-    |> optimistic_lock(:lock_version)
-  end
-
   defp validate_broadcast_program_id(changeset) do
     type = get_field(changeset, :type)
     program_id = get_field(changeset, :program_id)

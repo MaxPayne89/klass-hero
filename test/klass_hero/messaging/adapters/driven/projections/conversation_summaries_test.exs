@@ -8,6 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
@@ -724,42 +725,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
     end
   end
 
-  describe "handle conversation_archived event" do
-    test "sets archived_at for all participants of the conversation" do
-      user_1 = user_fixture(name: "Alice Smith")
-      user_2 = user_fixture(name: "Bob Jones")
-
-      conversation_id = Ecto.UUID.generate()
-      provider_id = Ecto.UUID.generate()
-      archived_at = now()
-
-      # Create conversation first
-      dispatch(:conversation_created, %{
-        conversation_id: conversation_id,
-        type: :direct,
-        provider_id: provider_id,
-        participant_ids: [user_1.id, user_2.id]
-      })
-
-      # Now archive it
-      dispatch(:conversation_archived, %{
-        conversation_id: conversation_id,
-        archived_at: archived_at
-      })
-
-      # Both participants' summary rows should have archived_at set
-      summaries =
-        Repo.all(
-          from(s in ConversationSummary,
-            where: s.conversation_id == ^conversation_id
-          )
-        )
-
-      assert length(summaries) == 2
-      assert Enum.all?(summaries, fn s -> s.archived_at == archived_at end)
-    end
-  end
-
   describe "handle conversations_archived event" do
     test "sets archived_at for all participants across multiple conversations" do
       user_1 = user_fixture(name: "Alice Smith")
@@ -780,15 +745,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         })
       end
 
-      # Bulk archive both conversations
-      dispatch(
-        :conversations_archived,
-        %{
-          conversation_ids: [conv_1_id, conv_2_id],
-          archived_at: archived_at
-        },
-        entity_id: "bulk_archive_#{System.unique_integer([:positive])}"
-      )
+      # Built through the real constructor, not a literal payload: a hand-written map
+      # here is what let the producer stop sending archived_at without any test noticing.
+      [conv_1_id, conv_2_id]
+      |> MessagingEvents.conversations_archived(:program_ended, 2, archived_at)
+      |> dispatch()
 
       # All 4 summary rows (2 per conversation) should have archived_at set
       summaries =
@@ -800,6 +761,33 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       assert length(summaries) == 4
       assert Enum.all?(summaries, fn s -> s.archived_at == archived_at end)
+    end
+
+    test "falls back to occurred_at for an event staged before archived_at was on the payload" do
+      user = user_fixture(name: "Alice Smith")
+      conversation_id = Ecto.UUID.generate()
+
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: Ecto.UUID.generate(),
+        participant_ids: [user.id]
+      })
+
+      # The pre-#1216 payload shape, which can still be sitting in the queue across the
+      # deploy. A literal map is right here: the point is a payload the constructor can
+      # no longer build.
+      event =
+        event(:conversations_archived, %{conversation_ids: [conversation_id], reason: :program_ended, count: 1},
+          entity_id: "bulk_archive_#{System.unique_integer([:positive])}"
+        )
+
+      dispatch(event)
+
+      summary = Repo.one(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
+
+      assert summary.archived_at == DateTime.truncate(event.occurred_at, :second),
+             "a legacy event must still archive the row rather than dead-letter the job"
     end
   end
 

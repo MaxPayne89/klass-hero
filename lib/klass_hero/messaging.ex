@@ -742,39 +742,6 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc """
-  Archives a conversation, setting a 30-day retention window.
-
-  Re-fetches the row before updating (ignoring the caller's in-memory `lock_version`)
-  so the optimistic lock only guards the narrow get/update window.
-  """
-  @spec archive_conversation(Conversation.t()) ::
-          {:ok, Conversation.t()} | {:error, :not_found | Ecto.Changeset.t()}
-  def archive_conversation(conversation) do
-    context_span entity: "conversation" do
-      now = DateTime.utc_now()
-      retention_until = DateTime.add(now, 30, :day)
-
-      case Repo.get(Conversation, conversation.id) do
-        nil ->
-          {:error, :not_found}
-
-        schema ->
-          schema
-          |> Conversation.archive_changeset(%{archived_at: now, retention_until: retention_until})
-          |> Repo.update()
-          |> case do
-            {:ok, updated} ->
-              Logger.info("Archived conversation", conversation_id: conversation.id)
-              {:ok, updated}
-
-            error ->
-              error
-          end
-      end
-    end
-  end
-
   @doc "Hard-deletes archived conversations whose retention window expired before `before`."
   @spec delete_expired_conversations(DateTime.t()) :: {:ok, non_neg_integer()}
   def delete_expired_conversations(before) do
@@ -790,12 +757,26 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Archives conversations for programs that ended before `cutoff_date`."
+  @doc """
+  Archives conversations for programs that ended before `cutoff_date`.
+
+  Returns the `archived_at` it wrote so the caller can put it on the
+  `conversations_archived` event: the read-side projection stores that timestamp
+  verbatim, and re-deriving it there would drift from the write table.
+  """
   @spec archive_ended_program_conversations(DateTime.t(), non_neg_integer()) ::
-          {:ok, %{count: non_neg_integer(), conversation_ids: [String.t()]}}
+          {:ok,
+           %{
+             count: non_neg_integer(),
+             conversation_ids: [String.t()],
+             archived_at: DateTime.t() | nil
+           }}
   def archive_ended_program_conversations(cutoff_date, retention_days) do
     context_span entity: "conversation" do
-      now = DateTime.utc_now()
+      # Truncated because both `conversations.archived_at` and the read table's column are
+      # `:utc_datetime` — keeping microseconds here would make the value on the event differ
+      # from the value in the row it describes.
+      now = DateTime.utc_now() |> DateTime.truncate(:second)
       retention_until = DateTime.add(now, retention_days, :day)
 
       conversation_ids =
@@ -805,7 +786,7 @@ defmodule KlassHero.Messaging do
         |> Repo.all()
 
       if conversation_ids == [] do
-        {:ok, %{count: 0, conversation_ids: []}}
+        {:ok, %{count: 0, conversation_ids: [], archived_at: nil}}
       else
         {count, _} =
           from(c in Conversation, where: c.id in ^conversation_ids)
@@ -817,7 +798,7 @@ defmodule KlassHero.Messaging do
           retention_days: retention_days
         )
 
-        {:ok, %{count: count, conversation_ids: conversation_ids}}
+        {:ok, %{count: count, conversation_ids: conversation_ids, archived_at: now}}
       end
     end
   end

@@ -311,9 +311,6 @@ config :klass_hero, :event_consumers, %{
   "integration:messaging:messages_read" => [
     {ConversationSummaries, :project}
   ],
-  "integration:messaging:conversation_archived" => [
-    {ConversationSummaries, :project}
-  ],
   "integration:messaging:conversations_archived" => [
     {ConversationSummaries, :project}
   ],
