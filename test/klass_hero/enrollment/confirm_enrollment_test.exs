@@ -1,7 +1,6 @@
 defmodule KlassHero.Enrollment.ConfirmEnrollmentTest do
   use KlassHero.DataCase, async: true
 
-  import KlassHero.EventTestHelper
   import KlassHero.Factory
 
   alias KlassHero.Enrollment.Enrollment

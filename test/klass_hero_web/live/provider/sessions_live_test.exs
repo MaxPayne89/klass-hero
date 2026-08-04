@@ -1,14 +1,10 @@
 defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   use KlassHeroWeb.ConnCase, async: true
 
-  import KlassHero.EventTestHelper
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
   alias KlassHero.Participation
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
-  alias KlassHero.Participation.ParticipationRecord
-  alias KlassHero.Participation.ProgramSession
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do
@@ -562,7 +558,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
     test "an unrelated participation event does not crash the view", %{conn: conn, provider: provider} do
       listing = insert(:program_listing_schema, provider_id: provider.id)
-      program = insert(:program_schema, id: listing.id, provider_id: provider.id)
+      _program = insert(:program_schema, id: listing.id, provider_id: provider.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/sessions")
 
