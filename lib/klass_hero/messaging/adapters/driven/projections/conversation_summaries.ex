@@ -311,7 +311,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
           # fields (latest_message_*, has_attachments, system_notes,
           # enrolled_child_names) and archived_at MUST be preserved —
           # those are owned by other event handlers (:message_sent,
-          # :messages_read, :conversation_archived).
+          # :messages_read, :conversations_archived).
           on_conflict:
             {:replace,
              [
