@@ -39,11 +39,18 @@ mix deps.get
 MIX_TEST_PARTITION=<n> mix compile
 MIX_TEST_PARTITION=<n> MIX_ENV=test mix ecto.create
 MIX_TEST_PARTITION=<n> MIX_ENV=test mix ecto.migrate
+mix ecto.setup     # this worktree's OWN dev DB — create + migrate
+mix ecto.seed      # skip if you only need the test suite
 bin/setup-mcp      # allocate this worktree's dev port + Tidewave endpoint
 ```
 
 `bin/setup-mcp` writes `.mcp.json`, which Claude Code reads **at session start** —
 so restart the session in the worktree afterwards. See the Tidewave section below.
+
+The two `ecto` lines are the dev DB, which is separate from the test DB above and
+needs no `MIX_TEST_PARTITION` — see the next section. Skipping them is safe: the
+first dev-env command fails loudly on a missing database rather than falling back
+to main's.
 
 ## Test DB isolation — always set MIX_TEST_PARTITION in a worktree
 
@@ -81,6 +88,41 @@ TEST_PORT=4242 MIX_TEST_PARTITION=1060 mix test.e2e
 
 `TEST_PORT` feeds both the endpoint and Wallaby's `base_url` from one binding, so the
 two can't drift apart.
+
+## Dev DB isolation — automatic, nothing to remember
+
+Unlike the test DB, the dev DB needs no env var from you. `config/dev.exs` derives the
+name from the checkout itself:
+
+| Checkout | Dev database |
+|---|---|
+| main | `klass_hero_dev` |
+| worktree `.claude/worktrees/kh-1257` | `klass_hero_dev_kh_1257` |
+| anything, with `LOCAL_DEV_DATABASE` set | whatever you set |
+
+The slug is the checkout **directory basename**, downcased with non-alphanumerics
+folded to `_`. Deliberately not the branch name, which changes under the checkout on
+`git switch` and would silently repoint the DB mid-session.
+
+Override either way with `LOCAL_DEV_DATABASE` — to point a worktree at main's data
+for a read-only comparison, or to give main a scratch DB:
+
+```bash
+LOCAL_DEV_DATABASE=klass_hero_dev mix phx.server   # worktree, on main's data
+LOCAL_DEV_DATABASE=kh_scratch mix ecto.setup       # a throwaway
+```
+
+**Why this is derived in `config/dev.exs` and not in `bin/dev`:** every `mix`
+invocation in a checkout reads its own `config/dev.exs`, so a bare `mix ecto.migrate`
+is covered — and that is the command that actually caused the damage (#1253: a
+migration run from a worktree dropped a column in main's dev schema, breaking main
+until it was restored by hand). A default exported from a launcher script would not
+have been in that process's environment. `mix`, `iex -S mix`, `bin/dev`, and a
+Tidewave `execute_sql_query` all land on the same DB with no cooperation from the
+caller.
+
+Each app boot logs `Dev database: <name>` so a worktree session can see at a glance
+which schema it is about to touch.
 
 ## Tidewave / dev server per worktree (separate axis from the test partition)
 
@@ -135,11 +177,14 @@ ignored until a workspace is trusted, which a fresh worktree isn't yet.
   symptom if it regresses.)
 - **live_debugger** binds its own endpoint and defaults to 4007. Before ports were
   derived, a second concurrent `mix phx.server` died on `:eaddrinuse` here.
-- **Shared dev DB caveat:** `klass_hero_dev` is shared across all checkouts and is
-  **not** partitioned like the test DB. A worktree server reads/writes the same
-  dev DB as main — fine for reads, but running migrations from a worktree mutates
-  shared dev schema. For schema-diverging work, point the worktree at its own dev
-  DB (override `database:` via env) rather than migrating the shared one.
+- **A fresh worktree has no dev DB yet.** Isolation is automatic (see the dev DB
+  section above), so the first dev-env command in a new worktree hits a database that
+  does not exist until `mix ecto.setup` has run. That failure is the design: it is
+  loud, immediate, and local, where the old shared-DB behaviour was silent and
+  surfaced later in a *different* checkout.
+- **`LOCAL_DEV_DATABASE` is per-command, not per-checkout.** Exporting it in a shell
+  profile re-creates the exact trap the derivation removes — every worktree in that
+  shell would share one DB again. Set it inline on the command that needs it.
 
 ## Recovery
 
