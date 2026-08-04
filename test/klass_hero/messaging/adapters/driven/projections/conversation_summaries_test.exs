@@ -8,6 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
@@ -744,15 +745,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         })
       end
 
-      # Bulk archive both conversations
-      dispatch(
-        :conversations_archived,
-        %{
-          conversation_ids: [conv_1_id, conv_2_id],
-          archived_at: archived_at
-        },
-        entity_id: "bulk_archive_#{System.unique_integer([:positive])}"
-      )
+      # Built through the real constructor, not a literal payload: a hand-written map
+      # here is what let the producer stop sending archived_at without any test noticing.
+      [conv_1_id, conv_2_id]
+      |> MessagingEvents.conversations_archived(:program_ended, 2, archived_at)
+      |> dispatch()
 
       # All 4 summary rows (2 per conversation) should have archived_at set
       summaries =
