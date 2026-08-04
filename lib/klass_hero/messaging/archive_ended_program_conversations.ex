@@ -78,8 +78,8 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
   # delivery job a job with no work in it.
   defp archived_events(%{count: 0}), do: []
 
-  defp archived_events(%{count: count, conversation_ids: ids}) do
-    [MessagingEvents.conversations_archived(ids, :program_ended, count)]
+  defp archived_events(%{count: count, conversation_ids: ids, archived_at: archived_at}) do
+    [MessagingEvents.conversations_archived(ids, :program_ended, count, archived_at)]
   end
 
   defp default_days_after_program_end do

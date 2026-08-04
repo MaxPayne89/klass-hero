@@ -102,17 +102,19 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
     end
   end
 
-  describe "conversations_archived/3" do
+  describe "conversations_archived/4" do
     test "creates event with correct type and payload" do
       ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
+      archived_at = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      event = MessagingEvents.conversations_archived(ids, :retention_policy, 2)
+      event = MessagingEvents.conversations_archived(ids, :retention_policy, 2, archived_at)
 
       assert event.event_type == :conversations_archived
       assert event.entity_type == :conversation
       assert event.payload.conversation_ids == ids
       assert event.payload.reason == :retention_policy
       assert event.payload.count == 2
+      assert event.payload.archived_at == archived_at
     end
   end
 

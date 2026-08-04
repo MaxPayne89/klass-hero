@@ -549,9 +549,11 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   end
 
   defp project_conversations_archived(event) do
-    payload = event.payload
-    conversation_ids = Map.get(payload, :conversation_ids, [])
-    archived_at = Map.get(payload, :archived_at)
+    # Destructured, not `Map.get`-ed: `project/1` discards this function's return, so a
+    # defaulting read of a key the producer stopped sending would write `archived_at: nil`
+    # and silently leave archived conversations in every inbox. A MatchError here surfaces
+    # as a retried delivery job instead.
+    %{conversation_ids: conversation_ids, archived_at: archived_at} = event.payload
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     if conversation_ids != [] do
