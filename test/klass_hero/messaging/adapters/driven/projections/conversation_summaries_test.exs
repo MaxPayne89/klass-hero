@@ -724,42 +724,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
     end
   end
 
-  describe "handle conversation_archived event" do
-    test "sets archived_at for all participants of the conversation" do
-      user_1 = user_fixture(name: "Alice Smith")
-      user_2 = user_fixture(name: "Bob Jones")
-
-      conversation_id = Ecto.UUID.generate()
-      provider_id = Ecto.UUID.generate()
-      archived_at = now()
-
-      # Create conversation first
-      dispatch(:conversation_created, %{
-        conversation_id: conversation_id,
-        type: :direct,
-        provider_id: provider_id,
-        participant_ids: [user_1.id, user_2.id]
-      })
-
-      # Now archive it
-      dispatch(:conversation_archived, %{
-        conversation_id: conversation_id,
-        archived_at: archived_at
-      })
-
-      # Both participants' summary rows should have archived_at set
-      summaries =
-        Repo.all(
-          from(s in ConversationSummary,
-            where: s.conversation_id == ^conversation_id
-          )
-        )
-
-      assert length(summaries) == 2
-      assert Enum.all?(summaries, fn s -> s.archived_at == archived_at end)
-    end
-  end
-
   describe "handle conversations_archived event" do
     test "sets archived_at for all participants across multiple conversations" do
       user_1 = user_fixture(name: "Alice Smith")

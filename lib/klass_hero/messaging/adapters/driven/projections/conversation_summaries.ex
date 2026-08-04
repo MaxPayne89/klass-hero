@@ -27,8 +27,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   - `:message_sent` — updates latest_message fields, increments unread_count
     for non-sender participants
   - `:messages_read` — resets unread_count to 0, updates last_read_at
-  - `:conversation_archived` — sets archived_at for all rows of a conversation
-  - `:conversations_archived` — same as above but for multiple conversations
+  - `:conversations_archived` — sets archived_at for all rows of the archived conversations
   - `:message_data_anonymized` — updates other_participant_name to "Deleted User"
     for rows where the anonymized user was the other participant
   """
@@ -38,7 +37,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       "integration:messaging:conversation_created",
       "integration:messaging:message_sent",
       "integration:messaging:messages_read",
-      "integration:messaging:conversation_archived",
       "integration:messaging:conversations_archived",
       "integration:messaging:message_data_anonymized",
       "integration:messaging:participant_added",
@@ -92,15 +90,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     )
 
     project_messages_read(event)
-  end
-
-  def handle_event(:conversation_archived, %Event{} = event) do
-    Logger.debug("ConversationSummaries projecting conversation_archived",
-      conversation_id: event.entity_id,
-      event_id: event.event_id
-    )
-
-    project_conversation_archived(event)
   end
 
   def handle_event(:conversations_archived, %Event{} = event) do
@@ -526,23 +515,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       set: [
         unread_count: 0,
         last_read_at: read_at,
-        updated_at: now
-      ]
-    )
-  end
-
-  defp project_conversation_archived(event) do
-    payload = event.payload
-    conversation_id = payload.conversation_id
-    archived_at = Map.get(payload, :archived_at)
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    from(s in ConversationSummary,
-      where: s.conversation_id == ^conversation_id
-    )
-    |> Repo.update_all(
-      set: [
-        archived_at: archived_at,
         updated_at: now
       ]
     )

@@ -742,39 +742,6 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc """
-  Archives a conversation, setting a 30-day retention window.
-
-  Re-fetches the row before updating (ignoring the caller's in-memory `lock_version`)
-  so the optimistic lock only guards the narrow get/update window.
-  """
-  @spec archive_conversation(Conversation.t()) ::
-          {:ok, Conversation.t()} | {:error, :not_found | Ecto.Changeset.t()}
-  def archive_conversation(conversation) do
-    context_span entity: "conversation" do
-      now = DateTime.utc_now()
-      retention_until = DateTime.add(now, 30, :day)
-
-      case Repo.get(Conversation, conversation.id) do
-        nil ->
-          {:error, :not_found}
-
-        schema ->
-          schema
-          |> Conversation.archive_changeset(%{archived_at: now, retention_until: retention_until})
-          |> Repo.update()
-          |> case do
-            {:ok, updated} ->
-              Logger.info("Archived conversation", conversation_id: conversation.id)
-              {:ok, updated}
-
-            error ->
-              error
-          end
-      end
-    end
-  end
-
   @doc "Hard-deletes archived conversations whose retention window expired before `before`."
   @spec delete_expired_conversations(DateTime.t()) :: {:ok, non_neg_integer()}
   def delete_expired_conversations(before) do

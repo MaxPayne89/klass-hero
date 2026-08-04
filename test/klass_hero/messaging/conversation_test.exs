@@ -104,26 +104,13 @@ defmodule KlassHero.Messaging.ConversationTest do
     end
   end
 
-  describe "archive_conversation/1" do
-    test "sets archived_at, a retention window, and bumps lock_version" do
-      conversation = insert(:conversation_schema)
-
-      assert {:ok, archived} = Messaging.archive_conversation(conversation)
-      assert archived.archived_at != nil
-      assert archived.retention_until != nil
-      assert archived.lock_version == conversation.lock_version + 1
-    end
-
-    test "returns :not_found for an unknown conversation" do
-      assert {:error, :not_found} =
-               Messaging.archive_conversation(%Conversation{id: Ecto.UUID.generate()})
-    end
-  end
-
   describe "delete_expired_conversations/1" do
     test "deletes archived conversations past their retention window" do
-      conversation = insert(:conversation_schema)
-      {:ok, _} = Messaging.archive_conversation(conversation)
+      conversation =
+        insert(:conversation_schema,
+          archived_at: DateTime.utc_now() |> DateTime.add(-31, :day) |> DateTime.truncate(:second),
+          retention_until: DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
+        )
 
       future = DateTime.add(DateTime.utc_now(), 60, :day)
 

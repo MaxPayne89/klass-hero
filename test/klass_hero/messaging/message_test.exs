@@ -130,11 +130,15 @@ defmodule KlassHero.Messaging.MessageTest do
     end
 
     test "delete_messages_for_expired_conversations removes messages of expired conversations" do
-      conversation = insert(:conversation_schema)
+      conversation =
+        insert(:conversation_schema,
+          archived_at: DateTime.utc_now() |> DateTime.add(-31, :day) |> DateTime.truncate(:second),
+          retention_until: DateTime.utc_now() |> DateTime.add(-1, :day) |> DateTime.truncate(:second)
+        )
+
       user = AccountsFixtures.user_fixture()
       insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
       {:ok, message} = Messaging.create_message(%{conversation_id: conversation.id, sender_id: user.id, content: "x"})
-      {:ok, _} = Messaging.archive_conversation(conversation)
 
       future = DateTime.add(DateTime.utc_now(), 60, :day)
 

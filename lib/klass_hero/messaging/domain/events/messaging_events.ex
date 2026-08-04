@@ -104,23 +104,6 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   end
 
   @doc """
-  Creates a conversation_archived event (single conversation).
-  """
-  @spec conversation_archived(
-          conversation_id :: String.t(),
-          reason :: :program_ended | :manual
-        ) :: Event.t()
-  def conversation_archived(conversation_id, reason) do
-    Event.new(
-      :conversation_archived,
-      @source_context,
-      @entity_type,
-      conversation_id,
-      %{conversation_id: conversation_id, reason: reason}
-    )
-  end
-
-  @doc """
   Creates a conversations_archived event for bulk archive operations.
 
   Published when multiple conversations are archived at once (e.g. program
