@@ -17,8 +17,8 @@ defmodule KlassHero.Participation do
 
   import Ecto.Query
 
+  alias KlassHero.Enrollment
   alias KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver
-  alias KlassHero.Participation.Adapters.Driven.ACL.EnrolledChildrenResolver
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
@@ -447,7 +447,7 @@ defmodule KlassHero.Participation do
   @spec seed_session_roster(String.t(), String.t()) :: :ok
   def seed_session_roster(session_id, program_id) when is_binary(session_id) and is_binary(program_id) do
     context_span entity: "participation_record" do
-      child_ids = EnrolledChildrenResolver.list_enrolled_child_ids(program_id)
+      child_ids = Enrollment.list_enrolled_child_ids(program_id)
 
       # max_capacity is not checked: capacity is an enrollment-time concern, not a roster gate.
       {:ok, {count, roster_events}} = seed_roster_records(session_id, program_id, child_ids)
@@ -488,7 +488,7 @@ defmodule KlassHero.Participation do
 
   def seed_rosters_for_sessions(session_ids, program_id) when is_list(session_ids) and is_binary(program_id) do
     context_span entity: "participation_record" do
-      child_ids = EnrolledChildrenResolver.list_enrolled_child_ids(program_id)
+      child_ids = Enrollment.list_enrolled_child_ids(program_id)
 
       for session_id <- session_ids do
         {:ok, {_count, events}} = seed_roster_records(session_id, program_id, child_ids)

@@ -153,6 +153,7 @@ defmodule KlassHero.MixProject do
         "format",
         "lint_typography",
         "lint_translations",
+        "lint_read_tables",
         "credo --strict",
         "cmd env MIX_ENV=test mix test --include slow"
       ]

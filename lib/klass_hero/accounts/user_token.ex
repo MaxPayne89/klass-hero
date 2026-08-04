@@ -3,6 +3,10 @@ defmodule KlassHero.Accounts.UserToken do
   Schema and query helpers for user authentication tokens (session, magic link, email change).
   """
 
+  # read-table-lint-ignore: neither an entity nor a projection read table. Tokens are
+  # generated server-side, never from user input, so rows are built as struct literals
+  # (see build_session_token/1) and there is nothing for a changeset to validate.
+
   use Ecto.Schema
 
   import Ecto.Query

@@ -103,8 +103,9 @@ violation. e.g. `program_catalog/program_listing.ex`, `provider/provider_program
 ## Check 4: Cross-context access via facade
 
 **Rule:** Code in context A reaches context B only through B's root module
-`KlassHero.B` (or an ACL adapter under A's `adapters/driven/acl/`). Never alias B's
-internal schemas, entity modules, or Repo.
+`KlassHero.B` — called **directly**, at every layer (ADR 0015); an ACL adapter under
+A's `adapters/driven/acl/` is a valid wrapper but not the expected one. Never alias
+B's internal schemas, entity modules, or Repo.
 
 **How to verify:**
 1. For each changed module, list `alias`/references that resolve to another context
@@ -120,11 +121,22 @@ internal schemas, entity modules, or Repo.
 - event handlers → `adapters/driving/events/` (specific handlers in `events/event_handlers/`)
 - Oban workers → `adapters/driving/workers/`
 
+A projection's **read table** goes the other way: it lives at the **context root**
+(`lib/klass_hero/<context>/<name>.ex`), beside the entities, never under `adapters/`.
+It declares itself with `use KlassHero.Shared.ReadTable` and carries **no changeset** —
+the projection is its only writer.
+
 **How to verify:**
 1. Grep new `use Oban.Worker` — must be in `adapters/driving/workers/`
 2. New event handlers must be in `adapters/driving/events/**`
 3. New projection GenServers must be in `adapters/driven/projections/`
-4. Flag anything placed outside its directory
+4. Grep new `use KlassHero.Shared.ReadTable` — must be at a context root, and the module
+   must define no `*changeset*` clause
+5. Flag anything placed outside its directory
+
+`mix lint_read_tables` gates rule 4 in CI, keyed off the same `use` line. If you find a
+placement violation this check would catch, the gate should have caught it first — say so,
+because that means the two have drifted.
 
 ## Check 6: Projection convention
 

@@ -10,9 +10,6 @@ defmodule KlassHero.Enrollment do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Enrollment.Adapters.Driven.ACL.ChildInfoACL
-  alias KlassHero.Enrollment.Adapters.Driven.ACL.ParentInfoACL
-  alias KlassHero.Enrollment.Adapters.Driven.ACL.ParticipantDetailsACL
   alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramCatalogACL
   alias KlassHero.Enrollment.Adapters.Driven.ACL.ProgramScheduleACL
   alias KlassHero.Enrollment.Adapters.Driven.Persistence.Queries.EnrollmentQueries
@@ -74,27 +71,63 @@ defmodule KlassHero.Enrollment do
   defp parent_user_id(nil), do: nil
 
   defp parent_user_id(parent_id) do
-    case ParentInfoACL.get_parents_by_ids([parent_id]) do
+    case fetch_parents([parent_id]) do
       [%{identity_id: identity_id}] -> identity_id
       [] -> nil
     end
   end
 
+  # Family owns parents and children; Enrollment reads them straight off the facade
+  # (ADR 0015). The `acl_span`s keep the cross-context hop visible in traces.
+  defp fetch_parents(parent_ids) do
+    acl_span source: "enrollment", target: "family" do
+      Family.get_parents_by_ids(parent_ids)
+    end
+  end
+
+  defp fetch_children(child_ids) do
+    acl_span source: "enrollment", target: "family" do
+      Family.get_children_by_ids(child_ids)
+    end
+  end
+
+  defp fetch_child(child_id) do
+    acl_span source: "enrollment", target: "family" do
+      Family.get_child_by_id(child_id)
+    end
+  end
+
+  # An identity without a parent profile is not an error here — it just cannot be
+  # enrolled, so callers want `nil` rather than `{:error, :not_found}`.
+  defp resolve_parent_id(identity_id) do
+    acl_span source: "enrollment", target: "family" do
+      case Family.get_parent_by_identity(identity_id) do
+        {:ok, parent} -> parent.id
+        {:error, :not_found} -> nil
+      end
+    end
+  end
+
+  # Same hop as resolve_parent_id/1, but the create path wants a named failure it can
+  # surface rather than a nil.
   defp fetch_parent(identity_id) do
-    case Family.get_parent_by_identity(identity_id) do
-      {:ok, parent} -> {:ok, parent}
-      {:error, :not_found} -> {:error, :no_parent_profile}
+    acl_span source: "enrollment", target: "family" do
+      case Family.get_parent_by_identity(identity_id) do
+        {:ok, parent} -> {:ok, parent}
+        {:error, :not_found} -> {:error, :no_parent_profile}
+      end
     end
   end
 
   # Ownership guard (IDOR): child_id is client-supplied; the FK constraint proves
   # the child exists, not that it belongs to this parent.
   defp ensure_child_belongs_to_parent(child_id, parent_id) when is_binary(child_id) do
-    if ChildInfoACL.child_belongs_to_parent?(child_id, parent_id) do
-      :ok
-    else
-      {:error, :not_your_child}
-    end
+    guardian? =
+      acl_span source: "enrollment", target: "family" do
+        Family.child_belongs_to_parent?(child_id, parent_id)
+      end
+
+    if guardian?, do: :ok, else: {:error, :not_your_child}
   end
 
   defp ensure_child_belongs_to_parent(_child_id, _parent_id), do: {:error, :not_your_child}
@@ -469,7 +502,7 @@ defmodule KlassHero.Enrollment do
     enrollments
     |> Enum.map(& &1.child_id)
     |> Enum.uniq()
-    |> ChildInfoACL.get_children_by_ids()
+    |> fetch_children()
     |> Map.new(fn c -> {c.id, c} end)
   end
 
@@ -477,7 +510,7 @@ defmodule KlassHero.Enrollment do
     enrollments
     |> Enum.map(& &1.parent_id)
     |> Enum.uniq()
-    |> ParentInfoACL.get_parents_by_ids()
+    |> fetch_parents()
     |> Map.new(fn p -> {p.id, p} end)
   end
 
@@ -609,6 +642,21 @@ defmodule KlassHero.Enrollment do
   end
 
   @doc """
+  Returns distinct child IDs with active (pending/confirmed) enrollments in a program.
+
+  Used by the Participation context to build attendance rosters.
+  """
+  @spec list_enrolled_child_ids(String.t()) :: [String.t()]
+  def list_enrolled_child_ids(program_id) when is_binary(program_id) do
+    EnrollmentQueries.base()
+    |> EnrollmentQueries.by_program(program_id)
+    |> EnrollmentQueries.active_only()
+    |> select([e], e.child_id)
+    |> distinct(true)
+    |> Repo.all()
+  end
+
+  @doc """
   Returns distinct identity IDs of parents with active (pending/confirmed) enrollments in a program.
   Used by the Messaging context for broadcast recipient resolution.
   """
@@ -620,7 +668,7 @@ defmodule KlassHero.Enrollment do
     |> select([e], e.parent_id)
     |> distinct(true)
     |> Repo.all()
-    |> ParentInfoACL.get_parents_by_ids()
+    |> fetch_parents()
     |> Enum.map(& &1.identity_id)
   end
 
@@ -631,7 +679,7 @@ defmodule KlassHero.Enrollment do
   """
   @spec enrolled?(String.t(), String.t()) :: boolean()
   def enrolled?(program_id, identity_id) when is_binary(program_id) and is_binary(identity_id) do
-    case ParentInfoACL.resolve_identity_id(identity_id) do
+    case resolve_parent_id(identity_id) do
       nil ->
         false
 
@@ -861,7 +909,7 @@ defmodule KlassHero.Enrollment do
   end
 
   defp check_eligibility(policy, program_id, child_id) do
-    with {:ok, details} <- ParticipantDetailsACL.get_participant_details(child_id),
+    with {:ok, details} <- fetch_child(child_id),
          {:ok, reference_date} <- resolve_reference_date(policy, program_id) do
       participant = %{
         age_months: ParticipantPolicy.age_in_months(details.date_of_birth, reference_date),

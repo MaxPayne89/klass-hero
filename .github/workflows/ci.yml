@@ -95,6 +95,11 @@ jobs:
       - name: Gettext catalog check (structure + DE completeness)
         run: mix lint_translations
 
+      # Text-based, compiles nothing — safe to append without displacing the
+      # --warnings-as-errors compile above.
+      - name: Projection read-table convention
+        run: mix lint_read_tables
+
   # Release-please's Release PR only ever touches .release-please-manifest.json,
   # CHANGELOG.md and mix.exs's `version:` — content already tested on main. Running the
   # full suite plus a browser E2E pass for a version bump costs ~9 billable minutes.
