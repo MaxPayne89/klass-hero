@@ -155,7 +155,14 @@ defmodule KlassHero.MixProject do
         "lint_translations",
         "lint_read_tables",
         "credo --strict",
-        "cmd env MIX_ENV=test mix test --include slow"
+        # Two halves on purpose: `test --warnings-as-errors` only covers test
+        # files, and `test/support/*.ex` compiles solely in the test env — so
+        # the dev-env `compile --warnings-as-errors` above never sees it.
+        #
+        # Restored after release-please reverted it (#1265 landed it, the #1266
+        # Release PR replayed a pre-#1265 snapshot of this file over it). The
+        # `release-pr-guard` job in ci.yml exists to stop that recurring.
+        "cmd env MIX_ENV=test mix do compile --warnings-as-errors + test --warnings-as-errors --include slow"
       ]
     ]
   end
