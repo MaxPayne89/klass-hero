@@ -13,6 +13,7 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
   """
 
   use Ecto.Schema
+  use KlassHero.Shared.ReadTable
 
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id

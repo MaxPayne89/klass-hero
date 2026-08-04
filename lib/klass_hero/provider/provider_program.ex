@@ -14,6 +14,7 @@ defmodule KlassHero.Provider.ProviderProgram do
   """
 
   use Ecto.Schema
+  use KlassHero.Shared.ReadTable
 
   @primary_key {:program_id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id

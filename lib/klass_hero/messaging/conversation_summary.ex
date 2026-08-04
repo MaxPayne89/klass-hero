@@ -9,6 +9,7 @@ defmodule KlassHero.Messaging.ConversationSummary do
   """
 
   use Ecto.Schema
+  use KlassHero.Shared.ReadTable
 
   @primary_key {:id, :binary_id, autogenerate: false}
   @timestamps_opts [type: :utc_datetime]

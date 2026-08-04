@@ -90,11 +90,11 @@ context/
 
 See `.claude/rules/domain-architecture.md` for patterns. For context-specific details, read the code under `lib/klass_hero/<context>/` directly — Claude Code explores on-demand.
 
-**Context boundaries:** Not tooling-enforced (`boundary` library removed). Cross-context isolation is a convention — call other contexts only through their root module's public API (e.g. `KlassHero.Family`), never reach into their internals. For cross-context *reads*, use an ACL adapter under `adapters/driven/acl/` or subscribe an event handler to build a local read model — never call another context's Repo/schemas directly.
+**Context boundaries:** Not tooling-enforced (`boundary` library removed). Cross-context isolation is a convention — call other contexts only through their root module's public API (e.g. `KlassHero.Family`), never reach into their internals. For cross-context *reads*, **call the owning context's root facade directly** (ADR 0015) — at every layer, adapters included. An ACL under `adapters/driven/acl/` is for genuine translation only (error remapping, business-rule masking, cycle-breaking table access); a projection is for a read path a per-render facade call can't serve. Never call another context's Repo/schemas directly.
 
 **CQRS reads:** Read models are maintained by projection GenServers (`adapters/driven/projections/`) that subscribe to events and denormalize into dedicated read tables. A read table's Ecto schema lives at the context root and **is** the DTO — no separate struct, no mapper, no per-table repository; queries go in the context module or a context-root submodule (`provider/programs.ex`, `messaging/staff_participants.ex`). Program Catalog, Messaging, and Provider have these. Build new projections on `KlassHero.Shared.Projection` (base macro) — see `provider/adapters/driven/projections/provider_programs.ex` for the canonical projection and `program_catalog/program_listing.ex` for the read-table schema. See `.claude/rules/domain-architecture.md` for the three read-side kinds and where each lives.
 
-> **Note:** Per-context *aggregate* port DI wiring (`config :klass_hero, :<context>, for_managing_*: Adapter`) is gone — those ports were ceremony (one prod impl). What survives is Shared's genuine env-swapped adapter seams, where a behaviour + config-selected impl is idiomatic Elixir DI, not DDD ceremony: `outbox`, `feature_flags`, `storage` (each real-vs-test/stub), plus `:shared, for_tracking_processed_events`. Their slim behaviours live at the Shared root (`KlassHero.Shared.ForStoringFiles` etc.), not in a `domain/ports/` tree. Do not add new *aggregate* port-wiring — call collaborators directly or via an ACL module — but a new genuinely swappable external adapter may follow the Shared seam pattern.
+> **Note:** Per-context *aggregate* port DI wiring (`config :klass_hero, :<context>, for_managing_*: Adapter`) is gone — those ports were ceremony (one prod impl). What survives is Shared's genuine env-swapped adapter seams, where a behaviour + config-selected impl is idiomatic Elixir DI, not DDD ceremony: `outbox`, `feature_flags`, `storage` (each real-vs-test/stub), plus `:shared, for_tracking_processed_events`. Their slim behaviours live at the Shared root (`KlassHero.Shared.ForStoringFiles` etc.), not in a `domain/ports/` tree. Do not add new *aggregate* port-wiring — call collaborators directly — but a new genuinely swappable external adapter may follow the Shared seam pattern.
 
 ### Event System
 
@@ -190,6 +190,8 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 | `mix format --check-formatted` | Formatting issues |
 | `mix credo --strict` | Style violations, code smells, long lines, TODO tags |
 | `mix lint_typography` | Font/typography usage violations |
+| `mix lint_translations` | Stale `.pot` templates, empty/fuzzy German `msgstr` |
+| `mix lint_read_tables` | Projection read-table convention: a context-root schema that is neither an entity nor a declared read table, a read table carrying a changeset, or a read table outside the context root |
 | `mix test` | Functional regressions (full suite with PostgreSQL) |
 | Sobelow | Common Phoenix security vulnerabilities |
 | `mix deps.audit` | Known dependency vulnerabilities (community advisory DB) |

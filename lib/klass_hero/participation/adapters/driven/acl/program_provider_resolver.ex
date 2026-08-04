@@ -7,9 +7,12 @@ defmodule KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver do
   This adapter serves as an anti-corruption layer between the Participation and
   ProgramCatalog bounded contexts. It resolves which provider owns a given program.
 
+  A cross-context read calls the owning facade directly by default (ADR 0015); this
+  adapter earns its place by the error mapping below, not by the indirection.
+
   ```
-  NotifyLiveViews Handler → ForResolvingProgramProvider Port → [THIS ADAPTER] → ProgramCatalog Public API
-       (needs provider_id)    (behaviour contract)              (ACL lookup)      (owns Program model)
+  NotifyLiveViews Handler → [THIS ADAPTER] → ProgramCatalog Public API
+       (needs provider_id)    (ACL lookup)     (owns Program model)
   ```
 
   ## Error Mapping

@@ -63,7 +63,9 @@ The flatten deleted aggregate ports, mappers, and DI wiring. Subdirectories rema
 ## Cross-Context Access
 
 - Call other contexts **only** through their root `<context>.ex` module — never their internal schemas/Repo.
-- For cross-context **reads**: use an ACL adapter (`adapters/driven/acl/`) or subscribe an event handler that builds a local read model. Prefer projections over ACLs for hot read paths.
+- For cross-context **reads**: **call the owning context's root facade directly** (ADR 0015). This is the default at every layer — a projection, event handler, worker or web helper calls the facade with no adapter in between. Reach for something heavier only when it earns its place:
+  - an **ACL adapter** (`adapters/driven/acl/`) when there is genuine translation to do — remapping the other context's errors into your vocabulary, masking fields behind a business rule, cycle-breaking direct table access, or a query no facade expresses. An ACL that only forwards a call is indirection without a payer; fold it into the caller.
+  - a **projection** when a per-render facade call cannot serve the read path.
 - There is **no** per-context *aggregate* `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly. (Shared is the exception: its genuine env-swapped adapter seams — `outbox`, `feature_flags`, `storage`, `for_tracking_processed_events` — keep a slim behaviour at the Shared root + a config-selected impl. That is idiomatic Elixir DI, not ceremony; see ADR 0006.)
 
 ## Event System

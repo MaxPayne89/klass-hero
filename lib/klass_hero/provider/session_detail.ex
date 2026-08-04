@@ -13,6 +13,7 @@ defmodule KlassHero.Provider.SessionDetail do
   """
 
   use Ecto.Schema
+  use KlassHero.Shared.ReadTable
 
   @primary_key {:session_id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id

@@ -41,10 +41,17 @@ the whole target context.
 Boundaries are enforced by convention. The valid ways for context A to use
 context B's data are:
 
-1. Call B's root facade: `KlassHero.B.some_function(...)`.
-2. Read B's data through an ACL adapter under A's `adapters/driven/acl/`, which
-   itself calls B's facade and maps the result to A's own types.
-3. Subscribe to B's events and build a local read model (projection).
+1. **Call B's root facade directly: `KlassHero.B.some_function(...)`.** This is the
+   default for a cross-context read (ADR 0015). It applies at every layer — a
+   projection, event handler, worker or web helper calls the facade with no adapter
+   in between.
+2. Wrap that facade call in an ACL adapter under A's `adapters/driven/acl/` **only
+   when the adapter earns its place** by doing genuine translation: remapping B's
+   errors into A's vocabulary, masking fields behind a business rule, or reaching
+   B's tables directly to break a dependency cycle. An ACL that only forwards a
+   call is indirection without a payer.
+3. Subscribe to B's events and build a local read model (projection) — for a hot
+   read path that a per-render facade call cannot serve.
 
 Everything else — aliasing B's schemas/entity modules, querying B's tables via
 `Repo`, calling B's internal use-case/adapter modules — is a violation.
@@ -74,8 +81,8 @@ KlassHero.Repo.get(Enrollment, id)
 ```
 **Correct pattern:**
 ```elixir
-KlassHero.Enrollment.get_enrollment(id)          # facade call
-# or, for a hot read path, an ACL adapter / an event-fed projection
+KlassHero.Enrollment.get_enrollment(id)          # facade call — the default
+# an ACL adapter only if it translates; an event-fed projection for a hot read path
 ```
 
 ## Check 2: No cross-context Repo / schema access
@@ -133,14 +140,29 @@ dependencies on Ecto (`Ecto.Changeset/Schema/Query`), Phoenix, infrastructure
 ## Check 5: ACL adapter correctness
 
 **Rule:** Anti-Corruption Layer adapters (`adapters/driven/acl/`) must:
-- Call the target context's PUBLIC facade API (not internal modules)
-- Map external data to their own context's types
+- Call the target context's PUBLIC facade API (not internal modules) — unless the ACL
+  exists precisely to reach the tables directly and break a dependency cycle, which its
+  moduledoc must say
+- **Earn their place.** Since ADR 0015 the default is a direct facade call, so an ACL is
+  only justified by genuine translation: remapping the target's errors into this context's
+  vocabulary, masking fields behind a business rule, cycle-breaking, or a query no facade
+  expresses
 - Expose a plain read function for their own context to consume (no port behaviour required)
 
 **How to verify:**
 1. For each ACL adapter file
 2. Check all external calls go through facade modules (e.g. `KlassHero.Family.get_child/1`)
-3. Flag direct calls to another context's repositories, schemas, or internal modules
+3. Flag direct calls to another context's repositories, schemas, or internal modules that
+   the moduledoc does not justify as cycle-breaking
+4. Flag an ACL whose every function is pure delegation — a `defdelegate`, or a call that
+   returns the facade's result unchanged, or one that narrows a struct into a map whose
+   keys are the struct's own field names (that narrowing buys nothing). Fix: fold it into
+   the caller, keeping any `acl_span` at the new call site
+
+**Not a violation:** a projection, event handler, worker or web helper calling another
+context's facade with no ACL in between. That is the sanctioned pattern —
+`provider/assignments.ex:307` and `lib/klass_hero_web/helpers/provider_display.ex:30`
+are deliberate instances of it.
 
 ---
 
@@ -176,6 +198,8 @@ dependencies on Ecto (`Ecto.Changeset/Schema/Query`), Phoenix, infrastructure
 - The `Accounts.User` reference is a KNOWN exception — do not flag it
 - Shared (`KlassHero.Shared.*`) is universal infrastructure — accessible to all
 - A context using `Repo` on its OWN schemas is correct (schema-as-struct) — never flag it
-- Prefer projections/ACL over facade calls on hot read paths, but a facade call is valid
+- A direct facade call is the DEFAULT for a cross-context read (ADR 0015) — never flag one
+  for lacking an ACL. Reserve a projection for a genuinely hot read path
 - Critical severity: cross-context Repo/schema access, reaching into another context's internals
-- Warning severity: cross-context `belongs_to` beyond the User exception, a missing ACL where one should exist
+- Warning severity: cross-context `belongs_to` beyond the User exception, an unnecessary ACL
+  (pure delegation — no error remapping, no business-rule masking, no cycle to break)
