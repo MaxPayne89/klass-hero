@@ -3,6 +3,8 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
 
   import KlassHero.Factory
 
+  alias KlassHero.Enrollment.BulkEnrollmentInvite
+
   # -- CSV builder -----------------------------------------------------------
 
   @csv_defaults %{
@@ -214,6 +216,32 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
       conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
 
       assert json_response(conn, 413) == %{"error" => "File too large (max 2MB)"}
+    end
+  end
+
+  # 5k rows costs ~8s, hence :slow. See test/test_helper.exs for what opts it back in.
+  describe "POST /provider/enrollment/import (5k rows)" do
+    @tag :slow
+    test "imports 5000 rows in a single transaction" do
+      %{conn: conn, provider: provider} = register_and_log_in_provider(%{conn: build_conn()})
+      insert(:program_schema, provider_id: provider.id, title: "Ballsports & Parkour")
+
+      rows =
+        for i <- 1..5_000 do
+          %{
+            first: "Child#{i}",
+            last: "Last#{i}",
+            email: "parent#{i}@test.com",
+            program: "Ballsports & Parkour"
+          }
+        end
+
+      path = rows |> build_csv() |> write_temp()
+
+      conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
+
+      assert json_response(conn, 201) == %{"created" => 5_000, "failed" => []}
+      assert KlassHero.Repo.aggregate(BulkEnrollmentInvite, :count) == 5_000
     end
   end
 end

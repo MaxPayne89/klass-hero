@@ -2,22 +2,20 @@ defmodule KlassHero.StorageIntegrationCase do
   @moduledoc """
   Test case for storage integration tests using MinIO.
 
-  These tests require MinIO running via docker-compose.
-  Tag tests with `@tag :integration` to run them.
+  These tests require MinIO running via docker-compose. Using this case template
+  applies `@moduletag :minio`, which `test/test_helper.exs` excludes by default —
+  no test needs to tag itself.
 
   ## Usage
 
       use KlassHero.StorageIntegrationCase
 
-  ## Running Integration Tests
-
-      mix test --include integration
-
-  ## Requirements
-
-  MinIO must be running:
+  ## Running These Tests
 
       docker compose up -d minio
+      mix test --include minio
+
+  CI never opts `:minio` in; see the note in the test_helper exclude list.
   """
 
   use ExUnit.CaseTemplate
@@ -26,7 +24,7 @@ defmodule KlassHero.StorageIntegrationCase do
     quote do
       alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
 
-      @moduletag :integration
+      @moduletag :minio
 
       @doc """
       Returns MinIO configuration for tests.
