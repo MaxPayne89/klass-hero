@@ -762,6 +762,33 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert length(summaries) == 4
       assert Enum.all?(summaries, fn s -> s.archived_at == archived_at end)
     end
+
+    test "falls back to occurred_at for an event staged before archived_at was on the payload" do
+      user = user_fixture(name: "Alice Smith")
+      conversation_id = Ecto.UUID.generate()
+
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: Ecto.UUID.generate(),
+        participant_ids: [user.id]
+      })
+
+      # The pre-#1216 payload shape, which can still be sitting in the queue across the
+      # deploy. A literal map is right here: the point is a payload the constructor can
+      # no longer build.
+      event =
+        event(:conversations_archived, %{conversation_ids: [conversation_id], reason: :program_ended, count: 1},
+          entity_id: "bulk_archive_#{System.unique_integer([:positive])}"
+        )
+
+      dispatch(event)
+
+      summary = Repo.one(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
+
+      assert summary.archived_at == DateTime.truncate(event.occurred_at, :second),
+             "a legacy event must still archive the row rather than dead-letter the job"
+    end
   end
 
   describe "handle message_data_anonymized event" do

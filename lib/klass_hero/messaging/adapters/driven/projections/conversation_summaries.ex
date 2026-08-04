@@ -522,10 +522,16 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
   defp project_conversations_archived(event) do
     # Destructured, not `Map.get`-ed: `project/1` discards this function's return, so a
-    # defaulting read of a key the producer stopped sending would write `archived_at: nil`
-    # and silently leave archived conversations in every inbox. A MatchError here surfaces
-    # as a retried delivery job instead.
-    %{conversation_ids: conversation_ids, archived_at: archived_at} = event.payload
+    # defaulting read would write `archived_at: nil` and silently leave archived
+    # conversations in every inbox — the bug #1216 fixed.
+    %{conversation_ids: conversation_ids} = event.payload
+
+    # Both values arrive as ISO8601 *strings*, not %DateTime{}: the outbox stores the
+    # event as Oban jsonb and `CriticalEventSerializer.deserialize/1` atomizes keys only.
+    # Safe here because `update_all` casts them into the `:utc_datetime` column; a
+    # consumer doing DateTime arithmetic on them would not be.
+    archived_at = legacy_archived_at(event)
+
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     if conversation_ids != [] do
@@ -539,6 +545,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
         ]
       )
     end
+  end
+
+  # Producers before #1216 staged this event without `archived_at`. Such an event can only
+  # be delivered in the window between that deploy and the queue draining, and its
+  # `occurred_at` was stamped in the archiving transaction itself — close enough to the
+  # value the row got, and far better than dropping the event into the dead-letter table
+  # and leaving the conversation in every inbox. Delete this clause once no pre-#1216
+  # event can still be queued.
+  defp legacy_archived_at(%Event{payload: %{archived_at: archived_at}}), do: archived_at
+
+  defp legacy_archived_at(%Event{} = event) do
+    Logger.warning("conversations_archived carried no archived_at; falling back to occurred_at",
+      event_id: event.event_id
+    )
+
+    event.occurred_at
   end
 
   defp project_message_data_anonymized(event) do
