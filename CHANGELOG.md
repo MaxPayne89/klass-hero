@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.67.3](https://github.com/MaxPayne89/klass-hero/compare/v0.67.2...v0.67.3) (2026-08-04)
+
+
+### Bug Fixes
+
+* derive the dev database name per checkout ([#1271](https://github.com/MaxPayne89/klass-hero/issues/1271)) ([b9dba83](https://github.com/MaxPayne89/klass-hero/commit/b9dba838faf0cdeb476d46cba6043d0826d9a434)), closes [#1257](https://github.com/MaxPayne89/klass-hero/issues/1257)
+
+
+### Code Refactoring
+
+* enforce the read-table convention and make the architecture rules match practice ([#1272](https://github.com/MaxPayne89/klass-hero/issues/1272)) ([446f564](https://github.com/MaxPayne89/klass-hero/commit/446f56400dd88c33ed5ff016297c77851f54cff2)), closes [#1269](https://github.com/MaxPayne89/klass-hero/issues/1269)
+
 ## [0.67.2](https://github.com/MaxPayne89/klass-hero/compare/v0.67.1...v0.67.2) (2026-08-04)
 
 
