@@ -7,6 +7,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensat
   is a unique constraint rather than careful code. A compensation that fails leaves
   no marker, and the next sweep retries it.
 
+  That duplication is deliberate and was surveyed — see #1249 for why the two are not
+  extracted into one gate, and what would justify extracting them.
+
   ## Why `:ignore` is not `{:error, _}`
 
   A compensation whose entity is already terminal — an invite already `:enrolled`,
