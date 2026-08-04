@@ -51,8 +51,26 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
   now requires naming which of the four justifications applies.
 - **Observability is preserved at the call site, not by the adapter.** Where a folded ACL carried
   `acl_span source:/target:`, the direct call keeps it — `provider/assignments.ex:307` is the
-  reference shape. The span attribution follows the calling function, so `acl.operation` values
-  shift when an ACL is folded.
+  reference shape. Folding shifts the emitted spans in three ways, all of which a saved
+  Honeycomb query could notice:
+
+  1. **`acl.operation` is renamed.** The macro derives it from the enclosing function, so the
+     value follows the new private helper rather than the deleted ACL function. The #1269 fold
+     renamed five: `get_children_by_ids`→`fetch_children`, `get_parents_by_ids`→`fetch_parents`,
+     `child_belongs_to_parent?`→`ensure_child_belongs_to_parent`,
+     `resolve_identity_id`→`resolve_parent_id`, `get_participant_details`→`fetch_child`.
+  2. **Span count can rise.** An ACL that short-circuited before its own `acl_span`
+     (`get_children_by_ids([]), do: []`) emitted nothing on that path; the folded helper wraps
+     unconditionally, so an empty-list call now emits a span and issues an empty-array `IN`.
+     Restoring the guard is usually the wrong trade — it is dead code at most call sites.
+  3. **Previously-untraced hops gain spans.** Folding tends to expose a sibling call that was
+     already facade-direct but never instrumented, and leaving one of N identical hops untraced
+     is the inconsistency the fold exists to remove. #1269's `fetch_parent/1` is that case.
+
+  Check the boards and triggers before folding an instrumented ACL — #1259 is the precedent,
+  where renaming an instrumented module silently moved its span. At the time of writing the
+  `live` environment has no `acl.*` columns at all, so nothing queries these attributes yet;
+  that is why #1269's renames were safe, and it is not a general licence.
 - **A facade read is strongly consistent; a projection is not.** That is sometimes the reason to
   choose it. `provider/assignments.ex:307` reads `ProgramCatalog.get_program_for_provider/2`
   rather than the `provider_programs` projection precisely because an ownership guard cannot
