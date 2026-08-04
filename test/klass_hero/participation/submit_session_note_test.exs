@@ -5,7 +5,6 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
 
   use KlassHero.DataCase, async: true
 
-  import KlassHero.EventTestHelper
   import KlassHero.Factory
 
   alias KlassHero.Participation

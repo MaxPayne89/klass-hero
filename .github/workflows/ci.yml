@@ -167,8 +167,10 @@ jobs:
       # ecto.create --quiet + ecto.migrate --quiet automatically.
       # --include slow opts the 5k-row CSV smoke test into CI so
       # chunk-boundary correctness at scale is exercised on every PR.
+      # --warnings-as-errors covers the test files themselves; the
+      # compile job's gate runs in dev env and never sees them.
       - name: Run tests
-        run: mix test --include slow
+        run: mix test --warnings-as-errors --include slow
 
   # Skip condition mirrors `test` above — see the rationale there.
   e2e:

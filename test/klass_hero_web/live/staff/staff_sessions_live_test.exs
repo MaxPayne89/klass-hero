@@ -1,12 +1,10 @@
 defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
   use KlassHeroWeb.ConnCase, async: true
 
-  import KlassHero.EventTestHelper
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
   alias KlassHero.Participation
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do

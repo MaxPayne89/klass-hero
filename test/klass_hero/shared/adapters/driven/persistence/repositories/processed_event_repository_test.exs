@@ -7,7 +7,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEve
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
-  alias KlassHero.Shared.Domain.Events.Event
 
   describe "execute_atomically/3" do
     test "runs handler and inserts row on success" do
