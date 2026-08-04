@@ -6,11 +6,34 @@ alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
 # main's. See .claude/rules/worktrees.md.
 dev_port = String.to_integer(System.get_env("PORT") || "4000")
 
+# __DIR__ is <root>/config no matter which directory mix was invoked from.
+checkout_root = Path.dirname(__DIR__)
+
+# The dev DB is per-checkout for the same reason the port is, but derived here rather
+# than in bin/dev: every mix invocation reads this file, so a bare `mix ecto.migrate`
+# in a worktree cannot reach main's schema (#1257). A linked worktree has `.git` as a
+# file; the main checkout has a directory, and a checkout with neither (tarball,
+# container build) keeps the shared default.
+dev_database =
+  System.get_env("LOCAL_DEV_DATABASE") ||
+    if File.regular?(Path.join(checkout_root, ".git")) do
+      slug =
+        checkout_root
+        |> Path.basename()
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9]+/, "_")
+
+      # 63 is the Postgres identifier limit.
+      String.slice("klass_hero_dev_#{slug}", 0, 63)
+    else
+      "klass_hero_dev"
+    end
+
 config :klass_hero, KlassHero.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "klass_hero_dev",
+  database: dev_database,
   stacktrace: true,
   # In order to use HTTPS in development, a self-signed
   #     https: [

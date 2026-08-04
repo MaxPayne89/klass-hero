@@ -5,7 +5,9 @@
 ### Development Database
 
 - PostgreSQL (default: user `postgres`, password `postgres`, host `localhost`, port `5432`)
-- Database: `klass_hero_dev`
+- Database: `klass_hero_dev` on the main checkout; a worktree derives its own
+  (`klass_hero_dev_<checkout>`) so migrations cannot escape into main's schema.
+  Override either with `LOCAL_DEV_DATABASE`. See `.claude/rules/worktrees.md`.
 
 ### Test Database
 
