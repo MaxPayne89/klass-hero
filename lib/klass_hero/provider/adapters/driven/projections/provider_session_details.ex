@@ -39,7 +39,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
       "integration:participation:child_checked_out",
       "integration:participation:child_marked_absent",
       "integration:provider:staff_assigned_to_program",
-      "integration:provider:staff_unassigned_from_program"
+      "integration:provider:staff_unassigned_from_program",
+      "integration:provider:staff_member_deactivated"
     ]
 
   use KlassHero.Shared.Projection.WithBootstrapRetry
@@ -149,6 +150,29 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
   end
 
+  # Scoped by staff member, not by program: deactivation ends the employment link
+  # itself, so it reaches every program they were on. Historical rows keep their
+  # attribution, matching :staff_unassigned_from_program.
+  #
+  # This clause is why the event exists. The other staff-name consumers can filter
+  # `s.active` on read; this one cannot, because the name is a stored column — so
+  # without it a deactivated (or erased) staff member stays named here until a
+  # restart rebuilds the projection.
+  def handle_event(:staff_member_deactivated, %Event{payload: %{staff_member_id: staff_member_id}}) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    from(d in SessionDetail,
+      where: d.current_assigned_staff_id == ^staff_member_id and d.status == :scheduled
+    )
+    |> Repo.update_all(
+      set: [
+        current_assigned_staff_id: nil,
+        current_assigned_staff_name: nil,
+        updated_at: now
+      ]
+    )
+  end
+
   # Rebuilds from programs + program_sessions + staff assignments + participation counts.
   # Design notes:
   # * UUIDs cast to ::text so Postgrex returns strings (Ecto :binary_id accepts them on insert).
@@ -159,6 +183,11 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     # LATERAL subquery picks exactly one active staff assignment (earliest-assigned wins, matching
     # resolve_program_context/1). Without LIMIT 1 a program with N staff would produce N rows per
     # session and break the ON CONFLICT target.
+    #
+    # `sm.active` is an inner join, not a filter on a LEFT JOIN: a deactivated staff member must not
+    # win the LIMIT 1 and shadow a still-active colleague. Without it a rebuild would resurrect the
+    # attribution the :staff_member_deactivated clause cleared — an erased user's name reappearing
+    # in a read table on the next restart (#1237).
     sql = """
     SELECT
       ps.id::text                            AS session_id,
@@ -179,7 +208,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     LEFT JOIN LATERAL (
       SELECT psa.staff_member_id, sm.first_name, sm.last_name
       FROM program_staff_assignments psa
-      LEFT JOIN staff_members sm ON sm.id = psa.staff_member_id
+      JOIN staff_members sm ON sm.id = psa.staff_member_id AND sm.active
       WHERE psa.program_id = ps.program_id
         AND psa.unassigned_at IS NULL
       ORDER BY psa.assigned_at ASC
@@ -332,21 +361,34 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   defp warn_if_missing(_result, _event_name, _metadata), do: :ok
 
+  # Deliberately the same LATERAL shape as bootstrap_session_details/0, not a
+  # second spelling of it: both answer "which staff member is currently assigned
+  # to this program", and the two must agree or a rebuild silently rewrites what
+  # the incremental path wrote.
+  #
+  # `sm.active` is inside the LATERAL, so a deactivated staff member is skipped
+  # rather than selected-then-blanked. Deactivation leaves assignments standing on
+  # purpose, so a departed staff member stays the earliest-assigned row forever —
+  # filtering on the join alone would still pick their assignment and merely lose
+  # their name.
   defp resolve_program_context(program_id) do
     sql = """
     SELECT p.title,
            p.provider_id,
-           psa.staff_member_id,
-           sm.first_name,
-           sm.last_name
+           staff.staff_member_id,
+           staff.first_name,
+           staff.last_name
     FROM programs p
-    LEFT JOIN program_staff_assignments psa
-           ON psa.program_id = p.id
-          AND psa.unassigned_at IS NULL
-    LEFT JOIN staff_members sm ON sm.id = psa.staff_member_id
+    LEFT JOIN LATERAL (
+      SELECT psa.staff_member_id, sm.first_name, sm.last_name
+      FROM program_staff_assignments psa
+      JOIN staff_members sm ON sm.id = psa.staff_member_id AND sm.active
+      WHERE psa.program_id = p.id
+        AND psa.unassigned_at IS NULL
+      ORDER BY psa.assigned_at ASC
+      LIMIT 1
+    ) staff ON TRUE
     WHERE p.id = $1
-    ORDER BY psa.assigned_at ASC NULLS LAST
-    LIMIT 1
     """
 
     case Repo.query(sql, [Ecto.UUID.dump!(program_id)]) do

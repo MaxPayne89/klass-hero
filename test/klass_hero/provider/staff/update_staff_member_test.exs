@@ -46,9 +46,13 @@ defmodule KlassHero.Provider.Staff.UpdateStaffMemberTest do
       assert updated.qualifications == ["First Aid"]
     end
 
-    test "deactivates a staff member", %{staff: staff} do
+    test "ignores :active — ending an employment link is its own operation", %{staff: staff} do
+      # The profile-edit path must not be a back door into deactivation: it stages
+      # no event and clears no lead-instructor flag, so a staff member deactivated
+      # this way would leave every consequence unapplied (#1237).
       assert {:ok, updated} = Provider.update_staff_member(staff.provider_id, staff.id, %{active: false})
-      assert updated.active == false
+
+      assert updated.active, "update_staff_member/3 must not flip :active"
     end
 
     test "preserves unmodified fields", %{staff: staff} do

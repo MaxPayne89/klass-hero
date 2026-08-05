@@ -208,6 +208,12 @@ defmodule KlassHero.Provider do
   @doc "Deletes a staff member owned by `provider_id`; foreign ≡ missing."
   defdelegate delete_staff_member(staff_id, provider_id), to: Staff
 
+  @doc "Ends a staff member's employment link: clears their lead flags, revokes any invitation, stages the event."
+  defdelegate deactivate_staff_member(staff_member), to: Staff
+
+  @doc "Reinstates a staff member's employment link; does not restore lead flags or invitations."
+  defdelegate reactivate_staff_member(staff_member), to: Staff
+
   @doc "Resends a staff invitation for a `:failed`/`:expired` member owned by `provider_id`."
   defdelegate resend_staff_invitation(provider_id, staff_member_id), to: Staff
 

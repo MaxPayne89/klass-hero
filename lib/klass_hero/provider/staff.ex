@@ -15,6 +15,7 @@ defmodule KlassHero.Provider.Staff do
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.ReadModels.StaffMembership
   alias KlassHero.Provider.Profiles
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
@@ -39,7 +40,11 @@ defmodule KlassHero.Provider.Staff do
     "invitation_sent_at"
   ]
 
-  @staff_updatable_fields ~w(first_name last_name role email bio headshot_url tags qualifications active
+  # `active` is deliberately absent: ending an employment link is
+  # deactivate_staff_member/1, which clears lead flags, revokes the invitation and
+  # stages an event. A profile edit that flipped the same boolean would skip all
+  # three (#1237).
+  @staff_updatable_fields ~w(first_name last_name role email bio headshot_url tags qualifications
                              pay_rate rate_type rate_amount rate_currency)a
 
   @doc """
@@ -132,6 +137,78 @@ defmodule KlassHero.Provider.Staff do
           {:error, :not_found}
       end
     end
+  end
+
+  @doc """
+  Ends a staff member's employment link — the single definition of deactivation.
+
+  Before this existed, `active` was flipped by a bare cast from four places and
+  every consequence had to be remembered at each call site; forgetting one is
+  what left a deactivated staff member showing as lead instructor on the public
+  program page (#1236). The consequences now live here, in one transaction:
+
+    * the lead-instructor flag on their active assignments is cleared,
+    * an outstanding invitation is revoked (it is a live credential), and
+    * a `staff_member_deactivated` event is staged, so read tables holding a
+      denormalised staff name can clear it — a read filter cannot, because the
+      name is a stored column.
+
+  Program Staff Assignments deliberately **survive**: unassigning would strip
+  Messaging conversation membership, which reactivation cannot give back.
+
+  Idempotent — an already-inactive member is returned unchanged with nothing
+  staged. Takes the struct, so provider-initiated callers scope first through
+  `get_staff_member/2`; foreign ≡ missing is that function's guarantee.
+  """
+  @spec deactivate_staff_member(StaffMember.t()) :: {:ok, StaffMember.t()} | {:error, term()}
+  def deactivate_staff_member(%StaffMember{active: false} = staff), do: {:ok, staff}
+
+  def deactivate_staff_member(%StaffMember{} = staff) do
+    context_span entity: "staff_member" do
+      deactivate_with_event(staff)
+    end
+  end
+
+  @doc """
+  Reinstates a staff member's employment link.
+
+  Deliberately not the mirror image of deactivation: lead-instructor flags stay
+  cleared (leading a program is a promotion, not a property of employment) and a
+  revoked invitation is not reissued — use `resend_staff_invitation/2`.
+
+  No event is staged, so a read table whose staff name was cleared on
+  deactivation stays cleared until the staff member's assignments next change or
+  the projection rebuilds. Recomputing "who is currently assigned" incrementally
+  would have to re-run the bootstrap's earliest-active-assignment resolution and
+  could disagree with it; leaving the field empty is the safe direction.
+  """
+  @spec reactivate_staff_member(StaffMember.t()) :: {:ok, StaffMember.t()} | {:error, term()}
+  def reactivate_staff_member(%StaffMember{active: true} = staff), do: {:ok, staff}
+
+  def reactivate_staff_member(%StaffMember{} = staff) do
+    context_span entity: "staff_member" do
+      Repo.update(StaffMember.reactivate_changeset(staff))
+    end
+  end
+
+  defp deactivate_with_event(staff) do
+    Outbox.transact(@context, fn ->
+      clear_lead_instructor_flags(staff)
+
+      with {:ok, deactivated} <- Repo.update(StaffMember.deactivate_changeset(staff)) do
+        {:ok, deactivated, [ProviderEvents.staff_member_deactivated(deactivated)]}
+      end
+    end)
+  end
+
+  # Scoped to the staff member's own active assignments, so a program whose lead
+  # is someone else is untouched. Leaves `unassigned_at` alone — the assignment
+  # survives, only the lead responsibility ends.
+  defp clear_lead_instructor_flags(%StaffMember{id: staff_id}) do
+    from(a in ProgramStaffAssignment,
+      where: a.staff_member_id == ^staff_id and a.is_lead_instructor and is_nil(a.unassigned_at)
+    )
+    |> Repo.update_all(set: [is_lead_instructor: false])
   end
 
   @doc """

@@ -72,7 +72,7 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
         )
 
       # Deactivate the second staff member
-      {:ok, _} = Provider.update_staff_member(inactive.provider_id, inactive.id, %{active: false})
+      {:ok, _} = Provider.deactivate_staff_member(inactive)
 
       assert {:ok, members} = Provider.list_active_staff_members(provider.id)
       assert length(members) == 1
@@ -88,7 +88,7 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
           first_name: "Inactive"
         )
 
-      {:ok, _} = Provider.update_staff_member(staff.provider_id, staff.id, %{active: false})
+      {:ok, _} = Provider.deactivate_staff_member(staff)
 
       assert {:ok, []} = Provider.list_active_staff_members(provider.id)
     end

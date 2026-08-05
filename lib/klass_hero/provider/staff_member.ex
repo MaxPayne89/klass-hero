@@ -162,7 +162,6 @@ defmodule KlassHero.Provider.StaffMember do
       :headshot_url,
       :tags,
       :qualifications,
-      :active,
       :invitation_status,
       :invitation_token_hash,
       :invitation_sent_at,
@@ -184,14 +183,42 @@ defmodule KlassHero.Provider.StaffMember do
   end
 
   @doc """
-  Admin changeset for Backpex dashboard edits.
+  Admin changeset satisfying Backpex's `adapter_config` contract.
 
-  Only allows toggling `active` — all other fields are provider-owned. Accepts
-  the Backpex 3-arg signature; metadata is unused (no audit fields for the toggle).
+  Inert since #1237: the admin dashboard denies `:edit` and toggles `active`
+  through `Provider.deactivate_staff_member/1` item actions instead, so Backpex
+  never calls this. It stays because `adapter_config` requires the key.
   """
   def admin_changeset(schema, attrs, _metadata) do
     cast(schema, attrs, [:active])
   end
+
+  @doc """
+  Ends a staff member's employment link.
+
+  Deactivation is the reversible end of an employment link (`CONTEXT.md`), so it
+  scrubs no PII — that is erasure's job, via `anonymize_changeset/1`. It does
+  revoke an outstanding invitation for the same reason erasure does: the invite
+  link is a live credential and `get_staff_member_by_token_hash/1` does not check
+  `active`.
+  """
+  @spec deactivate_changeset(t()) :: Ecto.Changeset.t()
+  def deactivate_changeset(%__MODULE__{} = staff) do
+    staff
+    |> change(%{active: false})
+    |> revoke_invitation()
+  end
+
+  @doc """
+  Reinstates a staff member's employment link.
+
+  Deliberately narrow: a revoked invitation is not reissued (use
+  `resend_staff_invitation/2`) and lead-instructor flags cleared on deactivation
+  are not restored — leading a program is a deliberate promotion, not a property
+  of being employed.
+  """
+  @spec reactivate_changeset(t()) :: Ecto.Changeset.t()
+  def reactivate_changeset(%__MODULE__{} = staff), do: change(staff, %{active: true})
 
   @doc """
   Changeset for updating invitation-specific fields.

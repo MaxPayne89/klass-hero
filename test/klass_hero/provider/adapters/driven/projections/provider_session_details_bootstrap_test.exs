@@ -160,4 +160,53 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsB
     assert row.current_assigned_staff_id == first_staff.id
     assert row.current_assigned_staff_name == "Grace Hopper"
   end
+
+  @tag :bootstrap
+  test "bootstrap skips a deactivated staff member and picks the next active one" do
+    # Trigger: the earliest-assigned staff member has been deactivated, a later
+    #          one is still active. Both assignments remain live — deactivation
+    #          ends the employment link, it does not unassign (#1237).
+    # Why: the incremental path clears a deactivated staff member on
+    #      :staff_member_deactivated, so a rebuild that re-named them would
+    #      resurrect the stale attribution — and on the GDPR path that is an
+    #      erased user's real name reappearing in a read table.
+    # Outcome: the LATERAL picks the earliest *active* assignment.
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id, title: "Fencing")
+
+    departed =
+      insert(:staff_member_schema, provider_id: provider.id, first_name: "Gone", last_name: "Away", active: false)
+
+    current =
+      insert(:staff_member_schema, provider_id: provider.id, first_name: "Still", last_name: "Here")
+
+    for {staff, assigned_at} <- [{departed, ~U[2026-04-01 09:00:00Z]}, {current, ~U[2026-04-02 09:00:00Z]}] do
+      {:ok, _} =
+        %ProgramStaffAssignment{}
+        |> ProgramStaffAssignment.create_changeset(%{
+          provider_id: provider.id,
+          staff_member_id: staff.id,
+          program_id: program.id,
+          assigned_at: assigned_at
+        })
+        |> Repo.insert()
+    end
+
+    session_schema =
+      insert(:program_session_schema,
+        program_id: program.id,
+        session_date: ~D[2026-05-11],
+        start_time: ~T[09:00:00],
+        end_time: ~T[10:00:00],
+        status: "scheduled"
+      )
+
+    start_supervised!({ProviderSessionDetails, name: :bootstrap_test_inactive_staff})
+    :ok = ProviderSessionDetails.rebuild(:bootstrap_test_inactive_staff)
+
+    row = Repo.get(SessionDetail, session_schema.id)
+
+    assert row.current_assigned_staff_id == current.id
+    assert row.current_assigned_staff_name == "Still Here"
+  end
 end

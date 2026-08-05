@@ -17,6 +17,7 @@ defmodule KlassHero.Provider.AnonymizeUserData do
   import Ecto.Query, only: [from: 2]
 
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.Staff
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
 
@@ -60,9 +61,21 @@ defmodule KlassHero.Provider.AnonymizeUserData do
 
       _ ->
         Enum.each(reports, &update!(IncidentReport.anonymize_changeset(&1)))
-        Enum.each(staff, &update!(StaffMember.anonymize_changeset(&1)))
+        Enum.each(staff, &erase_staff_member/1)
 
         %{incident_reports: length(reports), staff_members: length(staff)}
+    end
+  end
+
+  # Erasure is an ending of employment plus a scrub, and the ordering is
+  # load-bearing: deactivate_staff_member/1 short-circuits on an already-inactive
+  # row, so scrubbing first (which sets active: false) would silently skip the
+  # lead-instructor clearing and the event that clears the erased name from read
+  # tables. Deactivate, then scrub.
+  defp erase_staff_member(staff) do
+    case Staff.deactivate_staff_member(staff) do
+      {:ok, deactivated} -> update!(StaffMember.anonymize_changeset(deactivated))
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
