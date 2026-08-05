@@ -8,6 +8,25 @@ on:
   push:
     branches: [main]
 
+# Two pushes to main close together used to run this workflow twice at once, and each run
+# force-pushes the Release PR branch from its own read of main. The older run finishing last
+# then overwrites the newer one's content — a lost update. #1266 is the case: #1264 (08:07:34Z)
+# and #1265 (08:07:45Z) merged 11s apart, and the Release PR that came out carried a mix.exs
+# read before #1265, silently reverting the precommit warning gate #1265 had just added.
+#
+# Serialising fixes it because a queued run re-reads main when it finally starts, so the last
+# run to finish is also the one with the freshest content.
+#
+# cancel-in-progress MUST stay false. This workflow also creates the GitHub Release and
+# dispatches the production deploy when a Release PR merges (see `release_created` below), so
+# cancelling an in-flight run to make way for an ordinary push would silently skip a
+# production release. Queuing buys the same freshness without that failure mode.
+#
+# `release-pr-guard` in ci.yml is the backstop if this prevention ever fails.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write
