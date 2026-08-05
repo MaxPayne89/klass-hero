@@ -213,61 +213,6 @@ defmodule KlassHeroWeb.ProgramComponents do
   end
 
   @doc """
-  Renders a provider's vetting state inline beside their name on a program card.
-
-  Deliberately compact — the roomier `verification_status_badge/1` in
-  `ProviderComponents` is a labelled pill built for the provider's own dashboard
-  header, which is too heavy to sit next to a name in a card.
-
-  `:unverified` renders nothing: a provider who has not completed vetting gets no
-  mark rather than a negative one.
-
-  ## Examples
-
-      <.provider_trust_mark state={:verified} />
-      <.provider_trust_mark state={:in_progress} />
-  """
-  attr :state, :atom, required: true, values: [:verified, :in_progress, :unverified]
-
-  def provider_trust_mark(%{state: :verified} = assigns) do
-    ~H"""
-    <span
-      data-testid="provider-trust-mark"
-      data-trust-state="verified"
-      class={[
-        "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium flex-shrink-0",
-        Theme.status_badge(:available),
-        Theme.rounded(:full)
-      ]}
-      title={gettext("This provider completed Klass Hero's verification checks")}
-    >
-      <.icon name="hero-check-badge-mini" class="w-3.5 h-3.5" />
-      <span>{gettext("Verified")}</span>
-    </span>
-    """
-  end
-
-  def provider_trust_mark(%{state: :in_progress} = assigns) do
-    ~H"""
-    <span
-      data-testid="provider-trust-mark"
-      data-trust-state="in_progress"
-      class={[
-        "inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium flex-shrink-0",
-        Theme.status_badge(:limited),
-        Theme.rounded(:full)
-      ]}
-      title={gettext("This provider is working through Klass Hero's verification checks")}
-    >
-      <.icon name="hero-clock-mini" class="w-3.5 h-3.5" />
-      <span>{gettext("Verification in progress")}</span>
-    </span>
-    """
-  end
-
-  def provider_trust_mark(assigns), do: ~H""
-
-  @doc """
   Renders a program card with gradient header, favorite button, and program details.
 
   Supports two variants:
@@ -357,7 +302,7 @@ defmodule KlassHeroWeb.ProgramComponents do
               <span class="text-sm font-medium text-hero-black truncate">
                 {@program.provider_name}
               </span>
-              <.provider_trust_mark state={Map.get(@program, :verification_state, :unverified)} />
+              <.kh_trust_mark state={Map.get(@program, :verification_state, :unverified)} />
             </div>
             <div
               :if={Map.get(@program, :provider_location)}

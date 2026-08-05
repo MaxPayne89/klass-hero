@@ -5,13 +5,15 @@ defmodule KlassHeroWeb.HomeLive do
 
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
 
   @impl true
   def mount(_params, _session, socket) do
     featured = ProgramCatalog.list_featured_programs()
-    featured_maps = Enum.map(featured, &listing_to_card_map/1)
+    providers = ProviderDisplay.for_programs(featured)
+    featured_maps = Enum.map(featured, &listing_to_card_map(&1, ProviderDisplay.fetch(providers, &1)))
     trending_tags = ProgramCatalog.trending_searches()
 
     socket =
@@ -52,14 +54,12 @@ defmodule KlassHeroWeb.HomeLive do
     {:noreply, push_navigate(socket, to: ~p"/programs/#{program_id}")}
   end
 
-  # No provider row here on purpose: the home page renders `mk_program_card`, a
-  # marketing card that shows no provider at all. Threading a name and trust state
-  # into it would recreate exactly the write-only data #1195 deleted. Surfacing
-  # verification here needs a design decision about the marketing card first.
-  defp listing_to_card_map(%ProgramListing{} = program) do
+  defp listing_to_card_map(%ProgramListing{} = program, provider) do
     %{
       id: program.id,
       title: program.title,
+      provider_name: provider.name,
+      verification_state: provider.trust,
       description: program.description,
       category: ProgramPresenter.format_category_for_display(program.category),
       age_range: program.age_range,

@@ -1847,25 +1847,114 @@ defmodule KlassHeroWeb.UIComponents do
 
       <.kh_pill tone={:success}>Verified</.kh_pill>
       <.kh_pill tone={:dark}>This week</.kh_pill>
+      <.kh_pill tone={:success} size={:xs}>Verified</.kh_pill>
   """
   attr :tone, :atom,
     default: :outline,
-    values: [:primary, :accent, :outline, :success, :warning, :error, :info, :dark, :cream]
+    values: [:primary, :accent, :outline, :success, :warning, :error, :info, :dark, :cream, :none],
+    doc: "`:none` emits no colors — the caller supplies them through `class`"
+
+  attr :size, :atom,
+    default: :default,
+    values: [:default, :xs],
+    doc: "`:xs` is the dense variant for pills sharing a line with other text"
 
   attr :class, :string, default: ""
+  attr :rest, :global
   slot :inner_block, required: true
 
   def kh_pill(assigns) do
     ~H"""
-    <span class={[
-      "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
-      kh_pill_tone_classes(@tone),
-      @class
-    ]}>
+    <span
+      class={[
+        "inline-flex items-center rounded-full",
+        kh_pill_size_classes(@size),
+        kh_pill_tone_classes(@tone),
+        @class
+      ]}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </span>
     """
   end
+
+  defp kh_pill_size_classes(:default), do: "gap-1.5 px-3 py-1 text-xs font-semibold"
+  defp kh_pill_size_classes(:xs), do: "gap-1 px-1.5 py-0.5 text-xs font-medium flex-shrink-0"
+
+  @doc """
+  Renders a provider's vetting state inline beside their name.
+
+  Lives here rather than with either card because both card families render it:
+  `ProgramComponents.program_card/1` on `/programs` and the parent dashboard, and
+  `MarketingComponents.mk_program_card/1` on the home page. The roomier
+  `ProviderComponents.verification_status_badge/1` stays separate — it is a
+  labelled pill for the provider's own dashboard header, too heavy to sit next to
+  a name in a card.
+
+  `:unverified` renders nothing: a provider who has not completed vetting gets no
+  mark rather than a negative one.
+
+  `variant={:compact}` shortens the in-progress label. The marketing card puts the
+  mark on the same line as the provider name, where the full "Verification in
+  progress" would push that line to wrap at mobile width (#1224).
+
+  Colors come from `Theme.status_badge/1` rather than `kh_pill`'s `:success` /
+  `:warning` tones, which pair a tint background with a mid-tone accent color and
+  measure 2.4:1 and 2.1:1 — below WCAG AA's 4.5:1 for text this size. The
+  `status_badge` pairs measure 6.5:1 and 6.4:1.
+
+  ## Examples
+
+      <.kh_trust_mark state={:verified} />
+      <.kh_trust_mark state={:in_progress} variant={:compact} />
+  """
+  attr :state, :atom, required: true, values: [:verified, :in_progress, :unverified]
+
+  attr :variant, :atom,
+    default: :default,
+    values: [:default, :compact],
+    doc: "`:compact` shortens the in-progress label for dense, shared lines"
+
+  def kh_trust_mark(%{state: :verified} = assigns) do
+    ~H"""
+    <.kh_pill
+      tone={:none}
+      size={:xs}
+      class={Theme.status_badge(:available)}
+      data-testid="provider-trust-mark"
+      data-trust-state="verified"
+      title={gettext("This provider completed Klass Hero's verification checks")}
+    >
+      <.icon name="hero-check-badge-mini" class="w-3.5 h-3.5" />
+      <span>{gettext("Verified")}</span>
+    </.kh_pill>
+    """
+  end
+
+  def kh_trust_mark(%{state: :in_progress} = assigns) do
+    ~H"""
+    <.kh_pill
+      tone={:none}
+      size={:xs}
+      class={Theme.status_badge(:limited)}
+      data-testid="provider-trust-mark"
+      data-trust-state="in_progress"
+      title={gettext("This provider is working through Klass Hero's verification checks")}
+    >
+      <.icon name="hero-clock-mini" class="w-3.5 h-3.5" />
+      <span>
+        <%= if @variant == :compact do %>
+          {gettext("Verifying")}
+        <% else %>
+          {gettext("Verification in progress")}
+        <% end %>
+      </span>
+    </.kh_pill>
+    """
+  end
+
+  def kh_trust_mark(assigns), do: ~H""
 
   defp kh_pill_tone_classes(:primary), do: "bg-[var(--brand-primary)] text-black"
   defp kh_pill_tone_classes(:accent), do: "bg-[var(--hero-yellow-500)] text-black"
@@ -1878,6 +1967,7 @@ defmodule KlassHeroWeb.UIComponents do
   defp kh_pill_tone_classes(:info), do: "bg-[var(--info-bg)] text-[var(--info)]"
   defp kh_pill_tone_classes(:dark), do: "bg-black text-white"
   defp kh_pill_tone_classes(:cream), do: "bg-[var(--hero-cream-100)] text-[var(--fg-body)]"
+  defp kh_pill_tone_classes(:none), do: ""
 
   @doc """
   Renders a heroicon. Convenience alias matching the `Kh*` naming so handoff
