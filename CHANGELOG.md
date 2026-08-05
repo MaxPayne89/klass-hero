@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.68.1](https://github.com/MaxPayne89/klass-hero/compare/v0.68.0...v0.68.1) (2026-08-05)
+
+
+### Bug Fixes
+
+* retry a tokenless invite's failing write instead of cancelling ([#1288](https://github.com/MaxPayne89/klass-hero/issues/1288)) ([6233bc9](https://github.com/MaxPayne89/klass-hero/commit/6233bc9db4fa8ff6479e74835bfab4824df19e88)), closes [#1248](https://github.com/MaxPayne89/klass-hero/issues/1248)
+
 ## [0.68.0](https://github.com/MaxPayne89/klass-hero/compare/v0.67.3...v0.68.0) (2026-08-05)
 
 
