@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.69.0](https://github.com/MaxPayne89/klass-hero/compare/v0.68.1...v0.69.0) (2026-08-05)
+
+
+### Features
+
+* make staff deactivation a real domain operation ([#1291](https://github.com/MaxPayne89/klass-hero/issues/1291)) ([baeaab2](https://github.com/MaxPayne89/klass-hero/commit/baeaab2bf1e02b03884536f2133c4f28ce6044a0))
+
 ## [0.68.1](https://github.com/MaxPayne89/klass-hero/compare/v0.68.0...v0.68.1) (2026-08-05)
 
 
