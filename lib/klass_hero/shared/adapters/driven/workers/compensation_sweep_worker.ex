@@ -15,6 +15,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
   The job row is the only durable trace — Lifeline's telemetry carries ids and
   nothing else — so reconciliation reads the table rather than listening for events.
 
+  `cancelled` is deliberately **not** swept. A cancel is a decision the worker made,
+  not a death it failed to observe, and re-deciding it here would override the one
+  branch that had the context to judge. The obligation that falls out: a worker
+  returning `{:cancel, _}` after a compensating write of its own must resolve that
+  write itself, because nothing downstream will. `SendInviteEmailWorker`'s tokenless
+  branch is the only such site — it returns `{:error, _}` when its write fails, so the
+  retry machinery and then this sweep still apply (#1248).
+
   Scope is the `CompensatingWorkerRegistry` list, filtered in SQL. Without that, a
   discarded job from a worker that never compensates would be re-examined on every
   tick for as long as the Pruner keeps its row.

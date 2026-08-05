@@ -1,6 +1,7 @@
 defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTest do
   use KlassHero.DataCase, async: true
 
+  import ExUnit.CaptureLog
   import KlassHero.Factory
   import Swoosh.TestAssertions
 
@@ -147,6 +148,62 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       assert {:error, _reason} =
                SendInviteEmailWorker.execute(job(invite, program, @max_attempts))
+    end
+  end
+
+  # #1248: the tokenless branch used to discard this transition's result and return
+  # {:cancel, _} regardless. A cancelled job is out of the compensation sweep's scope
+  # on purpose, so a failed write left the invite :pending forever with nothing to
+  # retry it and nothing logged.
+  #
+  # The result is injected because no fixture can produce it: the non-pending guard in
+  # execute/1 catches every invite that is not :pending before this branch, and
+  # transition_changeset validates against the refetched row — so by the time the
+  # branch runs, pending -> :failed is always legal.
+  describe "resolve_tokenless/2" do
+    setup :create_pending_invite
+
+    test "cancels once the invite is marked failed", %{invite: invite, program: program} do
+      assert {:cancel, "invite has no token"} =
+               SendInviteEmailWorker.resolve_tokenless({:ok, invite}, job(invite, program, 1))
+
+      assert reload(invite).status == :pending,
+             "resolve_tokenless/2 should not write; the caller already did"
+    end
+
+    test "retries a failed write while attempts remain", %{invite: invite, program: program} do
+      assert {:error, :not_found} =
+               SendInviteEmailWorker.resolve_tokenless({:error, :not_found}, job(invite, program, 1))
+
+      assert reload(invite).status == :pending,
+             "compensated while retries remained, destroying the write the next attempt makes"
+    end
+
+    test "compensates a failed write on the final attempt", %{invite: invite, program: program} do
+      assert {:error, :not_found} =
+               SendInviteEmailWorker.resolve_tokenless(
+                 {:error, :not_found},
+                 job(invite, program, @max_attempts)
+               )
+
+      # The reason reads "Email delivery failed" because compensate/2 is shared with the
+      # delivery path, and the sweep that also calls it has only the job row to go on.
+      # Imprecise, but the provider still sees Failed rather than a silent :pending.
+      failed = reload(invite)
+      assert failed.status == :failed
+      assert failed.error_details =~ "not_found"
+    end
+
+    # Returning the error is what retries it; the log is what makes a write that keeps
+    # failing visible before the retries run out.
+    test "logs the failed write at :critical", %{invite: invite, program: program} do
+      log =
+        capture_log(fn ->
+          SendInviteEmailWorker.resolve_tokenless({:error, :not_found}, job(invite, program, 1))
+        end)
+
+      assert log =~ "[critical]"
+      assert log =~ "tokenless invite"
     end
   end
 end

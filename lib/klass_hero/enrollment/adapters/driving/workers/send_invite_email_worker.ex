@@ -30,23 +30,53 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
 
         :ok
 
-      # Every retry re-reads the same nil token, so the remaining attempts are
-      # guaranteed waste — cancel rather than spend them. Failing the invite here is
-      # what makes it visible: left :pending it would sit forever with no email sent
-      # and nothing to show the provider. A resend mints a fresh token.
+      # Failing the invite here is what makes it visible: left :pending it would sit
+      # forever with no email sent and nothing to show the provider. A resend mints a
+      # fresh token.
       {:ok, %BulkEnrollmentInvite{invite_token: nil} = invite} ->
         Logger.warning("[SendInviteEmailWorker] Invite has no token", invite_id: invite_id)
 
-        Enrollment.transition_invite(invite, %{
+        invite
+        |> Enrollment.transition_invite(%{
           status: :failed,
           error_details: "Invite link could not be generated (no token). Please resend."
         })
-
-        {:cancel, "invite has no token"}
+        |> resolve_tokenless(job)
 
       {:ok, %BulkEnrollmentInvite{} = invite} ->
         send_and_transition(invite, program_name, job)
     end
+  end
+
+  @doc """
+  The Oban outcome a tokenless invite deserves, given whether failing it stuck.
+
+  Split from the branch it serves because no fixture can reach the error arm: the
+  non-pending guard in `execute/1` catches every invite that is not `:pending` before
+  the branch runs, and `transition_changeset/2` validates against the refetched row,
+  so `pending -> :failed` is legal by the time we get here. Injecting the result is
+  the only way this decision goes red.
+  """
+  @spec resolve_tokenless({:ok, BulkEnrollmentInvite.t()} | {:error, term()}, Oban.Job.t()) ::
+          {:cancel, String.t()} | {:error, term()}
+  # The nil token is beyond retry — every attempt re-reads it — so once the invite is
+  # marked failed there is nothing left worth spending attempts on.
+  def resolve_tokenless({:ok, _invite}, %Oban.Job{}), do: {:cancel, "invite has no token"}
+
+  # The token is beyond retry; this write is not. `{:cancel, _}` would land the job in
+  # `cancelled`, which the compensation sweep does not scan — cancelling is a decision
+  # the code made rather than a death it failed to observe — so a lost write would
+  # leave the invite :pending forever with nothing to retry it (#1248). Erroring hands
+  # it back to Oban, and the final attempt to the sweep.
+  def resolve_tokenless({:error, reason}, %Oban.Job{} = job) do
+    Logger.critical("[SendInviteEmailWorker] Could not fail a tokenless invite",
+      invite_id: job.args["invite_id"],
+      reason: inspect(reason)
+    )
+
+    TracedWorker.compensate_if_final(__MODULE__, job, reason)
+
+    {:error, reason}
   end
 
   defp send_and_transition(invite, program_name, job) do
