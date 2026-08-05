@@ -49,6 +49,23 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
   # realistic "what did we lose?" investigation still finds the payload.
   @undelivered_retention_days 90
 
+  # A marker carries no personal data; it only has to outlive the `oban_jobs` row it guards,
+  # which the Pruner deletes at 7 days. Everything past that is margin for the Pruner running
+  # behind — it prunes only while a node is up, and 10_000 rows at a time. Shortening this
+  # below the Pruner window deletes a marker whose job is still discardable and hands the same
+  # job back to the sweep for a second compensation; `KlassHero.ObanConfigTest` is what stops
+  # that going unnoticed.
+  @job_compensation_retention_days 14
+
+  @doc """
+  How long a compensation marker is kept, in days.
+
+  Public because the coupling to `Oban.Plugins.Pruner`'s window is asserted in
+  `KlassHero.ObanConfigTest`, which reads config rather than module attributes.
+  """
+  @spec job_compensation_retention_days() :: pos_integer()
+  def job_compensation_retention_days, do: @job_compensation_retention_days
+
   @impl true
   def execute(%Oban.Job{}) do
     pending = uncompensated_jobs()
@@ -59,11 +76,12 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
 
     Enum.each(pending, &compensate_job/1)
     prune_undelivered_events()
+    prune_job_compensations()
     :ok
   end
 
-  # Rides the 5-minute tick rather than a cron of its own: an indexed delete over a
-  # table that is empty in the healthy case costs nothing, and the alternative is a
+  # Both prunes ride the 5-minute tick rather than a cron of their own: an indexed delete
+  # over a table that is empty in the healthy case costs nothing, and the alternative is a
   # second schedule to keep in agreement with this one.
   defp prune_undelivered_events do
     cutoff = DateTime.add(DateTime.utc_now(), -@undelivered_retention_days, :day)
@@ -71,6 +89,17 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
     case UndeliveredEventRepository.prune(cutoff) do
       0 -> :ok
       pruned -> Logger.info("Pruned #{pruned} undelivered event(s) past #{@undelivered_retention_days} days")
+    end
+  end
+
+  # After the compensation pass, not before: pruning first could delete a marker and hand
+  # its job straight back to `uncompensated_jobs/0` in the same tick.
+  defp prune_job_compensations do
+    cutoff = DateTime.add(DateTime.utc_now(), -@job_compensation_retention_days, :day)
+
+    case JobCompensationRepository.prune(cutoff) do
+      0 -> :ok
+      pruned -> Logger.info("Pruned #{pruned} compensation marker(s) past #{@job_compensation_retention_days} days")
     end
   end
 

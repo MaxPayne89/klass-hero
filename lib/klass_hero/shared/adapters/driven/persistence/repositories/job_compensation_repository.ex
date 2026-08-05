@@ -22,6 +22,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensat
 
   use KlassHero.Shared.Interaction
 
+  import Ecto.Query
+
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.JobCompensation
 
@@ -51,6 +53,25 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensat
         end
       end)
       |> unwrap_transaction_result()
+    end
+  end
+
+  @doc """
+  Deletes markers compensated before `cutoff`, returning how many went.
+
+  Cutting on `compensated_at` rather than the job's `discarded_at` is deliberate and
+  safe in the conservative direction: a marker can only be written while the sweep's
+  join still sees the `oban_jobs` row, so `compensated_at >= discarded_at` always, and
+  a cutoff measured from it therefore lands no earlier than the same span measured
+  from the job's own clock. The caller owns the span — see `CompensationSweepWorker`.
+  """
+  @spec prune(DateTime.t()) :: non_neg_integer()
+  def prune(%DateTime{} = cutoff) do
+    db_interaction operation: :prune, entity: "job_compensation" do
+      {deleted, _returning} =
+        Repo.delete_all(from(compensation in JobCompensation, where: compensation.compensated_at < ^cutoff))
+
+      deleted
     end
   end
 
