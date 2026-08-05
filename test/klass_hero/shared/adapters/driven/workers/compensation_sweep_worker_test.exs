@@ -121,6 +121,35 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
     end
   end
 
+  # 14 days, against the Pruner's 7. `oban_config_test` guards that ordering; these two guard
+  # that the prune runs at all and cuts where it says it does.
+  describe "compensation markers" do
+    for {age_days, kept?} <- [{13, true}, {15, false}] do
+      test "a marker written #{age_days} days ago is #{if kept?, do: "kept", else: "pruned"}" do
+        job_id = stale_marker(unquote(age_days))
+
+        assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
+
+        assert Repo.get_by(JobCompensation, job_id: job_id) != nil == unquote(kept?),
+               "expected a #{unquote(age_days)}-day-old marker to be #{unquote(if kept?, do: "kept", else: "pruned")}"
+      end
+    end
+
+    # Pins where the safety actually comes from. The prune has no join back to `oban_jobs`, so
+    # an expired marker goes whether or not its job survives; nothing but the retention being
+    # longer than the Pruner window keeps the two from overlapping.
+    test "prunes an expired marker even while its job row survives" do
+      reply = pending_reply()
+      job = discarded_job(@registered, %{"reply_id" => reply.id})
+      stale_marker(15, job.id)
+
+      assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
+
+      refute Repo.get_by(JobCompensation, job_id: job.id)
+      assert reply_status(reply) == :sending, "the marker should have excluded this job from the sweep"
+    end
+  end
+
   describe "reason_from/1" do
     test "returns the last recorded error string" do
       job = %Oban.Job{
@@ -168,6 +197,21 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
     ])
 
     event_id
+  end
+
+  # Same shortcut as `stale_record/1`. The default `job_id` deliberately matches no
+  # `oban_jobs` row, so a marker staged this way cannot be re-created by the same sweep —
+  # `uncompensated_jobs/0` joins *from* the job table.
+  defp stale_marker(age_days, job_id \\ 999_999) do
+    Repo.insert_all(JobCompensation, [
+      %{
+        job_id: job_id,
+        worker: @registered,
+        compensated_at: DateTime.add(DateTime.utc_now(), -age_days, :day)
+      }
+    ])
+
+    job_id
   end
 
   # Written straight to the table: Oban's own insert path cannot leave a row in a

@@ -51,6 +51,20 @@ defmodule KlassHero.ObanConfigTest do
       assert max_age > 3600,
              "Pruner max_age (#{max_age}s) leaves too little room for the sweep at #{expression}"
     end
+
+    # The other end of the same coupling. A marker exists to stop the sweep reaching a job it
+    # already compensated; delete it while that job row survives and the sweep compensates the
+    # job a second time. Neither side can see the other — the retention is a module attribute,
+    # the window is config — so this is the only place the two are compared.
+    test "keeps compensation markers longer than the job rows they guard" do
+      retention = CompensationSweepWorker.job_compensation_retention_days() * 86_400
+      max_age = Oban.Plugins.Pruner |> plugin_opts() |> Keyword.get(:max_age, 60)
+
+      assert retention > max_age,
+             "job_compensations retention (#{retention}s) is shorter than the Pruner window " <>
+               "(#{max_age}s) — a marker can be deleted while its job row is still discardable, " <>
+               "and the next sweep compensates that job twice"
+    end
   end
 
   # config/test.exs adds only `testing: :inline` and Config.Reader deep-merges, so the plugin list
