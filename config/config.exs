@@ -262,6 +262,12 @@ config :klass_hero, :event_consumers, %{
     {StaffAssignmentHandler, :handle_event},
     {ProviderSessionDetails, :project}
   ],
+  # Deliberately NOT routed to StaffAssignmentHandler: deactivation ends the
+  # employment link but leaves assignments standing, so conversation membership
+  # survives — reactivating cannot give it back (#1237).
+  "integration:provider:staff_member_deactivated" => [
+    {ProviderSessionDetails, :project}
+  ],
   # `integration:provider:provider_verified` / `provider_unverified` have no consumers
   # since #1195: program cards read trust state from Provider's facade per render rather
   # than from a denormalised column. The events are still produced (the `verified` fact

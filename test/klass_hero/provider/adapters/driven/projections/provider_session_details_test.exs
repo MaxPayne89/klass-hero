@@ -6,8 +6,10 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
   import KlassHero.Factory
 
   alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.SessionDetail
+  alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -421,6 +423,83 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       assert scheduled.current_assigned_staff_name == nil
       assert completed.current_assigned_staff_id == staff.id
       assert completed.current_assigned_staff_name == "Bob Jones"
+    end
+  end
+
+  describe "staff deactivation (#1237)" do
+    # Built from the real ProviderEvents constructor rather than the local
+    # Event.new/5 helpers: the suite runs on TestOutbox, so nothing else in this
+    # file pairs a producer with its consumer, and a hand-rolled payload would
+    # hide drift between the two.
+    setup do
+      provider = insert(:provider_profile_schema)
+
+      staff =
+        insert(:staff_member_schema,
+          provider_id: provider.id,
+          first_name: "Carol",
+          last_name: "Dane"
+        )
+
+      %{provider: provider, staff: staff}
+    end
+
+    defp deactivate(staff) do
+      staff
+      |> ProviderEvents.staff_member_deactivated()
+      |> ProviderSessionDetails.project()
+    end
+
+    defp session_assigned_to(provider, staff, status) do
+      program = insert(:program_schema, provider_id: provider.id)
+      session_id = Ecto.UUID.generate()
+
+      insert_program_session(
+        session_id: session_id,
+        program_id: program.id,
+        provider_id: provider.id,
+        status: status,
+        current_assigned_staff_id: staff.id,
+        current_assigned_staff_name: StaffMember.full_name(staff)
+      )
+
+      session_id
+    end
+
+    test "clears the staff member from scheduled sessions across every program", ctx do
+      # Deactivation is not per-program, so unlike :staff_unassigned_from_program
+      # this clause must reach every program the staff member was assigned to.
+      first = session_assigned_to(ctx.provider, ctx.staff, :scheduled)
+      second = session_assigned_to(ctx.provider, ctx.staff, :scheduled)
+
+      deactivate(ctx.staff)
+
+      for session_id <- [first, second] do
+        row = reload(session_id)
+        assert is_nil(row.current_assigned_staff_id), "expected #{session_id} to be cleared"
+        assert is_nil(row.current_assigned_staff_name), "expected #{session_id} to be cleared"
+      end
+    end
+
+    test "leaves historical rows attributed", ctx do
+      completed = session_assigned_to(ctx.provider, ctx.staff, :completed)
+
+      deactivate(ctx.staff)
+
+      row = reload(completed)
+      assert row.current_assigned_staff_id == ctx.staff.id
+      assert row.current_assigned_staff_name == "Carol Dane"
+    end
+
+    test "does not clear another staff member's sessions", ctx do
+      other = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Dee", last_name: "Ell")
+      mine = session_assigned_to(ctx.provider, ctx.staff, :scheduled)
+      theirs = session_assigned_to(ctx.provider, other, :scheduled)
+
+      deactivate(ctx.staff)
+
+      assert is_nil(reload(mine).current_assigned_staff_id)
+      assert reload(theirs).current_assigned_staff_id == other.id
     end
   end
 

@@ -105,8 +105,13 @@ _Avoid_: Teacher, Coach, Trainer (those are **Roles**, not the lead responsibili
 A **Staff Member**'s specific job title — freeform text such as "Coach" or "Teacher". Distinct from **Instructor**, which is the lead responsibility for a Program/Session, not a title.
 _Avoid_: Position, Title, Type
 
+**Deactivation**:
+Ending a **Staff Member**'s employment link — they no longer work for that **Provider**. Reversible (*reactivation*), and deliberately narrow: any **Instructor** role they held is cleared and an outstanding invitation is revoked, but their **Program Staff Assignments** and conversation membership survive, because unassigning would destroy access that reactivation cannot give back. Reactivation restores only the employment: the Instructor role and the invitation stay gone.
+Distinct from two neighbours that land on the same `active` column: **removal** (a hard delete of the row, the Team tab's "remove member") and **erasure** (GDPR, which deactivates *and* scrubs PII). Deactivation alone says nothing about why.
+_Avoid_: Disable, Archive, Soft-delete, Suspend, Terminate
+
 **Program Staff Assignment**:
-The link recording that a **Staff Member** works on a **Program**. Many Staff Members may be assigned to one Program because a class can need several people.
+The link recording that a **Staff Member** works on a **Program**. Many Staff Members may be assigned to one Program because a class can need several people. Survives the Staff Member's **deactivation**.
 _Avoid_: Membership, Posting
 
 ## Families & Accounts

@@ -5,6 +5,11 @@ defmodule KlassHeroWeb.Admin.StaffLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Provider.StaffMember
+  alias KlassHero.Repo
+  alias KlassHeroWeb.Admin.Actions.ActivateStaffAction
+  alias KlassHeroWeb.Admin.Actions.DeactivateStaffAction
+  alias KlassHeroWeb.Admin.StaffLive
+  alias Phoenix.LiveView.Socket
 
   describe "admin access control" do
     setup :register_and_log_in_admin
@@ -60,62 +65,76 @@ defmodule KlassHeroWeb.Admin.StaffLiveTest do
     end
   end
 
-  describe "edit staff member" do
-    setup :register_and_log_in_admin
+  describe "can?/3 employment-action gating" do
+    # Deactivate and Activate are opposite-gated on the same row, so Backpex renders
+    # exactly one of them per staff member. Tested as plain functions, matching
+    # BookingLive's cancel_booking gates — no item-action modal is driven anywhere
+    # in this suite.
+    @employment_cases [
+      {:deactivate_staff, true, true},
+      {:deactivate_staff, false, false},
+      {:activate_staff, true, false},
+      {:activate_staff, false, true}
+    ]
 
-    test "admin can toggle active status to false", %{conn: conn} do
-      provider = provider_profile_fixture()
-
-      staff =
-        staff_member_fixture(provider_id: provider.id, first_name: "Bob", last_name: "Jones")
-
-      {:ok, view, _html} = live(conn, ~p"/admin/staff/#{staff.id}/edit")
-
-      view
-      |> form("#resource-form", %{change: %{active: false}})
-      |> render_submit(%{"save-type" => "save"})
-
-      schema =
-        KlassHero.Repo.get!(
-          StaffMember,
-          staff.id
-        )
-
-      assert schema.active == false
+    test "offers deactivate only for active staff and activate only for inactive" do
+      for {action, active?, expected} <- @employment_cases do
+        assert StaffLive.can?(%{}, action, %{active: active?}) == expected,
+               "can?(#{inspect(action)}, active: #{active?}) should be #{expected}"
+      end
     end
 
-    test "admin cannot edit provider-owned fields", %{conn: conn} do
-      provider = provider_profile_fixture()
+    @fixed_cases [{:new, false}, {:delete, false}, {:edit, false}, {:index, true}, {:show, true}]
 
-      staff =
-        staff_member_fixture(
-          provider_id: provider.id,
-          first_name: "Original",
-          last_name: "Name",
-          role: "Instructor"
-        )
+    test "denies create, delete and edit; permits index and show" do
+      # :edit is denied since #1237 — `active` was the only editable field, and it
+      # now moves through the domain command, so the form has nothing left to write.
+      for {action, expected} <- @fixed_cases do
+        assert StaffLive.can?(%{}, action, %{}) == expected,
+               "can?(#{inspect(action)}) should be #{expected}"
+      end
+    end
 
-      {:ok, view, _html} = live(conn, ~p"/admin/staff/#{staff.id}/edit")
-
-      # Trigger: admin submits the edit form with only the active toggle changed
-      # Why: admin_changeset only casts :active; readonly fields (first_name, role)
-      #      are not rendered as editable inputs, so they can't be submitted at all
-      # Outcome: first_name, role remain unchanged in the database
-      view
-      |> form("#resource-form", %{
-        change: %{active: false}
-      })
-      |> render_submit(%{"save-type" => "save"})
-
-      schema =
-        KlassHero.Repo.get!(
-          StaffMember,
-          staff.id
-        )
-
-      assert schema.first_name == "Original"
-      assert schema.role == "Instructor"
-      assert schema.active == false
+    test "denies unknown actions" do
+      refute StaffLive.can?(%{}, :unknown_action, %{active: true})
     end
   end
+
+  describe "employment item actions" do
+    setup :register_and_log_in_admin
+
+    test "deactivating ends the employment link through the domain command" do
+      provider = provider_profile_fixture()
+      staff = staff_member_fixture(provider_id: provider.id, first_name: "Bob", last_name: "Jones")
+
+      assert {:ok, _socket} = DeactivateStaffAction.handle(bare_socket(), [staff], %{})
+
+      reloaded = Repo.get!(StaffMember, staff.id)
+      refute reloaded.active
+      assert reloaded.first_name == "Bob", "the action must not touch provider-owned fields"
+    end
+
+    test "activating reinstates the employment link" do
+      provider = provider_profile_fixture()
+      staff = staff_member_fixture(provider_id: provider.id, active: false)
+
+      assert {:ok, _socket} = ActivateStaffAction.handle(bare_socket(), [staff], %{})
+
+      assert Repo.get!(StaffMember, staff.id).active
+    end
+
+    test "the edit route is no longer reachable", %{conn: conn} do
+      # Backpex raises rather than redirecting when can?/3 denies a form mount, so
+      # the URL cannot be used as a back door around the item actions.
+      provider = provider_profile_fixture()
+      staff = staff_member_fixture(provider_id: provider.id)
+
+      assert_raise Backpex.ForbiddenError, fn -> live(conn, ~p"/admin/staff/#{staff.id}/edit") end
+    end
+  end
+
+  # The actions only put a flash on the socket, so a bare one exercises handle/3
+  # directly. Driving the confirm modal through LiveViewTest has no precedent in
+  # this suite — BookingLive's action is tested the same way.
+  defp bare_socket, do: %Socket{assigns: %{flash: %{}, __changed__: %{}}}
 end

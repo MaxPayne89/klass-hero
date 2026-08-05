@@ -5,12 +5,18 @@ defmodule KlassHero.Provider.AnonymizeUserDataTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
+  import KlassHero.EventTestHelper
   import KlassHero.Factory
   import KlassHero.ProviderFixtures
 
   alias KlassHero.Provider
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
+
+  setup do
+    setup_test_integration_events()
+  end
 
   describe "anonymize_data_for_user/1" do
     test "scrubs both PII surfaces and reports what it touched" do
@@ -59,6 +65,24 @@ defmodule KlassHero.Provider.AnonymizeUserDataTest do
 
       assert Repo.get(StaffMember, staff.id).email == nil
     end
+
+    test "ends the employment link with its consequences, not just the PII" do
+      # Erasure goes through deactivate_staff_member/1 rather than flipping `active`
+      # itself, so it inherits every consequence instead of having to remember them:
+      # the lead-instructor flag goes, and the event that clears the erased name from
+      # read tables is staged (#1237).
+      %{user: user, provider: provider, program: program, staff: staff} = user_with_provider_data()
+
+      {:ok, lead} = Provider.set_lead_instructor(program.id, staff.id, provider.id)
+      assert lead.is_lead_instructor
+
+      clear_integration_events()
+
+      assert {:ok, _} = Provider.anonymize_data_for_user(user.id)
+
+      refute Repo.get(ProgramStaffAssignment, lead.id).is_lead_instructor
+      assert_integration_event_published(:staff_member_deactivated, %{staff_member_id: staff.id})
+    end
   end
 
   defp user_with_provider_data(staff_attrs \\ []) do
@@ -89,6 +113,6 @@ defmodule KlassHero.Provider.AnonymizeUserDataTest do
         program_id: program.id
       )
 
-    %{user: user, provider: provider, staff: staff, report: report}
+    %{user: user, provider: provider, program: program, staff: staff, report: report}
   end
 end

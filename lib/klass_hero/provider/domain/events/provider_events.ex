@@ -14,6 +14,9 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   - `staff_assigned_to_program` / `staff_unassigned_from_program` - A staff
     member's program assignment changed (critical). Messaging reacts by adding
     or removing the staff member from the program's conversation.
+  - `staff_member_deactivated` - A staff member's employment link ended
+    (critical). Read tables holding a denormalised staff name clear it; a read
+    filter cannot, because the name is a stored column.
 
   The staff assignment events carry the **staff member** as their entity, not
   the assignment row: consumers key on who was assigned, not on which row
@@ -87,6 +90,32 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
           Event.t()
   def staff_unassigned_from_program(%ProgramStaffAssignment{} = assignment, %StaffMember{} = staff_member, opts \\ []) do
     assignment_event(:staff_unassigned_from_program, assignment, staff_member, opts)
+  end
+
+  @doc """
+  Creates a `staff_member_deactivated` event (critical).
+
+  Carries no `program_ids`: consumers hold `staff_member_id` on their own rows,
+  so scoping by the staff member is both narrower and immune to the assignment
+  set changing between staging and delivery. No timestamp either — a payload
+  `DateTime` does not survive the durable round trip (#1010).
+  """
+  @spec staff_member_deactivated(StaffMember.t(), keyword()) :: Event.t()
+  def staff_member_deactivated(%StaffMember{} = staff_member, opts \\ []) do
+    payload = %{
+      provider_id: staff_member.provider_id,
+      staff_member_id: staff_member.id,
+      staff_user_id: staff_member.user_id
+    }
+
+    Event.new(
+      :staff_member_deactivated,
+      @source_context,
+      @staff_entity_type,
+      staff_member.id,
+      payload,
+      Keyword.put_new(opts, :criticality, :critical)
+    )
   end
 
   # assigned_at/unassigned_at are deliberately absent: no consumer reads them, and

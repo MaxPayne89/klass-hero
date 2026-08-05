@@ -13,6 +13,22 @@ defmodule KlassHero.Release.DedupActiveStaffMemberships do
   Lives outside the migration so the transform is unit-testable (the #966
   pattern); the migration's `up/0` calls `run/1` before creating the index.
   Idempotent: re-running finds no duplicates and deactivates zero rows.
+
+  ## Why this bypasses `Provider.deactivate_staff_member/1`
+
+  #1237 made deactivation a domain operation and routed every other writer of
+  `active` through it. This one is a deliberate exemption, not an oversight:
+
+    * It runs inside a migration's `up/0`, where staging an event would deliver
+      it on the next boot against a schema that was mid-migration when the event
+      was written.
+    * It is a one-shot historical cleanup that has already run in production, so
+      routing it changes no live behaviour while adding migration-time risk.
+    * The rows it touches are duplicates that should never have existed; they
+      hold no lead-instructor role and no outstanding invitation worth revoking.
+
+  Do not copy this exemption. A new writer of `active` belongs on
+  `Provider.deactivate_staff_member/1`.
   """
 
   alias Ecto.Adapters.SQL

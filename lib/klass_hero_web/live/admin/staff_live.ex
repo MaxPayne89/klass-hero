@@ -2,12 +2,14 @@ defmodule KlassHeroWeb.Admin.StaffLive do
   @moduledoc """
   Backpex LiveResource for managing staff members in the admin dashboard.
 
-  Provides index, show, and edit views. Only `active` status is editable —
-  all other fields are provider-owned.
+  Read-only (index and show): every field is provider-owned.
 
-  Note: Backpex operates directly on Ecto schemas and Repo, bypassing
-  the Ports & Adapters layering used elsewhere. This is a pragmatic
-  exception scoped to admin-only read + limited edit operations.
+  Employment status is changed through the `Deactivate` / `Activate` item
+  actions, which call `KlassHero.Provider`'s commands. Backpex otherwise writes
+  straight to `Repo`, and that is exactly what #1237 removed here: the old
+  editable `active` checkbox cast the column with none of deactivation's
+  consequences — no lead-instructor clearing, no event, so read tables kept
+  naming the departed staff member.
   """
 
   # Backpex requires FQ refs in `use` args — alias can't precede `use` per formatter rules
@@ -26,19 +28,33 @@ defmodule KlassHeroWeb.Admin.StaffLive do
   alias Backpex.Fields.Boolean
   alias Backpex.Fields.Text
   alias Backpex.Fields.Textarea
+  alias KlassHeroWeb.Admin.Actions.ActivateStaffAction
+  alias KlassHeroWeb.Admin.Actions.DeactivateStaffAction
   alias KlassHeroWeb.Admin.Filters.ActiveFilter
 
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
 
   # Staff members are created/deleted by their providers — hides "New" button, denies create/delete.
+  # `:edit` is denied too since #1237: `active` was the only editable field, and it now
+  # moves through Provider's domain command, so the form has nothing left to write.
+  # The two employment actions are opposite-gated, so exactly one shows per row.
   @impl Backpex.LiveResource
   def can?(_assigns, :new, _item), do: false
   def can?(_assigns, :delete, _item), do: false
+  def can?(_assigns, :edit, _item), do: false
   def can?(_assigns, :index, _item), do: true
   def can?(_assigns, :show, _item), do: true
-  def can?(_assigns, :edit, _item), do: true
+  def can?(_assigns, :deactivate_staff, item), do: item.active
+  def can?(_assigns, :activate_staff, item), do: not item.active
   def can?(_assigns, _action, _item), do: false
+
+  @impl Backpex.LiveResource
+  def item_actions(default_actions) do
+    default_actions
+    |> Keyword.put(:deactivate_staff, %{module: DeactivateStaffAction, only: [:row, :show]})
+    |> Keyword.put(:activate_staff, %{module: ActivateStaffAction, only: [:row, :show]})
+  end
 
   @impl Backpex.LiveResource
   def filters do
@@ -89,6 +105,8 @@ defmodule KlassHeroWeb.Admin.StaffLive do
         searchable: true,
         readonly: true
       },
+      # No `readonly:` — Backpex.Fields.Boolean rejects the option, and it would be
+      # redundant: can?(:edit) is false, so no form ever renders this field.
       active: %{
         module: Boolean,
         label: "Active",
