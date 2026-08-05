@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.68.0](https://github.com/MaxPayne89/klass-hero/compare/v0.67.3...v0.68.0) (2026-08-05)
+
+
+### Features
+
+* surface the provider trust mark on home page featured cards ([#1284](https://github.com/MaxPayne89/klass-hero/issues/1284)) ([99f1eea](https://github.com/MaxPayne89/klass-hero/commit/99f1eea6f9c45f2d31f55eb170a63a107579e76f))
+
+
+### Bug Fixes
+
+* archive conversations in the read table, and drop the producer-less archive path ([#1278](https://github.com/MaxPayne89/klass-hero/issues/1278)) ([6bede87](https://github.com/MaxPayne89/klass-hero/commit/6bede87e7ab409968f25538c419e1b3e5bfcfb0c))
+
 ## [0.67.3](https://github.com/MaxPayne89/klass-hero/compare/v0.67.2...v0.67.3) (2026-08-04)
 
 
