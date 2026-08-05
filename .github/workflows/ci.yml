@@ -153,14 +153,19 @@ jobs:
             exit 1
           fi
 
-  # Release-please rebuilds mix.exs from a SNAPSHOT taken when it first opened the Release
-  # PR, then re-parents the branch onto latest main without re-reading the file. So a
-  # Release PR can revert any mix.exs change merged while it was open, even though its
-  # branch is perfectly up to date. #1266 reverted the precommit warning gate #1265 added
-  # 81 minutes earlier that way: its head commit was parented on #1265's merge, yet its
-  # mix.exs was byte-identical to main from before #1265 apart from `version:`.
+  # A Release PR can carry a REVERT of someone's merged mix.exs change. #1266 reverted the
+  # precommit warning gate #1265 had added 81 minutes earlier: its head commit was parented
+  # on #1265's merge, yet its mix.exs was byte-identical to main from before #1265 apart
+  # from `version:`.
   #
-  # `release-pr-guard` below re-checks that premise on every Release PR, so this skip stays
+  # The cause is concurrent workflow runs, not a stale branch. Each run of release-please.yml
+  # force-pushes the Release PR from its own read of main; #1264 and #1265 merged 11s apart,
+  # so two ran at once and the older one finished last and overwrote the newer. That is fixed
+  # at source by the `concurrency` group in release-please.yml — release-please does re-read
+  # main on every regeneration, which #1281 shows: opened before #1279, it regenerated after
+  # it and carried #1279's mix.exs correctly.
+  #
+  # `release-pr-guard` below is the backstop for that prevention, and what keeps this skip
   # honest: the Release PR touches .release-please-manifest.json, CHANGELOG.md and mix.exs's
   # `version:` and nothing else — content already tested on main. Running the full suite
   # plus a browser E2E pass for a version bump costs ~9 billable minutes.
