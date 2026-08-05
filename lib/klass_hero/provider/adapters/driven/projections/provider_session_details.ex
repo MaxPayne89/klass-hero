@@ -361,21 +361,34 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   defp warn_if_missing(_result, _event_name, _metadata), do: :ok
 
+  # Deliberately the same LATERAL shape as bootstrap_session_details/0, not a
+  # second spelling of it: both answer "which staff member is currently assigned
+  # to this program", and the two must agree or a rebuild silently rewrites what
+  # the incremental path wrote.
+  #
+  # `sm.active` is inside the LATERAL, so a deactivated staff member is skipped
+  # rather than selected-then-blanked. Deactivation leaves assignments standing on
+  # purpose, so a departed staff member stays the earliest-assigned row forever —
+  # filtering on the join alone would still pick their assignment and merely lose
+  # their name.
   defp resolve_program_context(program_id) do
     sql = """
     SELECT p.title,
            p.provider_id,
-           psa.staff_member_id,
-           sm.first_name,
-           sm.last_name
+           staff.staff_member_id,
+           staff.first_name,
+           staff.last_name
     FROM programs p
-    LEFT JOIN program_staff_assignments psa
-           ON psa.program_id = p.id
-          AND psa.unassigned_at IS NULL
-    LEFT JOIN staff_members sm ON sm.id = psa.staff_member_id
+    LEFT JOIN LATERAL (
+      SELECT psa.staff_member_id, sm.first_name, sm.last_name
+      FROM program_staff_assignments psa
+      JOIN staff_members sm ON sm.id = psa.staff_member_id AND sm.active
+      WHERE psa.program_id = p.id
+        AND psa.unassigned_at IS NULL
+      ORDER BY psa.assigned_at ASC
+      LIMIT 1
+    ) staff ON TRUE
     WHERE p.id = $1
-    ORDER BY psa.assigned_at ASC NULLS LAST
-    LIMIT 1
     """
 
     case Repo.query(sql, [Ecto.UUID.dump!(program_id)]) do

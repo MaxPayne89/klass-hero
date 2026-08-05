@@ -97,6 +97,48 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       assert row.current_assigned_staff_name == "Ada Lovelace"
     end
 
+    test "skips a deactivated staff member when resolving the assigned staff" do
+      # The incremental twin of the bootstrap's active-staff filter. Deactivation
+      # leaves ProgramStaffAssignment rows standing on purpose, so a departed staff
+      # member can stay the earliest-assigned row forever — and a session created
+      # afterwards would be attributed to them over their active colleague. Unlike
+      # bootstrap, this path never self-heals: the row is written wrong and stays wrong.
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id, title: "Judo")
+
+      departed =
+        insert(:staff_member_schema, provider_id: provider.id, first_name: "Gone", last_name: "Away", active: false)
+
+      current = insert(:staff_member_schema, provider_id: provider.id, first_name: "Still", last_name: "Here")
+
+      for {staff, assigned_at} <- [{departed, ~U[2026-04-01 09:00:00Z]}, {current, ~U[2026-04-02 09:00:00Z]}] do
+        {:ok, _} =
+          %ProgramStaffAssignment{}
+          |> ProgramStaffAssignment.create_changeset(%{
+            provider_id: provider.id,
+            staff_member_id: staff.id,
+            program_id: program.id,
+            assigned_at: assigned_at
+          })
+          |> Repo.insert()
+      end
+
+      session_id = Ecto.UUID.generate()
+
+      broadcast(:session_created, session_id, %{
+        session_id: session_id,
+        program_id: program.id,
+        session_date: ~D[2026-05-04],
+        start_time: ~T[09:00:00],
+        end_time: ~T[10:00:00]
+      })
+
+      row = Repo.get(SessionDetail, session_id)
+
+      assert row.current_assigned_staff_id == current.id
+      assert row.current_assigned_staff_name == "Still Here"
+    end
+
     test "duplicate delivery preserves evolved state written by other handlers" do
       # session_created must be a no-op on duplicate (at-least-once) delivery — it
       # must NOT stomp status/counts/cover_staff_* that other handlers evolved
