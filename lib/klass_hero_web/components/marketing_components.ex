@@ -24,7 +24,15 @@ defmodule KlassHeroWeb.MarketingComponents do
   use Gettext, backend: KlassHeroWeb.Gettext
 
   import KlassHeroWeb.UIComponents,
-    only: [kh_logo: 1, kh_button: 1, kh_card: 1, kh_pill: 1, kh_icon_chip: 1, icon: 1]
+    only: [
+      kh_logo: 1,
+      kh_button: 1,
+      kh_card: 1,
+      kh_pill: 1,
+      kh_icon_chip: 1,
+      kh_trust_mark: 1,
+      icon: 1
+    ]
 
   alias KlassHeroWeb.Theme
   alias Phoenix.HTML.FormField
@@ -365,8 +373,15 @@ defmodule KlassHeroWeb.MarketingComponents do
 
   @doc """
   Program card used inside `mk_featured`. Cover image (or gradient
-  fallback), price + category pills, schedule chip, title, age/period
-  footer with `View →`. Click → existing `phx-click="view_program"`.
+  fallback), price + category pills, schedule chip, title, provider +
+  age/period meta row, footer with `View →`. Click → existing
+  `phx-click="view_program"`.
+
+  The provider appears as a name and a compact trust mark in the meta row —
+  no avatar, no bordered row, unlike `ProgramComponents.program_card/1`. The
+  mark needs an adjacent name to read as a statement about the *provider*
+  rather than about the listing, but the full row truncates the name at mobile
+  width on this narrower card (#1224).
   """
   attr :id, :string, required: true
   attr :program, :map, required: true
@@ -375,6 +390,7 @@ defmodule KlassHeroWeb.MarketingComponents do
     ~H"""
     <.kh_card
       id={@id}
+      data-program-id={@program.id}
       phx-click="view_program"
       phx-value-program-id={@program.id}
       class="overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-1"
@@ -415,6 +431,19 @@ defmodule KlassHeroWeb.MarketingComponents do
         <h3 class="font-bold text-lg leading-snug text-hero-black line-clamp-2">
           {@program.title}
         </h3>
+        <%!-- Provider gets its own line rather than joining the meta row below: at 375px
+              the name plus the mark already fills the card, so sharing a line with the
+              age range would wrap unpredictably (#1224). --%>
+        <div
+          :if={Map.get(@program, :provider_name)}
+          class="mt-2 flex items-center gap-2 text-[13px] text-[var(--fg-muted)]"
+        >
+          <span class="truncate">{@program.provider_name}</span>
+          <.kh_trust_mark
+            state={Map.get(@program, :verification_state, :unverified)}
+            variant={:compact}
+          />
+        </div>
         <div class="mt-2 flex items-center gap-2 text-[13px] text-[var(--fg-muted)] flex-wrap">
           <span :if={@program.age_range} class="flex items-center gap-1">
             <.icon name="hero-user" class="w-4 h-4" />
