@@ -100,9 +100,70 @@ jobs:
       - name: Projection read-table convention
         run: mix lint_read_tables
 
-  # Release-please's Release PR only ever touches .release-please-manifest.json,
-  # CHANGELOG.md and mix.exs's `version:` — content already tested on main. Running the
-  # full suite plus a browser E2E pass for a version bump costs ~9 billable minutes.
+  # The counterpart to the skip documented on `test` below: that skip is only safe while a
+  # Release PR's diff really is a version bump over content already tested on main. This job
+  # is what makes that true rather than assumed. Runs only on the Release PR (~20s), so it
+  # costs nothing on ordinary PRs.
+  #
+  # When it fails, the Release PR is carrying someone else's reverted work. Do not "fix" the
+  # diff by hand — close the PR and delete the release-please--branches--main branch; the
+  # next push to main regenerates it from current content.
+  release-pr-guard:
+    name: Release PR Diff Shape
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.head_ref == 'release-please--branches--main'
+
+    steps:
+      # fetch-depth: 0 because the check is a diff against the merge base, which a depth-1
+      # checkout cannot reach.
+      # actions/checkout@v7.0.1
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      # BASE_REF goes through env rather than inline `${{ }}` in run: — a ref name is
+      # attacker-influenced input and inline interpolation is a shell-injection sink.
+      - name: Release PR changes only release files
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+          unexpected=$(echo "$changed" | grep -vxE 'mix\.exs|CHANGELOG\.md|\.release-please-manifest\.json' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::Release PR touches files it does not own:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+      - name: Release PR changes only mix.exs's version
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          # --unified=0 so no context line is mistaken for a change.
+          extra=$(git diff --unified=0 "origin/${BASE_REF}...HEAD" -- mix.exs \
+            | grep -E '^[-+][^-+]' \
+            | grep -vE '^[-+][[:space:]]*version: "[0-9]+\.[0-9]+\.[0-9]+",$' || true)
+          if [ -n "$extra" ]; then
+            echo "::error::Release PR changes mix.exs beyond version: — it is reverting merged work."
+            echo "$extra"
+            exit 1
+          fi
+
+  # Release-please rebuilds mix.exs from a SNAPSHOT taken when it first opened the Release
+  # PR, then re-parents the branch onto latest main without re-reading the file. So a
+  # Release PR can revert any mix.exs change merged while it was open, even though its
+  # branch is perfectly up to date. #1266 reverted the precommit warning gate #1265 added
+  # 81 minutes earlier that way: its head commit was parented on #1265's merge, yet its
+  # mix.exs was byte-identical to main from before #1265 apart from `version:`.
+  #
+  # `release-pr-guard` below re-checks that premise on every Release PR, so this skip stays
+  # honest: the Release PR touches .release-please-manifest.json, CHANGELOG.md and mix.exs's
+  # `version:` and nothing else — content already tested on main. Running the full suite
+  # plus a browser E2E pass for a version bump costs ~9 billable minutes.
   # `quality` deliberately still runs: format and credo over a bumped mix.exs are cheap and
   # catch a malformed version.
   #
