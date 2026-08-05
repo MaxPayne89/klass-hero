@@ -84,3 +84,16 @@ Assert what the change *did*:
 
 An `assert_receive` still belongs on the UI notifications (`Participation.Notifications` and
 friends), which are plain `Phoenix.PubSub` broadcasts carrying tagged tuples.
+
+## Bulk Enqueues Also Need Manual Mode
+
+The sequencing above is not the only cost. `Oban.insert_all` inside a `Repo.transaction` under
+`testing: :inline` runs *every* job's DB work on the producer's connection, inside its
+transaction. At N jobs × k queries that crosses the connection timeout on a slow runner and
+surfaces as `DBConnection.ConnectionError` from a worker line that looks unrelated to the test
+(#1282: 5000 jobs × 3 queries, CI-only, ~2 failures in 6 runs).
+
+So a test driving a bulk enqueue wraps the call in `with_testing_mode(:manual, ...)` and asserts
+the job rows — see the 5k CSV import tests in
+`test/klass_hero_web/controllers/provider/enrollment_import_controller_test.exs` and
+`test/klass_hero/enrollment/import_enrollment_csv_test.exs`.

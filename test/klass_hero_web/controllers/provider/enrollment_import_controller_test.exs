@@ -219,10 +219,10 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
     end
   end
 
-  # 5k rows costs ~8s, hence :slow. See test/test_helper.exs for what opts it back in.
+  # 5k rows is :slow even in manual mode. See test/test_helper.exs for what opts it back in.
   describe "POST /provider/enrollment/import (5k rows)" do
     @tag :slow
-    test "imports 5000 rows in a single transaction" do
+    test "imports 5000 rows and enqueues one invite email each" do
       %{conn: conn, provider: provider} = register_and_log_in_provider(%{conn: build_conn()})
       insert(:program_schema, provider_id: provider.id, title: "Ballsports & Parkour")
 
@@ -238,10 +238,17 @@ defmodule KlassHeroWeb.Provider.EnrollmentImportControllerTest do
 
       path = rows |> build_csv() |> write_temp()
 
-      conn = post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
+      # `testing: :inline` would run all 5000 SendInviteEmailWorker jobs inside the enqueue's
+      # own transaction — ~15k serialized queries on one connection, which crosses the
+      # connection timeout on a slow runner (#1282). Manual mode inserts them as rows instead.
+      conn =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          post(conn, ~p"/provider/enrollment/import", %{"file" => upload(path)})
+        end)
 
       assert json_response(conn, 201) == %{"created" => 5_000, "failed" => []}
       assert KlassHero.Repo.aggregate(BulkEnrollmentInvite, :count) == 5_000
+      assert KlassHero.Repo.aggregate(Oban.Job, :count) == 5_000
     end
   end
 end
