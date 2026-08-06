@@ -3,7 +3,10 @@ defmodule KlassHero.Enrollment do
   Public API for the Enrollment bounded context.
 
   Manages program enrollments, capacity policies, participant eligibility, and bulk invite flows.
-  Follows Ports & Adapters: this module delegates to use cases in the application layer.
+
+  Conventional Phoenix since the flatten (#986–#1002): this module is the imperative shell
+  that other contexts call, over schema-as-struct entities. There is no application layer
+  and there are no ports.
   """
 
   use KlassHero.Shared.Tracing
@@ -563,22 +566,29 @@ defmodule KlassHero.Enrollment do
 
   # One trip for enrollments + program titles. Querying `programs` directly avoids a
   # ProgramCatalog↔Enrollment dependency cycle (ProgramCatalog already depends on
-  # Enrollment for capacity ACL).
+  # Enrollment for capacity ACL) — ADR 0015's cycle-breaking case, which is why the
+  # join stays here rather than moving behind ProgramCatalogACL: it attaches to
+  # Enrollment's own query, so an adapter could only serve it by handing back a
+  # composable fragment.
   #
   # The two arities filter deliberately different sides of the join: the program_ids
   # arity filters the enrollment's program_id, the provider_id arity the program's
   # provider_id — the only place that link lives.
   defp list_pending(filter_fun) do
-    query =
-      Enrollment
-      |> join(:left, [e], p in "programs", on: type(p.id, :binary_id) == e.program_id)
-      |> where([e], e.status == :pending)
-      |> select([e, p], {e, p.title})
+    # Span covers the foreign query alone. Widening it over the rest would nest
+    # child_map_for/1's own family-targeted span inside a program_catalog one and
+    # bill that hop's time to Program Catalog.
+    rows =
+      acl_span source: "enrollment", target: "program_catalog" do
+        Enrollment
+        |> join(:left, [e], p in "programs", on: type(p.id, :binary_id) == e.program_id)
+        |> where([e], e.status == :pending)
+        |> select([e, p], {e, p.title})
+        |> filter_fun.()
+        |> Repo.all()
+      end
 
-    query
-    |> filter_fun.()
-    |> Repo.all()
-    |> case do
+    case rows do
       [] ->
         []
 

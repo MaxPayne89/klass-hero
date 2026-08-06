@@ -71,6 +71,10 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
   where renaming an instrumented module silently moved its span. At the time of writing the
   `live` environment has no `acl.*` columns at all, so nothing queries these attributes yet;
   that is why #1269's renames were safe, and it is not a general licence.
+  **Update (#1274):** `acl.source`, `acl.target` and `acl.operation` now exist in `live`. The
+  second half still holds — both live triggers filter on `context.name` + `error`, not `acl.*`
+  — but the "no columns at all" premise is spent, so a future rename needs the board and
+  trigger check rather than this exemption.
 - **A facade read is strongly consistent; a projection is not.** That is sometimes the reason to
   choose it. `provider/assignments.ex:307` reads `ProgramCatalog.get_program_for_provider/2`
   rather than the `provider_programs` projection precisely because an ownership guard cannot
@@ -79,6 +83,12 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
   ADR narrows when an *ACL* is warranted; it does not change CQRS.
 - **`boundary-checker` flags the inverse.** It previously reported "a missing ACL where one should
   exist" as a Warning — a false finding against this decision. It now flags an *unnecessary* ACL.
+- **`mix lint_acl_boundary` enforces the observability clause** (added for #1274). Review alone did
+  not hold it: four of the eight raw-table reads in the tree had drifted untraced, including
+  `provider/…/acl/participation_session_stats_acl.ex` — cited by name above as a legitimate ACL —
+  and `enrollment.ex`, whose untraced `programs` join hid behind the six `acl_span`s that file
+  already carried for its Family hops. That last one is why the lint checks per *function*, not
+  per file.
 
 ## Precedents in the tree
 

@@ -100,6 +100,9 @@ jobs:
       - name: Projection read-table convention
         run: mix lint_read_tables
 
+      - name: Cross-context table reads are traced
+        run: mix lint_acl_boundary
+
   # The counterpart to the skip documented on `test` below: that skip is only safe while a
   # Release PR's diff really is a version bump over content already tested on main. This job
   # is what makes that true rather than assumed. Runs only on the Release PR (~20s), so it

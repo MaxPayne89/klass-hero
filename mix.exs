@@ -154,6 +154,7 @@ defmodule KlassHero.MixProject do
         "lint_typography",
         "lint_translations",
         "lint_read_tables",
+        "lint_acl_boundary",
         "credo --strict",
         # Two halves on purpose: `test --warnings-as-errors` only covers test
         # files, and `test/support/*.ex` compiles solely in the test env — so
