@@ -1,6 +1,6 @@
 # Program Catalog holds its own Instructor copy (ACL snapshot)
 
-> **Superseded by [ADR 0008](0008-lead-instructor-single-source-of-truth.md) (2026-07-09).**
+> **Superseded by [ADR 0016](0016-lead-instructor-single-source-of-truth.md) (2026-07-09).**
 > The `programs.instructor_*` snapshot columns, the `Instructor` value object, and the
 > `program_listings.instructor_*` projection copy were removed. The lead instructor is now
 > the single source of truth on `program_staff_assignments.is_lead_instructor`, read live
