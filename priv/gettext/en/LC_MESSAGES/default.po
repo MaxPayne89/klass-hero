@@ -1323,7 +1323,7 @@ msgid "Push, email, SMS settings"
 msgstr ""
 
 #: lib/klass_hero_web/components/composite_components.ex:103
-#: lib/klass_hero_web/components/layouts/admin.html.heex:63
+#: lib/klass_hero_web/components/layouts/admin.html.heex:71
 #: lib/klass_hero_web/components/provider_components.ex:119
 #: lib/klass_hero_web/live/admin/sessions_live.ex:26
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:3
@@ -4194,7 +4194,7 @@ msgstr ""
 msgid "Email not found"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:54
+#: lib/klass_hero_web/components/layouts/admin.html.heex:62
 #: lib/klass_hero_web/live/admin/emails_live.ex:21
 #: lib/klass_hero_web/live/admin/emails_live.ex:41
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:4
@@ -7613,4 +7613,9 @@ msgstr ""
 #: lib/klass_hero_web/components/ui_components.ex:1948
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Verifying"
+msgstr ""
+
+#: lib/klass_hero_web/components/layouts/admin.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "Undelivered Events"
 msgstr ""

@@ -223,6 +223,7 @@ defmodule KlassHeroWeb.Router do
         live_resources("/bookings", BookingLive, only: [:index, :show])
         live_resources("/consents", ConsentLive, only: [:index, :show])
         live_resources("/incidents", IncidentLive, only: [:index, :show])
+        live_resources("/undelivered-events", UndeliveredEventLive, only: [:index, :show])
       end
     end
 
