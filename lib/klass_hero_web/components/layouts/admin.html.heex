@@ -50,6 +50,14 @@
         "Incidents"
       )}
     </Backpex.HTML.Layout.sidebar_item>
+    <Backpex.HTML.Layout.sidebar_item
+      current_url={@current_url}
+      navigate={~p"/admin/undelivered-events"}
+    >
+      <Backpex.HTML.CoreComponents.icon name="hero-inbox-arrow-down" class="h-5 w-5" /> {gettext(
+        "Undelivered Events"
+      )}
+    </Backpex.HTML.Layout.sidebar_item>
     <Backpex.HTML.Layout.sidebar_item current_url={@current_url} navigate={~p"/admin/emails"}>
       <Backpex.HTML.CoreComponents.icon name="hero-envelope" class="h-5 w-5" /> {gettext("Emails")}
       <span

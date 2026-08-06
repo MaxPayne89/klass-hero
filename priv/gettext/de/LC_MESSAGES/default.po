@@ -1323,7 +1323,7 @@ msgid "Push, email, SMS settings"
 msgstr "Push-, E-Mail-, SMS-Einstellungen"
 
 #: lib/klass_hero_web/components/composite_components.ex:103
-#: lib/klass_hero_web/components/layouts/admin.html.heex:63
+#: lib/klass_hero_web/components/layouts/admin.html.heex:71
 #: lib/klass_hero_web/components/provider_components.ex:119
 #: lib/klass_hero_web/live/admin/sessions_live.ex:26
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:3
@@ -4194,7 +4194,7 @@ msgstr "E-Mail als ungelesen markiert"
 msgid "Email not found"
 msgstr "E-Mail nicht gefunden"
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:54
+#: lib/klass_hero_web/components/layouts/admin.html.heex:62
 #: lib/klass_hero_web/live/admin/emails_live.ex:21
 #: lib/klass_hero_web/live/admin/emails_live.ex:41
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:4
@@ -7614,3 +7614,8 @@ msgstr "Verifizierung läuft"
 #, elixir-autogen, elixir-format
 msgid "Verifying"
 msgstr "In Prüfung"
+
+#: lib/klass_hero_web/components/layouts/admin.html.heex:57
+#, elixir-autogen, elixir-format
+msgid "Undelivered Events"
+msgstr "Nicht zugestellte Ereignisse"
