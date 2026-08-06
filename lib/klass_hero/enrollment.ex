@@ -563,31 +563,36 @@ defmodule KlassHero.Enrollment do
 
   # One trip for enrollments + program titles. Querying `programs` directly avoids a
   # ProgramCatalog↔Enrollment dependency cycle (ProgramCatalog already depends on
-  # Enrollment for capacity ACL).
+  # Enrollment for capacity ACL) — ADR 0015's cycle-breaking case, which is why the
+  # join stays here rather than moving behind ProgramCatalogACL: it attaches to
+  # Enrollment's own query, so an adapter could only serve it by handing back a
+  # composable fragment.
   #
   # The two arities filter deliberately different sides of the join: the program_ids
   # arity filters the enrollment's program_id, the provider_id arity the program's
   # provider_id — the only place that link lives.
   defp list_pending(filter_fun) do
-    query =
-      Enrollment
-      |> join(:left, [e], p in "programs", on: type(p.id, :binary_id) == e.program_id)
-      |> where([e], e.status == :pending)
-      |> select([e, p], {e, p.title})
+    acl_span source: "enrollment", target: "program_catalog" do
+      query =
+        Enrollment
+        |> join(:left, [e], p in "programs", on: type(p.id, :binary_id) == e.program_id)
+        |> where([e], e.status == :pending)
+        |> select([e, p], {e, p.title})
 
-    query
-    |> filter_fun.()
-    |> Repo.all()
-    |> case do
-      [] ->
-        []
+      query
+      |> filter_fun.()
+      |> Repo.all()
+      |> case do
+        [] ->
+          []
 
-      rows ->
-        child_map = rows |> Enum.map(fn {enrollment, _title} -> enrollment end) |> child_map_for()
+        rows ->
+          child_map = rows |> Enum.map(fn {enrollment, _title} -> enrollment end) |> child_map_for()
 
-        Enum.map(rows, fn {enrollment, title} ->
-          build_pending_entry(enrollment, title, child_map)
-        end)
+          Enum.map(rows, fn {enrollment, title} ->
+            build_pending_entry(enrollment, title, child_map)
+          end)
+      end
     end
   end
 

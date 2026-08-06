@@ -35,18 +35,18 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
     looks up `children.first_name` because the `enrollment_created` integration
     event payload does not carry the child's name.
 
-  These are **pragmatic cross-context couplings** at the adapter layer: raw
-  string table references (rather than schema-module aliases) sidestep
-  Boundary's compile-time isolation, but Messaging still gains runtime
-  knowledge of Enrollment's and Family's physical schema — a rename in those
-  contexts will silently break these paths.
+  These are **pragmatic cross-context couplings** at the adapter layer, and the cost is
+  real: Messaging holds runtime knowledge of Enrollment's and Family's physical schema,
+  so a rename in those contexts breaks these paths with nothing at compile time to say
+  so. What ADR 0015 requires in exchange is that the hop stays visible — hence the
+  `acl_span` on each, enforced by `mix lint_acl_boundary`.
 
   Both paths mirror the precedent set by
   `Family.Adapters.Driven.ACL.ChildEnrollmentACL` and
-  `Enrollment.Adapters.Driven.ACL.ProgramCatalogACL`, which adopt the same
-  raw-string workaround to avoid hard Boundary dependencies. Issue #685
-  tracks replacing all of these with dedicated cross-context ports.
+  `Enrollment.Adapters.Driven.ACL.ProgramCatalogACL`.
   """
+
+  use KlassHero.Shared.Tracing
 
   use KlassHero.Shared.Projection,
     topics: [
@@ -86,20 +86,22 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   defp bootstrap_from_write_tables do
     entries =
-      from(e in "enrollments",
-        join: c in "children",
-        on: c.id == e.child_id,
-        join: pp in "parents",
-        on: pp.id == e.parent_id,
-        where: e.status in ["pending", "confirmed"],
-        select: %{
-          parent_user_id: type(pp.identity_id, :binary_id),
-          program_id: type(e.program_id, :binary_id),
-          child_id: type(e.child_id, :binary_id),
-          child_first_name: c.first_name
-        }
-      )
-      |> Repo.all()
+      acl_span source: "messaging", target: "enrollment" do
+        from(e in "enrollments",
+          join: c in "children",
+          on: c.id == e.child_id,
+          join: pp in "parents",
+          on: pp.id == e.parent_id,
+          where: e.status in ["pending", "confirmed"],
+          select: %{
+            parent_user_id: type(pp.identity_id, :binary_id),
+            program_id: type(e.program_id, :binary_id),
+            child_id: type(e.child_id, :binary_id),
+            child_first_name: c.first_name
+          }
+        )
+        |> Repo.all()
+      end
 
     if entries == [] do
       0
@@ -154,12 +156,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
 
   defp resolve_child_first_name(child_id) do
     name =
-      Repo.one(
-        from(c in "children",
-          where: c.id == type(^child_id, :binary_id),
-          select: c.first_name
+      acl_span source: "messaging", target: "family" do
+        Repo.one(
+          from(c in "children",
+            where: c.id == type(^child_id, :binary_id),
+            select: c.first_name
+          )
         )
-      )
+      end
 
     if is_nil(name) do
       Logger.warning("EnrolledChildren: child row not found when resolving first_name",

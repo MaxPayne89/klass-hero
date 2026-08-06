@@ -192,6 +192,7 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 | `mix lint_typography` | Font/typography usage violations |
 | `mix lint_translations` | Stale `.pot` templates, empty/fuzzy German `msgstr` |
 | `mix lint_read_tables` | Projection read-table convention: a context-root schema that is neither an entity nor a declared read table, a read table carrying a changeset, or a read table outside the context root |
+| `mix lint_acl_boundary` | A function reading another context's table (`in "<table>"`) without an `acl_span` — ADR 0015 permits the direct read but requires the hop stay visible in traces |
 | `mix test` | Functional regressions (full suite with PostgreSQL) |
 | Sobelow | Common Phoenix security vulnerabilities |
 | `mix deps.audit` | Known dependency vulnerabilities (community advisory DB) |

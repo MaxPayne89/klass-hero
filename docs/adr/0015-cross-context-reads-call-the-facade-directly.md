@@ -79,6 +79,12 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
   ADR narrows when an *ACL* is warranted; it does not change CQRS.
 - **`boundary-checker` flags the inverse.** It previously reported "a missing ACL where one should
   exist" as a Warning — a false finding against this decision. It now flags an *unnecessary* ACL.
+- **`mix lint_acl_boundary` enforces the observability clause** (added for #1274). Review alone did
+  not hold it: four of the eight raw-table reads in the tree had drifted untraced, including
+  `provider/…/acl/participation_session_stats_acl.ex` — cited by name above as a legitimate ACL —
+  and `enrollment.ex`, whose untraced `programs` join hid behind the six `acl_span`s that file
+  already carried for its Family hops. That last one is why the lint checks per *function*, not
+  per file.
 
 ## Precedents in the tree
 

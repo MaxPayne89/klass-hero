@@ -94,12 +94,18 @@ is fine (schema-as-struct: the context module is the data-access API).
 
 **Exceptions:**
 - `KlassHero.Accounts.User` — commonly used for `belongs_to` associations (known exception)
+- **A raw-string table read (`from(p in "programs", ...)`) that carries an `acl_span`.**
+  ADR 0015 lists cycle-breaking direct table access as legitimate — ProgramCatalog
+  depends on Enrollment, so Enrollment cannot call its facade — and requires only that
+  the hop stay visible in traces. `mix lint_acl_boundary` enforces that in CI, per
+  function. Do not hand-report this class; the lint already owns it, and reporting a
+  traced read as a violation is a false finding (it produced #1274).
 
 **How to verify:**
 1. For each changed module, extract schema modules referenced in queries
    (`from`, `join`, `preload`) and any `Repo` calls
 2. Determine each schema's owning context
-3. Flag references to another context's schemas/tables (except the allowed exception)
+3. Flag references to another context's schemas/tables (except the allowed exceptions)
 4. Do NOT flag a context using `Repo` on its own schemas — that is the convention now
 
 ## Check 3: Event handlers must use facade APIs
