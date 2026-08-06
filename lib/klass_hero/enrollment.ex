@@ -3,7 +3,10 @@ defmodule KlassHero.Enrollment do
   Public API for the Enrollment bounded context.
 
   Manages program enrollments, capacity policies, participant eligibility, and bulk invite flows.
-  Follows Ports & Adapters: this module delegates to use cases in the application layer.
+
+  Conventional Phoenix since the flatten (#986–#1002): this module is the imperative shell
+  that other contexts call, over schema-as-struct entities. There is no application layer
+  and there are no ports.
   """
 
   use KlassHero.Shared.Tracing
@@ -572,27 +575,29 @@ defmodule KlassHero.Enrollment do
   # arity filters the enrollment's program_id, the provider_id arity the program's
   # provider_id — the only place that link lives.
   defp list_pending(filter_fun) do
-    acl_span source: "enrollment", target: "program_catalog" do
-      query =
+    # Span covers the foreign query alone. Widening it over the rest would nest
+    # child_map_for/1's own family-targeted span inside a program_catalog one and
+    # bill that hop's time to Program Catalog.
+    rows =
+      acl_span source: "enrollment", target: "program_catalog" do
         Enrollment
         |> join(:left, [e], p in "programs", on: type(p.id, :binary_id) == e.program_id)
         |> where([e], e.status == :pending)
         |> select([e, p], {e, p.title})
-
-      query
-      |> filter_fun.()
-      |> Repo.all()
-      |> case do
-        [] ->
-          []
-
-        rows ->
-          child_map = rows |> Enum.map(fn {enrollment, _title} -> enrollment end) |> child_map_for()
-
-          Enum.map(rows, fn {enrollment, title} ->
-            build_pending_entry(enrollment, title, child_map)
-          end)
+        |> filter_fun.()
+        |> Repo.all()
       end
+
+    case rows do
+      [] ->
+        []
+
+      rows ->
+        child_map = rows |> Enum.map(fn {enrollment, _title} -> enrollment end) |> child_map_for()
+
+        Enum.map(rows, fn {enrollment, title} ->
+          build_pending_entry(enrollment, title, child_map)
+        end)
     end
   end
 
