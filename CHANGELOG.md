@@ -5,6 +5,23 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.70.0](https://github.com/MaxPayne89/klass-hero/compare/v0.69.0...v0.70.0) (2026-08-07)
+
+
+### Features
+
+* surface undelivered events in the admin dashboard ([#1295](https://github.com/MaxPayne89/klass-hero/issues/1295)) ([75f4125](https://github.com/MaxPayne89/klass-hero/commit/75f41252ab70a372929b34084ae0662cb907d453)), closes [#1251](https://github.com/MaxPayne89/klass-hero/issues/1251)
+
+
+### Bug Fixes
+
+* restore :storage config after MinIO integration tests ([#1298](https://github.com/MaxPayne89/klass-hero/issues/1298)) ([bd88493](https://github.com/MaxPayne89/klass-hero/commit/bd88493e098887ac3b659ed9915f90bfa8afeff5))
+
+
+### Code Refactoring
+
+* enforce traced cross-context table reads ([#1296](https://github.com/MaxPayne89/klass-hero/issues/1296)) ([901eab1](https://github.com/MaxPayne89/klass-hero/commit/901eab10c7416a2105dab345fece95dc6eaf5979))
+
 ## [0.69.0](https://github.com/MaxPayne89/klass-hero/compare/v0.68.1...v0.69.0) (2026-08-05)
 
 
