@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.71.0](https://github.com/MaxPayne89/klass-hero/compare/v0.70.0...v0.71.0) (2026-08-10)
+
+
+### Features
+
+* manage several staff members on one program ([#1300](https://github.com/MaxPayne89/klass-hero/issues/1300)) ([0058491](https://github.com/MaxPayne89/klass-hero/commit/0058491cab11ac3204395fd038f315890e1ffa65))
+
 ## [0.70.0](https://github.com/MaxPayne89/klass-hero/compare/v0.69.0...v0.70.0) (2026-08-07)
 
 
