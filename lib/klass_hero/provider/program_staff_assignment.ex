@@ -63,9 +63,18 @@ defmodule KlassHero.Provider.ProgramStaffAssignment do
 
   Sets `unassigned_at` to the current UTC time, which lifts the partial unique
   index constraint and allows future re-assignment.
+
+  Also clears `is_lead_instructor`, so a retired row can never read as both dead
+  and leading. `Assignments.unassign_staff_from_program/3` refuses to retire the
+  lead at all, so this is belt-and-braces — but the flag surviving on a dead row
+  is the kind of state a later query that forgets `is_nil(unassigned_at)` would
+  silently believe.
   """
   def unassign_changeset(schema) do
-    change(schema, %{unassigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)})
+    change(schema, %{
+      unassigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
+      is_lead_instructor: false
+    })
   end
 
   @doc """

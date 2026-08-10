@@ -370,102 +370,153 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     end
   end
 
+  # Both handlers re-resolve attribution from program_staff_assignments rather
+  # than trusting the event's staff_member_id, so live state matches what a
+  # bootstrap would rebuild. Every test here therefore writes the assignment rows
+  # the handler will read — an event without its row is a shape production never
+  # produces, and asserting against one hid the multi-staff bug (#1299).
   describe "staff assignment" do
-    test "staff_assigned_to_program updates scheduled sessions for the program and skips non-scheduled ones" do
-      # Cover staff on the bulk update path — only :scheduled rows flip to the new
-      # staff; already-started/completed rows retain their state.
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
+    test "staff_assigned_to_program attributes scheduled sessions and skips non-scheduled ones" do
+      %{provider: provider, program: program} = program_with_sessions()
 
-      staff =
-        insert(:staff_member_schema,
-          provider_id: provider.id,
-          first_name: "Alice",
-          last_name: "Smith"
-        )
+      staff = staff_on(program, first_name: "Alice", last_name: "Smith", assigned_at: ~U[2026-01-01 09:00:00.000000Z])
 
-      scheduled_session_id = Ecto.UUID.generate()
-      completed_session_id = Ecto.UUID.generate()
+      broadcast_assignment(:staff_assigned_to_program, provider, program, staff)
 
-      insert_program_session(
-        session_id: scheduled_session_id,
-        program_id: program.id,
-        provider_id: provider.id,
-        status: :scheduled
-      )
+      assert %{current_assigned_staff_id: id, current_assigned_staff_name: "Alice Smith"} =
+               reload(program.scheduled_session_id)
 
-      insert_program_session(
-        session_id: completed_session_id,
-        program_id: program.id,
-        provider_id: provider.id,
-        status: :completed
-      )
+      assert id == staff.id
 
-      broadcast_provider(:staff_assigned_to_program, staff.id, %{
-        staff_member_id: staff.id,
-        program_id: program.id,
-        provider_id: provider.id,
-        staff_user_id: Ecto.UUID.generate()
-      })
-
-      scheduled = reload(scheduled_session_id)
-      completed = reload(completed_session_id)
-
-      assert scheduled.current_assigned_staff_id == staff.id
-      assert scheduled.current_assigned_staff_name == "Alice Smith"
+      completed = reload(program.completed_session_id)
       assert completed.current_assigned_staff_id == nil
-      assert completed.current_assigned_staff_name == nil
     end
 
-    test "staff_unassigned_from_program clears staff fields on scheduled rows for the program" do
-      # Once a session starts/ends, its historical staff attribution persists; only
-      # upcoming (:scheduled) sessions lose the assignment.
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
+    test "a second assignment leaves the earliest member attributed" do
+      %{provider: provider, program: program} = program_with_sessions()
 
-      staff =
-        insert(:staff_member_schema,
-          provider_id: provider.id,
-          first_name: "Bob",
-          last_name: "Jones"
-        )
+      first = staff_on(program, first_name: "Alice", last_name: "Smith", assigned_at: ~U[2026-01-01 09:00:00.000000Z])
+      second = staff_on(program, first_name: "Bob", last_name: "Jones", assigned_at: ~U[2026-01-02 09:00:00.000000Z])
 
-      scheduled_session_id = Ecto.UUID.generate()
-      completed_session_id = Ecto.UUID.generate()
+      broadcast_assignment(:staff_assigned_to_program, provider, program, first)
+      broadcast_assignment(:staff_assigned_to_program, provider, program, second)
 
-      insert_program_session(
-        session_id: scheduled_session_id,
-        program_id: program.id,
-        provider_id: provider.id,
-        status: :scheduled,
-        current_assigned_staff_id: staff.id,
-        current_assigned_staff_name: "Bob Jones"
-      )
+      scheduled = reload(program.scheduled_session_id)
 
-      insert_program_session(
-        session_id: completed_session_id,
-        program_id: program.id,
-        provider_id: provider.id,
-        status: :completed,
-        current_assigned_staff_id: staff.id,
-        current_assigned_staff_name: "Bob Jones"
-      )
+      assert scheduled.current_assigned_staff_id == first.id
+      assert scheduled.current_assigned_staff_name == "Alice Smith"
+    end
 
-      broadcast_provider(:staff_unassigned_from_program, staff.id, %{
-        staff_member_id: staff.id,
-        program_id: program.id,
-        provider_id: provider.id,
-        staff_user_id: Ecto.UUID.generate()
-      })
+    test "staff_unassigned_from_program clears scheduled rows when nobody is left" do
+      %{provider: provider, program: program} = program_with_sessions()
 
-      scheduled = reload(scheduled_session_id)
-      completed = reload(completed_session_id)
+      staff = staff_on(program, first_name: "Bob", last_name: "Jones", assigned_at: ~U[2026-01-01 09:00:00.000000Z])
+      broadcast_assignment(:staff_assigned_to_program, provider, program, staff)
+
+      retire!(program, staff)
+      broadcast_assignment(:staff_unassigned_from_program, provider, program, staff)
+
+      scheduled = reload(program.scheduled_session_id)
 
       assert scheduled.current_assigned_staff_id == nil
       assert scheduled.current_assigned_staff_name == nil
+    end
+
+    test "historical rows keep their attribution when the assignment is retired" do
+      %{provider: provider, program: program} = program_with_sessions()
+
+      staff = staff_on(program, first_name: "Bob", last_name: "Jones", assigned_at: ~U[2026-01-01 09:00:00.000000Z])
+
+      set_attribution!(program.completed_session_id, staff.id, "Bob Jones")
+
+      retire!(program, staff)
+      broadcast_assignment(:staff_unassigned_from_program, provider, program, staff)
+
+      completed = reload(program.completed_session_id)
+
       assert completed.current_assigned_staff_id == staff.id
       assert completed.current_assigned_staff_name == "Bob Jones"
     end
+
+    test "retiring one of two hands attribution to the colleague who remains" do
+      %{provider: provider, program: program} = program_with_sessions()
+
+      first = staff_on(program, first_name: "Alice", last_name: "Smith", assigned_at: ~U[2026-01-01 09:00:00.000000Z])
+      second = staff_on(program, first_name: "Bob", last_name: "Jones", assigned_at: ~U[2026-01-02 09:00:00.000000Z])
+
+      broadcast_assignment(:staff_assigned_to_program, provider, program, first)
+
+      retire!(program, first)
+      broadcast_assignment(:staff_unassigned_from_program, provider, program, first)
+
+      scheduled = reload(program.scheduled_session_id)
+
+      assert scheduled.current_assigned_staff_id == second.id
+      assert scheduled.current_assigned_staff_name == "Bob Jones"
+    end
+  end
+
+  defp program_with_sessions do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+
+    scheduled_session_id = Ecto.UUID.generate()
+    completed_session_id = Ecto.UUID.generate()
+
+    for {id, status} <- [{scheduled_session_id, :scheduled}, {completed_session_id, :completed}] do
+      insert_program_session(
+        session_id: id,
+        program_id: program.id,
+        provider_id: provider.id,
+        status: status
+      )
+    end
+
+    %{
+      provider: provider,
+      program: %{
+        id: program.id,
+        provider_id: provider.id,
+        scheduled_session_id: scheduled_session_id,
+        completed_session_id: completed_session_id
+      }
+    }
+  end
+
+  defp staff_on(program, opts) do
+    {assigned_at, name_attrs} = Keyword.pop!(opts, :assigned_at)
+
+    staff = insert(:staff_member_schema, [provider_id: program.provider_id] ++ name_attrs)
+
+    insert(:program_staff_assignment_schema,
+      provider_id: program.provider_id,
+      program_id: program.id,
+      staff_member_id: staff.id,
+      assigned_at: assigned_at
+    )
+
+    staff
+  end
+
+  defp retire!(program, staff) do
+    from(a in ProgramStaffAssignment,
+      where: a.program_id == ^program.id and a.staff_member_id == ^staff.id
+    )
+    |> Repo.update_all(set: [unassigned_at: DateTime.utc_now()])
+  end
+
+  defp set_attribution!(session_id, staff_id, staff_name) do
+    from(d in SessionDetail, where: d.session_id == ^session_id)
+    |> Repo.update_all(set: [current_assigned_staff_id: staff_id, current_assigned_staff_name: staff_name])
+  end
+
+  defp broadcast_assignment(event, provider, program, staff) do
+    broadcast_provider(event, staff.id, %{
+      staff_member_id: staff.id,
+      program_id: program.id,
+      provider_id: provider.id,
+      staff_user_id: Ecto.UUID.generate()
+    })
   end
 
   describe "staff deactivation (#1237)" do
@@ -542,6 +593,36 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
 
       assert is_nil(reload(mine).current_assigned_staff_id)
       assert reload(theirs).current_assigned_staff_id == other.id
+    end
+
+    test "hands attribution to the colleague who is still active" do
+      # Only reachable since a program can carry several staff (#1299): blanking
+      # the column here would disagree with a bootstrap, which resolves to the
+      # earliest *active* assignment and would name the colleague.
+      %{program: program} = program_with_sessions()
+
+      departing =
+        staff_on(program, first_name: "Carol", last_name: "Dane", assigned_at: ~U[2026-01-01 09:00:00.000000Z])
+
+      staying = staff_on(program, first_name: "Dee", last_name: "Ell", assigned_at: ~U[2026-01-02 09:00:00.000000Z])
+
+      set_attribution!(program.scheduled_session_id, departing.id, "Carol Dane")
+
+      # Production commits the row before the event is delivered, and the resolver
+      # joins `sm.active` — so deactivating the row first is the real ordering,
+      # not test convenience.
+      deactivate_row!(departing)
+      deactivate(departing)
+
+      scheduled = reload(program.scheduled_session_id)
+
+      assert scheduled.current_assigned_staff_id == staying.id
+      assert scheduled.current_assigned_staff_name == "Dee Ell"
+    end
+
+    defp deactivate_row!(staff) do
+      from(s in StaffMember, where: s.id == ^staff.id)
+      |> Repo.update_all(set: [active: false])
     end
   end
 

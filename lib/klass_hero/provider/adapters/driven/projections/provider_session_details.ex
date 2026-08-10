@@ -21,10 +21,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   - `:child_checked_in` — increments checked_in_count (monotonic; not reversed).
   - `:child_checked_out` — intentional no-op (counter is monotonic).
   - `:child_marked_absent` — intentional no-op (no effect on checked_in_count).
-  - `:staff_assigned_to_program` — bulk-updates current_assigned_staff_* on all
-    `:scheduled` rows for the program.
-  - `:staff_unassigned_from_program` — bulk-clears current_assigned_staff_* on all
-    `:scheduled` rows for the program.
+  - `:staff_assigned_to_program` / `:staff_unassigned_from_program` — re-resolve
+    current_assigned_staff_* on all `:scheduled` rows for the program, from the
+    assignment table rather than from the event. `current_assigned_staff_*` holds
+    one staff member and a program may carry several, so both directions apply
+    bootstrap's rule (earliest active assignment, active staff only) instead of
+    naming whoever the event happened to mention.
   """
 
   use KlassHero.Shared.Projection,
@@ -117,11 +119,47 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
   end
 
-  # Bulk update scoped to :scheduled rows only — historical rows retain pre-existing attribution.
-  def handle_event(:staff_assigned_to_program, %Event{payload: %{staff_member_id: staff_id, program_id: program_id}}) do
-    staff_name = lookup_staff_name(staff_id)
+  # Both directions re-resolve the program's attribution from
+  # program_staff_assignments instead of trusting the event's staff member, because
+  # a program carries N staff and this column holds exactly one.
+  #
+  # Taking the event's member made assignment attribute the NEWEST assignee and
+  # unassignment blank the column outright — neither of which agrees with
+  # bootstrap's earliest-active-assignment rule, so the same program read
+  # differently before and after a restart (#1299). Resolving through the same
+  # helper `session_created` uses makes live state and a rebuild converge.
+  def handle_event(event, %Event{payload: %{program_id: program_id}})
+      when event in [:staff_assigned_to_program, :staff_unassigned_from_program] do
+    reattribute_scheduled_sessions(program_id)
+  end
+
+  # Scoped by staff member, not by program: deactivation ends the employment link
+  # itself, so it reaches every program they were on. Historical rows keep their
+  # attribution, matching :staff_unassigned_from_program.
+  #
+  # This clause is why the event exists. The other staff-name consumers can filter
+  # `s.active` on read; this one cannot, because the name is a stored column — so
+  # without it a deactivated (or erased) staff member stays named here until a
+  # restart rebuilds the projection.
+  #
+  # Re-resolves rather than blanks: with several staff on a program the departing
+  # member's colleague should inherit the attribution, which is what a bootstrap
+  # would produce. Blanking only happens to be right when they were the last one.
+  def handle_event(:staff_member_deactivated, %Event{payload: %{staff_member_id: staff_member_id}}) do
+    staff_member_id
+    |> programs_attributed_to()
+    |> Enum.each(&reattribute_scheduled_sessions/1)
+  end
+
+  # The single writer for current_assigned_staff_* on live events. Reads the
+  # program's attribution back out of program_staff_assignments through the same
+  # helper `session_created` uses, so an incremental update and a rebuild cannot
+  # disagree.
+  defp reattribute_scheduled_sessions(program_id) do
+    %{staff_id: staff_id, staff_name: staff_name} = resolve_program_context(program_id)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
+    # :scheduled only — historical rows keep their attribution as an audit trail.
     from(d in SessionDetail,
       where: d.program_id == ^program_id and d.status == :scheduled
     )
@@ -134,43 +172,15 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
   end
 
-  # Historical rows retain pre-existing attribution as audit trail; only :scheduled rows are cleared.
-  def handle_event(:staff_unassigned_from_program, %Event{payload: %{program_id: program_id}}) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
+  # Which programs still name the departing staff member on an upcoming session —
+  # the only ones whose attribution can change.
+  defp programs_attributed_to(staff_member_id) do
     from(d in SessionDetail,
-      where: d.program_id == ^program_id and d.status == :scheduled
+      where: d.current_assigned_staff_id == ^staff_member_id and d.status == :scheduled,
+      distinct: true,
+      select: d.program_id
     )
-    |> Repo.update_all(
-      set: [
-        current_assigned_staff_id: nil,
-        current_assigned_staff_name: nil,
-        updated_at: now
-      ]
-    )
-  end
-
-  # Scoped by staff member, not by program: deactivation ends the employment link
-  # itself, so it reaches every program they were on. Historical rows keep their
-  # attribution, matching :staff_unassigned_from_program.
-  #
-  # This clause is why the event exists. The other staff-name consumers can filter
-  # `s.active` on read; this one cannot, because the name is a stored column — so
-  # without it a deactivated (or erased) staff member stays named here until a
-  # restart rebuilds the projection.
-  def handle_event(:staff_member_deactivated, %Event{payload: %{staff_member_id: staff_member_id}}) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    from(d in SessionDetail,
-      where: d.current_assigned_staff_id == ^staff_member_id and d.status == :scheduled
-    )
-    |> Repo.update_all(
-      set: [
-        current_assigned_staff_id: nil,
-        current_assigned_staff_name: nil,
-        updated_at: now
-      ]
-    )
+    |> Repo.all()
   end
 
   # Rebuilds from programs + program_sessions + staff assignments + participation counts.
@@ -407,17 +417,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   defp cast_uuid_or_nil(nil), do: nil
   defp cast_uuid_or_nil(bin), do: Ecto.UUID.cast!(bin)
-
-  # Event payload carries only IDs; looks up name from staff_members (source of truth).
-  defp lookup_staff_name(staff_id) do
-    case Repo.query(
-           "SELECT first_name, last_name FROM staff_members WHERE id = $1",
-           [Ecto.UUID.dump!(staff_id)]
-         ) do
-      {:ok, %{rows: [[first_name, last_name]]}} -> build_staff_name(first_name, last_name)
-      _ -> nil
-    end
-  end
 
   defp build_staff_name(nil, nil), do: nil
   defp build_staff_name(first, nil), do: first
