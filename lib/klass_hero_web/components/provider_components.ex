@@ -1192,10 +1192,12 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
         </div>
 
+        <%!-- Lead only. Everyone else on the program is managed from the
+              staffing panel, which writes the same program_staff_assignments rows. --%>
         <.input
           field={@form[:instructor_id]}
           type="select"
-          label={gettext("Assign Instructor")}
+          label={gettext("Lead Instructor")}
           options={@instructor_options}
           prompt={gettext("None (optional)")}
         />
@@ -1425,6 +1427,13 @@ defmodule KlassHeroWeb.ProviderComponents do
                     icon="hero-user-group-mini"
                     title={gettext("View Roster")}
                     phx-click="view_roster"
+                    phx-value-id={program.id}
+                  />
+                  <.action_button
+                    id={"manage-staffing-#{program.id}"}
+                    icon="hero-identification-mini"
+                    title={gettext("Manage Staffing")}
+                    phx-click="manage_staffing"
                     phx-value-id={program.id}
                   />
                   <.action_button
@@ -1724,6 +1733,173 @@ defmodule KlassHeroWeb.ProviderComponents do
           <% end %>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the staffing panel for one program: who is on it, who leads it, and the
+  controls to add, promote and remove.
+
+  Named "staffing" rather than "team" because `/provider/team` is already the
+  provider's staff directory — this is the per-program subset of it.
+
+  ## Example
+
+      <.staffing_modal :if={@staffing_modal} modal={@staffing_modal} />
+  """
+  attr :modal, :map, required: true
+
+  def staffing_modal(assigns) do
+    ~H"""
+    <div
+      id="program-staffing-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="program-staffing-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      phx-window-keydown="close_staffing"
+      phx-key="escape"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+        phx-click-away="close_staffing"
+      >
+        <div class="flex items-center justify-between px-4 py-4 sm:px-6 border-b border-hero-grey-200">
+          <h2 id="program-staffing-modal-title" class={Theme.typography(:section_title)}>
+            {gettext("Staffing — %{title}", title: @modal.program_name)}
+          </h2>
+          <button type="button" phx-click="close_staffing" aria-label={gettext("Close")}>
+            <.icon name="hero-x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          <ul :if={@modal.members != []} id="staffing-members" class="divide-y divide-hero-grey-100">
+            <li
+              :for={member <- @modal.members}
+              id={"staffing-member-#{member.id}"}
+              class="flex items-center gap-3 py-3"
+            >
+              <.staff_avatar member={member} />
+
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-hero-charcoal">
+                  {member.full_name}
+                  <span
+                    :if={member.lead?}
+                    id={"staffing-lead-badge-#{member.id}"}
+                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow text-hero-charcoal rounded-full align-middle"
+                  >
+                    {gettext("Lead")}
+                  </span>
+                </p>
+                <p :if={member.role} class="truncate text-sm text-hero-grey-500">{member.role}</p>
+              </div>
+
+              <div class="flex shrink-0 items-center gap-1">
+                <.action_button
+                  :if={!member.lead?}
+                  id={"promote-staff-#{member.id}"}
+                  icon="hero-star-mini"
+                  title={gettext("Make lead instructor")}
+                  phx-click="promote_to_lead"
+                  phx-value-staff-id={member.id}
+                />
+                <%!-- Disabled, not hidden: the reason the lead cannot be removed
+                      is worth showing. The context refuses regardless. --%>
+                <.action_button
+                  id={"remove-staff-#{member.id}"}
+                  icon="hero-user-minus-mini"
+                  title={
+                    if(member.lead?,
+                      do: gettext("Reassign the lead before removing them"),
+                      else: gettext("Remove from program")
+                    )
+                  }
+                  disabled={member.lead?}
+                  phx-click="remove_staff_member"
+                  phx-value-staff-id={member.id}
+                />
+              </div>
+            </li>
+          </ul>
+
+          <p
+            :if={@modal.members == []}
+            id="staffing-empty"
+            class="py-6 text-center text-hero-grey-500"
+          >
+            {gettext("Nobody is on this program yet.")}
+          </p>
+
+          <div class="mt-4 border-t border-hero-grey-200 pt-4">
+            <form
+              phx-submit="assign_staff_member"
+              id="staffing-add-form"
+              class="flex flex-col gap-2 sm:flex-row"
+            >
+              <select
+                id="staffing-add-select"
+                name="staff-id"
+                disabled={@modal.assignable_options == []}
+                class={[
+                  "flex-1 border border-hero-grey-300 px-3 py-2 text-hero-charcoal disabled:bg-hero-grey-50",
+                  Theme.rounded(:lg)
+                ]}
+              >
+                <option value="">{gettext("Select a staff member…")}</option>
+                <option :for={{label, value} <- @modal.assignable_options} value={value}>
+                  {label}
+                </option>
+              </select>
+              <button
+                type="submit"
+                id="staffing-add-btn"
+                disabled={@modal.assignable_options == []}
+                class={[
+                  "flex items-center justify-center gap-2 px-4 py-2 font-semibold",
+                  "bg-hero-yellow hover:bg-hero-yellow-dark text-hero-charcoal",
+                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400",
+                  Theme.rounded(:lg),
+                  Theme.transition(:normal)
+                ]}
+              >
+                <.icon name="hero-plus-mini" class="w-5 h-5" />
+                {gettext("Add")}
+              </button>
+            </form>
+
+            <p class="mt-2 text-xs text-hero-grey-400">
+              {gettext("Staff you add can read and reply to this program's parent conversations.")}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :member, :map, required: true
+
+  defp staff_avatar(assigns) do
+    ~H"""
+    <img
+      :if={@member.headshot_url}
+      src={@member.headshot_url}
+      alt=""
+      class="w-9 h-9 shrink-0 rounded-full object-cover"
+    />
+    <div
+      :if={!@member.headshot_url}
+      class={[
+        "w-9 h-9 shrink-0 rounded-full flex items-center justify-center",
+        "text-xs font-semibold text-hero-charcoal",
+        Theme.gradient(:primary)
+      ]}
+      aria-hidden="true"
+    >
+      {@member.initials}
     </div>
     """
   end

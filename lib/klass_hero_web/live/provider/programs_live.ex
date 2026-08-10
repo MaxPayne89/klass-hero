@@ -24,6 +24,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHeroWeb.Presenters.ProgramPresenter
+  alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
 
@@ -69,6 +70,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         single_invite_form: blank_single_invite_form()
       )
       |> assign(sessions_modal: nil)
+      |> assign(staffing_modal: nil)
       |> assign(program_form: to_form(ProgramCatalog.new_program_changeset(), as: :program_schema))
       |> assign(enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"))
       |> assign(
@@ -228,6 +230,108 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   @impl true
   def handle_event("close_sessions", _params, socket) do
     {:noreply, assign(socket, :sessions_modal, nil)}
+  end
+
+  @impl true
+  def handle_event("manage_staffing", %{"id" => program_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    # Untrusted client input; the scoped getter makes a foreign program
+    # unreachable (IDOR guard), mirroring view_roster/edit_program.
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+      {:ok, program} ->
+        {:noreply, assign(socket, :staffing_modal, build_staffing_modal(program_id, program.title, provider_id))}
+
+      {:error, :not_found} ->
+        Logger.warning("[ProgramsLive] Staffing access attempt for unknown or foreign program",
+          program_id: program_id,
+          provider_id: provider_id
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Program not found."))}
+    end
+  end
+
+  @impl true
+  def handle_event("close_staffing", _params, socket) do
+    {:noreply, assign(socket, :staffing_modal, nil)}
+  end
+
+  @impl true
+  def handle_event("assign_staff_member", %{"staff-id" => ""}, socket) do
+    {:noreply, put_flash(socket, :error, gettext("Pick a staff member to add."))}
+  end
+
+  def handle_event("assign_staff_member", %{"staff-id" => staff_member_id}, socket) do
+    %{program_id: program_id} = socket.assigns.staffing_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    %{provider_id: provider_id, program_id: program_id, staff_member_id: staff_member_id}
+    |> Provider.assign_staff_to_program()
+    |> case do
+      {:ok, _assignment} ->
+        {:noreply,
+         socket
+         |> refresh_staffing_modal()
+         |> put_flash(:info, gettext("Staff member added to the program."))}
+
+      # The picker excludes them, so this is a stale panel (two tabs, back button)
+      # rather than user error — re-read so the list stops offering them.
+      {:error, :already_assigned} ->
+        {:noreply,
+         socket
+         |> refresh_staffing_modal()
+         |> put_flash(:error, gettext("They are already on this program."))}
+
+      {:error, :not_found} ->
+        {:noreply, staffing_not_found(socket, "assign", staff_member_id, provider_id)}
+    end
+  end
+
+  @impl true
+  def handle_event("remove_staff_member", %{"staff-id" => staff_member_id}, socket) do
+    %{program_id: program_id} = socket.assigns.staffing_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case Provider.unassign_staff_from_program(program_id, staff_member_id, provider_id) do
+      {:ok, _assignment} ->
+        {:noreply,
+         socket
+         |> refresh_staffing_modal()
+         |> put_flash(:info, gettext("Staff member removed from the program."))}
+
+      {:error, :cannot_unassign_lead} ->
+        {:noreply,
+         socket
+         |> refresh_staffing_modal()
+         |> put_flash(
+           :error,
+           gettext("This person is the lead instructor. Make someone else lead before removing them.")
+         )}
+
+      # Already gone — a benign double-click or a second tab, not an error worth
+      # a red flash. Re-read so the row disappears.
+      {:error, :not_found} ->
+        {:noreply, refresh_staffing_modal(socket)}
+    end
+  end
+
+  @impl true
+  def handle_event("promote_to_lead", %{"staff-id" => staff_member_id}, socket) do
+    %{program_id: program_id} = socket.assigns.staffing_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case Provider.set_lead_instructor(program_id, staff_member_id, provider_id) do
+      {:ok, _assignment} ->
+        {:noreply,
+         socket
+         |> refresh_staffing_modal()
+         |> refresh_program_row(program_id)
+         |> put_flash(:info, gettext("Lead instructor updated."))}
+
+      {:error, :not_found} ->
+        {:noreply, staffing_not_found(socket, "promote", staff_member_id, provider_id)}
+    end
   end
 
   @impl true
@@ -706,6 +810,75 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     )
   end
 
+  # Two facade reads joined by a presenter, the same shape ProgramDetailLive uses
+  # for the public "Meet the Heroes" section — `is_lead_instructor` on the
+  # assignment is the single source of truth for who leads.
+  defp build_staffing_modal(program_id, program_name, provider_id) do
+    lead_id =
+      case Provider.get_lead_instructor(program_id) do
+        %{id: id} -> id
+        nil -> nil
+      end
+
+    members =
+      program_id
+      |> Provider.list_active_staff_for_program()
+      |> ProgramStaffingPresenter.for_panel(lead_id)
+
+    assignable =
+      provider_id
+      |> Provider.list_assignable_staff_for_program(program_id)
+      |> staff_to_options()
+
+    %{
+      program_id: program_id,
+      program_name: program_name,
+      members: members,
+      assignable_options: assignable
+    }
+  end
+
+  # Every mutation re-reads rather than patching the assign in place: the context
+  # owns who is on the program and who leads it, so the panel asks it again.
+  defp refresh_staffing_modal(socket) do
+    %{program_id: program_id, program_name: program_name} = socket.assigns.staffing_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    assign(socket, :staffing_modal, build_staffing_modal(program_id, program_name, provider_id))
+  end
+
+  # Only a lead change reaches the table: its staff column renders the lead alone
+  # (ProgramPresenter.to_table_view/3), so adding or removing anyone else is invisible there.
+  defp refresh_program_row(socket, program_id) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+      {:ok, program} ->
+        view =
+          ProgramPresenter.to_table_view(
+            program,
+            build_enrollment_data([program]),
+            Provider.get_lead_instructor(program_id)
+          )
+
+        stream_insert(socket, :programs, view)
+
+      {:error, :not_found} ->
+        socket
+    end
+  end
+
+  defp staffing_not_found(socket, action, staff_member_id, provider_id) do
+    Logger.warning("[ProgramsLive] Staffing #{action} for unknown or foreign staff member",
+      staff_member_id: staff_member_id,
+      provider_id: provider_id
+    )
+
+    socket
+    |> refresh_staffing_modal()
+    |> put_flash(:error, gettext("That staff member could not be found."))
+  end
+
   defp build_enrollment_data(domain_programs) do
     program_ids = Enum.map(domain_programs, & &1.id)
     Enrollment.get_enrollment_summary_batch(program_ids)
@@ -1020,6 +1193,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         />
 
         <.sessions_modal :if={@sessions_modal} modal={@sessions_modal} />
+
+        <.staffing_modal :if={@staffing_modal} modal={@staffing_modal} />
       </div>
     </.pv_dashboard_shell>
     """
