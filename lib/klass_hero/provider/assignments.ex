@@ -79,12 +79,26 @@ defmodule KlassHero.Provider.Assignments do
   @doc """
   Unassigns a staff member from a program owned by `provider_id`.
 
+  Refuses when the target is the program's lead instructor: detaching them would
+  silently leave the program lead-less off a single click. Promote a replacement
+  (`set_lead_instructor/3`) or step them down (`clear_lead_instructor/2`) first.
+
+  That guard is deliberately **not** mirrored on
+  `Provider.Staff.deactivate_staff_member/1`, which clears lead flags and leaves
+  a lead-less program behind without complaint. The asymmetry is the point: a
+  lead-less program is a sanctioned state (the program form produces one on every
+  blanked select), so this is not an invariant — it is a rail on *this* command,
+  the interactive detach of one row from one program. Deactivation is an
+  employment-lifecycle cascade across every program, and offboarding or GDPR
+  erasure must never block on someone not having picked a new camp lead yet.
+
   Returns:
   - `{:ok, ProgramStaffAssignment.t()}` on success
+  - `{:error, :cannot_unassign_lead}` if the staff member currently leads the program
   - `{:error, :not_found}` if no active assignment exists or it is foreign
   """
   @spec unassign_staff_from_program(String.t(), String.t(), String.t()) ::
-          {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | term()}
+          {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | :cannot_unassign_lead | term()}
   def unassign_staff_from_program(program_id, staff_member_id, provider_id)
       when is_binary(program_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "program_staff_assignment" do
@@ -142,6 +156,41 @@ defmodule KlassHero.Provider.Assignments do
     )
     |> Repo.all()
     |> Enum.map(&StaffMember.load_pay_rate/1)
+  end
+
+  @doc """
+  Lists the provider's active staff members who hold no current assignment to
+  `program_id` — the addable pool behind the staffing panel's picker.
+
+  Provider-scoped, unlike the display reads above: this answers a *write*
+  affordance ("who may I put on this program"), so a rival's staff must never
+  appear. Alphabetical, because it renders as a picker rather than a history.
+
+  A retired assignment does not disqualify anyone — `unassigned_at` lifts the
+  partial unique index, so a returning staff member is offered again.
+  """
+  @spec list_assignable_staff_for_program(String.t(), String.t()) :: [StaffMember.t()]
+  def list_assignable_staff_for_program(provider_id, program_id)
+      when is_binary(provider_id) and is_binary(program_id) do
+    from(s in StaffMember,
+      as: :staff,
+      where: s.provider_id == ^provider_id and s.active == true,
+      where: not exists(current_assignment_to(program_id)),
+      order_by: [asc: s.last_name, asc: s.first_name]
+    )
+    |> Repo.all()
+  end
+
+  # Correlated EXISTS against the outer :staff binding — cheaper than loading the
+  # assigned set and diffing in Elixir, and it keeps "currently assigned" defined
+  # in exactly one place (here and `active_assignment_scope/3` agree on
+  # `unassigned_at IS NULL`).
+  defp current_assignment_to(program_id) do
+    from(a in ProgramStaffAssignment,
+      where: a.staff_member_id == parent_as(:staff).id,
+      where: a.program_id == ^program_id and is_nil(a.unassigned_at),
+      select: 1
+    )
   end
 
   @doc "Lists all active staff assignments for a provider."
@@ -363,6 +412,9 @@ defmodule KlassHero.Provider.Assignments do
     |> case do
       nil ->
         {:error, :not_found}
+
+      %ProgramStaffAssignment{is_lead_instructor: true} ->
+        {:error, :cannot_unassign_lead}
 
       assignment ->
         assignment

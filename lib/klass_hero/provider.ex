@@ -278,7 +278,12 @@ defmodule KlassHero.Provider do
   @doc "Assigns a staff member to a program."
   defdelegate assign_staff_to_program(attrs), to: Assignments
 
-  @doc "Unassigns a staff member from a program owned by the provider."
+  @doc """
+  Unassigns a staff member from a program owned by the provider.
+
+  Returns `{:error, :cannot_unassign_lead}` when the target currently leads the
+  program — clear or reassign the lead first.
+  """
   defdelegate unassign_staff_from_program(program_id, staff_member_id, provider_id), to: Assignments
 
   @doc "Filters a list of programs to only those assigned to a staff member."
@@ -289,6 +294,9 @@ defmodule KlassHero.Provider do
 
   @doc "Lists active staff members assigned to a program."
   defdelegate list_active_staff_for_program(program_id), to: Assignments
+
+  @doc "Lists the provider's active staff who are not currently assigned to the program."
+  defdelegate list_assignable_staff_for_program(provider_id, program_id), to: Assignments
 
   @doc "Lists all active staff assignments for a provider."
   defdelegate list_active_assignments_for_provider(provider_id), to: Assignments
