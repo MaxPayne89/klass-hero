@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.71.1](https://github.com/MaxPayne89/klass-hero/compare/v0.71.0...v0.71.1) (2026-08-11)
+
+
+### Bug Fixes
+
+* replay program assignments when a staff invite is accepted ([#1313](https://github.com/MaxPayne89/klass-hero/issues/1313)) ([dfe080c](https://github.com/MaxPayne89/klass-hero/commit/dfe080cf21e18420371d481d39399c0bad631839)), closes [#1312](https://github.com/MaxPayne89/klass-hero/issues/1312)
+
 ## [0.71.0](https://github.com/MaxPayne89/klass-hero/compare/v0.70.0...v0.71.0) (2026-08-10)
 
 
