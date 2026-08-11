@@ -52,22 +52,34 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   end
 
   @doc """
-  Raises if a `:critical` event carries a payload value that is not a JSON
-  scalar.
+  Raises if a `:critical` event carries a payload value that cannot survive Oban's
+  jsonb column.
 
-  Critical events are serialized to Oban's jsonb `args` column for durable,
-  at-least-once delivery. Non-scalar payload *values* — a `%DateTime{}`, an
-  atom, a tuple — silently lose their type across the `serialize → jsonb →
-  deserialize` round trip (a `DateTime` comes back a string, an atom comes
-  back a string) with no error (see issue #1010). Guarding at construction
-  makes the failure loud at the publish site instead of latent three systems
-  downstream.
+  Payloads are serialized to `oban_jobs.args`, so a value that loses its type there
+  — an atom, a tuple, a schema struct — reaches consumers as something else, with no
+  error at the publish site (#1010). Guarding at construction makes that loud where
+  it is caused.
 
-  Nested maps and lists are allowed as *containers* — they are walked
-  recursively, and only their leaf values must be scalars.
+  `Date`, `Time`, `DateTime`, `NaiveDateTime` and `Decimal` are exempt: since #1311
+  `CriticalEventSerializer` records them on the way out and rebuilds them on the way
+  in, so they arrive as what the producer sent. Nested maps and lists are containers
+  — walked recursively, only their leaves are checked.
 
-  Non-critical events dispatch in-memory only (never serialized), so they may
-  carry any term and are exempt.
+  ## Why this still only runs for `:critical`
+
+  The original reason for the exemption is stale. It read "non-critical events
+  dispatch in-memory only (never serialized)", which ADR-0014 ended: every staged
+  event now takes the same Outbox → Oban → `EventDeliveryWorker` path, and
+  `criticality` selects nothing. #1311's two bugs both hid in that gap.
+
+  It stays gated anyway, because ungating it today raises on 137 existing tests:
+  `:normal` payloads carry atoms as a matter of course (`type: :direct`,
+  `message_type: :text`, `status: :pending`), and their consumers already cope with
+  the string that arrives — `conversation_summaries.ex` matches
+  `message_type in [:system, "system"]` for exactly this reason. Closing that needs
+  either atom support in the serializer or an encode-at-the-producer pass across ~9
+  producers, and it is tracked separately. #1311 was about type loss the envelope can
+  fix without changing what any consumer receives.
 
   Returns `:ok` or raises `ArgumentError`.
   """
@@ -93,16 +105,26 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   end
 
   defp scan_payload(value, path) do
-    if !json_scalar?(value) do
+    if !json_scalar?(value) and !typed_scalar?(value) do
       location = path |> Enum.reverse() |> Enum.join(".")
 
       raise ArgumentError,
-            "Critical event payload value at #{inspect(location)} is not a JSON scalar: " <>
-              "#{inspect(value)}. Critical payloads must carry only strings, numbers, " <>
-              "booleans, or nil (nested in maps/lists) so they survive jsonb serialization. " <>
-              "Encode DateTimes as ISO8601 strings and atoms as strings before publishing."
+            "Critical event payload value at #{inspect(location)} cannot survive jsonb " <>
+              "serialization: #{inspect(value)}. Critical payloads may carry strings, numbers, " <>
+              "booleans, nil, and Date/Time/DateTime/NaiveDateTime/Decimal structs (nested in " <>
+              "maps/lists). Encode anything else — an atom, a tuple, a schema struct — as a " <>
+              "JSON scalar before publishing."
     end
   end
+
+  # CriticalEventSerializer records these on the way out and rebuilds them on the way
+  # in, so unlike a bare atom they arrive as what the producer sent (#1311).
+  defp typed_scalar?(%Date{}), do: true
+  defp typed_scalar?(%Time{}), do: true
+  defp typed_scalar?(%DateTime{}), do: true
+  defp typed_scalar?(%NaiveDateTime{}), do: true
+  defp typed_scalar?(%Decimal{}), do: true
+  defp typed_scalar?(_value), do: false
 
   # A JSON scalar is a value that survives a jsonb round trip with its type
   # intact: strings, numbers, booleans, and nil. `nil`/`true`/`false` are

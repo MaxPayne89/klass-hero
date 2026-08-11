@@ -1,9 +1,11 @@
 defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTest do
   use KlassHero.DataCase, async: false
 
+  import KlassHero.EventTestHelper, only: [through_outbox: 1]
   import KlassHero.Factory
 
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
+  alias KlassHero.ProgramCatalog.Domain.Events.ProgramEvents
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
@@ -258,6 +260,65 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing.category == "education"
       assert listing.provider_id == provider_id
       assert listing.season == nil
+    end
+  end
+
+  # The tests above hand a native %Event{} to the projection. Production does not:
+  # the event is staged into oban_jobs.args and read back out first, which is where
+  # #1311's %Date{} became "2026-03-01". These use the real event constructors and
+  # cross that boundary.
+  describe "events crossing the outbox boundary" do
+    test "projects a program_created carrying dates, times and a price" do
+      program_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      ProgramEvents.program_created(program_id, %{
+        provider_id: provider_id,
+        title: "Soccer Camp",
+        category: "sports",
+        meeting_days: ["Monday"],
+        meeting_start_time: ~T[15:00:00],
+        meeting_end_time: ~T[17:00:00],
+        start_date: ~D[2026-08-12],
+        end_date: ~D[2026-09-30]
+      })
+      |> through_outbox()
+      |> dispatch()
+
+      listing = Repo.get!(ProgramListing, program_id)
+      assert listing.start_date == ~D[2026-08-12]
+      assert listing.end_date == ~D[2026-09-30]
+      assert listing.meeting_start_time == ~T[15:00:00]
+      assert listing.meeting_end_time == ~T[17:00:00]
+    end
+
+    test "projects a program_updated carrying every typed field" do
+      program_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      ProgramEvents.program_updated(program_id, %{
+        provider_id: provider_id,
+        title: "Updated Soccer Camp",
+        category: "sports",
+        price: Decimal.new("200.00"),
+        meeting_days: ["Tuesday"],
+        meeting_start_time: ~T[16:00:00],
+        meeting_end_time: ~T[18:00:00],
+        start_date: ~D[2026-08-12],
+        end_date: ~D[2026-09-30],
+        registration_start_date: ~D[2026-07-01],
+        registration_end_date: ~D[2026-07-31]
+      })
+      |> through_outbox()
+      |> dispatch()
+
+      listing = Repo.get!(ProgramListing, program_id)
+      assert listing.price == Decimal.new("200.00")
+      assert listing.start_date == ~D[2026-08-12]
+      assert listing.end_date == ~D[2026-09-30]
+      assert listing.meeting_start_time == ~T[16:00:00]
+      assert listing.registration_start_date == ~D[2026-07-01]
+      assert listing.registration_end_date == ~D[2026-07-31]
     end
   end
 

@@ -8,7 +8,10 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   - Use `source_context` to identify the publishing bounded context
   - Use `entity_type`/`entity_id` instead of `aggregate_type`/`aggregate_id`
   - Carry a `version` field for schema evolution and forward compatibility
-  - Contain only primitive types in `payload` for a stable cross-context contract
+  - Carry a `payload` of JSON scalars, plus `Date`/`Time`/`DateTime`/`NaiveDateTime`/
+    `Decimal`, which `CriticalEventSerializer` round-trips with their types intact
+    (#1311). Anything else loses its type in `oban_jobs.args`; for `:critical` events
+    `EventMetadata.validate_critical_payload!/2` rejects it at construction.
 
   ## Topic Naming Convention
 
