@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.71.2](https://github.com/MaxPayne89/klass-hero/compare/v0.71.1...v0.71.2) (2026-08-11)
+
+
+### Bug Fixes
+
+* guard both staff assignment clauses against an unclaimed invite ([#1319](https://github.com/MaxPayne89/klass-hero/issues/1319)) ([0a2ab30](https://github.com/MaxPayne89/klass-hero/commit/0a2ab30cd98b14143bfd76ba5a2225d578a87c30)), closes [#1309](https://github.com/MaxPayne89/klass-hero/issues/1309)
+* preserve typed payload values across the Oban jsonb boundary ([#1316](https://github.com/MaxPayne89/klass-hero/issues/1316)) ([bd930e9](https://github.com/MaxPayne89/klass-hero/commit/bd930e91cdc82d39c7ee31ffdeaf5bb69e96ade3)), closes [#1311](https://github.com/MaxPayne89/klass-hero/issues/1311)
+
 ## [0.71.1](https://github.com/MaxPayne89/klass-hero/compare/v0.71.0...v0.71.1) (2026-08-11)
 
 
