@@ -264,6 +264,9 @@ defmodule KlassHero.Provider.Staff do
   Links a User to a StaffMember and accepts the invitation (synchronous).
 
   Used by the one-click accept flow (#967). Idempotent for the same user.
+
+  Stages a `staff_assigned_to_program` per standing assignment (#1312) — see
+  `assignment_replay_events/1`. The link and that announcement commit together.
   """
   @spec accept_staff_invitation(StaffMember.t(), String.t()) ::
           {:ok, StaffMember.t()} | {:error, term()}
@@ -501,12 +504,32 @@ defmodule KlassHero.Provider.Staff do
   end
 
   defp accept_staff_invitation_fresh(%StaffMember{} = staff, user_id) do
-    with {:ok, _transitioned} <- StaffMember.transition_invitation(staff, :accepted),
-         {:ok, linked} <-
-           persist_staff_invitation_fields(staff, %{invitation_status: :accepted, user_id: user_id}),
-         {:ok, :selected} <- touch_staff_last_selected(user_id, linked.provider_id) do
-      {:ok, linked}
-    end
+    Outbox.transact(@context, fn ->
+      with {:ok, _transitioned} <- StaffMember.transition_invitation(staff, :accepted),
+           {:ok, linked} <-
+             persist_staff_invitation_fields(staff, %{invitation_status: :accepted, user_id: user_id}),
+           {:ok, :selected} <- touch_staff_last_selected(user_id, linked.provider_id) do
+        {:ok, linked, assignment_replay_events(linked)}
+      end
+    end)
+  end
+
+  # A program assigned before the invite was claimed emitted its
+  # staff_assigned_to_program with a nil staff_user_id, which Messaging skips —
+  # leaving the staff member out of that program's conversations for good.
+  # Acceptance is when those assignments become addressable, so replay them
+  # (#1312). Consumers are idempotent under replay: Messaging upserts on
+  # {program_id, staff_user_id}, and ProviderSessionDetails re-resolves from
+  # program_staff_assignments rather than trusting the payload.
+  #
+  # Queried here rather than through Assignments: Staff -> Assignments would
+  # close a cycle against the existing Assignments -> Provider -> Staff.
+  defp assignment_replay_events(%StaffMember{id: staff_id} = linked) do
+    from(a in ProgramStaffAssignment,
+      where: a.staff_member_id == ^staff_id and is_nil(a.unassigned_at)
+    )
+    |> Repo.all()
+    |> Enum.map(&ProviderEvents.staff_assigned_to_program(&1, linked))
   end
 
   defp insert_invited_staff(attrs, provider, raw_token) do
