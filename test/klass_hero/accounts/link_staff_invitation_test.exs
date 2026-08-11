@@ -2,11 +2,18 @@ defmodule KlassHero.Accounts.LinkStaffInvitationTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
+  import KlassHero.EventTestHelper
+  import KlassHero.Factory
   import KlassHero.ProviderFixtures
 
   alias KlassHero.Accounts
   alias KlassHero.Accounts.User
   alias KlassHero.Provider
+
+  setup do
+    setup_test_integration_events()
+    :ok
+  end
 
   defp sent_staff_for(provider, email) do
     staff_member_fixture(%{
@@ -99,6 +106,32 @@ defmodule KlassHero.Accounts.LinkStaffInvitationTest do
       assert {:ok, db} = Provider.get_staff_member(staff.id)
       assert db.invitation_status == :expired
       assert is_nil(db.user_id)
+    end
+  end
+
+  # This path never emits :staff_user_registered — the user already exists, so
+  # there is no registration to announce. Any backfill hung off that event would
+  # miss it entirely; replaying from the accept itself is what covers both (#1312).
+  describe "link_staff_invitation/2 (pre-claim program assignments)" do
+    test "replays assignments made before the invite was claimed" do
+      user = user_fixture(intended_roles: [:parent])
+      provider = provider_profile_fixture()
+      staff = sent_staff_for(provider, user.email)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: staff.id
+      )
+
+      assert {:ok, _updated} = Accounts.link_staff_invitation(user, staff)
+
+      assert_integration_event_published(:staff_assigned_to_program, %{
+        program_id: program.id,
+        staff_member_id: staff.id,
+        staff_user_id: user.id
+      })
     end
   end
 end

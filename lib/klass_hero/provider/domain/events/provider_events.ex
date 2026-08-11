@@ -14,6 +14,9 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   - `staff_assigned_to_program` / `staff_unassigned_from_program` - A staff
     member's program assignment changed (critical). Messaging reacts by adding
     or removing the staff member from the program's conversation.
+    `staff_assigned_to_program` is **also replayed on invite acceptance**, once per
+    standing assignment: a program assigned before the invite was claimed announced
+    a nil `staff_user_id`, which consumers skip (#1312).
   - `staff_member_deactivated` - A staff member's employment link ended
     (critical). Read tables holding a denormalised staff name clear it; a read
     filter cannot, because the name is a stored column.

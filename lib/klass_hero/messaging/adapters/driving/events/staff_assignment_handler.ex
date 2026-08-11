@@ -10,6 +10,11 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
      inside a single transaction, so the delivery job reaches the
      `ConversationSummaries` projection only after the rows it describes commit.
 
+  A nil `staff_user_id` means the invite is unclaimed, and the assignment is
+  skipped rather than mirrored — there is no user to make a participant yet. That
+  is not a dropped assignment: Provider replays the event on acceptance, once the
+  user exists (#1312).
+
   On unassignment:
   1. Deactivates the projection entry (sets active=false).
   2. Delegates to `RemoveAssignedStaff` to soft-leave the staff in every
