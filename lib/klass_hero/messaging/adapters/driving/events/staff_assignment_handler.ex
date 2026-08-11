@@ -10,10 +10,13 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
      inside a single transaction, so the delivery job reaches the
      `ConversationSummaries` projection only after the rows it describes commit.
 
-  A nil `staff_user_id` means the invite is unclaimed, and the assignment is
-  skipped rather than mirrored — there is no user to make a participant yet. That
-  is not a dropped assignment: Provider replays the event on acceptance, once the
-  user exists (#1312).
+  A nil `staff_user_id` means the invite is unclaimed, and the event is skipped
+  rather than mirrored — there is no user to make a participant yet. This applies
+  to **both** directions: an unclaimed staff member has nothing to mirror on
+  assignment and nothing to tear down on unassignment, and the read side cannot
+  express either as a query (`staff_user_id == nil` is not a comparison Ecto
+  allows). Skipping the assignment is not a dropped assignment: Provider replays
+  the event on acceptance, once the user exists (#1312).
 
   On unassignment:
   1. Deactivates the projection entry (sets active=false).
@@ -38,26 +41,27 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   @impl true
   def subscribed_events, do: [:staff_assigned_to_program, :staff_unassigned_from_program]
 
+  # One guard for both directions, deliberately: when each clause carried its own,
+  # only the assign side ever got one, and the unassign side compared a column
+  # against nil for as long as nothing could reach it (#1309).
   @impl true
-  def handle_event(%{event_type: :staff_assigned_to_program, payload: payload}) do
-    staff_user_id = Map.get(payload, :staff_user_id)
-
-    if is_nil(staff_user_id) do
-      Logger.debug("Skipping staff assignment — no user_id yet",
+  def handle_event(%{event_type: event_type, payload: payload})
+      when event_type in [:staff_assigned_to_program, :staff_unassigned_from_program] do
+    if is_nil(Map.get(payload, :staff_user_id)) do
+      Logger.debug("Skipping #{event_type} — staff member has no user_id yet",
         staff_member_id: payload.staff_member_id
       )
 
       :ok
     else
-      handle_assignment_with_retry(payload)
+      with_retry(event_type, payload)
     end
   end
 
-  def handle_event(%{event_type: :staff_unassigned_from_program, payload: payload}) do
-    handle_unassignment_with_retry(payload)
-  end
-
   def handle_event(_event), do: :ignore
+
+  defp with_retry(:staff_assigned_to_program, payload), do: handle_assignment_with_retry(payload)
+  defp with_retry(:staff_unassigned_from_program, payload), do: handle_unassignment_with_retry(payload)
 
   defp handle_assignment_with_retry(payload) do
     operation = fn ->
