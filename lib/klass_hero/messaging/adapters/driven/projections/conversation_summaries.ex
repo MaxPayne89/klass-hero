@@ -526,10 +526,9 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     # conversations in every inbox — the bug #1216 fixed.
     %{conversation_ids: conversation_ids} = event.payload
 
-    # Both values arrive as ISO8601 *strings*, not %DateTime{}: the outbox stores the
-    # event as Oban jsonb and `CriticalEventSerializer.deserialize/1` atomizes keys only.
-    # Safe here because `update_all` casts them into the `:utc_datetime` column; a
-    # consumer doing DateTime arithmetic on them would not be.
+    # Arrives as the %DateTime{} the producer sent: since #1311 the serializer records
+    # typed payload values and rebuilds them, so DateTime arithmetic on this is safe.
+    # (`reason` is still a string — atoms are not restored; see EventMetadata.)
     archived_at = legacy_archived_at(event)
 
     now = DateTime.utc_now() |> DateTime.truncate(:second)

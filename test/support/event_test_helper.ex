@@ -20,8 +20,32 @@ defmodule KlassHero.EventTestHelper do
 
   import ExUnit.Assertions
 
+  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
   alias KlassHero.Shared.Domain.Events.Event
+
+  @doc """
+  Puts an event through the Oban `jsonb` boundary its delivery job crosses.
+
+  A consumer test that hands a freshly built `%Event{}` straight to the consumer
+  exercises a path production does not have: since ADR-0014 every event is staged
+  into `oban_jobs.args` and read back out before any consumer sees it. `TestOutbox`
+  records native structs, so nothing else in the suite crosses that boundary —
+  which is why #1311 (a `%Date{}` arriving as `"2026-08-12"`) passed CI and failed
+  in prod.
+
+      event
+      |> KlassHero.EventTestHelper.through_outbox()
+      |> ProgramListings.project()
+  """
+  @spec through_outbox(Event.t()) :: Event.t()
+  def through_outbox(%Event{} = event) do
+    event
+    |> CriticalEventSerializer.serialize()
+    |> Jason.encode!()
+    |> Jason.decode!()
+    |> CriticalEventSerializer.deserialize()
+  end
 
   @doc """
   Initializes integration event collection for the current test.

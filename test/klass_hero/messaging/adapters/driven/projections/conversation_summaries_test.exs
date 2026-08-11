@@ -2,6 +2,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   use KlassHero.DataCase, async: false
 
   import Ecto.Query
+  import KlassHero.EventTestHelper, only: [through_outbox: 1]
   import KlassHero.Factory
 
   alias KlassHero.Messaging
@@ -669,6 +670,75 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
     end
   end
 
+  # Same gap as #1311, different context: the tests above hand a native %Event{} to
+  # the projection, while production stages it into oban_jobs.args first. These use
+  # the real constructors and cross that boundary, so a %DateTime{} arriving as an
+  # ISO string fails here instead of in prod.
+  describe "events crossing the outbox boundary" do
+    setup do
+      user_1 = user_fixture(name: "Alice Smith")
+      user_2 = user_fixture(name: "Bob Jones")
+      conversation_id = Ecto.UUID.generate()
+
+      dispatch(:conversation_created, %{
+        conversation_id: conversation_id,
+        type: :direct,
+        provider_id: Ecto.UUID.generate(),
+        participant_ids: [user_1.id, user_2.id]
+      })
+
+      {:ok, conversation_id: conversation_id, user_1: user_1, user_2: user_2}
+    end
+
+    test "message_sent keeps sent_at a DateTime for latest_message_at", ctx do
+      sent_at = now()
+
+      MessagingEvents.message_sent(
+        ctx.conversation_id,
+        Ecto.UUID.generate(),
+        ctx.user_1.id,
+        "Hello Bob!",
+        :text,
+        sent_at
+      )
+      |> through_outbox()
+      |> dispatch()
+
+      summary = summary_for(ctx.conversation_id, ctx.user_2.id)
+      assert summary.latest_message_at == sent_at
+    end
+
+    test "message_sent with a broadcast token stamps system_notes", ctx do
+      token = "[broadcast:#{Ecto.UUID.generate()}]"
+
+      MessagingEvents.message_sent(
+        ctx.conversation_id,
+        Ecto.UUID.generate(),
+        ctx.user_1.id,
+        "System note #{token}",
+        :system,
+        now()
+      )
+      |> through_outbox()
+      |> dispatch()
+
+      summary = summary_for(ctx.conversation_id, ctx.user_2.id)
+      assert Map.has_key?(summary.system_notes, token)
+    end
+
+    test "messages_read keeps read_at a DateTime for last_read_at", ctx do
+      read_at = now()
+
+      MessagingEvents.messages_read(ctx.conversation_id, ctx.user_2.id, read_at)
+      |> through_outbox()
+      |> dispatch()
+
+      summary = summary_for(ctx.conversation_id, ctx.user_2.id)
+      assert summary.last_read_at == read_at
+      assert summary.unread_count == 0
+    end
+  end
+
   describe "handle messages_read event" do
     test "sets unread_count to 0 and updates last_read_at for the user" do
       user_1 = user_fixture(name: "Alice Smith")
@@ -1265,6 +1335,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
   # ── Seed + dispatch helpers ────────────────────────────────────────────────
 
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
+
+  defp summary_for(conversation_id, user_id) do
+    Repo.one!(
+      from(s in ConversationSummary,
+        where: s.conversation_id == ^conversation_id and s.user_id == ^user_id
+      )
+    )
+  end
 
   defp insert_conversation(attrs) do
     Repo.insert!(struct!(Conversation, Keyword.put_new(attrs, :id, Ecto.UUID.generate())))
