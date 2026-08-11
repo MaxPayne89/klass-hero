@@ -6,7 +6,9 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
 
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Messaging.StaffParticipants
-  alias KlassHero.Shared.Domain.Events.Event
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.StaffMember
 
   setup do
     setup_test_integration_events()
@@ -122,6 +124,14 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   end
 
   describe "handle_event/1 - staff_unassigned_from_program" do
+    # #1309: the assign clause guarded nil, the unassign clause did not, so
+    # removing a staff member who had not yet claimed their invite compared a
+    # column against nil and crashed a :critical handler through all 10 attempts.
+    test "skips when staff_user_id is nil" do
+      event = build_unassignment_event(Ecto.UUID.generate(), Ecto.UUID.generate(), nil)
+      assert :ok = StaffAssignmentHandler.handle_event(event)
+    end
+
     test "deactivates projection entry" do
       provider_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
@@ -191,39 +201,29 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
     end
   end
 
+  # Built through the real producer constructors, not hand-rolled maps. The
+  # hand-rolled ones carried `assigned_at`/`unassigned_at`, which production
+  # payloads deliberately omit (provider_events.ex) — so the tests asserted
+  # against a payload shape the handler never actually receives (#1309).
   defp build_assignment_event(provider_id, program_id, staff_user_id) do
-    %Event{
-      event_id: Ecto.UUID.generate(),
-      event_type: :staff_assigned_to_program,
-      source_context: :provider,
-      entity_type: :staff_member,
-      entity_id: Ecto.UUID.generate(),
-      occurred_at: DateTime.utc_now(),
-      payload: %{
-        provider_id: provider_id,
-        program_id: program_id,
-        staff_member_id: Ecto.UUID.generate(),
-        staff_user_id: staff_user_id,
-        assigned_at: DateTime.utc_now()
-      }
-    }
+    ProviderEvents.staff_assigned_to_program(
+      assignment(provider_id, program_id),
+      %StaffMember{user_id: staff_user_id}
+    )
   end
 
   defp build_unassignment_event(provider_id, program_id, staff_user_id) do
-    %Event{
-      event_id: Ecto.UUID.generate(),
-      event_type: :staff_unassigned_from_program,
-      source_context: :provider,
-      entity_type: :staff_member,
-      entity_id: Ecto.UUID.generate(),
-      occurred_at: DateTime.utc_now(),
-      payload: %{
-        provider_id: provider_id,
-        program_id: program_id,
-        staff_member_id: Ecto.UUID.generate(),
-        staff_user_id: staff_user_id,
-        unassigned_at: DateTime.utc_now()
-      }
+    ProviderEvents.staff_unassigned_from_program(
+      assignment(provider_id, program_id),
+      %StaffMember{user_id: staff_user_id}
+    )
+  end
+
+  defp assignment(provider_id, program_id) do
+    %ProgramStaffAssignment{
+      provider_id: provider_id,
+      program_id: program_id,
+      staff_member_id: Ecto.UUID.generate()
     }
   end
 end

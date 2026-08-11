@@ -279,6 +279,39 @@ defmodule KlassHero.Provider.Staff do
   end
 
   @doc """
+  Re-announces every standing assignment of every claimed, active staff member.
+
+  A one-off repair, not a scheduled job. #1312's replay fires on acceptance, so
+  it only ever reaches staff who accept after it shipped; anyone already past
+  that moment keeps the empty `program_staff_participants` the nil-`staff_user_id`
+  skip left them with, and no other trigger exists. That is invisible in the
+  logs — the skip is a `Logger.debug` — and permanent, because the table has no
+  projection, bootstrap or rebuild.
+
+  Safe to re-run: idempotent at every consumer for the same reasons the
+  accept-time replay is (see `assignment_replay_events/1`). Returns the number
+  of assignments re-announced, which is not the number of staff members — one
+  staff member on three programs counts three.
+
+  Unclaimed staff are skipped rather than replayed with a nil `staff_user_id`:
+  that is the announcement that failed in the first place, and repeating it
+  repairs nothing.
+  """
+  @spec replay_standing_assignments() :: {:ok, non_neg_integer()}
+  def replay_standing_assignments do
+    context_span entity: "staff_member" do
+      events =
+        from(s in StaffMember, where: s.active == true and not is_nil(s.user_id))
+        |> Repo.all()
+        |> Enum.flat_map(&assignment_replay_events/1)
+
+      Outbox.stage(@context, events)
+
+      {:ok, length(events)}
+    end
+  end
+
+  @doc """
   Retrieves a staff member owned by `provider_id`; foreign ≡ missing.
 
   Scoped via `StaffMember.owned_by/2` (see its docs for why). Prefer this over

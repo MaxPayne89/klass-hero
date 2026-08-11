@@ -223,6 +223,9 @@ defmodule KlassHero.Provider do
   @doc "Links a user to a staff member and accepts the invitation (synchronous, #967)."
   defdelegate accept_staff_invitation(staff_member, user_id), to: Staff
 
+  @doc "One-off repair for staff who accepted before #1312's replay existed."
+  defdelegate replay_standing_assignments(), to: Staff
+
   @doc """
   Retrieves a staff member owned by `provider_id`; foreign ≡ missing (IDOR guard).
 
