@@ -90,6 +90,13 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodecTest do
     test "leaves an untagged value alone" do
       assert PayloadCodec.decode("2026-08-12", nil) == "2026-08-12"
     end
+
+    # A tag from a newer version. Raising here would dead-letter every job that version
+    # staged the moment anything rolled back — which is exactly what the pre-#1317
+    # serializer did, since its decode had a clause per known tag and no fallback.
+    test "degrades an unrecognised tag to the raw scalar rather than raising" do
+      assert PayloadCodec.decode("PT1H", "duration") == "PT1H"
+    end
   end
 
   describe "round-trip" do

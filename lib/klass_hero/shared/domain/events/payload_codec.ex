@@ -37,11 +37,18 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodec do
     is domain-defined, so the module defining it is loaded by the time an event
     carrying it is delivered.
 
-  ## A missing tag means "leave it alone"
+  ## An unknown tag means "leave it alone", and so does a missing one
 
   Args staged before a tag existed carry none, so `decode/2` returns the value as
-  `jsonb` left it. That is what in-flight Oban jobs and `undelivered_events` rows
-  need at deploy, and it makes a rollback safe in the other direction.
+  `jsonb` left it — what in-flight Oban jobs and `undelivered_events` rows need at
+  deploy.
+
+  A tag this version does not recognise degrades the same way, which is what makes a
+  rollback safe in the other direction. That is not free: the serializer before #1317
+  had a decode clause per known tag and no fallback, so a job carrying a tag it had
+  never heard of raised `FunctionClauseError` rather than degrading. Rolling *back*
+  past this commit still has that window, because the old code is what lacks the
+  fallback; rolling back to any version from here on does not.
   """
 
   @typedoc "A value `jsonb` stores natively."
@@ -110,4 +117,14 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodec do
     {:ok, datetime, _utc_offset} = DateTime.from_iso8601(value)
     datetime
   end
+
+  # A tag this version does not know was written by a newer one. Degrade to the raw
+  # scalar — the same thing an untagged value gets — rather than raising.
+  #
+  # Without this clause a rollback dead-letters every job the newer version staged,
+  # which is what the serializer before #1317 would do: its `revive/2` had a clause
+  # per known tag and no fallback, so a job carrying `"atom"` raised FunctionClauseError
+  # on any instance still running the old code. On a rolling deploy both versions read
+  # the same queue, so that window is real rather than theoretical.
+  def decode(value, _unrecognised_tag), do: value
 end

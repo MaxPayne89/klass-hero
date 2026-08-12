@@ -49,8 +49,15 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
 
   **Args written before this existed** carry no `"payload_types"`, so their values
   stay strings — the pre-#1311 behaviour, which is what in-flight jobs and
-  `undelivered_events` rows need at deploy. The reverse holds too: older code ignores
-  the extra key, so a rollback is safe.
+  `undelivered_events` rows need at deploy.
+
+  The reverse direction needs more care than it used to. "Older code ignores the extra
+  key" was true only of the pre-#1311 serializer, which never read `payload_types`;
+  #1316's does read it, and until #1317 it had no fallback for a tag it did not know.
+  So rolling back **past #1317** dead-letters any job staged with an `"atom"` tag,
+  because the old code is what lacks the fallback. From #1317 onward `PayloadCodec`
+  degrades an unrecognised tag to the raw scalar, so adding a tag later is safe to
+  roll back through.
   """
 
   alias KlassHero.Shared.Domain.Events.Event
