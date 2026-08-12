@@ -14,7 +14,6 @@ defmodule KlassHero.Messaging.SendMessage do
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Shared
-  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Storage
 
@@ -223,8 +222,9 @@ defmodule KlassHero.Messaging.SendMessage do
     |> String.slice(0, 255)
   end
 
-  # Broadcast conversations are one-way: only the provider owner and assigned staff may send.
-  # Parents replying would expose messages to all other participants (privacy breach).
+  # Broadcast conversations are one-way: only the provider owner and their currently
+  # employed staff may send. Parents replying would expose messages to all other
+  # participants (privacy breach).
   defp verify_broadcast_send_permission(conversation_id, sender_id, conversation) do
     # Validates conversation.id matches conversation_id to prevent a mismatched
     # pre-fetched struct from bypassing broadcast guards.
@@ -234,8 +234,8 @@ defmodule KlassHero.Messaging.SendMessage do
         else: KlassHero.Messaging.get_conversation_by_id(conversation_id)
 
     case result do
-      {:ok, %{type: :program_broadcast, provider_id: provider_id, program_id: program_id}} ->
-        check_broadcast_reply_permission(provider_id, program_id, sender_id)
+      {:ok, %{type: :program_broadcast, provider_id: provider_id}} ->
+        check_broadcast_reply_permission(provider_id, sender_id)
 
       {:ok, _direct_conversation} ->
         :ok
@@ -245,13 +245,10 @@ defmodule KlassHero.Messaging.SendMessage do
     end
   end
 
-  defp check_broadcast_reply_permission(provider_id, program_id, sender_id) do
-    cond do
-      provider_owner?(provider_id, sender_id) -> :ok
-      staff_assigned?(program_id, sender_id) -> :ok
-      active_staff_for_provider?(provider_id, sender_id) -> :ok
-      true -> {:error, :broadcast_reply_not_allowed}
-    end
+  defp check_broadcast_reply_permission(provider_id, sender_id) do
+    if provider_owner?(provider_id, sender_id) or active_staff_for_provider?(provider_id, sender_id),
+      do: :ok,
+      else: {:error, :broadcast_reply_not_allowed}
   end
 
   defp provider_owner?(provider_id, sender_id) do
@@ -261,16 +258,13 @@ defmodule KlassHero.Messaging.SendMessage do
     end
   end
 
-  defp staff_assigned?(nil, _sender_id), do: false
-
-  defp staff_assigned?(program_id, sender_id) do
-    staff_user_ids = StaffParticipants.get_active_staff_user_ids(program_id)
-    sender_id in staff_user_ids
-  end
-
-  # `program_staff_participants` projection covers only explicit program assignments;
-  # provider-level staff are also authorised to broadcast for any program of their
-  # provider (see `StaffBroadcastLive.mount/3`). The two checks must agree — bug #669.
+  # Current employment at the provider is the whole authorization fact — staff may
+  # follow up on any program of their provider (bug #669), so a per-program check
+  # against `program_staff_participants` would only ever narrow this for people the
+  # mirror has drifted on. That is exactly what it did: the mirror is never told
+  # about deactivation (#1237) or hard removal (#1292), so it kept authorizing both
+  # (#1320). Deriving from `staff_members.active` also means reactivation restores
+  # access with no event, replay, or backfill.
   defp active_staff_for_provider?(provider_id, sender_id) do
     ProviderStaffResolver.active_staff_for_provider?(provider_id, sender_id)
   end
