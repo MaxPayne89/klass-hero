@@ -9,9 +9,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   `:participant_added`, `:participant_removed` and `:message_data_anonymized`
   are critical: without durable delivery, late participants would be missing
   from read-model summaries until a restart re-derived them, removed ones would
-  linger, and the GDPR cascade could be lost. Their `source` atom is written
-  out as a string, because a critical payload must be a JSON scalar to survive
-  Oban's jsonb round trip (see #1010).
+  linger, and the GDPR cascade could be lost.
   """
 
   alias KlassHero.Shared.Domain.Events.Event
@@ -213,8 +211,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
       %{
         conversation_id: conversation_id,
         participant_user_ids: participant_user_ids,
-        # Critical payload must be a JSON scalar; the atom source is write-only (see #1010).
-        source: to_string(source)
+        source: source
       },
       criticality: :critical
     )

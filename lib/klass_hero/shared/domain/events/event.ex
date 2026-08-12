@@ -8,10 +8,11 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   - Use `source_context` to identify the publishing bounded context
   - Use `entity_type`/`entity_id` instead of `aggregate_type`/`aggregate_id`
   - Carry a `version` field for schema evolution and forward compatibility
-  - Carry a `payload` of JSON scalars, plus `Date`/`Time`/`DateTime`/`NaiveDateTime`/
-    `Decimal`, which `CriticalEventSerializer` round-trips with their types intact
-    (#1311). Anything else loses its type in `oban_jobs.args`; for `:critical` events
-    `EventMetadata.validate_critical_payload!/2` rejects it at construction.
+  - Carry a `payload` of JSON scalars, plus atoms and `Date`/`Time`/`DateTime`/
+    `NaiveDateTime`/`Decimal`, which `CriticalEventSerializer` round-trips with their
+    types intact (#1311, #1317). Anything else loses its type in `oban_jobs.args`, so
+    `EventMetadata.validate_payload!/1` rejects it at construction —
+    `PayloadCodec` is the one list of what survives.
 
   ## Topic Naming Convention
 
@@ -104,7 +105,7 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   def new(event_type, source_context, entity_type, entity_id, payload, opts \\ []) do
     metadata = EventMetadata.build_metadata(opts)
     version = Keyword.get(opts, :version, 1)
-    EventMetadata.validate_critical_payload!(metadata.criticality, payload)
+    EventMetadata.validate_payload!(payload)
 
     %__MODULE__{
       event_id: EventMetadata.generate_event_id(),

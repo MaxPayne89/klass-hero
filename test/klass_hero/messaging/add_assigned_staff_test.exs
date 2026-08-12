@@ -59,7 +59,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       assert event.entity_id == conversation_id
       assert event.entity_type == :conversation
       assert Enum.sort(event.payload.participant_user_ids) == Enum.sort([staff_a.id, staff_b.id])
-      assert event.payload.source == "initial_staff"
+      assert event.payload.source == :initial_staff
 
       # Critical: the command must NOT dispatch the event itself —
       # post-commit dispatch is the caller's responsibility so the projection

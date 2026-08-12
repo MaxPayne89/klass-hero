@@ -97,9 +97,16 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
           {"a DateTime with microseconds", %{alpha: ~U[2026-08-12 10:00:00.123456Z]}},
           {"a NaiveDateTime", %{alpha: ~N[2026-08-12 10:00:00]}},
           {"a Decimal", %{alpha: Decimal.new("12.50")}},
+          {"an atom", %{alpha: :direct}},
+          {"an atom nested in a map", %{alpha: %{beta: :program_broadcast}}},
+          {"an atom nested in a list", %{alpha: ["x", :text]}},
           {"a typed value nested in a map", %{alpha: %{beta: ~D[2026-08-12]}}},
           {"a typed value nested in a list", %{alpha: ["x", ~T[09:00:00]]}},
-          {"typed values beside scalars and nils", %{alpha: ~D[2026-08-12], beta: "x", gamma: nil}}
+          {"typed values beside scalars and nils", %{alpha: ~D[2026-08-12], beta: "x", gamma: nil}},
+          # nil and the booleans are atoms too. Tagging them would turn JSON null into
+          # the string "nil" and change what every `Map.get(payload, :k) || default`
+          # in a consumer returns.
+          {"an atom beside nil and booleans", %{alpha: :pending, beta: nil, gamma: true, delta: false}}
         ] do
       test "restores #{label}" do
         payload = unquote(Macro.escape(payload))
@@ -223,6 +230,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
       integer(),
       boolean(),
       constant(nil),
+      # Drawn from @keys so String.to_existing_atom/1 can restore them, same bet the
+      # payload keys already make.
+      member_of(@keys),
       map(integer(0..36_500), &Date.add(~D[1990-01-01], &1)),
       map(integer(0..86_399), &Time.add(~T[00:00:00], &1)),
       map(integer(0..2_000_000_000), &DateTime.from_unix!/1),
