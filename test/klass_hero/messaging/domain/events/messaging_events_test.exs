@@ -130,7 +130,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
       assert event.entity_type == :conversation
       assert event.payload.conversation_id == conversation_id
       assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == "initial_staff"
+      assert event.payload.source == :initial_staff
     end
 
     test "accepts :later_assignment source" do
@@ -141,7 +141,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
           :later_assignment
         )
 
-      assert event.payload.source == "later_assignment"
+      assert event.payload.source == :later_assignment
     end
   end
 
@@ -158,7 +158,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
       assert event.entity_type == :conversation
       assert event.payload.conversation_id == conversation_id
       assert event.payload.participant_user_ids == user_ids
-      assert event.payload.source == "staff_unassignment"
+      assert event.payload.source == :staff_unassignment
     end
   end
 end

@@ -18,9 +18,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   shallow `normalize_keys/1` long after this became the single normalization
   point, and it read as load-bearing (#1256).
 
-  ## Payload values keep their types, and that is also only here
+  ## Payload values keep their types, and the sidecar is how
 
-  `jsonb` has no date, time or decimal. A `%Date{}` a producer put in a payload
+  `jsonb` has no date, time, decimal or atom. A `%Date{}` a producer put in a payload
   would arrive as `"2026-08-12"`, and a consumer written against the `@spec` would
   raise on it — which is what #1311 was, in two contexts at once.
 
@@ -33,9 +33,13 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
       }
 
   A consumer therefore receives what the producer sent and needs to know nothing
-  about the wire. Supported: `Date`, `Time`, `DateTime`, `NaiveDateTime`, `Decimal`.
-  Any other struct raises here — `EventMetadata.validate_payload!/1` rejects it at
-  construction, so reaching that raise means something bypassed `Event.new/6`.
+  about the wire.
+
+  **What each leaf may be is `PayloadCodec`'s to say, not this module's.** This one
+  walks the payload and mirrors the tags into the sidecar; the codec turns one leaf
+  into `{scalar, tag}` and back. `EventMetadata.validate_payload!/1` asks that same
+  codec at construction, which is what keeps the two ends from drifting — they were
+  separate lists until #1317, and each of #1316 and #1317 had to edit both.
 
   The sidecar mirrors the payload's shape rather than tagging values inline
   (`{"__type__": ...}`) so the payload stays plain JSON in `oban_jobs.args` and
@@ -43,18 +47,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   wrapped scalar is materially worse. Branches with nothing typed in them are
   pruned, so an all-scalar payload carries `%{}`.
 
-  Two properties worth knowing:
-
-  - **Args written before this existed** carry no `"payload_types"`, so their values
-    stay strings — the pre-#1311 behaviour, which is what in-flight jobs need at
-    deploy. The reverse holds too: older code ignores the extra key, so a rollback
-    is safe.
-  - **A `DateTime` comes back in UTC.** `DateTime.from_iso8601/1` returns the instant
-    plus a separate offset, and only the instant is kept. Every producer here builds
-    UTC, so nothing observes the difference.
+  **Args written before this existed** carry no `"payload_types"`, so their values
+  stay strings — the pre-#1311 behaviour, which is what in-flight jobs and
+  `undelivered_events` rows need at deploy. The reverse holds too: older code ignores
+  the extra key, so a rollback is safe.
   """
 
   alias KlassHero.Shared.Domain.Events.Event
+  alias KlassHero.Shared.Domain.Events.PayloadCodec
 
   @doc """
   Serializes an event struct into a JSON-safe map.
@@ -105,22 +105,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
 
   defp encode_payload(payload) when is_map(payload), do: encode_value(payload)
 
-  defp encode_value(%Date{} = value), do: {Date.to_iso8601(value), "date"}
-  defp encode_value(%Time{} = value), do: {Time.to_iso8601(value), "time"}
-  defp encode_value(%DateTime{} = value), do: {DateTime.to_iso8601(value), "datetime"}
-  defp encode_value(%NaiveDateTime{} = value), do: {NaiveDateTime.to_iso8601(value), "naive_datetime"}
-  defp encode_value(%Decimal{} = value), do: {Decimal.to_string(value), "decimal"}
-
-  defp encode_value(%struct{} = value) do
-    raise ArgumentError,
-          "Event payload value of type #{inspect(struct)} cannot cross the Oban jsonb " <>
-            "boundary: #{inspect(value)}. Supported structs are Date, Time, DateTime, " <>
-            "NaiveDateTime and Decimal; encode anything else as a JSON scalar in the " <>
-            "producer. Event.new/6 rejects this too, so reaching here means the event " <>
-            "was built some other way."
-  end
-
-  defp encode_value(map) when is_map(map) do
+  # `not is_struct/1` keeps Date and friends out of the container clause — they are
+  # maps, but they are leaves, and PayloadCodec is what knows that.
+  defp encode_value(map) when is_map(map) and not is_struct(map) do
     {encoded, types} =
       Enum.map_reduce(map, %{}, fn {key, value}, types ->
         string_key = stringify_key(key)
@@ -138,7 +125,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
     {encoded, prune(types)}
   end
 
-  defp encode_value(value), do: {value, nil}
+  defp encode_value(value), do: PayloadCodec.encode(value)
 
   defp stringify_key(key) when is_atom(key), do: Atom.to_string(key)
   defp stringify_key(key), do: key
@@ -154,7 +141,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
 
   defp decode_payload(payload, types) when is_map(payload), do: decode_value(payload, types)
 
-  defp decode_value(value, type) when is_binary(type), do: revive(type, value)
+  defp decode_value(value, type) when is_binary(type), do: PayloadCodec.decode(value, type)
 
   defp decode_value(map, types) when is_map(map) do
     Map.new(map, fn {key, value} ->
@@ -175,16 +162,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
 
   defp type_for(types, key) when is_map(types), do: Map.get(types, key)
   defp type_for(_types, _key), do: nil
-
-  defp revive("date", value), do: Date.from_iso8601!(value)
-  defp revive("time", value), do: Time.from_iso8601!(value)
-  defp revive("naive_datetime", value), do: NaiveDateTime.from_iso8601!(value)
-  defp revive("decimal", value), do: Decimal.new(value)
-
-  defp revive("datetime", value) do
-    {:ok, datetime, _utc_offset} = DateTime.from_iso8601(value)
-    datetime
-  end
 
   defp serialize_metadata(metadata) when is_map(metadata) do
     Map.new(metadata, fn

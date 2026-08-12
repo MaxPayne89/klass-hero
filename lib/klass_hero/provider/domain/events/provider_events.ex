@@ -100,8 +100,8 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
 
   Carries no `program_ids`: consumers hold `staff_member_id` on their own rows,
   so scoping by the staff member is both narrower and immune to the assignment
-  set changing between staging and delivery. No timestamp either — a payload
-  `DateTime` does not survive the durable round trip (#1010).
+  set changing between staging and delivery. No timestamp either — no consumer
+  reads one.
   """
   @spec staff_member_deactivated(StaffMember.t(), keyword()) :: Event.t()
   def staff_member_deactivated(%StaffMember{} = staff_member, opts \\ []) do
@@ -121,9 +121,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
     )
   end
 
-  # assigned_at/unassigned_at are deliberately absent: no consumer reads them, and
-  # a payload DateTime does not survive the durable round trip as a DateTime
-  # (the serializer does not re-parse payload values, see #1010).
+  # assigned_at/unassigned_at are deliberately absent: no consumer reads them.
   defp assignment_event(event_type, assignment, staff_member, opts) do
     payload = %{
       provider_id: assignment.provider_id,

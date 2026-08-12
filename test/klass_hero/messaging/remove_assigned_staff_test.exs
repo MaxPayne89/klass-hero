@@ -51,7 +51,7 @@ defmodule KlassHero.Messaging.RemoveAssignedStaffTest do
 
       assert Enum.all?(events, fn e ->
                e.payload.participant_user_ids == [staff.id] and
-                 e.payload.source == "staff_unassignment"
+                 e.payload.source == :staff_unassignment
              end)
 
       # Critical: events are returned as data, NOT dispatched in-band.
