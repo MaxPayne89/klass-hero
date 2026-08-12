@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.71.3](https://github.com/MaxPayne89/klass-hero/compare/v0.71.2...v0.71.3) (2026-08-12)
+
+
+### Bug Fixes
+
+* deny broadcast replies from staff whose employment ended ([#1324](https://github.com/MaxPayne89/klass-hero/issues/1324)) ([309fc94](https://github.com/MaxPayne89/klass-hero/commit/309fc9479387cbe9b6fc8455df731794a6e50dc5)), closes [#1320](https://github.com/MaxPayne89/klass-hero/issues/1320)
+* keep atom payload values typed across the outbox ([#1325](https://github.com/MaxPayne89/klass-hero/issues/1325)) ([8ce4174](https://github.com/MaxPayne89/klass-hero/commit/8ce417413eaa5f49fba937648b573c21aaf88956))
+
 ## [0.71.2](https://github.com/MaxPayne89/klass-hero/compare/v0.71.1...v0.71.2) (2026-08-11)
 
 
