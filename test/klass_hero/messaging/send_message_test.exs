@@ -147,6 +147,12 @@ defmodule KlassHero.Messaging.SendMessageTest do
       staff_user = AccountsFixtures.user_fixture()
       broadcast = insert_broadcast(provider, program)
 
+      insert(:staff_member_schema,
+        provider_id: provider.id,
+        user_id: staff_user.id,
+        active: true
+      )
+
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
       StaffParticipants.upsert_active(%{
@@ -172,6 +178,48 @@ defmodule KlassHero.Messaging.SendMessageTest do
 
       assert {:error, :broadcast_reply_not_allowed} =
                SendMessage.execute(broadcast.id, non_staff_user.id, "Sneaky reply")
+    end
+
+    # #1320: nothing tells the mirror that an employment ended. Deactivation
+    # deliberately leaves the assignment and the conversation membership standing
+    # and is not routed to the mirror's writer (#1237); hard removal destroys the
+    # assignment with no event at all (#1292). Either way the participant row and
+    # an `active: true` mirror row survive, so `staff_members` — the row's `active`
+    # flag, or its absence — is the only thing left that can tell these senders
+    # apart from staff who may still reply.
+    test "rejects staff whose employment ended, despite an active mirror row" do
+      for {label, employed_row?} <- [{"deactivated", true}, {"hard-removed", false}] do
+        provider = insert(:provider_profile_schema)
+        program = insert(:program_schema, provider_id: provider.id)
+        staff_user = AccountsFixtures.user_fixture()
+        broadcast = insert_broadcast(provider, program)
+
+        if employed_row? do
+          insert(:staff_member_schema,
+            provider_id: provider.id,
+            user_id: staff_user.id,
+            active: false
+          )
+        end
+
+        insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
+
+        StaffParticipants.upsert_active(%{
+          provider_id: provider.id,
+          program_id: program.id,
+          staff_user_id: staff_user.id
+        })
+
+        # Pin the precondition: the mirror still lists them, and that list is
+        # exactly what the deleted guard branch consulted. Without this the
+        # assertion below could go green for the wrong reason.
+        assert staff_user.id in StaffParticipants.get_active_staff_user_ids(program.id),
+               "#{label}: the mirror row must survive, or this stops being a regression test"
+
+        assert SendMessage.execute(broadcast.id, staff_user.id, "Still here") ==
+                 {:error, :broadcast_reply_not_allowed},
+               "expected a #{label} staff member to be denied"
+      end
     end
 
     # Bug #669: a staff_member of the provider should be able to follow up in a
