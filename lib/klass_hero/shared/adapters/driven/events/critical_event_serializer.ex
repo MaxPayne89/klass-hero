@@ -48,8 +48,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   pruned, so an all-scalar payload carries `%{}`.
 
   **Args written before this existed** carry no `"payload_types"`, so their values
-  stay strings — the pre-#1311 behaviour, which is what in-flight jobs and
-  `undelivered_events` rows need at deploy.
+  stay strings — the pre-#1311 behaviour, which is what the jobs already in the queue
+  at deploy need.
 
   The reverse direction needs more care than it used to. "Older code ignores the extra
   key" was true only of the pre-#1311 serializer, which never read `payload_types`;

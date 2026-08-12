@@ -40,8 +40,10 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodec do
   ## An unknown tag means "leave it alone", and so does a missing one
 
   Args staged before a tag existed carry none, so `decode/2` returns the value as
-  `jsonb` left it — what in-flight Oban jobs and `undelivered_events` rows need at
-  deploy.
+  `jsonb` left it — what the jobs already in the queue at deploy need. (Those args
+  get read once more on the way out, by `EventDeliveryWorker.compensate/2`, which
+  deserializes a discarded job to record what it missed. `undelivered_events` itself
+  is written and pruned, never replayed.)
 
   A tag this version does not recognise degrades the same way, which is what makes a
   rollback safe in the other direction. That is not free: the serializer before #1317
