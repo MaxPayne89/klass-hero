@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.71.4](https://github.com/MaxPayne89/klass-hero/compare/v0.71.3...v0.71.4) (2026-08-13)
+
+
+### Bug Fixes
+
+* block deactivated staff from new program attachments ([#1333](https://github.com/MaxPayne89/klass-hero/issues/1333)) ([76b1958](https://github.com/MaxPayne89/klass-hero/commit/76b195859c1f92f7bfd4b5f58b5fb85e29c98d4c)), closes [#1306](https://github.com/MaxPayne89/klass-hero/issues/1306)
+* follow the real transaction context when isolating an insert ([#1331](https://github.com/MaxPayne89/klass-hero/issues/1331)) ([e705029](https://github.com/MaxPayne89/klass-hero/commit/e705029cc082b8e6a36bf5a62f626291283ff0f8)), closes [#1322](https://github.com/MaxPayne89/klass-hero/issues/1322)
+
 ## [0.71.3](https://github.com/MaxPayne89/klass-hero/compare/v0.71.2...v0.71.3) (2026-08-12)
 
 
