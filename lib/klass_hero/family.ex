@@ -32,6 +32,7 @@ defmodule KlassHero.Family do
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.Outbox
 
   @context __MODULE__
@@ -47,13 +48,9 @@ defmodule KlassHero.Family do
   """
   def create_parent_profile(attrs) when is_map(attrs) do
     context_span entity: "parent" do
-      # `mode: :savepoint` so a unique-constraint hit rolls back only to a savepoint
-      # instead of poisoning an outer transaction — this runs inside
-      # `ProcessedEventRepository.execute_atomically`'s txn on the
-      # `:user_registered`/`:user_confirmed` compensation path (issue #1065).
       %ParentProfile{}
       |> ParentProfile.changeset(attrs)
-      |> Repo.insert(mode: :savepoint)
+      |> RepositoryHelpers.insert_isolated()
       |> case do
         {:ok, parent} ->
           {:ok, parent}
@@ -214,10 +211,7 @@ defmodule KlassHero.Family do
 
       %Consent{}
       |> Consent.changeset(attrs)
-      # `mode: :savepoint` because callers run this inside a transaction (ProcessInviteClaim
-      # grants invite consents inside its Outbox.transact). Without it the constraint hit
-      # below aborts the enclosing transaction instead of being caught here — issue #1065.
-      |> Repo.insert(mode: :savepoint)
+      |> RepositoryHelpers.insert_isolated()
       |> case do
         {:ok, consent} ->
           {:ok, consent}

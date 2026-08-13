@@ -15,6 +15,7 @@ defmodule KlassHero.Provider.Profiles do
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.CommandResult
   alias KlassHero.Shared.Outbox
 
@@ -197,13 +198,9 @@ defmodule KlassHero.Provider.Profiles do
   # unique-identity violation back to the frozen :duplicate_resource contract
   # (ProviderEventHandler/Accounts depend on that literal atom).
   defp insert_provider_profile(attrs) do
-    # `mode: :savepoint` so a unique-identity violation rolls back only to a
-    # savepoint instead of poisoning an outer transaction — this runs inside
-    # `ProcessedEventRepository.execute_atomically`'s txn on the
-    # `:user_registered`/`:user_confirmed` compensation path (issue #1065).
     %ProviderProfile{}
     |> ProviderProfile.changeset(attrs)
-    |> Repo.insert(mode: :savepoint)
+    |> RepositoryHelpers.insert_isolated()
     |> case do
       {:ok, profile} ->
         {:ok, profile}
