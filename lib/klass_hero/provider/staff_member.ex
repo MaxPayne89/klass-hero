@@ -375,6 +375,24 @@ defmodule KlassHero.Provider.StaffMember do
     from s in query, where: s.provider_id == ^provider_id
   end
 
+  @doc """
+  Narrows a query to staff whose employment is still live.
+
+  Deliberately separate from `owned_by/2`: tenancy ("is this row mine?") and
+  employment ("is this person still on staff?") are different questions, and the
+  callers that need them differ. Composing both is right for a *new* attachment —
+  assigning to a program, promoting to lead. Composing only `owned_by/2` is right
+  for the employment lifecycle itself — editing, deleting, unassigning, GDPR
+  erasure — all of which must still reach an offboarded member.
+
+  Fusing the two into one getter looks like a simplification and is not: it makes
+  offboarding and erasure fail to find their own targets (#1306).
+  """
+  @spec active(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def active(query \\ __MODULE__) do
+    from s in query, where: s.active == true
+  end
+
   # ── Functional core (ported domain validator + helpers) ──────────────────
 
   @doc """

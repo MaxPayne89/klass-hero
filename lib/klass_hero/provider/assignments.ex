@@ -9,7 +9,7 @@ defmodule KlassHero.Provider.Assignments do
   ## Tenancy
 
   Every write takes a `provider_id` and enforces it uniformly (#1134): the staff
-  member comes from the scoped `Provider.get_staff_member/2`, the program from the
+  member comes from a scoped getter (see ## Employment below), the program from the
   scoped `ProgramCatalog.get_program_for_provider/2` (via `ensure_program_owned/2`), and
   every UPDATE is narrowed by `ProgramStaffAssignment.owned_by/2`. Ownership is a
   property of the queries, not a caller convention, so no UPDATE can reach a
@@ -21,6 +21,21 @@ defmodule KlassHero.Provider.Assignments do
 
   Foreign and missing are deliberately indistinguishable throughout — both
   `{:error, :not_found}`, leaking no existence oracle.
+
+  ## Employment
+
+  Which scoped getter a write uses depends on whether it *creates* an attachment
+  (#1306). `assign_staff_to_program/1` and `set_lead_instructor/3` take
+  `Provider.get_active_staff_member/2`, so a deactivated member cannot be newly
+  attached — the read side filters them out, and a write the reads then hide is a
+  silent no-op with a real row behind it.
+
+  `unassign_staff_from_program/3` uses the tenancy-only `Provider.get_staff_member/2`
+  on purpose: deactivation leaves existing assignments alive, so detaching someone
+  after they were offboarded has to stay possible.
+
+  Deactivated collapses into the same `{:error, :not_found}` as foreign and missing,
+  so this adds no third error branch for callers.
 
   Reads are intentionally *not* provider-scoped: `get_lead_instructor/1` and its
   batch sibling feed publicly-rendered program pages.
@@ -54,14 +69,15 @@ defmodule KlassHero.Provider.Assignments do
   Returns:
   - `{:ok, ProgramStaffAssignment.t()}` on success
   - `{:error, :already_assigned}` if the staff member is already assigned
-  - `{:error, :not_found}` if the staff member or program is missing or foreign
+  - `{:error, :not_found}` if the staff member or program is missing or foreign, or
+    the staff member is deactivated (#1306 — deactivated ≡ foreign ≡ missing)
   """
   @spec assign_staff_to_program(map()) ::
           {:ok, ProgramStaffAssignment.t()}
           | {:error, :already_assigned | :not_found | term()}
   def assign_staff_to_program(%{provider_id: provider_id} = attrs) do
     context_span entity: "program_staff_assignment" do
-      with {:ok, staff_member} <- Provider.get_staff_member(attrs.staff_member_id, provider_id),
+      with {:ok, staff_member} <- Provider.get_active_staff_member(attrs.staff_member_id, provider_id),
            :ok <- ensure_program_owned(attrs.program_id, provider_id),
            assignment_attrs = build_assignment_attrs(attrs, staff_member),
            {:ok, assignment} <-
@@ -221,14 +237,16 @@ defmodule KlassHero.Provider.Assignments do
   Returns `{:ok, ProgramStaffAssignment.t()}`, or `{:error, :not_found}` when the
   staff member **or the program** is missing or foreign — both sides are checked,
   so a competitor's staff can never attach to this program, nor this provider's
-  staff to theirs.
+  staff to theirs. A **deactivated** staff member is `{:error, :not_found}` too:
+  promoting someone the read side filters out would flag a lead that
+  `get_lead_instructor/1` reports as absent (#1306).
   """
   @spec set_lead_instructor(String.t(), String.t(), String.t()) ::
           {:ok, ProgramStaffAssignment.t()} | {:error, :not_found | term()}
   def set_lead_instructor(program_id, staff_member_id, provider_id)
       when is_binary(program_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "program_staff_assignment" do
-      with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id, provider_id),
+      with {:ok, staff_member} <- Provider.get_active_staff_member(staff_member_id, provider_id),
            :ok <- ensure_program_owned(program_id, provider_id) do
         Multi.new()
         |> Multi.update_all(

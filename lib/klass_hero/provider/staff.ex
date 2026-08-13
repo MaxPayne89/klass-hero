@@ -317,11 +317,42 @@ defmodule KlassHero.Provider.Staff do
   Scoped via `StaffMember.owned_by/2` (see its docs for why). Prefer this over
   `get_staff_member/1` on every provider-initiated path. A malformed `staff_id`
   is `{:error, :not_found}`, not a raise.
+
+  Answers tenancy only, so a **deactivated** member is still returned — which is
+  what the employment lifecycle needs (edit, delete, unassign, GDPR erasure all
+  target offboarded people). To gate a *new* attachment, use
+  `get_active_staff_member/2` instead.
   """
   @spec get_staff_member(String.t(), String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
   def get_staff_member(staff_id, provider_id) when is_binary(staff_id) and is_binary(provider_id) do
     provider_id
     |> StaffMember.owned_by()
+    |> RepositoryHelpers.get_schema_by_uuid(staff_id)
+    |> case do
+      {:ok, staff} -> {:ok, StaffMember.load_pay_rate(staff)}
+      {:error, :not_found} -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Retrieves an **active** staff member owned by `provider_id`; deactivated ≡
+  foreign ≡ missing.
+
+  The getter for paths that create a *new* attachment between a staff member and
+  a program — `assign_staff_to_program/1`, `set_lead_instructor/3`, and the
+  program form's lead pick. Deactivation deliberately leaves existing assignments
+  alive (see `deactivate_staff_member/1`) so Messaging membership survives
+  reactivation; this blocks new ones without disturbing those.
+
+  Collapsing deactivated into `:not_found` rather than a distinct error is what
+  keeps the callers' existing not-found branches correct, and leaks nothing about
+  which ids are real. `get_staff_member/2` is the counterpart for lifecycle work.
+  """
+  @spec get_active_staff_member(String.t(), String.t()) :: {:ok, StaffMember.t()} | {:error, :not_found}
+  def get_active_staff_member(staff_id, provider_id) when is_binary(staff_id) and is_binary(provider_id) do
+    provider_id
+    |> StaffMember.owned_by()
+    |> StaffMember.active()
     |> RepositoryHelpers.get_schema_by_uuid(staff_id)
     |> case do
       {:ok, staff} -> {:ok, StaffMember.load_pay_rate(staff)}
