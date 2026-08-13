@@ -4,16 +4,17 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
   import ExUnit.CaptureLog
 
   alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
   alias KlassHero.Shared.Categories
   alias KlassHeroWeb.Presenters.ProgramPresenter
 
   describe "to_table_view/3" do
-    test "no lead returns nil assigned_staff and nil enrollment fields" do
+    test "no staffing (3rd arg omitted) renders as nobody on the program" do
       program = build_program(%{})
 
       result = ProgramPresenter.to_table_view(program)
 
-      assert result.assigned_staff == nil
+      assert result.assigned_staff == %{lead: nil, count: 0, others_count: 0}
       assert result.status == :active
       assert result.enrolled == nil
       assert result.capacity == nil
@@ -29,17 +30,42 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result.capacity == 20
     end
 
-    test "the lead instructor (3rd arg) populates assigned_staff" do
-      lead = %{id: "instr-1", name: "John Doe", headshot_url: "https://example.com/photo.jpg"}
+    test "a lead plus one other yields the lead map and an others_count of 1" do
+      staffing =
+        staffing(
+          members: ["instr-1", "instr-2"],
+          lead: %{id: "instr-1", name: "John Doe", headshot_url: "https://example.com/photo.jpg"}
+        )
 
-      program = build_program(%{})
+      result = ProgramPresenter.to_table_view(build_program(%{}), %{}, staffing)
 
-      result = ProgramPresenter.to_table_view(program, %{}, lead)
+      assert result.assigned_staff.lead.id == "instr-1"
+      assert result.assigned_staff.lead.name == "John Doe"
+      assert result.assigned_staff.lead.initials == "JD"
+      assert result.assigned_staff.lead.headshot_url == "https://example.com/photo.jpg"
+      assert result.assigned_staff.count == 2
+      assert result.assigned_staff.others_count == 1
+    end
 
-      assert result.assigned_staff.id == "instr-1"
-      assert result.assigned_staff.name == "John Doe"
-      assert result.assigned_staff.initials == "JD"
-      assert result.assigned_staff.headshot_url == "https://example.com/photo.jpg"
+    # The #1310 state: staffed but leaderless. `count` is what separates it from
+    # an empty program, which is the distinction the old lead-only shape lost.
+    test "a leaderless but staffed program keeps its headcount with a nil lead" do
+      staffing = staffing(members: ["a", "b"], lead: nil)
+
+      result = ProgramPresenter.to_table_view(build_program(%{}), %{}, staffing)
+
+      assert result.assigned_staff.lead == nil
+      assert result.assigned_staff.count == 2
+      assert result.assigned_staff.others_count == 2
+    end
+
+    test "a lone lead has no others" do
+      staffing = staffing(members: ["solo"], lead: %{id: "solo", name: "Ada Lovelace", headshot_url: nil})
+
+      result = ProgramPresenter.to_table_view(build_program(%{}), %{}, staffing)
+
+      assert result.assigned_staff.count == 1
+      assert result.assigned_staff.others_count == 0
     end
 
     # {price, expected string} — integer and fractional Decimal values.
@@ -71,10 +97,11 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       @name name
       @expected expected
       test "#{inspect(name)} -> initials #{inspect(expected)}" do
-        lead = %{id: "1", name: @name, headshot_url: nil}
+        staffing = staffing(members: ["1"], lead: %{id: "1", name: @name, headshot_url: nil})
         program = build_program(%{})
 
-        assert ProgramPresenter.to_table_view(program, %{}, lead).assigned_staff.initials == @expected
+        assert ProgramPresenter.to_table_view(program, %{}, staffing).assigned_staff.lead.initials ==
+                 @expected
       end
     end
 
@@ -388,6 +415,17 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       result = ProgramPresenter.format_schedule_brief(program)
       assert result == "Tue & Thu 2:00 - 3:00 PM"
     end
+  end
+
+  defp staffing(opts) do
+    members = Keyword.fetch!(opts, :members)
+
+    %ProgramStaffing{
+      program_id: "prog-1",
+      lead: Keyword.fetch!(opts, :lead),
+      member_ids: members,
+      member_count: length(members)
+    }
   end
 
   defp build_program(overrides) do

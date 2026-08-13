@@ -140,47 +140,6 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
     end
   end
 
-  describe "list_lead_instructors_for_programs/1" do
-    test "returns a map keyed by program_id for programs with a lead" do
-      {provider, program_a, staff_a} = setup_provider_program_staff()
-      program_b = insert(:program_schema, provider_id: provider.id)
-      staff_b = insert(:staff_member_schema, provider_id: provider.id)
-      program_c = insert(:program_schema, provider_id: provider.id)
-
-      {:ok, _} = Provider.set_lead_instructor(program_a.id, staff_a.id, program_a.provider_id)
-      {:ok, _} = Provider.set_lead_instructor(program_b.id, staff_b.id, program_b.provider_id)
-
-      result =
-        Provider.list_lead_instructors_for_programs([program_a.id, program_b.id, program_c.id])
-
-      assert result[program_a.id].id == staff_a.id
-      assert result[program_b.id].id == staff_b.id
-      refute Map.has_key?(result, program_c.id)
-    end
-
-    test "returns an empty map for an empty list" do
-      assert Provider.list_lead_instructors_for_programs([]) == %{}
-    end
-
-    # Same invariant as get_lead_instructor/1, asserted separately: the two reads
-    # share lead_staff_query/0 but have their own selects.
-    test "omits programs whose lead has been deactivated" do
-      {provider, program_a, staff_a} = setup_provider_program_staff()
-      program_b = insert(:program_schema, provider_id: provider.id)
-      staff_b = insert(:staff_member_schema, provider_id: provider.id)
-
-      {:ok, _} = Provider.set_lead_instructor(program_a.id, staff_a.id, program_a.provider_id)
-      {:ok, _} = Provider.set_lead_instructor(program_b.id, staff_b.id, program_b.provider_id)
-
-      deactivate(staff_a)
-
-      result = Provider.list_lead_instructors_for_programs([program_a.id, program_b.id])
-
-      refute Map.has_key?(result, program_a.id)
-      assert result[program_b.id].id == staff_b.id
-    end
-  end
-
   defp deactivate(staff) do
     staff
     |> Ecto.Changeset.change(active: false)

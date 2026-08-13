@@ -322,8 +322,11 @@ defmodule KlassHero.Provider do
   @doc "Returns the program's lead instructor as a `%{id, name, headshot_url}` map, or nil."
   defdelegate get_lead_instructor(program_id), to: Assignments
 
-  @doc "Batch lead-instructor read keyed by program_id (avoids N+1 in list views)."
-  defdelegate list_lead_instructors_for_programs(program_ids), to: Assignments
+  @doc """
+  Batch staffing read keyed by program_id — active members plus the lead, in one
+  query (avoids N+1 in list views). Programs nobody staffs are omitted.
+  """
+  defdelegate list_program_staffing(program_ids), to: Assignments
 
   # --- Programs & sessions -------------------------------------------------
 

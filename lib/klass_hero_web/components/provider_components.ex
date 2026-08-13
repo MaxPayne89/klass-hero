@@ -1299,8 +1299,13 @@ defmodule KlassHeroWeb.ProviderComponents do
           <h3 class="text-lg font-semibold text-hero-charcoal">
             {gettext("Program Inventory")}
           </h3>
+          <%!-- Each control needs its own <form>: LiveView refuses a phx-change on a
+                bare input ("form events require the input to be inside a form"), so
+                until this wrapper existed neither search nor the staff filter fired
+                in a browser at all — only in tests, where render_change/2 posts to
+                the server directly and never sees the client-side check. --%>
           <div class="flex flex-col sm:flex-row gap-2">
-            <div class="relative">
+            <form phx-change="search_programs" id="programs-search-form" class="relative">
               <.icon
                 name="hero-magnifying-glass-mini"
                 class="w-5 h-5 text-hero-grey-400 absolute left-3 top-1/2 -translate-y-1/2"
@@ -1315,11 +1320,10 @@ defmodule KlassHeroWeb.ProviderComponents do
                   "text-sm placeholder-hero-grey-400 focus:border-hero-cyan focus:ring-1 focus:ring-hero-cyan",
                   Theme.rounded(:lg)
                 ]}
-                phx-change="search_programs"
                 phx-debounce="300"
               />
-            </div>
-            <div class="relative">
+            </form>
+            <form phx-change="filter_by_staff" id="programs-staff-filter-form" class="relative">
               <.icon
                 name="hero-funnel-mini"
                 class="w-5 h-5 text-hero-grey-400 absolute left-3 top-1/2 -translate-y-1/2"
@@ -1331,7 +1335,6 @@ defmodule KlassHeroWeb.ProviderComponents do
                   "text-sm focus:border-hero-cyan focus:ring-1 focus:ring-hero-cyan appearance-none",
                   Theme.rounded(:lg)
                 ]}
-                phx-change="filter_by_staff"
               >
                 <option
                   :for={option <- @staff_options}
@@ -1341,7 +1344,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   {option.label}
                 </option>
               </select>
-            </div>
+            </form>
           </div>
         </div>
       </div>
@@ -1376,17 +1379,44 @@ defmodule KlassHeroWeb.ProviderComponents do
                 </div>
               </td>
               <td class="px-4 py-4">
-                <div :if={program.assigned_staff} class="flex items-center gap-2">
+                <%!-- Three distinct states: led, staffed-but-leaderless, empty. Collapsing
+                      the middle one into "Unassigned" is what #1310 was about. --%>
+                <div
+                  :if={program.assigned_staff.lead}
+                  id={"program-staff-lead-#{program.id}"}
+                  class="flex items-center gap-2"
+                >
                   <div class={[
-                    "w-8 h-8 flex items-center justify-center text-white text-xs font-medium",
+                    "w-8 h-8 shrink-0 flex items-center justify-center text-white text-xs font-medium",
                     Theme.rounded(:full),
                     Theme.gradient(:primary)
                   ]}>
-                    {program.assigned_staff.initials}
+                    {program.assigned_staff.lead.initials}
                   </div>
-                  <span class="text-sm text-hero-charcoal">{program.assigned_staff.name}</span>
+                  <span class="text-sm text-hero-charcoal">{program.assigned_staff.lead.name}</span>
+                  <span
+                    :if={program.assigned_staff.others_count > 0}
+                    class="text-sm text-hero-grey-500 whitespace-nowrap"
+                  >
+                    +{program.assigned_staff.others_count}
+                  </span>
                 </div>
-                <span :if={!program.assigned_staff} class="text-sm text-hero-grey-400 italic">
+                <span
+                  :if={!program.assigned_staff.lead and program.assigned_staff.count > 0}
+                  id={"program-staff-leaderless-#{program.id}"}
+                  class="text-sm text-hero-grey-500"
+                >
+                  {ngettext(
+                    "%{count} staff member · no lead",
+                    "%{count} staff · no lead",
+                    program.assigned_staff.count
+                  )}
+                </span>
+                <span
+                  :if={program.assigned_staff.count == 0}
+                  id={"program-staff-empty-#{program.id}"}
+                  class="text-sm text-hero-grey-400 italic"
+                >
                   {gettext("Unassigned")}
                 </span>
               </td>

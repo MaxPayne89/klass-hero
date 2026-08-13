@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
   alias KlassHero.Shared.NameUtils
 
   require Logger
@@ -14,24 +15,30 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   @doc """
   Table view for the provider dashboard. `status` is a placeholder (tracking not yet implemented).
 
-  `lead` is the program's lead instructor as a `%{id, name, headshot_url}` map (or
-  `nil`), read by the caller from `Provider.get_lead_instructor/1` or the batch
-  `Provider.list_lead_instructors_for_programs/1` — the single source of truth now
-  lives on `program_staff_assignments`, not a denormalized program snapshot.
-  """
-  @spec to_table_view(Program.t() | ProgramListing.t(), map(), map() | nil) :: map()
-  def to_table_view(program, enrollment_data \\ %{}, lead \\ nil)
+  `staffing` is the program's `ProgramStaffing` read-model (or `nil` when nobody
+  is on it — the batch read omits those programs), from
+  `Provider.list_program_staffing/1`. The single source of truth lives on
+  `program_staff_assignments`, not a denormalized program snapshot.
 
-  def to_table_view(%Program{} = program, enrollment_data, lead) do
-    to_table_row(program.id, program.title, program.category, program.price, enrollment_data, lead)
+  It carries the whole roster rather than the lead alone because a lead-less but
+  staffed program is a sanctioned state that must not render as "Unassigned"
+  (#1310). Filtering reads the same read-model through
+  `ProgramStaffing.staffed_by?/2` — never this output — so display and
+  findability cannot drift apart.
+  """
+  @spec to_table_view(Program.t() | ProgramListing.t(), map(), ProgramStaffing.t() | nil) :: map()
+  def to_table_view(program, enrollment_data \\ %{}, staffing \\ nil)
+
+  def to_table_view(%Program{} = program, enrollment_data, staffing) do
+    to_table_row(program.id, program.title, program.category, program.price, enrollment_data, staffing)
   end
 
   # ProgramListing is a flat read-model DTO used by other list surfaces.
-  def to_table_view(%ProgramListing{} = listing, enrollment_data, lead) do
-    to_table_row(listing.id, listing.title, listing.category, listing.price, enrollment_data, lead)
+  def to_table_view(%ProgramListing{} = listing, enrollment_data, staffing) do
+    to_table_row(listing.id, listing.title, listing.category, listing.price, enrollment_data, staffing)
   end
 
-  defp to_table_row(id, title, category, price, enrollment_data, lead) do
+  defp to_table_row(id, title, category, price, enrollment_data, staffing) do
     data = Map.get(enrollment_data, id, %{})
 
     %{
@@ -39,7 +46,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       name: title,
       category: humanize_category(category),
       price: format_price(price),
-      assigned_staff: format_lead(lead),
+      assigned_staff: format_staffing(staffing),
       status: :active,
       enrolled: Map.get(data, :enrolled),
       capacity: Map.get(data, :capacity)
@@ -253,6 +260,21 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   defp format_price(nil), do: "0.00"
   defp format_price(price), do: price |> Decimal.round(2) |> Decimal.to_string()
+
+  # The table's staff cell. Always a map, so the template branches on values
+  # rather than on the presence of the key. `count` is everyone active on the
+  # program; `others_count` is everyone who is not the lead — which equals
+  # `count` on a leaderless program, so both render branches read the field that
+  # means what they need. A nil staffing is an unstaffed program, not missing data.
+  defp format_staffing(nil), do: %{lead: nil, count: 0, others_count: 0}
+
+  defp format_staffing(%ProgramStaffing{lead: lead, member_count: count}) do
+    %{
+      lead: format_lead(lead),
+      count: count,
+      others_count: if(lead, do: max(count - 1, 0), else: count)
+    }
+  end
 
   # Lead instructor (single source of truth on program_staff_assignments), shaped
   # for the dashboard table avatar/name. `initials` is derived here for display.
