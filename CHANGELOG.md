@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.71.5](https://github.com/MaxPayne89/klass-hero/compare/v0.71.4...v0.71.5) (2026-08-13)
+
+
+### Bug Fixes
+
+* show whole roster in the provider programs staff column ([#1334](https://github.com/MaxPayne89/klass-hero/issues/1334)) ([3e42d1c](https://github.com/MaxPayne89/klass-hero/commit/3e42d1c6f8512d50b4ada95ed524437e57cb2872))
+
 ## [0.71.4](https://github.com/MaxPayne89/klass-hero/compare/v0.71.3...v0.71.4) (2026-08-13)
 
 
