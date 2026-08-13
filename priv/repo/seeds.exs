@@ -20,6 +20,7 @@ alias KlassHero.Participation.ProgramSession
 alias KlassHero.Participation.SessionNote
 alias KlassHero.ProgramCatalog.Program
 alias KlassHero.ProjectionSupervisor
+alias KlassHero.Provider.ProgramStaffAssignment
 alias KlassHero.Provider.ProviderProfile
 alias KlassHero.Provider.StaffMember
 alias KlassHero.Provider.VerificationDocument
@@ -949,6 +950,75 @@ program_by_title = Map.new(inserted_programs, fn p -> {p.title, p} end)
 Logger.info("Created #{length(inserted_programs)} programs")
 
 # ==============================================================================
+# S9b: PROGRAM STAFF ASSIGNMENTS
+# ==============================================================================
+# Who staffs each program, and who leads it. Deliberately covers all four states
+# the provider programs table can render, because until #1310 the column read the
+# lead alone and "staffed but leaderless" was indistinguishable from "empty":
+#
+#   lead + others   -> "Sven Lehmann +1"
+#   lead alone      -> "Tanja Köhler"
+#   staffed, no lead-> "2 staff · no lead"
+#   nobody          -> "Unassigned"
+#
+# A lead-less program is a sanctioned state (`clear_lead_instructor/2`,
+# `deactivate_staff_member/1`, and a blanked instructor select all produce one),
+# so it belongs in the seeds rather than only in tests.
+#
+# It also seeds the staff-filter case: Dirk Schreiber is a NON-lead on two
+# programs, so filtering the table by him exercises the path that used to match
+# on the rendered lead and therefore found nothing.
+#
+# Written with `Repo.insert!` rather than `Provider.assign_staff_to_program/1` to
+# match the rest of this file: seeding is not a state transition, so it should
+# not stage integration events for the outbox to deliver.
+
+Logger.info("Seeding program staff assignments...")
+
+staff_by_email = Map.new(staff_members, fn s -> {s.email, s} end)
+
+# {program title, [staff email], lead email or nil}
+staffing_data = [
+  # Richter Elite Academy (biz) — the provider you log in as to see all four states.
+  {"Elite Soccer Training", ["sven.lehmann@example.com", "dirk.schreiber@example.com"], "sven.lehmann@example.com"},
+  {"Athletic Conditioning", ["tanja.koehler@example.com"], "tanja.koehler@example.com"},
+  {"Summer Sports Camp", ["sven.lehmann@example.com", "tanja.koehler@example.com", "dirk.schreiber@example.com"],
+   "dirk.schreiber@example.com"},
+  # The #1310 state: two people on it, nobody leading.
+  {"Winter Adventure Camp", ["dirk.schreiber@example.com", "tanja.koehler@example.com"], nil},
+  # "Basketball League" and "Leadership & Team Building" stay unstaffed on purpose.
+
+  # Wolf Musik Akademie (pro_1)
+  {"Piano for Beginners", ["maria.schulz@example.com"], "maria.schulz@example.com"},
+  {"Children's Choir", ["peter.neumann@example.com", "maria.schulz@example.com"], "peter.neumann@example.com"},
+  {"Music Theory Essentials", ["maria.schulz@example.com"], nil},
+
+  # Braun Bildungszentrum (pro_2)
+  {"Math Mastery", ["heike.zimmermann@example.com"], "heike.zimmermann@example.com"},
+  {"Science Explorers", ["juergen.krueger@example.com", "heike.zimmermann@example.com"], "juergen.krueger@example.com"},
+  {"Weekend STEM Camp", ["juergen.krueger@example.com"], nil}
+]
+
+program_staff_assignments =
+  for {title, staff_emails, lead_email} <- staffing_data,
+      staff_email <- staff_emails do
+    program = Map.fetch!(program_by_title, title)
+    staff = Map.fetch!(staff_by_email, staff_email)
+
+    %ProgramStaffAssignment{}
+    |> ProgramStaffAssignment.create_changeset(%{
+      provider_id: staff.provider_id,
+      program_id: program.id,
+      staff_member_id: staff.id,
+      assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
+      is_lead_instructor: staff_email == lead_email
+    })
+    |> Repo.insert!()
+  end
+
+Logger.info("Created #{length(program_staff_assignments)} program staff assignments")
+
+# ==============================================================================
 # S10: ENROLLMENT POLICIES (~8 programs)
 # ==============================================================================
 
@@ -1527,6 +1597,7 @@ Logger.info("  Consents: #{length(children)}")
 Logger.info("  Staff members: #{length(staff_members)}")
 Logger.info("  Verification documents: #{length(verification_documents)}")
 Logger.info("  Programs: #{length(inserted_programs)}")
+Logger.info("  Program staff assignments: #{length(program_staff_assignments)}")
 Logger.info("  Enrollment policies: #{length(enrollment_policy_programs)}")
 Logger.info("  Participant policies: #{length(participant_policy_data)}")
 Logger.info("  Enrollments: #{length(enrollment_records)}")
