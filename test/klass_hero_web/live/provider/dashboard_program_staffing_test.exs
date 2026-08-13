@@ -264,6 +264,117 @@ defmodule KlassHeroWeb.Provider.DashboardProgramStaffingTest do
     end
   end
 
+  # The table column and the staff filter both read one `ProgramStaffing`
+  # read-model. Before #1310 the column rendered the lead alone and the filter
+  # matched on that rendered lead, so a leaderless-but-staffed program looked
+  # empty and a non-lead staff member found none of their programs.
+  describe "the programs table staff column" do
+    test "a staffed but leaderless program shows its headcount, not Unassigned", %{
+      conn: conn,
+      program: program,
+      ann: ann,
+      bo: bo
+    } do
+      for staff <- [ann, bo], do: assign_staff!(program, staff)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      assert has_element?(view, "#program-staff-leaderless-#{program.id}", "2 staff")
+      refute has_element?(view, "#program-staff-empty-#{program.id}")
+    end
+
+    test "a led program shows the lead plus an overflow count", %{
+      conn: conn,
+      program: program,
+      ann: ann,
+      bo: bo
+    } do
+      for staff <- [ann, bo], do: assign_staff!(program, staff)
+      promote!(program, ann)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      assert has_element?(view, "#program-staff-lead-#{program.id}", "Ann Blake")
+      assert has_element?(view, "#program-staff-lead-#{program.id}", "+1")
+    end
+
+    test "a program nobody is on still shows Unassigned", %{conn: conn, program: program} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      assert has_element?(view, "#program-staff-empty-#{program.id}")
+    end
+
+    test "adding a non-lead refreshes the row's headcount", %{
+      conn: conn,
+      program: program,
+      ann: ann,
+      bo: bo
+    } do
+      assign_staff!(program, ann)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+      assert has_element?(view, "#program-staff-leaderless-#{program.id}", "1 staff member")
+
+      view |> element("#manage-staffing-#{program.id}") |> render_click()
+      view |> form("#staffing-add-form", %{"staff-id" => bo.id}) |> render_submit()
+
+      assert has_element?(view, "#program-staff-leaderless-#{program.id}", "2 staff")
+    end
+  end
+
+  describe "filtering the programs table by staff member" do
+    test "finds the programs a NON-LEAD staff member is on", %{
+      conn: conn,
+      program: program,
+      ann: ann,
+      bo: bo
+    } do
+      for staff <- [ann, bo], do: assign_staff!(program, staff)
+      promote!(program, ann)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      filter_by_staff(view, bo)
+
+      assert has_element?(view, "#programs-#{program.id}")
+    end
+
+    test "hides programs a staff member is not on", %{conn: conn, program: program, ann: ann, cy: cy} do
+      assign_staff!(program, ann)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      filter_by_staff(view, cy)
+
+      refute has_element?(view, "#programs-#{program.id}")
+    end
+
+    test "drops the row when the staff member the filter is pinned to is removed", %{
+      conn: conn,
+      program: program,
+      ann: ann,
+      bo: bo
+    } do
+      for staff <- [ann, bo], do: assign_staff!(program, staff)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      filter_by_staff(view, bo)
+      assert has_element?(view, "#programs-#{program.id}")
+
+      view |> element("#manage-staffing-#{program.id}") |> render_click()
+      view |> element("#remove-staff-#{bo.id}") |> render_click()
+
+      refute has_element?(view, "#programs-#{program.id}")
+    end
+  end
+
+  defp filter_by_staff(view, staff) do
+    view
+    |> element("select[name=staff_filter]")
+    |> render_change(%{"staff_filter" => staff.id})
+  end
+
   defp open_panel(conn, program) do
     {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
     view |> element("#manage-staffing-#{program.id}") |> render_click()

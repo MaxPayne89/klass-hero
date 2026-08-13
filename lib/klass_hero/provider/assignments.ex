@@ -49,6 +49,7 @@ defmodule KlassHero.Provider.Assignments do
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
@@ -292,18 +293,44 @@ defmodule KlassHero.Provider.Assignments do
   end
 
   @doc """
-  Batch lead-instructor read keyed by `program_id`, for list views that would
-  otherwise N+1. Programs without a lead are omitted from the map.
-  """
-  @spec list_lead_instructors_for_programs([String.t()]) :: %{optional(String.t()) => map()}
-  def list_lead_instructors_for_programs([]), do: %{}
+  Batch staffing read keyed by `program_id`, for list views that would otherwise
+  N+1: every active member of each program plus its lead, in one round-trip.
 
-  def list_lead_instructors_for_programs(program_ids) when is_list(program_ids) do
-    lead_staff_query()
-    |> where([_s, a], a.program_id in ^program_ids)
-    |> select([s, a], {a.program_id, s})
+  Programs nobody staffs are **omitted** rather than mapped to an empty struct —
+  callers default with `ProgramStaffing.empty/1`, or pass the `nil` straight to
+  `ProgramStaffing.staffed_by?/2`, which accepts it.
+
+  Replaced the lead-only batch read this module used to expose: rendering and
+  filtering the provider programs table off the lead alone is what made a
+  staffed-but-leaderless program read as "Unassigned" and made non-lead staff
+  unfindable in the table's filter (#1310).
+  """
+  @spec list_program_staffing([String.t()]) :: %{optional(String.t()) => ProgramStaffing.t()}
+  def list_program_staffing([]), do: %{}
+
+  def list_program_staffing(program_ids) when is_list(program_ids) do
+    from(s in StaffMember,
+      join: a in ProgramStaffAssignment,
+      on: a.staff_member_id == s.id and a.provider_id == s.provider_id,
+      where: a.program_id in ^program_ids and is_nil(a.unassigned_at) and s.active,
+      order_by: [asc: a.assigned_at],
+      select: {a.program_id, s, a.is_lead_instructor}
+    )
     |> Repo.all()
-    |> Map.new(fn {program_id, staff} -> {program_id, to_lead_map(staff)} end)
+    |> Enum.group_by(fn {program_id, _staff, _lead?} -> program_id end)
+    |> Map.new(fn {program_id, rows} -> {program_id, to_staffing(program_id, rows)} end)
+  end
+
+  defp to_staffing(program_id, rows) do
+    lead = Enum.find_value(rows, fn {_program_id, staff, lead?} -> lead? && staff end)
+    member_ids = Enum.map(rows, fn {_program_id, staff, _lead?} -> staff.id end)
+
+    %ProgramStaffing{
+      program_id: program_id,
+      lead: to_lead_map(lead),
+      member_ids: member_ids,
+      member_count: length(member_ids)
+    }
   end
 
   # Active lead assignment(s) for a program (should be at most one via the index),

@@ -23,6 +23,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   alias KlassHero.Messaging
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
+  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
@@ -36,7 +37,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     domain_programs = ProgramCatalog.list_programs_for_provider(provider.id)
     enrollment_data = build_enrollment_data(domain_programs)
-    programs = to_table_views(domain_programs, enrollment_data)
+    programs = to_table_views(domain_programs, enrollment_data, fetch_staffing(domain_programs))
 
     staff_members = fetch_staff_members(provider.id)
     staff_views = StaffMemberPresenter.to_admin_view_list(staff_members)
@@ -273,6 +274,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         {:noreply,
          socket
          |> refresh_staffing_modal()
+         |> refresh_program_row(program_id)
          |> put_flash(:info, gettext("Staff member added to the program."))}
 
       # The picker excludes them, so this is a stale panel (two tabs, back button)
@@ -298,6 +300,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         {:noreply,
          socket
          |> refresh_staffing_modal()
+         |> refresh_program_row(program_id)
          |> put_flash(:info, gettext("Staff member removed from the program."))}
 
       {:error, :cannot_unassign_lead} ->
@@ -652,7 +655,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         ProgramPresenter.to_table_view(
           program,
           new_enrollment_data,
-          Provider.get_lead_instructor(program.id)
+          Map.get(Provider.list_program_staffing([program.id]), program.id)
         )
 
       {:noreply,
@@ -708,7 +711,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         ProgramPresenter.to_table_view(
           updated,
           enrollment_data,
-          Provider.get_lead_instructor(program_id)
+          Map.get(Provider.list_program_staffing([program_id]), program_id)
         )
 
       {:noreply,
@@ -779,34 +782,39 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     members
   end
 
+  # Filters run over the DOMAIN programs and their staffing read-model, then the
+  # survivors are presented — never the other way round. Filtering presenter
+  # output is what made the staff filter match on the rendered lead alone, so a
+  # non-lead staff member found none of their programs (#1310).
   defp reset_programs_stream(socket) do
     provider_id = socket.assigns.current_scope.provider.id
     domain_programs = ProgramCatalog.list_programs_for_provider(provider_id)
-    enrollment_data = build_enrollment_data(domain_programs)
+    staffing = fetch_staffing(domain_programs)
 
-    programs =
+    filtered =
       domain_programs
-      |> to_table_views(enrollment_data)
       |> filter_by_search(socket.assigns.search_query)
-      |> filter_by_staff(socket.assigns.selected_staff)
+      |> filter_by_staff(staffing, socket.assigns.selected_staff)
+
+    programs = to_table_views(filtered, build_enrollment_data(filtered), staffing)
 
     socket
     |> stream(:programs, programs, reset: true)
     |> assign(programs_count: length(programs))
   end
 
-  # Batch the lead-instructor read (single query) so the dashboard table avoids an
-  # N+1 across programs. The lead is the single source of truth on
-  # program_staff_assignments; ProgramCatalog no longer carries an instructor snapshot.
-  defp to_table_views(domain_programs, enrollment_data) do
-    leads =
-      domain_programs
-      |> Enum.map(& &1.id)
-      |> Provider.list_lead_instructors_for_programs()
+  # One query for the whole table's staffing, so neither rendering nor filtering
+  # N+1s across programs.
+  defp fetch_staffing(domain_programs) do
+    domain_programs
+    |> Enum.map(& &1.id)
+    |> Provider.list_program_staffing()
+  end
 
+  defp to_table_views(domain_programs, enrollment_data, staffing) do
     Enum.map(
       domain_programs,
-      &ProgramPresenter.to_table_view(&1, enrollment_data, Map.get(leads, &1.id))
+      &ProgramPresenter.to_table_view(&1, enrollment_data, Map.get(staffing, &1.id))
     )
   end
 
@@ -847,24 +855,34 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     assign(socket, :staffing_modal, build_staffing_modal(program_id, program_name, provider_id))
   end
 
-  # Only a lead change reaches the table: its staff column renders the lead alone
-  # (ProgramPresenter.to_table_view/3), so adding or removing anyone else is invisible there.
+  # Every staffing change reaches the table now that the column renders the whole
+  # roster — adding or removing a non-lead moves the headcount, so those paths
+  # refresh the row too, not just promotion.
   defp refresh_program_row(socket, program_id) do
     provider_id = socket.assigns.current_scope.provider.id
 
     case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
       {:ok, program} ->
-        view =
-          ProgramPresenter.to_table_view(
-            program,
-            build_enrollment_data([program]),
-            Provider.get_lead_instructor(program_id)
-          )
+        staffing = Map.get(Provider.list_program_staffing([program_id]), program_id)
 
-        stream_insert(socket, :programs, view)
+        if row_visible?(socket, staffing) do
+          view = ProgramPresenter.to_table_view(program, build_enrollment_data([program]), staffing)
+          stream_insert(socket, :programs, view)
+        else
+          stream_delete(socket, :programs, %{id: program_id})
+        end
 
       {:error, :not_found} ->
         socket
+    end
+  end
+
+  # Removing the staff member a filter is pinned to must drop the row, not
+  # re-insert it — otherwise the table shows a program that no longer matches.
+  defp row_visible?(socket, staffing) do
+    case socket.assigns.selected_staff do
+      "all" -> true
+      staff_id -> ProgramStaffing.staffed_by?(staffing, staff_id)
     end
   end
 
@@ -890,15 +908,17 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     query_lower = String.downcase(query)
 
     Enum.filter(programs, fn program ->
-      String.contains?(String.downcase(program.name), query_lower)
+      String.contains?(String.downcase(program.title), query_lower)
     end)
   end
 
-  defp filter_by_staff(programs, "all"), do: programs
+  defp filter_by_staff(programs, _staffing, "all"), do: programs
 
-  defp filter_by_staff(programs, staff_id) do
+  # Matches anyone active on the program, lead or not — the read-model owns that
+  # definition, so the column's rendering can change without moving it.
+  defp filter_by_staff(programs, staffing, staff_id) do
     Enum.filter(programs, fn program ->
-      program.assigned_staff && to_string(program.assigned_staff.id) == staff_id
+      ProgramStaffing.staffed_by?(Map.get(staffing, program.id), staff_id)
     end)
   end
 
