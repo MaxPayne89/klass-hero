@@ -111,6 +111,36 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       assert staff_id == staff.id
     end
 
+    # The select only lists active staff, so this needs a crafted param — but
+    # resolve_instructor/2 is also what keeps apply_lead_instructor's bang-match
+    # safe, so a deactivated pick must be refused there rather than reaching the
+    # context and blowing up mid-save (#1306).
+    test "refuses a deactivated instructor without creating the program", %{conn: conn, provider: provider} do
+      staff = ProviderFixtures.staff_member_fixture(provider_id: provider.id, first_name: "Del", last_name: "Gone")
+      {:ok, _} = KlassHero.Provider.deactivate_staff_member(staff)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#new-program-btn") |> render_click()
+
+      # Dispatched directly: the select never renders a deactivated option, so
+      # form/3 would reject the value before it ever reached the LiveView.
+      html =
+        render_submit(view, "save_program", %{
+          "program_schema" => %{
+            "title" => "Ghost Camp",
+            "description" => "Nobody leads this",
+            "category" => "sports",
+            "price" => "75.00",
+            "location" => "Sports Park",
+            "instructor_id" => staff.id
+          }
+        })
+
+      assert html =~ "instructor"
+      refute Repo.get_by(Program, title: "Ghost Camp")
+    end
+
     test "closes form on cancel", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 

@@ -208,6 +208,62 @@ defmodule KlassHeroWeb.Provider.DashboardProgramStaffingTest do
     end
   end
 
+  # The picker filters deactivated staff, so these are only reachable by a crafted
+  # phx-value — or a stale panel left open in another tab across a deactivation.
+  # Before #1306 they wrote a real row that then rendered nowhere.
+  describe "deactivated staff" do
+    setup %{provider: provider} do
+      former = insert_staff(provider, "Del", "Gone")
+      {:ok, _} = Provider.deactivate_staff_member(former)
+
+      %{former: former}
+    end
+
+    test "the picker does not offer them", %{conn: conn, program: program, former: former} do
+      view = open_panel(conn, program)
+
+      refute has_element?(view, ~s(#staffing-add-form option[value="#{former.id}"]))
+    end
+
+    test "a deactivated staff member cannot be added to my program", %{
+      conn: conn,
+      program: program,
+      former: former
+    } do
+      view = open_panel(conn, program)
+
+      html = render_click(view, "assign_staff_member", %{"staff-id" => former.id})
+
+      assert html =~ "could not be found"
+      assert active_staff_ids(program) == MapSet.new()
+    end
+
+    test "a deactivated staff member cannot be promoted on my program", %{
+      conn: conn,
+      program: program,
+      former: former
+    } do
+      view = open_panel(conn, program)
+
+      html = render_click(view, "promote_to_lead", %{"staff-id" => former.id})
+
+      assert html =~ "could not be found"
+      assert Provider.get_lead_instructor(program.id) == nil
+    end
+
+    test "the panel stays usable afterwards", %{conn: conn, program: program, former: former, ann: ann} do
+      view = open_panel(conn, program)
+
+      render_click(view, "assign_staff_member", %{"staff-id" => former.id})
+
+      assert has_element?(view, "#program-staffing-modal")
+
+      view |> form("#staffing-add-form", %{"staff-id" => ann.id}) |> render_submit()
+
+      assert has_element?(view, "#staffing-member-#{ann.id}")
+    end
+  end
+
   defp open_panel(conn, program) do
     {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
     view |> element("#manage-staffing-#{program.id}") |> render_click()

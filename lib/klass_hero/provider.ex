@@ -234,6 +234,12 @@ defmodule KlassHero.Provider do
   """
   defdelegate get_staff_member(staff_id, provider_id), to: Staff
 
+  @doc """
+  Retrieves an active staff member owned by `provider_id`; deactivated ≡ foreign ≡
+  missing. Use for new program attachments; `get_staff_member/2` for lifecycle work.
+  """
+  defdelegate get_active_staff_member(staff_id, provider_id), to: Staff
+
   @doc "Retrieves a single staff member by ID, unscoped (no provider in scope)."
   defdelegate get_staff_member(staff_id), to: Staff
 

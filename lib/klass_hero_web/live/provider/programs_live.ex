@@ -921,19 +921,21 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   defp maybe_flash_cover_warning(socket, _cover_result), do: socket
 
-  # Validates the instructor exists AND belongs to this provider (IDOR guard) —
-  # the pre-write gate that keeps apply_lead_instructor's bang-match safe.
+  # Validates the instructor exists, belongs to this provider (IDOR guard), and is
+  # still employed (#1306) — the pre-write gate that keeps apply_lead_instructor's
+  # bang-match safe. It must refuse on exactly the conditions set_lead_instructor/3
+  # refuses on, or the bang below matches an {:error, :not_found} and crashes.
   defp resolve_instructor(id, _socket) when id in [nil, ""], do: {:ok, nil}
 
   defp resolve_instructor(instructor_id, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    case Provider.get_staff_member(instructor_id, provider_id) do
+    case Provider.get_active_staff_member(instructor_id, provider_id) do
       {:ok, _staff} ->
         {:ok, instructor_id}
 
-      _not_found_or_foreign ->
-        Logger.warning("Instructor not found or not owned by provider during program save",
+      _not_found_foreign_or_deactivated ->
+        Logger.warning("Instructor not found, not owned by provider, or deactivated during program save",
           instructor_id: instructor_id,
           provider_id: provider_id
         )
