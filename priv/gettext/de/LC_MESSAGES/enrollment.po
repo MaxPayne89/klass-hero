@@ -11,62 +11,62 @@ msgstr ""
 "Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/klass_hero_web/components/provider_components.ex:2428
+#: lib/klass_hero_web/components/provider_components.ex:2431
 #, elixir-autogen, elixir-format
 msgid "Child first name"
 msgstr "Vorname des Kindes"
 
-#: lib/klass_hero_web/components/provider_components.ex:2429
+#: lib/klass_hero_web/components/provider_components.ex:2432
 #, elixir-autogen, elixir-format
 msgid "Child last name"
 msgstr "Nachname des Kindes"
 
-#: lib/klass_hero_web/components/provider_components.ex:2430
+#: lib/klass_hero_web/components/provider_components.ex:2433
 #, elixir-autogen, elixir-format
 msgid "Date of birth"
 msgstr "Geburtsdatum"
 
-#: lib/klass_hero_web/components/provider_components.ex:2441
+#: lib/klass_hero_web/components/provider_components.ex:2444
 #, elixir-autogen, elixir-format
 msgid "Grade"
 msgstr "Klassenstufe"
 
-#: lib/klass_hero_web/components/provider_components.ex:2431
+#: lib/klass_hero_web/components/provider_components.ex:2434
 #, elixir-autogen, elixir-format
 msgid "Guardian email"
 msgstr "E-Mail des Erziehungsberechtigten"
 
-#: lib/klass_hero_web/components/provider_components.ex:2432
+#: lib/klass_hero_web/components/provider_components.ex:2435
 #, elixir-autogen, elixir-format
 msgid "Guardian first name"
 msgstr "Vorname des Erziehungsberechtigten"
 
-#: lib/klass_hero_web/components/provider_components.ex:2433
+#: lib/klass_hero_web/components/provider_components.ex:2436
 #, elixir-autogen, elixir-format
 msgid "Guardian last name"
 msgstr "Nachname des Erziehungsberechtigten"
 
-#: lib/klass_hero_web/components/provider_components.ex:2440
+#: lib/klass_hero_web/components/provider_components.ex:2443
 #, elixir-autogen, elixir-format
 msgid "Program"
 msgstr "Programm"
 
-#: lib/klass_hero_web/components/provider_components.ex:2442
+#: lib/klass_hero_web/components/provider_components.ex:2445
 #, elixir-autogen, elixir-format
 msgid "School"
 msgstr "Schule"
 
-#: lib/klass_hero_web/components/provider_components.ex:2434
+#: lib/klass_hero_web/components/provider_components.ex:2437
 #, elixir-autogen, elixir-format
 msgid "Second guardian email"
 msgstr "E-Mail des zweiten Erziehungsberechtigten"
 
-#: lib/klass_hero_web/components/provider_components.ex:2436
+#: lib/klass_hero_web/components/provider_components.ex:2439
 #, elixir-autogen, elixir-format
 msgid "Second guardian first name"
 msgstr "Vorname des zweiten Erziehungsberechtigten"
 
-#: lib/klass_hero_web/components/provider_components.ex:2438
+#: lib/klass_hero_web/components/provider_components.ex:2441
 #, elixir-autogen, elixir-format
 msgid "Second guardian last name"
 msgstr "Nachname des zweiten Erziehungsberechtigten"

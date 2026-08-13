@@ -369,10 +369,14 @@ defmodule KlassHeroWeb.Provider.DashboardProgramStaffingTest do
     end
   end
 
+  # Drives the wrapping <form>, not the bare <select>: LiveView rejects a
+  # phx-change on an input outside a form in the browser, and `element/2` +
+  # render_change/2 would happily bypass that check and pass on markup no user
+  # could actually trigger.
   defp filter_by_staff(view, staff) do
     view
-    |> element("select[name=staff_filter]")
-    |> render_change(%{"staff_filter" => staff.id})
+    |> form("#programs-staff-filter-form", %{"staff_filter" => staff.id})
+    |> render_change()
   end
 
   defp open_panel(conn, program) do
