@@ -1,16 +1,18 @@
 defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
   @moduledoc """
-  Two small conveniences shared by persistence-adapter code.
+  Small conveniences shared by persistence-adapter code.
 
   The mapper-taking fetch-and-map variants were removed post-flatten (#986→#1002)
   once every schema became its own domain struct. What remains is unrelated:
 
     * `get_schema_by_uuid/2` — a UUID-safe `Repo.get` that returns
       `{:error, :not_found}` for a malformed id instead of raising.
+    * `insert_isolated/2` — an insert whose constraint violation stays
+      recoverable whether or not a transaction is open.
     * `log_validation_error/2` — canonical changeset-failure logging.
 
-  Neither emits telemetry spans; callers wrap their own `span` so traces
-  attribute to the repository, not this module.
+  None emit telemetry spans; callers wrap their own `span` so traces attribute
+  to the repository, not this module.
   """
 
   alias KlassHero.Repo
@@ -39,6 +41,33 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers do
       :error ->
         {:error, :not_found}
     end
+  end
+
+  @doc """
+  Inserts a changeset whose constraint violation must come back as
+  `{:error, changeset}` without damaging anything around it.
+
+  Inside a transaction that means `mode: :savepoint`: without it the constraint
+  hit aborts the *enclosing* transaction instead of being caught by the caller
+  (#1065). Outside one it means the opposite — `mode: :savepoint` has no
+  transaction to open a savepoint against, so Postgrex refuses and DBConnection
+  raises `TransactionError` (#1322, a crash on the add-a-child flow).
+
+  So the mode follows the actual context rather than assuming one. Note this
+  cannot be tested under the SQL sandbox, which proxies every statement through
+  its own savepoint and hides both failure modes — see
+  `test/klass_hero/family/consents_unboxed_test.exs`.
+  """
+  @spec insert_isolated(Ecto.Changeset.t(), keyword()) ::
+          {:ok, struct()} | {:error, Ecto.Changeset.t()}
+  def insert_isolated(%Ecto.Changeset{} = changeset, opts \\ []) do
+    # Merge, not `++`: a keyword lookup takes the first match, so appending would
+    # let the derived mode silently outrank a caller's explicit one.
+    Repo.insert(changeset, Keyword.merge(isolation_opts(), opts))
+  end
+
+  defp isolation_opts do
+    if Repo.in_transaction?(), do: [mode: :savepoint], else: []
   end
 
   @doc """
