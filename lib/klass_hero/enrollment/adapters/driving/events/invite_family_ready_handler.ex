@@ -68,7 +68,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
           reason: inspect(reason)
         )
 
-        transition_to_failed(invite_id, reason)
+        Enrollment.fail_invite(invite_id, reason)
         {:error, reason}
     end
   end
@@ -129,19 +129,6 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
 
       _ ->
         :ok
-    end
-  end
-
-  defp transition_to_failed(invite_id, reason) do
-    case Enrollment.get_invite(invite_id) do
-      {:error, :not_found} ->
-        :ok
-
-      {:ok, invite} ->
-        Enrollment.transition_invite(invite, %{
-          status: :failed,
-          error_details: inspect(reason)
-        })
     end
   end
 end

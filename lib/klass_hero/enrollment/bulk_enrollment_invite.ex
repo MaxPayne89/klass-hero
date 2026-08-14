@@ -6,9 +6,9 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
   Child, Enrollment, Consents) are created from this data.
 
   This module is both the Ecto schema and the struct consumers pattern-match.
-  The changesets are the validation gatekeepers; the predicates, `generate_token/0`
-  and `dedup_key/4` are the functional core. Status follows a state machine
-  (see `valid_transitions/0`).
+  The changesets are the validation gatekeepers; the predicates, `generate_token/0`,
+  `dedup_key/4` and `describe_failure/2` are the functional core. Status follows a
+  state machine (see `valid_transitions/0`).
   """
 
   use Ecto.Schema
@@ -16,6 +16,7 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
   import Ecto.Changeset
 
   alias KlassHero.Enrollment.Domain.Services.InviteFieldValidations
+  alias KlassHero.Shared.ChangesetErrors
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -184,6 +185,66 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
   @spec ensure_claimable(t()) :: {:ok, t()} | {:error, :already_claimed}
   def ensure_claimable(%__MODULE__{status: :invite_sent} = invite), do: {:ok, invite}
   def ensure_claimable(%__MODULE__{}), do: {:error, :already_claimed}
+
+  @doc """
+  The sentence a provider reads under a failed invite's status pill.
+
+  `error_details` is rendered verbatim to providers so the reason is *actionable*
+  (#1221), which means no clause here may emit `inspect/1` output — see #1290, where
+  three of the four writers had each invented their own convention and two emitted raw
+  Elixir terms. Diagnostics belong in the `Logger` calls the writers already make.
+
+  Takes the invite as well as the reason because a missing token is a fact about the
+  row that no reason can carry: the compensation sweep hands back `nil` for a Lifeline
+  discard, and Oban's own error text otherwise, so by then the original term is gone.
+  """
+  @spec describe_failure(t(), term()) :: String.t()
+  # First, because the row outranks the reason: a tokenless invite failed for want of a
+  # token whatever the caller believed went wrong, and the resend that mints a new one
+  # is different advice from retrying a delivery.
+  def describe_failure(%__MODULE__{invite_token: nil}, _reason) do
+    "Invite link could not be generated (no token). Please resend."
+  end
+
+  def describe_failure(%__MODULE__{}, %Ecto.Changeset{} = changeset) do
+    case ChangesetErrors.field_list(changeset) do
+      # A changeset can be invalid with its errors on an association rather than a field.
+      # Falling back to the generic sentence loses detail; falling back to `inspect/1`
+      # would lose the provider.
+      [] -> generic_failure()
+      fields -> Enum.map_join(fields, "; ", fn {field, message} -> "#{humanize_field(field)} #{message}" end)
+    end
+  end
+
+  def describe_failure(%__MODULE__{}, :program_full) do
+    "The program is full, so this child could not be enrolled."
+  end
+
+  def describe_failure(%__MODULE__{}, {:invalid_date, value}) when is_binary(value) do
+    ~s(Date of birth "#{value}" is not a valid date. Please correct it and resend.)
+  end
+
+  def describe_failure(%__MODULE__{}, {:delivery, _reason}) do
+    "The invitation email could not be delivered. Please check the address and resend."
+  end
+
+  # `nil` is a Lifeline discard, which records no cause at all; a binary is Oban's own
+  # error text — `Exception.format/3` output or "... failed with #{inspect(reason)}" —
+  # which is developer copy by construction. Both give the provider the fact without a
+  # cause rather than a term they cannot act on.
+  def describe_failure(%__MODULE__{}, reason) when is_nil(reason) or is_binary(reason) do
+    "This invite could not be completed and no retries remain. Please resend."
+  end
+
+  def describe_failure(%__MODULE__{}, _other), do: generic_failure()
+
+  defp generic_failure, do: "This invite could not be completed. Please resend."
+
+  defp humanize_field(field) do
+    field
+    |> Atom.to_string()
+    |> String.replace("_", " ")
+  end
 
   @doc "Generates a cryptographically secure URL-safe token for invite links."
   @spec generate_token() :: String.t()

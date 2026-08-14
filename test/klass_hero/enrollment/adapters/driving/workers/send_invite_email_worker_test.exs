@@ -138,7 +138,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       failed = reload(invite)
       assert failed.status == :failed
-      assert failed.error_details =~ "Email delivery failed"
+      assert failed.error_details =~ "could not be delivered"
+      refute failed.error_details =~ "network", "the mailer's own term reached the provider"
     end
 
     # Oban reads retry/discard off the return value; compensating must not look to it
@@ -179,19 +180,23 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
              "compensated while retries remained, destroying the write the next attempt makes"
     end
 
-    test "compensates a failed write on the final attempt", %{invite: invite, program: program} do
+    # The token is nilled to match the only state that reaches this branch in
+    # production. It is also what makes the reason right: compensate/2 is shared with
+    # the delivery path, so before #1290 a missing token was reported to the provider as
+    # an email delivery problem — different advice from the resend that mints a new one.
+    test "compensates a failed write, naming the missing token", %{invite: invite, program: program} do
+      tokenless = invite |> Ecto.Changeset.change(%{invite_token: nil}) |> Repo.update!()
+
       assert {:error, :not_found} =
                SendInviteEmailWorker.resolve_tokenless(
                  {:error, :not_found},
-                 job(invite, program, @max_attempts)
+                 job(tokenless, program, @max_attempts)
                )
 
-      # The reason reads "Email delivery failed" because compensate/2 is shared with the
-      # delivery path, and the sweep that also calls it has only the job row to go on.
-      # Imprecise, but the provider still sees Failed rather than a silent :pending.
-      failed = reload(invite)
+      failed = reload(tokenless)
       assert failed.status == :failed
-      assert failed.error_details =~ "not_found"
+      assert failed.error_details =~ "no token"
+      refute failed.error_details =~ "not_found"
     end
 
     # Returning the error is what retries it; the log is what makes a write that keeps

@@ -19,7 +19,6 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
 
   alias KlassHero.Enrollment
   alias KlassHero.Family.ProcessInviteClaim
-  alias KlassHero.Shared.ChangesetErrors
 
   require Logger
 
@@ -38,22 +37,19 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
     end
   end
 
-  # The invite belongs to Enrollment, so this goes through its facade rather than touching
-  # the schema. A rejected transition means the invite is already terminal — enrolled by a
-  # retry Lifeline re-ran, or failed by an earlier pass — which is a fact, not a fault, so
-  # it reports `:ignore` rather than an error the sweep would keep retrying.
+  # The invite belongs to Enrollment, so this goes through its facade — which also owns
+  # the wording a provider reads, rather than this worker inventing its own (#1290).
+  # `:already_terminal` is the expected rejection: the invite was enrolled by a retry
+  # Lifeline re-ran, or failed by an earlier pass. That is a fact, not a fault, so it
+  # reports `:ignore` rather than an error the sweep would keep retrying.
   @impl true
-  def compensate(%Oban.Job{args: args}, reason) do
-    fail_invite(args["invite_id"], reason)
-  end
-
-  defp fail_invite(invite_id, reason) when is_binary(invite_id) do
-    case Enrollment.transition_invite(%{id: invite_id}, %{status: :failed, error_details: describe(reason)}) do
+  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}}, reason) when is_binary(invite_id) do
+    case Enrollment.fail_invite(invite_id, reason) do
       {:ok, _invite} ->
         :ok
 
       {:error, transition_error} ->
-        Logger.warning("[ProcessInviteClaimWorker] Invite already past :registered, not failing it",
+        Logger.warning("[ProcessInviteClaimWorker] Invite not failed",
           invite_id: invite_id,
           reason: inspect(transition_error)
         )
@@ -62,30 +58,7 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
     end
   end
 
-  defp fail_invite(_invite_id, _reason), do: :ignore
-
-  # A provider reads this in the invites table, so it has to name what is wrong with the
-  # row they uploaded. `inspect/1` of a changeset names it only to a developer.
-  defp describe(%Ecto.Changeset{} = changeset) do
-    case ChangesetErrors.field_list(changeset) do
-      # A changeset can be invalid with its errors on an association rather than a field,
-      # and an empty string here would render as a blank reason line rather than none.
-      [] -> inspect(changeset)
-      fields -> Enum.map_join(fields, "; ", fn {field, message} -> "#{humanize_field(field)} #{message}" end)
-    end
-  end
-
-  # The sweep cannot recover the failing attempt's reason — a Lifeline discard records
-  # none — so the provider gets the fact without a cause rather than the string "nil".
-  defp describe(nil), do: "Processing failed and no retries remain"
-
-  defp describe(reason), do: inspect(reason)
-
-  defp humanize_field(field) do
-    field
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-  end
+  def compensate(%Oban.Job{}, _reason), do: :ignore
 
   # Oban JSON args use string keys and ISO date strings; convert to atom keys and Date.
   defp deserialize_args(args) do
