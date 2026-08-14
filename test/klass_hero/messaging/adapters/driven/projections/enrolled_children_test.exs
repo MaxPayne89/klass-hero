@@ -3,9 +3,12 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
 
   import Ecto.Query
   import ExUnit.CaptureLog
+  import KlassHero.EventTestHelper, only: [through_outbox: 1]
   import KlassHero.Factory
 
   alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
+  alias KlassHero.Messaging.ConversationSummary
+  alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
@@ -114,6 +117,48 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
       assert row.child_first_name == "Emma"
     end
 
+    test "re-derivation stamps the names onto that parent's direct conversation summaries" do
+      # re_derive_and_emit/2 selects the summaries to stamp by conversation_type, and
+      # nothing asserted that hop before #1327 — the three callers all stopped at the
+      # messaging_enrolled_children rows.
+      user = user_fixture(name: "Sarah Johnson")
+      parent = insert(:parent_profile_schema, identity_id: user.id)
+      child = insert(:child_schema, first_name: "Emma", last_name: "Johnson")
+      insert(:child_guardian_schema, child_id: child.id, guardian_id: parent.id)
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+
+      direct_id = Ecto.UUID.generate()
+      broadcast_id = Ecto.UUID.generate()
+
+      for {conversation_id, type} <- [{direct_id, "direct"}, {broadcast_id, "program_broadcast"}] do
+        insert(:conversation_summary_schema,
+          conversation_id: conversation_id,
+          user_id: user.id,
+          program_id: program.id,
+          conversation_type: type,
+          enrolled_child_names: []
+        )
+      end
+
+      enrollment_id = Ecto.UUID.generate()
+
+      Event.new(:enrollment_created, :enrollment, :enrollment, enrollment_id, %{
+        enrollment_id: enrollment_id,
+        child_id: child.id,
+        parent_id: parent.id,
+        parent_user_id: user.id,
+        program_id: program.id,
+        status: "confirmed"
+      })
+      |> EnrolledChildren.project()
+
+      assert names_for(direct_id) == ["Emma"]
+
+      assert names_for(broadcast_id) == [],
+             "broadcasts carry :program_name, not per-parent child names"
+    end
+
     test "inserts row with nil child_first_name and logs warning when child row is missing" do
       user = user_fixture(name: "Unknown Parent")
       parent = insert(:parent_profile_schema, identity_id: user.id)
@@ -155,6 +200,56 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
 
       assert row != nil
       assert row.child_first_name == nil
+    end
+  end
+
+  # `project_conversation_created/1` had no test at all before #1327, and it branches on
+  # the payload's `:type` — the one field that changed form when atoms started surviving
+  # the outbox (#1317). Crossing the real serializer is the point: an in-memory %Event{}
+  # would not prove the branch still fires.
+  @conversation_type_cases [
+    {:direct, ["Emma"]},
+    {:program_broadcast, []}
+  ]
+
+  describe "handle conversation_created event" do
+    for {type, expected_names} <- @conversation_type_cases do
+      test "#{type} conversation stamps enrolled_child_names as #{inspect(expected_names)}" do
+        type = unquote(type)
+        expected_names = unquote(expected_names)
+
+        user = user_fixture(name: "Sarah Johnson")
+        provider = insert(:provider_profile_schema)
+        program = insert(:program_schema, provider_id: provider.id)
+        conversation_id = Ecto.UUID.generate()
+
+        Repo.insert!(%EnrolledChild{
+          parent_user_id: user.id,
+          program_id: program.id,
+          child_id: Ecto.UUID.generate(),
+          child_first_name: "Emma"
+        })
+
+        insert(:conversation_summary_schema,
+          conversation_id: conversation_id,
+          user_id: user.id,
+          program_id: program.id,
+          enrolled_child_names: []
+        )
+
+        MessagingEvents.conversation_created(
+          conversation_id,
+          type,
+          provider.id,
+          [user.id],
+          program.id
+        )
+        |> through_outbox()
+        |> EnrolledChildren.project()
+
+        assert names_for(conversation_id) == expected_names,
+               "#{inspect(type)} took the wrong branch in project_conversation_created/1"
+      end
     end
   end
 
@@ -206,5 +301,14 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
   # Helper to create users with specific names
   defp user_fixture(attrs) do
     KlassHero.AccountsFixtures.user_fixture(attrs)
+  end
+
+  defp names_for(conversation_id) do
+    Repo.one!(
+      from(s in ConversationSummary,
+        where: s.conversation_id == ^conversation_id,
+        select: s.enrolled_child_names
+      )
+    )
   end
 end

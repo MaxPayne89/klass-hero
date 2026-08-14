@@ -739,6 +739,50 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
     end
   end
 
+  # `:conversation_created` was the one event with no outbox round-trip: every other
+  # call site here builds the %Event{} in memory, so `:type` crossing serialization was
+  # never exercised. Both denormalised names are asserted alongside the type because a
+  # resolver keyed on the wrong form of `:type` falls to its catch-all and returns nil
+  # rather than failing — that is bug #892's shape.
+  @created_type_cases [
+    {:direct, nil, "Bob Jones"},
+    {:program_broadcast, "Forest Friends", nil}
+  ]
+
+  describe "conversation_created crossing the outbox boundary" do
+    for {type, expected_program_name, expected_other_name} <- @created_type_cases do
+      test "#{type} survives serialization and still resolves its names" do
+        type = unquote(type)
+        expected_program_name = unquote(expected_program_name)
+        expected_other_name = unquote(expected_other_name)
+
+        provider = insert(:provider_profile_schema)
+        program = insert(:program_schema, provider_id: provider.id, title: "Forest Friends")
+        user_1 = user_fixture(name: "Alice Smith")
+        user_2 = user_fixture(name: "Bob Jones")
+        conversation_id = Ecto.UUID.generate()
+
+        MessagingEvents.conversation_created(
+          conversation_id,
+          type,
+          provider.id,
+          [user_1.id, user_2.id],
+          program.id
+        )
+        |> through_outbox()
+        |> dispatch()
+
+        summary = summary_for(conversation_id, user_1.id)
+
+        assert summary.conversation_type == type,
+               "expected #{inspect(type)} to survive the outbox, got #{inspect(summary.conversation_type)}"
+
+        assert summary.program_name == expected_program_name
+        assert summary.other_participant_name == expected_other_name
+      end
+    end
+  end
+
   describe "handle messages_read event" do
     test "sets unread_count to 0 and updates last_read_at for the user" do
       user_1 = user_fixture(name: "Alice Smith")
