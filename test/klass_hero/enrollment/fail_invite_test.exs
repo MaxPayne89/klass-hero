@@ -48,10 +48,10 @@ defmodule KlassHero.Enrollment.FailInviteTest do
       assert failed.error_details =~ "no token"
     end
 
-    # This rejection is what keeps compensation idempotent: a worker compensates inline
-    # on its final attempt, and the sweep then re-examines the same discarded job. Both
-    # land here, and `@valid_transitions` (failed: [:pending]) is the only thing that
-    # stops the second one overwriting the first one's reason.
+    # `@valid_transitions` (failed: [:pending]) is what stops a second compensation
+    # overwriting the first one's reason. It is no longer the *only* guard — since #1339
+    # the marker stops a job being compensated twice at all — but it still catches the
+    # cases the marker cannot, such as two different jobs failing the same invite.
     test "refuses to re-fail an invite that is already failed", %{invite: invite} do
       assert {:ok, _} = Enrollment.fail_invite(invite.id, :program_full)
 
@@ -63,6 +63,65 @@ defmodule KlassHero.Enrollment.FailInviteTest do
 
     test "reports a missing invite rather than raising" do
       assert {:error, :not_found} = Enrollment.fail_invite(Ecto.UUID.generate(), :program_full)
+    end
+  end
+
+  # A compensation speaks for a job that is already dead, so it must not describe an
+  # invite the provider has since resent — `failed: [:pending]` reopens the transition
+  # the state machine was otherwise relying on to reject it (#1339).
+  describe "fail_invite/3" do
+    setup :create_invite
+
+    @enqueued_at ~U[2026-08-14 12:00:00.000000Z]
+
+    # Offsets are relative to when the job was enqueued. Equality is the resend's *own*
+    # job and must still compensate: both timestamps come from the one transaction that
+    # reset the invite and enqueued its email.
+    for {label, offset_seconds, outcome} <- [
+          {"was never resent", nil, :fails},
+          {"was resent before the job was enqueued", -60, :fails},
+          {"was resent as the job was enqueued", 0, :fails},
+          {"was resent after the job was enqueued", 60, :superseded}
+        ] do
+      test "an invite that #{label} #{if outcome == :fails, do: "fails", else: "is superseded"}",
+           %{invite: invite} do
+        resent_at =
+          case unquote(offset_seconds) do
+            nil -> nil
+            seconds -> DateTime.add(@enqueued_at, seconds, :second)
+          end
+
+        invite |> Ecto.Changeset.change(%{resent_at: resent_at}) |> Repo.update!()
+
+        result = Enrollment.fail_invite(invite.id, :program_full, @enqueued_at)
+
+        case unquote(outcome) do
+          :fails ->
+            assert {:ok, failed} = result, "expected an invite that #{unquote(label)} to fail"
+            assert failed.status == :failed
+
+          :superseded ->
+            assert {:error, :superseded} = result,
+                   "expected an invite that #{unquote(label)} to be left alone"
+
+            assert Repo.get!(BulkEnrollmentInvite, invite.id).status == :pending
+        end
+      end
+    end
+
+    test "leaves the reason of a superseded invite untouched", %{invite: invite} do
+      invite
+      |> Ecto.Changeset.change(%{resent_at: DateTime.add(@enqueued_at, 60, :second)})
+      |> Repo.update!()
+
+      assert {:error, :superseded} = Enrollment.fail_invite(invite.id, :program_full, @enqueued_at)
+
+      assert Repo.get!(BulkEnrollmentInvite, invite.id).error_details == nil
+    end
+
+    test "reports a missing invite rather than raising" do
+      assert {:error, :not_found} =
+               Enrollment.fail_invite(Ecto.UUID.generate(), :program_full, @enqueued_at)
     end
   end
 end

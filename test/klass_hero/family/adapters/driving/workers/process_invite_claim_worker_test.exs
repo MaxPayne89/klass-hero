@@ -121,7 +121,19 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorkerTest
       }
     end
 
-    defp job(args, attempt), do: %Oban.Job{args: args, attempt: attempt, max_attempts: @max_attempts}
+    # `id`, `worker` and `inserted_at` are populated because a job reaching the
+    # compensation gate came out of `oban_jobs`: the first two key its compensation
+    # marker, and the third is the watermark a resend is measured against (#1339).
+    defp job(args, attempt, opts \\ []) do
+      %Oban.Job{
+        id: System.unique_integer([:positive]),
+        worker: Oban.Worker.to_string(ProcessInviteClaimWorker),
+        args: args,
+        attempt: attempt,
+        max_attempts: @max_attempts,
+        inserted_at: Keyword.get(opts, :inserted_at, DateTime.utc_now())
+      }
+    end
 
     defp reload(invite), do: Repo.get!(BulkEnrollmentInvite, invite.id)
 

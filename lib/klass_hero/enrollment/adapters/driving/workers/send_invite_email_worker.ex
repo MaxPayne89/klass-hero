@@ -128,18 +128,25 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
   # not the missing token, and the token is read off the row, so tagging here cannot
   # mislabel a tokenless invite. It survives the sweep, which arrives with `nil` for a
   # Lifeline discard and could not otherwise tell the two apart.
+  #
+  # `inserted_at` is passed so the invite can reject a compensation it has moved past: a
+  # provider resending between this job's death and the compensation running would
+  # otherwise see their resend revert to Failed under this job's stale reason (#1339).
+  # `:superseded` joins `:already_terminal` in the `:ignore` arm — both are facts a later
+  # sweep cannot improve on.
   @impl true
-  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}}, reason) when is_binary(invite_id) do
-    case Enrollment.fail_invite(invite_id, {:delivery, reason}) do
+  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}, inserted_at: %DateTime{} = enqueued_at}, reason)
+      when is_binary(invite_id) do
+    case Enrollment.fail_invite(invite_id, {:delivery, reason}, enqueued_at) do
       {:ok, _invite} -> :ok
       {:error, _reason} -> :ignore
     end
   end
 
-  # Unreachable from the enqueue path, which only ever writes a binary `invite.id`. Guarded
-  # anyway because the sweep calls this with whatever the job row holds, and a raise here
-  # escapes its `Enum.each` and abandons the rest of the batch — every worker's, not just this
-  # one's.
+  # Unreachable on both counts: the enqueue path only ever writes a binary `invite.id`, and
+  # `oban_jobs.inserted_at` is `null: false`. Guarded anyway because the sweep calls this
+  # with whatever the job row holds, and `:ignore` is the safe direction — it retires the
+  # job without writing a failure this clause has no watermark to justify.
   def compensate(%Oban.Job{}, _reason), do: :ignore
 
   # Reads URL config at runtime — referencing KlassHeroWeb.Endpoint directly would violate boundary rules.

@@ -47,6 +47,11 @@ defmodule KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorkerTe
 
       assert {:error, :not_found} =
                FetchEmailContentWorker.perform(%Oban.Job{
+                 # `id` and `worker` because this attempt reaches the compensation gate,
+                 # which keys its marker on them — a job that gets there came out of
+                 # `oban_jobs` and always has both (#1339).
+                 id: System.unique_integer([:positive]),
+                 worker: Oban.Worker.to_string(FetchEmailContentWorker),
                  args: %{"email_id" => email.id, "resend_id" => email.resend_id},
                  attempt: 3,
                  max_attempts: 3

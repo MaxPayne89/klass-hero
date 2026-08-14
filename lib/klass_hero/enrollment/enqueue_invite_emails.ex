@@ -67,12 +67,20 @@ defmodule KlassHero.Enrollment.EnqueueInviteEmails do
 
   defp insert_jobs([]), do: :ok
 
+  # `inserted_at` is set here rather than left to the column's `now()` default, which
+  # Postgres freezes at *transaction start*. A resend resets the invite and enqueues its
+  # email in one transaction (`Enrollment.resend_invite/2`), so the default would stamp
+  # every resend's job as older than the `resent_at` that same transaction goes on to
+  # write — and `fail_invite/3` would then read the resend's own job as superseded and
+  # skip its compensation entirely (#1339). Both clocks have to be the same clock.
   defp insert_jobs(pairs) do
+    enqueued_at = DateTime.utc_now()
+
     jobs =
       Enum.map(pairs, fn {invite_id, program_name} ->
         %{invite_id: invite_id, program_name: program_name}
         |> Context.inject_into_args()
-        |> SendInviteEmailWorker.new()
+        |> SendInviteEmailWorker.new(inserted_at: enqueued_at)
       end)
 
     Oban.insert_all(jobs)
