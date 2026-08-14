@@ -131,7 +131,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildrenTest d
       direct_id = Ecto.UUID.generate()
       broadcast_id = Ecto.UUID.generate()
 
-      for {conversation_id, type} <- [{direct_id, "direct"}, {broadcast_id, "program_broadcast"}] do
+      for {conversation_id, type} <- [{direct_id, :direct}, {broadcast_id, :program_broadcast}] do
         insert(:conversation_summary_schema,
           conversation_id: conversation_id,
           user_id: user.id,

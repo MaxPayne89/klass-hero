@@ -63,7 +63,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       assert summary_1 != nil
-      assert summary_1.conversation_type == "direct"
+      assert summary_1.conversation_type == :direct
       assert summary_1.provider_id == provider.id
       assert summary_1.other_participant_name == "Bob Jones"
       assert summary_1.participant_count == 2
@@ -209,7 +209,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
 
       assert length(summaries) == 2
-      assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
+      assert Enum.all?(summaries, &(&1.conversation_type == :program_broadcast))
       assert Enum.all?(summaries, &(&1.program_name == "Science Explorers"))
     end
   end
@@ -250,7 +250,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert length(summaries) == 2
 
       summary_1 = Enum.find(summaries, &(&1.user_id == user_1.id))
-      assert summary_1.conversation_type == "direct"
+      assert summary_1.conversation_type == :direct
       assert summary_1.other_participant_name == "Bob Rebuild"
     end
   end
@@ -281,7 +281,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       assert summary_1 != nil
-      assert summary_1.conversation_type == "direct"
+      assert summary_1.conversation_type == :direct
       assert summary_1.provider_id == provider_id
       assert summary_1.other_participant_name == "Bob Jones"
       assert summary_1.participant_count == 2
@@ -328,7 +328,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       assert summary != nil
-      assert summary.conversation_type == "program_broadcast"
+      assert summary.conversation_type == :program_broadcast
       assert summary.program_name == nil
     end
 
@@ -359,7 +359,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         Repo.all(from(s in ConversationSummary, where: s.conversation_id == ^conversation_id))
 
       assert length(summaries) == 2
-      assert Enum.all?(summaries, &(&1.conversation_type == "program_broadcast"))
+      assert Enum.all?(summaries, &(&1.conversation_type == :program_broadcast))
       assert Enum.all?(summaries, &(&1.program_name == "Forest Friends"))
     end
 
@@ -413,7 +413,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
              "unread_count must survive a :conversation_created replay"
 
       # Meta fields should still be in sync with the event payload
-      assert summary_1.conversation_type == "direct"
+      assert summary_1.conversation_type == :direct
       assert summary_1.provider_id == provider_id
       assert summary_1.other_participant_name == "Bob Jones"
       assert summary_1.participant_count == 2
@@ -997,7 +997,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
       assert length(staff_summaries) == 1
       staff_summary = hd(staff_summaries)
       assert staff_summary.conversation_id == conversation_id
-      assert staff_summary.conversation_type == "direct"
+      assert staff_summary.conversation_type == :direct
       assert staff_summary.participant_count == 3
 
       # Owner should have a summary row
@@ -1078,7 +1078,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       assert summary != nil, "staff summary row must exist after :participant_added"
-      assert summary.conversation_type == "direct"
+      assert summary.conversation_type == :direct
       assert summary.provider_id == provider.id
       assert summary.participant_count == 3
       assert summary.latest_message_content == "Hi there"
@@ -1175,7 +1175,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
 
       assert length(summaries) == 2
       assert Enum.all?(summaries, &(&1.participant_count == 3))
-      assert Enum.all?(summaries, &(&1.conversation_type == "direct"))
+      assert Enum.all?(summaries, &(&1.conversation_type == :direct))
     end
 
     test "inserts row for broadcast conversation with nil other_participant_name" do
@@ -1203,7 +1203,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummariesT
         )
 
       assert summary != nil
-      assert summary.conversation_type == "program_broadcast"
+      assert summary.conversation_type == :program_broadcast
       assert summary.other_participant_name == nil
     end
   end

@@ -1230,7 +1230,7 @@ defmodule KlassHero.Factory do
       id: Ecto.UUID.generate(),
       conversation_id: Ecto.UUID.generate(),
       user_id: Ecto.UUID.generate(),
-      conversation_type: "direct",
+      conversation_type: :direct,
       provider_id: Ecto.UUID.generate(),
       program_id: nil,
       subject: nil,
