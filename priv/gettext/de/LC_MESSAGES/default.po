@@ -2336,12 +2336,12 @@ msgstr "Berechtigung prüfen unter"
 msgid "Child Name"
 msgstr "Name des Kindes"
 
-#: lib/klass_hero_web/components/booking_components.ex:181
+#: lib/klass_hero_web/components/booking_components.ex:189
 #, elixir-autogen, elixir-format
 msgid "Child does not meet program requirements"
 msgstr "Kind erfüllt die Programmanforderungen nicht"
 
-#: lib/klass_hero_web/components/booking_components.ex:171
+#: lib/klass_hero_web/components/booking_components.ex:179
 #, elixir-autogen, elixir-format
 msgid "Child meets all program requirements"
 msgstr "Kind erfüllt alle Programmanforderungen"
@@ -2849,8 +2849,8 @@ msgstr "Ausstehende Überprüfung"
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:121
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:127
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:106
-#: lib/klass_hero_web/live/provider/programs_live.ex:691
-#: lib/klass_hero_web/live/provider/programs_live.ex:757
+#: lib/klass_hero_web/live/provider/programs_live.ex:684
+#: lib/klass_hero_web/live/provider/programs_live.ex:743
 #: lib/klass_hero_web/live/provider/team_live.ex:305
 #: lib/klass_hero_web/live/provider/team_live.ex:348
 #: lib/klass_hero_web/live/provider/team_live.ex:467
@@ -2883,12 +2883,12 @@ msgstr "Profil erfolgreich aktualisiert."
 msgid "Program Start"
 msgstr "Programmbeginn"
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1102
+#: lib/klass_hero_web/live/provider/programs_live.ex:1108
 #, elixir-autogen, elixir-format
 msgid "Program created successfully."
 msgstr "Programm erfolgreich erstellt."
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1109
+#: lib/klass_hero_web/live/provider/programs_live.ex:1115
 #, elixir-autogen, elixir-format
 msgid "Program created, but enrollment capacity could not be saved. Edit the program to retry."
 msgstr "Programm erstellt, aber die Anmeldekapazität konnte nicht gespeichert werden. Bearbeiten Sie das Programm, um es erneut zu versuchen."
@@ -2897,12 +2897,12 @@ msgstr "Programm erstellt, aber die Anmeldekapazität konnte nicht gespeichert w
 #: lib/klass_hero_web/live/provider/programs_live.ex:153
 #: lib/klass_hero_web/live/provider/programs_live.ex:190
 #: lib/klass_hero_web/live/provider/programs_live.ex:254
-#: lib/klass_hero_web/live/provider/programs_live.ex:732
+#: lib/klass_hero_web/live/provider/programs_live.ex:718
 #, elixir-autogen, elixir-format
 msgid "Program not found."
 msgstr "Programm nicht gefunden."
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:721
+#: lib/klass_hero_web/live/provider/programs_live.ex:707
 #, elixir-autogen, elixir-format
 msgid "Program updated successfully."
 msgstr "Programm erfolgreich aktualisiert."
@@ -3063,8 +3063,8 @@ msgstr "Datei auswählen"
 msgid "Selected child does not meet the program requirements."
 msgstr "Das ausgewählte Kind erfüllt die Programmanforderungen nicht."
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:681
-#: lib/klass_hero_web/live/provider/programs_live.ex:747
+#: lib/klass_hero_web/live/provider/programs_live.ex:674
+#: lib/klass_hero_web/live/provider/programs_live.ex:733
 #, elixir-autogen, elixir-format
 msgid "Selected instructor could not be found. Please try again."
 msgstr "Der ausgewählte Kursleiter konnte nicht gefunden werden. Bitte versuchen Sie es erneut."
@@ -3169,7 +3169,7 @@ msgstr "Die Geschichte von Klass Hero"
 msgid "This invite cannot be resent."
 msgstr "Diese Einladung kann nicht erneut gesendet werden."
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:739
+#: lib/klass_hero_web/live/provider/programs_live.ex:725
 #, elixir-autogen, elixir-format
 msgid "This program was modified by someone else. Please close and try again."
 msgstr "Dieses Programm wurde von jemand anderem geändert. Bitte schließen Sie es und versuchen Sie es erneut."
@@ -3384,7 +3384,7 @@ msgstr "Zahlung per Bargeld oder Banküberweisung"
 msgid "Program fee:"
 msgstr "Programmgebühr:"
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:940
+#: lib/klass_hero_web/live/provider/programs_live.ex:946
 #, elixir-autogen, elixir-format
 msgid "Program saved, but the cover image upload failed. You can re-upload it by editing the program."
 msgstr "Programm gespeichert, aber der Upload des Titelbilds ist fehlgeschlagen. Sie können es erneut hochladen, indem Sie das Programm bearbeiten."
@@ -7685,7 +7685,7 @@ msgstr ""
 msgid "Staffing — %{title}"
 msgstr "Programmteam — %{title}"
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:899
+#: lib/klass_hero_web/live/provider/programs_live.ex:905
 #, elixir-autogen, elixir-format
 msgid "That staff member could not be found."
 msgstr "Dieses Teammitglied wurde nicht gefunden."

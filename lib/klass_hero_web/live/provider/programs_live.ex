@@ -653,18 +653,11 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         program.id => %{enrolled: 0, capacity: capacity}
       }
 
-      view =
-        ProgramPresenter.to_table_view(
-          program,
-          new_enrollment_data,
-          Map.get(Provider.list_program_staffing([program.id]), program.id)
-        )
-
       {:noreply,
        socket
        |> flash_for_policy_result(policy_result)
        |> maybe_flash_cover_warning(cover_result)
-       |> stream_insert(:programs, view)
+       |> insert_program_row(program, new_enrollment_data)
        |> assign(
          show_program_form: false,
          editing_program_id: nil,
@@ -709,18 +702,11 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       enrolled = Map.get(active_counts, program_id, 0)
       enrollment_data = %{program_id => %{enrolled: enrolled, capacity: capacity}}
 
-      view =
-        ProgramPresenter.to_table_view(
-          updated,
-          enrollment_data,
-          Map.get(Provider.list_program_staffing([program_id]), program_id)
-        )
-
       {:noreply,
        socket
        |> put_flash(:info, gettext("Program updated successfully."))
        |> maybe_flash_cover_warning(cover_result)
-       |> stream_insert(:programs, view)
+       |> insert_program_row(updated, enrollment_data)
        |> assign(
          show_program_form: false,
          editing_program_id: nil,
@@ -865,11 +851,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
       {:ok, program} ->
-        staffing = Map.get(Provider.list_program_staffing([program_id]), program_id)
+        staffing = fetch_program_staffing(program_id)
 
         if row_visible?(socket, staffing) do
-          view = ProgramPresenter.to_table_view(program, build_enrollment_data([program]), staffing)
-          stream_insert(socket, :programs, view)
+          insert_program_row(socket, program, build_enrollment_data([program]), staffing)
         else
           stream_delete(socket, :programs, %{id: program_id})
         end
@@ -877,6 +862,27 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       {:error, :not_found} ->
         socket
     end
+  end
+
+  # The three write paths differ only in where the enrollment numbers come from:
+  # the save paths hand-build them so a rejected capacity blanks the cell instead
+  # of showing the surviving old policy, while the staffing panel re-reads. That
+  # decision stays with each caller; everything after it is this one rebuild (#1307).
+  #
+  # The panel path already holds the staffing it filtered on, so it passes it in
+  # rather than paying for the read twice.
+  defp insert_program_row(socket, program, enrollment_data) do
+    insert_program_row(socket, program, enrollment_data, fetch_program_staffing(program.id))
+  end
+
+  defp insert_program_row(socket, program, enrollment_data, staffing) do
+    view = ProgramPresenter.to_table_view(program, enrollment_data, staffing)
+
+    stream_insert(socket, :programs, view)
+  end
+
+  defp fetch_program_staffing(program_id) do
+    Map.get(Provider.list_program_staffing([program_id]), program_id)
   end
 
   # Removing the staff member a filter is pinned to must drop the row, not

@@ -3,6 +3,7 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
 
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Enrollment.EnrollmentPolicy
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.ProviderFixtures
@@ -410,6 +411,120 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       html = render(view)
       assert html =~ "Program created successfully."
       refute html =~ "enrollment capacity could not be saved"
+    end
+  end
+
+  # The row a save inserts shows the capacity that was just typed, not what an
+  # enrollment read would return — the two save paths hand-build their
+  # `enrollment_data` for exactly that reason, and the staffing panel's refresh
+  # deliberately does not (#1307). Nothing pinned that divergence before, so a
+  # naive fold of the three row-rebuild paths would have landed green.
+  describe "the saved row reflects just-submitted capacity" do
+    defp seed_program_with_listing(provider_id, title) do
+      id = Ecto.UUID.generate()
+
+      attrs = %{
+        id: id,
+        title: title,
+        description: "Seeded for a capacity row assertion",
+        category: "arts",
+        price: Decimal.new("50.00"),
+        provider_id: provider_id
+      }
+
+      program = Repo.insert!(struct!(Program, Map.put(attrs, :origin, :self_posted)))
+      Repo.insert!(struct!(ProgramListing, attrs))
+
+      program
+    end
+
+    # The one case where the two sources actually disagree. A rejected capacity
+    # leaves `enrollment_policies` holding the old 20, but `resolve_capacity/2`
+    # answers `nil` for the failed write — so the row blanks to "—" rather than
+    # showing a number the save did not accept. Fold the save path onto
+    # `build_enrollment_data/1` and this is the test that goes red.
+    test "a rejected capacity blanks the row while the old policy survives", %{
+      conn: conn,
+      provider: provider
+    } do
+      program = seed_program_with_listing(provider.id, "Kept Policy Program")
+
+      {:ok, _policy} =
+        KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 20})
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      assert view |> element("#programs-#{program.id}") |> render() =~ "0/20"
+
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => "Kept Policy Program",
+          "description" => "Submitting a capacity the policy will reject",
+          "category" => "arts",
+          "price" => "50.00"
+        },
+        "enrollment_policy" => %{"min_enrollment" => "50", "max_enrollment" => "10"}
+      })
+      |> render_submit()
+
+      # No warning flash here: `flash_for_policy_result/2` is wired into the create
+      # path only, so an update silently drops a rejected capacity. Filed separately;
+      # this test pins the row, not the (missing) flash.
+      assert view |> element("#programs-#{program.id}") |> render() =~ "0/—"
+
+      assert %{max_enrollment: 20} =
+               Repo.get_by!(EnrollmentPolicy, program_id: program.id)
+    end
+
+    test "a created program's row shows the capacity from the form", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#new-program-btn") |> render_click()
+
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => "Capacity Row Program",
+          "description" => "The new row must show the typed capacity",
+          "category" => "arts",
+          "price" => "25.00"
+        },
+        "enrollment_policy" => %{"max_enrollment" => "42"}
+      })
+      |> render_submit()
+
+      program = Repo.get_by!(Program, title: "Capacity Row Program")
+
+      assert view |> element("#programs-#{program.id}") |> render() =~ "0/42"
+    end
+
+    test "an edited program's row shows the raised capacity", %{conn: conn, provider: provider} do
+      program = seed_program_with_listing(provider.id, "Raise My Capacity")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => "Raise My Capacity",
+          "description" => "The rebuilt row must show the raised capacity",
+          "category" => "arts",
+          "price" => "50.00"
+        },
+        "enrollment_policy" => %{"max_enrollment" => "60"}
+      })
+      |> render_submit()
+
+      assert view |> element("#programs-#{program.id}") |> render() =~ "0/60"
     end
   end
 
