@@ -139,9 +139,11 @@ defmodule KlassHero.ProviderFixtures do
   rename. The difference is that this writes the *source* — Messaging now derives
   the same fact from Provider rather than mirroring it (#1321).
 
-  Composed from `staff_member_fixture/1`, not from the
-  `:program_staff_assignment_schema` factory, which mints its own provider and
-  program and so cannot attach to the caller's.
+  Composed from `staff_member_fixture/1` plus `program_assignment_fixture/1`, not
+  from the `:program_staff_assignment_schema` factory, which mints its own provider
+  and program and so cannot attach to the caller's. The split is the useful one:
+  `program_assignment_fixture/1` attaches a staff member you already have, this
+  one starts from a *user* and mints the employment too.
 
   Calling this twice for one user at one provider adds a second *assignment* to the
   same staff member rather than a second staff member — both because that is what
@@ -163,17 +165,11 @@ defmodule KlassHero.ProviderFixtures do
           invitation_status: :accepted
         })
 
-    {:ok, assignment} =
-      %{
-        provider_id: provider_id,
-        staff_member_id: staff.id,
-        program_id: program_id,
-        assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
-      }
-      |> ProgramStaffAssignment.create_changeset()
-      |> Repo.insert()
-
-    assignment
+    program_assignment_fixture(%{
+      provider_id: provider_id,
+      staff_member_id: staff.id,
+      program_id: program_id
+    })
   end
 
   defp apply_timestamp_overrides(schema, overrides) when map_size(overrides) == 0, do: schema
