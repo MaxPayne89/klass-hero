@@ -17,9 +17,9 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
     `staff_assigned_to_program` is **also replayed on invite acceptance**, once per
     standing assignment: a program assigned before the invite was claimed announced
     a nil `staff_user_id`, which consumers skip (#1312).
-  - `staff_member_deactivated` - A staff member's employment link ended
-   . Read tables holding a denormalised staff name clear it; a read
-    filter cannot, because the name is a stored column.
+  - `staff_member_deactivated` - A staff member's employment link ended. Read
+    tables holding a denormalised staff name clear it; a read filter cannot,
+    because the name is a stored column.
 
   The staff assignment events carry the **staff member** as their entity, not
   the assignment row: consumers key on who was assigned, not on which row
