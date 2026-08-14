@@ -52,7 +52,7 @@ defmodule KlassHero.Messaging.ListConversations do
     %{
       conversation: %{
         id: summary.conversation_id,
-        type: parse_conversation_type(summary.conversation_type),
+        type: summary.conversation_type,
         provider_id: summary.provider_id,
         program_id: summary.program_id,
         subject: summary.subject
@@ -64,17 +64,6 @@ defmodule KlassHero.Messaging.ListConversations do
       program_name: summary.program_name,
       enrolled_child_names: summary.enrolled_child_names
     }
-  end
-
-  defp parse_conversation_type("direct"), do: :direct
-  defp parse_conversation_type("program_broadcast"), do: :program_broadcast
-
-  defp parse_conversation_type(unknown) do
-    Logger.warning("[ListConversations] Unknown conversation_type in read model",
-      conversation_type: unknown
-    )
-
-    :direct
   end
 
   defp build_latest_message(%{latest_message_content: nil, has_attachments: false}), do: nil

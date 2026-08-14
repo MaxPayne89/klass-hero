@@ -1057,7 +1057,7 @@ defmodule KlassHero.Messaging do
               id: Ecto.UUID.generate(),
               conversation_id: conversation_id,
               user_id: user_id,
-              conversation_type: to_string(conversation.type),
+              conversation_type: conversation.type,
               provider_id: conversation.provider_id,
               subject: conversation.subject,
               system_notes: token_json,

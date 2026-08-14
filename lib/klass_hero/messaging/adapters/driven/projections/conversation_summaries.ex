@@ -226,10 +226,10 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     participant_count = length(active_participants)
 
     other_name =
-      resolve_other_participant_name(
+      resolve_other_name(
         conversation.type,
         participant.user_id,
-        active_participants,
+        Enum.map(active_participants, & &1.user_id),
         user_names
       )
 
@@ -242,7 +242,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
       id: Ecto.UUID.generate(),
       conversation_id: conversation.id,
       user_id: participant.user_id,
-      conversation_type: to_string(conversation.type),
+      conversation_type: conversation.type,
       provider_id: conversation.provider_id,
       program_id: conversation.program_id,
       subject: conversation.subject,
@@ -269,7 +269,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     payload = event.payload
     conversation_id = payload.conversation_id
     participant_ids = Map.get(payload, :participant_ids, [])
-    conversation_type = payload |> Map.get(:type, "direct") |> to_string()
+    conversation_type = Map.get(payload, :type, :direct)
     provider_id = Map.get(payload, :provider_id)
     program_id = Map.get(payload, :program_id)
     subject = Map.get(payload, :subject)
@@ -282,7 +282,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     Repo.transaction(fn ->
       Enum.each(participant_ids, fn user_id ->
         other_name =
-          resolve_other_name_from_ids(
+          resolve_other_name(
             conversation_type,
             user_id,
             participant_ids,
@@ -591,7 +591,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
   # Private Functions — System Note Projection
 
   defp maybe_project_system_note(%{message_type: message_type, content: content} = payload)
-       when message_type in [:system, "system"] do
+       when message_type == :system do
     conversation_id = payload.conversation_id
 
     case Regex.run(@broadcast_token_regex, content || "") do
@@ -666,29 +666,23 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
     ProgramCatalog.get_titles(program_ids)
   end
 
-  defp resolve_program_name("program_broadcast", program_id) when not is_nil(program_id) do
+  defp resolve_program_name(:program_broadcast, program_id) when not is_nil(program_id) do
     [program_id] |> fetch_program_names() |> Map.get(program_id)
   end
 
   defp resolve_program_name(_type, _program_id), do: nil
 
-  defp resolve_other_participant_name(:direct, user_id, participants, user_names) do
-    case Enum.find(participants, fn p -> p.user_id != user_id end) do
-      nil -> nil
-      other -> Map.get(user_names, other.user_id)
-    end
-  end
-
-  defp resolve_other_participant_name(_type, _user_id, _participants, _user_names), do: nil
-
-  defp resolve_other_name_from_ids("direct", user_id, participant_ids, user_names) do
+  # Both the bootstrap and the event path land here. They used to be two functions
+  # keyed on different spellings of the same value — `:direct` from `conversation.type`,
+  # `"direct"` from the payload — which is the duplication #1327 removes.
+  defp resolve_other_name(:direct, user_id, participant_ids, user_names) do
     case Enum.find(participant_ids, fn id -> id != user_id end) do
       nil -> nil
       other_id -> Map.get(user_names, other_id)
     end
   end
 
-  defp resolve_other_name_from_ids(_type, _user_id, _participant_ids, _user_names), do: nil
+  defp resolve_other_name(_type, _user_id, _participant_ids, _user_names), do: nil
 
   # Subquery avoids loading N×M rows via :messages preload.
   defp fetch_latest_messages(conversation_ids) when conversation_ids != [] do
