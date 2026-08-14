@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.1](https://github.com/MaxPayne89/klass-hero/compare/v0.72.0...v0.72.1) (2026-08-14)
+
+
+### Bug Fixes
+
+* scope staff surfaces by program assignments, not tags ([#1352](https://github.com/MaxPayne89/klass-hero/issues/1352)) ([7e996f7](https://github.com/MaxPayne89/klass-hero/commit/7e996f7b45b562a59a85af7aa95605f9fdb1b8f1))
+
+
+### Code Refactoring
+
+* fold the program-row rebuild paths in ProgramsLive ([#1344](https://github.com/MaxPayne89/klass-hero/issues/1344)) ([4975821](https://github.com/MaxPayne89/klass-hero/commit/4975821293f09dcd08dc0cf48ec113a23130c981)), closes [#1307](https://github.com/MaxPayne89/klass-hero/issues/1307)
+* read program staffing from Provider instead of a mirror ([#1351](https://github.com/MaxPayne89/klass-hero/issues/1351)) ([e3335b5](https://github.com/MaxPayne89/klass-hero/commit/e3335b521b291488307a093137a58f6695c23039))
+
 ## [0.72.0](https://github.com/MaxPayne89/klass-hero/compare/v0.71.5...v0.72.0) (2026-08-14)
 
 
