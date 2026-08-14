@@ -6,7 +6,6 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Shared.Domain.Events.Event
 
   describe "conversation_created/4" do
     test "creates event with correct type and payload" do
@@ -106,11 +105,10 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEventsTest do
   end
 
   describe "message_data_anonymized/1" do
-    test "creates a critical event with correct type and payload" do
+    test "creates an event with correct type and payload" do
       user_id = Ecto.UUID.generate()
       event = MessagingEvents.message_data_anonymized(user_id)
 
-      assert Event.critical?(event)
       assert event.event_type == :message_data_anonymized
       assert event.entity_id == user_id
       assert event.entity_type == :user

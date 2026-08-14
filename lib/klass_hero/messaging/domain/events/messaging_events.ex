@@ -7,9 +7,11 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   field a consumer needs.
 
   `:participant_added`, `:participant_removed` and `:message_data_anonymized`
-  are critical: without durable delivery, late participants would be missing
-  from read-model summaries until a restart re-derived them, removed ones would
-  linger, and the GDPR cascade could be lost.
+  are the ones durable delivery is load-bearing for: without it, late
+  participants would be missing from read-model summaries until a restart
+  re-derived them, removed ones would linger, and the GDPR cascade could be
+  lost. Since ADR-0014 every staged event gets that guarantee, so there is
+  nothing here to opt into.
   """
 
   alias KlassHero.Shared.Domain.Events.Event
@@ -134,7 +136,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   end
 
   @doc """
-  Creates a message_data_anonymized event (critical).
+  Creates a message_data_anonymized event.
 
   Published after anonymizing a user's messaging data (content replaced,
   participations ended). Part of the GDPR deletion cascade, so it must not be
@@ -147,8 +149,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
       @source_context,
       :user,
       user_id,
-      %{user_id: user_id},
-      criticality: :critical
+      %{user_id: user_id}
     )
   end
 
@@ -161,7 +162,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   @type participant_added_source :: :initial_staff | :later_assignment | :broadcast_setup
 
   @doc """
-  Creates a participant_added event (critical).
+  Creates a participant_added event.
 
   Published after one or more users are inserted into a conversation's
   `participants` table. Consumed by CQRS projections.
@@ -183,7 +184,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
   @type participant_removed_source :: :staff_unassignment
 
   @doc """
-  Creates a participant_removed event (critical).
+  Creates a participant_removed event.
 
   Published after one or more users are removed from a conversation's
   `participants` table. Consumed by CQRS projections, which soft-archive the
@@ -212,8 +213,7 @@ defmodule KlassHero.Messaging.Domain.Events.MessagingEvents do
         conversation_id: conversation_id,
         participant_user_ids: participant_user_ids,
         source: source
-      },
-      criticality: :critical
+      }
     )
   end
 end

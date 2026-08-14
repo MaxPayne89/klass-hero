@@ -7,8 +7,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry do
   (`{ProgramListings, :project}`) are the same kind of thing here, because the
   delivery job calls them the same way.
 
-  Replaces the pair of switches that used to decide durability — per-event
-  `Event.critical?` metadata and a per-topic handler map — which had to
+  Replaces the pair of switches that used to decide durability — a per-event
+  criticality level in metadata and a per-topic handler map — which had to
   *both* be on for an Oban fallback to exist, and which nothing kept in agreement.
   Being in this table is now the only condition, so a consumer either gets durable
   at-least-once delivery or is visibly absent from `config/config.exs`.

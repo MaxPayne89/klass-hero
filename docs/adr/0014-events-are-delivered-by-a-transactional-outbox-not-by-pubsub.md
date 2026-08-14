@@ -51,6 +51,13 @@ error propagation into the caller's `with`). What actually needs to be asynchron
   `validate_critical_payload!`, which guards Oban's jsonb round-trip (#1010); it moves onto the
   single struct.
 
+  > **Amended by #1326.** That guard was the last reader of the `criticality` field, and PR #1325
+  > ungated it (`validate_payload!/1`, no criticality argument) once #1317 taught the codec to
+  > record atoms. With nothing left consulting it, `criticality` is gone. Rows staged before that
+  > deploy still carry the key, so `CriticalEventSerializer` reads metadata through a closed
+  > allowlist and drops what the format does not define — an open `String.to_existing_atom/1`
+  > would have raised on every one of them, in `execute/1` and again in `compensate/2`.
+
 - **The `DomainEventBus` is deleted, not made async.** Its 7 surviving handlers are same-context and
   become direct calls, which restores compile-time checking, `xref` visibility, natural error
   propagation, and line-order sequencing. The runtime `subscribe/4` API — with its owner scoping,

@@ -5,23 +5,23 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
 
   ## Events
 
-  - `:user_registered` - Emitted when a new user registers (critical).
+  - `:user_registered` - Emitted when a new user registers.
     Downstream contexts react to create profiles.
 
-  - `:user_confirmed` - Emitted when a user confirms their email (critical).
+  - `:user_confirmed` - Emitted when a user confirms their email.
     Downstream contexts use this as a compensation path to ensure profiles exist
     before first login.
 
-  - `:user_anonymized` - Emitted when a user is anonymized for GDPR (critical).
+  - `:user_anonymized` - Emitted when a user is anonymized for GDPR.
     Downstream contexts (Family, Messaging) react to anonymize their data.
 
-  - `:staff_invitation_sent` - Emitted when a staff invitation email was sent (critical).
+  - `:staff_invitation_sent` - Emitted when a staff invitation email was sent.
     The Provider context reacts to update the staff member's invitation status.
 
-  - `:staff_invitation_failed` - Emitted when a staff invitation email failed (critical).
+  - `:staff_invitation_failed` - Emitted when a staff invitation email failed.
     The Provider context reacts to update the staff member's invitation status.
 
-  - `:staff_user_registered` - Emitted to link a user to their staff membership (critical).
+  - `:staff_user_registered` - Emitted to link a user to their staff membership.
     The Provider context reacts to set `StaffMember.user_id` and accept the invitation —
     no provider profile is created (ADR-0005).
 
@@ -56,7 +56,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   @staff_entity_type :staff_member
 
   @doc """
-  Creates a `user_registered` event (critical). Payload includes `email`, `name`, `intended_roles`.
+  Creates a `user_registered` event. Payload includes `email`, `name`, `intended_roles`.
   """
   def user_registered(%{id: _, email: _, name: _} = user, payload \\ %{}, opts \\ []) do
     validate_user_for_registration!(user)
@@ -67,11 +67,11 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
       intended_roles: Enum.map(Map.get(user, :intended_roles) || [], &Atom.to_string/1)
     }
 
-    build(:user_registered, user.id, base_payload, payload, Keyword.put_new(opts, :criticality, :critical))
+    build(:user_registered, user.id, base_payload, payload, opts)
   end
 
   @doc """
-  Creates a `user_confirmed` event (critical). Payload includes `email`, `name`, `confirmed_at`, `intended_roles`.
+  Creates a `user_confirmed` event. Payload includes `email`, `name`, `confirmed_at`, `intended_roles`.
   """
   def user_confirmed(%{id: _, email: _, confirmed_at: _} = user, payload \\ %{}, opts \\ []) do
     validate_user_for_confirmation!(user)
@@ -79,17 +79,17 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
     base_payload = %{
       email: user.email,
       name: Map.get(user, :name),
-      # Critical events serialize to jsonb; ISO8601 string keeps this a scalar
+      # Events serialize to jsonb; ISO8601 string keeps this a scalar
       # so it round-trips with its type intact (see #1010).
       confirmed_at: encode_timestamp(user.confirmed_at),
       intended_roles: Enum.map(Map.get(user, :intended_roles) || [], &Atom.to_string/1)
     }
 
-    build(:user_confirmed, user.id, base_payload, payload, Keyword.put_new(opts, :criticality, :critical))
+    build(:user_confirmed, user.id, base_payload, payload, opts)
   end
 
   @doc """
-  Creates a `user_anonymized` event (critical — GDPR cascade must not be lost).
+  Creates a `user_anonymized` event (GDPR cascade must not be lost).
   Requires `previous_email` in payload for audit trail.
   """
   def user_anonymized(user, payload, opts \\ [])
@@ -98,14 +98,14 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
       when is_binary(previous_email) and byte_size(previous_email) > 0 do
     validate_user_for_anonymization!(user)
 
-    # Critical events serialize to jsonb; carry the timestamp as an ISO8601
+    # Events serialize to jsonb; carry the timestamp as an ISO8601
     # string so it survives the round trip as a scalar (see #1010).
     base_payload = %{
       anonymized_email: Map.get(user, :email),
       anonymized_at: DateTime.to_iso8601(DateTime.utc_now())
     }
 
-    build(:user_anonymized, user.id, base_payload, payload, Keyword.put_new(opts, :criticality, :critical))
+    build(:user_anonymized, user.id, base_payload, payload, opts)
   end
 
   def user_anonymized(%{id: _}, payload, _opts) do
@@ -114,7 +114,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   end
 
   @doc """
-  Creates a `staff_invitation_sent` event (critical — Provider must update staff status).
+  Creates a `staff_invitation_sent` event (Provider must update staff status).
   """
   def staff_invitation_sent(staff_member_id, payload \\ %{}, opts \\ [])
 
@@ -129,7 +129,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   end
 
   @doc """
-  Creates a `staff_invitation_failed` event (critical — Provider must update staff status).
+  Creates a `staff_invitation_failed` event (Provider must update staff status).
   """
   def staff_invitation_failed(staff_member_id, payload \\ %{}, opts \\ [])
 
@@ -144,7 +144,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   end
 
   @doc """
-  Creates a `staff_user_registered` event (critical — Provider must activate the staff member).
+  Creates a `staff_user_registered` event (Provider must activate the staff member).
   """
   def staff_user_registered(user_id, payload \\ %{}, opts \\ [])
 
@@ -155,7 +155,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
       @entity_type,
       user_id,
       Map.put(payload, :user_id, user_id),
-      Keyword.put_new(opts, :criticality, :critical)
+      opts
     )
   end
 
@@ -184,7 +184,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
       @staff_entity_type,
       staff_member_id,
       Map.put(payload, :staff_member_id, staff_member_id),
-      Keyword.put_new(opts, :criticality, :critical)
+      opts
     )
   end
 
@@ -226,7 +226,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   defp validate_field!(_field, _value, :list_or_nil, _event_name), do: :ok
 
   # Encodes a timestamp as an ISO8601 string so it stays a JSON scalar through
-  # critical-event serialization (see #1010). Accepts nil defensively — the
+  # event serialization (see #1010). Accepts nil defensively — the
   # confirmation validator already rejects a nil `confirmed_at` upstream.
   defp encode_timestamp(%DateTime{} = timestamp), do: DateTime.to_iso8601(timestamp)
   defp encode_timestamp(nil), do: nil

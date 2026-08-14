@@ -2,22 +2,13 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   @moduledoc """
   Shared metadata accessors and builders for domain and integration events.
 
-  Both event structs carry a `:metadata` map with
-  optional fields like `:criticality`, `:correlation_id`, and `:causation_id`.
+  Both event structs carry a `:metadata` map with optional fields like
+  `:correlation_id` and `:causation_id`.
   This module centralises the accessor functions and the metadata construction
   logic so that both event structs stay in sync without duplicating code.
   """
 
   alias KlassHero.Shared.Domain.Events.PayloadCodec
-
-  @type criticality :: :critical | :normal
-
-  @spec criticality(%{metadata: map()}) :: criticality()
-  def criticality(%{metadata: %{criticality: level}}), do: level
-  def criticality(%{metadata: _}), do: :normal
-
-  @spec critical?(%{metadata: map()}) :: boolean()
-  def critical?(event), do: criticality(event) == :critical
 
   @spec correlation_id(%{metadata: map()}) :: String.t() | nil
   def correlation_id(%{metadata: %{correlation_id: id}}), do: id
@@ -36,12 +27,13 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
   @doc """
   Builds a metadata map from keyword options.
 
-  Always includes `:criticality` (defaulting to `:normal`), plus
-  `:correlation_id` and `:causation_id` when present.
+  Includes `:correlation_id` and `:causation_id` when present, and is empty
+  otherwise — which is what every event carries today, since no producer passes
+  either.
   """
   @spec build_metadata(keyword()) :: map()
   def build_metadata(opts) do
-    %{criticality: Keyword.get(opts, :criticality, :normal)}
+    %{}
     |> maybe_add(:correlation_id, opts)
     |> maybe_add(:causation_id, opts)
   end
@@ -67,14 +59,15 @@ defmodule KlassHero.Shared.Domain.Events.EventMetadata do
 
   ## Why this runs for every event
 
-  It used to run for `:critical` events only, on the reasoning that "non-critical
+  It used to run for events marked critical only, on the reasoning that "non-critical
   events dispatch in-memory only (never serialized)". ADR-0014 ended that: every
-  staged event now takes the same Outbox → Oban → `EventDeliveryWorker` path, and
-  `criticality` selects nothing. Both of #1311's production bugs sat in the gap.
+  staged event takes the same Outbox → Oban → `EventDeliveryWorker` path. Both of
+  #1311's production bugs sat in the gap that left, and being this guard's last
+  reader was the only thing keeping the criticality field alive — #1326 removed it.
 
-  Ungating it was blocked on atoms, which `:normal` payloads carry as a matter of
-  course (`type: :direct`, `message_type: :text`, `status: :pending`). #1317 taught
-  the codec to record them, so there is nothing left to exempt.
+  Ungating it was blocked on atoms, which payloads carry as a matter of course
+  (`type: :direct`, `message_type: :text`, `status: :pending`). #1317 taught the
+  codec to record them, so there is nothing left to exempt.
 
   Returns `:ok` or raises `ArgumentError`.
   """

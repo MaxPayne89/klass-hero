@@ -9,14 +9,14 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   - `:child_updated` - Emitted when an existing child record is updated.
     Downstream contexts (e.g. Messaging) react to refresh local child name lookups.
   - `:child_data_anonymized` - Emitted when a child's PII is anonymized during
-    GDPR account deletion (critical). Downstream contexts (e.g. Participation)
+    GDPR account deletion. Downstream contexts (e.g. Participation)
     react to anonymize their own child-related data.
   - `:invite_family_ready` - Emitted after creating parent + child from an
     invite claim. Downstream contexts (e.g. Enrollment) react to auto-enroll
     the child.
 
   Each factory takes the entity id, an optional payload, and metadata opts
-  (`correlation_id`, `causation_id`, `criticality`), and raises `ArgumentError`
+  (`correlation_id`, `causation_id`), and raises `ArgumentError`
   on a nil or blank id.
   """
 
@@ -87,16 +87,16 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   @doc """
   Creates a `child_data_anonymized` event.
 
-  Critical by default: it is part of the GDPR deletion cascade and must not be lost.
+  Part of the GDPR deletion cascade, so it must not be lost — which every staged
+  event is guaranteed since ADR-0014, not something this factory opts into.
 
       iex> event = FamilyEvents.child_data_anonymized("child-uuid")
-      iex> Event.critical?(event)
-      true
+      iex> event.event_type
+      :child_data_anonymized
   """
   def child_data_anonymized(child_id, payload \\ %{}, opts \\ [])
 
   def child_data_anonymized(child_id, payload, opts) when is_binary(child_id) and byte_size(child_id) > 0 do
-    opts = Keyword.put_new(opts, :criticality, :critical)
     build(:child_data_anonymized, @entity_type, :child_id, child_id, payload, opts)
   end
 

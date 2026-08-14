@@ -8,13 +8,12 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEventsTest do
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Shared.Domain.Events.Event
 
-  # The provider integration-event factories share one contract: build a
-  # critical event with stable identity fields, let the base payload's id win
-  # over any caller-supplied id (while preserving extras), allow criticality
-  # to be lowered via opts, and raise on a blank id. The table drives that
-  # shape; rows vary only by the factory function, id field name, and
-  # entity_type. Factory-specific payload passthrough is covered by the
-  # hand-written tests below.
+  # The provider integration-event factories share one contract: build an event
+  # with stable identity fields, let the base payload's id win over any
+  # caller-supplied id (while preserving extras), and raise on a blank id. The
+  # table drives that shape; rows vary only by the factory function, id field
+  # name, and entity_type. Factory-specific payload passthrough is covered by
+  # the hand-written tests below.
   @factories [
     %{fun: :staff_member_invited, id: :staff_member_id, entity: :staff_member}
   ]
@@ -41,18 +40,6 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEventsTest do
 
         assert Map.get(event.payload, @id) == "real-id"
         assert event.payload.extra == "data"
-      end
-
-      test "marks event as critical by default" do
-        event = apply(ProviderEvents, @fun, ["id-1"])
-
-        assert Event.critical?(event)
-      end
-
-      test "allows overriding criticality via opts" do
-        event = apply(ProviderEvents, @fun, ["id-1", %{}, [criticality: :normal]])
-
-        refute Event.critical?(event)
       end
 
       test "raises for a nil or blank id" do
