@@ -2,27 +2,30 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   @moduledoc """
   Handles Provider integration events for staff-program assignment changes.
 
-  On assignment:
-  1. Upserts the `program_staff_participants` projection (sets active=true).
-  2. Adds the staff user as a participant to every active program conversation
-     where they are not already an active participant. The participant inserts
-     and one `:participant_added` event per back-filled conversation are staged
-     inside a single transaction, so the delivery job reaches the
-     `ConversationSummaries` projection only after the rows it describes commit.
+  On assignment, adds the staff user as a participant to every active program
+  conversation where they are not already an active participant. The participant
+  inserts and one `:participant_added` event per back-filled conversation are
+  staged inside a single transaction, so the delivery job reaches the
+  `ConversationSummaries` projection only after the rows it describes commit.
 
-  A nil `staff_user_id` means the invite is unclaimed, and the event is skipped
-  rather than mirrored — there is no user to make a participant yet. This applies
-  to **both** directions: an unclaimed staff member has nothing to mirror on
-  assignment and nothing to tear down on unassignment, and the read side cannot
-  express either as a query (`staff_user_id == nil` is not a comparison Ecto
-  allows). Skipping the assignment is not a dropped assignment: Provider replays
-  the event on acceptance, once the user exists (#1312).
+  On unassignment, delegates to `RemoveAssignedStaff` to soft-leave the staff in
+  every active program conversation; the returned `:participant_removed` events
+  are dispatched after the wrapping transaction commits.
 
-  On unassignment:
-  1. Deactivates the projection entry (sets active=false).
-  2. Delegates to `RemoveAssignedStaff` to soft-leave the staff in every
-     active program conversation; the returned `:participant_removed` events
-     are dispatched after the wrapping transaction commits.
+  ## Why this handler survived #1321
+
+  It used to maintain a second thing: `program_staff_participants`, a mirror of
+  Provider's staffing. That mirror was deleted because it was *derivable* —
+  Messaging now asks Provider directly. `conversation_participants` is not: the
+  rows carry join/leave times and read receipts, facts that exist nowhere else.
+  Derivable state gets read on demand; state with its own history stays
+  event-maintained.
+
+  A nil `staff_user_id` means the invite is unclaimed, so the event is skipped —
+  there is no user to make a participant yet. This applies to **both**
+  directions: nothing to add on assignment, nothing to tear down on
+  unassignment. Skipping is not dropping: Provider replays the event on
+  acceptance, once the user exists (#1312).
   """
 
   @behaviour KlassHero.Shared.ForHandlingEvents
@@ -30,7 +33,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.RemoveAssignedStaff
-  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Shared.Adapters.Driven.Events.RetryHelpers
   alias KlassHero.Shared.Outbox
 
@@ -65,12 +67,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_assignment_with_retry(payload) do
     operation = fn ->
-      StaffParticipants.upsert_active(%{
-        provider_id: payload.provider_id,
-        program_id: payload.program_id,
-        staff_user_id: payload.staff_user_id
-      })
-
       add_staff_to_existing_conversations(payload.program_id, payload.staff_user_id)
     end
 
@@ -85,7 +81,6 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   defp handle_unassignment_with_retry(payload) do
     operation = fn ->
-      StaffParticipants.deactivate(payload.program_id, payload.staff_user_id)
       remove_staff_from_existing_conversations(payload.program_id, payload.staff_user_id)
     end
 

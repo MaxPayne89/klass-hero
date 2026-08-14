@@ -11,8 +11,9 @@ defmodule KlassHero.Provider.OffboardStaffMember do
     * **Offboarding** is the provider saying the person no longer works here. The
       assignments have to go, and going through the assignment rows is what
       stages `staff_unassigned_from_program` — the event Messaging listens to in
-      order to deactivate the `program_staff_participant` row and soft-leave the
-      person from the program's conversations.
+      order to soft-leave the person from the program's conversations. (Whether
+      Messaging still *counts* them as staff needs no event since #1321; it is
+      derived from these same rows, so it flips with this write.)
 
   It replaces a bare `Repo.delete` whose assignments were destroyed by an
   `on_delete: :delete_all` FK: Postgres removed the rows, no changeset ran, and

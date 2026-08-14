@@ -10,8 +10,8 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
   alias KlassHero.Messaging.BroadcastToProgram
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Message
-  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.ProviderFixtures
 
   setup do
     provider = insert(:provider_profile_schema)
@@ -95,7 +95,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
 
       staff_user = AccountsFixtures.user_fixture()
 
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -112,7 +112,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       enroll_parent(program)
 
       # Assign the broadcasting user as staff too.
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: scope.user.id

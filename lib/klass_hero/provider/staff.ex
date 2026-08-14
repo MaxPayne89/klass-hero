@@ -337,10 +337,15 @@ defmodule KlassHero.Provider.Staff do
 
   A one-off repair, not a scheduled job. #1312's replay fires on acceptance, so
   it only ever reaches staff who accept after it shipped; anyone already past
-  that moment keeps the empty `program_staff_participants` the nil-`staff_user_id`
-  skip left them with, and no other trigger exists. That is invisible in the
-  logs — the skip is a `Logger.debug` — and permanent, because the table has no
-  projection, bootstrap or rebuild.
+  that moment keeps the conversation membership the nil-`staff_user_id` skip
+  left them without, and no other trigger exists. That is invisible in the logs —
+  the skip is a `Logger.debug` — and permanent, because `conversation_participants`
+  has no projection, bootstrap or rebuild.
+
+  Narrower since #1321 than when it was written: the skip used to strand *two*
+  things, and the other one — whether Messaging counted the person as staff at
+  all — is now derived from `staff_members`, so it repairs itself the moment
+  `user_id` is set. Only the participant rows still need re-announcing.
 
   Safe to re-run: idempotent at every consumer for the same reasons the
   accept-time replay is (see `assignment_replay_events/1`). Returns the number

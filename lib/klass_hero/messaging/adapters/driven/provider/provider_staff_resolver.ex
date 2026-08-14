@@ -13,4 +13,18 @@ defmodule KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver do
       KlassHero.Provider.active_staff_for_provider?(provider_id, user_id)
     end
   end
+
+  @doc """
+  User IDs of the staff currently active on a program.
+
+  Messaging mirrored this in `program_staff_participants` until #1321. The mirror
+  had no projection, bootstrap or rebuild, so only an event could correct it —
+  and three bugs (#1309, #1312, #1320) were drift between it and this source.
+  """
+  @spec list_active_staff_user_ids(String.t()) :: [String.t()]
+  def list_active_staff_user_ids(program_id) do
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.list_active_staff_user_ids_for_program(program_id)
+    end
+  end
 end

@@ -164,15 +164,49 @@ defmodule KlassHero.Provider.Assignments do
   """
   @spec list_active_staff_for_program(String.t()) :: [StaffMember.t()]
   def list_active_staff_for_program(program_id) when is_binary(program_id) do
-    from(s in StaffMember,
-      join: a in ProgramStaffAssignment,
-      on: a.staff_member_id == s.id and a.provider_id == s.provider_id,
-      where: a.program_id == ^program_id and is_nil(a.unassigned_at) and s.active == true,
-      order_by: [asc: a.assigned_at],
-      select: s
-    )
+    active_staffing_query()
+    |> where([assignment: a], a.program_id == ^program_id)
+    |> select([staff: s], s)
     |> Repo.all()
     |> Enum.map(&StaffMember.load_pay_rate/1)
+  end
+
+  @doc """
+  Lists the *user* IDs of staff currently active on a program.
+
+  The membership set Messaging needs to answer "does this user act for the
+  provider on this program" — for conversation participants and sender
+  attribution. Messaging held a mirror of this (`program_staff_participants`)
+  until #1321; deriving it is what makes a nil `user_id` unrepresentable (#1309)
+  and makes reactivation repair itself with no event, replay, or backfill (#1320).
+
+  Narrower than `list_active_staff_for_program/1` in both directions: it also
+  drops staff who have not claimed their invite (no user to name), and it skips
+  `StaffMember.load_pay_rate/1`, whose decrypt would otherwise land on a
+  per-conversation-mount path for a field no caller here reads.
+  """
+  @spec list_active_staff_user_ids_for_program(String.t()) :: [String.t()]
+  def list_active_staff_user_ids_for_program(program_id) when is_binary(program_id) do
+    active_staffing_query()
+    |> where([assignment: a, staff: s], a.program_id == ^program_id and not is_nil(s.user_id))
+    |> select([staff: s], s.user_id)
+    |> Repo.all()
+  end
+
+  # "Currently staffing a program" — no `unassigned_at`, and the person still
+  # employed — in one place, because three reads need exactly this and had each
+  # spelled it out. Callers add their own program filter and `select:`; the
+  # `:staff` / `:assignment` bindings are named so they can do so positionally
+  # without depending on join order.
+  defp active_staffing_query do
+    from(s in StaffMember,
+      as: :staff,
+      join: a in ProgramStaffAssignment,
+      as: :assignment,
+      on: a.staff_member_id == s.id and a.provider_id == s.provider_id,
+      where: is_nil(a.unassigned_at) and s.active == true,
+      order_by: [asc: a.assigned_at]
+    )
   end
 
   @doc """
@@ -309,13 +343,9 @@ defmodule KlassHero.Provider.Assignments do
   def list_program_staffing([]), do: %{}
 
   def list_program_staffing(program_ids) when is_list(program_ids) do
-    from(s in StaffMember,
-      join: a in ProgramStaffAssignment,
-      on: a.staff_member_id == s.id and a.provider_id == s.provider_id,
-      where: a.program_id in ^program_ids and is_nil(a.unassigned_at) and s.active,
-      order_by: [asc: a.assigned_at],
-      select: {a.program_id, s, a.is_lead_instructor}
-    )
+    active_staffing_query()
+    |> where([assignment: a], a.program_id in ^program_ids)
+    |> select([staff: s, assignment: a], {a.program_id, s, a.is_lead_instructor})
     |> Repo.all()
     |> Enum.group_by(fn {program_id, _staff, _lead?} -> program_id end)
     |> Map.new(fn {program_id, rows} -> {program_id, to_staffing(program_id, rows)} end)

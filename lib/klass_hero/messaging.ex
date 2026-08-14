@@ -33,6 +33,7 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
+  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
 
   alias KlassHero.Messaging.{
     AnonymizeUserData,
@@ -47,7 +48,6 @@ defmodule KlassHero.Messaging do
     ReceiveInboundEmail,
     ReplyPrivatelyToBroadcast,
     ReplyToEmail,
-    ResolverQueries,
     ScheduleEmailContentFetch,
     SendMessage,
     StartProgramConversation
@@ -689,19 +689,18 @@ defmodule KlassHero.Messaging do
   defdelegate get_display_name(user_id), to: KlassHero.Accounts
 
   @doc """
-  Returns the user IDs of active staff assigned to a program.
+  Returns the user IDs of staff currently active on a program, read from
+  Provider (#1321) rather than from a mirror Messaging maintained itself.
 
-  Used by the web layer to determine which message senders are on the
-  provider side, for branded attribution display ("Business via Staff Name").
-
-  ## Parameters
-  - program_id: The program to look up staff for
-
-  ## Returns
-  - List of user ID strings
+  Two callers, and the second is why this is not display-only: the web layer
+  decides which senders render provider-side ("Business via Staff Name"), and
+  `AddAssignedStaff` seeds these users as participants when a conversation is
+  created. The first is cosmetic; the second grants access.
   """
   @spec get_active_staff_user_ids(String.t()) :: [String.t()]
-  defdelegate get_active_staff_user_ids(program_id), to: ResolverQueries
+  defdelegate get_active_staff_user_ids(program_id),
+    to: ProviderStaffResolver,
+    as: :list_active_staff_user_ids
 
   @doc """
   Returns the PubSub topic for a conversation.

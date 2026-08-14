@@ -5,8 +5,6 @@ defmodule KlassHeroWeb.Staff.MessagesLiveTest do
   import KlassHero.Factory, only: [insert: 1, insert: 2]
   import KlassHero.ProviderFixtures
 
-  alias KlassHero.Messaging.StaffParticipants
-
   describe "staff messages index" do
     setup %{conn: conn} do
       user = user_fixture(intended_roles: [:staff])
@@ -22,7 +20,7 @@ defmodule KlassHeroWeb.Staff.MessagesLiveTest do
         })
 
       # Seed projection so staff is recognized
-      StaffParticipants.upsert_active(%{
+      assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: user.id
@@ -76,7 +74,7 @@ defmodule KlassHeroWeb.Staff.MessagesLiveTest do
           invitation_status: :accepted
         })
 
-      StaffParticipants.upsert_active(%{
+      assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: user.id
