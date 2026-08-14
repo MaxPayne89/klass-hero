@@ -5,6 +5,20 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.0](https://github.com/MaxPayne89/klass-hero/compare/v0.71.5...v0.72.0) (2026-08-14)
+
+
+### Features
+
+* seed program staff assignments covering every column state ([#1337](https://github.com/MaxPayne89/klass-hero/issues/1337)) ([7e623f2](https://github.com/MaxPayne89/klass-hero/commit/7e623f258d25a1c0399ce992d3b58e4ac4c566b2))
+
+
+### Bug Fixes
+
+* give invite error_details a single owner ([#1341](https://github.com/MaxPayne89/klass-hero/issues/1341)) ([86992dc](https://github.com/MaxPayne89/klass-hero/commit/86992dc0e389f97bfa5a116dd1f6293898ba55fc)), closes [#1290](https://github.com/MaxPayne89/klass-hero/issues/1290)
+* model staff removal as offboarding so conversations tear down ([#1342](https://github.com/MaxPayne89/klass-hero/issues/1342)) ([daa430b](https://github.com/MaxPayne89/klass-hero/commit/daa430b29da5b1fd37345008a5bac7606668da6d)), closes [#1292](https://github.com/MaxPayne89/klass-hero/issues/1292)
+* scope BookingLive price assertions to the summary card ([#1343](https://github.com/MaxPayne89/klass-hero/issues/1343)) ([55362dd](https://github.com/MaxPayne89/klass-hero/commit/55362dd2c8325d30dfa8740e4389dc959c2dee43)), closes [#1287](https://github.com/MaxPayne89/klass-hero/issues/1287)
+
 ## [0.71.5](https://github.com/MaxPayne89/klass-hero/compare/v0.71.4...v0.71.5) (2026-08-13)
 
 
