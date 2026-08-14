@@ -59,7 +59,7 @@ defmodule KlassHero.Shared.Tracing.ContextTest.Helpers do
   def attach_with_mixed_keys_in_child_span do
     span "parent.operation" do
       context = Context.inject()
-      mixed = Map.put(context, :criticality, :critical)
+      mixed = Map.put(context, :correlation_id, "corr-1")
 
       task =
         Task.async(fn ->

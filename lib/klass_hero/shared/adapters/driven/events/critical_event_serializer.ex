@@ -51,6 +51,15 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
   stay strings — the pre-#1311 behaviour, which is what the jobs already in the queue
   at deploy need.
 
+  ## Metadata is a closed format, and that is what makes a key retirable
+
+  `deserialize_metadata/1` restores only the keys the format defines and drops the
+  rest, rather than atomizing whatever arrives. The asymmetry is deliberate: an open
+  `String.to_existing_atom/1` makes deleting a metadata key a breaking change, because
+  every row an earlier release staged still carries it and no module holds the atom any
+  more. #1326 retired `criticality` through this door; whatever is retired next needs
+  no shim.
+
   The reverse direction needs more care than it used to. "Older code ignores the extra
   key" was true only of the pre-#1311 serializer, which never read `payload_types`;
   #1316's does read it, and until #1317 it had no fallback for a tag it did not know.
@@ -183,29 +192,22 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
     end)
   end
 
-  @atom_metadata_values ~w(criticality)
+  # Keys restored to the atom the producer used.
+  @atom_metadata_keys ~w(correlation_id causation_id)
 
-  # Keys that remain as binary strings after deserialization — they are
-  # string-keyed by design (W3C Trace Context headers) and must not be atomized.
-  @string_passthrough_keys ["traceparent", "tracestate", "baggage"]
+  # Keys that stay binary strings — W3C Trace Context headers, which the Erlang
+  # propagator wants as `{binary(), binary()}` pairs.
+  @string_metadata_keys ~w(traceparent tracestate baggage)
 
   defp deserialize_metadata(metadata) when is_map(metadata) do
-    Map.new(metadata, fn
-      {k, v} when is_binary(k) and k in @atom_metadata_values ->
-        {String.to_existing_atom(k), String.to_existing_atom(v)}
-
-      {k, v} when is_binary(k) and k in @string_passthrough_keys ->
-        {k, v}
-
-      {k, v} when is_binary(k) ->
-        {String.to_existing_atom(k), v}
-
-      {k, v} when is_atom(k) ->
-        {k, v}
-    end)
+    for {key, value} <- metadata, entry = restore_entry(to_string(key), value), into: %{}, do: entry
   end
 
   defp deserialize_metadata(nil), do: %{}
+
+  defp restore_entry(key, value) when key in @atom_metadata_keys, do: {String.to_existing_atom(key), value}
+  defp restore_entry(key, value) when key in @string_metadata_keys, do: {key, value}
+  defp restore_entry(_key, _value), do: nil
 
   defp parse_datetime!(iso_string) when is_binary(iso_string) do
     {:ok, dt, _offset} = DateTime.from_iso8601(iso_string)

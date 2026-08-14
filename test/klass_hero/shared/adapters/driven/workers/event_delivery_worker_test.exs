@@ -54,6 +54,18 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
     }
   end
 
+  # A row staged before #1326: its metadata still carries `"criticality"`. No module
+  # holds that atom any more, so a serializer that atomized whatever arrived would
+  # raise on this — here, and again in `compensate/2`, losing the event with no
+  # `undelivered_events` row to find it by. Both routes are covered because the
+  # second is the one nothing else would have caught.
+  defp legacy_job(events) do
+    job = job(events)
+    staged = Enum.map(job.args["events"], &Map.put(&1, "metadata", %{"criticality" => "critical"}))
+
+    %{job | args: %{"events" => staged}}
+  end
+
   defp handler_ref(consumer), do: CriticalEventDispatcher.handler_ref(consumer)
 
   defp mark_processed(event, consumer) do
@@ -74,6 +86,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
     assert :ok = EventDeliveryWorker.perform(job([event("thing-1")]))
 
     assert [{:first, "thing-1"}, {:second, "thing-1"}] = Recorder.calls()
+  end
+
+  test "delivers a job staged before the criticality field was removed", ctx do
+    route([{Recorder, :first}], ctx)
+
+    assert :ok = EventDeliveryWorker.perform(legacy_job([event("thing-1")]))
+
+    assert [{:first, "thing-1"}] = Recorder.calls()
   end
 
   test "delivers a job's events in the order they were staged", ctx do
@@ -161,6 +181,15 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
       assert row.job_id == 4242
       assert row.discarded_at
       assert row.missed_consumers == [handler_ref({Recorder, :first}), handler_ref({Recorder, :second})]
+    end
+
+    test "records a job staged before the criticality field was removed", ctx do
+      route([{Recorder, :first}], ctx)
+      event = event("thing-1")
+
+      assert :ok = EventDeliveryWorker.compensate(legacy_job([event]), "boom")
+
+      assert undelivered(event).missed_consumers == [handler_ref({Recorder, :first})]
     end
 
     # Replay hands these args straight back to the worker, so the whole envelope has

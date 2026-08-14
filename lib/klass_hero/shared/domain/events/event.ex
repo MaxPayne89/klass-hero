@@ -26,16 +26,16 @@ defmodule KlassHero.Shared.Domain.Events.Event do
 
   Subscribers receive: `{:integration_event, %Event{}}`
 
-  ## Event Criticality
+  ## Delivery is not a per-event choice
 
-  Events can be marked with a criticality level via metadata:
-  - `:critical` - Must not be lost (durable delivery via CriticalEventDispatcher + Oban)
-  - `:normal` - Standard fire-and-forget (default)
+  Every staged event takes the same durable Outbox → Oban → `EventDeliveryWorker`
+  route. Events used to carry a criticality level that was meant to select between
+  durable and fire-and-forget delivery; ADR-0014 collapsed the two tiers into one,
+  and #1326 removed the field. Being in `EventConsumerRegistry` is the only
+  condition that decides anything.
   """
 
   alias KlassHero.Shared.Domain.Events.EventMetadata
-
-  @type criticality :: :critical | :normal
 
   @type t :: %__MODULE__{
           event_id: String.t(),
@@ -84,7 +84,6 @@ defmodule KlassHero.Shared.Domain.Events.Event do
 
   ## Options
 
-  - `:criticality` - Event criticality level (:critical or :normal, default: :normal)
   - `:correlation_id` - ID to correlate related events
   - `:causation_id` - ID of the event that caused this event
   - `:version` - Schema version (default: 1)
@@ -96,10 +95,6 @@ defmodule KlassHero.Shared.Domain.Events.Event do
       :child_data_anonymized
       iex> event.source_context
       :identity
-
-      iex> event = Event.new(:child_data_anonymized, :identity, :child, "uuid", %{}, criticality: :critical)
-      iex> Event.critical?(event)
-      true
   """
   @spec new(atom(), atom(), atom(), String.t() | integer(), map(), keyword()) :: t()
   def new(event_type, source_context, entity_type, entity_id, payload, opts \\ []) do
@@ -132,18 +127,6 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   def topic(%__MODULE__{source_context: source_context, event_type: event_type}) do
     "integration:#{source_context}:#{event_type}"
   end
-
-  @doc """
-  Returns the criticality level of the event (defaults to :normal).
-  """
-  @spec criticality(t()) :: criticality()
-  defdelegate criticality(event), to: EventMetadata
-
-  @doc """
-  Returns true if this is a critical event.
-  """
-  @spec critical?(t()) :: boolean()
-  defdelegate critical?(event), to: EventMetadata
 
   @doc """
   Returns the correlation_id from metadata if present.

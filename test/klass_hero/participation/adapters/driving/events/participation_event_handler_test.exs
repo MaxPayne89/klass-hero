@@ -25,8 +25,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
           :identity,
           :child,
           note.child_id,
-          %{child_id: note.child_id},
-          criticality: :critical
+          %{child_id: note.child_id}
         )
 
       assert :ok == ParticipationEventHandler.handle_event(event)
@@ -46,8 +45,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
           :identity,
           :child,
           child_id,
-          %{child_id: child_id},
-          criticality: :critical
+          %{child_id: child_id}
         )
 
       assert :ok == ParticipationEventHandler.handle_event(event)

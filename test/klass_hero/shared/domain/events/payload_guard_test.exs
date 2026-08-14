@@ -85,20 +85,13 @@ defmodule KlassHero.Shared.Domain.Events.PayloadGuardTest do
     end
   end
 
-  # The guard used to run for `:critical` events only, on the reasoning that a
-  # `:normal` event was never serialized. ADR-0014 ended that — every staged event
-  # takes the same Outbox → Oban → EventDeliveryWorker path — and both of #1311's
-  # production bugs sat in the gap it left.
-  describe "the guard runs regardless of criticality" do
-    for criticality <- [:critical, :normal] do
-      test "rejects an unencodable value on a #{criticality} event" do
-        assert_raise ArgumentError, ~r/cannot survive jsonb serialization/, fn ->
-          build(%{coord: {1, 2}}, criticality: unquote(criticality))
-        end
-      end
-    end
-
-    test "rejects an unencodable value when criticality is unset" do
+  # The guard used to run for events marked critical only, on the reasoning that an
+  # unmarked one was never serialized. ADR-0014 ended that — every staged event takes
+  # the same Outbox → Oban → EventDeliveryWorker path — and both of #1311's production
+  # bugs sat in the gap it left. #1326 then removed the marker itself, so there is one
+  # kind of event and one rule for it.
+  describe "the guard is ungated" do
+    test "rejects an unencodable value on any event" do
       assert_raise ArgumentError, ~r/cannot survive jsonb serialization/, fn ->
         Event.new(:test_event, :test_context, :test, "agg-1", %{coord: {1, 2}})
       end

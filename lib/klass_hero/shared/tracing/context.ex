@@ -30,7 +30,7 @@ defmodule KlassHero.Shared.Tracing.Context do
   @spec attach(map()) :: :ok
   def attach(context) when is_map(context) and map_size(context) > 0 do
     # W3C Trace Context keys are always binary strings. Filter out any atom-keyed
-    # entries (e.g. :criticality from event metadata) before handing to the
+    # entries (e.g. :correlation_id from event metadata) before handing to the
     # Erlang propagator, which expects {binary(), binary()} 2-tuples.
     headers = Enum.filter(context, fn {k, _} -> is_binary(k) end)
 

@@ -10,15 +10,15 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
     projection used to subscribe, but program cards now read verification through
     `Provider.get_trust_states/1` per render. They are still built here so that
     registering a consumer in `config/config.exs` is all it takes to revive delivery.
-  - `staff_member_invited` - A staff invitation was created (critical).
+  - `staff_member_invited` - A staff invitation was created.
   - `staff_assigned_to_program` / `staff_unassigned_from_program` - A staff
-    member's program assignment changed (critical). Messaging reacts by adding
+    member's program assignment changed. Messaging reacts by adding
     or removing the staff member from the program's conversation.
     `staff_assigned_to_program` is **also replayed on invite acceptance**, once per
     standing assignment: a program assigned before the invite was claimed announced
     a nil `staff_user_id`, which consumers skip (#1312).
   - `staff_member_deactivated` - A staff member's employment link ended
-    (critical). Read tables holding a denormalised staff name clear it; a read
+   . Read tables holding a denormalised staff name clear it; a read
     filter cannot, because the name is a stored column.
 
   The staff assignment events carry the **staff member** as their entity, not
@@ -57,7 +57,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   end
 
   @doc """
-  Creates a `staff_member_invited` event (critical).
+  Creates a `staff_member_invited` event.
 
   Accounts reacts by sending the invitation email, so a lost event is a staff
   member who never hears they were invited.
@@ -72,7 +72,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
       @staff_entity_type,
       staff_member_id,
       Map.put(payload, :staff_member_id, staff_member_id),
-      Keyword.put_new(opts, :criticality, :critical)
+      opts
     )
   end
 
@@ -81,14 +81,14 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
           "staff_member_invited/3 requires a non-empty staff_member_id string, got: #{inspect(staff_member_id)}"
   end
 
-  @doc "Creates a staff_assigned_to_program event (critical)."
+  @doc "Creates a staff_assigned_to_program event."
   @spec staff_assigned_to_program(ProgramStaffAssignment.t(), StaffMember.t(), keyword()) ::
           Event.t()
   def staff_assigned_to_program(%ProgramStaffAssignment{} = assignment, %StaffMember{} = staff_member, opts \\ []) do
     assignment_event(:staff_assigned_to_program, assignment, staff_member, opts)
   end
 
-  @doc "Creates a staff_unassigned_from_program event (critical)."
+  @doc "Creates a staff_unassigned_from_program event."
   @spec staff_unassigned_from_program(ProgramStaffAssignment.t(), StaffMember.t(), keyword()) ::
           Event.t()
   def staff_unassigned_from_program(%ProgramStaffAssignment{} = assignment, %StaffMember{} = staff_member, opts \\ []) do
@@ -96,7 +96,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   end
 
   @doc """
-  Creates a `staff_member_deactivated` event (critical).
+  Creates a `staff_member_deactivated` event.
 
   Carries no `program_ids`: consumers hold `staff_member_id` on their own rows,
   so scoping by the staff member is both narrower and immune to the assignment
@@ -117,7 +117,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
       @staff_entity_type,
       staff_member.id,
       payload,
-      Keyword.put_new(opts, :criticality, :critical)
+      opts
     )
   end
 
@@ -136,7 +136,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
       @staff_entity_type,
       assignment.staff_member_id,
       payload,
-      Keyword.put_new(opts, :criticality, :critical)
+      opts
     )
   end
 end

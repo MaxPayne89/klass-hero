@@ -9,23 +9,21 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
   # Every family event factory shares one contract: build a :family event with
   # stable identity fields, let the id argument win over any caller-supplied
   # one (while preserving extras), and raise on a blank id. The table drives
-  # that shape; rows vary only by the id field name, the entity_type, and
-  # (for child_data_anonymized) default criticality.
+  # that shape; rows vary only by the id field name and the entity_type.
   @factories [
-    %{fun: :child_created, id: :child_id, entity_type: :child, critical: false},
-    %{fun: :child_updated, id: :child_id, entity_type: :child, critical: false},
-    %{fun: :child_data_anonymized, id: :child_id, entity_type: :child, critical: true},
-    %{fun: :invite_family_ready, id: :invite_id, entity_type: :invite, critical: false}
+    %{fun: :child_created, id: :child_id, entity_type: :child},
+    %{fun: :child_updated, id: :child_id, entity_type: :child},
+    %{fun: :child_data_anonymized, id: :child_id, entity_type: :child},
+    %{fun: :invite_family_ready, id: :invite_id, entity_type: :invite}
   ]
 
-  for %{fun: fun, id: id, entity_type: entity_type, critical: critical} <- @factories do
+  for %{fun: fun, id: id, entity_type: entity_type} <- @factories do
     describe "#{fun}/3" do
       @fun fun
       @id id
       @entity_type entity_type
-      @critical critical
 
-      test "builds an event with the right type, entity, and criticality" do
+      test "builds an event with the right type and entity" do
         event = apply(FamilyEvents, @fun, ["id-1"])
 
         assert %Event{} = event
@@ -34,7 +32,6 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
         assert event.entity_id == "id-1"
         assert event.entity_type == @entity_type
         assert Map.get(event.payload, @id) == "id-1"
-        assert Event.critical?(event) == @critical
       end
 
       test "the id argument wins over a caller-supplied one and preserves extras" do

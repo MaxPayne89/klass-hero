@@ -5,10 +5,10 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
   alias KlassHero.Shared.Domain.Events.Event
 
   # The staff factories take an id, because their producers hold one and not a
-  # user. They share one contract: build a critical event with stable identity
-  # fields, let the id argument win over any caller-supplied id (while
-  # preserving extras), allow criticality to be lowered via opts, and raise on
-  # a blank id. Rows vary only by the id field name and entity_type.
+  # user. They share one contract: build an event with stable identity fields,
+  # let the id argument win over any caller-supplied id (while preserving
+  # extras), and raise on a blank id. Rows vary only by the id field name and
+  # entity_type.
   @staff_factories [
     %{fun: :staff_invitation_sent, id: :staff_member_id, entity: :staff_member},
     %{fun: :staff_invitation_failed, id: :staff_member_id, entity: :staff_member},
@@ -21,7 +21,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       @id id
       @entity entity
 
-      test "builds a critical event with stable identity fields" do
+      test "builds an event with stable identity fields" do
         event = apply(AccountsEvents, @fun, ["id-1"])
 
         assert %Event{} = event
@@ -30,7 +30,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
         assert event.entity_type == @entity
         assert event.entity_id == "id-1"
         assert Map.get(event.payload, @id) == "id-1"
-        assert Event.critical?(event)
       end
 
       test "the id argument wins over a caller-supplied one and preserves extras" do
@@ -39,12 +38,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
         assert Map.get(event.payload, @id) == "real-id"
         assert event.payload.extra == "data"
-      end
-
-      test "allows overriding criticality via opts" do
-        event = apply(AccountsEvents, @fun, ["id-1", %{}, [criticality: :normal]])
-
-        refute Event.critical?(event)
       end
 
       test "raises for a nil or blank id" do
@@ -95,7 +88,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       assert event.payload.user_id == 1
       assert event.payload.email == "test@example.com"
       assert event.payload.name == "Test User"
-      assert event.metadata.criticality == :critical
     end
 
     test "succeeds with valid user and custom payload" do
@@ -224,7 +216,6 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       assert event.payload.anonymized_email == "deleted_1@anonymized.local"
       assert event.payload.previous_email == "old@example.com"
       assert event.payload.anonymized_at
-      assert event.metadata.criticality == :critical
     end
 
     test "succeeds with valid user and additional payload fields" do

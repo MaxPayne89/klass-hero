@@ -21,7 +21,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
           :child,
           "child-uuid",
           %{child_id: "child-uuid", reason: "gdpr_request"},
-          criticality: :critical,
           version: 2
         )
 
@@ -34,7 +33,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
       assert deserialized.entity_type == :child
       assert deserialized.entity_id == "child-uuid"
       assert deserialized.payload == %{child_id: "child-uuid", reason: "gdpr_request"}
-      assert deserialized.metadata.criticality == :critical
       assert deserialized.version == 2
     end
 
@@ -155,7 +153,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
     test "restores metadata atom keys after JSON round-trip" do
       event =
         Event.new(:test, :test_context, :test, "id", %{},
-          criticality: :critical,
           correlation_id: "corr-1",
           causation_id: "cause-1"
         )
@@ -164,14 +161,12 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
       json_cycled = Jason.decode!(Jason.encode!(serialized))
       deserialized = CriticalEventSerializer.deserialize(json_cycled)
 
-      assert deserialized.metadata.criticality == :critical
-      assert deserialized.metadata.correlation_id == "corr-1"
-      assert deserialized.metadata.causation_id == "cause-1"
+      assert deserialized.metadata == %{correlation_id: "corr-1", causation_id: "cause-1"}
     end
 
     test "preserves string keys for trace context fields after round-trip" do
       event =
-        Event.new(:test_event, :enrollment, :invite, "id-1", %{}, criticality: :normal)
+        Event.new(:test_event, :enrollment, :invite, "id-1", %{})
 
       event_with_trace =
         %{
@@ -192,6 +187,34 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
       refute Map.has_key?(deserialized.metadata, :traceparent)
       refute Map.has_key?(deserialized.metadata, :tracestate)
     end
+
+    # Dropping is what makes a retired key safe. `criticality` was removed in #1326
+    # and no module holds that atom any more, so atomizing whatever arrives would
+    # raise on every row an earlier release staged — in `execute/1` and again in
+    # `compensate/2`, losing the event with no `undelivered_events` row to find it by.
+    # Whatever is retired next is covered without a second shim.
+    #
+    # These strings are load-bearing: an atom literal anywhere in the suite creates
+    # the atom for the whole run, and these would then pass for a reason production
+    # does not have.
+    for key <- ["criticality", "some_future_retired_key"] do
+      test "drops #{key}, which the format does not define" do
+        args = legacy_args(%{unquote(key) => "critical"})
+
+        assert CriticalEventSerializer.deserialize(args).metadata == %{}
+      end
+    end
+  end
+
+  # A serialized event whose metadata is replaced wholesale, then pushed through JSON
+  # — the shape `EventDeliveryWorker` reads out of `oban_jobs.args`.
+  defp legacy_args(metadata) do
+    :test
+    |> Event.new(:test_context, :test, "id", %{})
+    |> CriticalEventSerializer.serialize()
+    |> Map.put("metadata", metadata)
+    |> Jason.encode!()
+    |> Jason.decode!()
   end
 
   # Jason.encode!/decode! is not ceremony: without it the test compares two in-memory
