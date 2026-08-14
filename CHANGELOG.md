@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.2](https://github.com/MaxPayne89/klass-hero/compare/v0.72.1...v0.72.2) (2026-08-14)
+
+
+### Bug Fixes
+
+* run a compensation once per job, and never against a resent invite ([#1361](https://github.com/MaxPayne89/klass-hero/issues/1361)) ([c5fb973](https://github.com/MaxPayne89/klass-hero/commit/c5fb9732d82c06fd7f50f084f1d684da9b436892)), closes [#1339](https://github.com/MaxPayne89/klass-hero/issues/1339)
+
+
+### Code Refactoring
+
+* make conversation_type an Ecto.Enum end to end ([#1355](https://github.com/MaxPayne89/klass-hero/issues/1355)) ([a58c96a](https://github.com/MaxPayne89/klass-hero/commit/a58c96a79123ecdc896a71f3cb40ed3c1bfb9adc)), closes [#1327](https://github.com/MaxPayne89/klass-hero/issues/1327)
+* remove criticality from the event envelope ([#1354](https://github.com/MaxPayne89/klass-hero/issues/1354)) ([29143ba](https://github.com/MaxPayne89/klass-hero/commit/29143ba9c2c7d5a8f7004178689c0959fd12515f)), closes [#1326](https://github.com/MaxPayne89/klass-hero/issues/1326)
+
 ## [0.72.1](https://github.com/MaxPayne89/klass-hero/compare/v0.72.0...v0.72.1) (2026-08-14)
 
 
