@@ -36,11 +36,11 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
       {:ok, %BulkEnrollmentInvite{invite_token: nil} = invite} ->
         Logger.warning("[SendInviteEmailWorker] Invite has no token", invite_id: invite_id)
 
-        invite
-        |> Enrollment.transition_invite(%{
-          status: :failed,
-          error_details: "Invite link could not be generated (no token). Please resend."
-        })
+        # The reason is not what names this failure — `describe_failure/2` reads the
+        # missing token off the row, so the sweep reaches the same wording later without
+        # a reason to go on.
+        invite.id
+        |> Enrollment.fail_invite(:tokenless)
         |> resolve_tokenless(job)
 
       {:ok, %BulkEnrollmentInvite{} = invite} ->
@@ -123,21 +123,24 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
   # A rejected transition means the invite is already terminal — sent by a duplicate
   # attempt, or failed by an earlier pass — which is a fact rather than something a later
   # sweep could fix, so it reports `:ignore`.
+  #
+  # `{:delivery, _}` unconditionally: delivery is this worker's only failure mode that is
+  # not the missing token, and the token is read off the row, so tagging here cannot
+  # mislabel a tokenless invite. It survives the sweep, which arrives with `nil` for a
+  # Lifeline discard and could not otherwise tell the two apart.
   @impl true
-  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}}, reason) do
-    case Enrollment.transition_invite(%{id: invite_id}, %{
-           status: :failed,
-           error_details: describe(reason)
-         }) do
+  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}}, reason) when is_binary(invite_id) do
+    case Enrollment.fail_invite(invite_id, {:delivery, reason}) do
       {:ok, _invite} -> :ok
       {:error, _reason} -> :ignore
     end
   end
 
-  # The sweep cannot recover the failing attempt's reason — a Lifeline discard records
-  # none — so the provider gets the fact without a cause rather than "nil".
-  defp describe(nil), do: "Email delivery failed and no retries remain"
-  defp describe(reason), do: "Email delivery failed: #{inspect(reason)}"
+  # Unreachable from the enqueue path, which only ever writes a binary `invite.id`. Guarded
+  # anyway because the sweep calls this with whatever the job row holds, and a raise here
+  # escapes its `Enum.each` and abandons the rest of the batch — every worker's, not just this
+  # one's.
+  def compensate(%Oban.Job{}, _reason), do: :ignore
 
   # Reads URL config at runtime — referencing KlassHeroWeb.Endpoint directly would violate boundary rules.
   defp base_url do

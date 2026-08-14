@@ -1094,6 +1094,46 @@ defmodule KlassHero.Enrollment do
     end
   end
 
+  @doc """
+  Fails an invite, recording a reason the owning provider can act on.
+
+  The single writer of `error_details`. Before #1290 four call sites across two
+  contexts each rebuilt this — the `:failed` atom, the refetch-by-id shape, the
+  "a rejected transition means already-terminal" rule, and their own wording — and two
+  of them wrote raw `inspect/1` output into a field rendered verbatim to providers.
+
+  `reason` is only ever used to *describe* the failure (see
+  `BulkEnrollmentInvite.describe_failure/2`); callers keep logging it themselves for
+  diagnostics, which is where an unmapped term belongs.
+
+  `{:error, :already_terminal}` is the expected outcome of compensating twice — inline
+  on a worker's last attempt, then again from the compensation sweep over the same
+  discarded job — and callers translate it to `:ignore` rather than retrying.
+  """
+  @spec fail_invite(binary(), term()) ::
+          {:ok, BulkEnrollmentInvite.t()} | {:error, :not_found | :already_terminal}
+  def fail_invite(invite_id, reason) when is_binary(invite_id) do
+    case Repo.get(BulkEnrollmentInvite, invite_id) do
+      nil ->
+        {:error, :not_found}
+
+      invite ->
+        invite
+        |> BulkEnrollmentInvite.transition_changeset(%{
+          status: :failed,
+          error_details: BulkEnrollmentInvite.describe_failure(invite, reason)
+        })
+        |> Repo.update()
+        |> case do
+          {:ok, failed} -> {:ok, failed}
+          # `@valid_transitions` admits `:failed` only from a live status, so a rejection
+          # here means something already settled this invite. Collapsed rather than
+          # reported field-by-field: no caller can act on the difference.
+          {:error, %Ecto.Changeset{}} -> {:error, :already_terminal}
+        end
+    end
+  end
+
   @doc "Applies a validated status transition to an invite (refetched by id)."
   def transition_invite(%{id: id}, attrs) when is_map(attrs) do
     case Repo.get(BulkEnrollmentInvite, id) do
