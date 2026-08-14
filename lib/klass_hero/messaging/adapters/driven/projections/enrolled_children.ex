@@ -227,9 +227,8 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   defp project_conversation_created(event) do
     payload = event.payload
     program_id = Map.get(payload, :program_id)
-    conversation_type = payload |> Map.get(:type, "direct") |> to_string()
 
-    if conversation_type == "direct" and program_id do
+    if Map.get(payload, :type, :direct) == :direct and program_id do
       emit_enrolled_children_for_direct_participants(
         payload.conversation_id,
         Map.get(payload, :participant_ids, []),
@@ -256,7 +255,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
         where:
           s.user_id == ^parent_user_id and
             s.program_id == ^program_id and
-            s.conversation_type == "direct",
+            s.conversation_type == ^:direct,
         select: s.conversation_id,
         distinct: true
       )

@@ -70,7 +70,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
       insert_conversation_summary(%{
         conversation_id: conversation.id,
         user_id: parent_user.id,
-        conversation_type: "direct",
+        conversation_type: :direct,
         provider_id: provider.id,
         other_participant_name: "Test Provider",
         latest_message_content: msg3.content,
@@ -111,7 +111,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
       insert_conversation_summary(%{
         conversation_id: conversation.id,
         user_id: parent_user.id,
-        conversation_type: "direct",
+        conversation_type: :direct,
         provider_id: provider.id,
         other_participant_name: "Test Provider",
         latest_message_content: "Hello parent!",
@@ -177,7 +177,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
         insert_conversation_summary(%{
           conversation_id: conversation.id,
           user_id: parent_identity_id,
-          conversation_type: "program_broadcast",
+          conversation_type: :program_broadcast,
           provider_id: provider.id,
           program_id: program.id,
           subject: "Schedule Update",
@@ -219,7 +219,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
       id: Ecto.UUID.generate(),
       conversation_id: Ecto.UUID.generate(),
       user_id: Ecto.UUID.generate(),
-      conversation_type: "direct",
+      conversation_type: :direct,
       provider_id: Ecto.UUID.generate(),
       program_id: nil,
       subject: nil,

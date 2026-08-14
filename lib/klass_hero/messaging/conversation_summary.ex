@@ -17,7 +17,7 @@ defmodule KlassHero.Messaging.ConversationSummary do
   schema "conversation_summaries" do
     field :conversation_id, :binary_id
     field :user_id, :binary_id
-    field :conversation_type, :string
+    field :conversation_type, Ecto.Enum, values: [:direct, :program_broadcast]
     field :provider_id, :binary_id
     field :program_id, :binary_id
     field :subject, :string
@@ -41,7 +41,7 @@ defmodule KlassHero.Messaging.ConversationSummary do
           id: String.t(),
           conversation_id: String.t(),
           user_id: String.t(),
-          conversation_type: String.t() | nil,
+          conversation_type: :direct | :program_broadcast | nil,
           provider_id: String.t(),
           program_id: String.t() | nil,
           subject: String.t() | nil,

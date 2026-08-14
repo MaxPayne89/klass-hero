@@ -39,7 +39,7 @@ defmodule KlassHero.Messaging.ArchiveConversationsDeliveryTest do
       insert(:conversation_summary_schema,
         conversation_id: conversation.id,
         user_id: user_id,
-        conversation_type: "program_broadcast",
+        conversation_type: :program_broadcast,
         provider_id: provider.id,
         program_id: program.id,
         archived_at: nil
