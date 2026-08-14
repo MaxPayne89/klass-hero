@@ -51,6 +51,12 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
     field :enrollment_id, :binary_id
     field :error_details, :string
 
+    # When the provider last reopened this invite. Compared against an Oban job's
+    # `inserted_at` to tell a compensation whether the job it speaks for still describes
+    # this invite — `failed: [:pending]` means a resend can undo a compensation, so a
+    # dead job must not silently redo it (#1339). `nil` means never resent.
+    field :resent_at, :utc_datetime_usec
+
     timestamps()
   end
 
@@ -83,7 +89,7 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
     failed: [:pending]
   }
 
-  @lifecycle_fields ~w(status invite_token invite_sent_at registered_at enrolled_at enrollment_id error_details)a
+  @lifecycle_fields ~w(status invite_token invite_sent_at registered_at enrolled_at enrollment_id error_details resent_at)a
 
   def valid_transitions, do: @valid_transitions
 

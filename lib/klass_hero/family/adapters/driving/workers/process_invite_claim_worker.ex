@@ -42,9 +42,15 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
   # `:already_terminal` is the expected rejection: the invite was enrolled by a retry
   # Lifeline re-ran, or failed by an earlier pass. That is a fact, not a fault, so it
   # reports `:ignore` rather than an error the sweep would keep retrying.
+  #
+  # `inserted_at` is passed so the invite can reject a compensation it has moved past.
+  # A failed claim leaves the invite `:failed`, which the provider may resend from — and
+  # `failed: [:pending]` then makes a second failure legal, so a dead job arriving after
+  # the resend would revert it (#1339). `:superseded` joins `:already_terminal` here.
   @impl true
-  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}}, reason) when is_binary(invite_id) do
-    case Enrollment.fail_invite(invite_id, reason) do
+  def compensate(%Oban.Job{args: %{"invite_id" => invite_id}, inserted_at: %DateTime{} = enqueued_at}, reason)
+      when is_binary(invite_id) do
+    case Enrollment.fail_invite(invite_id, reason, enqueued_at) do
       {:ok, _invite} ->
         :ok
 
@@ -58,6 +64,9 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
     end
   end
 
+  # Unreachable from the enqueue path, and `oban_jobs.inserted_at` is `null: false`.
+  # `:ignore` is the safe direction: it retires the job without writing a failure this
+  # clause has no watermark to justify.
   def compensate(%Oban.Job{}, _reason), do: :ignore
 
   # Oban JSON args use string keys and ISO date strings; convert to atom keys and Date.

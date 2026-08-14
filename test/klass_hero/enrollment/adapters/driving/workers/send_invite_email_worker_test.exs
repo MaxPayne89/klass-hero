@@ -5,9 +5,11 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
   import KlassHero.Factory
   import Swoosh.TestAssertions
 
+  alias KlassHero.Enrollment
   alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
   alias KlassHero.Test.StubMailerAdapter
 
   defp create_pending_invite(_context) do
@@ -93,11 +95,17 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
     @max_attempts 3
 
-    defp job(invite, program, attempt) do
+    # `id`, `worker` and `inserted_at` are populated because a job reaching the
+    # compensation gate came out of `oban_jobs`: the first two key its compensation
+    # marker, and the third is the watermark a resend is measured against (#1339).
+    defp job(invite, program, attempt, opts \\ []) do
       %Oban.Job{
+        id: System.unique_integer([:positive]),
+        worker: Oban.Worker.to_string(SendInviteEmailWorker),
         args: %{"invite_id" => invite.id, "program_name" => program.title},
         attempt: attempt,
-        max_attempts: @max_attempts
+        max_attempts: @max_attempts,
+        inserted_at: Keyword.get(opts, :inserted_at, DateTime.utc_now())
       }
     end
 
@@ -149,6 +157,123 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       assert {:error, _reason} =
                SendInviteEmailWorker.execute(job(invite, program, @max_attempts))
+    end
+  end
+
+  # #1339. A compensation speaks for a job that is already dead, and between that death
+  # and the compensation running the provider can resend — `failed: [:pending]` reopens
+  # the transition the state machine was otherwise relying on to reject a second failure.
+  describe "compensate/2 after a resend" do
+    setup :create_pending_invite
+
+    test "leaves an invite resent after this job was enqueued alone", %{invite: invite, program: program} do
+      dead = job(invite, program, @max_attempts, inserted_at: minutes_ago(30))
+
+      {:ok, _resent} = Enrollment.reset_invite_for_resend(invite)
+
+      assert :ignore = SendInviteEmailWorker.compensate(dead, {:network, :timeout})
+
+      resent = reload(invite)
+      assert resent.status == :pending, "a dead job re-failed an invite the provider had resent"
+      assert resent.error_details == nil, "a dead job overwrote the reason a resend had cleared"
+    end
+
+    # The other side of the guard: without a resend to supersede it, the compensation is
+    # still the whole point of the mechanism.
+    test "still fails an invite that was never resent", %{invite: invite, program: program} do
+      dead = job(invite, program, @max_attempts, inserted_at: minutes_ago(30))
+
+      assert :ok = SendInviteEmailWorker.compensate(dead, {:network, :timeout})
+      assert reload(invite).status == :failed
+    end
+
+    # The full reported sequence, through the real sweep rather than a direct call:
+    # exhaust the attempts, resend, then let the sweep reach the discarded job.
+    test "survives the compensation sweep after a resend", %{invite: invite, program: program} do
+      StubMailerAdapter.fail_with({:network, :timeout})
+
+      assert {:error, _reason} =
+               SendInviteEmailWorker.execute(job(invite, program, @max_attempts))
+
+      assert reload(invite).status == :failed
+
+      {:ok, _resent} = Enrollment.resend_invite(invite.id, invite.provider_id)
+      assert reload(invite).status == :pending
+
+      discarded_send_job(invite, program)
+      assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
+
+      swept = reload(invite)
+      assert swept.status == :pending, "the sweep re-failed an invite the provider had resent"
+      assert swept.error_details == nil
+    end
+
+    # The guard's sharpest edge. `resent_at` and a job's `inserted_at` are only
+    # comparable if they come from the SAME clock, and left to itself `inserted_at` does
+    # not: the column defaults to Postgres `now()`, which is (a) the database server's
+    # clock, skewed from this VM's by however far the two have drifted, and (b) frozen at
+    # *transaction start* — before the `resent_at` the same transaction goes on to write,
+    # since `resend_invite/2` resets and enqueues together.
+    #
+    # Either alone makes a resend enqueue a job its own guard reads as superseded,
+    # silently disabling compensation for exactly the invites this protects. So the
+    # assertion is on the clock source rather than on an ordering: the window is
+    # microseconds wide, and only a timestamp taken by this VM can land inside it.
+    test "stamps the enqueue time from the application clock, not the database's", %{invite: invite} do
+      before_resend = DateTime.utc_now()
+
+      {:ok, _resent} =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          Enrollment.resend_invite(invite.id, invite.provider_id)
+        end)
+
+      after_resend = DateTime.utc_now()
+      enqueued_at = resend_job().inserted_at
+
+      assert DateTime.compare(enqueued_at, before_resend) != :lt and
+               DateTime.compare(enqueued_at, after_resend) != :gt,
+             "inserted_at #{inspect(enqueued_at)} fell outside #{inspect(before_resend)}..." <>
+               "#{inspect(after_resend)}, so it came from the database clock, not this one"
+    end
+
+    # The behaviour resting on it: a resend's own job is not superseded by the resend that
+    # enqueued it, so its compensation still lands if that send then fails for good.
+    test "compensates for the job its own resend enqueued", %{invite: invite} do
+      {:ok, _resent} =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          Enrollment.resend_invite(invite.id, invite.provider_id)
+        end)
+
+      assert :ok = SendInviteEmailWorker.compensate(resend_job(), {:network, :timeout}),
+             "the resend's own job read as superseded by the resend that enqueued it"
+
+      assert reload(invite).status == :failed
+    end
+
+    defp resend_job do
+      Repo.one!(from(j in Oban.Job, where: j.worker == ^Oban.Worker.to_string(SendInviteEmailWorker)))
+    end
+
+    defp minutes_ago(minutes), do: DateTime.add(DateTime.utc_now(), -minutes, :minute)
+
+    # Written straight to the table: `testing: :inline` executes a job at insert, so
+    # Oban's own path cannot leave one sitting in a terminal state.
+    defp discarded_send_job(invite, program) do
+      now = DateTime.utc_now()
+
+      Repo.insert!(%Oban.Job{
+        worker: Oban.Worker.to_string(SendInviteEmailWorker),
+        args: %{"invite_id" => invite.id, "program_name" => program.title},
+        queue: "email",
+        state: "discarded",
+        attempt: @max_attempts,
+        max_attempts: @max_attempts,
+        discarded_at: now,
+        attempted_at: now,
+        inserted_at: minutes_ago(30),
+        scheduled_at: minutes_ago(30),
+        errors: [%{"attempt" => 3, "at" => DateTime.to_iso8601(now), "error" => "boom"}]
+      })
     end
   end
 

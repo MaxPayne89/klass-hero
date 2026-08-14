@@ -11,6 +11,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker
   alias KlassHero.MessagingFixtures
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
@@ -18,6 +19,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.UndeliveredEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
   alias KlassHero.Shared.Domain.Events.Event
+  alias KlassHero.Shared.Tracing.TracedWorker
 
   @registered "KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker"
   @unregistered "KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker"
@@ -57,6 +59,26 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
 
       assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
       assert reply_status(reply) == :sending
+    end
+
+    # The #1339 sequence, with a reply standing in for the invite that surfaced it. A
+    # worker returning `{:error, _}` on its final attempt compensates inline *and* is
+    # marked `discarded`, so before the inline path wrote a marker this sweep found the
+    # job and compensated it a second time — over whatever had happened in between.
+    test "leaves a job that already compensated itself inline alone" do
+      reply = pending_reply()
+      job = discarded_job(@registered, %{"reply_id" => reply.id})
+
+      assert :ok = TracedWorker.compensate_if_final(SendEmailReplyWorker, job, "boom")
+      assert reply_status(reply) == :failed
+
+      # Whoever owns the entity moves it on, exactly as a provider resending does.
+      {:ok, _} = Messaging.update_email_reply_status(reply.id, "sending", %{})
+
+      assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
+
+      assert reply_status(reply) == :sending,
+             "the sweep re-compensated a job that had already compensated itself inline"
     end
 
     test "leaves jobs from unregistered workers alone" do

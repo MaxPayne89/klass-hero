@@ -59,11 +59,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensat
   @doc """
   Deletes markers compensated before `cutoff`, returning how many went.
 
-  Cutting on `compensated_at` rather than the job's `discarded_at` is deliberate and
-  safe in the conservative direction: a marker can only be written while the sweep's
-  join still sees the `oban_jobs` row, so `compensated_at >= discarded_at` always, and
-  a cutoff measured from it therefore lands no earlier than the same span measured
-  from the job's own clock. The caller owns the span — see `CompensationSweepWorker`.
+  Cutting on `compensated_at` rather than the job's `discarded_at` is deliberate. The
+  two clocks are within milliseconds of each other in both directions: the sweep writes
+  its marker after the job was discarded, while the in-attempt gate writes one just
+  *before* the failing return that discards the job (#1339). Either way the gap is
+  bounded by a single attempt, and the retention span is days — so a cutoff measured
+  from `compensated_at` cannot expire a marker meaningfully earlier than the same span
+  measured from the job's own clock. The caller owns the span, and owns keeping it
+  clear of the Pruner's window — see `CompensationSweepWorker`.
   """
   @spec prune(DateTime.t()) :: non_neg_integer()
   def prune(%DateTime{} = cutoff) do

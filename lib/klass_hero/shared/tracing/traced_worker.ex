@@ -25,6 +25,7 @@ defmodule KlassHero.Shared.Tracing.TracedWorker do
   The `backoff/1` and `timeout/1` callbacks remain overridable by concrete workers.
   """
 
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensationRepository
   alias KlassHero.Shared.Tracing
 
   @callback execute(Oban.Job.t()) :: :ok | {:ok, term()} | {:error, term()}
@@ -75,10 +76,26 @@ defmodule KlassHero.Shared.Tracing.TracedWorker do
   The in-attempt fast path. A job that dies without reaching it — orphaned, raised,
   or discarded early — is caught later by the sweep over discarded jobs, which calls
   the same `compensate/2`.
+
+  Both routes go through `JobCompensationRepository.compensate_once/3`, so the marker
+  means "this job was compensated" rather than "the sweep compensated this job". It has
+  to: a worker returning `{:error, _}` on its final attempt is marked `discarded` by
+  Oban, so an inline compensation that wrote no marker left the job selectable by the
+  sweep and compensated it a second time (#1339).
+
+  Returns `:ok` for a compensation that ran or had nothing left to do — `compensate_once/3`
+  folds `:ignore` in, because both commit the marker — and `{:error, _}` for one that
+  failed, which rolls the marker back and leaves the job to a later sweep.
   """
-  @spec compensate_if_final(module(), Oban.Job.t(), term()) :: :ok | :ignore | {:error, term()}
+  @spec compensate_if_final(module(), Oban.Job.t(), term()) :: :ok | {:error, term()}
   def compensate_if_final(worker, %Oban.Job{} = job, reason) when is_atom(worker) do
-    if final_attempt?(job), do: worker.compensate(job, reason), else: :ok
+    if final_attempt?(job) do
+      JobCompensationRepository.compensate_once(job.id, job.worker, fn ->
+        worker.compensate(job, reason)
+      end)
+    else
+      :ok
+    end
   end
 
   @doc false

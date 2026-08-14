@@ -1106,31 +1106,68 @@ defmodule KlassHero.Enrollment do
   `BulkEnrollmentInvite.describe_failure/2`); callers keep logging it themselves for
   diagnostics, which is where an unmapped term belongs.
 
-  `{:error, :already_terminal}` is the expected outcome of compensating twice — inline
-  on a worker's last attempt, then again from the compensation sweep over the same
-  discarded job — and callers translate it to `:ignore` rather than retrying.
+  `{:error, :already_terminal}` means something else already settled this invite, and
+  callers translate it to `:ignore` rather than retrying.
+
+  Use `fail_invite/3` from anything speaking for a dead Oban job; this arity applies no
+  staleness check and is for callers acting on the invite's present, not its past.
   """
   @spec fail_invite(binary(), term()) ::
           {:ok, BulkEnrollmentInvite.t()} | {:error, :not_found | :already_terminal}
   def fail_invite(invite_id, reason) when is_binary(invite_id) do
-    case Repo.get(BulkEnrollmentInvite, invite_id) do
-      nil ->
-        {:error, :not_found}
+    with {:ok, invite} <- fetch_invite_to_fail(invite_id), do: apply_failure(invite, reason)
+  end
 
-      invite ->
-        invite
-        |> BulkEnrollmentInvite.transition_changeset(%{
-          status: :failed,
-          error_details: BulkEnrollmentInvite.describe_failure(invite, reason)
-        })
-        |> Repo.update()
-        |> case do
-          {:ok, failed} -> {:ok, failed}
-          # `@valid_transitions` admits `:failed` only from a live status, so a rejection
-          # here means something already settled this invite. Collapsed rather than
-          # reported field-by-field: no caller can act on the difference.
-          {:error, %Ecto.Changeset{}} -> {:error, :already_terminal}
-        end
+  @doc """
+  Same, but refuses to fail an invite the provider resent after `enqueued_at`.
+
+  A compensation speaks for a job that is already dead, so between that job's death and
+  the compensation running, the provider may have resent the invite — and
+  `@valid_transitions` admits `failed: [:pending]`, so nothing else rejects a second
+  failure. The result was a resend reverting to Failed under a reason copied from the
+  dead job (#1339).
+
+  `enqueued_at` is the job's `inserted_at`. Equality still compensates: a resend and the
+  job it enqueues are written by one transaction, so the invite's own job must not read
+  as stale against it. That relies on `EnqueueInviteEmails` stamping `inserted_at`
+  itself — the column's `now()` default would report transaction start, which precedes
+  the reset in the same transaction.
+  """
+  @spec fail_invite(binary(), term(), DateTime.t()) ::
+          {:ok, BulkEnrollmentInvite.t()} | {:error, :not_found | :already_terminal | :superseded}
+  def fail_invite(invite_id, reason, %DateTime{} = enqueued_at) when is_binary(invite_id) do
+    with {:ok, invite} <- fetch_invite_to_fail(invite_id),
+         :ok <- ensure_not_resent_since(invite, enqueued_at) do
+      apply_failure(invite, reason)
+    end
+  end
+
+  defp fetch_invite_to_fail(invite_id) do
+    case Repo.get(BulkEnrollmentInvite, invite_id) do
+      nil -> {:error, :not_found}
+      invite -> {:ok, invite}
+    end
+  end
+
+  defp ensure_not_resent_since(%BulkEnrollmentInvite{resent_at: nil}, _enqueued_at), do: :ok
+
+  defp ensure_not_resent_since(%BulkEnrollmentInvite{resent_at: resent_at}, enqueued_at) do
+    if DateTime.after?(resent_at, enqueued_at), do: {:error, :superseded}, else: :ok
+  end
+
+  defp apply_failure(invite, reason) do
+    invite
+    |> BulkEnrollmentInvite.transition_changeset(%{
+      status: :failed,
+      error_details: BulkEnrollmentInvite.describe_failure(invite, reason)
+    })
+    |> Repo.update()
+    |> case do
+      {:ok, failed} -> {:ok, failed}
+      # `@valid_transitions` admits `:failed` only from a live status, so a rejection
+      # here means something already settled this invite. Collapsed rather than
+      # reported field-by-field: no caller can act on the difference.
+      {:error, %Ecto.Changeset{}} -> {:error, :already_terminal}
     end
   end
 
@@ -1157,8 +1194,17 @@ defmodule KlassHero.Enrollment do
         {:error, :not_found}
 
       invite ->
+        # `resent_at` is the watermark every compensation for this invite is measured
+        # against, so it must be stamped here — this is the one place the provider
+        # reopens an invite the state machine had settled (#1339).
         invite
-        |> Ecto.Changeset.change(%{status: :pending, invite_token: nil, invite_sent_at: nil, error_details: nil})
+        |> Ecto.Changeset.change(%{
+          status: :pending,
+          invite_token: nil,
+          invite_sent_at: nil,
+          error_details: nil,
+          resent_at: DateTime.utc_now()
+        })
         |> Repo.update()
     end
   end
