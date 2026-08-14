@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
   alias KlassHero.Provider
+  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme
@@ -22,7 +23,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     # memberships read model carries id + business_name — no separate profile lookup needed.
     case Enum.find(memberships, &(&1.provider_id == staff_member.provider_id)) do
       %{provider_id: provider_id, business_name: business_name} ->
-        {programs, assigned_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
+        {programs, program_access} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
         socket =
           socket
@@ -32,7 +33,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           |> assign(:memberships, memberships)
           |> assign(:staff_member, staff_member)
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))
-          |> assign(:assigned_program_ids, assigned_ids)
+          |> assign(:program_access, program_access)
           |> assign(:programs_empty?, programs == [])
           |> assign(:provider?, Scope.provider?(socket.assigns.current_scope))
           |> assign(:upgrade_confirm?, false)
@@ -104,7 +105,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
   @impl true
   def handle_event("view_roster", %{"id" => program_id} = params, socket) do
-    if MapSet.member?(socket.assigns.assigned_program_ids, program_id) do
+    if StaffProgramAccess.authorized?(socket.assigns.program_access, program_id) do
       roster = Enrollment.list_program_enrollments(program_id)
       can_message? = Messaging.can_initiate_messaging?(%{provider: socket.assigns.provider})
       enrolled_count = Enum.count(roster, &(&1.status == :confirmed))

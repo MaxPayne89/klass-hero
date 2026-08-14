@@ -121,7 +121,13 @@ _Avoid_: using this word for an employee leaving — that is **offboarding**
 
 **Program Staff Assignment**:
 The link recording that a **Staff Member** works on a **Program**. Many Staff Members may be assigned to one Program because a class can need several people. Survives the Staff Member's **deactivation**, but not their **offboarding**.
+This is the **only** thing that decides which Programs a Staff Member sees and may act on — their dashboard, their sessions, participation, and broadcast compose all read it. A **Specialty** never grants access (#1323).
 _Avoid_: Membership, Posting
+
+**Specialty**:
+A descriptive marker of what a **Staff Member** is good at, drawn from the **Category** list and shown on their team card. Editorial, not operational: it says "Maria coaches sports", never "Maria may open this Program". Access is a **Program Staff Assignment** and nothing else.
+Stored in the `staff_members.tags` column, which is why the name misleads — the column predates the distinction and the form has always labelled it "Specialties". Until #1323 the four staff surfaces scoped by matching this against `program.category`, with an empty list silently meaning *every* Program; that made a description into an authorization rule, and made check-in on a child's roster depend on a category string.
+_Avoid_: Tag, Skill, Assignment, and any phrasing that implies it confers access
 
 ## Families & Accounts
 

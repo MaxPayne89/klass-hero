@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
 
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.SessionNote
+  alias KlassHero.ProviderFixtures
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do
@@ -28,15 +29,17 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
     test "redirects to /staff/sessions when session belongs to unassigned program", %{conn: conn} do
       %{conn: conn, provider: provider} = register_and_log_in_staff(%{conn: conn})
 
-      # Create a program with category "arts" — staff has tags: ["sports"]
-      unassigned_program = insert(:program_schema, provider_id: provider.id, category: "arts")
+      # Category "sports" matches the staff member's Specialties on purpose. What makes
+      # this program unreachable is the absence of a Program Staff Assignment (#1323) —
+      # before which a matching category alone would have opened the roster.
+      unassigned_program = insert(:program_schema, provider_id: provider.id, category: "sports")
 
       _listing =
         insert(:program_listing_schema,
           id: unassigned_program.id,
           provider_id: provider.id,
-          category: "arts",
-          title: "Art Workshop"
+          category: "sports",
+          title: "Soccer Training"
         )
 
       session =
@@ -54,7 +57,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
   describe "participation management" do
     setup :register_and_log_in_staff
 
-    setup %{provider: provider} do
+    setup %{provider: provider, staff: staff} do
       program = insert(:program_schema, provider_id: provider.id, category: "sports")
 
       _listing =
@@ -64,6 +67,14 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
           category: "sports",
           title: "Soccer Training"
         )
+
+      # The assignment is what lets this staff member manage the session (#1323) —
+      # their matching Specialty does not.
+      ProviderFixtures.program_assignment_fixture(%{
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: staff.id
+      })
 
       session =
         insert(:program_session_schema,

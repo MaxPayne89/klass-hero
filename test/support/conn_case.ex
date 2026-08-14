@@ -218,6 +218,12 @@ defmodule KlassHeroWeb.ConnCase do
     user = AccountsFixtures.user_fixture(%{intended_roles: [:staff]})
     provider = KlassHero.Factory.insert(:provider_profile_schema)
 
+    # `tags` is kept deliberately non-empty. Since #1323 Specialties grant no access
+    # — Program Staff Assignments do — so leaving a value here means every staff test
+    # built on this helper proves the tags are inert rather than quietly avoiding
+    # them. Tests that need the staff member to reach a program create the assignment
+    # themselves (`ProviderFixtures.program_assignment_fixture/1`); this helper
+    # creates no program, so it cannot.
     staff =
       KlassHero.ProviderFixtures.staff_member_fixture(%{
         provider_id: provider.id,

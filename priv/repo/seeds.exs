@@ -465,7 +465,8 @@ staff_by_provider =
 # S7b: UI TEST STAFF USER
 # ==============================================================================
 # A confirmed staff user for test-driving staff dashboard flows.
-# Linked to Wolf Musik Akademie (pro_1), empty tags (sees all programs).
+# Linked to Wolf Musik Akademie (pro_1). Its Program Staff Assignments are seeded
+# in S9b, below — they, not `tags`, are what its dashboard shows (#1323).
 
 Logger.info("Seeding UI test staff user...")
 
@@ -1016,7 +1017,26 @@ program_staff_assignments =
     |> Repo.insert!()
   end
 
-Logger.info("Created #{length(program_staff_assignments)} program staff assignments")
+# The UI test staff user (S7b) is keyed by nothing `staffing_data` can reach — it
+# carries no email — so it gets its own block. Two of Wolf Musik Akademie's three
+# programs on purpose: test-driving the staff dashboard should show scoping
+# working, not a list that happens to be everything.
+uitest_assignments =
+  for title <- ["Piano for Beginners", "Children's Choir"] do
+    program = Map.fetch!(program_by_title, title)
+
+    %ProgramStaffAssignment{}
+    |> ProgramStaffAssignment.create_changeset(%{
+      provider_id: uitest_staff_member.provider_id,
+      program_id: program.id,
+      staff_member_id: uitest_staff_member.id,
+      assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
+      is_lead_instructor: false
+    })
+    |> Repo.insert!()
+  end
+
+Logger.info("Created #{length(program_staff_assignments) + length(uitest_assignments)} program staff assignments")
 
 # ==============================================================================
 # S10: ENROLLMENT POLICIES (~8 programs)
@@ -1597,7 +1617,7 @@ Logger.info("  Consents: #{length(children)}")
 Logger.info("  Staff members: #{length(staff_members)}")
 Logger.info("  Verification documents: #{length(verification_documents)}")
 Logger.info("  Programs: #{length(inserted_programs)}")
-Logger.info("  Program staff assignments: #{length(program_staff_assignments)}")
+Logger.info("  Program staff assignments: #{length(program_staff_assignments) + length(uitest_assignments)}")
 Logger.info("  Enrollment policies: #{length(enrollment_policy_programs)}")
 Logger.info("  Participant policies: #{length(participant_policy_data)}")
 Logger.info("  Enrollments: #{length(enrollment_records)}")
