@@ -14,6 +14,40 @@ defmodule KlassHero.ProviderFixtures do
   alias KlassHero.Repo
 
   @doc """
+  Assigns a staff member to a program — the row every staff surface reads to
+  decide what that person may see and act on (#1323).
+
+  Inserts directly rather than calling `Provider.assign_staff_to_program/1`,
+  which stages a `staff_assigned_to_program` event. Under the suite's
+  `testing: :inline` Oban that event is delivered *at insert*, which would drag
+  Messaging's staff-assignment handler into the setup of every staff LiveView
+  test that merely needs the person to have a program. Context tests that are
+  actually about the assignment command should call the command.
+
+  Takes the ids explicitly so the caller's existing provider/program/staff are
+  used, unlike `insert(:program_staff_assignment_schema)`, which builds its own
+  and leaves them orphaned.
+  """
+  def program_assignment_fixture(attrs) do
+    attrs = Map.new(attrs)
+
+    {:ok, assignment} =
+      %ProgramStaffAssignment{}
+      |> ProgramStaffAssignment.create_changeset(
+        Map.merge(
+          %{
+            assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
+            is_lead_instructor: false
+          },
+          attrs
+        )
+      )
+      |> Repo.insert()
+
+    assignment
+  end
+
+  @doc """
   Creates a provider profile for testing.
 
   Inserts a provider profile via its changeset and returns the struct.
@@ -105,9 +139,11 @@ defmodule KlassHero.ProviderFixtures do
   rename. The difference is that this writes the *source* — Messaging now derives
   the same fact from Provider rather than mirroring it (#1321).
 
-  Composed from `staff_member_fixture/1`, not from the
-  `:program_staff_assignment_schema` factory, which mints its own provider and
-  program and so cannot attach to the caller's.
+  Composed from `staff_member_fixture/1` plus `program_assignment_fixture/1`, not
+  from the `:program_staff_assignment_schema` factory, which mints its own provider
+  and program and so cannot attach to the caller's. The split is the useful one:
+  `program_assignment_fixture/1` attaches a staff member you already have, this
+  one starts from a *user* and mints the employment too.
 
   Calling this twice for one user at one provider adds a second *assignment* to the
   same staff member rather than a second staff member — both because that is what
@@ -129,17 +165,11 @@ defmodule KlassHero.ProviderFixtures do
           invitation_status: :accepted
         })
 
-    {:ok, assignment} =
-      %{
-        provider_id: provider_id,
-        staff_member_id: staff.id,
-        program_id: program_id,
-        assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
-      }
-      |> ProgramStaffAssignment.create_changeset()
-      |> Repo.insert()
-
-    assignment
+    program_assignment_fixture(%{
+      provider_id: provider_id,
+      staff_member_id: staff.id,
+      program_id: program_id
+    })
   end
 
   defp apply_timestamp_overrides(schema, overrides) when map_size(overrides) == 0, do: schema

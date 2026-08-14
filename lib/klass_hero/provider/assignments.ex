@@ -50,6 +50,7 @@ defmodule KlassHero.Provider.Assignments do
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
+  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
@@ -130,22 +131,6 @@ defmodule KlassHero.Provider.Assignments do
         {:ok, assignment}
       end
     end
-  end
-
-  @doc """
-  Filters a list of programs to only those assigned to a staff member.
-
-  If the staff member has no tags, returns all programs unchanged.
-  If tags are set, returns only programs whose category matches a tag.
-
-  The caller is responsible for fetching the programs list (typically from
-  `ProgramCatalog.list_programs_for_provider/1`), which keeps this function pure
-  and free of I/O. (The module does read the Program Catalog facade elsewhere —
-  see `ensure_program_owned/2` — but only for write-path ownership guards.)
-  """
-  @spec list_assigned_programs(StaffMember.t(), [map()]) :: [map()]
-  def list_assigned_programs(%StaffMember{} = staff_member, programs) when is_list(programs) do
-    filter_programs_by_tags(programs, staff_member.tags)
   end
 
   @doc "Lists all active staff assignments for a program."
@@ -258,6 +243,31 @@ defmodule KlassHero.Provider.Assignments do
     active_assignments_query()
     |> where([a], a.staff_member_id == ^staff_member_id)
     |> Repo.all()
+  end
+
+  @doc """
+  Which programs a staff member may see and act on — every staff surface's
+  authorization answer (#1323).
+
+  Selects ids alone rather than reusing
+  `list_active_assignments_for_staff_member/1`: the callers gate a render loop and
+  need nothing else off the row.
+
+  Not provider-scoped, because the staff member arrives already resolved from the
+  authenticated scope and carries the tenancy with them; a second narrowing here
+  would only restate it.
+  """
+  @spec get_staff_program_access(String.t()) :: StaffProgramAccess.t()
+  def get_staff_program_access(staff_member_id) when is_binary(staff_member_id) do
+    program_ids =
+      from(a in ProgramStaffAssignment,
+        where: a.staff_member_id == ^staff_member_id and is_nil(a.unassigned_at),
+        select: a.program_id
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    %StaffProgramAccess{staff_member_id: staff_member_id, program_ids: program_ids}
   end
 
   @doc """
@@ -504,12 +514,5 @@ defmodule KlassHero.Provider.Assignments do
     from a in ProgramStaffAssignment,
       where: is_nil(a.unassigned_at),
       order_by: [asc: a.assigned_at]
-  end
-
-  # Empty tags = staff sees all programs; populated tags restrict to matching categories.
-  defp filter_programs_by_tags(programs, []), do: programs
-
-  defp filter_programs_by_tags(programs, tags) when is_list(tags) do
-    Enum.filter(programs, &(&1.category in tags))
   end
 end

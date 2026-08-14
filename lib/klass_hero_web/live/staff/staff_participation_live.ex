@@ -10,6 +10,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     ]
 
   alias KlassHero.Participation
+  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
@@ -21,7 +22,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
   def mount(%{"session_id" => session_id}, _session, socket) do
     staff_member = socket.assigns.current_scope.staff_member
 
-    {_programs, assigned_program_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
+    {_programs, program_access} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
     socket =
       socket
@@ -30,7 +31,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
       |> assign(:session_id, session_id)
       |> assign(:provider_id, staff_member.provider_id)
       |> assign(:staff_member, staff_member)
-      |> assign(:assigned_program_ids, assigned_program_ids)
+      |> assign(:program_access, program_access)
       |> assign(:session, nil)
       |> assign(:participation_records, [])
       |> assign(:checkout_form_expanded, nil)
@@ -193,7 +194,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
 
     case Participation.get_session_with_roster_enriched(session_id) do
       {:ok, session} ->
-        if MapSet.member?(socket.assigns.assigned_program_ids, session.program_id) do
+        if StaffProgramAccess.authorized?(socket.assigns.program_access, session.program_id) do
           socket
           |> assign(:session, session)
           |> assign(:participation_records, session.participation_records || [])

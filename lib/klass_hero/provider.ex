@@ -308,9 +308,6 @@ defmodule KlassHero.Provider do
   """
   defdelegate unassign_staff_from_program(program_id, staff_member_id, provider_id), to: Assignments
 
-  @doc "Filters a list of programs to only those assigned to a staff member."
-  defdelegate list_assigned_programs(staff_member, programs), to: Assignments
-
   @doc "Lists all active staff assignments for a program."
   defdelegate list_active_assignments_for_program(program_id), to: Assignments
 
@@ -328,6 +325,9 @@ defmodule KlassHero.Provider do
 
   @doc "Lists all active program assignments for a staff member."
   defdelegate list_active_assignments_for_staff_member(staff_member_id), to: Assignments
+
+  @doc "Which programs a staff member may see and act on, from their live assignments."
+  defdelegate get_staff_program_access(staff_member_id), to: Assignments
 
   @doc "Promotes a `provider_id`-owned staff member to the program's lead instructor (single source of truth)."
   defdelegate set_lead_instructor(program_id, staff_member_id, provider_id), to: Assignments

@@ -12,6 +12,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
   alias KlassHero.Messaging.Attachment
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
+  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.MessagingComponents
   alias KlassHeroWeb.MessagingLiveHelper
 
@@ -39,7 +40,14 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
     # a missing program are deliberately indistinguishable here.
     case ProgramCatalog.get_program_for_provider(provider.id, program_id) do
       {:ok, program} ->
-        if staff_assigned?(staff_member, program) do
+        # Compose reads the same Program Staff Assignments as every other staff
+        # surface (#1323), so the dashboard can no longer hide a program this page
+        # would let you broadcast about. Only the rule is shared, not
+        # `StaffLiveHelpers.load_assigned_programs/1` — that fetches every listing
+        # the provider has, and this page has already resolved its one program.
+        access = Provider.get_staff_program_access(staff_member.id)
+
+        if StaffProgramAccess.authorized?(access, program.id) do
           mount_form(socket, provider, program)
         else
           redirect_to_dashboard(socket, gettext("You are not assigned to this program"))
@@ -75,10 +83,6 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
      socket
      |> put_flash(:error, message)
      |> push_navigate(to: ~p"/staff/dashboard")}
-  end
-
-  defp staff_assigned?(staff_member, program) do
-    staff_member.tags == [] or program.category in staff_member.tags
   end
 
   @impl true

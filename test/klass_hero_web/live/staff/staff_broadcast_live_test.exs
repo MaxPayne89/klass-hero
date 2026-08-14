@@ -33,6 +33,13 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
           category: "sports"
         )
 
+      # Compose is gated on this row since #1323, not on `tags` matching the category.
+      program_assignment_fixture(%{
+        provider_id: provider.id,
+        program_id: program_write.id,
+        staff_member_id: staff.id
+      })
+
       parent_profile = insert(:parent_profile_schema, identity_id: parent_user.id)
       {child, _parent} = KlassHero.Factory.insert_child_with_guardian(parent: parent_profile)
 
@@ -103,18 +110,20 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
     end
 
     test "rejects broadcast for non-assigned program", %{conn: conn, provider: provider} do
-      # Write model needed for ProgramCatalog.get_program_by_id
+      # Category "sports" matches the staff member's Specialties deliberately: what
+      # rejects this is the missing Program Staff Assignment (#1323). Compose and the
+      # reply guard in `Messaging.send_message` now scope the same way, so a staffer
+      # can no longer open a compose page for a program their dashboard hides.
       unassigned_program =
         insert(:program_schema,
           provider_id: provider.id,
-          category: "music"
+          category: "sports"
         )
 
-      # Read model needed for list_programs_for_provider (tag matching)
       insert(:program_listing_schema,
         id: unassigned_program.id,
         provider_id: provider.id,
-        category: "music"
+        category: "sports"
       )
 
       assert {:error, {:live_redirect, %{to: "/staff/dashboard", flash: flash}}} =
@@ -148,16 +157,23 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
       provider = provider_profile_fixture()
       user = user_fixture(intended_roles: [:staff])
 
-      staff_member_fixture(%{
-        provider_id: provider.id,
-        user_id: user.id,
-        active: true,
-        invitation_status: :accepted,
-        tags: ["sports"]
-      })
+      staff =
+        staff_member_fixture(%{
+          provider_id: provider.id,
+          user_id: user.id,
+          active: true,
+          invitation_status: :accepted,
+          tags: ["sports"]
+        })
 
       program =
         insert(:program_schema, provider_id: provider.id, category: "sports")
+
+      program_assignment_fixture(%{
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: staff.id
+      })
 
       conn = log_in_user(conn, user)
       %{conn: conn, program: program}

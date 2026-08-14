@@ -8,6 +8,29 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   alias KlassHero.Accounts.User
   alias KlassHero.Provider.PayRate
 
+  # A program on this staff member's dashboard: the write row the assignment's FK
+  # needs, the listing row the dashboard renders, and the Program Staff Assignment
+  # that puts it there. Category is arbitrary — since #1323 it gates nothing, so
+  # these tests no longer derive it from `staff.tags`.
+  defp assigned_listing(provider, staff, attrs \\ []) do
+    category = Keyword.get(attrs, :category, "sports")
+    write = insert(:program_schema, provider_id: provider.id, category: category)
+
+    listing =
+      insert(
+        :program_listing_schema,
+        Keyword.merge([id: write.id, provider_id: provider.id, category: category], attrs)
+      )
+
+    program_assignment_fixture(%{
+      provider_id: provider.id,
+      program_id: write.id,
+      staff_member_id: staff.id
+    })
+
+    listing
+  end
+
   describe "staff dashboard" do
     setup %{conn: conn} do
       user = user_fixture(intended_roles: [:staff])
@@ -81,11 +104,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      program =
-        insert(:program_listing_schema,
-          provider_id: provider.id,
-          category: List.first(staff.tags) || "education"
-        )
+      program = assigned_listing(provider, staff)
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -98,11 +117,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      program =
-        insert(:program_listing_schema,
-          provider_id: provider.id,
-          category: List.first(staff.tags) || "education"
-        )
+      program = assigned_listing(provider, staff)
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -115,11 +130,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
     end
 
     test "closing roster modal hides it", %{conn: conn, provider: provider, staff: staff} do
-      program =
-        insert(:program_listing_schema,
-          provider_id: provider.id,
-          category: List.first(staff.tags) || "education"
-        )
+      program = assigned_listing(provider, staff)
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -177,6 +188,12 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
           provider_id: provider.id,
           category: "sports"
         )
+
+      program_assignment_fixture(%{
+        provider_id: provider.id,
+        program_id: program_write.id,
+        staff_member_id: staff.id
+      })
 
       parent_profile = insert(:parent_profile_schema, identity_id: parent_user.id)
 
@@ -285,6 +302,12 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
           provider_id: provider.id,
           category: "sports"
         )
+
+      program_assignment_fixture(%{
+        provider_id: provider.id,
+        program_id: program_write.id,
+        staff_member_id: staff.id
+      })
 
       {child, parent} = KlassHero.Factory.insert_child_with_guardian()
 

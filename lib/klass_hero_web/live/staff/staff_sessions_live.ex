@@ -2,6 +2,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Participation
+  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 
@@ -13,7 +14,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     provider_id = staff_member.provider_id
     selected_date = Date.utc_today()
 
-    {programs, assigned_program_ids} = StaffLiveHelpers.load_assigned_programs(staff_member)
+    {programs, program_access} = StaffLiveHelpers.load_assigned_programs(staff_member)
 
     socket =
       socket
@@ -24,7 +25,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
       |> assign(:provider_id, provider_id)
       |> assign(:staff_member, staff_member)
       |> assign(:selected_date, selected_date)
-      |> assign(:assigned_program_ids, assigned_program_ids)
+      |> assign(:program_access, program_access)
       |> assign(:filter_program_id, nil)
       |> stream(:sessions, [])
 
@@ -148,15 +149,15 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   defp load_sessions(socket) do
     provider_id = socket.assigns.provider_id
     selected_date = socket.assigns.selected_date
-    assigned_program_ids = socket.assigns.assigned_program_ids
+    access = socket.assigns.program_access
     filter_program_id = socket.assigns.filter_program_id
 
     {:ok, sessions} = Participation.list_provider_sessions(provider_id, selected_date)
 
     filtered =
       sessions
-      |> Enum.filter(&MapSet.member?(assigned_program_ids, &1.program_id))
-      |> maybe_filter_by_program(filter_program_id, assigned_program_ids)
+      |> Enum.filter(&StaffProgramAccess.authorized?(access, &1.program_id))
+      |> maybe_filter_by_program(filter_program_id, access)
 
     socket
     |> stream(:sessions, filtered, reset: true)
@@ -164,11 +165,11 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     |> assign(:sessions_error, nil)
   end
 
-  defp maybe_filter_by_program(sessions, nil, _assigned_ids), do: sessions
-  defp maybe_filter_by_program(sessions, "", _assigned_ids), do: sessions
+  defp maybe_filter_by_program(sessions, nil, _access), do: sessions
+  defp maybe_filter_by_program(sessions, "", _access), do: sessions
 
-  defp maybe_filter_by_program(sessions, program_id, assigned_ids) do
-    if MapSet.member?(assigned_ids, program_id) do
+  defp maybe_filter_by_program(sessions, program_id, access) do
+    if StaffProgramAccess.authorized?(access, program_id) do
       Enum.filter(sessions, &(&1.program_id == program_id))
     else
       sessions
@@ -178,7 +179,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   defp authorize_session_action(session_id, socket) do
     case Participation.get_session_with_roster(session_id) do
       {:ok, %{session: session}} ->
-        if MapSet.member?(socket.assigns.assigned_program_ids, session.program_id) do
+        if StaffProgramAccess.authorized?(socket.assigns.program_access, session.program_id) do
           :ok
         else
           {:error, :unauthorized}
@@ -195,7 +196,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
         # Session events fan out across dates — a schedule edit cancels every
         # orphaned date, an enrolment seeds every upcoming roster — so check the
         # session's own date rather than trusting the event to concern this day.
-        if MapSet.member?(socket.assigns.assigned_program_ids, session.program_id) and
+        if StaffProgramAccess.authorized?(socket.assigns.program_access, session.program_id) and
              session.session_date == socket.assigns.selected_date do
           socket
           |> assign(
