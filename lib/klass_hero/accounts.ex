@@ -135,17 +135,51 @@ defmodule KlassHero.Accounts do
   end
 
   @doc """
-  Deletes a staff member row, atomically tearing down the now-backing-less
+  Ends a staff member's employment, atomically tearing down the now-backing-less
   `:staff` role (ADR-0005, #972).
 
+  Provider offboards the person — retiring every program assignment so Messaging
+  drops them from those conversations (#1292) — and Accounts settles the persona.
   `:staff` is removed from the linked user only when no other active linked staff
   row remains for them; multi-employer users keep it, and unlinked display-only
   rows never touch roles.
 
-  Returns `{:ok, %StaffMember{}}` (the deleted row) or `{:error, :not_found}`.
+  Returns `{:ok, %StaffMember{}}` (the offboarded row) or `{:error, :not_found}`.
+  """
+  @spec offboard_staff_member(String.t(), String.t()) ::
+          {:ok, StaffMember.t()} | {:error, :not_found}
+  def offboard_staff_member(provider_id, staff_id) when is_binary(provider_id) and is_binary(staff_id) do
+    context_span entity: "user" do
+      Repo.transaction(fn ->
+        # The fetch is the provider-scoping step — foreign ≡ missing — and supplies
+        # the struct the offboard command takes.
+        with {:ok, staff} <- Provider.get_staff_member(staff_id, provider_id),
+             {:ok, %{staff_member: offboarded}} <- Provider.offboard_staff_member(staff),
+             # Runs after the `active` flip, in the same transaction, so the
+             # "any employment left?" query already sees this one as ended.
+             :ok <- maybe_revoke_staff_role(offboarded) do
+          offboarded
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    end
+  end
+
+  @doc """
+  Erases a staff row that never became anything — the narrow counterpart to
+  `offboard_staff_member/2` (#1292).
+
+  Refuses with `{:error, :has_history}` unless the row has no linked user, no
+  invitation ever sent, and no program assignment ever created; `Provider` owns
+  that precondition. Use it for a roster entry typed in by mistake, never to
+  remove someone who worked here.
+
+  Returns `{:ok, %StaffMember{}}` (the deleted row) or
+  `{:error, :not_found | :has_history}`.
   """
   @spec remove_staff_member(String.t(), String.t()) ::
-          {:ok, StaffMember.t()} | {:error, :not_found}
+          {:ok, StaffMember.t()} | {:error, :not_found | :has_history}
   def remove_staff_member(provider_id, staff_id) when is_binary(provider_id) and is_binary(staff_id) do
     context_span entity: "user" do
       Repo.transaction(fn ->
@@ -167,7 +201,7 @@ defmodule KlassHero.Accounts do
   defp maybe_revoke_staff_role(%StaffMember{user_id: nil}), do: :ok
 
   defp maybe_revoke_staff_role(%StaffMember{user_id: user_id}) do
-    # Queried after the delete (same txn): :not_found means this was the last active employment
+    # Queried after the employment ended (same txn): :not_found means this was the last one
     case Provider.get_active_staff_member_by_user(user_id) do
       {:ok, _still_employed} -> :ok
       {:error, :not_found} -> revoke_staff(user_id)

@@ -17,7 +17,7 @@ defmodule KlassHero.Provider.AnonymizeUserData do
   import Ecto.Query, only: [from: 2]
 
   alias KlassHero.Provider.IncidentReport
-  alias KlassHero.Provider.Staff
+  alias KlassHero.Provider.OffboardStaffMember
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
 
@@ -67,14 +67,18 @@ defmodule KlassHero.Provider.AnonymizeUserData do
     end
   end
 
-  # Erasure is an ending of employment plus a scrub, and the ordering is
-  # load-bearing: deactivate_staff_member/1 short-circuits on an already-inactive
-  # row, so scrubbing first (which sets active: false) would silently skip the
-  # lead-instructor clearing and the event that clears the erased name from read
-  # tables. Deactivate, then scrub.
+  # Erasure is an offboarding plus a scrub, and the ordering is load-bearing: the
+  # employment write short-circuits on an already-inactive row, so scrubbing first
+  # (which sets active: false) would silently skip the event that clears the
+  # erased name from read tables. Offboard, then scrub.
+  #
+  # Offboarding rather than deactivating (#1292): deactivation deliberately keeps
+  # Program Staff Assignments alive, which for an erased person means their
+  # account stays an active participant in the programs' conversations. Retiring
+  # each assignment is what stages the event Messaging listens to.
   defp erase_staff_member(staff) do
-    case Staff.deactivate_staff_member(staff) do
-      {:ok, deactivated} -> update!(StaffMember.anonymize_changeset(deactivated))
+    case OffboardStaffMember.execute(staff) do
+      {:ok, %{staff_member: offboarded}} -> update!(StaffMember.anonymize_changeset(offboarded))
       {:error, reason} -> Repo.rollback(reason)
     end
   end

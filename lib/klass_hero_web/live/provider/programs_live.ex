@@ -42,9 +42,11 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     staff_members = fetch_staff_members(provider.id)
     staff_views = StaffMemberPresenter.to_admin_view_list(staff_members)
 
+    # Current team only: a former member has no active assignment left, so
+    # filtering by them would always come back empty — a dead option (#1292).
     staff_options =
       [%{value: "all", label: gettext("All Staff")}] ++
-        Enum.map(staff_views, &%{value: &1.id, label: &1.full_name})
+        for member <- staff_views, member.active, do: %{value: member.id, label: member.full_name}
 
     socket =
       socket

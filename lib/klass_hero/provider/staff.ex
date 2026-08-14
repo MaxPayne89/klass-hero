@@ -120,22 +120,76 @@ defmodule KlassHero.Provider.Staff do
   end
 
   @doc """
-  Deletes a staff member owned by `provider_id`.
+  Erases a staff member owned by `provider_id` — the narrow hard delete (#1292).
 
-  Scoped like `get_staff_member/2`, so a foreign row is unreachable rather than
-  fetched and then rejected — the guard cannot be skipped by a caller.
+  Removing someone who actually worked here is `offboard_staff_member/1`. This is
+  for a row that is provably a data-entry mistake, and it refuses anything else
+  with `{:error, :has_history}`. A row qualifies only when it has **no linked
+  user**, **no invitation was ever sent**, and **no assignment row ever existed**:
+
+    * an invitation means a real person was told they have a role at this
+      business, and
+    * an assignment means `staff_assigned_to_program` / `staff_unassigned_from_program`
+      events exist naming this `staff_member_id`.
+
+  Deleting under either would leave those pointing at nothing — silently, because
+  `program_staff_assignments.staff_member_id` is `on_delete: :delete_all` and a
+  cascade runs no changeset and stages no event. That silence *was* #1292.
+
+  The predicate and the delete are one statement, so an invitation sent or an
+  assignment created concurrently cannot slip between check and delete. Scoped
+  like `get_staff_member/2`, so a foreign row is unreachable rather than fetched
+  and then rejected.
   """
-  @spec delete_staff_member(String.t(), String.t()) :: :ok | {:error, :not_found}
+  @spec delete_staff_member(String.t(), String.t()) :: :ok | {:error, :not_found | :has_history}
   def delete_staff_member(staff_id, provider_id) when is_binary(staff_id) and is_binary(provider_id) do
     context_span entity: "staff_member" do
-      case get_staff_member(staff_id, provider_id) do
-        {:ok, staff} ->
-          {:ok, _} = Repo.delete(staff)
-          :ok
-
-        {:error, :not_found} ->
-          {:error, :not_found}
+      case Repo.delete_all(erasable_scope(staff_id, provider_id)) do
+        {1, _} -> :ok
+        {0, _} -> classify_refusal(staff_id, provider_id)
       end
+    end
+  end
+
+  @doc """
+  Ids of the provider's staff members that `delete_staff_member/2` would accept.
+
+  Shares the predicate with the delete itself, so the Team tab can only offer the
+  action where it would succeed — a UI copy of the rule would drift from it.
+  """
+  @spec erasable_staff_ids(String.t()) :: MapSet.t(String.t())
+  def erasable_staff_ids(provider_id) when is_binary(provider_id) do
+    provider_id
+    |> erasable_scope()
+    |> select([s], s.id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp erasable_scope(staff_id, provider_id) do
+    from [staff: s] in erasable_scope(provider_id), where: s.id == ^staff_id
+  end
+
+  defp erasable_scope(provider_id) do
+    from s in StaffMember,
+      as: :staff,
+      where: s.provider_id == ^provider_id,
+      where: is_nil(s.user_id) and is_nil(s.invitation_status),
+      where:
+        not exists(
+          from a in ProgramStaffAssignment,
+            where: a.staff_member_id == parent_as(:staff).id,
+            select: 1
+        )
+  end
+
+  # The delete matched nothing for one of two reasons. Re-reading tells them
+  # apart for the caller's error, and goes through the scoped getter so a foreign
+  # row still reports as missing rather than as a row that exists but is protected.
+  defp classify_refusal(staff_id, provider_id) do
+    case get_staff_member(staff_id, provider_id) do
+      {:ok, _protected} -> {:error, :has_history}
+      {:error, :not_found} -> {:error, :not_found}
     end
   end
 

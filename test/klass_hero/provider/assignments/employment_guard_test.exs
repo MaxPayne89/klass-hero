@@ -112,7 +112,13 @@ defmodule KlassHero.Provider.Assignments.EmploymentGuardTest do
                Repo.get_by(ProgramStaffAssignment, program_id: ctx.program.id, staff_member_id: ctx.staff.id)
     end
 
-    test "delete still reaches a deactivated member (offboarding, GDPR erasure)", ctx do
+    test "offboarding still reaches a deactivated member (GDPR erasure)", ctx do
+      # Erasure arrives after someone already left, so the command must not refuse
+      # an inactive row — it still has assignments to retire.
+      assert {:ok, %{staff_member: %{active: false}}} = Provider.offboard_staff_member(ctx.deactivated)
+    end
+
+    test "erasing a historyless row still reaches a deactivated member", ctx do
       assert :ok = Provider.delete_staff_member(ctx.deactivated.id, ctx.provider.id)
       assert {:error, :not_found} = Provider.get_staff_member(ctx.deactivated.id, ctx.provider.id)
     end

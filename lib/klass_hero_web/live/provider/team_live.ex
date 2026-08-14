@@ -28,7 +28,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
     scope = socket.assigns.current_scope
 
     staff_members = fetch_staff_members(provider.id)
-    staff_views = StaffMemberPresenter.to_admin_view_list(staff_members)
+    {current_views, former_views} = roster_views(staff_members, provider.id)
 
     socket =
       socket
@@ -37,8 +37,10 @@ defmodule KlassHeroWeb.Provider.TeamLive do
       |> assign(active_nav: :home)
       |> assign(:self_staffed?, self_staffed?(staff_members, scope))
       |> assign(:self_staffing?, false)
-      |> stream(:team_members, staff_views)
-      |> update_staff_count(length(staff_views))
+      |> stream(:team_members, current_views)
+      |> stream(:former_members, former_views)
+      |> update_staff_count(length(current_views))
+      |> assign(former_count: length(former_views))
       |> assign(show_staff_form: false, editing_staff_id: nil)
       |> assign(staff_form: to_form(Provider.new_staff_member_changeset(), as: :staff_member_schema))
       |> assign(categories: ProgramCatalog.program_categories())
@@ -147,12 +149,55 @@ defmodule KlassHeroWeb.Provider.TeamLive do
   end
 
   @impl true
+  def handle_event("end_employment", %{"id" => staff_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    # Accounts orchestrates: Provider offboards (every program assignment retired,
+    # which is what takes them out of the programs' conversations — #1292) and
+    # Accounts durably drops :staff when no other active employment remains (#972),
+    # atomically. It also enforces provider ownership — a foreign staff_id comes
+    # back as :not_found.
+    case Accounts.offboard_staff_member(provider_id, staff_id) do
+      {:ok, offboarded} ->
+        {:noreply,
+         socket
+         |> move_to_former(offboarded)
+         |> heal_after_self_delete({:ok, offboarded})
+         |> clear_flash(:error)
+         |> put_flash(:info, gettext("Team member removed from the team."))}
+
+      {:error, :not_found} ->
+        {:noreply, staff_not_found(socket, "offboard", staff_id, provider_id)}
+    end
+  end
+
+  @impl true
+  def handle_event("reactivate_member", %{"id" => staff_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    with {:ok, staff} <- Provider.get_staff_member(staff_id, provider_id),
+         {:ok, reactivated} <- Provider.reactivate_staff_member(staff) do
+      {:noreply,
+       socket
+       |> move_to_current(reactivated)
+       |> heal_after_self_reactivate(reactivated)
+       |> clear_flash(:error)
+       # Employment only: assignments retired on offboarding do not come back,
+       # so say so rather than let "reactivated" imply their programs returned.
+       |> put_flash(:info, gettext("Team member is back. Assign them to programs again when you're ready."))}
+    else
+      {:error, :not_found} ->
+        {:noreply, staff_not_found(socket, "reactivate", staff_id, provider_id)}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not bring this team member back. Please try again."))}
+    end
+  end
+
+  @impl true
   def handle_event("delete_member", %{"id" => staff_id}, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 
-    # Accounts orchestrates: it deletes the Provider row AND durably drops :staff
-    # when no other active linked row remains (#972), atomically. It also enforces
-    # provider ownership — a foreign staff_id comes back as :not_found.
     case Accounts.remove_staff_member(provider_id, staff_id) do
       {:ok, deleted} ->
         {:noreply,
@@ -163,14 +208,18 @@ defmodule KlassHeroWeb.Provider.TeamLive do
          |> clear_flash(:error)
          |> put_flash(:info, gettext("Team member removed."))}
 
-      {:error, :not_found} ->
-        # Log the attempt so an enumeration attack is visible.
-        Logger.warning("[TeamLive] Staff delete returned not_found",
-          staff_member_id: staff_id,
-          provider_id: provider_id
-        )
+      # The card only offers Delete on a row with no history, so this is a stale
+      # tab: someone was invited or assigned since the page loaded.
+      {:error, :has_history} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("This person has a history here now — use 'Remove from team' instead.")
+         )}
 
-        {:noreply, put_flash(socket, :error, gettext("Staff member not found."))}
+      {:error, :not_found} ->
+        {:noreply, staff_not_found(socket, "delete", staff_id, provider_id)}
     end
   end
 
@@ -273,15 +322,15 @@ defmodule KlassHeroWeb.Provider.TeamLive do
       {:error, :already_staffed} ->
         # Stale tab: they self-staffed elsewhere. The row exists but isn't in
         # this tab's memory, so converge the whole page: flags, nav, roster.
-        staff_views =
-          socket.assigns.current_scope.provider.id
-          |> fetch_staff_members()
-          |> StaffMemberPresenter.to_admin_view_list()
+        provider_id = socket.assigns.current_scope.provider.id
+        {current_views, former_views} = roster_views(fetch_staff_members(provider_id), provider_id)
 
         {:noreply,
          socket
-         |> stream(:team_members, staff_views, reset: true)
-         |> update_staff_count(length(staff_views))
+         |> stream(:team_members, current_views, reset: true)
+         |> stream(:former_members, former_views, reset: true)
+         |> update_staff_count(length(current_views))
+         |> assign(former_count: length(former_views))
          |> assign(show_staff_form: false, self_staffing?: false)
          |> assign(self_staffed?: true, dual_role?: true)
          |> put_flash(:info, gettext("You're already on your team."))}
@@ -429,9 +478,58 @@ defmodule KlassHeroWeb.Provider.TeamLive do
     assign(socket, staff_count: count)
   end
 
+  # Log the attempt so an enumeration attack is visible.
+  defp staff_not_found(socket, action, staff_id, provider_id) do
+    Logger.warning("[TeamLive] Staff #{action} returned not_found",
+      staff_member_id: staff_id,
+      provider_id: provider_id
+    )
+
+    put_flash(socket, :error, gettext("Staff member not found."))
+  end
+
   defp fetch_staff_members(provider_id) do
     {:ok, members} = Provider.list_staff_members(provider_id)
     members
+  end
+
+  # The roster read is not active-filtered, so the tab splits it: people who work
+  # here, and former team members kept for their history (and for Reactivate).
+  # `staff_count` counts the current team only.
+  defp roster_views(staff_members, provider_id) do
+    erasable = Provider.erasable_staff_ids(provider_id)
+    {current, former} = Enum.split_with(staff_members, & &1.active)
+
+    {StaffMemberPresenter.to_admin_view_list(current, erasable),
+     StaffMemberPresenter.to_admin_view_list(former, erasable)}
+  end
+
+  defp move_to_former(socket, staff) do
+    socket
+    |> stream_delete_by_dom_id(:team_members, "team_members-#{staff.id}")
+    |> stream_insert(:former_members, StaffMemberPresenter.to_admin_view(staff))
+    |> update_staff_count(max(0, socket.assigns.staff_count - 1))
+    |> assign(former_count: socket.assigns.former_count + 1)
+  end
+
+  defp move_to_current(socket, staff) do
+    erasable = Provider.erasable_staff_ids(staff.provider_id)
+
+    socket
+    |> stream_delete_by_dom_id(:former_members, "former_members-#{staff.id}")
+    |> stream_insert(:team_members, StaffMemberPresenter.to_admin_view(staff, erasable))
+    |> update_staff_count(socket.assigns.staff_count + 1)
+    |> assign(former_count: max(0, socket.assigns.former_count - 1))
+  end
+
+  # Mirror of heal_after_self_delete/2: reinstating their own row restores the
+  # self-staff state and the staff-dashboard cross-nav.
+  defp heal_after_self_reactivate(socket, %{user_id: user_id}) do
+    if user_id == socket.assigns.current_scope.user.id do
+      assign(socket, self_staffed?: true, dual_role?: true)
+    else
+      socket
+    end
   end
 
   defp upload_headshot(socket, provider_id) do
@@ -555,6 +653,19 @@ defmodule KlassHeroWeb.Provider.TeamLive do
           </div>
           <div :for={{id, member} <- @streams.team_members} id={id}>
             <.team_member_card member={member} rate_label={member.rate_label} />
+          </div>
+        </div>
+
+        <%!-- Streams cannot report their own size, so the section is gated on a
+              counted assign rather than on the stream (see LiveView streams). --%>
+        <div :if={@former_count > 0} id="former-members-section" class="space-y-3">
+          <h3 id="former-members-heading" class={KlassHeroWeb.Theme.typography(:card_title)}>
+            {gettext("Former team members")}
+          </h3>
+          <div id="former-members" phx-update="stream" class="space-y-3">
+            <div :for={{id, member} <- @streams.former_members} id={id}>
+              <.former_member_card member={member} />
+            </div>
           </div>
         </div>
       </div>
