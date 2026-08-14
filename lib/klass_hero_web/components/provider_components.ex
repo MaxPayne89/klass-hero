@@ -551,21 +551,92 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             {gettext("Resend")}
           </button>
+          <%!-- Ending employment is routine and reversible, so it reads as an
+                ordinary action rather than a red destructive one. --%>
           <button
             type="button"
-            phx-click="delete_member"
+            id={"end-employment-#{@member.id}"}
+            phx-click="end_employment"
             phx-value-id={@member.id}
-            data-confirm={gettext("Are you sure you want to remove this team member?")}
+            data-confirm={
+              gettext(
+                "%{name} will be unassigned from every program and removed from those conversations. Their history is kept and you can add them back later.",
+                name: @member.full_name
+              )
+            }
             class={[
-              "p-2 text-red-500 hover:bg-red-50",
+              "px-3 py-2 border border-hero-grey-300 bg-white",
+              "hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
           >
-            <.icon name="hero-x-mark-mini" class="w-5 h-5" />
+            {gettext("Remove from team")}
           </button>
         </div>
+
+        <%!-- Only rendered where the context would actually accept it: no linked
+              account, no invitation ever sent, no program assignment ever. Absent
+              rather than disabled — explaining a refusal for an action nobody was
+              trying to take is clutter, and "Remove from team" is the answer for
+              everyone else. --%>
+        <button
+          :if={@member.can_delete?}
+          type="button"
+          id={"delete-member-#{@member.id}"}
+          phx-click="delete_member"
+          phx-value-id={@member.id}
+          data-confirm={
+            gettext(
+              "This deletes %{name} permanently — there's nothing to undo. Use it only for an entry added by mistake.",
+              name: @member.full_name
+            )
+          }
+          class={[
+            "mt-2 text-xs text-hero-grey-500 underline hover:text-red-600",
+            Theme.transition(:normal)
+          ]}
+        >
+          {gettext("Delete entry")}
+        </button>
       </div>
+    </div>
+    """
+  end
+
+  @doc """
+  A team member whose employment has ended.
+
+  Deliberately not the active card greyed out: the only action is bringing them
+  back. Editing, resending an invitation or deleting all belong to someone who
+  currently works here, so reinstate first and act after.
+  """
+  attr :member, :map, required: true
+
+  def former_member_card(assigns) do
+    ~H"""
+    <div class={[
+      "flex items-center justify-between gap-3 bg-white border border-hero-grey-200 px-4 py-3",
+      Theme.rounded(:xl)
+    ]}>
+      <div class="min-w-0">
+        <p class="font-medium text-hero-charcoal truncate">{@member.full_name}</p>
+        <p :if={@member.role} class="text-xs text-hero-grey-500 truncate">{@member.role}</p>
+      </div>
+      <button
+        type="button"
+        id={"reactivate-member-#{@member.id}"}
+        phx-click="reactivate_member"
+        phx-value-id={@member.id}
+        class={[
+          "shrink-0 px-3 py-2 border border-hero-grey-300 bg-white",
+          "hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+          Theme.rounded(:lg),
+          Theme.transition(:normal)
+        ]}
+      >
+        {gettext("Add back to team")}
+      </button>
     </div>
     """
   end

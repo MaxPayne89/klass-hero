@@ -184,8 +184,8 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
     end
   end
 
-  describe "delete member" do
-    test "deleting a member shows success flash", %{conn: conn, provider: provider} do
+  describe "end employment" do
+    setup %{provider: provider} do
       staff =
         ProviderFixtures.staff_member_fixture(
           provider_id: provider.id,
@@ -193,16 +193,79 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
           last_name: "Smith"
         )
 
+      %{staff: staff}
+    end
+
+    test "moves the member out of the roster and into former team members", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/dashboard/team")
+
+      assert has_element?(view, "#team_members-#{ctx.staff.id}")
+
+      view |> element("#end-employment-#{ctx.staff.id}") |> render_click()
+
+      refute has_element?(view, "#team_members-#{ctx.staff.id}")
+      assert has_element?(view, "#former_members-#{ctx.staff.id}")
+    end
+
+    test "survives a reload — the roster read, not just the stream, excludes them", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/dashboard/team")
+      view |> element("#end-employment-#{ctx.staff.id}") |> render_click()
+
+      {:ok, reloaded, _html} = live(ctx.conn, ~p"/provider/dashboard/team")
+
+      refute has_element?(reloaded, "#team_members-#{ctx.staff.id}")
+      assert has_element?(reloaded, "#former_members-#{ctx.staff.id}")
+    end
+
+    test "keeps the employment row rather than destroying it", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/dashboard/team")
+
+      view |> element("#end-employment-#{ctx.staff.id}") |> render_click()
+
+      assert {:ok, %{active: false}} = Provider.get_staff_member(ctx.staff.id)
+    end
+
+    test "reactivating puts them back on the roster", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/dashboard/team")
+      view |> element("#end-employment-#{ctx.staff.id}") |> render_click()
+
+      view |> element("#reactivate-member-#{ctx.staff.id}") |> render_click()
+
+      assert has_element?(view, "#team_members-#{ctx.staff.id}")
+      refute has_element?(view, "#former_members-#{ctx.staff.id}")
+      assert {:ok, %{active: true}} = Provider.get_staff_member(ctx.staff.id)
+    end
+  end
+
+  describe "delete member" do
+    test "offers deletion for a roster entry with no history", %{conn: conn, provider: provider} do
+      typo = ProviderFixtures.staff_member_fixture(provider_id: provider.id, first_name: "Jhon")
+
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
-      html = render(view)
-      assert html =~ "Alice Smith"
+      assert has_element?(view, "#delete-member-#{typo.id}")
 
-      view
-      |> element(~s(button[phx-click="delete_member"][phx-value-id="#{staff.id}"]))
-      |> render_click()
+      view |> element("#delete-member-#{typo.id}") |> render_click()
 
       assert render(view) =~ "Team member removed."
+      assert {:error, :not_found} = Provider.get_staff_member(typo.id)
+    end
+
+    test "does not offer deletion once the person has history", %{conn: conn, provider: provider} do
+      # An invitation went out: a real person was told they work here, so the row
+      # is no longer a typo to erase. Absent rather than disabled — the answer for
+      # this member is End employment, and the UI should not suggest otherwise.
+      invited =
+        ProviderFixtures.staff_member_fixture(
+          provider_id: provider.id,
+          first_name: "Real",
+          invitation_status: :sent
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      assert has_element?(view, "#end-employment-#{invited.id}")
+      refute has_element?(view, "#delete-member-#{invited.id}")
     end
   end
 

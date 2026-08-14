@@ -69,13 +69,21 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenter do
 
   @doc """
   Business-owner-facing view. Extends the card view with pay_rate + formatted rate_label.
-  """
-  @spec to_admin_view(StaffMember.t()) :: map()
-  def to_admin_view(%StaffMember{} = staff), do: with_pay_rate(staff)
 
-  @spec to_admin_view_list([StaffMember.t()]) :: [map()]
-  def to_admin_view_list(staff_members) when is_list(staff_members) do
-    Enum.map(staff_members, &to_admin_view/1)
+  `erasable_ids` comes from `Provider.erasable_staff_ids/1` and decides `can_delete?`
+  — whether the Team tab offers the hard delete on this row. It defaults to none,
+  so a caller that does not ask about erasability never renders the action.
+  """
+  @spec to_admin_view(StaffMember.t(), MapSet.t(String.t())) :: map()
+  def to_admin_view(%StaffMember{} = staff, erasable_ids \\ MapSet.new()) do
+    staff
+    |> with_pay_rate()
+    |> Map.put(:can_delete?, MapSet.member?(erasable_ids, staff.id))
+  end
+
+  @spec to_admin_view_list([StaffMember.t()], MapSet.t(String.t())) :: [map()]
+  def to_admin_view_list(staff_members, erasable_ids \\ MapSet.new()) when is_list(staff_members) do
+    Enum.map(staff_members, &to_admin_view(&1, erasable_ids))
   end
 
   @doc """

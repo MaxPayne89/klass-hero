@@ -27,6 +27,7 @@ defmodule KlassHero.Provider do
   alias KlassHero.Provider.AnonymizeUserData
   alias KlassHero.Provider.Assignments
   alias KlassHero.Provider.Incidents
+  alias KlassHero.Provider.OffboardStaffMember
   alias KlassHero.Provider.Profiles
   alias KlassHero.Provider.Programs
   alias KlassHero.Provider.ProviderProfile
@@ -205,11 +206,23 @@ defmodule KlassHero.Provider do
   @doc "Updates an existing staff member."
   defdelegate update_staff_member(provider_id, staff_id, attrs), to: Staff
 
-  @doc "Deletes a staff member owned by `provider_id`; foreign ≡ missing."
+  @doc "Erases a staff row with no history; `{:error, :has_history}` otherwise. Foreign ≡ missing."
   defdelegate delete_staff_member(staff_id, provider_id), to: Staff
+
+  @doc "Ids of the provider's staff rows `delete_staff_member/2` would accept — the same predicate."
+  defdelegate erasable_staff_ids(provider_id), to: Staff
 
   @doc "Ends a staff member's employment link: clears their lead flags, revokes any invitation, stages the event."
   defdelegate deactivate_staff_member(staff_member), to: Staff
+
+  @doc """
+  Offboards a staff member: retires every live program assignment (one
+  `staff_unassigned_from_program` each, so Messaging drops them from the
+  programs' conversations), then ends the employment link.
+
+  Wider than `deactivate_staff_member/1`, which keeps assignments alive on purpose.
+  """
+  defdelegate offboard_staff_member(staff_member), to: OffboardStaffMember, as: :execute
 
   @doc "Reinstates a staff member's employment link; does not restore lead flags or invitations."
   defdelegate reactivate_staff_member(staff_member), to: Staff

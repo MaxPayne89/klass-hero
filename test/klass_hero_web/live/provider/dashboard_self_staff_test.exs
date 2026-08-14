@@ -170,7 +170,7 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
     end
   end
 
-  describe "deleting the own self row" do
+  describe "ending the own self row's employment" do
     test "heals the page: button returns, cross-nav goes (single employer)", %{conn: conn} do
       %{conn: conn, user: user, provider: provider} = log_in_named_provider(conn, "Maxi Founder")
 
@@ -186,7 +186,7 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
       refute has_element?(view, "#self-staff-btn")
 
       view
-      |> element(~s(button[phx-click="delete_member"][phx-value-id="#{staff.id}"]))
+      |> element("#end-employment-#{staff.id}")
       |> render_click()
 
       assert has_element?(view, "#self-staff-btn")
@@ -216,7 +216,7 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
       view
-      |> element(~s(button[phx-click="delete_member"][phx-value-id="#{own_row.id}"]))
+      |> element("#end-employment-#{own_row.id}")
       |> render_click()
 
       assert has_element?(view, "#self-staff-btn")
@@ -225,7 +225,7 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
   end
 
   describe "durable :staff teardown (#972)" do
-    test "deleting the last linked row removes :staff from intended_roles", %{conn: conn} do
+    test "offboarding the last linked row removes :staff from intended_roles", %{conn: conn} do
       %{conn: conn, user: user, provider: provider} = log_in_provider_also_staff(conn)
 
       staff =
@@ -241,14 +241,14 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
       view
-      |> element(~s(button[phx-click="delete_member"][phx-value-id="#{staff.id}"]))
+      |> element("#end-employment-#{staff.id}")
       |> render_click()
 
       # Durable: survives a fresh DB read, not just the in-session heal.
       assert reload_roles(user.id) == [:provider]
     end
 
-    test "deleting one of several linked rows keeps :staff", %{conn: conn} do
+    test "offboarding one of several linked rows keeps :staff", %{conn: conn} do
       %{conn: conn, user: user, provider: provider} = log_in_provider_also_staff(conn)
 
       employer = provider_profile_fixture()
@@ -271,7 +271,7 @@ defmodule KlassHeroWeb.Provider.DashboardSelfStaffTest do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 
       view
-      |> element(~s(button[phx-click="delete_member"][phx-value-id="#{own_row.id}"]))
+      |> element("#end-employment-#{own_row.id}")
       |> render_click()
 
       assert :staff in reload_roles(user.id)

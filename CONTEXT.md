@@ -107,11 +107,20 @@ _Avoid_: Position, Title, Type
 
 **Deactivation**:
 Ending a **Staff Member**'s employment link — they no longer work for that **Provider**. Reversible (*reactivation*), and deliberately narrow: any **Instructor** role they held is cleared and an outstanding invitation is revoked, but their **Program Staff Assignments** and conversation membership survive, because unassigning would destroy access that reactivation cannot give back. Reactivation restores only the employment: the Instructor role and the invitation stay gone.
-Distinct from two neighbours that land on the same `active` column: **removal** (a hard delete of the row, the Team tab's "remove member") and **erasure** (GDPR, which deactivates *and* scrubs PII). Deactivation alone says nothing about why.
+Distinct from two neighbours that land on the same `active` column: **offboarding** (below) and **erasure** (GDPR, which offboards *and* scrubs PII). Deactivation alone says nothing about why.
 _Avoid_: Disable, Archive, Soft-delete, Suspend, Terminate
 
+**Offboarding**:
+**Deactivation** plus the roster teardown: every live **Program Staff Assignment** is retired, which is what removes the person from those Programs' **Conversations**. This is what the Team tab's "Remove from team" does, and what **erasure** does before scrubbing. The employment can be reinstated, but the assignments cannot — reinstating gives back an employee with no Programs, so re-assign deliberately.
+The distinction from deactivation is the whole point: deactivation keeps assignments alive so a reversible pause does not destroy conversation access; offboarding is the person leaving, so the access has to go.
+_Avoid_: Remove, Delete, Fire (removal now means the erase below)
+
+**Removal (erase)**:
+Destroying a **Staff Member** row outright. Legal only for a row that never became anything — no linked **User**, no invitation ever sent, no **Program Staff Assignment** ever created — i.e. a roster entry typed in by mistake. Anything else is **offboarded** instead, because events and audit records name that `staff_member_id` and deleting the row would leave them pointing at nothing.
+_Avoid_: using this word for an employee leaving — that is **offboarding**
+
 **Program Staff Assignment**:
-The link recording that a **Staff Member** works on a **Program**. Many Staff Members may be assigned to one Program because a class can need several people. Survives the Staff Member's **deactivation**.
+The link recording that a **Staff Member** works on a **Program**. Many Staff Members may be assigned to one Program because a class can need several people. Survives the Staff Member's **deactivation**, but not their **offboarding**.
 _Avoid_: Membership, Posting
 
 ## Families & Accounts
