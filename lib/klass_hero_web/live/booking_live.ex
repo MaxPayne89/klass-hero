@@ -425,7 +425,7 @@ defmodule KlassHeroWeb.BookingLive do
             </fieldset>
           </div>
 
-          <.booking_summary title={gettext("Payment Summary")}>
+          <.booking_summary id="payment-summary" title={gettext("Payment Summary")}>
             <:line_item
               label={gettext("Program fee:")}
               value={ProgramCatalog.format_price(@total_amount)}

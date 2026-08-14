@@ -103,6 +103,12 @@ defmodule KlassHeroWeb.BookingComponents do
   attr :title, :string, default: "Summary"
   attr :class, :string, default: ""
 
+  attr :id, :string,
+    default: nil,
+    doc:
+      "DOM id for the card. Rows carry `data-line-item`/`data-summary-total` so callers " <>
+        "and tests can address the breakdown without scanning the whole document."
+
   slot :line_item, doc: "Regular line item with label and value" do
     attr :label, :string, required: true
     attr :value, :string, required: true
@@ -115,27 +121,29 @@ defmodule KlassHeroWeb.BookingComponents do
 
   def booking_summary(assigns) do
     ~H"""
-    <div class={["bg-white p-6 shadow-lg", Theme.rounded(:xl), @class]}>
+    <div id={@id} class={["bg-white p-6 shadow-lg", Theme.rounded(:xl), @class]}>
       <h3 class={[Theme.typography(:card_title), "text-hero-black mb-4"]}>{@title}</h3>
       <div class="space-y-2">
         <div
           :for={item <- @line_item}
+          data-line-item
           class="flex justify-between text-hero-black-100"
         >
           <span>{item[:label]}</span>
-          <span>{item[:value]}</span>
+          <span data-value>{item[:value]}</span>
         </div>
 
         <!-- Total with emphasis -->
         <div
           :for={total <- @total}
+          data-summary-total
           class={[
             "flex justify-between pt-2 border-t border-hero-grey-300",
             Theme.typography(:card_title)
           ]}
         >
           <span>{total[:label]}</span>
-          <span class={Theme.text_color(:primary)}>{total[:value]}</span>
+          <span data-value class={Theme.text_color(:primary)}>{total[:value]}</span>
         </div>
       </div>
     </div>

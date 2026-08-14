@@ -2336,12 +2336,12 @@ msgstr ""
 msgid "Child Name"
 msgstr ""
 
-#: lib/klass_hero_web/components/booking_components.ex:181
+#: lib/klass_hero_web/components/booking_components.ex:189
 #, elixir-autogen, elixir-format
 msgid "Child does not meet program requirements"
 msgstr ""
 
-#: lib/klass_hero_web/components/booking_components.ex:171
+#: lib/klass_hero_web/components/booking_components.ex:179
 #, elixir-autogen, elixir-format
 msgid "Child meets all program requirements"
 msgstr ""

@@ -86,28 +86,27 @@ defmodule KlassHeroWeb.BookingLiveTest do
 
     test "displays total matching program price exactly", %{conn: conn} do
       program = insert(:program_schema, price: Decimal.new("149.99"))
-      {:ok, _view, html} = live(conn, ~p"/programs/#{program.id}/booking")
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
 
-      assert html =~ "Program fee:"
-      assert html =~ "€149.99"
-      assert html =~ "Total due today:"
-      refute html =~ "Registration fee"
-      refute html =~ "VAT"
-      refute html =~ "Credit card fee"
+      assert has_element?(view, "#payment-summary [data-line-item]", "Program fee:")
+      assert has_element?(view, "#payment-summary [data-summary-total]", "Total due today:")
+      assert summary_total(view) == "€149.99"
+
+      # No hidden fees: the program fee is the only line item.
+      assert line_item_count(view) == 1
     end
 
     test "total is the same regardless of payment method", %{conn: conn} do
       program = insert(:program_schema, price: Decimal.new("75.00"))
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
 
-      # Switch to transfer — total unchanged
+      # Switch to transfer — total unchanged, still no payment-method surcharge
       view
       |> element("[phx-click='select_payment_method'][phx-value-method='transfer']")
       |> render_click()
 
-      html = render(view)
-      assert html =~ "€75.00"
-      refute html =~ "Credit card fee"
+      assert has_element?(view, "#payment-summary [data-summary-total]", "€75.00")
+      assert line_item_count(view) == 1
     end
 
     test "multi-week program total is still just program price, not multiplied", %{conn: conn} do
@@ -119,10 +118,9 @@ defmodule KlassHeroWeb.BookingLiveTest do
           end_date: ~D[2026-04-26]
         )
 
-      {:ok, _view, html} = live(conn, ~p"/programs/#{program.id}/booking")
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
 
-      assert html =~ "€50.00"
-      refute html =~ "€400.00"
+      assert summary_total(view) == "€50.00"
     end
   end
 
@@ -212,5 +210,20 @@ defmodule KlassHeroWeb.BookingLiveTest do
       # No crash, page still renders
       assert has_element?(view, "h1", "Enrollment")
     end
+  end
+
+  # Scope price assertions to the summary card. A `refute html =~ "VAT"` over the whole
+  # document flakes: the page's random base64 blobs (csrf-token, phx-session, phx-static)
+  # occasionally spell short strings. See #1287.
+  defp summary_doc(view) do
+    view |> element("#payment-summary") |> render() |> LazyHTML.from_fragment()
+  end
+
+  defp line_item_count(view) do
+    view |> summary_doc() |> LazyHTML.query("[data-line-item]") |> Enum.count()
+  end
+
+  defp summary_total(view) do
+    view |> summary_doc() |> LazyHTML.query("[data-summary-total] [data-value]") |> LazyHTML.text()
   end
 end
