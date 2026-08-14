@@ -88,9 +88,20 @@ Directionality still classifies the surviving event code:
   |---|---|---|---|
   | Projection read **table** | context root | Ecto schema **is** the DTO; **no changeset** — the projection owns every write | `provider/provider_program.ex`, `messaging/enrolled_child.ex` |
   | Query-shaped struct over **write** tables | `domain/read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/domain/read_models/staff_membership.ex` |
-  | Event-maintained table with **no** projection | context root + an ops submodule | schema **keeps** its changeset, because a handler writes it directly | `messaging/program_staff_participant.ex` + `messaging/staff_participants.ex` |
+  | Event-maintained table with **no** projection | context root + an ops submodule | schema **keeps** its changeset, because a handler writes it directly | *none — see below* |
 
-- **Queries go in the context module or a context-root submodule** (`provider/programs.ex`, `messaging/staff_participants.ex`) — never behind a per-table repository wrapper. A read-only module that just wraps `where`/`order_by`/`Repo.all` is indirection without a payer.
+- **The third kind currently has no instance, and that is a warning, not an
+  omission.** Its only example was `messaging/program_staff_participant.ex` +
+  `messaging/staff_participants.ex`, a mirror of Provider's staffing that #1321
+  deleted. A table with no projection has no bootstrap and no rebuild, so nothing
+  but an event can ever correct it — and three bugs (#1309, #1312, #1320) were
+  drift between that copy and its source. Before reaching for this kind, check
+  whether the data is **derivable** from another context: if it is, call that
+  context's facade (ADR-0015) and keep no copy. Reserve the kind for state that is
+  genuinely yours and has no source to re-derive from — rows carrying their own
+  history, like join/leave times or read receipts.
+
+- **Queries go in the context module or a context-root submodule** (`provider/programs.ex`, `provider/assignments.ex`) — never behind a per-table repository wrapper. A read-only module that just wraps `where`/`order_by`/`Repo.all` is indirection without a payer.
 - No mappers, and no separate DTO twinned with a projection schema. If you are writing a `to_dto/1`, the two modules should be one.
 - Build new projections on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
 - Canonical examples: `provider/adapters/driven/projections/provider_programs.ex` for the projection GenServer, and `program_catalog/program_listing.ex` for the read table a projection maintains — copy the latter for the schema-is-the-DTO shape. Program Catalog, Messaging, and Provider all have projections.

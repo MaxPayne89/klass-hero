@@ -7,8 +7,8 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Messaging.StartProgramConversation
+  alias KlassHero.ProviderFixtures
 
   describe "execute/3" do
     test "creates a direct conversation with provider owner and assigned staff as participants" do
@@ -17,7 +17,7 @@ defmodule KlassHero.Messaging.StartProgramConversationTest do
       program = insert(:program_schema, provider_id: provider.id)
       staff_user = AccountsFixtures.user_fixture()
 
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id

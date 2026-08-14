@@ -5,11 +5,20 @@ defmodule KlassHero.Provider.StaffInviteAcceptMessagingTest do
 
   A program assigned at invite time emits `staff_assigned_to_program` with a nil
   `staff_user_id`, which Messaging skips — and nothing re-announced when the user
-  later appeared, so `program_staff_participants` stayed empty forever. Since
-  that mirror is the only source of broadcast recipients, the staff member was
-  cut out of every future broadcast, not just the historical ones.
+  later appeared.
 
-  This starts at `Provider.accept_staff_invitation/2` and lets the real machinery
+  #1321 split that bug in half, and the two halves now behave differently:
+
+    * **Who counts as staff** is derived from Provider, so it is true the moment
+      `user_id` is set — no event, no job. This half can no longer regress.
+    * **Conversation participants** are still event-maintained, because the rows
+      carry join/leave and read receipts. The skipped announcement means no row
+      was ever created, and only the acceptance replay creates it.
+
+  So this test asserts the derived read *before* draining the queue and the
+  participant row *after* — the asymmetry is the point.
+
+  It starts at `Provider.accept_staff_invitation/2` and lets the real machinery
   run: staged events → Oban job → consumer registry → `StaffAssignmentHandler`.
   The unit tests assert what was staged; only this one proves it lands.
   """
@@ -22,8 +31,8 @@ defmodule KlassHero.Provider.StaffInviteAcceptMessagingTest do
   import KlassHero.Factory
   import KlassHero.ProviderFixtures
 
+  alias KlassHero.Messaging
   alias KlassHero.Messaging.Participant
-  alias KlassHero.Messaging.ProgramStaffParticipant
   alias KlassHero.Provider
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
 
@@ -64,26 +73,26 @@ defmodule KlassHero.Provider.StaffInviteAcceptMessagingTest do
         assert {:ok, accepted} = Provider.accept_staff_invitation(staff, user.id)
         assert accepted.user_id == user.id
 
-        # Nothing has consumed the events yet — the job is staged, not run.
-        assert staff_participants(user.id) == []
+        # Derived, so already true: no event has been consumed yet — the job is
+        # staged, not run — and Messaging nonetheless counts them as staff.
+        assert Messaging.get_active_staff_user_ids(program.id) == [user.id]
+
+        # The participant row is the half that still needs the replay to land.
+        refute participant?(conversation.id, user.id)
 
         Oban.drain_queue(queue: :critical_events, with_recursion: true)
       end)
     end)
 
-    assert [%ProgramStaffParticipant{active: true} = mirrored] = staff_participants(user.id)
-    assert mirrored.program_id == program.id
-    assert mirrored.provider_id == provider.id
-
-    assert Repo.exists?(
-             from(p in Participant,
-               where: p.conversation_id == ^conversation.id and p.user_id == ^user.id and is_nil(p.left_at)
-             )
-           )
+    assert participant?(conversation.id, user.id)
   end
 
-  defp staff_participants(user_id) do
-    Repo.all(from(p in ProgramStaffParticipant, where: p.staff_user_id == ^user_id))
+  defp participant?(conversation_id, user_id) do
+    Repo.exists?(
+      from(p in Participant,
+        where: p.conversation_id == ^conversation_id and p.user_id == ^user_id and is_nil(p.left_at)
+      )
+    )
   end
 
   defp with_real_outbox(fun) do

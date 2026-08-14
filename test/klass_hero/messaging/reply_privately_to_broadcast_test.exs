@@ -7,7 +7,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.ReplyPrivatelyToBroadcast
-  alias KlassHero.Messaging.StaffParticipants
+  alias KlassHero.ProviderFixtures
 
   describe "execute/2" do
     setup do
@@ -209,12 +209,11 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
     test "adds assigned staff as participants when broadcast has program context", ctx do
       staff_user = AccountsFixtures.user_fixture()
 
-      :ok =
-        StaffParticipants.upsert_active(%{
-          provider_id: ctx.provider.id,
-          program_id: ctx.program.id,
-          staff_user_id: staff_user.id
-        })
+      ProviderFixtures.assign_active_staff(%{
+        provider_id: ctx.provider.id,
+        program_id: ctx.program.id,
+        staff_user_id: staff_user.id
+      })
 
       assert {:ok, direct_conversation_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
@@ -231,12 +230,11 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
     end
 
     test "does not error when provider owner is also assigned as program staff", ctx do
-      :ok =
-        StaffParticipants.upsert_active(%{
-          provider_id: ctx.provider.id,
-          program_id: ctx.program.id,
-          staff_user_id: ctx.provider_user.id
-        })
+      ProviderFixtures.assign_active_staff(%{
+        provider_id: ctx.provider.id,
+        program_id: ctx.program.id,
+        staff_user_id: ctx.provider_user.id
+      })
 
       assert {:ok, direct_conversation_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
@@ -250,12 +248,11 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
 
       staff_user = AccountsFixtures.user_fixture()
 
-      :ok =
-        StaffParticipants.upsert_active(%{
-          provider_id: ctx.provider.id,
-          program_id: ctx.program.id,
-          staff_user_id: staff_user.id
-        })
+      ProviderFixtures.assign_active_staff(%{
+        provider_id: ctx.provider.id,
+        program_id: ctx.program.id,
+        staff_user_id: staff_user.id
+      })
 
       assert {:ok, ^first_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)

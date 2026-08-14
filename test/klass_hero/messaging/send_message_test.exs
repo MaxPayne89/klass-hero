@@ -7,7 +7,6 @@ defmodule KlassHero.Messaging.SendMessageTest do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.SendMessage
-  alias KlassHero.Messaging.StaffParticipants
 
   describe "execute/4" do
     test "sends message successfully for participant" do
@@ -155,12 +154,6 @@ defmodule KlassHero.Messaging.SendMessageTest do
 
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
-      StaffParticipants.upsert_active(%{
-        provider_id: provider.id,
-        program_id: program.id,
-        staff_user_id: staff_user.id
-      })
-
       assert {:ok, message} =
                SendMessage.execute(broadcast.id, staff_user.id, "Hello from staff!")
 
@@ -180,14 +173,19 @@ defmodule KlassHero.Messaging.SendMessageTest do
                SendMessage.execute(broadcast.id, non_staff_user.id, "Sneaky reply")
     end
 
-    # #1320: nothing tells the mirror that an employment ended. Deactivation
-    # deliberately leaves the assignment and the conversation membership standing
-    # and is not routed to the mirror's writer (#1237); hard removal destroys the
-    # assignment with no event at all (#1292). Either way the participant row and
-    # an `active: true` mirror row survive, so `staff_members` — the row's `active`
-    # flag, or its absence — is the only thing left that can tell these senders
+    # #1320: an ended employment leaves the conversation membership standing.
+    # Deactivation deliberately keeps the assignment and the participant row
+    # (#1237); hard removal destroys the assignment with no event at all (#1292).
+    # Either way the participant row survives, so `staff_members` — the row's
+    # `active` flag, or its absence — is the only thing that tells these senders
     # apart from staff who may still reply.
-    test "rejects staff whose employment ended, despite an active mirror row" do
+    #
+    # This used to also seed an `active: true` row in the
+    # `program_staff_participants` mirror and pin it as a precondition, because
+    # the mirror was never told about either exit and so kept authorizing both.
+    # #1321 deleted the mirror; the guard now reads `staff_members` directly, and
+    # neither exit is expressible as a stale row any more.
+    test "rejects staff whose employment ended" do
       for {label, employed_row?} <- [{"deactivated", true}, {"hard-removed", false}] do
         provider = insert(:provider_profile_schema)
         program = insert(:program_schema, provider_id: provider.id)
@@ -204,18 +202,6 @@ defmodule KlassHero.Messaging.SendMessageTest do
 
         insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
-        StaffParticipants.upsert_active(%{
-          provider_id: provider.id,
-          program_id: program.id,
-          staff_user_id: staff_user.id
-        })
-
-        # Pin the precondition: the mirror still lists them, and that list is
-        # exactly what the deleted guard branch consulted. Without this the
-        # assertion below could go green for the wrong reason.
-        assert staff_user.id in StaffParticipants.get_active_staff_user_ids(program.id),
-               "#{label}: the mirror row must survive, or this stops being a regression test"
-
         assert SendMessage.execute(broadcast.id, staff_user.id, "Still here") ==
                  {:error, :broadcast_reply_not_allowed},
                "expected a #{label} staff member to be denied"
@@ -223,11 +209,9 @@ defmodule KlassHero.Messaging.SendMessageTest do
     end
 
     # Bug #669: a staff_member of the provider should be able to follow up in a
-    # broadcast even if their staff record is not in the per-program
-    # `program_staff_participants` projection. The projection is only populated
-    # when staff is explicitly assigned to a program, but staff are still
-    # authorised to broadcast for any program owned by their provider, so the
-    # follow-up permission must be aligned with that.
+    # broadcast even without a per-program assignment. Employment at the provider
+    # is the whole authorization fact — staff may follow up on any program of
+    # their provider — so a per-program check would only ever narrow it wrongly.
     test "allows active staff_member of provider to send in broadcast even without program assignment" do
       staff_user = AccountsFixtures.user_fixture()
       provider = insert(:provider_profile_schema)
@@ -242,8 +226,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
       broadcast = insert_broadcast(provider, program)
       insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
 
-      # Note: NO call to StaffParticipants.upsert_active/1 — the
-      # projection is intentionally empty for this staff/program combo.
+      # Note: NO program assignment for this staff/program combo, deliberately.
 
       assert {:ok, message} =
                SendMessage.execute(broadcast.id, staff_user.id, "Hello from provider staff!")

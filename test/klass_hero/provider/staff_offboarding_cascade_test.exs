@@ -20,7 +20,6 @@ defmodule KlassHero.Provider.StaffOffboardingCascadeTest do
   import KlassHero.Factory
 
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.ProgramStaffParticipant
   alias KlassHero.Provider
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
 
@@ -51,13 +50,18 @@ defmodule KlassHero.Provider.StaffOffboardingCascadeTest do
 
         drain()
 
-        # Precondition: assignment put them in the conversation and the mirror.
+        # Precondition: assignment put them in the conversation, and Messaging
+        # counts them as staff on the program.
         assert Messaging.participant?(conversation.id, staff_user.id)
-        assert mirror(program, staff_user).active
+        assert staff_user.id in Messaging.get_active_staff_user_ids(program.id)
 
         {:ok, %{unassigned_count: 1}} = Provider.offboard_staff_member(staff)
 
-        # Nothing has consumed the unassignment yet — it is staged, not run.
+        # The two halves diverge here, which is the shape #1321 introduced.
+        # "Counts as staff" is derived, so it flips with the write itself;
+        # the participant row is event-maintained, so it survives until the
+        # staged unassignment is consumed.
+        refute staff_user.id in Messaging.get_active_staff_user_ids(program.id)
         assert Messaging.participant?(conversation.id, staff_user.id)
 
         drain()
@@ -65,13 +69,9 @@ defmodule KlassHero.Provider.StaffOffboardingCascadeTest do
     end)
 
     refute Messaging.participant?(conversation.id, staff_user.id)
-    refute mirror(program, staff_user).active
   end
 
   defp drain, do: Oban.drain_queue(queue: :critical_events, with_recursion: true)
-
-  defp mirror(program, staff_user),
-    do: Repo.get_by!(ProgramStaffParticipant, program_id: program.id, staff_user_id: staff_user.id)
 
   defp with_real_outbox(fun) do
     original = Application.get_env(:klass_hero, :outbox)

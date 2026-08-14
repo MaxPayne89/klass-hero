@@ -9,8 +9,8 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.CreateDirectConversation
-  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.ProviderFixtures
 
   describe "execute/3" do
     test "creates new conversation with participants" do
@@ -76,7 +76,7 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       target_user = AccountsFixtures.user_fixture()
       staff_user = AccountsFixtures.user_fixture()
 
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -95,7 +95,7 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       target_user = AccountsFixtures.user_fixture()
       staff_user = AccountsFixtures.user_fixture()
 
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -122,7 +122,7 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       target_user = AccountsFixtures.user_fixture()
       staff_user = AccountsFixtures.user_fixture()
 
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -141,7 +141,7 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       target_user = AccountsFixtures.user_fixture()
 
       # The owner (scope.user) is also assigned as staff
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: scope.user.id
@@ -164,7 +164,7 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       # Now assign staff
       staff_user = AccountsFixtures.user_fixture()
 
-      StaffParticipants.upsert_active(%{
+      ProviderFixtures.assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id

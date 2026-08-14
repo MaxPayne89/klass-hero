@@ -5,6 +5,7 @@ defmodule KlassHero.ProviderFixtures do
 
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.ProviderProgram
   alias KlassHero.Provider.StaffMember
@@ -93,6 +94,52 @@ defmodule KlassHero.ProviderFixtures do
     schema = apply_timestamp_overrides(schema, timestamp_overrides)
 
     StaffMember.load_pay_rate(schema)
+  end
+
+  @doc """
+  Makes `staff_user_id` count as active staff on `program_id`: a claimed, active
+  staff member holding a standing assignment to that program.
+
+  Deliberately shaped like the `StaffParticipants.upsert_active/1` it replaced, so
+  the ~30 setup sites that said "this user counts as staff on program X" convert by
+  rename. The difference is that this writes the *source* — Messaging now derives
+  the same fact from Provider rather than mirroring it (#1321).
+
+  Composed from `staff_member_fixture/1`, not from the
+  `:program_staff_assignment_schema` factory, which mints its own provider and
+  program and so cannot attach to the caller's.
+
+  Calling this twice for one user at one provider adds a second *assignment* to the
+  same staff member rather than a second staff member — both because that is what
+  the domain means (a person is employed once, staffed many times) and because
+  `staff_members` carries a partial unique index on `(provider_id, user_id) WHERE
+  active AND user_id IS NOT NULL`. The mirror keyed on `(program_id, user_id)` and
+  so had no equivalent shape.
+
+  Returns the assignment. Edge cases (deactivated, unassigned, unclaimed) belong to
+  the caller — compose `staff_member_fixture/1` and the assignment directly rather
+  than reaching for an option here.
+  """
+  def assign_active_staff(%{provider_id: provider_id, program_id: program_id, staff_user_id: staff_user_id}) do
+    staff =
+      Repo.get_by(StaffMember, provider_id: provider_id, user_id: staff_user_id, active: true) ||
+        staff_member_fixture(%{
+          provider_id: provider_id,
+          user_id: staff_user_id,
+          invitation_status: :accepted
+        })
+
+    {:ok, assignment} =
+      %{
+        provider_id: provider_id,
+        staff_member_id: staff.id,
+        program_id: program_id,
+        assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
+      }
+      |> ProgramStaffAssignment.create_changeset()
+      |> Repo.insert()
+
+    assignment
   end
 
   defp apply_timestamp_overrides(schema, overrides) when map_size(overrides) == 0, do: schema

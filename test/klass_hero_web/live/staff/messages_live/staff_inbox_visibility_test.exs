@@ -22,7 +22,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Messaging.CreateDirectConversation
-  alias KlassHero.Messaging.StaffParticipants
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -71,7 +70,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      StaffParticipants.upsert_active(%{
+      assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -181,7 +180,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      StaffParticipants.upsert_active(%{
+      assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
@@ -247,7 +246,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      StaffParticipants.upsert_active(%{
+      assign_active_staff(%{
         provider_id: provider.id,
         program_id: program.id,
         staff_user_id: staff_user.id
