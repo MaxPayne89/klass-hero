@@ -58,6 +58,9 @@ npm-debug.log
 .claude/worktrees/
 .superpowers/
 
+# Per-checkout dev server runtime state (pidfile + logs), written by bin/worktree-up
+.claude/run/
+
 # Override global gitignore to track Claude config
 !CLAUDE.md
 !.claude/
