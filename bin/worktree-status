@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Report whether this checkout has a dev server and a Tidewave endpoint that
+# actually belong to it. Read-only and instant — nothing here starts, stops, or
+# provisions anything.
+#
+# Use it to answer "can I trust project_eval right now?" before relying on
+# Tidewave, and to diagnose the case that looks fine but is not: an endpoint that
+# answers, from a server running in a different checkout.
+#
+# Exit status: 0 when Tidewave is up and verified to be this checkout's, 1 otherwise
+# — so it composes: `bin/worktree-status >/dev/null || bin/worktree-up`.
+#
+# Usage: bin/worktree-status
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+# shellcheck source=bin/lib/worktree-common.sh
+source bin/lib/worktree-common.sh
+
+root=$(repo_root)
+
+echo "checkout   ${root}"
+echo "kind       $(linked_worktree && echo "worktree ($(git branch --show-current))" || echo "main checkout")"
+echo "dev db     $(dev_database) $(database_exists "$(dev_database)" && echo "(exists)" || echo "(MISSING)")"
+echo "test db    $(test_database) $(database_exists "$(test_database)" && echo "(exists)" || echo "(MISSING)")"
+
+if [[ ! -f .mcp.json ]]; then
+  echo "tidewave   NOT CONFIGURED — no .mcp.json. Run bin/worktree-up."
+  exit 1
+fi
+
+port=$(bin/dev --port)
+owner=$(port_owner "$port")
+code=$(tidewave_status "$port")
+
+echo "port       ${port}"
+echo "endpoint   $(tidewave_url "$port")  (HTTP ${code}; 405 is healthy — it is POST-only)"
+
+case "$owner" in
+  mine)
+    if tidewave_alive "$port"; then
+      echo "verdict    READY — served by pid $(listener_pid "$port"), which lives in this checkout"
+      exit 0
+    fi
+    echo "verdict    NOT READY — the port is ours but nothing is answering yet. Still booting? See ${LOG_FILE}."
+    exit 1
+    ;;
+  free)
+    echo "verdict    NOT RUNNING — nothing is listening on ${port}. Run bin/worktree-up."
+    exit 1
+    ;;
+  dead)
+    pid=$(listener_pid "$port")
+    echo "verdict    ORPHAN — pid ${pid} answers on ${port} but its checkout ($(listener_cwd "$pid")) is gone."
+    echo "           Anything you ask it runs against code that no longer exists. Run bin/worktree-up to reap it."
+    exit 1
+    ;;
+  foreign)
+    pid=$(listener_pid "$port")
+    echo "verdict    WRONG CHECKOUT — pid ${pid} answers on ${port} but lives in $(listener_cwd "$pid")."
+    echo "           Do not use Tidewave from this session: project_eval would run against that tree, not this one."
+    exit 1
+    ;;
+esac

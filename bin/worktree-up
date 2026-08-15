@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+#
+# Bring this checkout to a working state: containers up, dependencies fetched,
+# code compiled, its own dev and test databases migrated, its own Tidewave port
+# written, and its own dev server running and *verified to be its own*.
+#
+# Idempotent and convergent — safe to run any number of times, in any checkout,
+# including the main one. Every step asks before it acts; nothing assumes.
+#
+# All progress goes to stderr. That is not cosmetic: .claude/hooks/worktree_create.sh
+# calls this script and must keep stdout clean for the worktree path it has to
+# return to Claude Code.
+#
+# Usage:
+#   bin/worktree-up              full converge (default)
+#   bin/worktree-up --fast       databases and .mcp.json only; no seeds, no server
+#   bin/worktree-up --no-seed    converge, but never seed
+#   bin/worktree-up --reseed     seed even if the database already existed
+#   bin/worktree-up --no-server  converge, but do not start the dev server
+#   bin/worktree-up --quiet      only report the final verdict and any problem
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+# shellcheck source=bin/lib/worktree-common.sh
+source bin/lib/worktree-common.sh
+
+SEED_MODE=auto # auto | never | always
+START_SERVER=true
+QUIET=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --fast)
+      SEED_MODE=never
+      START_SERVER=false
+      ;;
+    --no-seed) SEED_MODE=never ;;
+    --reseed) SEED_MODE=always ;;
+    --no-server) START_SERVER=false ;;
+    --quiet) QUIET=true ;;
+    *)
+      echo "worktree-up: unknown option $arg" >&2
+      exit 2
+      ;;
+  esac
+done
+
+step() { $QUIET || echo "→ $*" >&2; }
+note() { echo "  $*" >&2; }
+fail() {
+  echo "worktree-up: $*" >&2
+  exit 1
+}
+
+root=$(repo_root)
+slug=$(checkout_slug)
+dev_db=$(dev_database)
+test_db=$(test_database)
+
+# Explicit rather than relying on config/test.exs deriving the same value. The two
+# agree by construction (both read this slug), and being explicit means the script
+# behaves identically on a checkout that predates that config change.
+export MIX_TEST_PARTITION="$(test_partition)"
+
+# --- 1. containers ----------------------------------------------------------
+# mix dev.setup is already idempotent: docker-compose up -d, then health-polls
+# klass_hero_postgres and klass_hero_minio. Reused rather than reimplemented.
+step "Docker services"
+mix dev.setup >/dev/null 2>&1 || fail "mix dev.setup failed — run it directly to see why"
+
+# --- 2. warm the build ------------------------------------------------------
+# A fresh worktree materialises only *tracked* files, so deps/ and _build/ start
+# empty and a cold fetch-and-compile is by far the slowest step here — the one
+# thing that could exhaust the WorktreeCreate hook's budget. Same mix.lock and
+# same toolchain mean main's artefacts are valid input, and Elixir's compile
+# manifests sort out what is actually stale, so this becomes an incremental
+# compile instead of a full one.
+#
+# Copy, never symlink: a shared _build would serve one checkout's beam files to
+# another, which is the same class of mistake as a shared dev database.
+if linked_worktree; then
+  main_root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+
+  if [[ -d "$main_root/deps" && ! -d deps ]]; then
+    step "Warming deps/ from ${main_root}"
+    cp -R "$main_root/deps" deps
+  fi
+
+  if [[ -d "$main_root/_build" && ! -d _build ]]; then
+    step "Warming _build/ from ${main_root}"
+    cp -R "$main_root/_build" _build
+  fi
+fi
+
+# --- 3. dependencies + compile ---------------------------------------------
+step "Dependencies"
+mix deps.get >/dev/null || fail "mix deps.get failed"
+
+step "Compile"
+mix compile >/dev/null || fail "mix compile failed — run it directly to see the errors"
+
+# --- 4. dev database --------------------------------------------------------
+# Whether to seed is decided *before* creating, by asking Postgres. Parsing
+# `mix ecto.create`'s output would work today and break on an Ecto wording change.
+dev_db_existed=false
+database_exists "$dev_db" && dev_db_existed=true
+
+step "Dev database ${dev_db}"
+mix ecto.create >/dev/null || fail "mix ecto.create failed for ${dev_db}"
+mix ecto.migrate >/dev/null || fail "mix ecto.migrate failed for ${dev_db}"
+
+should_seed=false
+case "$SEED_MODE" in
+  always) should_seed=true ;;
+  auto) $dev_db_existed || should_seed=true ;;
+esac
+
+if $should_seed; then
+  step "Seeding ${dev_db}"
+  mix ecto.seed >/dev/null || fail "mix ecto.seed failed — see the output of 'mix ecto.seed'"
+elif [[ "$SEED_MODE" == "auto" ]] && $dev_db_existed; then
+  # priv/repo/seeds.exs is Repo.insert! throughout with no on_conflict guards, so
+  # re-running it against a populated database raises on a unique constraint.
+  # Skipping is the correct convergent behaviour, not a shortcut.
+  note "${dev_db} already existed — skipping seeds (seeds.exs is not idempotent; --reseed forces)"
+fi
+
+# --- 5. test database -------------------------------------------------------
+step "Test database ${test_db}"
+MIX_ENV=test mix ecto.create >/dev/null || fail "test-env ecto.create failed for ${test_db}"
+MIX_ENV=test mix ecto.migrate >/dev/null || fail "test-env ecto.migrate failed for ${test_db}"
+
+# --- 6. MCP endpoint --------------------------------------------------------
+step "Tidewave endpoint"
+bin/setup-mcp --quiet >&2 || fail "bin/setup-mcp failed"
+port=$(bin/dev --port)
+
+# --- 7. dev server ----------------------------------------------------------
+if $START_SERVER; then
+  step "Dev server on ${port}"
+  bin/dev --detach || fail "dev server did not come up on ${port}"
+
+  # --- 8. identity gate ----------------------------------------------------
+  # The point of the whole exercise. "Tidewave answers" is not the property we
+  # need; "Tidewave answers *for this checkout*" is. An orphaned server from a
+  # deleted worktree answers the first check perfectly and would have the agent
+  # evaluating code against a tree that no longer exists.
+  owner=$(port_owner "$port")
+  if [[ "$owner" != "mine" ]]; then
+    pid=$(listener_pid "$port")
+    fail "port ${port} answers, but from ${owner} process ${pid} at $(listener_cwd "$pid") — not ${root}"
+  fi
+
+  tidewave_alive "$port" || fail "no Tidewave at $(tidewave_url "$port")"
+
+  echo "READY  ${root}" >&2
+  echo "       tidewave  $(tidewave_url "$port")  (verified: pid $(listener_pid "$port") lives here)" >&2
+  echo "       dev db    ${dev_db}" >&2
+  echo "       test db   ${test_db}" >&2
+else
+  echo "PROVISIONED  ${root}  (no server started)" >&2
+  echo "             tidewave port ${port}, dev db ${dev_db}, test db ${test_db}" >&2
+  echo "             run bin/worktree-up to start the server" >&2
+fi

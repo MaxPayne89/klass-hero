@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#
+# Tear down what bin/worktree-up provisioned for THIS checkout: stop its dev
+# server, drop its dev and test databases, forget its port.
+#
+# Scoped to this checkout only. It never stops the shared Postgres/MinIO
+# containers and never runs `docker-compose down -v`, which would destroy every
+# other checkout's data along with this one's.
+#
+# Refuses to run in the main checkout without --force: dropping klass_hero_dev is
+# exactly the damage the per-checkout database derivation exists to prevent.
+#
+# Usage:
+#   bin/worktree-down             stop the server, drop this checkout's databases
+#   bin/worktree-down --keep-db   stop the server only
+#   bin/worktree-down --force     allow this in the main checkout
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+# shellcheck source=bin/lib/worktree-common.sh
+source bin/lib/worktree-common.sh
+
+DROP_DB=true
+FORCE=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --keep-db) DROP_DB=false ;;
+    --force) FORCE=true ;;
+    *)
+      echo "worktree-down: unknown option $arg" >&2
+      exit 2
+      ;;
+  esac
+done
+
+root=$(repo_root)
+dev_db=$(dev_database)
+test_db=$(test_database)
+
+if ! linked_worktree && ! $FORCE; then
+  echo "worktree-down: this is the main checkout — dropping ${dev_db} would take the whole" >&2
+  echo "               machine's dev data with it. Pass --force if you really mean it." >&2
+  exit 1
+fi
+
+export MIX_TEST_PARTITION="$(test_partition)"
+
+# --- server -----------------------------------------------------------------
+# Prefer the pid that actually holds the socket over the pidfile: the pidfile can
+# be stale, and the listener is what matters. Only ever stop a server that lives
+# in this checkout.
+port=$(bin/dev --port 2>/dev/null || echo "")
+
+if [[ -n "$port" ]]; then
+  case "$(port_owner "$port")" in
+    mine)
+      pid=$(listener_pid "$port")
+      echo "Stopping dev server on ${port} (pid ${pid})." >&2
+      kill "$pid" 2>/dev/null || true
+      for _ in $(seq 1 20); do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.5
+      done
+      kill -9 "$pid" 2>/dev/null || true
+      ;;
+    dead)
+      reap_dead_listener "$port" || true
+      ;;
+    foreign)
+      echo "Port ${port} is held by another live checkout — leaving it alone." >&2
+      ;;
+  esac
+fi
+
+rm -rf "$RUN_DIR"
+
+# --- databases --------------------------------------------------------------
+if $DROP_DB; then
+  echo "Dropping ${dev_db}." >&2
+  mix ecto.drop >/dev/null 2>&1 || echo "  (already gone)" >&2
+
+  echo "Dropping ${test_db}." >&2
+  MIX_ENV=test mix ecto.drop >/dev/null 2>&1 || echo "  (already gone)" >&2
+fi
+
+rm -f .mcp.json
+
+echo "DOWN  ${root}" >&2
