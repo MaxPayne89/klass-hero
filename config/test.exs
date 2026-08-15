@@ -12,6 +12,35 @@ alias KlassHero.Test.StubMailerAdapter
 # unrelated project on the same machine).
 test_port = String.to_integer(System.get_env("TEST_PORT") || "4002")
 
+# The test DB is per-checkout for the same reason the dev DB is (config/dev.exs), and
+# derived the same way. MIX_TEST_PARTITION still wins when set explicitly — CI sets it
+# per partition, and you can set it by hand to run two logically separate suites in one
+# checkout.
+#
+# The default matters because nothing enforces the env var on an automated caller:
+# .claude/hooks/tests.sh runs `mix test` on every edit and never set it, so every
+# worktree's edit-triggered suite was writing to the one shared klass_hero_test. That is
+# the same failure #1257 fixed on the dev side, and it is fixed the same way — in config,
+# where every mix invocation reads it, rather than in a launcher a hook can bypass.
+#
+# A linked worktree has `.git` as a file; the main checkout has a directory and keeps the
+# bare `klass_hero_test`, so CI (a normal checkout) is unaffected.
+checkout_root = Path.dirname(__DIR__)
+
+test_partition =
+  System.get_env("MIX_TEST_PARTITION") ||
+    if File.regular?(Path.join(checkout_root, ".git")) do
+      slug =
+        checkout_root
+        |> Path.basename()
+        |> String.downcase()
+        |> String.replace(~r/[^a-z0-9]+/, "_")
+
+      "_#{slug}"
+    else
+      ""
+    end
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 
@@ -31,7 +60,7 @@ config :klass_hero, KlassHero.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "klass_hero_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: String.slice("klass_hero_test#{test_partition}", 0, 63),
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
