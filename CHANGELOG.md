@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.4](https://github.com/MaxPayne89/klass-hero/compare/v0.72.3...v0.72.4) (2026-08-15)
+
+
+### Bug Fixes
+
+* translate invite failure reasons in the reader's locale ([#1367](https://github.com/MaxPayne89/klass-hero/issues/1367)) ([24ec4b7](https://github.com/MaxPayne89/klass-hero/commit/24ec4b7dcdba0e6a57c3937917044e0a10c45877)), closes [#1340](https://github.com/MaxPayne89/klass-hero/issues/1340)
+
 ## [0.72.3](https://github.com/MaxPayne89/klass-hero/compare/v0.72.2...v0.72.3) (2026-08-15)
 
 
