@@ -54,7 +54,6 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       |> assign(page_title: gettext("My Programs"))
       |> assign(active_nav: :programs)
       |> stream(:programs, programs)
-      |> assign(programs_count: length(programs))
       |> assign(staff_options: staff_options)
       |> assign(search_query: "", selected_staff: "all")
       |> assign(show_program_form: false, editing_program_id: nil)
@@ -660,11 +659,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
          participant_policy: participant_result
        )
        |> maybe_flash_cover_warning(cover_result)
-       |> insert_program_row(program, new_enrollment_data)
+       |> reveal_program_row(program, new_enrollment_data)
        |> assign(
          show_program_form: false,
          editing_program_id: nil,
-         programs_count: socket.assigns.programs_count + 1,
          enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"),
          participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
        )}
@@ -712,7 +710,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
          participant_policy: participant_result
        )
        |> maybe_flash_cover_warning(cover_result)
-       |> insert_program_row(updated, enrollment_data)
+       |> sync_program_row(updated, enrollment_data)
        |> assign(
          show_program_form: false,
          editing_program_id: nil,
@@ -792,9 +790,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     programs = to_table_views(filtered, build_enrollment_data(filtered), staffing)
 
-    socket
-    |> stream(:programs, programs, reset: true)
-    |> assign(programs_count: length(programs))
+    stream(socket, :programs, programs, reset: true)
   end
 
   # One query for the whole table's staffing, so neither rendering nor filtering
@@ -857,13 +853,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
       {:ok, program} ->
-        staffing = fetch_program_staffing(program_id)
-
-        if row_visible?(socket, staffing) do
-          insert_program_row(socket, program, build_enrollment_data([program]), staffing)
-        else
-          stream_delete(socket, :programs, %{id: program_id})
-        end
+        sync_program_row(socket, program, build_enrollment_data([program]), fetch_program_staffing(program_id))
 
       {:error, :not_found} ->
         socket
@@ -877,27 +867,54 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   #
   # The panel path already holds the staffing it filtered on, so it passes it in
   # rather than paying for the read twice.
-  defp insert_program_row(socket, program, enrollment_data) do
-    insert_program_row(socket, program, enrollment_data, fetch_program_staffing(program.id))
+  #
+  # Whether the row belongs in the table at all is *not* a caller's decision: the
+  # table is filtered, so a write that ignores the filter shows a row contradicting
+  # it. Every path lands here, so a fourth one is correct without knowing that (#1346).
+  defp sync_program_row(socket, program, enrollment_data) do
+    sync_program_row(socket, program, enrollment_data, fetch_program_staffing(program.id))
   end
 
-  defp insert_program_row(socket, program, enrollment_data, staffing) do
-    view = ProgramPresenter.to_table_view(program, enrollment_data, staffing)
+  defp sync_program_row(socket, program, enrollment_data, staffing) do
+    if row_matches_filters?(socket, program, staffing) do
+      stream_insert(socket, :programs, ProgramPresenter.to_table_view(program, enrollment_data, staffing))
+    else
+      stream_delete(socket, :programs, %{id: program.id})
+    end
+  end
 
-    stream_insert(socket, :programs, view)
+  # A program the provider just made is the one row they are certainly looking
+  # for, so a filter that would hide it yields rather than the row — the
+  # alternative is a save that visibly does nothing (#1346).
+  defp reveal_program_row(socket, program, enrollment_data) do
+    staffing = fetch_program_staffing(program.id)
+
+    if row_matches_filters?(socket, program, staffing) do
+      sync_program_row(socket, program, enrollment_data, staffing)
+    else
+      # The re-stream cannot carry the new row: it reads the `program_listings`
+      # projection, which has not caught up with a program created a moment ago.
+      # Only the domain struct the write returned can show it, so the row is
+      # inserted on top of the freshly unfiltered table.
+      socket
+      |> assign(search_query: "", selected_staff: "all")
+      |> reset_programs_stream()
+      |> sync_program_row(program, enrollment_data, staffing)
+    end
   end
 
   defp fetch_program_staffing(program_id) do
     Map.get(Provider.list_program_staffing([program_id]), program_id)
   end
 
-  # Removing the staff member a filter is pinned to must drop the row, not
-  # re-insert it — otherwise the table shows a program that no longer matches.
-  defp row_visible?(socket, staffing) do
-    case socket.assigns.selected_staff do
-      "all" -> true
-      staff_id -> ProgramStaffing.staffed_by?(staffing, staff_id)
-    end
+  # Asks the table's own filters about one row, so "what the list shows" and
+  # "what a row write shows" cannot drift apart — the drift is what let a save
+  # insert a row contradicting the active filter (#1346).
+  defp row_matches_filters?(socket, program, staffing) do
+    [program]
+    |> filter_by_search(socket.assigns.search_query)
+    |> filter_by_staff(%{program.id => staffing}, socket.assigns.selected_staff)
+    |> Enum.any?()
   end
 
   defp staffing_not_found(socket, action, staff_member_id, provider_id) do
