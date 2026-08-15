@@ -14,6 +14,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   import KlassHeroWeb.ParticipationComponents, only: [participation_status: 1]
   import KlassHeroWeb.UIComponents
 
+  alias KlassHero.Shared.ChangesetErrors
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
@@ -2273,11 +2274,11 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <%!-- Written by three places and shown by none until #1221: a red pill with no
                       reason tells a provider that something is wrong but not what to do about it. --%>
                 <p
-                  :if={invite.status == :failed && invite.error_details}
+                  :if={invite.status == :failed && failure_message(invite)}
                   id={"invite-error-#{invite.id}"}
                   class="mt-1 text-xs text-hero-grey-500 break-words"
                 >
-                  {invite.error_details}
+                  {failure_message(invite)}
                 </p>
               </td>
               <td class="px-3 py-3 text-right">
@@ -2498,25 +2499,103 @@ defmodule KlassHeroWeb.ProviderComponents do
     Enum.map_join(errors, ", ", fn {field, msg} -> "#{humanize_field(field)}: #{msg}" end)
   end
 
+  # The sentence a provider reads under a failed invite's status pill.
+  #
+  # `Enrollment` stores the *cause*, not the copy: every writer is a background process,
+  # so a sentence built there would be frozen in that process's locale (#1340). The
+  # wording lives here, where the reader's locale is the one in scope.
+  defp failure_message(%{failure_code: nil, error_details: legacy}), do: legacy
+
+  defp failure_message(%{failure_code: :no_token}),
+    do: dgettext("enrollment", "Invite link could not be generated (no token). Please resend.")
+
+  defp failure_message(%{failure_code: :program_full}),
+    do: dgettext("enrollment", "The program is full, so this child could not be enrolled.")
+
+  defp failure_message(%{failure_code: :invalid_date, failure_context: %{"value" => value}}) do
+    dgettext(
+      "enrollment",
+      "Date of birth \"%{value}\" is not a valid date. Please correct it and resend.",
+      value: value
+    )
+  end
+
+  defp failure_message(%{failure_code: :delivery_failed}),
+    do: dgettext("enrollment", "The invitation email could not be delivered. Please check the address and resend.")
+
+  defp failure_message(%{failure_code: :exhausted}),
+    do: dgettext("enrollment", "This invite could not be completed and no retries remain. Please resend.")
+
+  defp failure_message(%{failure_code: :invalid_details, failure_context: %{"fields" => fields}})
+       when is_list(fields) do
+    Enum.map_join(fields, "; ", &changeset_field_message/1)
+  end
+
+  # Also the landing place for a code whose context did not survive — naming no detail
+  # beats raising on the render path.
+  defp failure_message(%{}), do: dgettext("enrollment", "This invite could not be completed. Please resend.")
+
+  defp changeset_field_message(%{"field" => field, "msg" => msg} = error) do
+    bindings = Map.get(error, "bindings", %{})
+
+    "#{humanize_field(field)} #{translate_changeset_message(msg, bindings)}"
+  end
+
+  # Translate first, interpolate second: the German msgstr carries the placeholders too.
+  # The msgid is a runtime value, so this is `Gettext.d*gettext/4` the function rather
+  # than the macro — the "errors" catalog already holds Ecto's own messages.
+  #
+  # Gettext gets the bindings it can resolve itself, or it logs a missing-binding error
+  # on every render of the row; `interpolate/2` then covers any key outside that set.
+  defp translate_changeset_message(msg, bindings) do
+    msg
+    |> translate_errors_domain(bindings)
+    |> ChangesetErrors.interpolate(bindings)
+  end
+
+  defp translate_errors_domain(msg, %{"count" => count} = bindings) when is_integer(count) do
+    Gettext.dngettext(
+      KlassHeroWeb.Gettext,
+      "errors",
+      msg,
+      msg,
+      count,
+      ChangesetErrors.gettext_bindings(bindings)
+    )
+  end
+
+  defp translate_errors_domain(msg, bindings) do
+    Gettext.dgettext(KlassHeroWeb.Gettext, "errors", msg, ChangesetErrors.gettext_bindings(bindings))
+  end
+
+  # Field names arrive as atoms from a live import failure and as strings from a stored
+  # invite failure (#1340) — one vocabulary serves both, keyed on the string.
+  defp humanize_field(field) when is_atom(field), do: field |> Atom.to_string() |> humanize_field()
+
   # dgettext must run at call-time (not module-attribute time) for i18n to work
-  defp humanize_field(:child_first_name), do: dgettext("enrollment", "Child first name")
-  defp humanize_field(:child_last_name), do: dgettext("enrollment", "Child last name")
-  defp humanize_field(:child_date_of_birth), do: dgettext("enrollment", "Date of birth")
-  defp humanize_field(:guardian_email), do: dgettext("enrollment", "Guardian email")
-  defp humanize_field(:guardian_first_name), do: dgettext("enrollment", "Guardian first name")
-  defp humanize_field(:guardian_last_name), do: dgettext("enrollment", "Guardian last name")
-  defp humanize_field(:guardian2_email), do: dgettext("enrollment", "Second guardian email")
+  defp humanize_field("child_first_name"), do: dgettext("enrollment", "Child first name")
+  defp humanize_field("child_last_name"), do: dgettext("enrollment", "Child last name")
+  defp humanize_field("child_date_of_birth"), do: dgettext("enrollment", "Date of birth")
+  defp humanize_field("guardian_email"), do: dgettext("enrollment", "Guardian email")
+  defp humanize_field("guardian_first_name"), do: dgettext("enrollment", "Guardian first name")
+  defp humanize_field("guardian_last_name"), do: dgettext("enrollment", "Guardian last name")
+  defp humanize_field("guardian2_email"), do: dgettext("enrollment", "Second guardian email")
 
-  defp humanize_field(:guardian2_first_name), do: dgettext("enrollment", "Second guardian first name")
+  defp humanize_field("guardian2_first_name"), do: dgettext("enrollment", "Second guardian first name")
 
-  defp humanize_field(:guardian2_last_name), do: dgettext("enrollment", "Second guardian last name")
+  defp humanize_field("guardian2_last_name"), do: dgettext("enrollment", "Second guardian last name")
 
-  defp humanize_field(:program_name), do: dgettext("enrollment", "Program")
-  defp humanize_field(:school_grade), do: dgettext("enrollment", "Grade")
-  defp humanize_field(:school_name), do: dgettext("enrollment", "School")
+  defp humanize_field("program_name"), do: dgettext("enrollment", "Program")
+  defp humanize_field("school_grade"), do: dgettext("enrollment", "Grade")
+  defp humanize_field("school_name"), do: dgettext("enrollment", "School")
 
-  defp humanize_field(field) do
-    field |> to_string() |> String.replace("_", " ") |> String.capitalize()
+  # A claim failure names the Child's own fields, which the CSV spells differently.
+  defp humanize_field("first_name"), do: dgettext("enrollment", "Child first name")
+  defp humanize_field("last_name"), do: dgettext("enrollment", "Child last name")
+  defp humanize_field("date_of_birth"), do: dgettext("enrollment", "Date of birth")
+
+  defp humanize_field(field) when is_binary(field) do
+    field |> String.replace("_", " ") |> String.capitalize()
   end
 
   @doc """

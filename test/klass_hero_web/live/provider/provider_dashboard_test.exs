@@ -508,19 +508,109 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       assert has_element?(view, "[phx-click=delete_invite]")
     end
 
-    # #1221: a failed invite showed a red pill and nothing else, so the provider could see
-    # that something broke but not what, nor whether resending could possibly help.
-    test "shows why a failed invite failed", %{conn: conn, program: program} do
-      invite = Repo.one!(BulkEnrollmentInvite)
-
-      invite
-      |> Ecto.Changeset.change(%{status: :failed, error_details: "date of birth can't be blank"})
+    defp fail_invite(attrs) do
+      BulkEnrollmentInvite
+      |> Repo.one!()
+      |> Ecto.Changeset.change(Map.put(attrs, :status, :failed))
       |> Repo.update!()
+    end
 
-      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+    defp open_invites(conn, program, path \\ ~p"/provider/dashboard/programs") do
+      {:ok, view, _html} = live(conn, path)
 
       view |> element("#view-roster-#{program.id}") |> render_click()
       view |> element("#roster-tab-invites") |> render_click()
+
+      view
+    end
+
+    # #1221: a failed invite showed a red pill and nothing else, so the provider could see
+    # that something broke but not what, nor whether resending could possibly help.
+    test "shows why a failed invite failed", %{conn: conn, program: program} do
+      invite = fail_invite(%{failure_code: :delivery_failed})
+
+      view = open_invites(conn, program)
+
+      assert has_element?(view, "#invite-error-#{invite.id}", "could not be delivered")
+    end
+
+    # #1340: the cause is written by an Oban worker, which has no reader's locale — so the
+    # reason has to be translated here, on the render, or the provider reads English.
+    test "shows the reason in the provider's language", %{conn: conn, program: program} do
+      invite = fail_invite(%{failure_code: :delivery_failed})
+
+      view = open_invites(conn, program, ~p"/provider/dashboard/programs?locale=de")
+
+      assert has_element?(view, "#invite-error-#{invite.id}", "konnte nicht zugestellt werden")
+    end
+
+    test "names the field a failed claim could not accept, in the provider's language", %{
+      conn: conn,
+      program: program
+    } do
+      invite =
+        fail_invite(%{
+          failure_code: :invalid_details,
+          failure_context: %{
+            "fields" => [%{"field" => "date_of_birth", "msg" => "can't be blank", "bindings" => %{}}]
+          }
+        })
+
+      view = open_invites(conn, program, ~p"/provider/dashboard/programs?locale=de")
+
+      assert has_element?(view, "#invite-error-#{invite.id}", "Geburtsdatum darf nicht leer sein")
+    end
+
+    # Gettext's default `handle_missing_bindings/2` logs an error and hands back the
+    # un-interpolated string. Calling it with the msgid's placeholders unbound therefore
+    # costs a Logger.error on *every* render of that row — noise the prod-issue sweep
+    # would pick up — even though a second interpolation pass makes the output right.
+    test "renders a message with a value placeholder without logging a missing binding", %{
+      conn: conn,
+      program: program
+    } do
+      invite =
+        fail_invite(%{
+          failure_code: :invalid_details,
+          failure_context: %{
+            "fields" => [
+              %{
+                "field" => "school_grade",
+                "msg" => "must be greater than or equal to %{number}",
+                "bindings" => %{"number" => 1}
+              }
+            ]
+          }
+        })
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          view = open_invites(conn, program, ~p"/provider/dashboard/programs?locale=de")
+
+          assert has_element?(view, "#invite-error-#{invite.id}", "muss größer oder gleich 1 sein")
+        end)
+
+      refute log =~ "missing Gettext bindings"
+    end
+
+    test "interpolates the value a failed date carried", %{conn: conn, program: program} do
+      invite =
+        fail_invite(%{failure_code: :invalid_date, failure_context: %{"value" => "31.02.2016"}})
+
+      view = open_invites(conn, program)
+
+      assert has_element?(view, "#invite-error-#{invite.id}", "31.02.2016")
+    end
+
+    # Invites that failed before #1340 carry a sentence and no code. Nothing backfilled
+    # them, so the render has to keep reading the old column.
+    test "still shows the sentence an invite failed with before the codes existed", %{
+      conn: conn,
+      program: program
+    } do
+      invite = fail_invite(%{error_details: "date of birth can't be blank"})
+
+      view = open_invites(conn, program)
 
       assert has_element?(view, "#invite-error-#{invite.id}", "date of birth can't be blank")
     end

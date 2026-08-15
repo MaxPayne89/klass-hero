@@ -113,7 +113,8 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
 
         final = Repo.get!(BulkEnrollmentInvite, ctx.invite.id)
         assert final.status == :failed
-        assert final.error_details =~ "first name"
+        assert final.failure_code == :invalid_details
+        assert Enum.any?(final.failure_context["fields"], &(&1["field"] == "first_name"))
 
         # The account is real and stays; only the enrollment never happened.
         assert Accounts.get_user_by_email(ctx.email).id == user.id

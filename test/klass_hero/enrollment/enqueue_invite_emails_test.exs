@@ -51,7 +51,7 @@ defmodule KlassHero.Enrollment.EnqueueInviteEmailsTest do
       provider: provider,
       program: program
     } do
-      Repo.update_all(BulkEnrollmentInvite, set: [status: :failed, error_details: "test"])
+      Repo.update_all(BulkEnrollmentInvite, set: [status: :failed])
 
       manual(fn ->
         assert :ok = EnqueueInviteEmails.execute([program.id], provider.id)
@@ -113,7 +113,7 @@ defmodule KlassHero.Enrollment.EnqueueInviteEmailsTest do
       from(s in BulkEnrollmentInvite,
         where: s.program_id != ^orphan_program.id
       )
-      |> Repo.update_all(set: [status: :failed, error_details: "test"])
+      |> Repo.update_all(set: [status: :failed])
 
       manual(fn ->
         assert :ok = EnqueueInviteEmails.execute([orphan_program.id], provider.id)

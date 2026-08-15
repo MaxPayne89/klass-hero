@@ -81,7 +81,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       failed = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert failed.status == :failed
-      assert failed.error_details =~ "no token"
+      assert failed.failure_code == :no_token
     end
   end
 
@@ -146,8 +146,10 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       failed = reload(invite)
       assert failed.status == :failed
-      assert failed.error_details =~ "could not be delivered"
-      refute failed.error_details =~ "network", "the mailer's own term reached the provider"
+      assert failed.failure_code == :delivery_failed
+
+      refute inspect(failed.failure_context) =~ "network",
+             "the mailer's own term reached the provider"
     end
 
     # Oban reads retry/discard off the return value; compensating must not look to it
@@ -175,7 +177,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       resent = reload(invite)
       assert resent.status == :pending, "a dead job re-failed an invite the provider had resent"
-      assert resent.error_details == nil, "a dead job overwrote the reason a resend had cleared"
+      assert resent.failure_code == nil, "a dead job overwrote the reason a resend had cleared"
     end
 
     # The other side of the guard: without a resend to supersede it, the compensation is
@@ -205,7 +207,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       swept = reload(invite)
       assert swept.status == :pending, "the sweep re-failed an invite the provider had resent"
-      assert swept.error_details == nil
+      assert swept.failure_code == nil
     end
 
     # The guard's sharpest edge. `resent_at` and a job's `inserted_at` are only
@@ -320,8 +322,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       failed = reload(tokenless)
       assert failed.status == :failed
-      assert failed.error_details =~ "no token"
-      refute failed.error_details =~ "not_found"
+      assert failed.failure_code == :no_token
     end
 
     # Returning the error is what retries it; the log is what makes a write that keeps
