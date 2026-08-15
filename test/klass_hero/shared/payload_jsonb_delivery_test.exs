@@ -67,6 +67,18 @@ defmodule KlassHero.Shared.PayloadJsonbDeliveryTest do
     refute Map.has_key?(args["payload_types"], "active")
   end
 
+  # The row Postgres actually holds, which is the only place the envelope's shape is
+  # observable end to end. #1358 retired both keys; asserting it here rather than only
+  # against `serialize/1` is what would catch a producer path that reintroduced either.
+  test "the stored envelope carries no metadata or version" do
+    event = Event.new(:conversation_created, :messaging, :conversation, Ecto.UUID.generate(), @payload)
+
+    keys = event |> stage_and_read_args() |> Map.keys()
+
+    refute "metadata" in keys
+    refute "version" in keys
+  end
+
   # Manual mode so the job is inserted and left alone: this asserts what Postgres
   # stored, not what a consumer did with it. The real outbox is swapped in around
   # the stage alone, per archive_conversations_delivery_test.exs.

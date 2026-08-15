@@ -24,9 +24,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStatsTes
         program_id: attrs[:program_id] || Ecto.UUID.generate(),
         provider_id: attrs[:provider_id] || Ecto.UUID.generate(),
         program_title: attrs[:program_title] || "Test Program"
-      },
-      metadata: %{},
-      version: 1
+      }
     }
   end
 

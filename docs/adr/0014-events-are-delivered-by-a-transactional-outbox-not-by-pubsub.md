@@ -58,6 +58,16 @@ error propagation into the caller's `with`). What actually needs to be asynchron
   > allowlist and drops what the format does not define — an open `String.to_existing_atom/1`
   > would have raised on every one of them, in `execute/1` and again in `compensate/2`.
 
+  > **Amended by #1358.** `metadata` and `version` are both gone from the struct and the wire.
+  > No producer ever set `correlation_id`/`causation_id`, nothing branched on `version`, and the
+  > trace context that `metadata` was shaped to carry propagates through `oban_jobs.args`
+  > (`Tracing.Context.inject_into_args/1` → `TracedWorker.perform/1` → `attach_from_args/1`) —
+  > per-event propagation was not merely unused but wrong, reattaching inside an already-open
+  > worker span with no restore token. The closed allowlist above went with them: `deserialize/1`
+  > reads named keys and never walks the map, so a pre-#1358 row's leftover keys are inert
+  > without any allowlist to list them. Re-add `version` when a payload contract actually needs
+  > to evolve; a row lacking it deserializes the way a pre-`payload_types` row does.
+
 - **The `DomainEventBus` is deleted, not made async.** Its 7 surviving handlers are same-context and
   become direct calls, which restores compile-time checking, `xref` visibility, natural error
   propagation, and line-order sequencing. The runtime `subscribe/4` API — with its owner scoping,

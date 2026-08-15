@@ -7,12 +7,18 @@ defmodule KlassHero.Shared.Domain.Events.Event do
 
   - Use `source_context` to identify the publishing bounded context
   - Use `entity_type`/`entity_id` instead of `aggregate_type`/`aggregate_id`
-  - Carry a `version` field for schema evolution and forward compatibility
   - Carry a `payload` of JSON scalars, plus atoms and `Date`/`Time`/`DateTime`/
     `NaiveDateTime`/`Decimal`, which `EventSerializer` round-trips with their
     types intact (#1311, #1317). Anything else loses its type in `oban_jobs.args`, so
-    `EventMetadata.validate_payload!/1` rejects it at construction —
+    `PayloadGuard.validate_payload!/1` rejects it at construction —
     `PayloadCodec` is the one list of what survives.
+
+  The envelope carries only what something writes. A `metadata` map (`correlation_id`,
+  `causation_id`, W3C trace headers) and a `version` field were both retired in #1358:
+  no producer ever set either, nothing branched on them, and trace context propagates
+  through `oban_jobs.args`, not per-event metadata. Re-add `version` when a payload
+  contract actually needs to evolve — a row written without it deserializes fine, the
+  same way one written before `payload_types` existed does.
 
   ## Topic Naming Convention
 
@@ -35,7 +41,7 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   condition that decides anything.
   """
 
-  alias KlassHero.Shared.Domain.Events.EventMetadata
+  alias KlassHero.Shared.Domain.Events.PayloadGuard
 
   @type t :: %__MODULE__{
           event_id: String.t(),
@@ -44,9 +50,7 @@ defmodule KlassHero.Shared.Domain.Events.Event do
           entity_type: atom(),
           entity_id: String.t() | integer(),
           occurred_at: DateTime.t(),
-          payload: map(),
-          metadata: map(),
-          version: pos_integer()
+          payload: map()
         }
 
   @enforce_keys [
@@ -65,9 +69,7 @@ defmodule KlassHero.Shared.Domain.Events.Event do
     :entity_type,
     :entity_id,
     :occurred_at,
-    :payload,
-    metadata: %{},
-    version: 1
+    :payload
   ]
 
   @doc """
@@ -80,13 +82,6 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   - `entity_type` - Public-facing entity name (e.g., `:child`)
   - `entity_id` - Public-facing entity ID
   - `payload` - Event data map (primitive types only for stable contract)
-  - `opts` - Metadata options
-
-  ## Options
-
-  - `:correlation_id` - ID to correlate related events
-  - `:causation_id` - ID of the event that caused this event
-  - `:version` - Schema version (default: 1)
 
   ## Examples
 
@@ -96,22 +91,18 @@ defmodule KlassHero.Shared.Domain.Events.Event do
       iex> event.source_context
       :identity
   """
-  @spec new(atom(), atom(), atom(), String.t() | integer(), map(), keyword()) :: t()
-  def new(event_type, source_context, entity_type, entity_id, payload, opts \\ []) do
-    metadata = EventMetadata.build_metadata(opts)
-    version = Keyword.get(opts, :version, 1)
-    EventMetadata.validate_payload!(payload)
+  @spec new(atom(), atom(), atom(), String.t() | integer(), map()) :: t()
+  def new(event_type, source_context, entity_type, entity_id, payload) do
+    PayloadGuard.validate_payload!(payload)
 
     %__MODULE__{
-      event_id: EventMetadata.generate_event_id(),
+      event_id: Ecto.UUID.generate(),
       event_type: event_type,
       source_context: source_context,
       entity_type: entity_type,
       entity_id: entity_id,
       occurred_at: DateTime.utc_now(),
-      payload: payload,
-      metadata: metadata,
-      version: version
+      payload: payload
     }
   end
 
@@ -127,16 +118,4 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   def topic(%__MODULE__{source_context: source_context, event_type: event_type}) do
     "integration:#{source_context}:#{event_type}"
   end
-
-  @doc """
-  Returns the correlation_id from metadata if present.
-  """
-  @spec correlation_id(t()) :: String.t() | nil
-  defdelegate correlation_id(event), to: EventMetadata
-
-  @doc """
-  Returns the causation_id from metadata if present.
-  """
-  @spec causation_id(t()) :: String.t() | nil
-  defdelegate causation_id(event), to: EventMetadata
 end

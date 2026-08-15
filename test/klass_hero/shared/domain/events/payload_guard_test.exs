@@ -1,7 +1,7 @@
 defmodule KlassHero.Shared.Domain.Events.PayloadGuardTest do
   @moduledoc """
   Guards what an event payload may carry across jsonb (#1010, #1311, #1317).
-  The guard lives in `EventMetadata.validate_payload!/1`, invoked from `Event.new/6`.
+  The guard lives in `PayloadGuard.validate_payload!/1`, invoked from `Event.new/5`.
 
   One rule, and the difference it draws is the whole point: a value `PayloadCodec`
   can restore is allowed, a value that would silently arrive as something else is
@@ -98,7 +98,7 @@ defmodule KlassHero.Shared.Domain.Events.PayloadGuardTest do
     end
   end
 
-  defp build(payload, opts \\ []) do
-    Event.new(:test_event, :test_context, :test, "agg-1", payload, opts)
+  defp build(payload) do
+    Event.new(:test_event, :test_context, :test, "agg-1", payload)
   end
 end

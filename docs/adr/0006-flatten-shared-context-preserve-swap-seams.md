@@ -12,6 +12,8 @@ A behaviour module + config-selected impl is **idiomatic Elixir dependency injec
 
 The conventional-Phoenix target tree also *keeps* `domain/events/` (event structs) and all of `adapters/driven/**` (driven adapters). So Shared's event-envelope structs (`DomainEvent`/`IntegrationEvent`/`EventMetadata`) and every driven adapter stay exactly where they are. The flatten is therefore a **namespace collapse of the ports/services/types/validation/models modules only**, not a rewrite.
 
+> **Amended by #1358.** None of those three module names survives. `DomainEvent` and `IntegrationEvent` collapsed into one `Event` struct in ADR-0014, which this line predates. `EventMetadata` is gone too: #1358 retired the `metadata` field it was named for, leaving only a UUID mint (inlined into `Event.new/5`) and a jsonb guard (now `PayloadGuard`, beside `PayloadCodec`). The claim this paragraph was actually making — that `domain/events/` and `adapters/driven/**` keep their shape through the flatten — still holds.
+
 ## Decision
 
 Collapse the `Domain.Ports` / `Domain.Services` / `Domain.Types` namespaces; keep each swap behaviour as a **standalone slim behaviour module** at the context root. Modules keep their identity — only their path shortens. (The deeper "inline each `@callback` into its facade" variant was rejected: more edits, more risk, no payoff for a behaviour-preserving refactor.)

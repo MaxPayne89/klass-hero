@@ -64,15 +64,14 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   """
   def staff_member_invited(staff_member_id, payload \\ %{}, opts \\ [])
 
-  def staff_member_invited(staff_member_id, payload, opts)
+  def staff_member_invited(staff_member_id, payload, _opts)
       when is_binary(staff_member_id) and byte_size(staff_member_id) > 0 do
     Event.new(
       :staff_member_invited,
       @source_context,
       @staff_entity_type,
       staff_member_id,
-      Map.put(payload, :staff_member_id, staff_member_id),
-      opts
+      Map.put(payload, :staff_member_id, staff_member_id)
     )
   end
 
@@ -104,7 +103,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
   reads one.
   """
   @spec staff_member_deactivated(StaffMember.t(), keyword()) :: Event.t()
-  def staff_member_deactivated(%StaffMember{} = staff_member, opts \\ []) do
+  def staff_member_deactivated(%StaffMember{} = staff_member, _opts \\ []) do
     payload = %{
       provider_id: staff_member.provider_id,
       staff_member_id: staff_member.id,
@@ -116,13 +115,12 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
       @source_context,
       @staff_entity_type,
       staff_member.id,
-      payload,
-      opts
+      payload
     )
   end
 
   # assigned_at/unassigned_at are deliberately absent: no consumer reads them.
-  defp assignment_event(event_type, assignment, staff_member, opts) do
+  defp assignment_event(event_type, assignment, staff_member, _opts) do
     payload = %{
       provider_id: assignment.provider_id,
       program_id: assignment.program_id,
@@ -135,8 +133,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
       @source_context,
       @staff_entity_type,
       assignment.staff_member_id,
-      payload,
-      opts
+      payload
     )
   end
 end
