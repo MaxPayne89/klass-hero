@@ -2849,8 +2849,8 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:121
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:127
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:106
-#: lib/klass_hero_web/live/provider/programs_live.ex:684
-#: lib/klass_hero_web/live/provider/programs_live.ex:743
+#: lib/klass_hero_web/live/provider/programs_live.ex:687
+#: lib/klass_hero_web/live/provider/programs_live.ex:749
 #: lib/klass_hero_web/live/provider/team_live.ex:305
 #: lib/klass_hero_web/live/provider/team_live.ex:348
 #: lib/klass_hero_web/live/provider/team_live.ex:467
@@ -2883,12 +2883,12 @@ msgstr ""
 msgid "Program Start"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1108
+#: lib/klass_hero_web/live/provider/programs_live.ex:1130
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Program created successfully."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:1115
+#: lib/klass_hero_web/live/provider/programs_live.ex:1134
 #, elixir-autogen, elixir-format
 msgid "Program created, but enrollment capacity could not be saved. Edit the program to retry."
 msgstr ""
@@ -2897,12 +2897,12 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/programs_live.ex:153
 #: lib/klass_hero_web/live/provider/programs_live.ex:190
 #: lib/klass_hero_web/live/provider/programs_live.ex:254
-#: lib/klass_hero_web/live/provider/programs_live.ex:718
+#: lib/klass_hero_web/live/provider/programs_live.ex:724
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Program not found."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:707
+#: lib/klass_hero_web/live/provider/programs_live.ex:1131
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Program updated successfully."
 msgstr ""
@@ -3063,8 +3063,8 @@ msgstr ""
 msgid "Selected child does not meet the program requirements."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:674
-#: lib/klass_hero_web/live/provider/programs_live.ex:733
+#: lib/klass_hero_web/live/provider/programs_live.ex:677
+#: lib/klass_hero_web/live/provider/programs_live.ex:739
 #, elixir-autogen, elixir-format
 msgid "Selected instructor could not be found. Please try again."
 msgstr ""
@@ -3169,7 +3169,7 @@ msgstr ""
 msgid "This invite cannot be resent."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:725
+#: lib/klass_hero_web/live/provider/programs_live.ex:731
 #, elixir-autogen, elixir-format
 msgid "This program was modified by someone else. Please close and try again."
 msgstr ""
@@ -3384,7 +3384,7 @@ msgstr ""
 msgid "Program fee:"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:946
+#: lib/klass_hero_web/live/provider/programs_live.ex:952
 #, elixir-autogen, elixir-format
 msgid "Program saved, but the cover image upload failed. You can re-upload it by editing the program."
 msgstr ""
@@ -7683,7 +7683,7 @@ msgstr ""
 msgid "Staffing — %{title}"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/programs_live.ex:905
+#: lib/klass_hero_web/live/provider/programs_live.ex:911
 #, elixir-autogen, elixir-format
 msgid "That staff member could not be found."
 msgstr ""
@@ -7753,4 +7753,19 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/team_live.ex:218
 #, elixir-autogen, elixir-format
 msgid "This person has a history here now — use 'Remove from team' instead."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/programs_live.ex:1144
+#, elixir-autogen, elixir-format
+msgid "Program created, but some settings could not be saved. Please review the program's limits."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/programs_live.ex:1148
+#, elixir-autogen, elixir-format
+msgid "Program updated, but some settings could not be saved. Please review the program's limits."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/programs_live.ex:1138
+#, elixir-autogen, elixir-format
+msgid "Program updated, but the enrollment capacity was rejected. The previous limits still apply."
 msgstr ""

@@ -412,6 +412,112 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       assert html =~ "Program created successfully."
       refute html =~ "enrollment capacity could not be saved"
     end
+
+    # The regression #1345 reports: the update path reported success while the
+    # policy write was rejected and the old limits stayed in force.
+    test "warns when an edit's capacity is rejected", %{conn: conn, provider: provider} do
+      program = seed_program_with_listing(provider.id, "Rejected Capacity Program")
+
+      {:ok, _policy} =
+        KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 20})
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      open_edit_form(view, program)
+
+      submit_program_form(view, "Rejected Capacity Program", %{
+        "enrollment_policy" => %{"min_enrollment" => "50", "max_enrollment" => "10"}
+      })
+
+      assert_flash(
+        view,
+        :warning,
+        "Program updated, but the enrollment capacity was rejected. The previous limits still apply."
+      )
+
+      refute_flash(view, :info)
+    end
+
+    # Every edit outcome is the same submit under a different policy payload, so the
+    # only axis that matters is which sub-writes were rejected. A rejected capacity
+    # names itself; anything else shares the generic message.
+    for {label, policy_params, kind, message} <- [
+          {"accepted capacity and restrictions",
+           %{
+             "enrollment_policy" => %{"min_enrollment" => "5", "max_enrollment" => "20"},
+             "participant_policy" => %{"min_grade" => "1", "max_grade" => "4"}
+           }, :info, "Program updated successfully."},
+          {"rejected participant restrictions",
+           %{
+             "enrollment_policy" => %{"max_enrollment" => "20"},
+             "participant_policy" => %{"min_grade" => "10", "max_grade" => "2"}
+           }, :warning, "Program updated, but some settings could not be saved. Please review the program's limits."},
+          {"both rejected",
+           %{
+             "enrollment_policy" => %{"min_enrollment" => "50", "max_enrollment" => "10"},
+             "participant_policy" => %{"min_grade" => "10", "max_grade" => "2"}
+           }, :warning, "Program updated, but some settings could not be saved. Please review the program's limits."}
+        ] do
+      @edit_case %{params: policy_params, kind: kind, message: message}
+
+      test "editing with #{label} flashes the matching outcome", %{conn: conn, provider: provider} do
+        program = seed_program_with_listing(provider.id, "Outcome Program")
+
+        {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+        open_edit_form(view, program)
+        submit_program_form(view, "Outcome Program", @edit_case.params)
+
+        assert_flash(view, @edit_case.kind, @edit_case.message)
+        refute_flash(view, opposite_kind(@edit_case.kind))
+      end
+    end
+
+    # A partial failure is a :warning, never an :error — flash is keyed by kind, so
+    # an :error here would be erased by (or erase) a genuine error from elsewhere.
+    test "a rejected capacity on create is a warning, not an error", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#new-program-btn") |> render_click()
+
+      submit_program_form(view, "Capacity Kind Program", %{
+        "enrollment_policy" => %{"min_enrollment" => "20", "max_enrollment" => "5"}
+      })
+
+      assert_flash(
+        view,
+        :warning,
+        "Program created, but enrollment capacity could not be saved. Edit the program to retry."
+      )
+
+      refute_flash(view, :error)
+    end
+
+    defp opposite_kind(:info), do: :warning
+    defp opposite_kind(:warning), do: :info
+
+    defp open_edit_form(view, program) do
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+    end
+
+    defp submit_program_form(view, title, policy_params) do
+      params =
+        Map.merge(
+          %{
+            "program_schema" => %{
+              "title" => title,
+              "description" => "Exercising a program save outcome",
+              "category" => "arts",
+              "price" => "50.00"
+            }
+          },
+          policy_params
+        )
+
+      view |> form("#program-form", params) |> render_submit()
+    end
   end
 
   # The row a save inserts shows the capacity that was just typed, not what an
@@ -472,9 +578,8 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       })
       |> render_submit()
 
-      # No warning flash here: `flash_for_policy_result/2` is wired into the create
-      # path only, so an update silently drops a rejected capacity. Filed separately;
-      # this test pins the row, not the (missing) flash.
+      # The cell blanks rather than showing the surviving 20, so the warning flash
+      # is what tells the provider the capacity was refused, not cleared (#1345).
       assert view |> element("#programs-#{program.id}") |> render() =~ "0/—"
 
       assert %{max_enrollment: 20} =

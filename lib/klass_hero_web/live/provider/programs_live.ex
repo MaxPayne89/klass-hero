@@ -646,7 +646,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
          {:ok, program} <- ProgramCatalog.create_program(attrs) do
       :ok = apply_lead_instructor(program.id, instructor_id, socket.assigns.current_scope.provider.id)
       policy_result = maybe_set_enrollment_policy(program.id, enrollment_params)
-      set_participant_policy_on_create(program.id, participant_policy_params)
+      participant_result = set_participant_policy_on_create(program.id, participant_policy_params)
       capacity = resolve_capacity(policy_result, enrollment_params)
 
       new_enrollment_data = %{
@@ -655,7 +655,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
       {:noreply,
        socket
-       |> flash_for_policy_result(policy_result)
+       |> flash_for_save(:created,
+         enrollment_policy: policy_result,
+         participant_policy: participant_result
+       )
        |> maybe_flash_cover_warning(cover_result)
        |> insert_program_row(program, new_enrollment_data)
        |> assign(
@@ -695,7 +698,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
          {:ok, updated} <- ProgramCatalog.update_program(provider_id, program_id, attrs) do
       :ok = apply_lead_instructor(program_id, instructor_id, provider_id)
       policy_result = maybe_set_enrollment_policy(program_id, enrollment_params)
-      set_participant_policy_on_update(program_id, participant_policy_params)
+      participant_result = set_participant_policy_on_update(program_id, participant_policy_params)
 
       capacity = resolve_capacity(policy_result, enrollment_params)
       active_counts = Enrollment.count_active_enrollments_batch([program_id])
@@ -704,7 +707,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
       {:noreply,
        socket
-       |> put_flash(:info, gettext("Program updated successfully."))
+       |> flash_for_save(:updated,
+         enrollment_policy: policy_result,
+         participant_policy: participant_result
+       )
        |> maybe_flash_cover_warning(cover_result)
        |> insert_program_row(updated, enrollment_data)
        |> assign(
@@ -1102,18 +1108,44 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   defp resolve_capacity({:error, _}, _enrollment_params), do: nil
 
-  defp flash_for_policy_result(socket, :ok) do
-    socket
-    |> clear_flash(:error)
-    |> put_flash(:info, gettext("Program created successfully."))
+  # The program row is already written by the time the policy sub-writes run, so a
+  # rejected one is reported, never rolled back. Flash is keyed by kind, so a second
+  # put_flash of the same kind erases the first — every failure merges into ONE
+  # :warning, which also keeps it clear of a real :error (#1345).
+  defp flash_for_save(socket, action, results) do
+    failed_sources = for {source, {:error, _reason}} <- results, do: source
+
+    case failed_sources do
+      [] ->
+        socket
+        |> clear_flash(:error)
+        |> clear_flash(:warning)
+        |> put_flash(:info, save_success_message(action))
+
+      _ ->
+        put_flash(socket, :warning, save_failure_message(action, failed_sources))
+    end
   end
 
-  defp flash_for_policy_result(socket, {:error, :enrollment_policy_failed}) do
-    socket
-    |> put_flash(
-      :error,
-      gettext("Program created, but enrollment capacity could not be saved. Edit the program to retry.")
-    )
+  defp save_success_message(:created), do: gettext("Program created successfully.")
+  defp save_success_message(:updated), do: gettext("Program updated successfully.")
+
+  defp save_failure_message(:created, [:enrollment_policy]) do
+    gettext("Program created, but enrollment capacity could not be saved. Edit the program to retry.")
+  end
+
+  defp save_failure_message(:updated, [:enrollment_policy]) do
+    gettext("Program updated, but the enrollment capacity was rejected. The previous limits still apply.")
+  end
+
+  # A rejected participant policy is a should-never-happen (the form only submits
+  # shapes the changeset accepts), so it shares one message rather than earning its own.
+  defp save_failure_message(:created, _failed_sources) do
+    gettext("Program created, but some settings could not be saved. Please review the program's limits.")
+  end
+
+  defp save_failure_message(:updated, _failed_sources) do
+    gettext("Program updated, but some settings could not be saved. Please review the program's limits.")
   end
 
   defp lead_instructor_id(program_id) do
