@@ -1,4 +1,4 @@
-defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer do
+defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializer do
   @moduledoc """
   Serializes and deserializes event structs for Oban job args.
 

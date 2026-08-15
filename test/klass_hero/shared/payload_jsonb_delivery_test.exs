@@ -15,7 +15,7 @@ defmodule KlassHero.Shared.PayloadJsonbDeliveryTest do
 
   use KlassHero.DataCase, async: false
 
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Outbox
@@ -45,7 +45,7 @@ defmodule KlassHero.Shared.PayloadJsonbDeliveryTest do
 
     args = stage_and_read_args(event)
 
-    assert CriticalEventSerializer.deserialize(args).payload == @payload
+    assert EventSerializer.deserialize(args).payload == @payload
   end
 
   test "the stored payload is still plain JSON, with the types beside it" do

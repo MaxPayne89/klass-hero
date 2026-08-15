@@ -71,7 +71,7 @@ defmodule KlassHero.Provider.StaffOffboardingCascadeTest do
     refute Messaging.participant?(conversation.id, staff_user.id)
   end
 
-  defp drain, do: Oban.drain_queue(queue: :critical_events, with_recursion: true)
+  defp drain, do: Oban.drain_queue(queue: :events, with_recursion: true)
 
   defp with_real_outbox(fun) do
     original = Application.get_env(:klass_hero, :outbox)

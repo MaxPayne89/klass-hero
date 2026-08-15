@@ -1,8 +1,8 @@
-defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
+defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializerTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Domain.Events.Event
 
   # Payload keys must survive String.to_existing_atom/1, so the generator draws from
@@ -24,8 +24,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
           version: 2
         )
 
-      serialized = CriticalEventSerializer.serialize(event)
-      deserialized = CriticalEventSerializer.deserialize(serialized)
+      serialized = EventSerializer.serialize(event)
+      deserialized = EventSerializer.deserialize(serialized)
 
       assert deserialized.event_id == event.event_id
       assert deserialized.event_type == :child_data_anonymized
@@ -40,7 +40,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
       event =
         Event.new(:test, :enrollment, :invite, "id", %{}, version: 3)
 
-      serialized = CriticalEventSerializer.serialize(event)
+      serialized = EventSerializer.serialize(event)
 
       assert serialized["source_context"] == "enrollment"
       assert serialized["version"] == 3
@@ -50,30 +50,30 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
   describe "payload key atomization" do
     test "restores atom keys after JSON round-trip" do
       event = Event.new(:test, :test_context, :test, "id", %{user_id: 1, name: "Alice"})
-      serialized = CriticalEventSerializer.serialize(event)
+      serialized = EventSerializer.serialize(event)
 
       # Simulate JSON round-trip (keys become strings)
       json_cycled = Jason.decode!(Jason.encode!(serialized))
 
-      deserialized = CriticalEventSerializer.deserialize(json_cycled)
+      deserialized = EventSerializer.deserialize(json_cycled)
 
       assert deserialized.payload == %{user_id: 1, name: "Alice"}
     end
 
     test "handles nested payload maps" do
       event = Event.new(:test, :test_context, :test, "id", %{address: %{city: "Berlin", zip: "10115"}})
-      serialized = CriticalEventSerializer.serialize(event)
+      serialized = EventSerializer.serialize(event)
       json_cycled = Jason.decode!(Jason.encode!(serialized))
-      deserialized = CriticalEventSerializer.deserialize(json_cycled)
+      deserialized = EventSerializer.deserialize(json_cycled)
 
       assert deserialized.payload == %{address: %{city: "Berlin", zip: "10115"}}
     end
 
     test "atomizes keys inside maps nested in lists" do
       event = Event.new(:test, :test_context, :test, "id", %{items: [%{name: "Alice"}, %{name: "Bob"}]})
-      serialized = CriticalEventSerializer.serialize(event)
+      serialized = EventSerializer.serialize(event)
       json_cycled = Jason.decode!(Jason.encode!(serialized))
-      deserialized = CriticalEventSerializer.deserialize(json_cycled)
+      deserialized = EventSerializer.deserialize(json_cycled)
 
       assert deserialized.payload == %{items: [%{name: "Alice"}, %{name: "Bob"}]}
     end
@@ -129,7 +129,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
     test "leaves values alone when payload_types is absent" do
       legacy = serialize(%{alpha: ~D[2026-08-12]}) |> Map.delete("payload_types")
 
-      assert CriticalEventSerializer.deserialize(legacy).payload == %{alpha: "2026-08-12"}
+      assert EventSerializer.deserialize(legacy).payload == %{alpha: "2026-08-12"}
     end
 
     test "raises on a struct it cannot restore" do
@@ -144,7 +144,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
       }
 
       assert_raise ArgumentError, ~r/cannot cross the Oban jsonb boundary/, fn ->
-        CriticalEventSerializer.serialize(event)
+        EventSerializer.serialize(event)
       end
     end
   end
@@ -157,9 +157,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
           causation_id: "cause-1"
         )
 
-      serialized = CriticalEventSerializer.serialize(event)
+      serialized = EventSerializer.serialize(event)
       json_cycled = Jason.decode!(Jason.encode!(serialized))
-      deserialized = CriticalEventSerializer.deserialize(json_cycled)
+      deserialized = EventSerializer.deserialize(json_cycled)
 
       assert deserialized.metadata == %{correlation_id: "corr-1", causation_id: "cause-1"}
     end
@@ -178,9 +178,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
               })
         }
 
-      serialized = CriticalEventSerializer.serialize(event_with_trace)
+      serialized = EventSerializer.serialize(event_with_trace)
       json_cycled = Jason.decode!(Jason.encode!(serialized))
-      deserialized = CriticalEventSerializer.deserialize(json_cycled)
+      deserialized = EventSerializer.deserialize(json_cycled)
 
       assert Map.fetch(deserialized.metadata, "traceparent") == {:ok, "00-abc123-def456-01"}
       assert Map.fetch(deserialized.metadata, "tracestate") == {:ok, ""}
@@ -201,7 +201,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
       test "drops #{key}, which the format does not define" do
         args = legacy_args(%{unquote(key) => "critical"})
 
-        assert CriticalEventSerializer.deserialize(args).metadata == %{}
+        assert EventSerializer.deserialize(args).metadata == %{}
       end
     end
   end
@@ -211,7 +211,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
   defp legacy_args(metadata) do
     :test
     |> Event.new(:test_context, :test, "id", %{})
-    |> CriticalEventSerializer.serialize()
+    |> EventSerializer.serialize()
     |> Map.put("metadata", metadata)
     |> Jason.encode!()
     |> Jason.decode!()
@@ -224,14 +224,14 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializerTest do
     |> serialize()
     |> Jason.encode!()
     |> Jason.decode!()
-    |> CriticalEventSerializer.deserialize()
+    |> EventSerializer.deserialize()
     |> Map.fetch!(:payload)
   end
 
   defp serialize(payload) do
     :test
     |> Event.new(:test_context, :test, "id", payload)
-    |> CriticalEventSerializer.serialize()
+    |> EventSerializer.serialize()
   end
 
   defp payload_generator do

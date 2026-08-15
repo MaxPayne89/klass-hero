@@ -2,7 +2,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent do
   @moduledoc """
   Ecto schema for the processed_events idempotency table.
 
-  Internal to CriticalEventDispatcher — not a domain model. Each row records
+  Internal to EventDispatcher — not a domain model. Each row records
   that a specific handler has processed a specific event, preventing duplicate
   execution across PubSub and Oban delivery paths.
   """

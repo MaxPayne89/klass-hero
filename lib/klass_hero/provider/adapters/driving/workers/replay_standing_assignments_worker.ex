@@ -10,8 +10,8 @@ defmodule KlassHero.Provider.Adapters.Driving.Workers.ReplayStandingAssignmentsW
       Oban.insert(ReplayStandingAssignmentsWorker.new(%{}))
 
   Runs on `:default` rather than `:messaging`: the work here is Provider staging
-  events, and the Messaging-side effect happens later, on `:critical_events`,
-  once `EventDeliveryWorker` picks each one up.
+  events, and the Messaging-side effect happens later, on `:events`, once
+  `EventDeliveryWorker` picks each one up.
 
   Safe to run more than once — see `Provider.replay_standing_assignments/0` for
   why every consumer absorbs a repeat.

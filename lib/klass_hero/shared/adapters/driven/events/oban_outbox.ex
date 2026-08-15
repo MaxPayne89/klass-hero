@@ -14,13 +14,13 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.ObanOutbox do
 
   @behaviour KlassHero.Shared.ForStagingEvents
 
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
   alias KlassHero.Shared.Tracing.Context
 
   @impl true
   def stage(events) when is_list(events) do
-    args = Context.inject_into_args(%{"events" => Enum.map(events, &CriticalEventSerializer.serialize/1)})
+    args = Context.inject_into_args(%{"events" => Enum.map(events, &EventSerializer.serialize/1)})
 
     # insert! on purpose: a caller inside a transaction must not be able to ignore
     # a staging failure and commit the state change without its events.

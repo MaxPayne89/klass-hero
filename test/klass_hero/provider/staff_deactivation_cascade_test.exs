@@ -38,7 +38,7 @@ defmodule KlassHero.Provider.StaffDeactivationCascadeTest do
         # Nothing has consumed the event yet — the job is staged, not run.
         assert Repo.get(SessionDetail, scheduled).current_assigned_staff_name == "Jane Doe"
 
-        Oban.drain_queue(queue: :critical_events, with_recursion: true)
+        Oban.drain_queue(queue: :events, with_recursion: true)
       end)
     end)
 

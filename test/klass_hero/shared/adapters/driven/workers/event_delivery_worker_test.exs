@@ -3,12 +3,12 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
 
   import ExUnit.CaptureLog
 
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.UndeliveredEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
-  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.Event
+  alias KlassHero.Shared.EventDispatcher
 
   @topic "integration:test_context:thing_happened"
 
@@ -47,7 +47,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
   defp job(events, attempt \\ 1) do
     %Oban.Job{
       id: 4242,
-      args: %{"events" => Enum.map(events, &CriticalEventSerializer.serialize/1)},
+      args: %{"events" => Enum.map(events, &EventSerializer.serialize/1)},
       attempt: attempt,
       max_attempts: 10,
       discarded_at: DateTime.utc_now()
@@ -66,7 +66,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
     %{job | args: %{"events" => staged}}
   end
 
-  defp handler_ref(consumer), do: CriticalEventDispatcher.handler_ref(consumer)
+  defp handler_ref(consumer), do: EventDispatcher.handler_ref(consumer)
 
   defp mark_processed(event, consumer) do
     Repo.insert!(%ProcessedEvent{
@@ -115,7 +115,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
 
     assert Repo.get_by(ProcessedEvent,
              event_id: event.event_id,
-             handler_ref: CriticalEventDispatcher.handler_ref({Recorder, :first})
+             handler_ref: EventDispatcher.handler_ref({Recorder, :first})
            )
   end
 
@@ -200,7 +200,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
 
       assert :ok = EventDeliveryWorker.compensate(job([event]), nil)
 
-      assert undelivered(event).payload == CriticalEventSerializer.serialize(event)
+      assert undelivered(event).payload == EventSerializer.serialize(event)
     end
 
     # The loss is partial: `processed_events` keeps the consumers that did run, and a
@@ -256,6 +256,54 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
       assert :ok = EventDeliveryWorker.compensate(job, "boom")
 
       assert [_one] = Repo.all(from(u in UndeliveredEvent, where: u.event_id == ^event.event_id))
+    end
+  end
+
+  # #1357 moved this worker from `:critical_events` to `:events`. A queue rename is not a
+  # rename: `oban_jobs.queue` is data, so every row staged before the deploy still says
+  # "critical_events" — including anything mid-retry across the ~4.5h ladder. Both halves
+  # of why those rows are still safe are pinned here, because they are different facts and
+  # only one of them is behaviour.
+  describe "the legacy :critical_events queue" do
+    test "still executes its rows, because the worker column is what resolves the module", ctx do
+      route([{Recorder, :first}], ctx)
+
+      # `:manual` because `testing: :inline` would run the job at insert and never consult
+      # the queue at all, which is the one thing this test is here to exercise.
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Oban.insert!(
+          EventDeliveryWorker.new(%{"events" => [EventSerializer.serialize(event("thing-1"))]},
+            queue: :critical_events
+          )
+        )
+
+        Oban.drain_queue(queue: :critical_events, with_recursion: true)
+      end)
+
+      assert [{:first, "thing-1"}] = Recorder.calls()
+    end
+
+    # `drain_queue/2` above executes by queue name in the calling process and never consults
+    # the `queues:` list, so it proves the code path and NOT that anything drains this queue
+    # in production. That guarantee is a config fact, and this is the only thing asserting it.
+    test "stays configured, or every row staged before #1357 is stranded" do
+      queues = Application.get_env(:klass_hero, Oban)[:queues]
+
+      assert Keyword.has_key?(queues, :critical_events),
+             "dropping :critical_events strands every job staged before #1357 — confirm " <>
+               "`SELECT count(*) FROM oban_jobs WHERE queue = 'critical_events'` is 0 in prod " <>
+               "first. That is #1362, which removes this test along with the queue entry."
+    end
+
+    # The same failure from the other end: staging into a queue no producer is running for
+    # strands the job just as quietly, and a typo in the worker's `queue:` would do it to
+    # every event at once.
+    test "the queue this worker now stages into is one that is actually configured" do
+      queues = Application.get_env(:klass_hero, Oban)[:queues]
+      staged_queue = EventDeliveryWorker.new(%{"events" => []}).changes.queue
+
+      assert staged_queue == "events"
+      assert Keyword.has_key?(queues, String.to_existing_atom(staged_queue))
     end
   end
 end

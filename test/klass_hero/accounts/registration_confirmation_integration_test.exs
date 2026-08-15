@@ -31,7 +31,7 @@ defmodule KlassHero.Accounts.RegistrationProfileCreationIntegrationTest do
   # inside the registration's own transaction. Production runs it after the commit.
   defp register_and_deliver(attrs) do
     {:ok, user} = Oban.Testing.with_testing_mode(:manual, fn -> Accounts.register_user(attrs) end)
-    Oban.drain_queue(queue: :critical_events, with_recursion: true)
+    Oban.drain_queue(queue: :events, with_recursion: true)
     user
   end
 

@@ -2,10 +2,10 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   @moduledoc """
   Delivers one transaction's integration events to every consumer of each.
 
-  Generalizes `CriticalEventWorker`, which carried one event to one handler. This
-  carries N events to all their registered consumers — cross-context handlers and
+  Carries N events to all their registered consumers — cross-context handlers and
   projections alike, because `EventConsumerRegistry` makes them the same kind of
-  entry.
+  entry. ADR-0014 replaced a per-event, per-handler worker with this one, which is
+  why nothing downstream distinguishes a handler from a projection any more.
 
   ## Why the job invokes consumers rather than broadcasting to them
 
@@ -16,7 +16,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   recovery. PubSub keeps only the LiveView broadcast, where a dropped refresh is
   the one loss this system is allowed to take.
 
-  Each consumer runs through `CriticalEventDispatcher`, so at-least-once delivery
+  Each consumer runs through `EventDispatcher`, so at-least-once delivery
   does not become at-least-once *effects*: a consumer that already succeeded is a
   no-op on retry, and only the ones that failed run again.
 
@@ -32,15 +32,15 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   # this bound doubles as the window in which an orphaned event stays recoverable. 10 spans roughly
   # 4.5 hours under Oban's default backoff.
   use KlassHero.Shared.Tracing.TracedWorker,
-    queue: :critical_events,
+    queue: :events,
     max_attempts: 10
 
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.UndeliveredEventRepository
-  alias KlassHero.Shared.CriticalEventDispatcher
   alias KlassHero.Shared.Domain.Events.Event
+  alias KlassHero.Shared.EventDispatcher
   alias KlassHero.Shared.Tracing.Context
 
   require Logger
@@ -48,7 +48,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   @impl true
   def execute(%Oban.Job{args: %{"events" => raw_events}} = job) do
     raw_events
-    |> Enum.map(&CriticalEventSerializer.deserialize/1)
+    |> Enum.map(&EventSerializer.deserialize/1)
     |> Enum.map(&deliver(&1, job))
     |> first_error()
   end
@@ -67,9 +67,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   end
 
   defp run_consumer({module, function} = consumer, event, topic, job) do
-    handler_ref = CriticalEventDispatcher.handler_ref(consumer)
+    handler_ref = EventDispatcher.handler_ref(consumer)
 
-    case CriticalEventDispatcher.execute(event.event_id, handler_ref, fn -> apply(module, function, [event]) end) do
+    case EventDispatcher.execute(event.event_id, handler_ref, fn -> apply(module, function, [event]) end) do
       :ok ->
         :ok
 
@@ -129,7 +129,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   @impl true
   def compensate(%Oban.Job{args: %{"events" => raw_events}} = job, _reason) do
     raw_events
-    |> Enum.map(&CriticalEventSerializer.deserialize/1)
+    |> Enum.map(&EventSerializer.deserialize/1)
     |> Enum.flat_map(&undelivered_row(&1, job))
     |> record()
   end
@@ -152,7 +152,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
           %{
             event_id: event.event_id,
             topic: topic,
-            payload: CriticalEventSerializer.serialize(event),
+            payload: EventSerializer.serialize(event),
             missed_consumers: missed,
             job_id: job.id,
             discarded_at: job.discarded_at,
@@ -168,7 +168,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
     delivered = MapSet.new(processed)
 
     for consumer <- EventConsumerRegistry.consumers_for(topic),
-        ref = CriticalEventDispatcher.handler_ref(consumer),
+        ref = EventDispatcher.handler_ref(consumer),
         not MapSet.member?(delivered, ref),
         do: ref
   end

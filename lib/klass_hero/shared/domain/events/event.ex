@@ -9,7 +9,7 @@ defmodule KlassHero.Shared.Domain.Events.Event do
   - Use `entity_type`/`entity_id` instead of `aggregate_type`/`aggregate_id`
   - Carry a `version` field for schema evolution and forward compatibility
   - Carry a `payload` of JSON scalars, plus atoms and `Date`/`Time`/`DateTime`/
-    `NaiveDateTime`/`Decimal`, which `CriticalEventSerializer` round-trips with their
+    `NaiveDateTime`/`Decimal`, which `EventSerializer` round-trips with their
     types intact (#1311, #1317). Anything else loses its type in `oban_jobs.args`, so
     `EventMetadata.validate_payload!/1` rejects it at construction —
     `PayloadCodec` is the one list of what survives.

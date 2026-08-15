@@ -10,7 +10,7 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodec do
 
   - `EventMetadata.validate_payload!/1` asks `encodable?/1` at `Event.new/6`, so an
     unencodable value fails where a developer caused it rather than in a worker.
-  - `CriticalEventSerializer` calls `encode/1` on the way out and `decode/2` on the
+  - `EventSerializer` calls `encode/1` on the way out and `decode/2` on the
     way back, walking the payload and mirroring the tags into a `payload_types`
     sidecar beside it.
 

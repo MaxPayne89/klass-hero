@@ -65,9 +65,9 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
   # hop staged in turn. `with_scheduled` drives a failing job through its retries instead
   # of stopping at the first backoff.
   defp run_saga do
-    Oban.drain_queue(queue: :critical_events, with_recursion: true)
+    Oban.drain_queue(queue: :events, with_recursion: true)
     Oban.drain_queue(queue: :family, with_recursion: true, with_scheduled: true)
-    Oban.drain_queue(queue: :critical_events, with_recursion: true)
+    Oban.drain_queue(queue: :events, with_recursion: true)
   end
 
   describe "full invite claim saga" do
