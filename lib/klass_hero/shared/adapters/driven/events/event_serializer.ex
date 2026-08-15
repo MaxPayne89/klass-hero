@@ -51,14 +51,13 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializer do
   stay strings — the pre-#1311 behaviour, which is what the jobs already in the queue
   at deploy need.
 
-  ## Metadata is a closed format, and that is what makes a key retirable
+  ## A key this format does not define is ignored, which is what makes one retirable
 
-  `deserialize_metadata/1` restores only the keys the format defines and drops the
-  rest, rather than atomizing whatever arrives. The asymmetry is deliberate: an open
-  `String.to_existing_atom/1` makes deleting a metadata key a breaking change, because
-  every row an earlier release staged still carries it and no module holds the atom any
-  more. #1326 retired `criticality` through this door; whatever is retired next needs
-  no shim.
+  `deserialize/1` reads named keys out of the map and never walks it, so a key an
+  earlier release staged and this one no longer knows is inert rather than fatal — no
+  shim, no dated migration. #1326 retired `criticality` this way through a closed
+  metadata allowlist; #1358 retired `metadata` and `version` themselves, which needed
+  no allowlist at all because there is no field left to receive them into.
 
   The reverse direction needs more care than it used to. "Older code ignores the extra
   key" was true only of the pre-#1311 serializer, which never read `payload_types`;
@@ -87,9 +86,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializer do
       "entity_id" => event.entity_id,
       "occurred_at" => DateTime.to_iso8601(event.occurred_at),
       "payload" => payload,
-      "payload_types" => payload_types || %{},
-      "metadata" => serialize_metadata(event.metadata),
-      "version" => event.version
+      "payload_types" => payload_types || %{}
     }
   end
 
@@ -108,9 +105,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializer do
       entity_type: to_existing_atom(data["entity_type"]),
       entity_id: data["entity_id"],
       occurred_at: parse_datetime!(data["occurred_at"]),
-      payload: decode_payload(data["payload"], data["payload_types"]),
-      metadata: deserialize_metadata(data["metadata"]),
-      version: data["version"]
+      payload: decode_payload(data["payload"], data["payload_types"])
     }
   end
 
@@ -178,36 +173,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializer do
 
   defp type_for(types, key) when is_map(types), do: Map.get(types, key)
   defp type_for(_types, _key), do: nil
-
-  defp serialize_metadata(metadata) when is_map(metadata) do
-    Map.new(metadata, fn
-      {k, v} when is_atom(k) and is_atom(v) ->
-        {Atom.to_string(k), Atom.to_string(v)}
-
-      {k, v} when is_atom(k) ->
-        {Atom.to_string(k), v}
-
-      {k, v} ->
-        {to_string(k), v}
-    end)
-  end
-
-  # Keys restored to the atom the producer used.
-  @atom_metadata_keys ~w(correlation_id causation_id)
-
-  # Keys that stay binary strings — W3C Trace Context headers, which the Erlang
-  # propagator wants as `{binary(), binary()}` pairs.
-  @string_metadata_keys ~w(traceparent tracestate baggage)
-
-  defp deserialize_metadata(metadata) when is_map(metadata) do
-    for {key, value} <- metadata, entry = restore_entry(to_string(key), value), into: %{}, do: entry
-  end
-
-  defp deserialize_metadata(nil), do: %{}
-
-  defp restore_entry(key, value) when key in @atom_metadata_keys, do: {String.to_existing_atom(key), value}
-  defp restore_entry(key, value) when key in @string_metadata_keys, do: {key, value}
-  defp restore_entry(_key, _value), do: nil
 
   defp parse_datetime!(iso_string) when is_binary(iso_string) do
     {:ok, dt, _offset} = DateTime.from_iso8601(iso_string)
