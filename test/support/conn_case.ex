@@ -83,6 +83,22 @@ defmodule KlassHeroWeb.ConnCase do
   end
 
   @doc """
+  Asserts a LiveView has no flash message of the given kind.
+
+  ## Examples
+
+      refute_flash(lv, :warning)
+  """
+  def refute_flash(lv, kind) do
+    flash = :sys.get_state(lv.pid).socket.assigns.flash
+
+    case Phoenix.Flash.get(flash, kind) do
+      nil -> true
+      actual -> flunk("Expected no flash #{inspect(kind)}, but got: #{inspect(actual)}")
+    end
+  end
+
+  @doc """
   Asserts a cross-tenant (IDOR) ownership guard.
 
   Triggers `event` on the LiveView with a foreign resource `id` and asserts the
