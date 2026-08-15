@@ -8,7 +8,7 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodec do
 
   Two callers ask, at two different moments:
 
-  - `EventMetadata.validate_payload!/1` asks `encodable?/1` at `Event.new/6`, so an
+  - `PayloadGuard.validate_payload!/1` asks `encodable?/1` at `Event.new/5`, so an
     unencodable value fails where a developer caused it rather than in a worker.
   - `EventSerializer` calls `encode/1` on the way out and `decode/2` on the
     way back, walking the payload and mirroring the tags into a `payload_types`
@@ -16,7 +16,7 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodec do
 
   ## Why the list lives here and not in either caller
 
-  It lived in both. `EventMetadata` knew which types were *legal* and the serializer
+  It lived in both. `PayloadGuard` knew which types were *legal* and the serializer
   knew how each one *crossed*, and the two had to agree by hand — #1316 (typed value
   support) and #1317 (atoms) each had to edit both halves in lockstep, and the gap
   between them is exactly where #1311's two production bugs sat. Adding a type is now

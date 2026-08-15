@@ -76,15 +76,14 @@ defmodule KlassHero.Enrollment.Domain.Events.EnrollmentEvents do
           "enrollment_cancelled/3 requires a non-empty enrollment_id string, got: #{inspect(enrollment_id)}"
   end
 
-  defp build(event_type, entity_type, id_key, id, payload, opts) do
+  defp build(event_type, entity_type, id_key, id, payload, _opts) do
     Event.new(
       event_type,
       @source_context,
       entity_type,
       id,
       # Overwrites rather than merges: the id argument wins over any caller-supplied one.
-      Map.put(payload, id_key, id),
-      opts
+      Map.put(payload, id_key, id)
     )
   end
 end

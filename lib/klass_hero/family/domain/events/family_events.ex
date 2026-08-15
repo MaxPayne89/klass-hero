@@ -15,9 +15,8 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
     invite claim. Downstream contexts (e.g. Enrollment) react to auto-enroll
     the child.
 
-  Each factory takes the entity id, an optional payload, and metadata opts
-  (`correlation_id`, `causation_id`), and raises `ArgumentError`
-  on a nil or blank id.
+  Each factory takes the entity id and an optional payload, and raises
+  `ArgumentError` on a nil or blank id.
   """
 
   alias KlassHero.Shared.Domain.Events.Event
@@ -124,15 +123,14 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
     raise_blank_id(:invite_family_ready, :invite_id, invite_id)
   end
 
-  defp build(event_type, entity_type, id_key, id, payload, opts) do
+  defp build(event_type, entity_type, id_key, id, payload, _opts) do
     Event.new(
       event_type,
       @source_context,
       entity_type,
       id,
       # Overwrites rather than merges: the id argument wins over any caller-supplied one.
-      Map.put(payload, id_key, id),
-      opts
+      Map.put(payload, id_key, id)
     )
   end
 

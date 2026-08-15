@@ -36,15 +36,14 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEvents do
           "program_updated/3 requires a non-empty program_id string, got: #{inspect(program_id)}"
   end
 
-  defp build(event_type, program_id, payload, opts) do
+  defp build(event_type, program_id, payload, _opts) do
     Event.new(
       event_type,
       @source_context,
       @entity_type,
       program_id,
       # Overwrites rather than merges: the id argument wins over any caller-supplied :program_id.
-      Map.put(payload, :program_id, program_id),
-      opts
+      Map.put(payload, :program_id, program_id)
     )
   end
 end

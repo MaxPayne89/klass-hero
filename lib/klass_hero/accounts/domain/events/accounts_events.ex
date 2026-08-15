@@ -148,14 +148,13 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
   """
   def staff_user_registered(user_id, payload \\ %{}, opts \\ [])
 
-  def staff_user_registered(user_id, payload, opts) when is_binary(user_id) and byte_size(user_id) > 0 do
+  def staff_user_registered(user_id, payload, _opts) when is_binary(user_id) and byte_size(user_id) > 0 do
     Event.new(
       :staff_user_registered,
       @source_context,
       @entity_type,
       user_id,
-      Map.put(payload, :user_id, user_id),
-      opts
+      Map.put(payload, :user_id, user_id)
     )
   end
 
@@ -166,25 +165,23 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
 
   # Caller-supplied payload overrides the derived fields, but never the identity:
   # `user_id` is what consumers key on, so it is put last.
-  defp build(event_type, user_id, base_payload, payload, opts) do
+  defp build(event_type, user_id, base_payload, payload, _opts) do
     Event.new(
       event_type,
       @source_context,
       @entity_type,
       user_id,
-      base_payload |> Map.merge(payload) |> Map.put(:user_id, user_id),
-      opts
+      base_payload |> Map.merge(payload) |> Map.put(:user_id, user_id)
     )
   end
 
-  defp staff_event(event_type, staff_member_id, payload, opts) do
+  defp staff_event(event_type, staff_member_id, payload, _opts) do
     Event.new(
       event_type,
       @source_context,
       @staff_entity_type,
       staff_member_id,
-      Map.put(payload, :staff_member_id, staff_member_id),
-      opts
+      Map.put(payload, :staff_member_id, staff_member_id)
     )
   end
 

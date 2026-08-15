@@ -37,7 +37,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializer do
 
   **What each leaf may be is `PayloadCodec`'s to say, not this module's.** This one
   walks the payload and mirrors the tags into the sidecar; the codec turns one leaf
-  into `{scalar, tag}` and back. `EventMetadata.validate_payload!/1` asks that same
+  into `{scalar, tag}` and back. `PayloadGuard.validate_payload!/1` asks that same
   codec at construction, which is what keeps the two ends from drifting — they were
   separate lists until #1317, and each of #1316 and #1317 had to edit both.
 

@@ -1,49 +1,17 @@
-defmodule KlassHero.Shared.Domain.Events.EventMetadata do
+defmodule KlassHero.Shared.Domain.Events.PayloadGuard do
   @moduledoc """
-  Shared metadata accessors and builders for domain and integration events.
+  Rejects, at construction, any event payload that cannot survive Oban's jsonb column.
 
-  Both event structs carry a `:metadata` map with optional fields like
-  `:correlation_id` and `:causation_id`.
-  This module centralises the accessor functions and the metadata construction
-  logic so that both event structs stay in sync without duplicating code.
+  Pairs with `PayloadCodec`: the codec decides *what* survives, this walks a payload
+  and reports *where* something does not. Keeping them side by side is what stopped
+  them drifting — they were separate lists until #1317, and each of #1316 and #1317
+  had to edit both.
+
+  Lived in `EventMetadata` until #1358 retired the `metadata` field, which left that
+  module named after a concept it no longer held.
   """
 
   alias KlassHero.Shared.Domain.Events.PayloadCodec
-
-  @spec correlation_id(%{metadata: map()}) :: String.t() | nil
-  def correlation_id(%{metadata: %{correlation_id: id}}), do: id
-  def correlation_id(%{metadata: _}), do: nil
-
-  @spec causation_id(%{metadata: map()}) :: String.t() | nil
-  def causation_id(%{metadata: %{causation_id: id}}), do: id
-  def causation_id(%{metadata: _}), do: nil
-
-  @doc """
-  Generates a unique event ID (UUID v4).
-  """
-  @spec generate_event_id() :: String.t()
-  def generate_event_id, do: Ecto.UUID.generate()
-
-  @doc """
-  Builds a metadata map from keyword options.
-
-  Includes `:correlation_id` and `:causation_id` when present, and is empty
-  otherwise — which is what every event carries today, since no producer passes
-  either.
-  """
-  @spec build_metadata(keyword()) :: map()
-  def build_metadata(opts) do
-    %{}
-    |> maybe_add(:correlation_id, opts)
-    |> maybe_add(:causation_id, opts)
-  end
-
-  defp maybe_add(map, key, opts) do
-    case Keyword.get(opts, key) do
-      nil -> map
-      value -> Map.put(map, key, value)
-    end
-  end
 
   @doc """
   Raises if an event carries a payload value that cannot survive Oban's jsonb column.

@@ -42,6 +42,13 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventSerializerTest do
   end
 
   describe "metadata and version were retired (#1358)" do
+    test "the envelope struct carries neither field" do
+      fields = Event.new(:test, :test_context, :test, "id", %{}) |> Map.from_struct() |> Map.keys()
+
+      refute :metadata in fields
+      refute :version in fields
+    end
+
     test "the serialized envelope carries neither key" do
       keys = EventSerializer.serialize(Event.new(:test, :test_context, :test, "id", %{})) |> Map.keys()
 

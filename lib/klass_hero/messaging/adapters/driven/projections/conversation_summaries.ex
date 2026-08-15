@@ -528,7 +528,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries 
 
     # Arrives as the %DateTime{} the producer sent: since #1311 the serializer records
     # typed payload values and rebuilds them, so DateTime arithmetic on this is safe.
-    # (`reason` is still a string — atoms are not restored; see EventMetadata.)
     archived_at = legacy_archived_at(event)
 
     now = DateTime.utc_now() |> DateTime.truncate(:second)

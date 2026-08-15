@@ -285,8 +285,8 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   # Builds the event, deriving entity_type from the registry so no call site
   # hand-writes it.
   @spec new_event(atom(), String.t(), map(), keyword()) :: Event.t()
-  defp new_event(event_type, entity_id, payload, opts) do
-    Event.new(event_type, @source_context, entity_type_for(event_type), entity_id, payload, opts)
+  defp new_event(event_type, entity_id, payload, _opts) do
+    Event.new(event_type, @source_context, entity_type_for(event_type), entity_id, payload)
   end
 
   @spec session_note_payload(SessionNote.t()) :: session_note_payload()

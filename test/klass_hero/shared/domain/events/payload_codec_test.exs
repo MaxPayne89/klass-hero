@@ -2,7 +2,7 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodecTest do
   @moduledoc """
   The one list of what an event payload leaf may be, and how it crosses jsonb.
 
-  Both walkers ask this module: `EventMetadata` before construction, to reject a
+  Both walkers ask this module: `PayloadGuard` before construction, to reject a
   payload at its source, and `EventSerializer` on the way out and back.
   Keeping that list in one place is the point — it lived in two before #1317, and
   both #1316 and this change had to edit both halves in lockstep.
