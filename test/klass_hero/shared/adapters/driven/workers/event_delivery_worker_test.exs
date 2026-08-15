@@ -54,14 +54,24 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
     }
   end
 
-  # A row staged before #1326: its metadata still carries `"criticality"`. No module
-  # holds that atom any more, so a serializer that atomized whatever arrived would
-  # raise on this — here, and again in `compensate/2`, losing the event with no
-  # `undelivered_events` row to find it by. Both routes are covered because the
-  # second is the one nothing else would have caught.
+  # A row staged before #1326 *and* before #1358: it carries a `"metadata"` map holding
+  # `"criticality"`, plus a `"version"`. No module holds the `criticality` atom any more,
+  # and neither top-level key has a field to land in since #1358 — so a serializer that
+  # atomized whatever arrived would raise here, and again in `compensate/2`, losing the
+  # event with no `undelivered_events` row to find it by. Both routes are covered because
+  # the second is the one nothing else would have caught.
+  #
+  # The assertions deliberately say nothing about the retired keys. What is being proved
+  # is that an old row still *delivers*, which is the guarantee that has to survive every
+  # future retirement, not the mechanism any one of them used.
   defp legacy_job(events) do
     job = job(events)
-    staged = Enum.map(job.args["events"], &Map.put(&1, "metadata", %{"criticality" => "critical"}))
+
+    staged =
+      Enum.map(
+        job.args["events"],
+        &Map.merge(&1, %{"metadata" => %{"criticality" => "critical"}, "version" => 1})
+      )
 
     %{job | args: %{"events" => staged}}
   end
