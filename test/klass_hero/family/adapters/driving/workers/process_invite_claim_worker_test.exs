@@ -150,19 +150,20 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorkerTest
       end
     end
 
-    # error_details is read by a provider in the invites table, not by a developer in a
-    # log, so a raw inspect/1 of the changeset would be no more actionable than the
-    # silence it replaced.
-    test "fails the invite on the final attempt, recording a readable reason", ctx do
+    # The cause is read by a provider in the invites table, not by a developer in a log,
+    # so it has to name the field they can fix — and carry it as data, since the sentence
+    # is built later in the reader's own language (#1340).
+    test "fails the invite on the final attempt, recording which field it could not accept", ctx do
       args = failing_args(ctx.invite, ctx.program, ctx.user)
 
       assert {:error, _reason} = ProcessInviteClaimWorker.execute(job(args, @max_attempts))
 
       failed = reload(ctx.invite)
       assert failed.status == :failed
-      assert failed.error_details =~ "date of birth"
-      assert failed.error_details =~ "can't be blank"
-      refute failed.error_details =~ "Ecto.Changeset"
+      assert failed.failure_code == :invalid_details
+
+      assert %{"msg" => "can't be blank"} =
+               Enum.find(failed.failure_context["fields"], &(&1["field"] == "date_of_birth"))
     end
 
     test "records a reason for a failure that carries no changeset", ctx do
@@ -173,7 +174,9 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorkerTest
 
       assert {:error, _reason} = ProcessInviteClaimWorker.execute(job(args, @max_attempts))
 
-      assert reload(ctx.invite).error_details =~ "not-a-date"
+      failed = reload(ctx.invite)
+      assert failed.failure_code == :invalid_date
+      assert failed.failure_context == %{"value" => "not-a-date"}
     end
 
     # Oban reads retry/discard off the return value; compensating must not look to it

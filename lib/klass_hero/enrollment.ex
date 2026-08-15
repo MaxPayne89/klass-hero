@@ -1097,13 +1097,13 @@ defmodule KlassHero.Enrollment do
   @doc """
   Fails an invite, recording a reason the owning provider can act on.
 
-  The single writer of `error_details`. Before #1290 four call sites across two
+  The single writer of the failure cause. Before #1290 four call sites across two
   contexts each rebuilt this — the `:failed` atom, the refetch-by-id shape, the
   "a rejected transition means already-terminal" rule, and their own wording — and two
   of them wrote raw `inspect/1` output into a field rendered verbatim to providers.
 
-  `reason` is only ever used to *describe* the failure (see
-  `BulkEnrollmentInvite.describe_failure/2`); callers keep logging it themselves for
+  `reason` is only ever used to *classify* the failure (see
+  `BulkEnrollmentInvite.classify_failure/2`); callers keep logging it themselves for
   diagnostics, which is where an unmapped term belongs.
 
   `{:error, :already_terminal}` means something else already settled this invite, and
@@ -1156,10 +1156,13 @@ defmodule KlassHero.Enrollment do
   end
 
   defp apply_failure(invite, reason) do
+    {failure_code, failure_context} = BulkEnrollmentInvite.classify_failure(invite, reason)
+
     invite
     |> BulkEnrollmentInvite.transition_changeset(%{
       status: :failed,
-      error_details: BulkEnrollmentInvite.describe_failure(invite, reason)
+      failure_code: failure_code,
+      failure_context: failure_context
     })
     |> Repo.update()
     |> case do
@@ -1202,6 +1205,10 @@ defmodule KlassHero.Enrollment do
           status: :pending,
           invite_token: nil,
           invite_sent_at: nil,
+          failure_code: nil,
+          failure_context: nil,
+          # Legacy: an invite that failed before #1340 carries its reason here, and a
+          # resend must clear that too or the reopened invite keeps the old sentence.
           error_details: nil,
           resent_at: DateTime.utc_now()
         })

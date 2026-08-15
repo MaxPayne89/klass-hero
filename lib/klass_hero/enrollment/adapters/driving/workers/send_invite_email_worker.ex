@@ -36,8 +36,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
       {:ok, %BulkEnrollmentInvite{invite_token: nil} = invite} ->
         Logger.warning("[SendInviteEmailWorker] Invite has no token", invite_id: invite_id)
 
-        # The reason is not what names this failure — `describe_failure/2` reads the
-        # missing token off the row, so the sweep reaches the same wording later without
+        # The reason is not what names this failure — `classify_failure/2` reads the
+        # missing token off the row, so the sweep reaches the same cause later without
         # a reason to go on.
         invite.id
         |> Enrollment.fail_invite(:tokenless)

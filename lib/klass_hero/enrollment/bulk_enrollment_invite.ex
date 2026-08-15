@@ -7,7 +7,7 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
 
   This module is both the Ecto schema and the struct consumers pattern-match.
   The changesets are the validation gatekeepers; the predicates, `generate_token/0`,
-  `dedup_key/4` and `describe_failure/2` are the functional core. Status follows a
+  `dedup_key/4` and `classify_failure/2` are the functional core. Status follows a
   state machine (see `valid_transitions/0`).
   """
 
@@ -24,6 +24,8 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
 
   @statuses [:pending, :invite_sent, :registered, :enrolled, :failed]
   @resendable_statuses [:pending, :invite_sent, :failed]
+
+  @failure_codes [:no_token, :program_full, :invalid_date, :delivery_failed, :exhausted, :invalid_details, :generic]
 
   schema "bulk_enrollment_invites" do
     field :program_id, :binary_id
@@ -49,6 +51,15 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
     field :registered_at, :utc_datetime
     field :enrolled_at, :utc_datetime
     field :enrollment_id, :binary_id
+
+    # Why this invite failed, as a cause rather than a sentence. Every writer is a
+    # background process with no reader's locale in scope, so copy written here would be
+    # frozen in that process's language — the provider translates at render instead (#1340).
+    field :failure_code, Ecto.Enum, values: @failure_codes
+    field :failure_context, :map
+
+    # Superseded by the pair above; kept unwritten so invites that failed before #1340
+    # still read back their original sentence. Nothing may write it again.
     field :error_details, :string
 
     # When the provider last reopened this invite. Compared against an Oban job's
@@ -70,7 +81,7 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
     school_grade school_name medical_conditions nut_allergy
     consent_photo_marketing consent_photo_social_media
     status invite_token invite_sent_at registered_at enrolled_at
-    enrollment_id error_details
+    enrollment_id
   )a
 
   @import_fields ~w(
@@ -89,7 +100,7 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
     failed: [:pending]
   }
 
-  @lifecycle_fields ~w(status invite_token invite_sent_at registered_at enrolled_at enrollment_id error_details resent_at)a
+  @lifecycle_fields ~w(status invite_token invite_sent_at registered_at enrolled_at enrollment_id failure_code failure_context resent_at)a
 
   def valid_transitions, do: @valid_transitions
 
@@ -193,64 +204,54 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
   def ensure_claimable(%__MODULE__{}), do: {:error, :already_claimed}
 
   @doc """
-  The sentence a provider reads under a failed invite's status pill.
+  Why a failed invite failed, as a code the reader turns into a sentence.
 
-  `error_details` is rendered verbatim to providers so the reason is *actionable*
-  (#1221), which means no clause here may emit `inspect/1` output — see #1290, where
-  three of the four writers had each invented their own convention and two emitted raw
-  Elixir terms. Diagnostics belong in the `Logger` calls the writers already make.
+  The provider reads this under the status pill, so the cause has to be *actionable*
+  (#1221) — but every writer is a background process, so a sentence built here would be
+  frozen in that process's locale (#1340). The code plus its context is the whole
+  vocabulary; `KlassHeroWeb.ProviderComponents` owns the wording.
+
+  Context keys and values are JSON-safe scalars, because the map is persisted as jsonb
+  and read back. No clause may put an Elixir term in it — see #1290, where two of the
+  four writers this replaced emitted raw `inspect/1` output. Diagnostics belong in the
+  `Logger` calls the writers already make.
 
   Takes the invite as well as the reason because a missing token is a fact about the
   row that no reason can carry: the compensation sweep hands back `nil` for a Lifeline
   discard, and Oban's own error text otherwise, so by then the original term is gone.
   """
-  @spec describe_failure(t(), term()) :: String.t()
+  @spec classify_failure(t(), term()) :: {atom(), map()}
   # First, because the row outranks the reason: a tokenless invite failed for want of a
   # token whatever the caller believed went wrong, and the resend that mints a new one
   # is different advice from retrying a delivery.
-  def describe_failure(%__MODULE__{invite_token: nil}, _reason) do
-    "Invite link could not be generated (no token). Please resend."
-  end
+  def classify_failure(%__MODULE__{invite_token: nil}, _reason), do: {:no_token, %{}}
 
-  def describe_failure(%__MODULE__{}, %Ecto.Changeset{} = changeset) do
-    case ChangesetErrors.field_list(changeset) do
+  def classify_failure(%__MODULE__{}, %Ecto.Changeset{} = changeset) do
+    case ChangesetErrors.to_payload(changeset) do
       # A changeset can be invalid with its errors on an association rather than a field.
-      # Falling back to the generic sentence loses detail; falling back to `inspect/1`
-      # would lose the provider.
-      [] -> generic_failure()
-      fields -> Enum.map_join(fields, "; ", fn {field, message} -> "#{humanize_field(field)} #{message}" end)
+      # Naming no field is better than naming none convincingly.
+      [] -> {:generic, %{}}
+      fields -> {:invalid_details, %{"fields" => fields}}
     end
   end
 
-  def describe_failure(%__MODULE__{}, :program_full) do
-    "The program is full, so this child could not be enrolled."
+  def classify_failure(%__MODULE__{}, :program_full), do: {:program_full, %{}}
+
+  def classify_failure(%__MODULE__{}, {:invalid_date, value}) when is_binary(value) do
+    {:invalid_date, %{"value" => value}}
   end
 
-  def describe_failure(%__MODULE__{}, {:invalid_date, value}) when is_binary(value) do
-    ~s(Date of birth "#{value}" is not a valid date. Please correct it and resend.)
-  end
-
-  def describe_failure(%__MODULE__{}, {:delivery, _reason}) do
-    "The invitation email could not be delivered. Please check the address and resend."
-  end
+  def classify_failure(%__MODULE__{}, {:delivery, _reason}), do: {:delivery_failed, %{}}
 
   # `nil` is a Lifeline discard, which records no cause at all; a binary is Oban's own
   # error text — `Exception.format/3` output or "... failed with #{inspect(reason)}" —
   # which is developer copy by construction. Both give the provider the fact without a
   # cause rather than a term they cannot act on.
-  def describe_failure(%__MODULE__{}, reason) when is_nil(reason) or is_binary(reason) do
-    "This invite could not be completed and no retries remain. Please resend."
+  def classify_failure(%__MODULE__{}, reason) when is_nil(reason) or is_binary(reason) do
+    {:exhausted, %{}}
   end
 
-  def describe_failure(%__MODULE__{}, _other), do: generic_failure()
-
-  defp generic_failure, do: "This invite could not be completed. Please resend."
-
-  defp humanize_field(field) do
-    field
-    |> Atom.to_string()
-    |> String.replace("_", " ")
-  end
+  def classify_failure(%__MODULE__{}, _other), do: {:generic, %{}}
 
   @doc "Generates a cryptographically secure URL-safe token for invite links."
   @spec generate_token() :: String.t()

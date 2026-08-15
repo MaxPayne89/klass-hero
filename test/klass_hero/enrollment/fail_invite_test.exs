@@ -31,12 +31,19 @@ defmodule KlassHero.Enrollment.FailInviteTest do
   describe "fail_invite/2" do
     setup :create_invite
 
-    test "fails the invite with a reason a provider can act on", %{invite: invite} do
+    test "fails the invite with a cause a provider can act on", %{invite: invite} do
       assert {:ok, failed} = Enrollment.fail_invite(invite.id, :program_full)
 
       assert failed.status == :failed
-      assert failed.error_details =~ "full"
-      refute failed.error_details =~ ":program_full"
+      assert failed.failure_code == :program_full
+    end
+
+    # The sentence column is superseded, and a writer that still filled it would put the
+    # provider back in front of copy frozen in this process's locale (#1340).
+    test "writes no sentence into the legacy column", %{invite: invite} do
+      assert {:ok, failed} = Enrollment.fail_invite(invite.id, :program_full)
+
+      assert failed.error_details == nil
     end
 
     test "reads the missing token off the row, not off the reason", %{invite: invite} do
@@ -45,7 +52,7 @@ defmodule KlassHero.Enrollment.FailInviteTest do
       # nil is what the compensation sweep hands back for a Lifeline discard — the path
       # on which no reason term survives at all.
       assert {:ok, failed} = Enrollment.fail_invite(invite.id, nil)
-      assert failed.error_details =~ "no token"
+      assert failed.failure_code == :no_token
     end
 
     # `@valid_transitions` (failed: [:pending]) is what stops a second compensation
@@ -57,7 +64,7 @@ defmodule KlassHero.Enrollment.FailInviteTest do
 
       assert {:error, :already_terminal} = Enrollment.fail_invite(invite.id, nil)
 
-      assert Repo.get!(BulkEnrollmentInvite, invite.id).error_details =~ "full",
+      assert Repo.get!(BulkEnrollmentInvite, invite.id).failure_code == :program_full,
              "the second call overwrote the first call's reason"
     end
 
@@ -116,12 +123,40 @@ defmodule KlassHero.Enrollment.FailInviteTest do
 
       assert {:error, :superseded} = Enrollment.fail_invite(invite.id, :program_full, @enqueued_at)
 
-      assert Repo.get!(BulkEnrollmentInvite, invite.id).error_details == nil
+      assert Repo.get!(BulkEnrollmentInvite, invite.id).failure_code == nil
     end
 
     test "reports a missing invite rather than raising" do
       assert {:error, :not_found} =
                Enrollment.fail_invite(Ecto.UUID.generate(), :program_full, @enqueued_at)
+    end
+  end
+
+  describe "reset_invite_for_resend/1" do
+    setup :create_invite
+
+    test "clears the cause so the reopened invite shows no reason", %{invite: invite} do
+      {:ok, failed} = Enrollment.fail_invite(invite.id, {:invalid_date, "not-a-date"})
+      assert failed.failure_code == :invalid_date
+
+      assert {:ok, reset} = Enrollment.reset_invite_for_resend(failed)
+
+      assert reset.status == :pending
+      assert reset.failure_code == nil
+      assert reset.failure_context == nil
+    end
+
+    # An invite that failed before #1340 carries its reason in the old column, and a
+    # resend has to clear that one too or the reopened invite keeps the old sentence.
+    test "clears a legacy sentence as well", %{invite: invite} do
+      failed =
+        invite
+        |> Ecto.Changeset.change(%{status: :failed, error_details: "The program is full."})
+        |> Repo.update!()
+
+      assert {:ok, reset} = Enrollment.reset_invite_for_resend(failed)
+
+      assert reset.error_details == nil
     end
   end
 end

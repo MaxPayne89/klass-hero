@@ -100,4 +100,88 @@ defmodule KlassHero.Shared.ChangesetErrorsTest do
       assert [{:name, "expected 1 to 10"}] = ChangesetErrors.field_list(cs)
     end
   end
+
+  describe "to_payload/1" do
+    test "returns [] for a valid changeset" do
+      assert ChangesetErrors.to_payload(changeset(%{"name" => "ok"})) == []
+    end
+
+    # The msgid is what gettext looks up, so expanding it here would leave the reader
+    # with a string no catalog contains. Interpolation is the caller's second step.
+    test "keeps the msgid unexpanded and hands the values over separately" do
+      payload = ChangesetErrors.to_payload(changeset(%{"name" => "a"}))
+
+      assert %{"msg" => "should be at least %{count} character(s)", "bindings" => %{"count" => 2}} =
+               Enum.find(payload, &(&1["msg"] =~ "at least"))
+    end
+
+    test "names the field as a string so it survives jsonb" do
+      assert [%{"field" => "name"} | _] = ChangesetErrors.to_payload(changeset(%{"name" => ""}))
+    end
+
+    test "round-trips through JSON unchanged" do
+      payload = ChangesetErrors.to_payload(changeset(%{"name" => "a", "quantity" => -1}))
+
+      assert payload == payload |> Jason.encode!() |> Jason.decode!()
+    end
+
+    # Ecto puts its own bookkeeping in opts (`validation: :length`, `kind: :min`), and a
+    # custom validator can put anything there at all. Atoms stringify; a term with no
+    # string form is dropped rather than allowed to break the render path.
+    test "normalizes binding values to JSON-safe scalars" do
+      cs =
+        %Sample{}
+        |> cast(%{"name" => "ok"}, [:name])
+        |> add_error(:name, "bad", validation: :length, count: 3, term: {:awkwardly, "shaped"})
+
+      assert [%{"bindings" => bindings}] = ChangesetErrors.to_payload(cs)
+      assert bindings == %{"validation" => "length", "count" => 3}
+    end
+
+    test "keeps a count binding an integer so a plural lookup still works" do
+      assert [%{"bindings" => %{"count" => count}} | _] =
+               ChangesetErrors.to_payload(changeset(%{"name" => "a"}))
+
+      assert is_integer(count)
+    end
+  end
+
+  describe "gettext_bindings/1" do
+    test "atom-keys the placeholders the errors catalog interpolates" do
+      assert ChangesetErrors.gettext_bindings(%{"count" => 2, "number" => 1}) ==
+               %{count: 2, number: 1}
+    end
+
+    # Gettext logs an error for any placeholder it cannot bind, so a key it does not need
+    # is harmless but a key it does need being absent is not.
+    test "drops keys that are not catalog placeholders" do
+      assert ChangesetErrors.gettext_bindings(%{"validation" => "length", "kind" => "min"}) == %{}
+    end
+
+    test "returns an empty map when there is nothing to bind" do
+      assert ChangesetErrors.gettext_bindings(%{}) == %{}
+    end
+
+    # The keys arrive from jsonb, so the conversion is a closed literal map — never
+    # String.to_existing_atom, which raises once an atom is deleted in a later release.
+    test "ignores a key it has no atom for rather than minting one" do
+      refute Map.has_key?(ChangesetErrors.gettext_bindings(%{"totally_novel_key" => 1}), :totally_novel_key)
+    end
+  end
+
+  describe "interpolate/2" do
+    test "substitutes string-keyed bindings" do
+      assert ChangesetErrors.interpolate("expected %{min} to %{max}", %{"min" => 1, "max" => 10}) ==
+               "expected 1 to 10"
+    end
+
+    test "leaves a placeholder with no binding intact" do
+      assert ChangesetErrors.interpolate("needs %{count} things", %{"validation" => "custom"}) ==
+               "needs %{count} things"
+    end
+
+    test "returns the message untouched when there is nothing to bind" do
+      assert ChangesetErrors.interpolate("can't be blank", %{}) == "can't be blank"
+    end
+  end
 end
