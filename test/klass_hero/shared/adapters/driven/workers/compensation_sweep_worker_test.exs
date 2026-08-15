@@ -14,7 +14,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   alias KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker
   alias KlassHero.MessagingFixtures
   alias KlassHero.Repo
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.JobCompensation
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.UndeliveredEvent
   alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
@@ -120,7 +120,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   describe "undelivered events" do
     test "dead-letters an event delivery that gave up permanently" do
       event = Event.new(:user_registered, :accounts, :user, Ecto.UUID.generate(), %{})
-      job = discarded_job(@delivery, %{"events" => [CriticalEventSerializer.serialize(event)]})
+      job = discarded_job(@delivery, %{"events" => [EventSerializer.serialize(event)]})
 
       assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
 

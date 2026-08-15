@@ -1,10 +1,11 @@
-defmodule KlassHero.Shared.CriticalEventDispatcher do
+defmodule KlassHero.Shared.EventDispatcher do
   @moduledoc """
-  Exactly-once dispatch for critical events.
+  Exactly-once dispatch for events.
 
   Owns the idempotency invariant: a given event-handler pair is processed at
-  most once, regardless of how many delivery paths attempt it. Both the PubSub
-  real-time path and the Oban durable path funnel through this module.
+  most once, however many times delivery is attempted. Since ADR-0014 there is
+  one delivery path — `EventDeliveryWorker` — and Oban's at-least-once retry is
+  what makes this gate load-bearing rather than defensive.
 
   Delegates persistence and transactional atomicity to the
   `ForTrackingProcessedEvents` port — this domain service contains no

@@ -144,7 +144,14 @@ config :klass_hero, Oban,
   ],
   # email: 1 — serialized to stay under Resend's 2 req/sec rate limit (per-node;
   #   add a rate limiter if scaling to multiple Oban nodes)
-  queues: [default: 10, messaging: 5, cleanup: 2, email: 1, family: 1, critical_events: 5]
+  # events: 5 — every event goes here; since ADR-0014 there is no other kind.
+  # critical_events: 5 — transitional (#1357), and the only reason jobs staged before the
+  #   rename still run. `oban_jobs.queue` is data, so those rows still say "critical_events";
+  #   they execute fine because the `worker` column still resolves to EventDeliveryWorker, but
+  #   only while a producer is running for the queue they name. Removing this line does not
+  #   fail them — it leaves them sitting, and nothing alerts on a merely unattended queue.
+  #   Drop it once `SELECT count(*) FROM oban_jobs WHERE queue = 'critical_events'` is 0 in prod.
+  queues: [default: 10, messaging: 5, cleanup: 2, email: 1, family: 1, events: 5, critical_events: 5]
 
 # Base URL for constructing links in emails and event handlers
 # (avoids boundary violations from referencing KlassHeroWeb.Endpoint in domain code)

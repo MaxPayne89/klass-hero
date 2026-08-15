@@ -139,7 +139,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
     # Regression for #1065. Unlike the "idempotent" test above (which calls the
     # handler directly, exercising the safe out-of-transaction path), this drives
     # the handler through the exactly-once wrapper the way production does
-    # (EventSubscriber / CriticalEventWorker → ProcessedEventRepository.execute_atomically),
+    # (EventDeliveryWorker → EventDispatcher → ProcessedEventRepository.execute_atomically),
     # i.e. INSIDE a Repo.transaction. Before the `mode: :savepoint` fix, the
     # duplicate-identity insert poisoned that transaction and execute_atomically
     # returned {:error, :rollback}, so the dedup marker never committed and the

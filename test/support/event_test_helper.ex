@@ -20,7 +20,7 @@ defmodule KlassHero.EventTestHelper do
 
   import ExUnit.Assertions
 
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -41,10 +41,10 @@ defmodule KlassHero.EventTestHelper do
   @spec through_outbox(Event.t()) :: Event.t()
   def through_outbox(%Event{} = event) do
     event
-    |> CriticalEventSerializer.serialize()
+    |> EventSerializer.serialize()
     |> Jason.encode!()
     |> Jason.decode!()
-    |> CriticalEventSerializer.deserialize()
+    |> EventSerializer.deserialize()
   end
 
   @doc """

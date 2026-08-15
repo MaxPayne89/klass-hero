@@ -62,7 +62,7 @@ defmodule KlassHero.ProgramCatalog.ProgramListingDeliveryTest do
         Application.put_env(:klass_hero, :outbox, original_outbox)
       end
 
-    Oban.drain_queue(queue: :critical_events, with_recursion: true)
+    Oban.drain_queue(queue: :events, with_recursion: true)
 
     result
   end

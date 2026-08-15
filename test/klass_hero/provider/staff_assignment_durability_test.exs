@@ -13,7 +13,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
 
   2. **Serialization safety** — the payload carries only string/UUID fields
      (the `assigned_at`/`unassigned_at` `DateTime`s are never put in it), so it
-     round-trips through `CriticalEventSerializer` losslessly.
+     round-trips through `EventSerializer` losslessly.
   """
   use ExUnit.Case, async: true
 
@@ -21,8 +21,8 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
-  alias KlassHero.Shared.Adapters.Driven.Events.CriticalEventSerializer
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
+  alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Domain.Events.Event
 
   @assignment %ProgramStaffAssignment{
@@ -64,9 +64,9 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
 
       round_tripped =
         event
-        |> CriticalEventSerializer.serialize()
+        |> EventSerializer.serialize()
         |> jsonify()
-        |> CriticalEventSerializer.deserialize()
+        |> EventSerializer.deserialize()
 
       # Trimmed at the promotion boundary — no DateTime crosses the boundary.
       refute Map.has_key?(round_tripped.payload, :assigned_at)
@@ -84,9 +84,9 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
 
       round_tripped =
         event
-        |> CriticalEventSerializer.serialize()
+        |> EventSerializer.serialize()
         |> jsonify()
-        |> CriticalEventSerializer.deserialize()
+        |> EventSerializer.deserialize()
 
       refute Map.has_key?(round_tripped.payload, :unassigned_at)
 

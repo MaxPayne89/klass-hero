@@ -66,7 +66,7 @@ defmodule KlassHero.Provider.ErasureCascadeTest do
       # Nothing has consumed the event yet — the job is staged, not run.
       assert Repo.get(StaffMember, staff.id).email == "jane@example.com"
 
-      Oban.drain_queue(queue: :critical_events, with_recursion: true)
+      Oban.drain_queue(queue: :events, with_recursion: true)
     end)
 
     scrubbed_staff = Repo.get(StaffMember, staff.id)

@@ -3,7 +3,7 @@ defmodule KlassHero.Shared.ForTrackingProcessedEvents do
   Port for tracking which event-handler pairs have been processed.
 
   Provides the persistence and durable retry infrastructure behind
-  `CriticalEventDispatcher`. Implementations own the transactional
+  `EventDispatcher`. Implementations own the transactional
   atomicity guarantees — the domain service only sees `:ok` or
   `{:error, reason}`.
   """

@@ -1,21 +1,21 @@
-defmodule KlassHero.Shared.CriticalEventDispatcherTest do
+defmodule KlassHero.Shared.EventDispatcherTest do
   use KlassHero.DataCase, async: true
 
   import ExUnit.CaptureLog
 
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
-  alias KlassHero.Shared.CriticalEventDispatcher
+  alias KlassHero.Shared.EventDispatcher
 
   describe "handler_ref/1" do
     test "produces canonical string from {module, function} tuple" do
-      ref = CriticalEventDispatcher.handler_ref({MyApp.SomeHandler, :handle_event})
+      ref = EventDispatcher.handler_ref({MyApp.SomeHandler, :handle_event})
       assert ref == "Elixir.MyApp.SomeHandler:handle_event"
     end
 
     test "produces different refs for different functions on same module" do
-      ref_a = CriticalEventDispatcher.handler_ref({MyApp.Handler, :handle})
-      ref_b = CriticalEventDispatcher.handler_ref({MyApp.Handler, :handle_event})
+      ref_a = EventDispatcher.handler_ref({MyApp.Handler, :handle})
+      ref_b = EventDispatcher.handler_ref({MyApp.Handler, :handle_event})
       assert ref_a != ref_b
     end
   end
@@ -27,7 +27,7 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
       test_pid = self()
 
       result =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           send(test_pid, :handler_called)
           :ok
         end)
@@ -46,7 +46,7 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
 
       # First call processes normally
       :ok =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           send(test_pid, :first_call)
           :ok
         end)
@@ -55,7 +55,7 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
 
       # Second call is idempotent — handler not called
       :ok =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           send(test_pid, :second_call)
           :ok
         end)
@@ -68,7 +68,7 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
       handler_ref = "Elixir.TestModule:handle"
 
       result =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           {:error, :something_went_wrong}
         end)
 
@@ -83,7 +83,7 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
       handler_ref = "Elixir.TestModule:handle"
 
       result =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           raise "boom"
         end)
 
@@ -98,7 +98,7 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
       handler_ref = "Elixir.TestModule:handle"
 
       result =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           :ignore
         end)
 
@@ -112,7 +112,7 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
 
       log =
         capture_log([level: :error], fn ->
-          CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+          EventDispatcher.execute(event_id, handler_ref, fn ->
             raise "kaboom"
           end)
         end)
@@ -128,13 +128,13 @@ defmodule KlassHero.Shared.CriticalEventDispatcherTest do
 
       # First attempt fails
       {:error, _} =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           {:error, :transient}
         end)
 
       # Retry succeeds — row was not left behind
       :ok =
-        CriticalEventDispatcher.execute(event_id, handler_ref, fn ->
+        EventDispatcher.execute(event_id, handler_ref, fn ->
           send(test_pid, :retry_succeeded)
           :ok
         end)

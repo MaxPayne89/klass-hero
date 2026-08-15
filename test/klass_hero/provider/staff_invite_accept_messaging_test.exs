@@ -80,7 +80,7 @@ defmodule KlassHero.Provider.StaffInviteAcceptMessagingTest do
         # The participant row is the half that still needs the replay to land.
         refute participant?(conversation.id, user.id)
 
-        Oban.drain_queue(queue: :critical_events, with_recursion: true)
+        Oban.drain_queue(queue: :events, with_recursion: true)
       end)
     end)
 

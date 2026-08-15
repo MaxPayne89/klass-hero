@@ -21,7 +21,7 @@ defmodule KlassHero.Shared.Domain.Events.PayloadGuardTest do
     {"a struct nested in a list", %{items: ["ok", %URI{host: "x"}]}, "items.1"}
   ]
 
-  # CriticalEventSerializer records these on the way out and rebuilds them on the
+  # EventSerializer records these on the way out and rebuilds them on the
   # way in, so the consumer gets what the producer sent.
   @restorable [
     {"an atom", %{status: :pending}},
