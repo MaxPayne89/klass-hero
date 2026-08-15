@@ -63,13 +63,7 @@ test_db=$(test_database)
 # behaves identically on a checkout that predates that config change.
 export MIX_TEST_PARTITION="$(test_partition)"
 
-# --- 1. containers ----------------------------------------------------------
-# mix dev.setup is already idempotent: docker-compose up -d, then health-polls
-# klass_hero_postgres and klass_hero_minio. Reused rather than reimplemented.
-step "Docker services"
-mix dev.setup >/dev/null 2>&1 || fail "mix dev.setup failed — run it directly to see why"
-
-# --- 2. warm the build ------------------------------------------------------
+# --- 1. warm the build ------------------------------------------------------
 # A fresh worktree materialises only *tracked* files, so deps/ and _build/ start
 # empty and a cold fetch-and-compile is by far the slowest step here — the one
 # thing that could exhaust the WorktreeCreate hook's budget. Same mix.lock and
@@ -93,12 +87,21 @@ if linked_worktree; then
   fi
 fi
 
-# --- 3. dependencies + compile ---------------------------------------------
+# --- 2. dependencies + compile ---------------------------------------------
 step "Dependencies"
 mix deps.get >/dev/null || fail "mix deps.get failed"
 
 step "Compile"
 mix compile >/dev/null || fail "mix compile failed — run it directly to see the errors"
+
+# --- 3. containers ----------------------------------------------------------
+# After compiling, not before: dev.setup is a Mix task defined in this project
+# (lib/mix/tasks/dev.setup.ex), so it cannot run until the project's dependencies
+# are fetched and compiled. It is itself idempotent — docker-compose up -d, then
+# health-polls klass_hero_postgres and klass_hero_minio — so it is reused rather
+# than reimplemented here.
+step "Docker services"
+mix dev.setup >/dev/null 2>&1 || fail "mix dev.setup failed — run it directly to see why"
 
 # --- 4. dev database --------------------------------------------------------
 # Whether to seed is decided *before* creating, by asking Postgres. Parsing
