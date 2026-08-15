@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.3](https://github.com/MaxPayne89/klass-hero/compare/v0.72.2...v0.72.3) (2026-08-15)
+
+
+### Code Refactoring
+
+* rename the Critical* event modules and the :critical_events queue ([#1363](https://github.com/MaxPayne89/klass-hero/issues/1363)) ([2faaa01](https://github.com/MaxPayne89/klass-hero/commit/2faaa014923ed5391a4fea7ac9344aad44284384)), closes [#1357](https://github.com/MaxPayne89/klass-hero/issues/1357)
+* retire the dead metadata, version, and opts plumbing from the event envelope ([#1366](https://github.com/MaxPayne89/klass-hero/issues/1366)) ([f42bba8](https://github.com/MaxPayne89/klass-hero/commit/f42bba875b679b423e4555135468b988378569b1)), closes [#1358](https://github.com/MaxPayne89/klass-hero/issues/1358)
+
 ## [0.72.2](https://github.com/MaxPayne89/klass-hero/compare/v0.72.1...v0.72.2) (2026-08-14)
 
 
