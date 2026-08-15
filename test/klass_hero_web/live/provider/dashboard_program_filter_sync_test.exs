@@ -67,6 +67,32 @@ defmodule KlassHeroWeb.Provider.DashboardProgramFilterSyncTest do
       assert has_element?(view, ~s(#programs-search-form input[name=search][value=""]))
     end
 
+    # Deliberate, not incidental: when one axis hides the new row, *both* yield,
+    # even the one it still matches. Surgical per-axis clearing would buy a
+    # rarely-hit nicety for a branch on every combination.
+    test "clears both axes when only one of them hides the new program", %{
+      conn: conn,
+      provider: provider,
+      ann: ann
+    } do
+      staffed = insert_listed_program(provider, "Ann's Chess Camp")
+      assign_staff!(staffed, ann)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      search_for(view, "Chess")
+      filter_by_staff(view, ann)
+
+      # Matches the search, but has no staff at all — only the staff axis hides it.
+      create_program(view, "Chess Club")
+
+      created = Repo.get_by!(Program, title: "Chess Club")
+
+      assert has_element?(view, "#programs-#{created.id}")
+      assert has_element?(view, "#programs-staff-filter-form option[value=all][selected]")
+      assert has_element?(view, ~s(#programs-search-form input[name=search][value=""]))
+    end
+
     # The filter only yields when it would hide the new row. A provider who
     # searched for "Chess" and then made a chess program keeps their search.
     test "keeps a filter the new program already matches", %{conn: conn} do
@@ -132,6 +158,62 @@ defmodule KlassHeroWeb.Provider.DashboardProgramFilterSyncTest do
       })
       |> render_submit()
 
+      refute has_element?(view, "#programs-#{program.id}")
+    end
+
+    # The other direction: the same writer has to *add* a row an edit moved into
+    # the filter, not only drop one it moved out.
+    test "shows the row when the edit renames the program into the search", %{
+      conn: conn,
+      provider: provider
+    } do
+      program = insert_listed_program(provider, "Chess Club")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+
+      search_for(view, "Pottery")
+      refute has_element?(view, "#programs-#{program.id}")
+
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => "Pottery Basics",
+          "description" => "Renamed into the active search",
+          "category" => "arts",
+          "price" => "25.00"
+        }
+      })
+      |> render_submit()
+
+      assert has_element?(view, "#programs-#{program.id}")
+    end
+  end
+
+  describe "staffing the program while a filter is active" do
+    # The third write path. #1334 taught it the staff filter; it learned the
+    # search filter only by being folded onto the shared row writer, and nothing
+    # in the staffing suite covers that axis.
+    test "does not re-insert the row when the search no longer matches", %{
+      conn: conn,
+      provider: provider,
+      ann: ann
+    } do
+      program = insert_listed_program(provider, "Chess Club")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#manage-staffing-#{program.id}") |> render_click()
+
+      search_for(view, "Pottery")
+      refute has_element?(view, "#programs-#{program.id}")
+
+      view |> form("#staffing-add-form", %{"staff-id" => ann.id}) |> render_submit()
+
+      assert has_element?(view, "#staffing-member-#{ann.id}")
       refute has_element?(view, "#programs-#{program.id}")
     end
   end

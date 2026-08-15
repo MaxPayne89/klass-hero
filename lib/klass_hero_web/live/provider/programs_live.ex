@@ -886,6 +886,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   # A program the provider just made is the one row they are certainly looking
   # for, so a filter that would hide it yields rather than the row — the
   # alternative is a save that visibly does nothing (#1346).
+  #
+  # Both axes yield together, even when only one of them hides the row: clearing
+  # per-axis would branch on every combination to spare a search term the row
+  # still matched. Deliberate, and pinned by a test.
   defp reveal_program_row(socket, program, enrollment_data) do
     staffing = fetch_program_staffing(program.id)
 
