@@ -291,7 +291,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
 
       assert Keyword.has_key?(queues, :critical_events),
              "dropping :critical_events strands every job staged before #1357 — confirm " <>
-               "`SELECT count(*) FROM oban_jobs WHERE queue = 'critical_events'` is 0 in prod first"
+               "`SELECT count(*) FROM oban_jobs WHERE queue = 'critical_events'` is 0 in prod " <>
+               "first. That is #1362, which removes this test along with the queue entry."
     end
 
     # The same failure from the other end: staging into a queue no producer is running for

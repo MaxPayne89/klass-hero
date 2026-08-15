@@ -150,7 +150,8 @@ config :klass_hero, Oban,
   #   they execute fine because the `worker` column still resolves to EventDeliveryWorker, but
   #   only while a producer is running for the queue they name. Removing this line does not
   #   fail them — it leaves them sitting, and nothing alerts on a merely unattended queue.
-  #   Drop it once `SELECT count(*) FROM oban_jobs WHERE queue = 'critical_events'` is 0 in prod.
+  #   Drop it via #1362, once `SELECT count(*) FROM oban_jobs WHERE queue = 'critical_events'`
+  #   is 0 in prod — gate on the count, not on elapsed time.
   queues: [default: 10, messaging: 5, cleanup: 2, email: 1, family: 1, events: 5, critical_events: 5]
 
 # Base URL for constructing links in emails and event handlers
