@@ -6,15 +6,18 @@
 # checkout's Tidewave endpoint — so the MCP client and the server it talks to can
 # never drift apart. Falls back to 4000 if the file is missing.
 #
-# Run bin/setup-mcp once per checkout to create it.
+# Run bin/worktree-up once per checkout to create it (it calls bin/setup-mcp).
 #
 # Usage:
-#   bin/dev            start the server
+#   bin/dev            start the server in the foreground, with an IEx shell
 #   bin/dev --port     print the port and exit
+#   bin/dev --detach   start it in the background, then wait until Tidewave answers
 
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
+# shellcheck source=bin/lib/worktree-common.sh
+source bin/lib/worktree-common.sh
 
 port=4000
 
@@ -42,5 +45,50 @@ if [[ "${1:-}" == "--port" ]]; then
   exit 0
 fi
 
-echo "Starting dev server on http://localhost:${port} (live_debugger on $((port + 100)))"
-exec env PORT="$port" iex -S mix phx.server
+if [[ "${1:-}" != "--detach" ]]; then
+  echo "Starting dev server on http://localhost:${port} (live_debugger on $((port + 100)))"
+  exec env PORT="$port" iex -S mix phx.server
+fi
+
+# --- detached ---------------------------------------------------------------
+#
+# `mix phx.server`, not `iex -S mix`: a background process must not expect a TTY.
+# The pidfile records the pid that ends up *listening*, found via lsof once the
+# server is up — not $! from the launch, which is the mix wrapper and not the beam
+# that owns the socket.
+
+if [[ "$(port_owner "$port")" == "mine" ]] && tidewave_alive "$port"; then
+  echo "Dev server already running for this checkout on ${port}." >&2
+  exit 0
+fi
+
+reap_dead_listener "$port" || true
+
+case "$(port_owner "$port")" in
+  foreign)
+    pid=$(listener_pid "$port")
+    echo "bin/dev: port ${port} is held by pid ${pid} from $(listener_cwd "$pid")." >&2
+    echo "         That is a different live checkout — refusing to take its port." >&2
+    exit 1
+    ;;
+esac
+
+mkdir -p "$RUN_DIR"
+: >"$LOG_FILE"
+
+echo "Starting dev server on http://localhost:${port} (live_debugger on $((port + 100)))" >&2
+PORT="$port" nohup mix phx.server >>"$LOG_FILE" 2>&1 &
+disown
+
+for _ in $(seq 1 120); do
+  if tidewave_alive "$port"; then
+    listener_pid "$port" >"$PID_FILE"
+    echo "Tidewave up at $(tidewave_url "$port") (pid $(cat "$PID_FILE"))." >&2
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "bin/dev: server did not answer on ${port} within 120s. Last 30 lines of ${LOG_FILE}:" >&2
+tail -30 "$LOG_FILE" >&2
+exit 1

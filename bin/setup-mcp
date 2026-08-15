@@ -1,93 +1,102 @@
 #!/usr/bin/env bash
 #
 # Give this checkout its own dev-server port and Tidewave MCP endpoint by writing
-# .mcp.json. Run once per checkout — the main one included.
+# .mcp.json.
 #
 # The main checkout takes 4000; each worktree takes the lowest free port in
 # PORT_MIN..PORT_MAX, so several dev servers can run at once and each Claude Code
 # session talks to the server for the code it is actually looking at.
+#
+# Convergent, not write-once: an existing .mcp.json is re-validated, not trusted.
+# A port can stop being ours between runs — another checkout claims it, or an
+# orphaned server from a deleted worktree keeps answering on it. That orphan case
+# is the dangerous one, because it answers /tidewave/mcp *correctly* for the wrong
+# code. Re-validation is what turns that from a silent wrong answer into a fix.
 #
 # .mcp.json is *project* scope, which outranks user scope and replaces the entry
 # wholesale (scopes match by name; fields are never merged). Keeping the name
 # `tidewave` is deliberate: MCP tool permissions are keyed on the server name, so a
 # per-worktree name would need its own mcp__<name>__* grants in settings.
 #
-# .mcp.json is gitignored, so every checkout needs this run once.
+# .mcp.json is gitignored, so every checkout needs this run once. bin/worktree-up
+# calls it for you.
 #
-# Usage: bin/setup-mcp
+# Usage:
+#   bin/setup-mcp            write or repair .mcp.json
+#   bin/setup-mcp --quiet    same, but only speak up on a change or a problem
 
 set -euo pipefail
 
-MAIN_PORT=4000
-PORT_MIN=4010
-PORT_MAX=4039
-
 cd "$(git rev-parse --show-toplevel)"
+# shellcheck source=bin/lib/worktree-common.sh
+source bin/lib/worktree-common.sh
+
+QUIET=false
+[[ "${1:-}" == "--quiet" ]] && QUIET=true
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "setup-mcp: jq is required" >&2
   exit 1
 fi
 
-# Extract the port from a .mcp.json, or nothing if it has no tidewave entry.
-port_from() {
-  jq -r '.mcpServers.tidewave.url // empty' "$1" 2>/dev/null |
-    sed -n 's#.*localhost:\([0-9][0-9]*\)/.*#\1#p'
+say() { $QUIET || echo "$@"; }
+
+root=$(repo_root)
+
+# Is $1 a port this checkout may still call its own?
+port_still_ours() {
+  local port="$1"
+
+  # Right neighbourhood for this kind of checkout?
+  if linked_worktree; then
+    ((port >= PORT_MIN && port <= PORT_MAX)) || return 1
+  else
+    ((port == MAIN_PORT)) || return 1
+  fi
+
+  # Written into another live checkout's .mcp.json since we last looked?
+  grep -qx "$port" <<<"$(claimed_ports)" && return 1
+
+  # An orphan holding it is reapable, so try that before judging.
+  reap_dead_listener "$port" >/dev/null 2>&1 || true
+
+  case "$(port_owner "$port")" in
+    free | mine) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
-if [[ -f .mcp.json ]]; then
-  echo "Already configured: port $(port_from .mcp.json). Nothing to do."
+existing=""
+[[ -f .mcp.json ]] && existing=$(port_from .mcp.json)
+
+if [[ -n "$existing" ]] && port_still_ours "$existing"; then
+  say "Port ${existing} is still this checkout's. Nothing to do."
   exit 0
 fi
 
-# Ports already written into some checkout's .mcp.json. Stale entries self-clean:
-# a deleted worktree stops appearing in `git worktree list`.
-claimed_ports() {
-  local worktree
-  while read -r worktree; do
-    if [[ -f "$worktree/.mcp.json" ]]; then
-      port_from "$worktree/.mcp.json"
-    fi
-  done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
-}
+if [[ -n "$existing" ]]; then
+  pid=$(listener_pid "$existing")
+  owner=$(port_owner "$existing")
+  echo "Port ${existing} in .mcp.json is no longer usable here (${owner}${pid:+, held by pid ${pid} at $(listener_cwd "$pid")})." >&2
+  echo "Reallocating." >&2
+fi
 
-# Ports currently bound by any listening process on this machine.
-bound_ports() {
-  lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null |
-    sed -n 's/.*:\([0-9][0-9]*\) (LISTEN).*/\1/p'
-}
-
-# Lowest free port in the range. Claimed ports keep two worktrees off the same
-# number even while their servers are down; bound ports additionally dodge an
-# unrelated process squatting in the range.
-allocate_port() {
-  local taken port
-  taken=$(
-    {
-      claimed_ports
-      bound_ports
-    } | sort -u
-  )
-
-  for ((port = PORT_MIN; port <= PORT_MAX; port++)); do
-    if ! grep -qx "$port" <<<"$taken"; then
-      echo "$port"
-      return 0
-    fi
-  done
-
-  echo "setup-mcp: no free port in ${PORT_MIN}-${PORT_MAX}." >&2
-  echo "Prune a stale worktree, or widen the range at the top of this script." >&2
-  return 1
-}
-
-# A linked worktree has .git as a file ("gitdir: ..."); the main checkout has a directory.
-if [[ -d .git ]]; then
-  port=$MAIN_PORT
-  where="main checkout"
-else
+if linked_worktree; then
   port=$(allocate_port)
   where=$(git branch --show-current)
+else
+  port=$MAIN_PORT
+  where="main checkout"
+
+  reap_dead_listener "$port" >/dev/null 2>&1 || true
+
+  if [[ "$(port_owner "$port")" == "foreign" ]]; then
+    pid=$(listener_pid "$port")
+    echo "setup-mcp: port ${MAIN_PORT} belongs to the main checkout, but pid ${pid} is holding it" >&2
+    echo "           from $(listener_cwd "$pid")." >&2
+    echo "           Stop that server (bin/worktree-down there) and re-run." >&2
+    exit 1
+  fi
 fi
 
 cat >.mcp.json <<EOF
@@ -101,11 +110,9 @@ cat >.mcp.json <<EOF
 }
 EOF
 
-cat <<EOF
-Configured port ${port} for ${where}.
-
-  wrote .mcp.json  -> tidewave at http://localhost:${port}/tidewave/mcp
-  bin/dev          -> starts the server on ${port} (live_debugger on $((port + 100)))
-
-Restart Claude Code here — .mcp.json is read at session start.
-EOF
+say "Configured port ${port} for ${where}."
+say ""
+say "  wrote .mcp.json  -> tidewave at $(tidewave_url "$port")"
+say "  bin/worktree-up  -> provisions and starts the server on ${port} (live_debugger on $((port + 100)))"
+say ""
+say "Restart Claude Code here — .mcp.json is read at session start."

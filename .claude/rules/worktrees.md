@@ -26,52 +26,86 @@ Skip the worktree only when the user explicitly asks to work in the current
 checkout, or for read-only / throwaway actions (answering a question, a quick
 `git log`, inspecting a file) where no branch or edit is produced.
 
-After entering a native worktree, hydrate it once and set `MIX_TEST_PARTITION`
-per the sections below before running any format/credo/test hook.
+Provisioning is automatic — see the next section. You do not set
+`MIX_TEST_PARTITION` by hand any more; it is derived from the checkout.
 
-## First-run setup (fresh checkout has no deps/_build)
+## Provisioning: `bin/worktree-up` does all of it
 
-A native worktree starts empty of build artifacts, so the format/credo/test hooks
-fail until you hydrate it once:
-
-```bash
-mix deps.get
-MIX_TEST_PARTITION=<n> mix compile
-MIX_TEST_PARTITION=<n> MIX_ENV=test mix ecto.create
-MIX_TEST_PARTITION=<n> MIX_ENV=test mix ecto.migrate
-mix ecto.setup     # this worktree's OWN dev DB — create + migrate
-mix ecto.seed      # skip if you only need the test suite
-bin/setup-mcp      # allocate this worktree's dev port + Tidewave endpoint
-```
-
-`bin/setup-mcp` writes `.mcp.json`, which Claude Code reads **at session start** —
-so restart the session in the worktree afterwards. See the Tidewave section below.
-
-The two `ecto` lines are the dev DB, which is separate from the test DB above and
-needs no `MIX_TEST_PARTITION` — see the next section. Skipping them is safe: the
-first dev-env command fails loudly on a missing database rather than falling back
-to main's.
-
-## Test DB isolation — always set MIX_TEST_PARTITION in a worktree
-
-All parallel checkouts share **one** Docker Postgres test container. The test DB
-name is suffixed by `MIX_TEST_PARTITION` (`config/test.exs`:
-`database: "klass_hero_test#{System.get_env("MIX_TEST_PARTITION")}"`). Without it,
-every worktree targets the same `klass_hero_test` DB and steps on each other —
-the classic symptom is a phantom missing/extra column error where one branch's
-migrations disagree with another's schema.
-
-So in a worktree, prefix **every** test/DB command with a partition unique to that
-worktree (e.g. the issue number):
+**Before any work in a checkout, it must be provisioned.** One command, idempotent,
+safe to run any number of times in any checkout including main:
 
 ```bash
-MIX_TEST_PARTITION=1060 mix test
-MIX_TEST_PARTITION=1060 mix precommit
+bin/worktree-up        # containers, deps, compile, dev DB (+seeds), test DB,
+                       # .mcp.json, detached dev server, verified Tidewave
+bin/worktree-status    # read-only: is Tidewave up AND is it *this* checkout's?
+bin/worktree-down      # stop the server, drop this checkout's two databases
 ```
 
-`mix precommit` runs the full suite, so it needs the partition too. The container
-itself is shared and started once (`mix test.setup`); only the DB *name* is
-per-partition, so no extra container management is required.
+You normally never type these. Three hooks in `.claude/settings.json` run them:
+
+| Hook | What it does |
+|---|---|
+| `WorktreeCreate` | creates the worktree and provisions it (`--fast`: DBs + `.mcp.json`, no seeds, no server) |
+| `SessionStart` | converges the checkout on every session start/resume — the load-bearing path |
+| `WorktreeRemove` | tears the checkout down before its directory disappears |
+
+A cold worktree reaches a verified Tidewave in about 30 seconds, seeds included,
+because `bin/worktree-up` copies `deps/` and `_build/` from the main checkout
+first — a worktree materializes only *tracked* files, so those start empty, and
+the copy turns a full compile into an incremental one. It copies rather than
+symlinks: a shared `_build` would serve one checkout's beam files to another.
+
+### "Tidewave is up" is not the property you want
+
+`bin/worktree-status` verifies something stronger: that the process answering
+`/tidewave/mcp` on this checkout's port has **this checkout as its working
+directory**. A dev server outlives `git worktree remove` happily and keeps
+answering perfectly for a checkout that no longer exists — which is worse than
+being down, because it looks healthy, and `project_eval` against it silently
+evaluates code that is gone. `bin/worktree-up` reaps such a listener (and only
+such a listener: one whose own directory is gone). A port held by a *different
+live* checkout is reported, never taken.
+
+### The one thing no script can fix
+
+`.mcp.json` is read **at session start**, and `EnterWorktree` does not restart the
+session — it changes the working directory the way `/cd` does, and does not
+re-fire `SessionStart`. So **a worktree entered mid-session keeps pointing at the
+previous checkout's Tidewave.**
+
+Do not call `project_eval` after a mid-session `EnterWorktree`; you would be
+evaluating against the wrong tree. Start the task's session *in* the worktree
+instead (`cd <worktree> && claude`). If Tidewave is missing where it should be
+present, say so and follow the Unavailability Alert Protocol in
+`.claude/rules/mcp-integration.md` — never silently fall back to bash.
+
+## Test DB isolation — derived, not remembered
+
+All parallel checkouts share **one** Docker Postgres container. Isolation is by
+database *name*, and both names are derived in config from the checkout directory,
+so every `mix` invocation gets them for free:
+
+| Checkout | dev DB (`config/dev.exs`) | test DB (`config/test.exs`) |
+|---|---|---|
+| main | `klass_hero_dev` | `klass_hero_test` |
+| worktree `kh-1257` | `klass_hero_dev_kh_1257` | `klass_hero_test_kh_1257` |
+
+`MIX_TEST_PARTITION` still wins when set explicitly — CI sets it per partition,
+and you can set it by hand to run two logically separate suites in one checkout.
+What changed is that you no longer *have to*:
+
+```bash
+mix test          # already isolated
+mix precommit     # already isolated
+```
+
+This used to be a rule you had to remember, and a rule cannot bind an automated
+caller: `.claude/hooks/tests.sh` runs `mix test` on every edit and never set the
+variable, so every worktree's edit-triggered suite was writing to the shared
+`klass_hero_test`. Same failure as #1257 on the dev side, fixed the same way — in
+config, which every `mix` invocation reads, rather than in a launcher a hook can
+bypass. The container is still shared and started once (`mix test.setup`); only
+the DB name is per-checkout, so no extra container management is required.
 
 `mix test` binds **no** HTTP port, so worktree suites can run concurrently — only the
 `MIX_TEST_PARTITION` DB isolation above is required. `config/test.exs` sets
@@ -91,8 +125,8 @@ two can't drift apart.
 
 ## Dev DB isolation — automatic, nothing to remember
 
-Unlike the test DB, the dev DB needs no env var from you. `config/dev.exs` derives the
-name from the checkout itself:
+The dev DB needs no env var from you. `config/dev.exs` derives the name from the
+checkout itself (and `config/test.exs` now does the same for the test DB):
 
 | Checkout | Dev database |
 |---|---|
@@ -132,12 +166,20 @@ Tidewave endpoint on that port, so several can run at once.
 
 ### Setup
 
+`bin/worktree-up` does this for you, and the `SessionStart` hook runs it. The
+pieces, when you need them individually:
+
 ```bash
-bin/setup-mcp   # once per checkout — writes .mcp.json, then restart Claude Code here
-bin/dev         # starts the server on that checkout's port
+bin/setup-mcp    # allocate/repair this checkout's port in .mcp.json
+bin/dev          # foreground server with an IEx shell
+bin/dev --detach # background server, waits until Tidewave answers
+bin/dev --port   # print this checkout's port
 ```
 
-`bin/setup-mcp` runs in **every** checkout, main included. Main takes 4000; a worktree
+`bin/setup-mcp` runs in **every** checkout, main included. It is *convergent*, not
+write-once: an existing `.mcp.json` is re-validated rather than trusted, because a
+port can stop being yours between runs — another checkout claims it, or an orphaned
+server keeps answering on it. Main takes 4000; a worktree
 takes the lowest free port in **4010–4039**. It writes `.mcp.json` declaring an MCP
 server named `tidewave` at `http://localhost:<port>/tidewave/mcp`, and `bin/dev` reads
 the port back out of that same file — so the client and the server it talks to cannot

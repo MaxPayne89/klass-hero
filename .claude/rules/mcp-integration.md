@@ -54,10 +54,17 @@ When Tidewave is not connected or fails to respond:
    [Next step: suggest remedial action]
    ```
 
-2. **Investigation required**: Tidewave unavailability suggests:
-   - Phoenix server not running (`mix phx.server` needed)
-   - MCP connection issue requiring restart
-   - Development environment misconfiguration
+2. **Investigation required**: run `bin/worktree-status` first — it answers the two
+   questions that matter in one shot: is a server answering on this checkout's port,
+   and does that server actually *live in this checkout*. Its verdict maps to a cause:
+
+   | Verdict | Cause |
+   |---|---|
+   | `NOT RUNNING` | no dev server — run `bin/worktree-up` |
+   | `NOT CONFIGURED` | no `.mcp.json` — run `bin/worktree-up` |
+   | `ORPHAN` | a server from a deleted checkout is answering; `bin/worktree-up` reaps it |
+   | `WRONG CHECKOUT` | another live checkout holds the port; **do not use Tidewave from here** |
+   | `READY` | the server is fine, so this is an MCP client issue — the session started before the server was up, and `.mcp.json` is read at session start. Reconnect via `/mcp`, or restart the session in this directory |
 
 3. **Never silently degrade**: Do not fall back to bash/shell evaluation without explicitly notifying the user that Tidewave is unavailable
 
