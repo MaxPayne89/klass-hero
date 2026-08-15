@@ -41,7 +41,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.UndeliveredEventRepository
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.EventDispatcher
-  alias KlassHero.Shared.Tracing.Context
 
   require Logger
 
@@ -57,7 +56,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   # subscribing in PR 3, and no LiveView ever did — those now receive tagged
   # tuples from whoever wrote the data they read.
   defp deliver(%Event{} = event, job) do
-    Context.attach_from_event(event)
     topic = Event.topic(event)
 
     topic

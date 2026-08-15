@@ -131,9 +131,7 @@ defmodule KlassHero.Shared.ProjectionTest do
       entity_type: :thing,
       entity_id: "id-1",
       occurred_at: DateTime.utc_now(),
-      payload: %{},
-      metadata: %{},
-      version: 1
+      payload: %{}
     }
   end
 

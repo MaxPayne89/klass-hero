@@ -19,9 +19,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderProgramsTest do
       entity_type: :program,
       entity_id: payload.program_id,
       occurred_at: DateTime.utc_now(),
-      payload: payload,
-      metadata: %{},
-      version: 1
+      payload: payload
     }
   end
 
