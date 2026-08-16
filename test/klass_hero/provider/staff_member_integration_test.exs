@@ -94,6 +94,33 @@ defmodule KlassHero.Provider.StaffMemberIntegrationTest do
     end
   end
 
+  # Reading *past* attribution, not present authorization: a message sent by someone
+  # who has since left must keep rendering as it did (#1348), so employment ever —
+  # not employment now — is the question. Unclaimed invitations have no user_id and
+  # can never have sent anything.
+  describe "list_staff_user_ids_for_provider/1" do
+    test "includes deactivated staff and excludes unclaimed invitations" do
+      provider = ProviderFixtures.provider_profile_fixture()
+      other_provider = ProviderFixtures.provider_profile_fixture()
+      active_user = KlassHero.AccountsFixtures.user_fixture()
+      departed_user = KlassHero.AccountsFixtures.user_fixture()
+      other_user = KlassHero.AccountsFixtures.user_fixture()
+
+      ProviderFixtures.staff_member_fixture(provider_id: provider.id, user_id: active_user.id)
+      ProviderFixtures.staff_member_fixture(provider_id: provider.id, first_name: "Unclaimed")
+      ProviderFixtures.staff_member_fixture(provider_id: other_provider.id, user_id: other_user.id)
+
+      departed =
+        ProviderFixtures.staff_member_fixture(provider_id: provider.id, user_id: departed_user.id)
+
+      {:ok, _} = Provider.deactivate_staff_member(departed)
+
+      ids = Provider.list_staff_user_ids_for_provider(provider.id)
+
+      assert Enum.sort(ids) == Enum.sort([active_user.id, departed_user.id])
+    end
+  end
+
   describe "update_staff_member/3" do
     test "updates allowed fields" do
       staff = ProviderFixtures.staff_member_fixture(first_name: "Old", role: "Assistant")

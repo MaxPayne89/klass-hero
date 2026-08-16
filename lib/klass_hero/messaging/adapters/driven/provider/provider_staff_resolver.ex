@@ -27,4 +27,19 @@ defmodule KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver do
       KlassHero.Provider.list_active_staff_user_ids_for_program(program_id)
     end
   end
+
+  @doc """
+  User IDs of everyone who has ever been staff at the provider.
+
+  Only the render path wants this, and only for messages written before
+  `messages.sender_role` existed (#1348). Employment *ever* is the closest available
+  approximation of who was provider-side at send time; employment *now* — which is
+  what `list_active_staff_user_ids/1` answers — is the question that rewrote history.
+  """
+  @spec list_staff_user_ids(String.t()) :: [String.t()]
+  def list_staff_user_ids(provider_id) do
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.list_staff_user_ids_for_provider(provider_id)
+    end
+  end
 end

@@ -35,6 +35,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.Message
   alias Phoenix.LiveView.Socket
 
   require Logger
@@ -339,6 +340,16 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     message.sender_id == user_id
   end
 
+  @doc """
+  Whether the message renders with branded attribution ("Business via Staff Name").
+
+  `provider_user_ids` is consulted only for messages predating `sender_role` — see
+  `KlassHero.Messaging.Message.provider_side?/2`.
+  """
+  def provider_side?(message, provider_user_ids) do
+    Message.provider_side?(message, provider_user_ids)
+  end
+
   def get_sender_name(sender_names, sender_id) do
     Map.get(sender_names, sender_id, "Unknown")
   end
@@ -358,14 +369,14 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     Messaging.get_conversation_context(conversation_id, user_id)
   end
 
+  # The returned set only renders messages written before `messages.sender_role`
+  # existed (#1348); anything newer answers for itself. So it asks who has *ever*
+  # been staff at the provider, not who staffs this program today — the latter both
+  # rewrote history and disagreed with the send guard, which is provider-wide (#669).
+  #
   # Single fetch avoids separate round-trips for identity_id and business_name.
   defp resolve_provider_info(conversation) do
-    staff_ids =
-      if conversation.program_id do
-        Messaging.get_active_staff_user_ids(conversation.program_id)
-      else
-        []
-      end
+    staff_ids = Messaging.get_provider_staff_user_ids(conversation.provider_id)
 
     case KlassHero.Provider.get_provider_profile(conversation.provider_id) do
       {:ok, provider} ->

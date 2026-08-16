@@ -2,9 +2,10 @@ defmodule KlassHero.Messaging.SendMessage do
   @moduledoc """
   Use case for sending a message in a conversation.
 
-  Validates content/attachments, checks participant and broadcast-send permissions,
-  uploads files to S3, persists message + attachments (cleaning up S3 on DB failure),
-  updates sender's last_read_at, and publishes a message_sent event.
+  Validates content/attachments, resolves the sender's role relative to the
+  conversation's provider (which both authorizes the send and is recorded on the
+  message), uploads files to S3, persists message + attachments (cleaning up S3 on
+  DB failure), updates sender's last_read_at, and publishes a message_sent event.
   """
 
   alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
@@ -27,7 +28,7 @@ defmodule KlassHero.Messaging.SendMessage do
   ## Options
   - `:message_type` — `:text` (default) or `:system`
   - `:conversation` — pre-fetched `%Conversation{}` for the same `conversation_id`
-    (skips DB round-trip in broadcast permission check; ignored if ID doesn't match)
+    (skips the DB round-trip taken to authorize; ignored if ID doesn't match)
   - `:attachments` — list of `%{binary: <<>>, filename: "x.jpg", content_type: "image/jpeg", size: 1000}`
 
   ## Returns
@@ -54,12 +55,14 @@ defmodule KlassHero.Messaging.SendMessage do
     with :ok <- validate_message_content(trimmed_content, attachment_files),
          :ok <- validate_attachment_files(attachment_files),
          :ok <- Shared.verify_participant(conversation_id, sender_id),
-         :ok <- verify_broadcast_send_permission(conversation_id, sender_id, conversation),
+         {:ok, loaded_conversation} <- load_conversation(conversation_id, conversation),
+         {:ok, sender_role} <- authorize_sender(loaded_conversation, sender_id),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),
          {:ok, message_with_attachments} <-
            persist_message_and_attachments(
              conversation_id,
              sender_id,
+             sender_role,
              trimmed_content,
              message_type,
              uploaded_files
@@ -154,10 +157,11 @@ defmodule KlassHero.Messaging.SendMessage do
     end
   end
 
-  defp persist_message_and_attachments(conversation_id, sender_id, content, message_type, uploaded_files) do
+  defp persist_message_and_attachments(conversation_id, sender_id, sender_role, content, message_type, uploaded_files) do
     message_attrs = %{
       conversation_id: conversation_id,
       sender_id: sender_id,
+      sender_role: sender_role,
       content: content,
       message_type: message_type
     }
@@ -222,33 +226,36 @@ defmodule KlassHero.Messaging.SendMessage do
     |> String.slice(0, 255)
   end
 
-  # Broadcast conversations are one-way: only the provider owner and their currently
-  # employed staff may send. Parents replying would expose messages to all other
-  # participants (privacy breach).
-  defp verify_broadcast_send_permission(conversation_id, sender_id, conversation) do
-    # Validates conversation.id matches conversation_id to prevent a mismatched
-    # pre-fetched struct from bypassing broadcast guards.
-    result =
-      if conversation && conversation.id == conversation_id,
-        do: {:ok, conversation},
-        else: KlassHero.Messaging.get_conversation_by_id(conversation_id)
+  # Validates conversation.id matches conversation_id to prevent a mismatched
+  # pre-fetched struct from bypassing the broadcast guard below.
+  defp load_conversation(conversation_id, prefetched) do
+    if prefetched && prefetched.id == conversation_id,
+      do: {:ok, prefetched},
+      else: KlassHero.Messaging.get_conversation_by_id(conversation_id)
+  end
 
-    case result do
-      {:ok, %{type: :program_broadcast, provider_id: provider_id}} ->
-        check_broadcast_reply_permission(provider_id, sender_id)
-
-      {:ok, _direct_conversation} ->
-        :ok
-
-      {:error, :not_found} ->
-        {:error, :not_found}
+  # Resolves the sender's role once and authorizes from it, so attribution and
+  # permission can never disagree. They used to be separate computations over
+  # different staff sets — provider-wide here, program-scoped in the renderer —
+  # which is how an unassigned staff member came to be allowed to send a message
+  # that rendered as if a parent had sent it (#1348).
+  #
+  # Broadcast conversations are one-way: only the provider owner and their
+  # currently employed staff may send. Parents replying would expose messages to
+  # all other participants (privacy breach).
+  defp authorize_sender(conversation, sender_id) do
+    case {conversation.type, resolve_sender_role(conversation.provider_id, sender_id)} do
+      {:program_broadcast, :parent} -> {:error, :broadcast_reply_not_allowed}
+      {_type, role} -> {:ok, role}
     end
   end
 
-  defp check_broadcast_reply_permission(provider_id, sender_id) do
-    if provider_owner?(provider_id, sender_id) or active_staff_for_provider?(provider_id, sender_id),
-      do: :ok,
-      else: {:error, :broadcast_reply_not_allowed}
+  defp resolve_sender_role(provider_id, sender_id) do
+    cond do
+      provider_owner?(provider_id, sender_id) -> :provider
+      active_staff_for_provider?(provider_id, sender_id) -> :staff
+      true -> :parent
+    end
   end
 
   defp provider_owner?(provider_id, sender_id) do
