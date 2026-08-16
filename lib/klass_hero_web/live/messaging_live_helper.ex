@@ -289,7 +289,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
       |> assign(:navigate_base, navigate_base)
       |> assign(:conversations_empty?, Enum.empty?(conversations))
       |> Phoenix.LiveView.stream_configure(:conversations,
-        dom_id: &"conversations-#{&1.conversation.id}"
+        dom_id: &"conversations-#{&1.conversation_id}"
       )
       |> stream(:conversations, conversations)
 

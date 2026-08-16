@@ -121,9 +121,9 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
 
       {:ok, conversations, _has_more} = Messaging.list_conversations(parent_user.id)
 
-      enriched = hd(conversations)
-      assert enriched.latest_message.content == "Hello parent!"
-      assert enriched.other_participant_name != nil
+      summary = hd(conversations)
+      assert summary.latest_message_content == "Hello parent!"
+      assert summary.other_participant_name != nil
     end
   end
 

@@ -352,7 +352,7 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
       ConversationSummaries.handle_event(:participant_added, event)
 
       for user_id <- [scope.user.id, parent1_user.id, parent2_user.id] do
-        {:ok, summaries, _has_more} = KlassHero.Messaging.list_conversation_summaries_for_user(user_id, [])
+        {:ok, summaries, _has_more} = KlassHero.Messaging.list_conversations(user_id)
 
         assert Enum.any?(summaries, &(&1.conversation_id == conversation.id)),
                "expected user #{user_id} to see broadcast conversation #{conversation.id} in inbox; " <>

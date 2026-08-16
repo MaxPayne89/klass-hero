@@ -60,4 +60,16 @@ defmodule KlassHero.Messaging.ConversationSummary do
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
+
+  @doc """
+  True when the row carries a latest message worth displaying.
+
+  A row with neither content nor an attachment has never had a message: the
+  projection leaves `latest_message_*` untouched until one arrives. Callers use
+  this to distinguish "no conversation activity yet" from "an attachment-only
+  message", which reads as content-less but is real.
+  """
+  @spec has_latest_message?(t()) :: boolean()
+  def has_latest_message?(%__MODULE__{latest_message_content: nil, has_attachments: false}), do: false
+  def has_latest_message?(%__MODULE__{}), do: true
 end

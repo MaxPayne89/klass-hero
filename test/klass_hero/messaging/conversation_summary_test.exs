@@ -10,8 +10,27 @@ defmodule KlassHero.Messaging.ConversationSummaryTest do
   import KlassHero.Factory
 
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.ConversationSummary
 
-  describe "list_conversation_summaries_for_user/2" do
+  describe "list_conversations/2" do
+    test "returns read-table structs, not a reshaped map" do
+      user_id = Ecto.UUID.generate()
+
+      summary =
+        insert(:conversation_summary_schema,
+          user_id: user_id,
+          latest_message_content: "Hello!",
+          unread_count: 3
+        )
+
+      assert {:ok, [%ConversationSummary{} = listed], false} = Messaging.list_conversations(user_id)
+
+      assert listed.conversation_id == summary.conversation_id
+      assert listed.conversation_type == :direct
+      assert listed.latest_message_content == "Hello!"
+      assert listed.unread_count == 3
+    end
+
     test "returns non-archived summaries newest first" do
       user_id = Ecto.UUID.generate()
 
@@ -27,8 +46,7 @@ defmodule KlassHero.Messaging.ConversationSummaryTest do
           latest_message_at: ~U[2025-02-01 10:00:00Z]
         )
 
-      assert {:ok, [first, second], false} =
-               Messaging.list_conversation_summaries_for_user(user_id, [])
+      assert {:ok, [first, second], false} = Messaging.list_conversations(user_id)
 
       assert first.id == newer.id
       assert second.id == older.id
@@ -38,17 +56,39 @@ defmodule KlassHero.Messaging.ConversationSummaryTest do
       user_id = Ecto.UUID.generate()
       insert(:conversation_summary_schema, user_id: user_id, archived_at: DateTime.utc_now())
 
-      assert {:ok, [], false} = Messaging.list_conversation_summaries_for_user(user_id, [])
+      assert {:ok, [], false} = Messaging.list_conversations(user_id)
     end
 
     test "reports has_more via the limit+1 probe" do
       user_id = Ecto.UUID.generate()
       insert_list(3, :conversation_summary_schema, user_id: user_id)
 
-      assert {:ok, items, true} =
-               Messaging.list_conversation_summaries_for_user(user_id, limit: 2)
+      assert {:ok, items, true} = Messaging.list_conversations(user_id, limit: 2)
 
       assert length(items) == 2
+    end
+  end
+
+  describe "has_latest_message?/1" do
+    # {latest_message_content, has_attachments, expected}
+    @latest_message_cases [
+      {nil, false, false},
+      {nil, true, true},
+      {"Hello", false, true},
+      {"Hello", true, true}
+    ]
+
+    test "is false only when there is neither content nor an attachment" do
+      for {content, has_attachments, expected} <- @latest_message_cases do
+        summary = %ConversationSummary{
+          latest_message_content: content,
+          has_attachments: has_attachments
+        }
+
+        assert ConversationSummary.has_latest_message?(summary) == expected,
+               "content=#{inspect(content)} has_attachments=#{has_attachments} " <>
+                 "should be #{expected}"
+      end
     end
   end
 

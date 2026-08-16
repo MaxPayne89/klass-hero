@@ -55,7 +55,7 @@ defmodule KlassHero.Messaging.ArchiveConversationsDeliveryTest do
 
       assert DateTime.compare(summary.archived_at, archived_conversation.archived_at) == :eq
 
-      assert {:ok, [], false} = Messaging.list_conversation_summaries_for_user(user_id, [])
+      assert {:ok, [], false} = Messaging.list_conversations(user_id)
     end
   end
 

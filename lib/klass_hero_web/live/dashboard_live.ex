@@ -167,33 +167,20 @@ defmodule KlassHeroWeb.DashboardLive do
   defp format_session_time(_), do: nil
 
   defp load_recent_messages(user_id) do
-    case Messaging.list_conversations(user_id, limit: 4) do
-      {:ok, conversations, _has_more} ->
-        palette = ["#FFEAC9", "#33CFFF", "#FFFF36"]
+    {:ok, summaries, _has_more} = Messaging.list_conversations(user_id, limit: 4)
+    palette = ["#FFEAC9", "#33CFFF", "#FFFF36"]
 
-        conversations
-        |> Enum.with_index()
-        |> Enum.map(fn {entry, idx} ->
-          msg = entry.latest_message
-          conv = entry.conversation
-          from = conversation_display_name(conv, msg)
-
-          %{
-            id: conv.id,
-            from: from,
-            preview: (msg && msg.content) || gettext("New conversation"),
-            time: msg && relative_time(msg.inserted_at),
-            color: Enum.at(palette, rem(idx, length(palette))),
-            unread?: entry.unread_count > 0
-          }
-        end)
-
-      _ ->
-        []
+    for {summary, idx} <- Enum.with_index(summaries) do
+      %{
+        id: summary.conversation_id,
+        from: gettext("Conversation"),
+        preview: summary.latest_message_content || gettext("New conversation"),
+        time: summary.latest_message_at && relative_time(summary.latest_message_at),
+        color: Enum.at(palette, rem(idx, length(palette))),
+        unread?: summary.unread_count > 0
+      }
     end
   end
-
-  defp conversation_display_name(_conv, _msg), do: gettext("Conversation")
 
   defp relative_time(%DateTime{} = dt) do
     diff_seconds = DateTime.diff(DateTime.utc_now(), dt, :second)

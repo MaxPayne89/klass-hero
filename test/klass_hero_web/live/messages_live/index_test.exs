@@ -31,17 +31,20 @@ defmodule KlassHeroWeb.MessagesLive.IndexTest do
     test "renders conversation list", %{conn: conn, user: user} do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-      insert_summary(%{
-        user_id: user.id,
-        latest_message_content: "Hello there!",
-        latest_message_sender_id: user.id,
-        latest_message_at: now,
-        other_participant_name: "Test Provider"
-      })
+      summary =
+        insert_summary(%{
+          user_id: user.id,
+          latest_message_content: "Hello there!",
+          latest_message_sender_id: user.id,
+          latest_message_at: now,
+          other_participant_name: "Test Provider"
+        })
 
       {:ok, view, _html} = live(conn, ~p"/messages")
 
       assert has_element?(view, "#conversations")
+      # Stream identity is the conversation, not the summary row that mirrors it.
+      assert has_element?(view, "#conversations-#{summary.conversation_id}")
       refute has_element?(view, "h3", "No conversations yet")
     end
 
