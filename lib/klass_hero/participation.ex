@@ -17,11 +17,13 @@ defmodule KlassHero.Participation do
 
   import Ecto.Query
 
+  alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
   alias KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
+  alias KlassHero.Participation.AttendanceAuthorization
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.ParticipationRecord
@@ -563,18 +565,22 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   @doc """
-  Checks in a child to a session.
+  Checks in a child to a session, on behalf of `scope`.
 
-  Required params: `record_id`, `checked_in_by`. Optional: `notes`.
+  The actor's identity and role are derived from the scope — the caller cannot
+  name who did this, only prove who it is. Options: `:notes`.
 
-  Returns `{:ok, record}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
+  Returns `{:ok, record}`, `{:error, :unauthorized}`, `{:error, :not_found}`, or
+  `{:error, :invalid_status_transition}`.
   """
-  def record_check_in(%{record_id: record_id, checked_in_by: checked_in_by} = params) do
+  @spec record_check_in(Scope.t(), String.t(), keyword()) ::
+          {:ok, ParticipationRecord.t()} | {:error, atom()}
+  def record_check_in(%Scope{} = scope, record_id, opts \\ []) when is_binary(record_id) do
     context_span entity: "participation_record" do
       run_attendance_action(
+        scope,
         record_id,
-        checked_in_by,
-        Map.get(params, :notes),
+        Keyword.get(opts, :notes),
         &ParticipationRecord.check_in/3,
         &ParticipationEvents.child_checked_in/2
       )
@@ -582,18 +588,19 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Checks out a child from a session.
+  Checks out a child from a session, on behalf of `scope`.
 
-  Required params: `record_id`, `checked_out_by`. Optional: `notes`.
-
-  Returns `{:ok, record}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
+  Options: `:notes`. Returns `{:ok, record}`, `{:error, :unauthorized}`,
+  `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
   """
-  def record_check_out(%{record_id: record_id, checked_out_by: checked_out_by} = params) do
+  @spec record_check_out(Scope.t(), String.t(), keyword()) ::
+          {:ok, ParticipationRecord.t()} | {:error, atom()}
+  def record_check_out(%Scope{} = scope, record_id, opts \\ []) when is_binary(record_id) do
     context_span entity: "participation_record" do
       run_attendance_action(
+        scope,
         record_id,
-        checked_out_by,
-        Map.get(params, :notes),
+        Keyword.get(opts, :notes),
         &ParticipationRecord.check_out/3,
         &ParticipationEvents.child_checked_out/2
       )
@@ -601,41 +608,20 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Checks in multiple children at once.
+  Corrects a participation record's attendance data, on behalf of `scope`.
 
-  Required params: `record_ids`, `checked_in_by`. Optional: `notes`.
-
-  Returns a map with `successful` (records) and `failed` (`{record_id, reason}` tuples).
+  The correction rules follow the scope's derived role: an `:admin` must supply a
+  `:reason`, which is appended to the notes of whichever field changed; a
+  `:provider` or `:staff` actor corrects their own roster without one.
   """
-  def bulk_check_in(%{record_ids: record_ids, checked_in_by: checked_in_by} = params) do
+  @spec correct_attendance(Scope.t(), String.t(), map()) ::
+          {:ok, ParticipationRecord.t()} | {:error, atom()}
+  def correct_attendance(%Scope{} = scope, record_id, attrs) when is_binary(record_id) do
     context_span entity: "participation_record" do
-      notes = Map.get(params, :notes)
-
-      # Session resolved lazily from first successful record and reused — all records share the same session_id.
-      {results, _session} =
-        Enum.map_reduce(record_ids, nil, fn record_id, session ->
-          case bulk_check_in_record(record_id, checked_in_by, notes, session) do
-            {:ok, persisted, resolved_session} -> {{:ok, persisted}, resolved_session}
-            {:error, _, _} = error -> {error, session}
-          end
-        end)
-
-      results
-      |> Enum.reduce(%{successful: [], failed: []}, &categorize_bulk_result/2)
-      |> then(fn result ->
-        %{successful: Enum.reverse(result.successful), failed: Enum.reverse(result.failed)}
-      end)
-    end
-  end
-
-  @doc "Admin-corrects a participation record's attendance data."
-  def correct_attendance(%{record_id: record_id} = params) do
-    context_span entity: "participation_record" do
-      actor_role = Map.get(params, :actor_role, :admin)
-
-      with :ok <- validate_correction_reason(actor_role, params),
-           {:ok, record} <- fetch_record(record_id),
-           correction_attrs = build_correction_attrs(actor_role, record, params),
+      with {:ok, record} <- fetch_record(record_id),
+           {:ok, actor_role} <- authorize_for_record(scope, record),
+           :ok <- validate_correction_reason(actor_role, attrs),
+           correction_attrs = build_correction_attrs(actor_role, record, attrs),
            {:ok, corrected} <- ParticipationRecord.admin_correct(record, correction_attrs) do
         update_record(corrected)
       end
@@ -802,31 +788,28 @@ defmodule KlassHero.Participation do
   # Orchestration helpers
   # ============================================================================
 
-  defp run_attendance_action(record_id, actor_id, notes, domain_fn, event_fn) do
+  defp run_attendance_action(%Scope{} = scope, record_id, notes, domain_fn, event_fn) do
     notes = normalize_notes(notes)
 
     with {:ok, record} <- fetch_record(record_id),
-         {:ok, updated} <- domain_fn.(record, actor_id, notes),
+         {:ok, _role} <- authorize_for_record(scope, record),
+         {:ok, updated} <- domain_fn.(record, scope.user.id, notes),
          {:ok, {persisted, events}} <- update_record_with_event(updated, event_fn) do
       Notifications.notify_all(events)
       {:ok, persisted}
     end
   end
 
-  defp bulk_check_in_record(record_id, checked_in_by, notes, session) do
-    with {:ok, record} <- fetch_record(record_id),
-         {:ok, checked_in} <- ParticipationRecord.check_in(record, checked_in_by, notes),
-         {:ok, {{persisted, resolved}, events}} <- check_in_record_with_event(checked_in, session) do
-      Notifications.notify_all(events)
-      {:ok, persisted, resolved}
-    else
-      {:error, reason} -> {:error, record_id, reason}
+  # The record names its session and the session names its program; the program is
+  # what a role is authorized against. Kept here rather than in the authorizer so
+  # that module stays free of this context's own tables.
+  defp authorize_for_record(%Scope{} = scope, %ParticipationRecord{} = record) do
+    with {:ok, session} <- fetch_session(record.session_id) do
+      AttendanceAuthorization.authorize(scope, session.program_id)
     end
   end
 
-  defp resolve_session_best_effort(%ProgramSession{} = session, _session_id), do: session
-
-  defp resolve_session_best_effort(nil, session_id) do
+  defp resolve_session_best_effort(session_id) do
     case fetch_session(session_id) do
       {:ok, session} ->
         session
@@ -840,10 +823,6 @@ defmodule KlassHero.Participation do
         nil
     end
   end
-
-  defp categorize_bulk_result({:ok, record}, acc), do: %{acc | successful: [record | acc.successful]}
-
-  defp categorize_bulk_result({:error, record_id, reason}, acc), do: %{acc | failed: [{record_id, reason} | acc.failed]}
 
   defp mark_remaining_as_absent(session) do
     registered =
@@ -1012,10 +991,6 @@ defmodule KlassHero.Participation do
     end
   end
 
-  defp check_in_event(record, %ProgramSession{} = session), do: ParticipationEvents.child_checked_in(record, session)
-
-  defp check_in_event(record, nil), do: ParticipationEvents.child_checked_in(record)
-
   defp insert_session_with_event(session) do
     Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- insert_session(session) do
@@ -1048,17 +1023,8 @@ defmodule KlassHero.Participation do
       with {:ok, persisted} <- update_record(updated) do
         # Best-effort: attendance already succeeded; a session fetch failure enriches
         # the event less, it does not fail the write.
-        session = resolve_session_best_effort(nil, persisted.session_id)
+        session = resolve_session_best_effort(persisted.session_id)
         {:ok, persisted, [event_fn.(persisted, session)]}
-      end
-    end)
-  end
-
-  defp check_in_record_with_event(checked_in, session) do
-    Outbox.transact_with_events(@context, fn ->
-      with {:ok, persisted} <- update_record(checked_in) do
-        resolved = resolve_session_best_effort(session, persisted.session_id)
-        {:ok, {persisted, resolved}, [check_in_event(persisted, resolved)]}
       end
     end)
   end

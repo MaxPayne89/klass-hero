@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Accounts.Scope
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.SessionNote
   alias KlassHero.ProviderFixtures
@@ -57,7 +58,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
   describe "participation management" do
     setup :register_and_log_in_staff
 
-    setup %{provider: provider, staff: staff} do
+    setup %{provider: provider, staff: staff, user: user} do
       program = insert(:program_schema, provider_id: provider.id, category: "sports")
 
       _listing =
@@ -100,7 +101,11 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
           status: :registered
         )
 
-      %{session: session, parent: parent, child: child, record: record, program: program}
+      # The same scope the LiveView acts under, so arranging a check-in directly
+      # through the context goes down the production authorization path.
+      scope = %Scope{user: user, staff_member: staff}
+
+      %{session: session, parent: parent, child: child, record: record, program: program, scope: scope}
     end
 
     test "renders staff-participation element and child names in roster", %{
@@ -156,14 +161,11 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
       # Check in first
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
 
@@ -184,12 +186,9 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
     end
 
     test "shows Edit and 'Record departure' buttons for a checked-in child; pill reads Present",
-         %{conn: conn, session: session, record: record, user: user} do
+         %{conn: conn, session: session, record: record, scope: scope} do
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       {:ok, view, html} = live(conn, ~p"/staff/participation/#{session.id}")
 
@@ -209,13 +208,10 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
 
@@ -239,13 +235,10 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
 
@@ -282,13 +275,10 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       foreign_record = insert(:participation_record_schema)
 

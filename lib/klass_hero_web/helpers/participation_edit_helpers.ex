@@ -4,16 +4,15 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpers do
   provider and staff roster LiveViews.
 
   Translates form values (notes + optional `datetime-local` departure time)
-  into a `KlassHero.Participation.correct_attendance/1` command tagged with
-  the appropriate `:actor_role`.
+  into the attrs for `KlassHero.Participation.correct_attendance/3`. It carries
+  no actor role: the context derives that from the caller's scope, since a role
+  the caller declares is a claim rather than a fact (#1353).
   """
 
   import Phoenix.Component, only: [assign: 3, to_form: 2]
 
   alias KlassHero.Participation.ParticipationRecord
   alias Phoenix.LiveView.Socket
-
-  @type role :: :provider | :staff
 
   @doc """
   Pre-fill text for the edit form's notes textarea.
@@ -39,28 +38,23 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpers do
   - If the child has already departed, notes go into `check_out_notes`.
   - Otherwise notes go into `check_in_notes`.
   """
-  @spec build_edit_correction(ParticipationRecord.t() | map(), map(), role()) ::
+  @spec build_edit_correction(ParticipationRecord.t() | map(), map()) ::
           {:ok, map()} | {:error, :invalid_datetime}
-  def build_edit_correction(record, params, role) when role in [:provider, :staff] do
+  def build_edit_correction(record, params) do
     notes = params |> Map.get("notes", "") |> to_string()
     check_out_at_input = params |> Map.get("check_out_at", "") |> to_string() |> String.trim()
-    base = %{record_id: record.id, actor_role: role}
 
     cond do
       check_out_at_input != "" and is_nil(record.check_out_at) ->
         with {:ok, dt} <- parse_datetime_local(check_out_at_input) do
-          {:ok,
-           base
-           |> Map.put(:status, :checked_out)
-           |> Map.put(:check_out_at, dt)
-           |> Map.put(:check_out_notes, notes)}
+          {:ok, %{status: :checked_out, check_out_at: dt, check_out_notes: notes}}
         end
 
       not is_nil(record.check_out_at) ->
-        {:ok, Map.put(base, :check_out_notes, notes)}
+        {:ok, %{check_out_notes: notes}}
 
       true ->
-        {:ok, Map.put(base, :check_in_notes, notes)}
+        {:ok, %{check_in_notes: notes}}
     end
   end
 

@@ -160,13 +160,14 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
     record_id = socket.assigns.editing_record_id
 
     base_params =
-      %{record_id: record_id, reason: correction_params["reason"]}
+      %{reason: correction_params["reason"]}
       |> maybe_put_status(correction_params)
 
     with {:ok, params} <-
            maybe_put_time(base_params, :check_in_at, correction_params["check_in_at"]),
          {:ok, params} <- maybe_put_time(params, :check_out_at, correction_params["check_out_at"]),
-         {:ok, _corrected} <- Participation.correct_attendance(params),
+         {:ok, _corrected} <-
+           Participation.correct_attendance(socket.assigns.current_scope, record_id, params),
          {:ok, session} <-
            Participation.get_session_with_roster_enriched(socket.assigns.session.id) do
       {:noreply,

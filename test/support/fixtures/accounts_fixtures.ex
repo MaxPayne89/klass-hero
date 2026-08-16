@@ -77,6 +77,17 @@ defmodule KlassHero.AccountsFixtures do
     Scope.for_user(user)
   end
 
+  @doc """
+  A scope for a platform admin — no parent, provider or staff persona.
+
+  Handy for tests whose subject is what an operation *does* rather than who may
+  perform it: an admin is authorized everywhere, so the scope stays out of the
+  way. Tests about authorization itself should build the persona they mean.
+  """
+  def admin_scope_fixture do
+    Scope.for_user(user_fixture(is_admin: true))
+  end
+
   def set_password(user) do
     {:ok, {user, _expired_tokens}} =
       Accounts.update_user_password(user, %{password: valid_user_password()})
