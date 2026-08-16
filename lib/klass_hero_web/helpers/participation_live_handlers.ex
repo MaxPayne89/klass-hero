@@ -7,6 +7,14 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
   program-assignment authorization gate). Callers pass their own `reload_fn`
   (a `socket -> socket` function, typically `&load_session_data/1`) so that
   divergence stays in the LiveView while the orchestration lives here.
+
+  The `find_participation_record/2` lookup below is **not** the authorization
+  check. It reads the roster already in the socket, for the "Record not found"
+  flash and the `child_id` on the failure log. Until #1353 it was the only thing
+  standing between an actor and a child's attendance record — not by checking
+  anything, but because an authorized query had populated that assign at mount.
+  `KlassHero.Participation` now authorizes every attendance write against the
+  caller's scope, so this is defence in depth and a UX affordance.
   """
 
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -29,15 +37,15 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
         {:noreply, put_flash(socket, :error, gettext("Record not found"))}
 
       record ->
-        case KlassHero.Participation.record_check_in(%{
-               record_id: record.id,
-               checked_in_by: socket.assigns.current_scope.user.id
-             }) do
+        case KlassHero.Participation.record_check_in(socket.assigns.current_scope, record.id) do
           {:ok, _record} ->
             {:noreply,
              socket
              |> put_flash(:info, gettext("Child checked in successfully"))
              |> reload_fn.()}
+
+          {:error, :unauthorized} ->
+            {:noreply, put_flash(socket, :error, gettext("You are not assigned to this program"))}
 
           {:error, reason} ->
             Logger.error("[ParticipationLiveHandlers.check_in] Failed to check in",
@@ -61,11 +69,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
         {:noreply, put_flash(socket, :error, gettext("Record not found"))}
 
       record ->
-        case KlassHero.Participation.record_check_out(%{
-               record_id: record.id,
-               checked_out_by: socket.assigns.current_scope.user.id,
-               notes: notes
-             }) do
+        case KlassHero.Participation.record_check_out(socket.assigns.current_scope, record.id, notes: notes) do
           {:ok, _record} ->
             {:noreply,
              socket
@@ -73,6 +77,9 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
              |> assign(:checkout_form_expanded, nil)
              |> assign(:checkout_forms, Map.delete(socket.assigns.checkout_forms, record_id))
              |> reload_fn.()}
+
+          {:error, :unauthorized} ->
+            {:noreply, put_flash(socket, :error, gettext("You are not assigned to this program"))}
 
           {:error, reason} ->
             Logger.error("[ParticipationLiveHandlers.confirm_checkout] Failed to check out",

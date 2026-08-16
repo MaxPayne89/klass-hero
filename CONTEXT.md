@@ -41,7 +41,7 @@ One child's row on one Session's Roster, tracking presence through `registered �
 _Avoid_: Attendance record, Booking
 
 **Attendance**:
-The act and result of checking a child in and out of a **Session** (the state changes recorded on a **Participation Record**).
+The act and result of checking a child in and out of a **Session** (the state changes recorded on a **Participation Record**). Who may record it is decided inside the Participation context, from the actor's Scope, in the order Provider → Staff Member → admin — see [ADR-0017](docs/adr/0017-attendance-writes-authorize-at-the-context-boundary.md). The Staff Member's authority comes from a **Program Staff Assignment**, never from their **Specialties**.
 _Avoid_: Presence, Sign-in
 
 ## Payments & Invoicing

@@ -146,8 +146,8 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     record = find_participation_record(socket, record_id)
 
     with {:record, record} when not is_nil(record) <- {:record, record},
-         {:ok, correction} <- ParticipationEditHelpers.build_edit_correction(record, params, :staff),
-         {:ok, _} <- Participation.correct_attendance(correction) do
+         {:ok, correction} <- ParticipationEditHelpers.build_edit_correction(record, params),
+         {:ok, _} <- Participation.correct_attendance(socket.assigns.current_scope, record_id, correction) do
       {:noreply,
        socket
        |> put_flash(:info, gettext("Record updated"))
@@ -194,6 +194,10 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
 
     case Participation.get_session_with_roster_enriched(session_id) do
       {:ok, session} ->
+        # Defence in depth, and a UX affordance: it keeps an unauthorized roster off
+        # the screen instead of rendering a page whose every button fails. The
+        # authorization of record is in the context now (ADR-0017) — this gate is no
+        # longer the only thing standing between staff and a child's record (#1353).
         if StaffProgramAccess.authorized?(socket.assigns.program_access, session.program_id) do
           socket
           |> assign(:session, session)

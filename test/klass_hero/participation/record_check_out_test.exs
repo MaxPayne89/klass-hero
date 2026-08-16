@@ -16,7 +16,7 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
     test "successfully checks out a checked-in record" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
       check_in_time = DateTime.add(DateTime.utc_now(), -3600, :second)
 
       record_schema =
@@ -29,24 +29,20 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
         )
 
       assert {:ok, record} =
-               KlassHero.Participation.record_check_out(%{
-                 record_id: record_schema.id,
-                 checked_out_by: staff_id,
-                 notes: "Picked up by parent"
-               })
+               KlassHero.Participation.record_check_out(scope, record_schema.id, notes: "Picked up by parent")
 
       assert %ParticipationRecord{} = record
       assert record.id == record_schema.id
       assert record.status == :checked_out
       assert record.check_out_notes == "Picked up by parent"
-      assert record.check_out_by == staff_id
+      assert record.check_out_by == scope.user.id
       assert record.check_out_at != nil
     end
 
     test "checks out with nil notes when not provided" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
       check_in_time = DateTime.add(DateTime.utc_now(), -3600, :second)
 
       record_schema =
@@ -59,10 +55,7 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
         )
 
       assert {:ok, record} =
-               KlassHero.Participation.record_check_out(%{
-                 record_id: record_schema.id,
-                 checked_out_by: staff_id
-               })
+               KlassHero.Participation.record_check_out(scope, record_schema.id)
 
       assert record.check_out_notes == nil
       assert record.status == :checked_out
@@ -70,19 +63,16 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
 
     test "returns error when record not found" do
       non_existent_id = Ecto.UUID.generate()
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       assert {:error, :not_found} =
-               KlassHero.Participation.record_check_out(%{
-                 record_id: non_existent_id,
-                 checked_out_by: staff_id
-               })
+               KlassHero.Participation.record_check_out(scope, non_existent_id)
     end
 
     test "returns error when record is in registered status" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       record_schema =
         insert(:participation_record_schema,
@@ -92,16 +82,13 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               KlassHero.Participation.record_check_out(%{
-                 record_id: record_schema.id,
-                 checked_out_by: staff_id
-               })
+               KlassHero.Participation.record_check_out(scope, record_schema.id)
     end
 
     test "returns error when record is already checked out" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
       check_in_time = DateTime.add(DateTime.utc_now(), -3600, :second)
 
       record_schema =
@@ -116,16 +103,13 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               KlassHero.Participation.record_check_out(%{
-                 record_id: record_schema.id,
-                 checked_out_by: staff_id
-               })
+               KlassHero.Participation.record_check_out(scope, record_schema.id)
     end
 
     test "persists check-out to database" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
       check_in_time = DateTime.add(DateTime.utc_now(), -3600, :second)
 
       record_schema =
@@ -138,10 +122,7 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
         )
 
       {:ok, record} =
-        KlassHero.Participation.record_check_out(%{
-          record_id: record_schema.id,
-          checked_out_by: staff_id
-        })
+        KlassHero.Participation.record_check_out(scope, record_schema.id)
 
       reloaded =
         KlassHero.Repo.get(
@@ -151,7 +132,7 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
 
       assert reloaded.status == :checked_out
       assert reloaded.check_out_at != nil
-      assert reloaded.check_out_by == staff_id
+      assert reloaded.check_out_by == scope.user.id
     end
   end
 end

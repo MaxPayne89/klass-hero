@@ -33,45 +33,39 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpersTest do
     end
   end
 
-  describe "build_edit_correction/3" do
-    # The three cond branches, each asserted for BOTH actor roles — role is
-    # incidental data threaded through unchanged, so iterating proves passthrough
-    # without duplicating the branch logic per role.
-    for role <- [:provider, :staff] do
-      test "records a retroactive check-out when a departure time is supplied (#{role})" do
-        record = build_record()
-        params = %{"check_out_at" => "2026-01-01T15:00", "notes" => "Early pickup"}
+  describe "build_edit_correction/2" do
+    # The three cond branches. Until #1353 each was asserted twice, once per actor
+    # role, to prove the role was threaded through unchanged — the context derives
+    # the role from the caller's scope now, so there is nothing left to thread.
+    test "records a retroactive check-out when a departure time is supplied" do
+      record = build_record()
+      params = %{"check_out_at" => "2026-01-01T15:00", "notes" => "Early pickup"}
 
-        assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params, unquote(role))
+      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params)
 
-        assert cmd.status == :checked_out
-        assert cmd.check_out_at == ~U[2026-01-01 15:00:00Z]
-        assert cmd.check_out_notes == "Early pickup"
-        assert cmd.record_id == "rec-001"
-        assert cmd.actor_role == unquote(role)
-      end
+      assert cmd.status == :checked_out
+      assert cmd.check_out_at == ~U[2026-01-01 15:00:00Z]
+      assert cmd.check_out_notes == "Early pickup"
+    end
 
-      test "writes check_out_notes when the child has already departed (#{role})" do
-        record = build_record(check_out_at: @departed)
-        params = %{"notes" => "Updated note", "check_out_at" => ""}
+    test "writes check_out_notes when the child has already departed" do
+      record = build_record(check_out_at: @departed)
+      params = %{"notes" => "Updated note", "check_out_at" => ""}
 
-        assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params, unquote(role))
+      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params)
 
-        assert cmd.check_out_notes == "Updated note"
-        assert cmd.actor_role == unquote(role)
-        refute Map.has_key?(cmd, :status)
-      end
+      assert cmd.check_out_notes == "Updated note"
+      refute Map.has_key?(cmd, :status)
+    end
 
-      test "writes check_in_notes when no departure time and child not departed (#{role})" do
-        record = build_record()
-        params = %{"notes" => "Late arrival", "check_out_at" => ""}
+    test "writes check_in_notes when no departure time and child not departed" do
+      record = build_record()
+      params = %{"notes" => "Late arrival", "check_out_at" => ""}
 
-        assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params, unquote(role))
+      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params)
 
-        assert cmd.check_in_notes == "Late arrival"
-        assert cmd.actor_role == unquote(role)
-        refute Map.has_key?(cmd, :check_out_notes)
-      end
+      assert cmd.check_in_notes == "Late arrival"
+      refute Map.has_key?(cmd, :check_out_notes)
     end
 
     test "returns error when the departure time string is invalid" do
@@ -79,13 +73,13 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpersTest do
       params = %{"check_out_at" => "not-a-date", "notes" => ""}
 
       assert {:error, :invalid_datetime} =
-               ParticipationEditHelpers.build_edit_correction(record, params, :staff)
+               ParticipationEditHelpers.build_edit_correction(record, params)
     end
 
     test "defaults notes to empty string when the notes key is absent" do
       record = build_record()
 
-      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, %{}, :provider)
+      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, %{})
       assert cmd.check_in_notes == ""
     end
 
@@ -93,7 +87,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpersTest do
       record = build_record(check_out_at: @departed)
       params = %{"check_out_at" => "2026-01-01T16:00", "notes" => "Override attempt"}
 
-      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params, :staff)
+      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params)
 
       assert cmd.check_out_notes == "Override attempt"
       refute Map.has_key?(cmd, :check_out_at)
@@ -106,7 +100,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpersTest do
       record = build_record()
       params = %{"check_out_at" => "2026-01-01T15:00", "notes" => ""}
 
-      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params, :provider)
+      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params)
       assert cmd.check_out_at == ~U[2026-01-01 15:00:00Z]
     end
 
@@ -114,7 +108,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationEditHelpersTest do
       record = build_record()
       params = %{"check_out_at" => "2026-01-01T15:00:30", "notes" => ""}
 
-      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params, :provider)
+      assert {:ok, cmd} = ParticipationEditHelpers.build_edit_correction(record, params)
       assert cmd.check_out_at == ~U[2026-01-01 15:00:30Z]
     end
   end

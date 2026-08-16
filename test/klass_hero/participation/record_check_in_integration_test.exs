@@ -34,17 +34,13 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
   describe "RecordCheckIn integration" do
     test "checks in a registered record and publishes event" do
       record_schema = insert(:participation_record_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       {:ok, record} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record_schema.id,
-          checked_in_by: staff_id,
-          notes: "Arrived on time"
-        })
+        KlassHero.Participation.record_check_in(scope, record_schema.id, notes: "Arrived on time")
 
       assert record.status == :checked_in
-      assert record.check_in_by == staff_id
+      assert record.check_in_by == scope.user.id
       assert record.check_in_notes == "Arrived on time"
       assert %DateTime{} = record.check_in_at
 
@@ -55,20 +51,17 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       assert event.payload.record_id == record_schema.id
       assert event.payload.session_id == record_schema.session_id
       assert event.payload.child_id == record_schema.child_id
-      assert event.payload.checked_in_by == staff_id
+      assert event.payload.checked_in_by == scope.user.id
       assert event.payload.notes == "Arrived on time"
       assert %DateTime{} = event.payload.checked_in_at
     end
 
     test "checks in with nil notes" do
       record_schema = insert(:participation_record_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       {:ok, record} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record_schema.id,
-          checked_in_by: staff_id
-        })
+        KlassHero.Participation.record_check_in(scope, record_schema.id)
 
       assert record.status == :checked_in
       assert record.check_in_notes == nil
@@ -82,10 +75,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       fake_id = Ecto.UUID.generate()
 
       result =
-        KlassHero.Participation.record_check_in(%{
-          record_id: fake_id,
-          checked_in_by: AccountsFixtures.unconfirmed_user_fixture().id
-        })
+        KlassHero.Participation.record_check_in(AccountsFixtures.admin_scope_fixture(), fake_id)
 
       assert {:error, :not_found} = result
       assert attendance_events() == []
@@ -99,13 +89,10 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
           check_in_by: AccountsFixtures.unconfirmed_user_fixture().id
         )
 
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       result =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record_schema.id,
-          checked_in_by: staff_id
-        })
+        KlassHero.Participation.record_check_in(scope, record_schema.id)
 
       assert {:error, :invalid_status_transition} = result
       assert attendance_events() == []
@@ -121,17 +108,13 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
           check_in_by: AccountsFixtures.unconfirmed_user_fixture().id
         )
 
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       {:ok, record} =
-        KlassHero.Participation.record_check_out(%{
-          record_id: record_schema.id,
-          checked_out_by: staff_id,
-          notes: "Picked up by parent"
-        })
+        KlassHero.Participation.record_check_out(scope, record_schema.id, notes: "Picked up by parent")
 
       assert record.status == :checked_out
-      assert record.check_out_by == staff_id
+      assert record.check_out_by == scope.user.id
       assert record.check_out_notes == "Picked up by parent"
       assert %DateTime{} = record.check_out_at
 
@@ -142,7 +125,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       assert event.payload.record_id == record_schema.id
       assert event.payload.session_id == record_schema.session_id
       assert event.payload.child_id == record_schema.child_id
-      assert event.payload.checked_out_by == staff_id
+      assert event.payload.checked_out_by == scope.user.id
       assert event.payload.notes == "Picked up by parent"
       assert %DateTime{} = event.payload.checked_out_at
     end
@@ -155,13 +138,10 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
           check_in_by: AccountsFixtures.unconfirmed_user_fixture().id
         )
 
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       {:ok, record} =
-        KlassHero.Participation.record_check_out(%{
-          record_id: record_schema.id,
-          checked_out_by: staff_id
-        })
+        KlassHero.Participation.record_check_out(scope, record_schema.id)
 
       assert record.status == :checked_out
       assert record.check_out_notes == nil
@@ -175,10 +155,7 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
       fake_id = Ecto.UUID.generate()
 
       result =
-        KlassHero.Participation.record_check_out(%{
-          record_id: fake_id,
-          checked_out_by: AccountsFixtures.unconfirmed_user_fixture().id
-        })
+        KlassHero.Participation.record_check_out(AccountsFixtures.admin_scope_fixture(), fake_id)
 
       assert {:error, :not_found} = result
       assert attendance_events() == []
@@ -186,13 +163,10 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
 
     test "returns error when checking out a registered record" do
       record_schema = insert(:participation_record_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       result =
-        KlassHero.Participation.record_check_out(%{
-          record_id: record_schema.id,
-          checked_out_by: staff_id
-        })
+        KlassHero.Participation.record_check_out(scope, record_schema.id)
 
       assert {:error, :invalid_status_transition} = result
       assert attendance_events() == []
@@ -202,25 +176,17 @@ defmodule KlassHero.Participation.RecordCheckInIntegrationTest do
   describe "end-to-end check-in/check-out flow" do
     test "complete participation cycle" do
       record_schema = insert(:participation_record_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       # Check in
       {:ok, check_in_record} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record_schema.id,
-          checked_in_by: staff_id,
-          notes: "Morning arrival"
-        })
+        KlassHero.Participation.record_check_in(scope, record_schema.id, notes: "Morning arrival")
 
       assert check_in_record.status == :checked_in
 
       # Check out
       {:ok, check_out_record} =
-        KlassHero.Participation.record_check_out(%{
-          record_id: record_schema.id,
-          checked_out_by: staff_id,
-          notes: "Evening pickup"
-        })
+        KlassHero.Participation.record_check_out(scope, record_schema.id, notes: "Evening pickup")
 
       assert check_out_record.status == :checked_out
 

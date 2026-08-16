@@ -4,13 +4,14 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Accounts.Scope
   alias KlassHero.Participation
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.SessionNote
 
   setup :register_and_log_in_provider
 
-  defp create_session_with_child(%{provider: provider}) do
+  defp create_session_with_child(%{provider: provider, user: user}) do
     program = insert(:program_schema, provider_id: provider.id)
     session = insert(:program_session_schema, program_id: program.id, status: "in_progress")
     parent = insert(:parent_profile_schema)
@@ -33,7 +34,11 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
         status: :registered
       )
 
-    %{session: session, parent: parent, child: child, record: record}
+    # The same scope the LiveView acts under, so a check-in arranged directly
+    # through the context goes down the production authorization path.
+    scope = %Scope{user: user, provider: provider}
+
+    %{session: session, parent: parent, child: child, record: record, scope: scope}
   end
 
   describe "cross-provider authorization" do
@@ -188,15 +193,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   describe "session notes" do
     setup [:create_session_with_child]
 
-    # Trigger: check_in_by references users table via FK constraint
-    # Why: consolidated migrations enforce referential integrity
-    # Outcome: use the logged-in user's ID (not provider profile ID) for checked_in_by
-    defp check_in_record(%{record: record, user: user}) do
+    defp check_in_record(%{record: record, scope: scope}) do
       {:ok, updated} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       %{record: updated}
     end
@@ -205,9 +204,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -228,9 +227,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -255,9 +254,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       session: session,
       record: record,
       provider: provider,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       # Submit a note first
       {:ok, _note} =
@@ -279,9 +278,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       record: record,
       parent: parent,
       provider: provider,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       # Submit and reject a note
       {:ok, note} =
@@ -310,9 +309,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       record: record,
       parent: parent,
       provider: provider,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       {:ok, note} =
         KlassHero.Participation.submit_session_note(%{
@@ -340,9 +339,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       parent: parent,
       child: child,
       record: record,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       insert(:consent_schema,
         parent_id: parent.id,
@@ -369,9 +368,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -384,9 +383,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       record: record,
       parent: parent,
       provider: provider,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       # Submit and reject a note
       {:ok, note} =
@@ -428,9 +427,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -452,9 +451,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       session: session,
       record: record,
       provider: provider,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       # Submit a note first via the API
       {:ok, _note} =
@@ -475,9 +474,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      check_in_record(%{record: record, user: user})
+      check_in_record(%{record: record, scope: scope})
 
       foreign_record = insert(:participation_record_schema)
 
@@ -553,13 +552,10 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -574,13 +570,10 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -600,13 +593,10 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
       {:ok, _} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -627,12 +617,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   describe "edit-after-check-in flow" do
     setup [:create_session_with_child]
 
-    defp check_in!(record, user) do
+    defp check_in!(record, scope) do
       {:ok, updated} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record.id,
-          checked_in_by: user.id
-        })
+        KlassHero.Participation.record_check_in(scope, record.id)
 
       updated
     end
@@ -641,9 +628,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      _checked_in = check_in!(record, user)
+      _checked_in = check_in!(record, scope)
       {:ok, view, html} = live(conn, ~p"/provider/participation/#{session.id}")
 
       assert has_element?(view, "#edit-btn-#{record.id}")
@@ -663,9 +650,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      _checked_in = check_in!(record, user)
+      _checked_in = check_in!(record, scope)
 
       # Seed an existing check-in note so we can confirm pre-fill behaviour.
       record
@@ -687,9 +674,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      _checked_in = check_in!(record, user)
+      _checked_in = check_in!(record, scope)
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
       view |> element("#edit-btn-#{record.id}") |> render_click()
@@ -709,9 +696,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      _checked_in = check_in!(record, user)
+      _checked_in = check_in!(record, scope)
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
       view |> element("#edit-btn-#{record.id}") |> render_click()
@@ -742,16 +729,12 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      checked_in = check_in!(record, user)
+      checked_in = check_in!(record, scope)
 
       {:ok, _checked_out} =
-        KlassHero.Participation.record_check_out(%{
-          record_id: checked_in.id,
-          checked_out_by: user.id,
-          notes: "left at 3pm"
-        })
+        KlassHero.Participation.record_check_out(scope, checked_in.id, notes: "left at 3pm")
 
       {:ok, view, html} = live(conn, ~p"/provider/participation/#{session.id}")
 
@@ -765,19 +748,16 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     # form must NOT pre-fill the textarea with check_in_notes — that value
     # would silently get copied into check_out_notes on save.
     test "edit form starts empty when record is checked-out without check-out notes",
-         %{conn: conn, session: session, record: record, user: user} do
+         %{conn: conn, session: session, record: record, scope: scope} do
       record
       |> Ecto.Changeset.change(check_in_notes: "Brought hat and gloves")
       |> KlassHero.Repo.update!()
 
-      checked_in = check_in!(record, user)
+      checked_in = check_in!(record, scope)
 
+      # no :notes — leaves check_out_notes as nil
       {:ok, _} =
-        KlassHero.Participation.record_check_out(%{
-          record_id: checked_in.id,
-          checked_out_by: user.id
-          # no :notes — leaves check_out_notes as nil
-        })
+        KlassHero.Participation.record_check_out(scope, checked_in.id)
 
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
       view |> element("#edit-btn-#{record.id}") |> render_click()
@@ -790,9 +770,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      user: user
+      scope: scope
     } do
-      _checked_in = check_in!(record, user)
+      _checked_in = check_in!(record, scope)
       {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
 
       view |> element("#edit-btn-#{record.id}") |> render_click()

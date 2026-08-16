@@ -204,8 +204,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     record = find_participation_record(socket, record_id)
 
     with {:record, record} when not is_nil(record) <- {:record, record},
-         {:ok, correction} <- ParticipationEditHelpers.build_edit_correction(record, params, :provider),
-         {:ok, _} <- Participation.correct_attendance(correction) do
+         {:ok, correction} <- ParticipationEditHelpers.build_edit_correction(record, params),
+         {:ok, _} <- Participation.correct_attendance(socket.assigns.current_scope, record_id, correction) do
       {:noreply,
        socket
        |> put_flash(:info, gettext("Record updated"))
@@ -256,7 +256,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     case Participation.get_session_with_roster_enriched(session_id) do
       {:ok, session} ->
         # Ownership guard (IDOR): the session's program must belong to this provider,
-        # else any provider could read/mutate another business's roster via a guessed id.
+        # else any provider could read another business's roster via a guessed id.
+        # Mutation is guarded in the context as of ADR-0017 (#1353); this stays as
+        # defence in depth and to keep a foreign roster off the screen entirely.
         if MapSet.member?(socket.assigns.assigned_program_ids, session.program_id) do
           socket
           |> assign(:session, session)

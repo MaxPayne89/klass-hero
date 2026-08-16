@@ -466,12 +466,12 @@ msgstr ""
 msgid "Changing..."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:39
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:44
 #, elixir-autogen, elixir-format
 msgid "Child checked in successfully"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:72
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:76
 #, elixir-autogen, elixir-format
 msgid "Child checked out successfully"
 msgstr ""
@@ -611,12 +611,12 @@ msgstr ""
 msgid "Enter your password to confirm"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:49
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:57
 #, elixir-autogen, elixir-format
 msgid "Failed to check in: %{reason}"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:84
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:91
 #, elixir-autogen, elixir-format
 msgid "Failed to check out: %{reason}"
 msgstr ""
@@ -844,10 +844,10 @@ msgstr ""
 msgid "Questions About These Terms?"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:29
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:61
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:94
-#: lib/klass_hero_web/live/admin/sessions_live.ex:251
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:37
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:69
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:101
+#: lib/klass_hero_web/live/admin/sessions_live.ex:252
 #: lib/klass_hero_web/live/provider/participation_live.ex:171
 #: lib/klass_hero_web/live/provider/participation_live.ex:217
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:113
@@ -896,8 +896,8 @@ msgstr ""
 
 #: lib/klass_hero_web/live/admin/sessions_live.ex:67
 #: lib/klass_hero_web/live/admin/sessions_live.ex:73
-#: lib/klass_hero_web/live/provider/participation_live.ex:285
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:222
+#: lib/klass_hero_web/live/provider/participation_live.ex:287
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "Session not found"
 msgstr ""
@@ -1672,7 +1672,7 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:1581
 #: lib/klass_hero_web/components/provider_components.ex:2454
 #: lib/klass_hero_web/components/provider_components.ex:2472
-#: lib/klass_hero_web/live/admin/sessions_live.ex:297
+#: lib/klass_hero_web/live/admin/sessions_live.ex:298
 #: lib/klass_hero_web/live/admin/verifications_live.ex:197
 #, elixir-autogen, elixir-format
 msgid "Pending"
@@ -1926,7 +1926,7 @@ msgstr ""
 msgid "Failed to send broadcast"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:124
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:131
 #, elixir-autogen, elixir-format
 msgid "Failed to submit note"
 msgstr ""
@@ -2005,7 +2005,7 @@ msgstr ""
 msgid "Note approved"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:113
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:120
 #: lib/klass_hero_web/live/provider/participation_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Note content cannot be blank"
@@ -2122,8 +2122,8 @@ msgstr ""
 msgid "Type a message..."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:305
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:242
+#: lib/klass_hero_web/live/provider/participation_live.ex:307
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:246
 #, elixir-autogen, elixir-format
 msgid "Unable to refresh roster. Please reload."
 msgstr ""
@@ -2134,7 +2134,7 @@ msgstr ""
 msgid "Write your message to all enrolled parents..."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:116
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:123
 #, elixir-autogen, elixir-format
 msgid "You already submitted a note for this record"
 msgstr ""
@@ -2248,7 +2248,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:826
 #: lib/klass_hero_web/components/provider_components.ex:48
-#: lib/klass_hero_web/live/admin/sessions_live.ex:294
+#: lib/klass_hero_web/live/admin/sessions_live.ex:295
 #: lib/klass_hero_web/live/admin/verifications_live.ex:202
 #: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:141
 #, elixir-autogen, elixir-format
@@ -3513,7 +3513,7 @@ msgstr ""
 msgid "This deletion request has expired. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:249
+#: lib/klass_hero_web/live/admin/sessions_live.ex:250
 #, elixir-autogen, elixir-format
 msgid "A reason is required for corrections"
 msgstr ""
@@ -3539,7 +3539,7 @@ msgstr ""
 msgid "All payments processed securely through Stripe."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:261
+#: lib/klass_hero_web/live/admin/sessions_live.ex:262
 #, elixir-autogen, elixir-format
 msgid "An error occurred"
 msgstr ""
@@ -3549,7 +3549,7 @@ msgstr ""
 msgid "Apple Pay / Google Pay"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:177
+#: lib/klass_hero_web/live/admin/sessions_live.ex:178
 #, elixir-autogen, elixir-format
 msgid "Attendance corrected successfully"
 msgstr ""
@@ -3594,7 +3594,7 @@ msgstr ""
 msgid "Can I list my programs on Klass Hero and what does it cost?"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:255
+#: lib/klass_hero_web/live/admin/sessions_live.ex:256
 #, elixir-autogen, elixir-format
 msgid "Cannot check out without a check-in"
 msgstr ""
@@ -3625,13 +3625,13 @@ msgstr ""
 msgid "Check-out time"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:276
+#: lib/klass_hero_web/live/admin/sessions_live.ex:277
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:199
 #, elixir-autogen, elixir-format
 msgid "Checked In"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:277
+#: lib/klass_hero_web/live/admin/sessions_live.ex:278
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:200
 #, elixir-autogen, elixir-format
 msgid "Checked Out"
@@ -3722,7 +3722,7 @@ msgid "How does the booking system work?"
 msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:807
-#: lib/klass_hero_web/live/admin/sessions_live.ex:275
+#: lib/klass_hero_web/live/admin/sessions_live.ex:276
 #, elixir-autogen, elixir-format
 msgid "In Progress"
 msgstr ""
@@ -3758,7 +3758,7 @@ msgstr ""
 msgid "No change"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:250
+#: lib/klass_hero_web/live/admin/sessions_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "No changes detected"
 msgstr ""
@@ -3848,7 +3848,7 @@ msgstr ""
 msgid "Reason for correction"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:253
+#: lib/klass_hero_web/live/admin/sessions_live.ex:254
 #, elixir-autogen, elixir-format
 msgid "Record was modified by someone else. Please refresh."
 msgstr ""
@@ -4055,7 +4055,7 @@ msgstr ""
 msgid "Check In"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:257
+#: lib/klass_hero_web/live/admin/sessions_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "Check-in time must be before check-out time"
 msgstr ""
@@ -4268,7 +4268,7 @@ msgstr ""
 msgid "Invalid Invitation"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:259
+#: lib/klass_hero_web/live/admin/sessions_live.ex:260
 #: lib/klass_hero_web/live/provider/sessions_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "Invalid time format"
@@ -4705,9 +4705,11 @@ msgstr ""
 msgid "View and manage your assigned sessions"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/participation_live.ex:274
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:48
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:82
+#: lib/klass_hero_web/live/provider/participation_live.ex:276
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:53
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:211
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "You are not assigned to this program"
 msgstr ""
@@ -7555,7 +7557,7 @@ msgstr ""
 msgid "Session Note"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:107
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:114
 #, elixir-autogen, elixir-format
 msgid "Session note submitted for review"
 msgstr ""

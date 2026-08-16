@@ -16,7 +16,7 @@ defmodule KlassHero.Participation.RecordCheckInTest do
     test "successfully checks in a registered record" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       record_schema =
         insert(:participation_record_schema,
@@ -26,24 +26,20 @@ defmodule KlassHero.Participation.RecordCheckInTest do
         )
 
       assert {:ok, record} =
-               KlassHero.Participation.record_check_in(%{
-                 record_id: record_schema.id,
-                 checked_in_by: staff_id,
-                 notes: "Child arrived happy"
-               })
+               KlassHero.Participation.record_check_in(scope, record_schema.id, notes: "Child arrived happy")
 
       assert %ParticipationRecord{} = record
       assert record.id == record_schema.id
       assert record.status == :checked_in
       assert record.check_in_notes == "Child arrived happy"
-      assert record.check_in_by == staff_id
+      assert record.check_in_by == scope.user.id
       assert record.check_in_at != nil
     end
 
     test "checks in with nil notes when not provided" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       record_schema =
         insert(:participation_record_schema,
@@ -53,10 +49,7 @@ defmodule KlassHero.Participation.RecordCheckInTest do
         )
 
       assert {:ok, record} =
-               KlassHero.Participation.record_check_in(%{
-                 record_id: record_schema.id,
-                 checked_in_by: staff_id
-               })
+               KlassHero.Participation.record_check_in(scope, record_schema.id)
 
       assert record.check_in_notes == nil
       assert record.status == :checked_in
@@ -64,19 +57,16 @@ defmodule KlassHero.Participation.RecordCheckInTest do
 
     test "returns error when record not found" do
       non_existent_id = Ecto.UUID.generate()
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       assert {:error, :not_found} =
-               KlassHero.Participation.record_check_in(%{
-                 record_id: non_existent_id,
-                 checked_in_by: staff_id
-               })
+               KlassHero.Participation.record_check_in(scope, non_existent_id)
     end
 
     test "returns error when record is already checked in" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       record_schema =
         insert(:participation_record_schema,
@@ -88,16 +78,13 @@ defmodule KlassHero.Participation.RecordCheckInTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               KlassHero.Participation.record_check_in(%{
-                 record_id: record_schema.id,
-                 checked_in_by: staff_id
-               })
+               KlassHero.Participation.record_check_in(scope, record_schema.id)
     end
 
     test "returns error when record is already checked out" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
       check_in_time = DateTime.add(DateTime.utc_now(), -3600, :second)
 
       record_schema =
@@ -112,16 +99,13 @@ defmodule KlassHero.Participation.RecordCheckInTest do
         )
 
       assert {:error, :invalid_status_transition} =
-               KlassHero.Participation.record_check_in(%{
-                 record_id: record_schema.id,
-                 checked_in_by: staff_id
-               })
+               KlassHero.Participation.record_check_in(scope, record_schema.id)
     end
 
     test "persists check-in to database" do
       session = insert(:program_session_schema, status: :in_progress)
       child = insert(:child_schema)
-      staff_id = AccountsFixtures.unconfirmed_user_fixture().id
+      scope = AccountsFixtures.admin_scope_fixture()
 
       record_schema =
         insert(:participation_record_schema,
@@ -131,10 +115,7 @@ defmodule KlassHero.Participation.RecordCheckInTest do
         )
 
       {:ok, record} =
-        KlassHero.Participation.record_check_in(%{
-          record_id: record_schema.id,
-          checked_in_by: staff_id
-        })
+        KlassHero.Participation.record_check_in(scope, record_schema.id)
 
       reloaded =
         KlassHero.Repo.get(
@@ -144,7 +125,7 @@ defmodule KlassHero.Participation.RecordCheckInTest do
 
       assert reloaded.status == :checked_in
       assert reloaded.check_in_at != nil
-      assert reloaded.check_in_by == staff_id
+      assert reloaded.check_in_by == scope.user.id
     end
   end
 end
