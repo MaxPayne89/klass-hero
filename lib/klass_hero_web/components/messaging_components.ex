@@ -183,6 +183,8 @@ defmodule KlassHeroWeb.MessagingComponents do
       ]}>
         <p
           :if={!@is_own && @message.message_type != :system}
+          id={"#{@id}-attribution"}
+          data-provider-side={to_string(@is_provider_side)}
           class={["text-xs font-medium mb-1", Theme.text_color(:muted)]}
         >
           <%= if @is_provider_side && @provider_name do %>
@@ -653,10 +655,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           is_own={MessagingLiveHelper.own_message?(message, @current_user_id)}
           sender_name={MessagingLiveHelper.get_sender_name(@sender_names, message.sender_id)}
           provider_name={@provider_name}
-          is_provider_side={
-            @provider_user_ids != nil &&
-              MapSet.member?(@provider_user_ids, message.sender_id)
-          }
+          is_provider_side={MessagingLiveHelper.provider_side?(message, @provider_user_ids)}
         />
       </div>
       <.messages_empty_state :if={@messages_empty?} />

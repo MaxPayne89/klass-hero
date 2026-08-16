@@ -518,6 +518,26 @@ defmodule KlassHero.Provider.Staff do
   end
 
   @doc """
+  User IDs of everyone who has ever held a staff row at the provider, active or not.
+
+  The counterpart to `active_staff_for_provider?/2`: that one answers "may this user
+  act now", this one answers "was this user ever one of ours" — the question a reader
+  of *past* messages is really asking (#1348). Rows with no `user_id` are unclaimed
+  invitations and can never have sent anything.
+
+  Deliberately narrower than `list_staff_members/1`, which returns full structs and
+  loads a pay rate per row.
+  """
+  @spec list_staff_user_ids_for_provider(String.t()) :: [String.t()]
+  def list_staff_user_ids_for_provider(provider_id) when is_binary(provider_id) do
+    from(s in StaffMember,
+      where: s.provider_id == ^provider_id and not is_nil(s.user_id),
+      select: s.user_id
+    )
+    |> Repo.all()
+  end
+
+  @doc """
   Returns the staff member matching the given invitation token hash,
   only if invitation_status is :sent. Used by the invitation registration flow.
   """

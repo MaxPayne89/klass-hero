@@ -263,6 +263,90 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
     end
   end
 
+  # #1348: a parent re-reading a thread must see the conversation they saw a month
+  # ago. Attribution used to be a live staffing lookup, so a staff member leaving
+  # restyled every message they had ever sent.
+  describe "provider-side attribution" do
+    setup :register_and_log_in_user
+
+    setup %{conn: conn, user: user} do
+      provider_user = AccountsFixtures.user_fixture()
+      provider = insert(:provider_profile_schema, identity_id: provider_user.id)
+      program = insert(:program_schema, provider_id: provider.id)
+      staff_user = AccountsFixtures.user_fixture()
+
+      staff =
+        insert(:staff_member_schema,
+          provider_id: provider.id,
+          user_id: staff_user.id,
+          active: true
+        )
+
+      conversation =
+        insert(:conversation_schema,
+          type: "program_broadcast",
+          provider_id: provider.id,
+          program_id: program.id,
+          subject: "Update"
+        )
+
+      for participant_id <- [user.id, staff_user.id] do
+        insert(:participant_schema, conversation_id: conversation.id, user_id: participant_id)
+      end
+
+      %{conn: conn, conversation: conversation, staff: staff, staff_user: staff_user}
+    end
+
+    test "survives the sender's deactivation", ctx do
+      {:ok, message} =
+        KlassHero.Messaging.send_message(ctx.conversation.id, ctx.staff_user.id, "While employed")
+
+      {:ok, _} = KlassHero.Provider.deactivate_staff_member(ctx.staff)
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/messages/#{ctx.conversation.id}")
+
+      assert has_element?(view, "#messages-#{message.id}-attribution[data-provider-side='true']")
+    end
+
+    # Rows written before `sender_role` existed fall back to the live set, which is
+    # why that set asks about employment *ever* rather than employment *now*.
+    test "holds for a pre-#1348 message with no recorded role", ctx do
+      {:ok, message} =
+        KlassHero.Messaging.create_message(%{
+          conversation_id: ctx.conversation.id,
+          sender_id: ctx.staff_user.id,
+          content: "Sent before the column existed"
+        })
+
+      assert message.sender_role == nil
+      {:ok, _} = KlassHero.Provider.deactivate_staff_member(ctx.staff)
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/messages/#{ctx.conversation.id}")
+
+      assert has_element?(view, "#messages-#{message.id}-attribution[data-provider-side='true']")
+    end
+
+    test "is absent for a message from another parent", ctx do
+      other_parent = AccountsFixtures.user_fixture()
+
+      insert(:participant_schema,
+        conversation_id: ctx.conversation.id,
+        user_id: other_parent.id
+      )
+
+      {:ok, message} =
+        KlassHero.Messaging.create_message(%{
+          conversation_id: ctx.conversation.id,
+          sender_id: other_parent.id,
+          content: "Just a parent"
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/messages/#{ctx.conversation.id}")
+
+      assert has_element?(view, "#messages-#{message.id}-attribution[data-provider-side='false']")
+    end
+  end
+
   describe "page title" do
     setup :register_and_log_in_user
 

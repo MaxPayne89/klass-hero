@@ -274,6 +274,9 @@ defmodule KlassHero.Provider do
   @doc "Returns true if the user has any active staff row for the given provider."
   defdelegate active_staff_for_provider?(provider_id, user_id), to: Staff
 
+  @doc "User IDs of everyone who has ever been staff at the provider — active or not, claimed only."
+  defdelegate list_staff_user_ids_for_provider(provider_id), to: Staff
+
   @doc "Returns the staff member matching the given invitation token hash (status :sent)."
   defdelegate get_staff_member_by_token_hash(token_hash), to: Staff
 

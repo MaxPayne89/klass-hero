@@ -692,15 +692,28 @@ defmodule KlassHero.Messaging do
   Returns the user IDs of staff currently active on a program, read from
   Provider (#1321) rather than from a mirror Messaging maintained itself.
 
-  Two callers, and the second is why this is not display-only: the web layer
-  decides which senders render provider-side ("Business via Staff Name"), and
-  `AddAssignedStaff` seeds these users as participants when a conversation is
-  created. The first is cosmetic; the second grants access.
+  Access-granting, and only that: `AddAssignedStaff` seeds these users as
+  participants when a conversation is created. The render path used to share it to
+  decide which senders show branded attribution, which is how deactivating a staff
+  member restyled every message they had ever sent (#1348) — attribution now comes
+  from `messages.sender_role`, so a change here can no longer reach the past.
   """
   @spec get_active_staff_user_ids(String.t()) :: [String.t()]
   defdelegate get_active_staff_user_ids(program_id),
     to: ProviderStaffResolver,
     as: :list_active_staff_user_ids
+
+  @doc """
+  User IDs of everyone who has ever been staff at the provider.
+
+  Renders attribution for messages predating `messages.sender_role` (#1348) and
+  nothing else — it must never gate access, because it deliberately includes people
+  whose employment has ended.
+  """
+  @spec get_provider_staff_user_ids(String.t()) :: [String.t()]
+  defdelegate get_provider_staff_user_ids(provider_id),
+    to: ProviderStaffResolver,
+    as: :list_staff_user_ids
 
   @doc """
   Returns the PubSub topic for a conversation.
@@ -1095,7 +1108,8 @@ defmodule KlassHero.Messaging do
   @spec create_message(map()) :: {:ok, Message.t()} | {:error, Ecto.Changeset.t()}
   def create_message(attrs) do
     context_span entity: "message" do
-      create_attrs = Map.take(attrs, [:conversation_id, :sender_id, :content, :message_type])
+      create_attrs =
+        Map.take(attrs, [:conversation_id, :sender_id, :sender_role, :content, :message_type])
 
       %Message{}
       |> Message.create_changeset(create_attrs)

@@ -54,6 +54,44 @@ defmodule KlassHero.Messaging.MessageTest do
 
       assert %{message_type: ["is invalid"]} = errors_on(changeset)
     end
+
+    test "rejects a sender_role outside the enum" do
+      changeset =
+        Message.create_changeset(%{
+          conversation_id: Ecto.UUID.generate(),
+          sender_id: Ecto.UUID.generate(),
+          sender_role: :landlord
+        })
+
+      assert %{sender_role: ["is invalid"]} = errors_on(changeset)
+    end
+  end
+
+  describe "provider_side?/2" do
+    @sender_id "11111111-1111-1111-1111-111111111111"
+    @other_id "22222222-2222-2222-2222-222222222222"
+
+    # {sender_role, fallback set, expected, why}
+    @cases [
+      {:provider, nil, true, "the provider owner is provider-side"},
+      {:staff, nil, true, "staff are provider-side"},
+      {:parent, nil, false, "parents are not"},
+      {:parent, [@sender_id], false, "a persisted role wins over the live set"},
+      {:staff, [@other_id], true, "a persisted role wins even when the set disagrees"},
+      {nil, [@sender_id], true, "pre-#1348 rows fall back to the live set"},
+      {nil, [@other_id], false, "fallback says no when the sender is absent"},
+      {nil, nil, false, "no role and no set renders plainly"}
+    ]
+
+    for {role, ids, expected, why} <- @cases do
+      test "#{why} (role: #{inspect(role)})" do
+        message = %Message{sender_id: @sender_id, sender_role: unquote(role)}
+        fallback = unquote(ids) && MapSet.new(unquote(ids))
+
+        assert Message.provider_side?(message, fallback) == unquote(expected),
+               "expected provider_side? to be #{unquote(expected)} because #{unquote(why)}"
+      end
+    end
   end
 
   describe "create_message/1" do

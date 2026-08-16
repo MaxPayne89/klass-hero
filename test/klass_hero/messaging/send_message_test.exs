@@ -7,6 +7,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.SendMessage
+  alias KlassHero.Provider
 
   describe "execute/4" do
     test "sends message successfully for participant" do
@@ -371,6 +372,75 @@ defmodule KlassHero.Messaging.SendMessageTest do
 
   # A direct conversation with one enrolled participant (backed by a real user).
   # Extra participant attrs (e.g. last_read_at:, left_at:) override the defaults.
+  # #1348: attribution used to be a live staffing lookup at render time, so it
+  # rewrote itself whenever employment changed. The role is resolved here, from the
+  # same predicate that authorizes the send, and recorded on the row.
+  describe "sender_role" do
+    test "records :provider for the provider owner" do
+      provider_user = AccountsFixtures.user_fixture()
+      provider = insert(:provider_profile_schema, identity_id: provider_user.id)
+      program = insert(:program_schema, provider_id: provider.id)
+      broadcast = insert_broadcast(provider, program)
+      insert(:participant_schema, conversation_id: broadcast.id, user_id: provider_user.id)
+
+      assert {:ok, message} = SendMessage.execute(broadcast.id, provider_user.id, "Announcement")
+      assert message.sender_role == :provider
+    end
+
+    test "records :staff for a staff member assigned to the program" do
+      %{provider: provider, program: program, staff_user: staff_user, staff: staff, broadcast: broadcast} =
+        broadcast_with_staff()
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: staff.id
+      )
+
+      assert {:ok, message} = SendMessage.execute(broadcast.id, staff_user.id, "From staff")
+      assert message.sender_role == :staff
+    end
+
+    # The defect the issue did not name: send authorization is provider-wide
+    # (#669), but rendering used a program-scoped set, so an active staff member
+    # with no assignment to *this* program rendered parent-side immediately — no
+    # departure required. Resolving the role from the authorization predicate is
+    # what makes the two agree.
+    test "records :staff for active staff with no assignment to this program" do
+      %{staff_user: staff_user, broadcast: broadcast} = broadcast_with_staff()
+
+      assert {:ok, message} = SendMessage.execute(broadcast.id, staff_user.id, "From staff")
+      assert message.sender_role == :staff
+    end
+
+    test "records :parent for a participant who is neither owner nor staff" do
+      %{conversation: conversation, user: user} = conversation_with_participant()
+
+      assert {:ok, message} = SendMessage.execute(conversation.id, user.id, "From a parent")
+      assert message.sender_role == :parent
+    end
+
+    test "the recorded role survives the sender's deactivation" do
+      %{staff_user: staff_user, staff: staff, broadcast: broadcast} = broadcast_with_staff()
+
+      assert {:ok, message} = SendMessage.execute(broadcast.id, staff_user.id, "While employed")
+      assert {:ok, _} = Provider.deactivate_staff_member(staff)
+
+      assert KlassHero.Repo.get!(Message, message.id).sender_role == :staff
+    end
+  end
+
+  defp broadcast_with_staff do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    staff_user = AccountsFixtures.user_fixture()
+    staff = insert(:staff_member_schema, provider_id: provider.id, user_id: staff_user.id, active: true)
+    broadcast = insert_broadcast(provider, program)
+    insert(:participant_schema, conversation_id: broadcast.id, user_id: staff_user.id)
+
+    %{provider: provider, program: program, staff_user: staff_user, staff: staff, broadcast: broadcast}
+  end
+
   defp conversation_with_participant(participant_attrs \\ []) do
     conversation = insert(:conversation_schema)
     user = AccountsFixtures.user_fixture()
