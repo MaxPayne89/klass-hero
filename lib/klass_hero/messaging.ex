@@ -43,7 +43,6 @@ defmodule KlassHero.Messaging do
     GetConversationContext,
     GetInboundEmail,
     GetTotalUnreadCount,
-    ListConversations,
     MarkAsRead,
     ReceiveInboundEmail,
     ReplyPrivatelyToBroadcast,
@@ -425,36 +424,6 @@ defmodule KlassHero.Messaging do
           | {:error, :not_found | :not_participant}
   defdelegate get_conversation(conversation_id, user_id, opts \\ []),
     to: GetConversation,
-    as: :execute
-
-  @doc """
-  Lists conversations for a user with unread counts.
-
-  Returns conversations ordered by most recent message.
-
-  ## Parameters
-  - user_id: The user to list conversations for
-  - opts: Optional parameters
-    - limit: Number of conversations (default 50)
-
-  ## Returns
-  - `{:ok, conversations, has_more}` - List of enriched conversations
-
-  Each conversation includes:
-  - `:conversation` - The conversation entity
-  - `:unread_count` - Number of unread messages
-  - `:latest_message` - The most recent message
-  - `:last_read_at` - When user last read
-
-  ## Examples
-
-      iex> Messaging.list_conversations(user_id)
-      {:ok, [%{conversation: %Conversation{}, unread_count: 2, ...}], false}
-
-  """
-  @spec list_conversations(String.t(), keyword()) :: {:ok, [map()], boolean()}
-  defdelegate list_conversations(user_id, opts \\ []),
-    to: ListConversations,
     as: :execute
 
   @doc """
@@ -940,10 +909,21 @@ defmodule KlassHero.Messaging do
 
   # === Persistence — conversation summaries (read model) ===
 
-  @doc "Lists a user's non-archived conversation summaries, newest first. Limit+1 paginated."
-  @spec list_conversation_summaries_for_user(String.t(), keyword()) ::
+  @doc """
+  Lists a user's non-archived conversation summaries, newest first. Limit+1 paginated.
+
+  Returns the `ConversationSummary` read-table structs themselves: the schema is the
+  DTO (`KlassHero.Shared.ReadTable`), so callers read its flat fields directly.
+
+  ## Examples
+
+      iex> Messaging.list_conversations(user_id)
+      {:ok, [%ConversationSummary{conversation_id: "…", unread_count: 2}], false}
+
+  """
+  @spec list_conversations(String.t(), keyword()) ::
           {:ok, [ConversationSummary.t()], boolean()}
-  def list_conversation_summaries_for_user(user_id, opts) do
+  def list_conversations(user_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 25)
 
     schemas =

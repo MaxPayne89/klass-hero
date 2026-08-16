@@ -1741,7 +1741,7 @@ msgstr "Dies ist Ihre Hauptgeschäftsidentität. Eine Verifizierung ist erforder
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
-#: lib/klass_hero_web/components/messaging_components.ex:727
+#: lib/klass_hero_web/components/messaging_components.ex:722
 #: lib/klass_hero_web/components/provider_components.ex:50
 #: lib/klass_hero_web/components/provider_components.ex:1583
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:434
@@ -1765,7 +1765,7 @@ msgstr "Teilnehmerliste"
 msgid "%{age} years old"
 msgstr "%{age} Jahre alt"
 
-#: lib/klass_hero_web/components/messaging_components.ex:737
+#: lib/klass_hero_web/components/messaging_components.ex:742
 #, elixir-autogen, elixir-format
 msgid "%{n}m ago"
 msgstr "vor %{n} Min."
@@ -1801,7 +1801,7 @@ msgstr "Besondere Bedürfnisse oder Unterstützungsbedarf..."
 msgid "Back to Settings"
 msgstr "Zurück zu Einstellungen"
 
-#: lib/klass_hero_web/components/messaging_components.ex:150
+#: lib/klass_hero_web/components/messaging_components.ex:153
 #, elixir-autogen, elixir-format
 msgid "Broadcast"
 msgstr "Rundnachricht"
@@ -1862,7 +1862,7 @@ msgstr "Kind erfolgreich aktualisiert."
 msgid "Child updated, but consent update failed. Please try again."
 msgstr "Kind aktualisiert, aber Einwilligungsaktualisierung fehlgeschlagen. Bitte versuchen Sie es erneut."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:196
+#: lib/klass_hero_web/live/dashboard_live.ex:176
 #: lib/klass_hero_web/live/messaging_live_helper.ex:336
 #, elixir-autogen, elixir-format
 msgid "Conversation"
@@ -1969,8 +1969,8 @@ msgid "Message content is required"
 msgstr "Nachrichteninhalt ist erforderlich"
 
 #: lib/klass_hero_web/components/layouts/app.html.heex:212
-#: lib/klass_hero_web/components/messaging_components.ex:496
-#: lib/klass_hero_web/components/messaging_components.ex:519
+#: lib/klass_hero_web/components/messaging_components.ex:499
+#: lib/klass_hero_web/components/messaging_components.ex:522
 #: lib/klass_hero_web/live/messages_live/index.ex:19
 #: lib/klass_hero_web/live/messaging_live_helper.ex:288
 #, elixir-autogen, elixir-format
@@ -1983,14 +1983,13 @@ msgstr "Nachrichten"
 msgid "No children yet"
 msgstr "Noch keine Kinder"
 
-#: lib/klass_hero_web/components/messaging_components.ex:466
+#: lib/klass_hero_web/components/messaging_components.ex:469
 #, elixir-autogen, elixir-format
 msgid "No conversations yet"
 msgstr "Noch keine Unterhaltungen"
 
-#: lib/klass_hero_web/components/messaging_components.ex:435
-#: lib/klass_hero_web/components/messaging_components.ex:747
-#: lib/klass_hero_web/components/messaging_components.ex:758
+#: lib/klass_hero_web/components/messaging_components.ex:438
+#: lib/klass_hero_web/components/messaging_components.ex:764
 #, elixir-autogen, elixir-format
 msgid "No messages yet"
 msgstr "Noch keine Nachrichten"
@@ -2022,7 +2021,7 @@ msgstr "Notiz abgelehnt"
 msgid "Note resubmitted for review"
 msgstr "Notiz erneut zur Überprüfung eingereicht"
 
-#: lib/klass_hero_web/components/messaging_components.ex:736
+#: lib/klass_hero_web/components/messaging_components.ex:741
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr "Jetzt"
@@ -2062,7 +2061,7 @@ msgstr "Bitte authentifizieren Sie sich erneut, um Ihr Konto zu löschen."
 msgid "Please set up your parent profile to manage children."
 msgstr "Bitte richten Sie Ihr Elternprofil ein, um Kinder zu verwalten."
 
-#: lib/klass_hero_web/components/messaging_components.ex:720
+#: lib/klass_hero_web/components/messaging_components.ex:715
 #: lib/klass_hero_web/live/messaging_live_helper.ex:332
 #, elixir-autogen, elixir-format
 msgid "Program Broadcast"
@@ -2094,7 +2093,7 @@ msgstr "Änderungen speichern"
 msgid "Send Broadcast"
 msgstr "Rundnachricht senden"
 
-#: lib/klass_hero_web/components/messaging_components.ex:438
+#: lib/klass_hero_web/components/messaging_components.ex:441
 #, elixir-autogen, elixir-format
 msgid "Send a message to start the conversation"
 msgstr "Senden Sie eine Nachricht, um die Unterhaltung zu beginnen"
@@ -2118,7 +2117,7 @@ msgstr "Unterstützungsbedarf"
 msgid "This message will be sent to all parents with active enrollments in this program."
 msgstr "Diese Nachricht wird an alle Eltern mit aktiven Anmeldungen in diesem Programm gesendet."
 
-#: lib/klass_hero_web/components/messaging_components.ex:389
+#: lib/klass_hero_web/components/messaging_components.ex:392
 #, elixir-autogen, elixir-format
 msgid "Type a message..."
 msgstr "Nachricht eingeben..."
@@ -2155,12 +2154,12 @@ msgstr "Sie haben keine Berechtigung, dieses Kind zu löschen."
 msgid "You don't have permission to edit this child."
 msgstr "Sie haben keine Berechtigung, dieses Kind zu bearbeiten."
 
-#: lib/klass_hero_web/components/messaging_components.ex:475
+#: lib/klass_hero_web/components/messaging_components.ex:478
 #, elixir-autogen, elixir-format
 msgid "Your conversations with parents will appear here"
 msgstr "Ihre Unterhaltungen mit Eltern werden hier angezeigt"
 
-#: lib/klass_hero_web/components/messaging_components.ex:477
+#: lib/klass_hero_web/components/messaging_components.ex:480
 #, elixir-autogen, elixir-format
 msgid "Your conversations with providers will appear here"
 msgstr "Ihre Unterhaltungen mit Anbietern werden hier angezeigt"
@@ -2283,7 +2282,7 @@ msgstr "Zurück zu den Verifizierungen"
 msgid "Bio"
 msgstr "Biografie"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:402
+#: lib/klass_hero_web/live/dashboard_live.ex:389
 #, elixir-autogen, elixir-format
 msgid "Book a Program"
 msgstr "Programm buchen"
@@ -2381,7 +2380,7 @@ msgstr "Ablehnung bestätigen"
 msgid "Confirmed"
 msgstr "Bestätigt"
 
-#: lib/klass_hero_web/components/messaging_components.ex:810
+#: lib/klass_hero_web/components/messaging_components.ex:816
 #, elixir-autogen, elixir-format
 msgid "Contact Provider"
 msgstr "Anbieter kontaktieren"
@@ -2540,7 +2539,7 @@ msgstr "Einladung konnte nicht erneut gesendet werden."
 msgid "Failed to upload document."
 msgstr "Dokument konnte nicht hochgeladen werden."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:375
+#: lib/klass_hero_web/live/dashboard_live.ex:362
 #, elixir-autogen, elixir-format
 msgid "Family Programs"
 msgstr "Familienprogramme"
@@ -2779,7 +2778,7 @@ msgstr "Kein Minimum"
 msgid "No pending documents to review."
 msgstr "Keine ausstehenden Dokumente zur Überprüfung."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:391
+#: lib/klass_hero_web/live/dashboard_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "No programs booked yet"
 msgstr "Noch keine Programme gebucht"
@@ -3664,7 +3663,7 @@ msgstr "Kontaktieren Sie den Anbieter direkt (Details in der Bestätigungs-E-Mai
 msgid "Correct"
 msgstr "Korrigieren"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:301
+#: lib/klass_hero_web/live/dashboard_live.ex:288
 #: lib/klass_hero_web/live/provider/programs_live.ex:359
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:201
 #, elixir-autogen, elixir-format
@@ -3894,7 +3893,7 @@ msgstr "Mitarbeiter"
 msgid "Track Everything:"
 msgstr "Alles im Überblick:"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:288
+#: lib/klass_hero_web/live/dashboard_live.ex:275
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Upgrade your plan to send messages."
@@ -4045,7 +4044,7 @@ msgstr "Zurück zu Sitzungen"
 msgid "Back to emails"
 msgstr "Zurück zu E-Mails"
 
-#: lib/klass_hero_web/components/messaging_components.ex:687
+#: lib/klass_hero_web/components/messaging_components.ex:682
 #, elixir-autogen, elixir-format
 msgid "Broadcast messages are one-way"
 msgstr "Broadcast-Nachrichten sind einseitig"
@@ -4460,7 +4459,7 @@ msgstr "Grund für die Ablehnung (optional)"
 msgid "Reply"
 msgstr "Antworten"
 
-#: lib/klass_hero_web/components/messaging_components.ex:698
+#: lib/klass_hero_web/components/messaging_components.ex:693
 #, elixir-autogen, elixir-format
 msgid "Reply privately"
 msgstr "Privat antworten"
@@ -4774,7 +4773,7 @@ msgstr "Ziehen und ablegen oder klicken zum Hochladen"
 msgid "Failed to upload files. Please try again."
 msgstr "Hochladen der Dateien fehlgeschlagen. Bitte versuchen Sie es erneut."
 
-#: lib/klass_hero_web/components/messaging_components.ex:762
+#: lib/klass_hero_web/components/messaging_components.ex:768
 #, elixir-autogen, elixir-format
 msgid "File is too large (max %{mb} MB)"
 msgstr "Datei ist zu groß (max. %{mb} MB)"
@@ -4784,7 +4783,7 @@ msgstr "Datei ist zu groß (max. %{mb} MB)"
 msgid "File is too large (max %{mb} MB)."
 msgstr "Datei ist zu groß (max. %{mb} MB)."
 
-#: lib/klass_hero_web/components/messaging_components.ex:765
+#: lib/klass_hero_web/components/messaging_components.ex:771
 #, elixir-autogen, elixir-format
 msgid "File type not accepted (images only)"
 msgstr "Dateityp nicht akzeptiert (nur Bilder)"
@@ -4809,8 +4808,8 @@ msgstr "Ihr Unternehmen verwalten"
 msgid "Only images are accepted (JPG, PNG, GIF, WebP)."
 msgstr "Nur Bilder werden akzeptiert (JPG, PNG, GIF, WebP)."
 
-#: lib/klass_hero_web/components/messaging_components.ex:750
-#: lib/klass_hero_web/components/messaging_components.ex:754
+#: lib/klass_hero_web/components/messaging_components.ex:753
+#: lib/klass_hero_web/components/messaging_components.ex:757
 #, elixir-autogen, elixir-format
 msgid "Photo"
 msgstr "Foto"
@@ -4830,8 +4829,8 @@ msgstr "Profil vervollständigt! Klass Hero wird Ihr Profil in Kürze prüfen."
 msgid "Provider not found"
 msgstr "Anbieter nicht gefunden"
 
-#: lib/klass_hero_web/components/messaging_components.ex:278
-#: lib/klass_hero_web/components/messaging_components.ex:346
+#: lib/klass_hero_web/components/messaging_components.ex:281
+#: lib/klass_hero_web/components/messaging_components.ex:349
 #, elixir-autogen, elixir-format
 msgid "Remove attachment"
 msgstr "Anhang entfernen"
@@ -4849,7 +4848,7 @@ msgstr "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
 msgid "Tell parents about your organization and what makes you unique..."
 msgstr "Erzählen Sie Eltern von Ihrer Organisation und was Sie einzigartig macht..."
 
-#: lib/klass_hero_web/components/messaging_components.ex:769
+#: lib/klass_hero_web/components/messaging_components.ex:775
 #, elixir-autogen, elixir-format
 msgid "Too many files (max %{max})"
 msgstr "Zu viele Dateien (max. %{max})"
@@ -4859,12 +4858,12 @@ msgstr "Zu viele Dateien (max. %{max})"
 msgid "Too many files (max %{max})."
 msgstr "Zu viele Dateien (max. %{max})."
 
-#: lib/klass_hero_web/components/messaging_components.ex:773
+#: lib/klass_hero_web/components/messaging_components.ex:779
 #, elixir-autogen, elixir-format
 msgid "Upload error"
 msgstr "Upload-Fehler"
 
-#: lib/klass_hero_web/components/messaging_components.ex:772
+#: lib/klass_hero_web/components/messaging_components.ex:778
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
 msgstr "Hochladen fehlgeschlagen"
@@ -4894,7 +4893,7 @@ msgstr "Name Ihres Unternehmens oder Ihrer Organisation"
 msgid "Your profile is already complete."
 msgstr "Ihr Profil ist bereits vollständig."
 
-#: lib/klass_hero_web/components/messaging_components.ex:92
+#: lib/klass_hero_web/components/messaging_components.ex:90
 #: lib/klass_hero_web/live/messaging_live_helper.ex:320
 #, elixir-autogen, elixir-format
 msgid "for"
@@ -5326,7 +5325,7 @@ msgstr "Über alle Programme hinweg"
 msgid "Active policy required to teach."
 msgstr "Aktive Versicherungspolice erforderlich, um zu unterrichten."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:321
+#: lib/klass_hero_web/live/dashboard_live.ex:308
 #: lib/klass_hero_web/live/provider/overview_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "Active programs"
@@ -5367,7 +5366,7 @@ msgstr "Sind Sie Pädagog:in, Coach oder Künstler:in?"
 msgid "At Klass Hero, trust isn't a feature — it's the foundation of everything we do. We connect families, schools, and organizations with qualified, vetted, and safety-verified educators."
 msgstr "Bei Klass Hero ist Vertrauen kein Feature — es ist das Fundament von allem, was wir tun. Wir verbinden Familien, Schulen und Organisationen mit qualifizierten, geprüften und sicherheitsverifizierten Pädagogen."
 
-#: lib/klass_hero_web/components/messaging_components.ex:296
+#: lib/klass_hero_web/components/messaging_components.ex:299
 #, elixir-autogen, elixir-format
 msgid "Attach photo"
 msgstr "Foto anhängen"
@@ -6080,7 +6079,7 @@ msgstr "Monat"
 msgid "Mother and child-safety specialist with 10+ years in quality assurance. Architecting our Safety-First Verification engine."
 msgstr "Mutter und Kindersicherheitsspezialistin mit über 10 Jahren Erfahrung in der Qualitätssicherung. Verantwortlich für die Konzeption unserer Safety-First-Verifizierungs-Engine."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:184
+#: lib/klass_hero_web/live/dashboard_live.ex:177
 #, elixir-autogen, elixir-format
 msgid "New conversation"
 msgstr "Neue Unterhaltung"
@@ -6147,7 +6146,7 @@ msgid_plural "No rows imported. %{count} rows could not be processed."
 msgstr[0] "Keine Zeilen importiert. %{count} Zeile konnte nicht verarbeitet werden."
 msgstr[1] "Keine Zeilen importiert. %{count} Zeilen konnten nicht verarbeitet werden."
 
-#: lib/klass_hero_web/live/dashboard_live.ex:361
+#: lib/klass_hero_web/live/dashboard_live.ex:348
 #, elixir-autogen, elixir-format
 msgid "No upcoming sessions in the next few weeks."
 msgstr "Keine bevorstehenden Sitzungen in den nächsten Wochen."
@@ -6663,17 +6662,17 @@ msgstr "Unbekannter Elternteil"
 msgid "Unlimited programs and locations"
 msgstr "Unbegrenzte Programme und Standorte"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:333
+#: lib/klass_hero_web/live/dashboard_live.ex:320
 #, elixir-autogen, elixir-format
 msgid "Unread messages"
 msgstr "Ungelesene Nachrichten"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:346
+#: lib/klass_hero_web/live/dashboard_live.ex:333
 #, elixir-autogen, elixir-format
 msgid "Upcoming sessions"
 msgstr "Anstehende Sitzungen"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:327
+#: lib/klass_hero_web/live/dashboard_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Upcoming this week"
 msgstr "Diese Woche anstehend"
@@ -6688,7 +6687,7 @@ msgstr "Geprüft"
 msgid "View"
 msgstr "Ansehen"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:351
+#: lib/klass_hero_web/live/dashboard_live.ex:338
 #, elixir-autogen, elixir-format
 msgid "View all"
 msgstr "Alle anzeigen"
@@ -7561,12 +7560,12 @@ msgstr "Sitzungsnotiz"
 msgid "Session note submitted for review"
 msgstr "Sitzungsnotiz zur Überprüfung eingereicht"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:385
+#: lib/klass_hero_web/live/dashboard_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "Loading your programs…"
 msgstr "Deine Programme werden geladen…"
 
-#: lib/klass_hero_web/live/dashboard_live.ex:355
+#: lib/klass_hero_web/live/dashboard_live.ex:342
 #, elixir-autogen, elixir-format
 msgid "Loading…"
 msgstr "Wird geladen…"

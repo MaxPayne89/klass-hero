@@ -9,6 +9,7 @@ defmodule KlassHeroWeb.MessagingComponents do
   import KlassHeroWeb.UIComponents, only: [icon: 1]
 
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.ConversationSummary
   alias KlassHeroWeb.MessagingLiveHelper
   alias KlassHeroWeb.Theme
   alias Phoenix.LiveView.JS
@@ -24,38 +25,32 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   ## Attributes
   - id: DOM id for the card
-  - conversation: The conversation entity (must expose `:type`)
-  - unread_count: Number of unread messages
-  - latest_message: The most recent message (optional)
-  - other_participant_name: Name of the other participant (direct conversations)
-  - program_name: Program title (broadcast conversations)
-  - enrolled_child_names: Optional list of child first names rendered under the
-    label (provider-side direct conversations)
+  - summary: A `KlassHero.Messaging.ConversationSummary` read-table row. The schema
+    is the DTO, so the card reads its flat fields directly
+  - user_type: `:parent` or `:provider` — parents do not see the enrolled child names
   - navigate: Target URL for the `<.link navigate=...>` wrapper
 
   ## Examples
 
       <.conversation_card
         id="conv-123"
-        conversation={conv}
-        unread_count={2}
-        latest_message={message}
-        other_participant_name="John Smith"
-        program_name={nil}
+        summary={summary}
+        user_type={:parent}
+        navigate={~p"/messages/\#{summary.conversation_id}"}
       />
 
   """
   attr :id, :string, required: true
-  attr :conversation, :map, required: true
-  attr :unread_count, :integer, default: 0
-  attr :latest_message, :map, default: nil
-  attr :other_participant_name, :string, default: nil
-  attr :program_name, :string, default: nil
-  attr :enrolled_child_names, :list, default: []
+  attr :summary, :map, required: true
+  attr :user_type, :atom, required: true, values: [:parent, :provider]
   attr :navigate, :string, default: nil
 
   def conversation_card(assigns) do
-    assigns = assign(assigns, :display_name, derive_display_name(assigns))
+    assigns =
+      assigns
+      |> assign(:display_name, derive_display_name(assigns.summary))
+      |> assign(:unread_count, assigns.summary.unread_count)
+      |> assign(:child_names, visible_child_names(assigns.summary, assigns.user_type))
 
     ~H"""
     <.link
@@ -84,12 +79,15 @@ defmodule KlassHeroWeb.MessagingComponents do
             ]}>
               {@display_name}
             </h3>
-            <span class={["text-xs flex-shrink-0", Theme.text_color(:muted)]}>
-              {format_timestamp(@latest_message && @latest_message.inserted_at)}
+            <span
+              data-role="conversation-timestamp"
+              class={["text-xs flex-shrink-0", Theme.text_color(:muted)]}
+            >
+              {latest_message_timestamp(@summary)}
             </span>
           </div>
-          <p :if={@enrolled_child_names != []} class={["text-xs mt-0.5", Theme.text_color(:muted)]}>
-            {gettext("for")} {Enum.join(@enrolled_child_names, ", ")}
+          <p :if={@child_names != []} class={["text-xs mt-0.5", Theme.text_color(:muted)]}>
+            {gettext("for")} {Enum.join(@child_names, ", ")}
           </p>
 
           <div class="flex items-center justify-between gap-2 mt-1">
@@ -99,21 +97,26 @@ defmodule KlassHeroWeb.MessagingComponents do
               @unread_count == 0 && Theme.text_color(:muted)
             ]}>
               <.icon
-                :if={@latest_message && Map.get(@latest_message, :has_attachments, false)}
+                :if={@summary.has_attachments}
                 name="hero-camera-mini"
                 class="w-4 h-4 flex-shrink-0"
               />
-              {preview_content(@latest_message)}
+              {preview_content(@summary)}
             </p>
             <.unread_badge :if={@unread_count > 0} count={@unread_count} />
           </div>
 
-          <.broadcast_badge :if={@conversation.type == :program_broadcast} />
+          <.broadcast_badge :if={@summary.conversation_type == :program_broadcast} />
         </div>
       </div>
     </.link>
     """
   end
+
+  # Parents see their own children's names everywhere else; on the inbox the label
+  # is provider-side context ("Sarah Johnson for Emma, Liam").
+  defp visible_child_names(_summary, :parent), do: []
+  defp visible_child_names(summary, :provider), do: summary.enrolled_child_names
 
   @doc """
   Renders an unread message count badge.
@@ -533,19 +536,11 @@ defmodule KlassHeroWeb.MessagingComponents do
     ~H"""
     <div id="conversations" phx-update="stream" class="divide-y divide-hero-grey-200">
       <.conversation_card
-        :for={{dom_id, conv_data} <- @streams.conversations}
+        :for={{dom_id, summary} <- @streams.conversations}
         id={dom_id}
-        conversation={conv_data.conversation}
-        unread_count={conv_data.unread_count}
-        latest_message={conv_data.latest_message}
-        other_participant_name={conv_data.other_participant_name}
-        program_name={Map.get(conv_data, :program_name)}
-        enrolled_child_names={
-          if @user_type == :parent,
-            do: [],
-            else: Map.get(conv_data, :enrolled_child_names, [])
-        }
-        navigate={@navigate_base <> "/" <> conv_data.conversation.id}
+        summary={summary}
+        user_type={@user_type}
+        navigate={@navigate_base <> "/" <> summary.conversation_id}
       />
       <div :if={@conversations_empty?} id="conversations-empty-state" class="p-4">
         <.conversations_empty_state user_type={@user_type} />
@@ -711,12 +706,12 @@ defmodule KlassHeroWeb.MessagingComponents do
   end
 
   # Broadcasts have no "other participant" — fallback to "Unknown" was the UX bug in #892.
-  defp derive_display_name(%{conversation: %{type: :program_broadcast}, program_name: name})
+  defp derive_display_name(%{conversation_type: :program_broadcast, program_name: name})
        when is_binary(name) and byte_size(name) > 0 do
     name
   end
 
-  defp derive_display_name(%{conversation: %{type: :program_broadcast}}) do
+  defp derive_display_name(%{conversation_type: :program_broadcast}) do
     gettext("Program Broadcast")
   end
 
@@ -724,7 +719,17 @@ defmodule KlassHeroWeb.MessagingComponents do
     name
   end
 
-  defp derive_display_name(_assigns), do: gettext("Unknown")
+  defp derive_display_name(_summary), do: gettext("Unknown")
+
+  # A row with no message at all still carries whatever latest_message_at the
+  # projection last wrote, so the timestamp is gated on the message, not the column.
+  defp latest_message_timestamp(summary) do
+    if ConversationSummary.has_latest_message?(summary) do
+      format_timestamp(summary.latest_message_at)
+    else
+      ""
+    end
+  end
 
   defp format_timestamp(nil), do: ""
 
@@ -744,18 +749,19 @@ defmodule KlassHeroWeb.MessagingComponents do
   defp format_message_time(nil), do: ""
   defp format_message_time(datetime), do: Calendar.strftime(datetime, "%H:%M")
 
-  defp preview_content(nil), do: gettext("No messages yet")
-
-  defp preview_content(%{has_attachments: true, content: nil}) do
+  defp preview_content(%{has_attachments: true, latest_message_content: nil}) do
     gettext("Photo")
   end
 
-  defp preview_content(%{has_attachments: true, content: content}) when is_binary(content) do
+  defp preview_content(%{has_attachments: true, latest_message_content: content}) when is_binary(content) do
     gettext("Photo") <> " - " <> String.slice(content, 0, 40)
   end
 
-  defp preview_content(%{content: content}) when is_binary(content), do: String.slice(content, 0, 50)
-  defp preview_content(_), do: gettext("No messages yet")
+  defp preview_content(%{latest_message_content: content}) when is_binary(content) do
+    String.slice(content, 0, 50)
+  end
+
+  defp preview_content(_summary), do: gettext("No messages yet")
 
   defp upload_error_to_string(:too_large) do
     max_mb = div(Attachment.max_file_size_bytes(), 1_048_576)
