@@ -507,6 +507,36 @@ uitest_staff_member
 
 Logger.info("Created UI test staff user: uitest-staff@example.com (Wolf Musik Akademie)")
 
+# A second claimed staff member on the same provider, so a program can render more
+# than one staff user and `AddAssignedStaff`'s "exclude the sender" path has
+# something to exclude. Maria rather than a new synthetic person: she already leads
+# Piano for Beginners and staffs Children's Choir (S9b), both of which the UI test
+# staff is assigned to, so one claim also covers "the lead is a real user".
+#
+# Peter Neumann stays deliberately unclaimed while still assigned — an invite sent
+# and not yet accepted is a real shape, and the one #1309/#1312 were about.
+maria_staff_member = Enum.find(staff_members, &(&1.email == "maria.schulz@example.com"))
+
+maria_staff_user =
+  %User{}
+  |> Ecto.Changeset.change(%{
+    name: "Maria Schulz",
+    email: "maria.schulz@example.com",
+    hashed_password: hashed_pw,
+    confirmed_at: now,
+    intended_roles: [:staff]
+  })
+  |> Repo.insert!()
+
+maria_staff_member
+|> StaffMember.invitation_changeset(%{
+  user_id: maria_staff_user.id,
+  invitation_status: "accepted"
+})
+|> Repo.update!()
+
+Logger.info("Created second claimed staff user: maria.schulz@example.com (Wolf Musik Akademie)")
+
 # ==============================================================================
 # S8: VERIFICATION DOCUMENTS (~12)
 # ==============================================================================
@@ -1556,6 +1586,27 @@ message_count = 0
         |> Repo.insert!()
       end)
 
+    # Mirrors what `AddAssignedStaff.execute/3` does on the real write path
+    # (broadcast_to_program.ex): the program's active, claimed staff become
+    # participants, minus the sender. Derived from the same query rather than
+    # hardcoded, so the fixture cannot drift from that command's eligibility rule —
+    # a staff member seeded without this is invisible in `/staff/messages`, which is
+    # what made the "missing in UI" class of bug hard to see in dev.
+    staff_user_ids =
+      data.program.id
+      |> KlassHero.Provider.list_active_staff_user_ids_for_program()
+      |> Enum.reject(&(&1 == provider_user.id))
+
+    added_staff =
+      for user_id <- staff_user_ids do
+        Participant.create_changeset(%{
+          conversation_id: convo.id,
+          user_id: user_id,
+          joined_at: now
+        })
+        |> Repo.insert!()
+      end
+
     broadcast_messages = [
       "Welcome to the program broadcast channel! Important updates will be shared here.",
       "Reminder: Next session starts at the usual time. Please bring water bottles.",
@@ -1573,7 +1624,7 @@ message_count = 0
         |> Repo.insert!()
       end)
 
-    {pc + 1 + length(added_parents), mc + length(msgs)}
+    {pc + 1 + length(added_parents) + length(added_staff), mc + length(msgs)}
   end)
 
 Logger.info("Created #{participant_count} conversation participants")
