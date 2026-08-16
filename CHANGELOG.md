@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.5](https://github.com/MaxPayne89/klass-hero/compare/v0.72.4...v0.72.5) (2026-08-16)
+
+
+### Bug Fixes
+
+* make every programs-table row write respect the active filters ([#1371](https://github.com/MaxPayne89/klass-hero/issues/1371)) ([d155397](https://github.com/MaxPayne89/klass-hero/commit/d15539741ce3595c35bb609dd2eb3822dfa5838d))
+* surface rejected policy writes on the program update path ([#1369](https://github.com/MaxPayne89/klass-hero/issues/1369)) ([93aa4d0](https://github.com/MaxPayne89/klass-hero/commit/93aa4d01619b3ca05c7f2fb5b6918605b8c107b7)), closes [#1345](https://github.com/MaxPayne89/klass-hero/issues/1345)
+
 ## [0.72.4](https://github.com/MaxPayne89/klass-hero/compare/v0.72.3...v0.72.4) (2026-08-15)
 
 
