@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.72.7](https://github.com/MaxPayne89/klass-hero/compare/v0.72.6...v0.72.7) (2026-08-16)
+
+
+### Bug Fixes
+
+* seed a claimed staff member onto a program conversation ([#1382](https://github.com/MaxPayne89/klass-hero/issues/1382)) ([a830fe1](https://github.com/MaxPayne89/klass-hero/commit/a830fe13d0f20cc8f65f275495307e8494a367b0)), closes [#1349](https://github.com/MaxPayne89/klass-hero/issues/1349)
+
+
+### Code Refactoring
+
+* return ConversationSummary structs from list_conversations ([#1384](https://github.com/MaxPayne89/klass-hero/issues/1384)) ([8de3e2f](https://github.com/MaxPayne89/klass-hero/commit/8de3e2f67c3def037a3025a35de989e9b9ecfbbe)), closes [#1359](https://github.com/MaxPayne89/klass-hero/issues/1359)
+
 ## [0.72.6](https://github.com/MaxPayne89/klass-hero/compare/v0.72.5...v0.72.6) (2026-08-16)
 
 
