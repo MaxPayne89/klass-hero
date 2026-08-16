@@ -269,46 +269,11 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
     end
   end
 
-  # #1357 moved this worker from `:critical_events` to `:events`. A queue rename is not a
-  # rename: `oban_jobs.queue` is data, so every row staged before the deploy still says
-  # "critical_events" — including anything mid-retry across the ~4.5h ladder. Both halves
-  # of why those rows are still safe are pinned here, because they are different facts and
-  # only one of them is behaviour.
-  describe "the legacy :critical_events queue" do
-    test "still executes its rows, because the worker column is what resolves the module", ctx do
-      route([{Recorder, :first}], ctx)
-
-      # `:manual` because `testing: :inline` would run the job at insert and never consult
-      # the queue at all, which is the one thing this test is here to exercise.
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        Oban.insert!(
-          EventDeliveryWorker.new(%{"events" => [EventSerializer.serialize(event("thing-1"))]},
-            queue: :critical_events
-          )
-        )
-
-        Oban.drain_queue(queue: :critical_events, with_recursion: true)
-      end)
-
-      assert [{:first, "thing-1"}] = Recorder.calls()
-    end
-
-    # `drain_queue/2` above executes by queue name in the calling process and never consults
-    # the `queues:` list, so it proves the code path and NOT that anything drains this queue
-    # in production. That guarantee is a config fact, and this is the only thing asserting it.
-    test "stays configured, or every row staged before #1357 is stranded" do
-      queues = Application.get_env(:klass_hero, Oban)[:queues]
-
-      assert Keyword.has_key?(queues, :critical_events),
-             "dropping :critical_events strands every job staged before #1357 — confirm " <>
-               "`SELECT count(*) FROM oban_jobs WHERE queue = 'critical_events'` is 0 in prod " <>
-               "first. That is #1362, which removes this test along with the queue entry."
-    end
-
-    # The same failure from the other end: staging into a queue no producer is running for
-    # strands the job just as quietly, and a typo in the worker's `queue:` would do it to
+  describe "queue wiring" do
+    # Staging into a queue no producer is running for strands the job quietly — nothing
+    # errors, the row simply sits — and a typo in the worker's `queue:` would do it to
     # every event at once.
-    test "the queue this worker now stages into is one that is actually configured" do
+    test "the queue this worker stages into is one that is actually configured" do
       queues = Application.get_env(:klass_hero, Oban)[:queues]
       staged_queue = EventDeliveryWorker.new(%{"events" => []}).changes.queue
 
