@@ -45,7 +45,6 @@ npm-debug.log
 
 # IDE
 .idea/
-.mcp.json
 
 # specify
 .specify/results/
@@ -58,7 +57,9 @@ npm-debug.log
 .claude/worktrees/
 .superpowers/
 
-# Per-checkout dev server runtime state (pidfile + logs), written by bin/worktree-up
+# Per-checkout dev server runtime state (pidfile, logs, and the allocated port),
+# written by bin/worktree-up. The port lives here rather than in .mcp.json so that
+# .mcp.json can be identical everywhere and therefore committed.
 .claude/run/
 
 # Override global gitignore to track Claude config

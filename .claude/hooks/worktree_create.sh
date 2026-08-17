@@ -9,9 +9,11 @@
 #     else may be printed there. Every diagnostic goes to stderr.
 #   * any non-zero exit aborts worktree creation.
 #
-# Provisioning uses --fast (databases and .mcp.json, no seeds, no server) to stay well
-# inside the hook budget. The SessionStart hook finishes the job — seeds and the dev
-# server — once a session actually opens here.
+# Provisioning is FULL — databases, seeds, and a running dev server — not --fast.
+# --fast left the worktree without a server, which meant the first session to open here
+# raced its own MCP connection: bin/tidewave-router would resolve the right checkout and
+# find nothing listening. The hook budget is 600s and a warm worktree converges in ~30s,
+# because bin/worktree-up copies deps/ and _build/ from the main checkout first.
 #
 # Deliberate deviation from "fail closed": a *provisioning* failure warns and still
 # returns the path, because bin/worktree-up is convergent and SessionStart re-runs it.
@@ -51,7 +53,7 @@ else
   git worktree add "$DEST" -b "$BRANCH" origin/main >&2 || exit 1
 fi
 
-if ! (cd "$DEST" && bin/worktree-up --fast >&2); then
+if ! (cd "$DEST" && bin/worktree-up >&2); then
   cat >&2 <<EOF
 worktree_create: ${NAME} was created but provisioning did not finish.
                  The worktree is usable; run bin/worktree-up inside it, or just start

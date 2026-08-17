@@ -26,8 +26,8 @@ echo "kind       $(linked_worktree && echo "worktree ($(git branch --show-curren
 echo "dev db     $(dev_database) $(database_exists "$(dev_database)" && echo "(exists)" || echo "(MISSING)")"
 echo "test db    $(test_database) $(database_exists "$(test_database)" && echo "(exists)" || echo "(MISSING)")"
 
-if [[ ! -f .mcp.json ]]; then
-  echo "tidewave   NOT CONFIGURED — no .mcp.json. Run bin/worktree-up."
+if [[ -z "$(my_port)" ]]; then
+  echo "tidewave   NOT CONFIGURED — no port claimed in ${PORT_FILE}. Run bin/worktree-up."
   exit 1
 fi
 

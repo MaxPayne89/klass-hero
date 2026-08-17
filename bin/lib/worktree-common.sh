@@ -12,12 +12,18 @@
 
 MAIN_PORT=4000
 PORT_MIN=4010
-PORT_MAX=4039
+# live_debugger binds PORT + 100 (config/dev.exs), so the ceiling must stay below
+# PORT_MIN + 100 or a debugger would land on another checkout's server port.
+PORT_MAX=4089
 
 # Where a detached dev server records itself. Gitignored; per checkout.
 RUN_DIR=".claude/run"
 PID_FILE="${RUN_DIR}/dev.pid"
 LOG_FILE="${RUN_DIR}/dev.log"
+# This checkout's allocated port. It lives here, not in .mcp.json, because .mcp.json
+# is now byte-identical in every checkout (it names bin/tidewave-router, which resolves
+# the port at request time) and is therefore committed rather than generated.
+PORT_FILE="${RUN_DIR}/port"
 
 # ---------------------------------------------------------------------------
 # Checkout identity
@@ -75,22 +81,39 @@ test_database() {
 # Ports
 # ---------------------------------------------------------------------------
 
-# The port a .mcp.json names, or nothing if it has no tidewave entry.
-port_from() {
-  jq -r '.mcpServers.tidewave.url // empty' "$1" 2>/dev/null |
-    sed -n 's#.*localhost:\([0-9][0-9]*\)/.*#\1#p'
+# The port a checkout has claimed. The legacy fallback reads a pre-router .mcp.json,
+# which encoded the port in its URL; it covers checkouts not yet re-provisioned since
+# the router landed, and can go once none remain.
+port_of_checkout() {
+  local checkout="$1" port
+
+  if [[ -f "$checkout/$PORT_FILE" ]]; then
+    port=$(tr -dc '0-9' <"$checkout/$PORT_FILE")
+    if [[ -n "$port" ]]; then
+      echo "$port"
+      return
+    fi
+  fi
+
+  if [[ -f "$checkout/.mcp.json" ]]; then
+    jq -r '.mcpServers.tidewave.url // empty' "$checkout/.mcp.json" 2>/dev/null |
+      sed -n 's#.*localhost:\([0-9][0-9]*\)/.*#\1#p'
+  fi
 }
 
-# Ports already written into some checkout's .mcp.json. Stale entries self-clean:
-# a deleted worktree stops appearing in `git worktree list`.
+# Ports already claimed by some OTHER checkout. Stale entries self-clean: a deleted
+# worktree stops appearing in `git worktree list`.
 claimed_ports() {
   local worktree
   while read -r worktree; do
     [[ "$worktree" == "$(repo_root)" ]] && continue
-    if [[ -f "$worktree/.mcp.json" ]]; then
-      port_from "$worktree/.mcp.json"
-    fi
+    port_of_checkout "$worktree"
   done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
+}
+
+# This checkout's own port, or nothing if it has not been allocated one yet.
+my_port() {
+  port_of_checkout "$(repo_root)"
 }
 
 bound_ports() {

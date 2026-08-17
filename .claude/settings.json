@@ -12,6 +12,17 @@
         ]
       }
     ],
+    "CwdChanged": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/cwd_changed.sh",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
     "WorktreeCreate": [
       {
         "hooks": [
