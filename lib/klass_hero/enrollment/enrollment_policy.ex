@@ -63,6 +63,17 @@ defmodule KlassHero.Enrollment.EnrollmentPolicy do
   end
 
   @doc """
+  Returns true when a change would blank an existing maximum — i.e. uncap the program.
+
+  The single statement of the rule: both the warning the provider sees while editing
+  and the guard that enforces the write call this, so the two cannot drift. A `nil`
+  policy is the create path, where there is no cap to remove.
+  """
+  @spec cap_removal?(t() | nil, integer() | nil) :: boolean()
+  def cap_removal?(%__MODULE__{max_enrollment: previous}, nil) when is_integer(previous), do: true
+  def cap_removal?(_policy, _new_max), do: false
+
+  @doc """
   Returns true if the current enrollment count is below the maximum capacity.
 
   Always true when no `max_enrollment` is set (uncapped program).

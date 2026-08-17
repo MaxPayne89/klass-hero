@@ -32,6 +32,10 @@ _Avoid_: Class, Meeting, Occurrence, Program Session; and never reuse "Session" 
 A child's signup to a **Program** — the program-level commitment, made once. Feeds the **Roster** of every Session in that Program. Parents "book" a Program; the record that results is an Enrollment.
 _Avoid_: Registration, Signup; and "Booking" as a domain *noun* ("Book" is fine as a front-of-house verb only — see flagged ambiguities)
 
+**Enrollment Policy**:
+A **Program**'s optional minimum and maximum **Enrollment** counts. The maximum is the *cap* — the bound the Enrollment context enforces when a place is booked; a Program with no maximum is *uncapped*, and anyone may book. The minimum is a viability threshold only, enforced nowhere at booking time. Removing a cap from a Program that already has active Enrollments is a deliberate act the provider must acknowledge — it cannot happen as a side effect of an edit.
+_Avoid_: Capacity as a noun for the row itself ("the capacity" is the number), Limit, Quota
+
 **Roster**:
 The set of children expected at a given **Session**, seeded from the Program's active **Enrollments**. A roster belongs to one Session.
 _Avoid_: Attendance list, Class list, Sign-in sheet

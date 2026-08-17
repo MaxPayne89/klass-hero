@@ -243,16 +243,89 @@ defmodule KlassHero.Enrollment do
 
   @doc """
   Creates or updates the enrollment capacity policy for a program (upsert).
+
+  Passing an explicit `nil` clears the corresponding limit — the write carries the nils
+  into `on_conflict`, so a stored value is replaced rather than left standing (#1370).
+
+  Removing the cap entirely (`max_enrollment` from a number to `nil`) on a program that
+  already has active enrollments is refused with `{:error, {:cap_removal_blocked, count}}`
+  unless `attrs` carries `acknowledge_cap_removal: true`. The check runs under a
+  `FOR UPDATE` lock on the same policy row `create_enrollment_with_capacity_check/3`
+  locks, so a booking landing mid-edit serialises against the removal instead of
+  slipping past the count.
   """
   def set_enrollment_policy(attrs) when is_map(attrs) do
     context_span entity: "enrollment_policy" do
-      %EnrollmentPolicy{}
-      |> EnrollmentPolicy.changeset(attrs)
-      |> Repo.insert(
-        on_conflict: {:replace, [:min_enrollment, :max_enrollment, :updated_at]},
-        conflict_target: :program_id,
-        returning: true
-      )
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:guard, fn repo, _changes ->
+        guard_cap_removal(
+          repo,
+          fetch_attr(attrs, :program_id),
+          fetch_attr(attrs, :max_enrollment),
+          fetch_attr(attrs, :acknowledge_cap_removal) == true
+        )
+      end)
+      |> Ecto.Multi.run(:upsert, fn repo, _changes -> upsert_enrollment_policy(repo, attrs) end)
+      |> Repo.transaction()
+      |> case do
+        {:ok, %{upsert: policy}} -> {:ok, policy}
+        {:error, :guard, reason, _changes} -> {:error, reason}
+        {:error, :upsert, reason, _changes} -> {:error, reason}
+      end
+    end
+  end
+
+  @doc """
+  Reports whether a pending capacity change would remove the cap consequentially.
+
+  The read the provider's form asks before saving, so the warning it shows and the rule
+  `set_enrollment_policy/1` enforces come from one predicate and cannot drift.
+  """
+  @spec assess_capacity_change(String.t(), integer() | nil) :: :ok | {:cap_removal, pos_integer()}
+  def assess_capacity_change(program_id, new_max) when is_binary(program_id) do
+    with %EnrollmentPolicy{} = policy <- Repo.get_by(EnrollmentPolicy, program_id: program_id),
+         true <- EnrollmentPolicy.cap_removal?(policy, new_max),
+         active when active > 0 <- count_active_enrollments(program_id) do
+      {:cap_removal, active}
+    else
+      _no_consequence -> :ok
+    end
+  end
+
+  # No program_id is a changeset error, not a cap removal — let the changeset report it.
+  defp guard_cap_removal(_repo, nil, _new_max, _acknowledged?), do: {:ok, :no_program}
+  defp guard_cap_removal(_repo, _program_id, _new_max, true), do: {:ok, :acknowledged}
+
+  defp guard_cap_removal(repo, program_id, new_max, false) do
+    existing =
+      repo.one(from(p in EnrollmentPolicy, where: p.program_id == ^program_id, lock: "FOR UPDATE"))
+
+    if EnrollmentPolicy.cap_removal?(existing, new_max) do
+      case count_active_enrollments_in_tx(repo, program_id) do
+        0 -> {:ok, :uncontested}
+        active -> {:error, {:cap_removal_blocked, active}}
+      end
+    else
+      {:ok, :permitted}
+    end
+  end
+
+  defp upsert_enrollment_policy(repo, attrs) do
+    %EnrollmentPolicy{}
+    |> EnrollmentPolicy.changeset(attrs)
+    |> repo.insert(
+      on_conflict: {:replace, [:min_enrollment, :max_enrollment, :updated_at]},
+      conflict_target: :program_id,
+      returning: true
+    )
+  end
+
+  # Callers pass atom-keyed attrs, but a string-keyed map must not read as an absent
+  # max_enrollment — that would look like a cap removal and block a save that isn't one.
+  defp fetch_attr(attrs, key) do
+    case Map.fetch(attrs, key) do
+      {:ok, value} -> value
+      :error -> Map.get(attrs, Atom.to_string(key))
     end
   end
 
