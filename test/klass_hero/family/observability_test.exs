@@ -17,7 +17,10 @@ defmodule KlassHero.Family.ObservabilityTest do
     test "create_child opens a context span with a nested db child span" do
       assert {:ok, _child} = Family.create_child(@valid_attrs)
 
-      assert_span("Family.create_child/1",
+      # Arity is part of the span name, so widening create_child/1 to /2 renamed this
+      # span. Saved Honeycomb queries pinned to the old name match nothing rather than
+      # failing, which is why this assertion is worth keeping exact.
+      assert_span("Family.create_child/2",
         "context.name": "Family",
         "context.operation": "create_child"
       )

@@ -867,7 +867,7 @@ msgid "Save Password"
 msgstr "Passwort speichern"
 
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:381
-#: lib/klass_hero_web/live/settings/children_live.ex:743
+#: lib/klass_hero_web/live/settings/children_live.ex:708
 #: lib/klass_hero_web/live/user_live/settings.ex:151
 #, elixir-autogen, elixir-format
 msgid "Saving..."
@@ -1114,7 +1114,7 @@ msgid "Cards, bank accounts, billing info"
 msgstr "Karten, Bankkonten, Rechnungsinformationen"
 
 #: lib/klass_hero_web/live/settings/children_live.ex:23
-#: lib/klass_hero_web/live/settings/children_live.ex:348
+#: lib/klass_hero_web/live/settings/children_live.ex:313
 #: lib/klass_hero_web/live/settings_live.ex:79
 #: lib/klass_hero_web/live/user_live/settings.ex:224
 #, elixir-autogen, elixir-format
@@ -1503,10 +1503,10 @@ msgstr "Wir verstehen die einzigartigen Bedürfnisse der vielfältigen Familien 
 msgid "Workshops"
 msgstr "Workshops"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:377
-#: lib/klass_hero_web/live/settings/children_live.ex:399
-#: lib/klass_hero_web/live/settings/children_live.ex:618
-#: lib/klass_hero_web/live/settings/children_live.ex:752
+#: lib/klass_hero_web/live/settings/children_live.ex:342
+#: lib/klass_hero_web/live/settings/children_live.ex:364
+#: lib/klass_hero_web/live/settings/children_live.ex:583
+#: lib/klass_hero_web/live/settings/children_live.ex:717
 #, elixir-autogen, elixir-format
 msgid "Add Child"
 msgstr "Kind Hinzufügen"
@@ -1631,7 +1631,7 @@ msgstr "Erstellen Sie Profile für Ihr Personal. Diese werden für Eltern sichtb
 #: lib/klass_hero_web/components/provider_components.ex:1543
 #: lib/klass_hero_web/live/provider/participation_live.html.heex:54
 #: lib/klass_hero_web/live/provider/participation_live.html.heex:81
-#: lib/klass_hero_web/live/settings/children_live.ex:448
+#: lib/klass_hero_web/live/settings/children_live.ex:413
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:54
 #: lib/klass_hero_web/live/staff/staff_participation_live.html.heex:81
 #, elixir-autogen, elixir-format
@@ -1760,7 +1760,7 @@ msgstr "Verifiziertes Unternehmen"
 msgid "View Roster"
 msgstr "Teilnehmerliste"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:430
+#: lib/klass_hero_web/live/settings/children_live.ex:395
 #, elixir-autogen, elixir-format
 msgid "%{age} years old"
 msgstr "%{age} Jahre alt"
@@ -1770,18 +1770,18 @@ msgstr "%{age} Jahre alt"
 msgid "%{n}m ago"
 msgstr "vor %{n} Min."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:385
+#: lib/klass_hero_web/live/settings/children_live.ex:350
 #, elixir-autogen, elixir-format
 msgid "Add your first child to get started with activities and programs."
 msgstr "Fügen Sie Ihr erstes Kind hinzu, um mit Aktivitäten und Programmen zu beginnen."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:499
-#: lib/klass_hero_web/live/settings/children_live.ex:693
+#: lib/klass_hero_web/live/settings/children_live.ex:464
+#: lib/klass_hero_web/live/settings/children_live.ex:658
 #, elixir-autogen, elixir-format
 msgid "Allergies"
 msgstr "Allergien"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:720
+#: lib/klass_hero_web/live/settings/children_live.ex:685
 #, elixir-autogen, elixir-format
 msgid "Allow activity providers to access this child's profile information for program participation."
 msgstr "Aktivitätsanbietern Zugriff auf die Profilinformationen dieses Kindes für die Programmteilnahme erlauben."
@@ -1791,12 +1791,12 @@ msgstr "Aktivitätsanbietern Zugriff auf die Profilinformationen dieses Kindes f
 msgid "An unexpected error occurred. Please try again."
 msgstr "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:701
+#: lib/klass_hero_web/live/settings/children_live.ex:666
 #, elixir-autogen, elixir-format
 msgid "Any special accommodations or support needs..."
 msgstr "Besondere Bedürfnisse oder Unterstützungsbedarf..."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:363
+#: lib/klass_hero_web/live/settings/children_live.ex:328
 #, elixir-autogen, elixir-format
 msgid "Back to Settings"
 msgstr "Zurück zu Einstellungen"
@@ -1824,22 +1824,17 @@ msgstr "Rundnachricht an %{count} Eltern gesendet"
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:222
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:356
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:191
-#: lib/klass_hero_web/live/settings/children_live.ex:579
-#: lib/klass_hero_web/live/settings/children_live.ex:738
+#: lib/klass_hero_web/live/settings/children_live.ex:544
+#: lib/klass_hero_web/live/settings/children_live.ex:703
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:237
 #, elixir-autogen, elixir-format
 msgid "Cancel"
 msgstr "Abbrechen"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:293
+#: lib/klass_hero_web/live/settings/children_live.ex:263
 #, elixir-autogen, elixir-format
 msgid "Child added successfully."
 msgstr "Kind erfolgreich hinzugefügt."
-
-#: lib/klass_hero_web/live/settings/children_live.ex:295
-#, elixir-autogen, elixir-format
-msgid "Child added, but consent update failed. Please try again."
-msgstr "Kind hinzugefügt, aber Einwilligungsaktualisierung fehlgeschlagen. Bitte versuchen Sie es erneut."
 
 #: lib/klass_hero_web/live/settings/children_live.ex:87
 #: lib/klass_hero_web/live/settings/children_live.ex:179
@@ -1852,15 +1847,10 @@ msgstr "Kind nicht gefunden."
 msgid "Child removed successfully."
 msgstr "Kind erfolgreich entfernt."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:297
+#: lib/klass_hero_web/live/settings/children_live.ex:264
 #, elixir-autogen, elixir-format
 msgid "Child updated successfully."
 msgstr "Kind erfolgreich aktualisiert."
-
-#: lib/klass_hero_web/live/settings/children_live.ex:299
-#, elixir-autogen, elixir-format
-msgid "Child updated, but consent update failed. Please try again."
-msgstr "Kind aktualisiert, aber Einwilligungsaktualisierung fehlgeschlagen. Bitte versuchen Sie es erneut."
 
 #: lib/klass_hero_web/live/dashboard_live.ex:176
 #: lib/klass_hero_web/live/messaging_live_helper.ex:336
@@ -1878,29 +1868,29 @@ msgstr "Unterhaltung nicht gefunden"
 msgid "Could not remove child. Please try again."
 msgstr "Kind konnte nicht entfernt werden. Bitte versuchen Sie es erneut."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:477
+#: lib/klass_hero_web/live/settings/children_live.ex:442
 #, elixir-autogen, elixir-format
 msgid "Data sharing consent"
 msgstr "Einwilligung zur Datenweitergabe"
 
 #: lib/klass_hero_web/components/provider_components.ex:2341
-#: lib/klass_hero_web/live/settings/children_live.ex:657
+#: lib/klass_hero_web/live/settings/children_live.ex:622
 #, elixir-autogen, elixir-format
 msgid "Date of birth"
 msgstr "Geburtsdatum"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:462
+#: lib/klass_hero_web/live/settings/children_live.ex:427
 #, elixir-autogen, elixir-format
 msgid "Delete"
 msgstr "Löschen"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:620
+#: lib/klass_hero_web/live/settings/children_live.ex:585
 #, elixir-autogen, elixir-format
 msgid "Edit Child"
 msgstr "Kind bearbeiten"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:488
-#: lib/klass_hero_web/live/settings/children_live.ex:686
+#: lib/klass_hero_web/live/settings/children_live.ex:453
+#: lib/klass_hero_web/live/settings/children_live.ex:651
 #, elixir-autogen, elixir-format
 msgid "Emergency contact"
 msgstr "Notfallkontakt"
@@ -1934,7 +1924,7 @@ msgstr "Notiz konnte nicht eingereicht werden"
 #: lib/klass_hero_web/components/provider_components.ex:2335
 #: lib/klass_hero_web/components/provider_components.ex:2364
 #: lib/klass_hero_web/components/provider_components.ex:2380
-#: lib/klass_hero_web/live/settings/children_live.ex:643
+#: lib/klass_hero_web/live/settings/children_live.ex:608
 #, elixir-autogen, elixir-format
 msgid "First name"
 msgstr "Vorname"
@@ -1942,17 +1932,17 @@ msgstr "Vorname"
 #: lib/klass_hero_web/components/provider_components.ex:2336
 #: lib/klass_hero_web/components/provider_components.ex:2365
 #: lib/klass_hero_web/components/provider_components.ex:2381
-#: lib/klass_hero_web/live/settings/children_live.ex:649
+#: lib/klass_hero_web/live/settings/children_live.ex:614
 #, elixir-autogen, elixir-format
 msgid "Last name"
 msgstr "Nachname"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:694
+#: lib/klass_hero_web/live/settings/children_live.ex:659
 #, elixir-autogen, elixir-format
 msgid "List any known allergies..."
 msgstr "Bekannte Allergien auflisten..."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:349
+#: lib/klass_hero_web/live/settings/children_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Manage your children's information and consents"
 msgstr "Informationen und Einwilligungen Ihrer Kinder verwalten"
@@ -1977,7 +1967,7 @@ msgstr "Nachrichteninhalt ist erforderlich"
 msgid "Messages"
 msgstr "Nachrichten"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:384
+#: lib/klass_hero_web/live/settings/children_live.ex:349
 #: lib/klass_hero_web/presenters/child_presenter.ex:57
 #, elixir-autogen, elixir-format
 msgid "No children yet"
@@ -2026,7 +2016,7 @@ msgstr "Notiz erneut zur Überprüfung eingereicht"
 msgid "Now"
 msgstr "Jetzt"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:687
+#: lib/klass_hero_web/live/settings/children_live.ex:652
 #, elixir-autogen, elixir-format
 msgid "Phone number or name"
 msgstr "Telefonnummer oder Name"
@@ -2067,14 +2057,14 @@ msgstr "Bitte richten Sie Ihr Elternprofil ein, um Kinder zu verwalten."
 msgid "Program Broadcast"
 msgstr "Programm-Rundnachricht"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:717
+#: lib/klass_hero_web/live/settings/children_live.ex:682
 #, elixir-autogen, elixir-format
 msgid "Provider data sharing consent"
 msgstr "Einwilligung zur Datenweitergabe an Anbieter"
 
 #: lib/klass_hero_web/components/provider_components.ex:874
 #: lib/klass_hero_web/live/provider/edit_profile_live.ex:294
-#: lib/klass_hero_web/live/settings/children_live.ex:754
+#: lib/klass_hero_web/live/settings/children_live.ex:719
 #, elixir-autogen, elixir-format
 msgid "Save Changes"
 msgstr "Änderungen speichern"
@@ -2105,8 +2095,8 @@ msgstr "Senden Sie eine Nachricht, um die Unterhaltung zu beginnen"
 msgid "Sending..."
 msgstr "Wird gesendet..."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:510
-#: lib/klass_hero_web/live/settings/children_live.ex:700
+#: lib/klass_hero_web/live/settings/children_live.ex:475
+#: lib/klass_hero_web/live/settings/children_live.ex:665
 #, elixir-autogen, elixir-format
 msgid "Support needs"
 msgstr "Unterstützungsbedarf"
@@ -2419,7 +2409,7 @@ msgstr "Beschreibung"
 
 #: lib/klass_hero_web/components/program_components.ex:684
 #: lib/klass_hero_web/components/provider_components.ex:1160
-#: lib/klass_hero_web/live/settings/children_live.ex:670
+#: lib/klass_hero_web/live/settings/children_live.ex:635
 #, elixir-autogen, elixir-format
 msgid "Diverse"
 msgstr "Divers"
@@ -2546,7 +2536,7 @@ msgstr "Familienprogramme"
 
 #: lib/klass_hero_web/components/program_components.ex:682
 #: lib/klass_hero_web/components/provider_components.ex:1159
-#: lib/klass_hero_web/live/settings/children_live.ex:669
+#: lib/klass_hero_web/live/settings/children_live.ex:634
 #, elixir-autogen, elixir-format
 msgid "Female"
 msgstr "Weiblich"
@@ -2576,7 +2566,7 @@ msgstr "Erste Hilfe, UEFA-B-Lizenz, Kinderbetreuungszertifikat"
 msgid "First Name"
 msgstr "Vorname"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:665
+#: lib/klass_hero_web/live/settings/children_live.ex:630
 #, elixir-autogen, elixir-format
 msgid "Gender"
 msgstr "Geschlecht"
@@ -2658,7 +2648,7 @@ msgstr "JPG, PNG oder WebP. Max. 2 MB."
 msgid "Klass Hero was built to solve exactly that. A comprehensive operational platform that empowers educators to spend less time on paperwork and more time inspiring children."
 msgstr "Klass Hero wurde genau dafür entwickelt. Eine umfassende Betriebsplattform, die es Pädagogen ermöglicht, weniger Zeit mit Papierkram zu verbringen und mehr Zeit damit, Kinder zu inspirieren."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:679
+#: lib/klass_hero_web/live/settings/children_live.ex:644
 #, elixir-autogen, elixir-format
 msgid "Klasse %{n}"
 msgstr "Klasse %{n}"
@@ -2692,7 +2682,7 @@ msgstr "Logo-Upload fehlgeschlagen. Bitte versuchen Sie es erneut."
 
 #: lib/klass_hero_web/components/program_components.ex:683
 #: lib/klass_hero_web/components/provider_components.ex:1158
-#: lib/klass_hero_web/live/settings/children_live.ex:668
+#: lib/klass_hero_web/live/settings/children_live.ex:633
 #, elixir-autogen, elixir-format
 msgid "Male"
 msgstr "Männlich"
@@ -2753,7 +2743,7 @@ msgstr "Noch keine Anmeldungen."
 msgid "No file selected."
 msgstr "Keine Datei ausgewählt."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:678
+#: lib/klass_hero_web/live/settings/children_live.ex:643
 #, elixir-autogen, elixir-format
 msgid "No grade"
 msgstr "Keine Klassenstufe"
@@ -2811,7 +2801,7 @@ msgstr "Nicht verifiziert"
 
 #: lib/klass_hero_web/components/program_components.ex:685
 #: lib/klass_hero_web/components/provider_components.ex:1161
-#: lib/klass_hero_web/live/settings/children_live.ex:667
+#: lib/klass_hero_web/live/settings/children_live.ex:632
 #, elixir-autogen, elixir-format
 msgid "Not specified"
 msgstr "Nicht angegeben"
@@ -3046,7 +3036,7 @@ msgstr "Zeitplan (optional)"
 msgid "Schedule TBD"
 msgstr "Zeitplan noch offen"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:677
+#: lib/klass_hero_web/live/settings/children_live.ex:642
 #, elixir-autogen, elixir-format
 msgid "School Grade (optional)"
 msgstr "Klassenstufe (optional)"
@@ -3488,22 +3478,22 @@ msgstr "Unser 6-Schritte-Überprüfungsverfahren"
 msgid "Could not check enrollments. Please try again."
 msgstr "Anmeldungen konnten nicht überprüft werden. Bitte versuchen Sie es erneut."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:592
+#: lib/klass_hero_web/live/settings/children_live.ex:557
 #, elixir-autogen, elixir-format
 msgid "Remove Child"
 msgstr "Kind entfernen"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:546
+#: lib/klass_hero_web/live/settings/children_live.ex:511
 #, elixir-autogen, elixir-format
 msgid "Remove Child?"
 msgstr "Kind entfernen?"
 
-#: lib/klass_hero_web/live/settings/children_live.ex:564
+#: lib/klass_hero_web/live/settings/children_live.ex:529
 #, elixir-autogen, elixir-format
 msgid "Their enrollments will be cancelled. This action cannot be undone."
 msgstr "Die Anmeldungen des Kindes werden storniert. Diese Aktion kann nicht rückgängig gemacht werden."
 
-#: lib/klass_hero_web/live/settings/children_live.ex:551
+#: lib/klass_hero_web/live/settings/children_live.ex:516
 #, elixir-autogen, elixir-format
 msgid "This child is currently enrolled in the following programs:"
 msgstr "Dieses Kind ist derzeit für folgende Programme angemeldet:"

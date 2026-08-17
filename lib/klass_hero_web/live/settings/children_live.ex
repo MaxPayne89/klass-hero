@@ -197,7 +197,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
     if changeset.valid? do
       attrs = build_attrs(mode, child_params, socket.assigns.parent_id)
 
-      case persist_child(mode, attrs, socket.assigns.child) do
+      case persist_child(mode, attrs, socket.assigns.child, consent_opts(socket)) do
         {:ok, child} ->
           handle_save_success(socket, mode, child)
 
@@ -226,21 +226,24 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
 
   defp build_attrs(:edit, params, _parent_id), do: atomize_keys(params)
 
-  defp persist_child(:new, attrs, _child), do: Family.create_child(attrs)
-  defp persist_child(:edit, attrs, child), do: Family.update_child(child.id, attrs)
+  defp persist_child(:new, attrs, _child, opts), do: Family.create_child(attrs, opts)
+  defp persist_child(:edit, attrs, child, opts), do: Family.update_child(child.id, attrs, opts)
+
+  # The checkbox is not part of child_params — it lives in the consent_checked assign,
+  # kept current by the separate "toggle_consent" event — so the intent has to be handed
+  # to Family explicitly. Family then writes it in the same transaction as the child.
+  defp consent_opts(socket) do
+    [
+      consents: %{@consent_type => socket.assigns.consent_checked},
+      parent_id: socket.assigns.parent_id
+    ]
+  end
 
   defp handle_save_success(socket, mode, child) do
-    consent_result =
-      handle_consent_change(
-        child.id,
-        socket.assigns.parent_id,
-        socket.assigns.consent_checked
-      )
-
     socket =
       socket
       |> stream_insert(:children, child_view_data(child))
-      |> put_flash(:info, child_saved_flash(mode, consent_result))
+      |> put_flash(:info, child_saved_flash(mode))
       |> push_patch(to: ~p"/settings/children")
 
     socket =
@@ -254,49 +257,11 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
     {:noreply, socket}
   end
 
-  defp handle_consent_change(child_id, parent_id, consent_checked) do
-    child_id
-    |> resolve_consent_action(parent_id, consent_checked)
-    |> normalize_consent_result(child_id)
-  end
-
-  defp resolve_consent_action(child_id, parent_id, consent_checked) do
-    current_consent = Family.child_has_active_consent?(child_id, @consent_type)
-
-    cond do
-      consent_checked and not current_consent ->
-        Family.grant_consent(%{
-          parent_id: parent_id,
-          child_id: child_id,
-          consent_type: @consent_type
-        })
-
-      not consent_checked and current_consent ->
-        Family.withdraw_consent(child_id, @consent_type)
-
-      true ->
-        :noop
-    end
-  end
-
-  defp normalize_consent_result({:ok, _}, _child_id), do: :ok
-  defp normalize_consent_result(:noop, _child_id), do: :ok
-
-  # Idempotent: consent already exists, treat as success.
-  defp normalize_consent_result({:error, :already_active}, _child_id), do: :ok
-
-  defp normalize_consent_result({:error, reason}, child_id) do
-    Logger.error("Consent update failed for child #{child_id}: #{inspect(reason)}")
-    {:error, :consent_failed}
-  end
-
-  defp child_saved_flash(:new, :ok), do: gettext("Child added successfully.")
-
-  defp child_saved_flash(:new, {:error, _}), do: gettext("Child added, but consent update failed. Please try again.")
-
-  defp child_saved_flash(:edit, :ok), do: gettext("Child updated successfully.")
-
-  defp child_saved_flash(:edit, {:error, _}), do: gettext("Child updated, but consent update failed. Please try again.")
+  # No "saved, but consent failed" variant any more: the consent shares the child's
+  # transaction, so reaching here means both landed. A consent failure takes the child
+  # with it and is reported by save_child/3's error branch instead.
+  defp child_saved_flash(:new), do: gettext("Child added successfully.")
+  defp child_saved_flash(:edit), do: gettext("Child updated successfully.")
 
   defp child_view_data(child) do
     simple = ChildPresenter.to_simple_view(child)
