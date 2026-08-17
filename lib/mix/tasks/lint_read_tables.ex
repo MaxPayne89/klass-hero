@@ -20,6 +20,11 @@ defmodule Mix.Tasks.LintReadTables do
   Text-based on purpose: this runs in the `quality` CI job, which must keep its
   `mix compile --warnings-as-errors` step first (see `.github/workflows/ci.yml`).
 
+  That is also this task's limit. The fourth read-table rule — **no length caps**,
+  see `KlassHero.Shared.ReadTable` — is invisible here, because `field :url, :string`
+  reads identically whether the column is `varchar(255)` or `text`. It is enforced
+  against the database by `test/klass_hero/shared/read_table_column_types_test.exs`.
+
   ## Escape hatch
 
   A file-wide `# read-table-lint-ignore: <reason>` comment exempts a file. These
