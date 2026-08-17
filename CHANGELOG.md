@@ -5,6 +5,16 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.1](https://github.com/MaxPayne89/klass-hero/compare/v0.74.0...v0.74.1) (2026-08-17)
+
+
+### Bug Fixes
+
+* clear enrollment capacity, and guard removing a cap retroactively ([#1397](https://github.com/MaxPayne89/klass-hero/issues/1397)) ([eca80c5](https://github.com/MaxPayne89/klass-hero/commit/eca80c5b56f407558b4521dc908111bd6519af5d)), closes [#1370](https://github.com/MaxPayne89/klass-hero/issues/1370)
+* drop length caps from projection read tables ([#1394](https://github.com/MaxPayne89/klass-hero/issues/1394)) ([2dc6834](https://github.com/MaxPayne89/klass-hero/commit/2dc68344845003244a9df6527f61e47dbd0ac7d9)), closes [#1376](https://github.com/MaxPayne89/klass-hero/issues/1376)
+* narrow captured params before the error store keeps them ([#1392](https://github.com/MaxPayne89/klass-hero/issues/1392)) ([86792a5](https://github.com/MaxPayne89/klass-hero/commit/86792a56625cac06bbe2744e1d9352dcbf710759)), closes [#1391](https://github.com/MaxPayne89/klass-hero/issues/1391)
+* write a child and its consent in one transaction ([#1396](https://github.com/MaxPayne89/klass-hero/issues/1396)) ([8187e38](https://github.com/MaxPayne89/klass-hero/commit/8187e38a492adce1e1ef4b80bd96c10cdc308102)), closes [#1390](https://github.com/MaxPayne89/klass-hero/issues/1390)
+
 ## [0.74.0](https://github.com/MaxPayne89/klass-hero/compare/v0.73.0...v0.74.0) (2026-08-17)
 
 
