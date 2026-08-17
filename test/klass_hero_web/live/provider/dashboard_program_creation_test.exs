@@ -1,6 +1,7 @@
 defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.Factory
   import Phoenix.LiveViewTest
 
   alias KlassHero.Enrollment.EnrollmentPolicy
@@ -692,6 +693,190 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       html = render(view)
       assert html =~ "Program created successfully."
       refute html =~ "program limit"
+    end
+  end
+
+  # The edit form is prefilled from the stored policy, so blanking a field is a
+  # deliberate clear — not the "no limits given" the create path reads it as (#1370).
+  describe "clearing the enrollment capacity" do
+    defp edit_with_capacity(view, program, title, policy_params) do
+      open_edit_form(view, program)
+      submit_program_form(view, title, %{"enrollment_policy" => policy_params})
+    end
+
+    test "clears the stored limits when nobody is enrolled", %{conn: conn, provider: provider} do
+      program = seed_program_with_listing(provider.id, "Uncap Me")
+
+      {:ok, _} =
+        KlassHero.Enrollment.set_enrollment_policy(%{
+          program_id: program.id,
+          min_enrollment: 3,
+          max_enrollment: 12
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      assert view |> element("#programs-#{program.id}") |> render() =~ "0/12"
+
+      edit_with_capacity(view, program, "Uncap Me", %{
+        "min_enrollment" => "",
+        "max_enrollment" => ""
+      })
+
+      assert_flash(view, :info, "Program updated successfully.")
+
+      assert %EnrollmentPolicy{min_enrollment: nil, max_enrollment: nil} =
+               Repo.get_by!(EnrollmentPolicy, program_id: program.id)
+
+      assert view |> element("#programs-#{program.id}") |> render() =~ "0/—"
+    end
+
+    test "keeps clearing the minimum alone unguarded", %{conn: conn, provider: provider} do
+      program = seed_program_with_listing(provider.id, "Drop The Minimum")
+
+      {:ok, _} =
+        KlassHero.Enrollment.set_enrollment_policy(%{
+          program_id: program.id,
+          min_enrollment: 3,
+          max_enrollment: 12
+        })
+
+      insert(:enrollment_schema, program_id: program.id, status: "confirmed")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      edit_with_capacity(view, program, "Drop The Minimum", %{
+        "min_enrollment" => "",
+        "max_enrollment" => "12"
+      })
+
+      assert_flash(view, :info, "Program updated successfully.")
+
+      assert %EnrollmentPolicy{min_enrollment: nil, max_enrollment: 12} =
+               Repo.get_by!(EnrollmentPolicy, program_id: program.id)
+    end
+  end
+
+  describe "removing a capacity cap with children already enrolled" do
+    defp enrolled_capped_program(provider_id, title, enrolled) do
+      program = seed_program_with_listing(provider_id, title)
+
+      {:ok, _} =
+        KlassHero.Enrollment.set_enrollment_policy(%{program_id: program.id, max_enrollment: 12})
+
+      for _ <- 1..enrolled//1,
+          do: insert(:enrollment_schema, program_id: program.id, status: "confirmed")
+
+      program
+    end
+
+    defp blank_the_maximum(view, title) do
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => title,
+          "description" => "Exercising a program save outcome",
+          "category" => "arts",
+          "price" => "50.00"
+        },
+        "enrollment_policy" => %{"min_enrollment" => "", "max_enrollment" => ""}
+      })
+      |> render_change()
+    end
+
+    test "warns as soon as the field is blanked, before any save", %{
+      conn: conn,
+      provider: provider
+    } do
+      program = enrolled_capped_program(provider.id, "Warn Me First", 2)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      open_edit_form(view, program)
+
+      refute has_element?(view, "#cap-removal-warning")
+
+      blank_the_maximum(view, "Warn Me First")
+
+      assert has_element?(view, "#cap-removal-warning")
+      assert has_element?(view, "#enrollment_policy_acknowledge_cap_removal")
+    end
+
+    test "stays silent while the cap is merely lowered", %{conn: conn, provider: provider} do
+      program = enrolled_capped_program(provider.id, "Lower Me", 2)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      open_edit_form(view, program)
+
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => "Lower Me",
+          "description" => "Exercising a program save outcome",
+          "category" => "arts",
+          "price" => "50.00"
+        },
+        "enrollment_policy" => %{"max_enrollment" => "5"}
+      })
+      |> render_change()
+
+      refute has_element?(view, "#cap-removal-warning")
+    end
+
+    # The backstop, not the everyday path: the checkbox is `required`, so reaching
+    # this needs a booking to land while the form sits open (or a crafted submit).
+    test "refuses an unacknowledged removal and keeps the form open", %{
+      conn: conn,
+      provider: provider
+    } do
+      program = enrolled_capped_program(provider.id, "Refuse Me", 2)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      open_edit_form(view, program)
+      submit_program_form(view, "Refuse Me", %{"enrollment_policy" => %{"max_enrollment" => ""}})
+
+      assert_flash(
+        view,
+        :warning,
+        "2 children are already enrolled. Confirm you want this program to have no capacity limit."
+      )
+
+      refute_flash(view, :info)
+
+      assert %EnrollmentPolicy{max_enrollment: 12} =
+               Repo.get_by!(EnrollmentPolicy, program_id: program.id)
+
+      assert has_element?(view, "#program-form")
+      assert has_element?(view, "#cap-removal-warning")
+    end
+
+    test "removes the cap once acknowledged", %{conn: conn, provider: provider} do
+      program = enrolled_capped_program(provider.id, "Acknowledged Uncap", 2)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      open_edit_form(view, program)
+
+      # The checkbox only exists once the field is blanked, so the tick can only follow
+      # the warning — which is the whole point of showing it on change rather than on save.
+      blank_the_maximum(view, "Acknowledged Uncap")
+
+      submit_program_form(view, "Acknowledged Uncap", %{
+        "enrollment_policy" => %{
+          "min_enrollment" => "",
+          "max_enrollment" => "",
+          "acknowledge_cap_removal" => "true"
+        }
+      })
+
+      assert_flash(view, :info, "Program updated successfully.")
+
+      assert %EnrollmentPolicy{max_enrollment: nil} =
+               Repo.get_by!(EnrollmentPolicy, program_id: program.id)
+
+      assert view |> element("#programs-#{program.id}") |> render() =~ "2/—"
     end
   end
 

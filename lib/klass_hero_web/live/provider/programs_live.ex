@@ -78,6 +78,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       |> assign(
         participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
       )
+      |> assign(cap_removal_assessment: :ok)
       |> assign(instructor_options: build_instructor_options(staff_members))
       |> assign(categories: ProgramCatalog.program_categories())
       |> allow_upload(:program_cover,
@@ -119,6 +120,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
      |> assign(
        participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
      )
+     |> assign(cap_removal_assessment: :ok)
      |> assign(instructor_options: build_instructor_options(socket.assigns.current_scope.provider.id))}
   end
 
@@ -140,6 +142,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
            program_form: to_form(changeset, as: :program_schema),
            enrollment_form: load_enrollment_policy_form(program_id),
            participant_policy_form: load_participant_policy_form(program_id),
+           cap_removal_assessment: :ok,
            instructor_options: build_instructor_options(provider_id)
          )}
 
@@ -556,7 +559,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
        show_program_form: false,
        editing_program_id: nil,
        enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"),
-       participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
+       participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy"),
+       cap_removal_assessment: :ok
      )}
   end
 
@@ -584,7 +588,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
      socket
      |> assign(program_form: to_form(changeset, as: :program_schema))
      |> assign(enrollment_form: to_form(enrollment_changeset, as: "enrollment_policy"))
-     |> assign(participant_policy_form: to_form(participant_policy_changeset, as: "participant_policy"))}
+     |> assign(participant_policy_form: to_form(participant_policy_changeset, as: "participant_policy"))
+     |> assign(cap_removal_assessment: assess_cap_removal(socket, enrollment_params))}
   end
 
   @impl true
@@ -644,7 +649,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     with {:ok, instructor_id} <- resolve_instructor(program_params["instructor_id"], socket),
          {:ok, program} <- ProgramCatalog.create_program(attrs) do
       :ok = apply_lead_instructor(program.id, instructor_id, socket.assigns.current_scope.provider.id)
-      policy_result = maybe_set_enrollment_policy(program.id, enrollment_params)
+      policy_result = set_enrollment_policy_on_create(program.id, enrollment_params)
       participant_result = set_participant_policy_on_create(program.id, participant_policy_params)
       capacity = resolve_capacity(policy_result, enrollment_params)
 
@@ -695,28 +700,35 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     with {:ok, instructor_id} <- resolve_instructor(program_params["instructor_id"], socket),
          {:ok, updated} <- ProgramCatalog.update_program(provider_id, program_id, attrs) do
       :ok = apply_lead_instructor(program_id, instructor_id, provider_id)
-      policy_result = maybe_set_enrollment_policy(program_id, enrollment_params)
-      participant_result = set_participant_policy_on_update(program_id, participant_policy_params)
 
-      capacity = resolve_capacity(policy_result, enrollment_params)
-      active_counts = Enrollment.count_active_enrollments_batch([program_id])
-      enrolled = Map.get(active_counts, program_id, 0)
-      enrollment_data = %{program_id => %{enrolled: enrolled, capacity: capacity}}
+      case set_enrollment_policy_on_update(program_id, enrollment_params) do
+        {:error, {:cap_removal_blocked, active}} ->
+          halt_for_cap_acknowledgement(socket, active)
 
-      {:noreply,
-       socket
-       |> flash_for_save(:updated,
-         enrollment_policy: policy_result,
-         participant_policy: participant_result
-       )
-       |> maybe_flash_cover_warning(cover_result)
-       |> sync_program_row(updated, enrollment_data)
-       |> assign(
-         show_program_form: false,
-         editing_program_id: nil,
-         enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"),
-         participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
-       )}
+        policy_result ->
+          participant_result = set_participant_policy_on_update(program_id, participant_policy_params)
+
+          capacity = resolve_capacity(policy_result, enrollment_params)
+          active_counts = Enrollment.count_active_enrollments_batch([program_id])
+          enrolled = Map.get(active_counts, program_id, 0)
+          enrollment_data = %{program_id => %{enrolled: enrolled, capacity: capacity}}
+
+          {:noreply,
+           socket
+           |> flash_for_save(:updated,
+             enrollment_policy: policy_result,
+             participant_policy: participant_result
+           )
+           |> maybe_flash_cover_warning(cover_result)
+           |> sync_program_row(updated, enrollment_data)
+           |> assign(
+             show_program_form: false,
+             editing_program_id: nil,
+             cap_removal_assessment: :ok,
+             enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"),
+             participant_policy_form: to_form(Enrollment.new_participant_policy_changeset(), as: "participant_policy")
+           )}
+      end
     else
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Program not found."))}
@@ -1024,30 +1036,57 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     Enum.map(members, fn m -> {Provider.staff_member_full_name(m), m.id} end)
   end
 
-  defp maybe_set_enrollment_policy(program_id, params) do
+  # Skip the upsert on create when both limits are empty — avoid storing an all-nil row
+  # for a program that never specified any.
+  defp set_enrollment_policy_on_create(program_id, params) do
     min = parse_integer(params["min_enrollment"])
     max = parse_integer(params["max_enrollment"])
 
     if is_nil(min) and is_nil(max) do
       :ok
     else
-      case Enrollment.set_enrollment_policy(%{
-             program_id: program_id,
-             min_enrollment: min,
-             max_enrollment: max
-           }) do
-        {:ok, _policy} ->
-          :ok
+      save_enrollment_policy(
+        %{program_id: program_id, min_enrollment: min, max_enrollment: max},
+        program_id
+      )
+    end
+  end
 
-        # Program already created — don't roll back, propagate error to show a warning flash.
-        {:error, reason} ->
-          Logger.warning("[Provider.ProgramsLive] Failed to save enrollment policy",
-            program_id: program_id,
-            reason: inspect(reason)
-          )
+  # Trigger: existing program edit — must allow clearing previously stored limits
+  # Why: the form is prefilled from the stored policy, so short-circuiting on all-empty
+  #   would read a deliberate clear as an absence and leave stale values (issue #1370,
+  #   the same shape #795 fixed for the participant policy)
+  # Outcome: always upsert, carrying explicit nils so on_conflict replaces stored values
+  defp set_enrollment_policy_on_update(program_id, params) do
+    save_enrollment_policy(
+      %{
+        program_id: program_id,
+        min_enrollment: parse_integer(params["min_enrollment"]),
+        max_enrollment: parse_integer(params["max_enrollment"]),
+        acknowledge_cap_removal: params["acknowledge_cap_removal"] == "true"
+      },
+      program_id
+    )
+  end
 
-          {:error, :enrollment_policy_failed}
-      end
+  defp save_enrollment_policy(attrs, program_id) do
+    case Enrollment.set_enrollment_policy(attrs) do
+      {:ok, _policy} ->
+        :ok
+
+      # Not a failure to report and move on from — the provider is being asked a
+      # question, so the reason travels intact and the caller reopens the form.
+      {:error, {:cap_removal_blocked, _active} = reason} ->
+        {:error, reason}
+
+      # Program already created — don't roll back, propagate error to show a warning flash.
+      {:error, reason} ->
+        Logger.warning("[Provider.ProgramsLive] Failed to save enrollment policy",
+          program_id: program_id,
+          reason: inspect(reason)
+        )
+
+        {:error, :enrollment_policy_failed}
     end
   end
 
@@ -1146,6 +1185,24 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       _ ->
         put_flash(socket, :warning, save_failure_message(action, failed_sources))
     end
+  end
+
+  # Asked of Enrollment rather than decided here, so the warning the provider sees and
+  # the rule the write enforces come from one predicate (see assess_capacity_change/2).
+  defp assess_cap_removal(%{assigns: %{editing_program_id: nil}}, _params), do: :ok
+
+  defp assess_cap_removal(%{assigns: %{editing_program_id: program_id}}, params) do
+    Enrollment.assess_capacity_change(program_id, parse_integer(params["max_enrollment"]))
+  end
+
+  # The backstop, not the everyday path: the acknowledgement checkbox is `required`, so
+  # this is reached when a booking lands while the form sits open (or a crafted submit).
+  # The form stays open carrying the warning, so the answer is one tick away.
+  defp halt_for_cap_acknowledgement(socket, active) do
+    {:noreply,
+     socket
+     |> assign(cap_removal_assessment: {:cap_removal, active})
+     |> put_flash(:warning, cap_removal_message(active))}
   end
 
   defp save_success_message(:created), do: gettext("Program created successfully.")
@@ -1249,6 +1306,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
             instructor_options={@instructor_options}
             categories={@categories}
             editing={@editing_program_id != nil}
+            cap_removal_assessment={@cap_removal_assessment}
           />
         <% end %>
 

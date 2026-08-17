@@ -905,6 +905,24 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp rate_type_is?(field, value), do: to_string(field.value) == value
 
   @doc """
+  The sentence naming why removing a capacity cap is consequential.
+
+  Lives here, not in the LiveView, because both the inline warning and the flash that
+  reports a refused removal must say the same thing — and the wording is rendered in
+  the reader's locale either way.
+  """
+  @spec cap_removal_message({:cap_removal, pos_integer()} | pos_integer()) :: String.t()
+  def cap_removal_message({:cap_removal, active}), do: cap_removal_message(active)
+
+  def cap_removal_message(active) when is_integer(active) do
+    ngettext(
+      "%{count} child is already enrolled. Confirm you want this program to have no capacity limit.",
+      "%{count} children are already enrolled. Confirm you want this program to have no capacity limit.",
+      active
+    )
+  end
+
+  @doc """
   Renders the program create/edit form.
 
   ## Examples
@@ -918,6 +936,10 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :uploads, :map, required: true
   attr :instructor_options, :list, default: []
   attr :categories, :list, required: true, doc: "List of valid program categories"
+
+  attr :cap_removal_assessment, :any,
+    default: :ok,
+    doc: "`:ok`, or `{:cap_removal, active_count}` from Enrollment.assess_capacity_change/2"
 
   def program_form(assigns) do
     ~H"""
@@ -1080,6 +1102,30 @@ defmodule KlassHeroWeb.ProviderComponents do
               label={gettext("Maximum Enrollment")}
               min="1"
             />
+          </div>
+
+          <div
+            :if={@cap_removal_assessment != :ok}
+            id="cap-removal-warning"
+            class={[
+              "flex items-start gap-3 p-4 border border-amber-200 bg-amber-50 text-amber-800",
+              Theme.rounded(:lg),
+              Theme.typography(:body_small)
+            ]}
+          >
+            <.icon name="hero-exclamation-triangle-mini" class="w-5 h-5 shrink-0 mt-0.5" />
+            <div class="flex-1">
+              <p class="font-medium">{cap_removal_message(@cap_removal_assessment)}</p>
+              <p class="mt-1">
+                {gettext("Anyone will be able to book a place until you set a new maximum.")}
+              </p>
+              <.input
+                field={@enrollment_form[:acknowledge_cap_removal]}
+                type="checkbox"
+                label={gettext("I understand this program will have no capacity limit.")}
+                required
+              />
+            </div>
           </div>
         </div>
 
