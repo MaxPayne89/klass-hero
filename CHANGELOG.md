@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.74.0](https://github.com/MaxPayne89/klass-hero/compare/v0.73.0...v0.74.0) (2026-08-17)
+
+
+### Features
+
+* point Tidewave at the checkout the session is actually in ([#1388](https://github.com/MaxPayne89/klass-hero/issues/1388)) ([162bbca](https://github.com/MaxPayne89/klass-hero/commit/162bbcac0afb0a094b51ccf41df292073ab79f16))
+
 ## [0.73.0](https://github.com/MaxPayne89/klass-hero/compare/v0.72.7...v0.73.0) (2026-08-16)
 
 
