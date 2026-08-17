@@ -66,25 +66,35 @@ defmodule KlassHero.Family do
   end
 
   @doc """
-  Creates a new child, optionally linking it to a guardian.
+  Creates a new child, optionally linking it to a guardian and recording consents.
 
   Pass `:parent_id` in `attrs` to establish the guardian relationship; the
   child and the guardian link are then created atomically.
 
+  Pass `consents: %{consent_type => boolean}` in `opts` to record the guardian's
+  consent choices in the same transaction as the child. Consent granted on a form is
+  part of what that form submitted, so it commits with the child or not at all —
+  #1322 lost a guardian's consent precisely because the two were separate calls.
+
   Returns:
   - `{:ok, Child.t()}` on success
   - `{:error, changeset}` for validation failures
+  - `{:error, {:consent, reason}}` when a consent write failed; the child is rolled back
   """
-  def create_child(attrs) when is_map(attrs) do
+  def create_child(attrs, opts \\ []) when is_map(attrs) and is_list(opts) do
     context_span entity: "child" do
       {parent_id, child_attrs} = Map.pop(attrs, :parent_id)
+      consents = Keyword.get(opts, :consents, %{})
 
-      case insert_child_with_event(child_attrs, parent_id) do
+      case insert_child_with_event(child_attrs, parent_id, consents) do
         {:ok, child} ->
           {:ok, child}
 
         {:error, %Ecto.Changeset{} = changeset} ->
           {:error, changeset}
+
+        {:error, {:consent, _reason} = consent_error} ->
+          {:error, consent_error}
       end
     end
   end
@@ -114,17 +124,23 @@ defmodule KlassHero.Family do
   end
 
   @doc """
-  Updates an existing child.
+  Updates an existing child, optionally reconciling its consents.
+
+  Pass `consents: %{consent_type => boolean}` and `:parent_id` in `opts` to bring the
+  child's consents to the given state in the same transaction as the update. A consent
+  is granted when wanted and absent, withdrawn when unwanted and present, left alone
+  otherwise.
 
   Returns:
   - `{:ok, Child.t()}` on success
   - `{:error, :not_found}` if the child doesn't exist
   - `{:error, changeset}` for validation failures
+  - `{:error, {:consent, reason}}` when a consent write failed; the update is rolled back
   """
-  def update_child(child_id, attrs) when is_binary(child_id) and is_map(attrs) do
+  def update_child(child_id, attrs, opts \\ []) when is_binary(child_id) and is_map(attrs) and is_list(opts) do
     context_span entity: "child" do
       with {:ok, child} <- fetch_child(child_id) do
-        update_child_with_event(child, attrs)
+        update_child_with_event(child, attrs, Keyword.get(opts, :consents, %{}), Keyword.get(opts, :parent_id))
       end
     end
   end
@@ -545,21 +561,59 @@ defmodule KlassHero.Family do
     end
   end
 
-  defp insert_child_with_event(child_attrs, parent_id) do
+  defp insert_child_with_event(child_attrs, parent_id, consents) do
     Outbox.transact(@context, fn ->
-      with {:ok, child} <- insert_child(child_attrs, parent_id) do
+      with {:ok, child} <- insert_child(child_attrs, parent_id),
+           :ok <- reconcile_consents(child.id, parent_id, consents) do
         {:ok, child, [child_created_event(child, parent_id)]}
       end
     end)
   end
 
-  defp update_child_with_event(child, attrs) do
+  defp update_child_with_event(child, attrs, consents, parent_id) do
     Outbox.transact(@context, fn ->
-      with {:ok, updated} <- child |> Child.changeset(attrs) |> Repo.update() do
+      with {:ok, updated} <- child |> Child.changeset(attrs) |> Repo.update(),
+           :ok <- reconcile_consents(updated.id, parent_id, consents) do
         {:ok, updated, [child_updated_event(updated)]}
       end
     end)
   end
+
+  # Brings a child's consents to the state the guardian asked for. Runs inside the
+  # caller's transaction, so a failure here rolls the child write back with it — the
+  # consent intent is never left behind with nothing recording it (#1322, #1335).
+  defp reconcile_consents(_child_id, _parent_id, consents) when map_size(consents) == 0, do: :ok
+
+  defp reconcile_consents(child_id, parent_id, consents) do
+    Enum.reduce_while(consents, :ok, fn {consent_type, wanted?}, :ok ->
+      case apply_consent(child_id, parent_id, consent_type, wanted?) do
+        :ok -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, {:consent, reason}}}
+      end
+    end)
+  end
+
+  # The current state is read here rather than by the caller beforehand: deciding on an
+  # answer fetched outside the transaction is the race this fold-in exists to close.
+  defp apply_consent(child_id, parent_id, consent_type, wanted?) do
+    case {wanted?, child_has_active_consent?(child_id, consent_type)} do
+      {true, false} ->
+        normalize_consent(grant_consent(%{parent_id: parent_id, child_id: child_id, consent_type: consent_type}))
+
+      {false, true} ->
+        normalize_consent(withdraw_consent(child_id, consent_type))
+
+      _unchanged ->
+        :ok
+    end
+  end
+
+  # Both of these mean a concurrent writer already reached the state we wanted, so the
+  # guardian's intent holds either way. Only a genuine write failure aborts.
+  defp normalize_consent({:ok, _consent}), do: :ok
+  defp normalize_consent({:error, :already_active}), do: :ok
+  defp normalize_consent({:error, :not_found}), do: :ok
+  defp normalize_consent({:error, reason}), do: {:error, reason}
 
   # The GDPR cascade used to gate on the dispatch returning :ok — its way of asking
   # "were the downstream contexts told?". Staging inside this child's own transaction

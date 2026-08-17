@@ -11,6 +11,7 @@ defmodule KlassHero.Family.ChildrenTest do
   alias KlassHero.Family
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildGuardian
+  alias KlassHero.Family.Consent
 
   @valid_attrs %{
     first_name: "Emma",
@@ -62,6 +63,111 @@ defmodule KlassHero.Family.ChildrenTest do
                Family.create_child(Map.put(@valid_attrs, :parent_id, Ecto.UUID.generate()))
 
       assert Repo.aggregate(Child, :count) == count_before
+    end
+  end
+
+  # #1322 lost a guardian's consent because ChildrenLive persisted the child and then
+  # granted the consent as a separate top-level call. These cover the fold-in: the two
+  # writes now share one transaction, so neither can survive the other's failure.
+  describe "create_child/2 with consents" do
+    @consent_type "provider_data_sharing"
+
+    test "writes the child and its consent in one call" do
+      parent = parent()
+      attrs = Map.put(@valid_attrs, :parent_id, parent.id)
+
+      assert {:ok, %Child{} = child} =
+               Family.create_child(attrs, consents: %{@consent_type => true})
+
+      assert Family.child_has_active_consent?(child.id, @consent_type)
+    end
+
+    # The test that would have caught #1322: a failing consent write must take the
+    # child row with it, so there is no half-saved form to remediate later.
+    test "rolls back the child when the consent write fails" do
+      parent = parent()
+      attrs = Map.put(@valid_attrs, :parent_id, parent.id)
+      count_before = Repo.aggregate(Child, :count)
+
+      assert {:error, {:consent, %Ecto.Changeset{}}} =
+               Family.create_child(attrs, consents: %{"" => true})
+
+      assert Repo.aggregate(Child, :count) == count_before
+    end
+
+    test "grants nothing when consent is not requested" do
+      parent = parent()
+      attrs = Map.put(@valid_attrs, :parent_id, parent.id)
+
+      assert {:ok, child} = Family.create_child(attrs, consents: %{@consent_type => false})
+
+      refute Family.child_has_active_consent?(child.id, @consent_type)
+    end
+
+    test "grants nothing when no consents are passed at all" do
+      parent = parent()
+      attrs = Map.put(@valid_attrs, :parent_id, parent.id)
+
+      assert {:ok, child} = Family.create_child(attrs)
+
+      refute Family.child_has_active_consent?(child.id, @consent_type)
+    end
+  end
+
+  describe "update_child/3 with consents" do
+    setup do
+      parent = parent()
+
+      {:ok, child} = Family.create_child(Map.put(@valid_attrs, :parent_id, parent.id))
+
+      %{parent: parent, child: child}
+    end
+
+    test "grants a consent that was not there before", %{parent: parent, child: child} do
+      assert {:ok, _} =
+               Family.update_child(child.id, %{first_name: "Emmy"},
+                 consents: %{@consent_type => true},
+                 parent_id: parent.id
+               )
+
+      assert Family.child_has_active_consent?(child.id, @consent_type)
+    end
+
+    test "withdraws a consent that is no longer wanted", %{parent: parent, child: child} do
+      {:ok, _} = Family.grant_consent(%{parent_id: parent.id, child_id: child.id, consent_type: @consent_type})
+
+      assert {:ok, _} =
+               Family.update_child(child.id, %{first_name: "Emmy"},
+                 consents: %{@consent_type => false},
+                 parent_id: parent.id
+               )
+
+      refute Family.child_has_active_consent?(child.id, @consent_type)
+    end
+
+    # Re-submitting an unchanged form must not stack a second consent row, and must not
+    # fail on the partial unique index either.
+    test "leaves an already-granted consent alone", %{parent: parent, child: child} do
+      {:ok, _} = Family.grant_consent(%{parent_id: parent.id, child_id: child.id, consent_type: @consent_type})
+
+      assert {:ok, _} =
+               Family.update_child(child.id, %{first_name: "Emmy"},
+                 consents: %{@consent_type => true},
+                 parent_id: parent.id
+               )
+
+      assert Family.child_has_active_consent?(child.id, @consent_type)
+      assert Repo.aggregate(from(c in Consent, where: c.child_id == ^child.id), :count) == 1
+    end
+
+    test "rolls back the update when the consent write fails", %{parent: parent, child: child} do
+      assert {:error, {:consent, %Ecto.Changeset{}}} =
+               Family.update_child(child.id, %{first_name: "Emmy"},
+                 consents: %{"" => true},
+                 parent_id: parent.id
+               )
+
+      assert Repo.get!(Child, child.id).first_name == "Emma"
     end
   end
 
