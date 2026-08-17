@@ -320,6 +320,32 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing.registration_start_date == ~D[2026-07-01]
       assert listing.registration_end_date == ~D[2026-07-31]
     end
+
+    # #1376: the read column was varchar(255) while the write side allows 500, so a
+    # storage URL over the limit raised 22001 here, exhausted all ten Oban attempts
+    # and discarded the update *whole* — location stayed stale too, not just the image.
+    test "projects a cover_image_url longer than 255 characters" do
+      program_id = Ecto.UUID.generate()
+
+      url =
+        "https://storage.example.com/program_covers/providers/#{Ecto.UUID.generate()}/" <>
+          String.duplicate("a", 240) <> ".jpg"
+
+      assert String.length(url) > 255
+
+      ProgramEvents.program_updated(program_id, %{
+        provider_id: Ecto.UUID.generate(),
+        title: "Soccer Camp",
+        location: "Online",
+        cover_image_url: url
+      })
+      |> through_outbox()
+      |> dispatch()
+
+      listing = Repo.get!(ProgramListing, program_id)
+      assert listing.cover_image_url == url
+      assert listing.location == "Online"
+    end
   end
 
   describe "macro invariants after happy-path startup" do

@@ -12,8 +12,8 @@ defmodule KlassHero.Shared.ReadTable do
       end
 
   A read table is the denormalized output of a projection GenServer under
-  `adapters/driven/projections/`. Three rules follow from that, and
-  `mix lint_read_tables` enforces all three:
+  `adapters/driven/projections/`. Four rules follow from that; `mix lint_read_tables`
+  enforces the first three, and a guard test enforces the fourth:
 
   1. **No changeset.** The projection is the only writer, so there is no user input
      to validate at this boundary. A changeset here means something other than the
@@ -23,6 +23,14 @@ defmodule KlassHero.Shared.ReadTable do
      should be one.
   3. **It lives at the context root** (`lib/klass_hero/<context>/<name>.ex`), beside
      the entities, not inside `adapters/`.
+  4. **No length caps.** Its string columns are `text`. Rule 1 is why: with no
+     changeset, a `varchar(n)` cannot *reject* an over-long value — it can only crash
+     the projection mid-delivery, exhaust Oban's attempts and discard the event,
+     losing every field of that update (#1376). Caps belong on the write side, where a
+     changeset turns them into a user-visible error. This one is enforced by
+     `test/klass_hero/shared/read_table_column_types_test.exs`, not by the lint: the
+     property lives in the database, and `field :url, :string` reads identically
+     whether the column is `varchar(255)` or `text`.
 
   This `use` is the declaration the lint keys off. It is deliberately a code token
   rather than a phrase in the moduledoc: a moduledoc can be reworded by a docs pass

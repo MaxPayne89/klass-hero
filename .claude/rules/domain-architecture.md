@@ -86,9 +86,18 @@ Directionality still classifies the surviving event code:
 
   | Kind | Home | Shape | Example |
   |---|---|---|---|
-  | Projection read **table** | context root | Ecto schema **is** the DTO; **no changeset** — the projection owns every write | `provider/provider_program.ex`, `messaging/enrolled_child.ex` |
+  | Projection read **table** | context root | Ecto schema **is** the DTO; **no changeset** — the projection owns every write; string columns are **`text`**, never a capped `varchar` | `provider/provider_program.ex`, `messaging/enrolled_child.ex` |
   | Query-shaped struct over **write** tables | `domain/read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/domain/read_models/staff_membership.ex` |
   | Event-maintained table with **no** projection | context root + an ops submodule | schema **keeps** its changeset, because a handler writes it directly | *none — see below* |
+
+- **A length cap on a read table is unenforceable, so it is a liability.** The
+  no-changeset rule is what makes it one: a `varchar(n)` there cannot reject an
+  over-long value, only raise 22001 inside `EventDeliveryWorker`, exhaust Oban's ten
+  attempts and discard the event — losing every field of that update, not just the
+  long one (#1376). Read-table string columns are `text`; caps belong on the write
+  side, where a changeset turns them into a user-visible error. Enforced by
+  `test/klass_hero/shared/read_table_column_types_test.exs`, which reads
+  `information_schema` — `mix lint_read_tables` is text-based and cannot see it.
 
 - **The third kind currently has no instance, and that is a warning, not an
   omission.** Its only example was `messaging/program_staff_participant.ex` +
