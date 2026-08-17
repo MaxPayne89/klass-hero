@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.73.0](https://github.com/MaxPayne89/klass-hero/compare/v0.72.7...v0.73.0) (2026-08-16)
+
+
+### Features
+
+* authorize attendance writes at the Participation boundary ([#1385](https://github.com/MaxPayne89/klass-hero/issues/1385)) ([66d5b54](https://github.com/MaxPayne89/klass-hero/commit/66d5b5469f23098d726d2f654a703411872165f5)), closes [#1353](https://github.com/MaxPayne89/klass-hero/issues/1353)
+
+
+### Code Refactoring
+
+* drop the transitional :critical_events queue entry ([#1386](https://github.com/MaxPayne89/klass-hero/issues/1386)) ([8726013](https://github.com/MaxPayne89/klass-hero/commit/87260132e10f267239b7a1e85e5bcfd3d21f8149)), closes [#1362](https://github.com/MaxPayne89/klass-hero/issues/1362)
+
 ## [0.72.7](https://github.com/MaxPayne89/klass-hero/compare/v0.72.6...v0.72.7) (2026-08-16)
 
 
