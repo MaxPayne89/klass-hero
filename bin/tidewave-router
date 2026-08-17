@@ -1,0 +1,275 @@
+#!/usr/bin/env node
+// A stdio MCP server that forwards to whichever checkout the session is CURRENTLY in.
+//
+// The problem it solves: `.mcp.json` is read once, at session start. A session that
+// moves into a worktree mid-flight (EnterWorktree) therefore keeps talking to the
+// Tidewave of the checkout it booted in — silently answering questions about the
+// wrong tree. No hook can repoint it: no hook event carries an MCP field.
+//
+// The way out is to stop encoding the target in config at all. Claude Code answers
+// the MCP `roots/list` request with the session's current directory, and — verified
+// empirically, since the docs only describe roots in terms of --add-dir — that answer
+// FOLLOWS EnterWorktree. So we ask, per request, where the session is now, and forward
+// there. The target is late-bound; there is nothing left to go stale.
+//
+// One caveat that shapes the code: Claude Code does NOT send
+// notifications/roots/list_changed when EnterWorktree moves the session, even though
+// it advertises `roots.listChanged: true`. Waiting to be told would never fire. We
+// re-query instead, on every request that needs a target.
+//
+// Forwarding is a plain POST because Tidewave's HTTP transport is stateless JSON:
+// no session header, no SSE framing, and `tools/call` works with no prior handshake.
+// So this is a forwarder, not a session-bridging proxy.
+//
+// Failure is always loud. A checkout with no dev server produces a JSON-RPC error
+// naming the checkout and the command that fixes it — never a fallback to some other
+// checkout's server, which is the exact bug this file exists to end.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { createInterface } from "node:readline";
+import { fileURLToPath } from "node:url";
+
+const MAIN_PORT = 4000;
+const ROOTS_TIMEOUT_MS = 2000;
+
+const send = (msg) => process.stdout.write(JSON.stringify(msg) + "\n");
+const note = (line) => process.stderr.write(`tidewave-router: ${line}\n`);
+
+// ---------------------------------------------------------------------------
+// Asking the client where it is
+// ---------------------------------------------------------------------------
+
+let nextId = 1;
+const pendingRoots = new Map(); // our request id -> resolve fn
+
+function currentRoots() {
+  return new Promise((resolve) => {
+    const id = `router-${nextId++}`;
+    const done = (value) => {
+      if (pendingRoots.delete(id)) resolve(value);
+    };
+    pendingRoots.set(id, done);
+    send({ jsonrpc: "2.0", id, method: "roots/list" });
+    // A client that never answers must not wedge the tool call.
+    setTimeout(() => done(null), ROOTS_TIMEOUT_MS);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Root -> checkout -> port
+// ---------------------------------------------------------------------------
+
+// The reported root is normally the checkout root already, but a session started in
+// a subdirectory would report that instead. Walk up to the nearest .git — a file in
+// a linked worktree, a directory in the main checkout.
+function checkoutRootOf(dir) {
+  let current = dir;
+  for (;;) {
+    if (existsSync(join(current, ".git"))) return current;
+    const parent = dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+}
+
+// bin/setup-mcp writes .claude/run/port. The two fallbacks cover the window before a
+// checkout has been re-provisioned since this router landed: a legacy .mcp.json that
+// still names a port in its URL, and the main checkout's fixed port.
+function portOf(checkout) {
+  const portFile = join(checkout, ".claude", "run", "port");
+  if (existsSync(portFile)) {
+    const port = parseInt(readFileSync(portFile, "utf8").trim(), 10);
+    if (Number.isInteger(port)) return port;
+  }
+
+  const mcpJson = join(checkout, ".mcp.json");
+  if (existsSync(mcpJson)) {
+    try {
+      const url = JSON.parse(readFileSync(mcpJson, "utf8"))?.mcpServers?.tidewave?.url;
+      const match = /localhost:(\d+)\//.exec(url ?? "");
+      if (match) return parseInt(match[1], 10);
+    } catch {
+      // A malformed .mcp.json is not worth crashing the router over.
+    }
+  }
+
+  // A directory .git means the main checkout, which always binds MAIN_PORT.
+  try {
+    if (!readFileSync(join(checkout, ".git"), "utf8")) return MAIN_PORT;
+  } catch {
+    return MAIN_PORT; // reading a directory throws EISDIR
+  }
+  return null;
+}
+
+async function resolveTarget() {
+  const roots = await currentRoots();
+  const uri = roots?.roots?.[0]?.uri;
+  const dir = uri ? fileURLToPath(uri) : process.env.CLAUDE_PROJECT_DIR || process.cwd();
+
+  const checkout = checkoutRootOf(dir);
+  if (!checkout) return { error: `${dir} is not inside a git checkout` };
+
+  const port = portOf(checkout);
+  if (!port) {
+    return {
+      error:
+        `${checkout} has no dev server port on record. ` +
+        `Run bin/worktree-up in that checkout.`,
+    };
+  }
+  return { checkout, port };
+}
+
+// ---------------------------------------------------------------------------
+// Forwarding
+// ---------------------------------------------------------------------------
+
+async function forward(message) {
+  const target = await resolveTarget();
+  if (target.error) return { error: { code: -32001, message: target.error } };
+
+  const url = `http://localhost:${target.port}/tidewave/mcp`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify(message),
+    });
+
+    if (!response.ok) {
+      return {
+        error: {
+          code: -32002,
+          message: `Tidewave at ${url} (checkout ${target.checkout}) returned HTTP ${response.status}.`,
+        },
+      };
+    }
+    return { result: await response.json() };
+  } catch (cause) {
+    return {
+      error: {
+        code: -32003,
+        message:
+          `No Tidewave answering on port ${target.port} for checkout ${target.checkout} ` +
+          `(${cause.message}). Run bin/worktree-up there, then retry — this session is ` +
+          `pointed at the right tree, its server is just not up.`,
+      },
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Client-facing loop
+// ---------------------------------------------------------------------------
+
+// Answered locally rather than forwarded: initialize arrives before the client is
+// ready to answer roots/list, so there is no target to forward it to yet. Tools are
+// declared listChanged so a later target switch can announce a different tool set.
+function handleInitialize(msg) {
+  send({
+    jsonrpc: "2.0",
+    id: msg.id,
+    result: {
+      protocolVersion: msg.params?.protocolVersion || "2025-06-18",
+      capabilities: { tools: { listChanged: true } },
+      serverInfo: { name: "tidewave-router", version: "1.0.0" },
+    },
+  });
+}
+
+// tools/list is the one method where failing loudly is the WRONG answer. It runs once,
+// at session start; if the target's server is not up yet, an error there registers no
+// tidewave tools at all and the whole session silently has none — the failure is
+// invisible and total. Serving a cached list keeps the tools registered so the loud,
+// actionable error lands on the call instead, where someone can act on it.
+//
+// Safe to cache because Tidewave reports tools.listChanged: false and every checkout
+// runs the same version. The cache refreshes on every successful list.
+const TOOLS_CACHE = join(
+  process.env.CLAUDE_PROJECT_DIR || process.cwd(),
+  ".claude",
+  "run",
+  "tidewave-tools.json",
+);
+
+function cacheTools(result) {
+  try {
+    mkdirSync(dirname(TOOLS_CACHE), { recursive: true });
+    writeFileSync(TOOLS_CACHE, JSON.stringify(result));
+  } catch {
+    // A cache we cannot write is not worth failing a working call over.
+  }
+}
+
+function cachedTools() {
+  try {
+    return JSON.parse(readFileSync(TOOLS_CACHE, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function handleForwarded(msg) {
+  const outcome = await forward(msg);
+
+  if (outcome.error) {
+    if (msg.method === "tools/list") {
+      const cached = cachedTools();
+      if (cached) {
+        note(`serving cached tools/list — ${outcome.error.message}`);
+        send({ jsonrpc: "2.0", id: msg.id, result: cached });
+        return;
+      }
+    }
+    send({ jsonrpc: "2.0", id: msg.id, error: outcome.error });
+    return;
+  }
+
+  if (msg.method === "tools/list" && outcome.result?.result) {
+    cacheTools(outcome.result.result);
+  }
+
+  // Tidewave echoes our id; pass its envelope through untouched so any field we
+  // do not know about survives the hop.
+  send({ ...outcome.result, jsonrpc: "2.0", id: msg.id });
+}
+
+createInterface({ input: process.stdin }).on("line", async (line) => {
+  if (!line.trim()) return;
+
+  let msg;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    note(`ignoring unparseable line: ${line.slice(0, 120)}`);
+    return;
+  }
+
+  // A response to the roots/list we asked for.
+  if (msg.id !== undefined && msg.method === undefined) {
+    const resolve = pendingRoots.get(msg.id);
+    if (resolve) resolve(msg.error ? null : msg.result);
+    return;
+  }
+
+  switch (msg.method) {
+    case "initialize":
+      handleInitialize(msg);
+      return;
+    case "notifications/initialized":
+    case "notifications/cancelled":
+      return;
+    case "ping":
+      send({ jsonrpc: "2.0", id: msg.id, result: {} });
+      return;
+    default:
+      if (msg.id === undefined) return; // any other notification: nothing to reply to
+      await handleForwarded(msg);
+  }
+});
+
+process.stdin.on("end", () => process.exit(0));

@@ -13,7 +13,7 @@
 #
 # Usage:
 #   bin/worktree-up              full converge (default)
-#   bin/worktree-up --fast       databases and .mcp.json only; no seeds, no server
+#   bin/worktree-up --fast       databases and the port claim only; no seeds, no server
 #   bin/worktree-up --no-seed    converge, but never seed
 #   bin/worktree-up --reseed     seed even if the database already existed
 #   bin/worktree-up --no-server  converge, but do not start the dev server

@@ -1,28 +1,31 @@
 #!/usr/bin/env bash
 #
-# Give this checkout its own dev-server port and Tidewave MCP endpoint by writing
-# .mcp.json.
+# Give this checkout its own dev-server port, and make sure .mcp.json points Claude
+# Code at the router.
 #
 # The main checkout takes 4000; each worktree takes the lowest free port in
-# PORT_MIN..PORT_MAX, so several dev servers can run at once and each Claude Code
-# session talks to the server for the code it is actually looking at.
+# PORT_MIN..PORT_MAX, so several dev servers can run at once.
 #
-# Convergent, not write-once: an existing .mcp.json is re-validated, not trusted.
-# A port can stop being ours between runs — another checkout claims it, or an
-# orphaned server from a deleted worktree keeps answering on it. That orphan case
-# is the dangerous one, because it answers /tidewave/mcp *correctly* for the wrong
-# code. Re-validation is what turns that from a silent wrong answer into a fix.
+# What changed when bin/tidewave-router landed: the port no longer lives in .mcp.json.
+# It lives in .claude/run/port, and .mcp.json became byte-identical in every checkout
+# — it names the router, which asks the session where it is and resolves the port at
+# request time. That is what makes a mid-session EnterWorktree work: there is no
+# per-checkout value baked into a file that is only read at session start.
 #
-# .mcp.json is *project* scope, which outranks user scope and replaces the entry
-# wholesale (scopes match by name; fields are never merged). Keeping the name
-# `tidewave` is deliberate: MCP tool permissions are keyed on the server name, so a
-# per-worktree name would need its own mcp__<name>__* grants in settings.
+# Because it is identical everywhere, .mcp.json is committed rather than generated.
+# This script still rewrites it when it has drifted (a legacy URL-shaped entry from
+# before the router, or a deleted file), so an old checkout self-heals on first run.
 #
-# .mcp.json is gitignored, so every checkout needs this run once. bin/worktree-up
-# calls it for you.
+# Convergent, not write-once: an existing port claim is re-validated, not trusted. A
+# port can stop being ours between runs — another checkout claims it, or an orphaned
+# server from a deleted worktree keeps answering on it. That orphan case is the
+# dangerous one, because it answers /tidewave/mcp *correctly* for the wrong code.
+#
+# Keeping the MCP server name `tidewave` is deliberate: tool permissions are keyed on
+# the server name, so a per-worktree name would need its own mcp__<name>__* grants.
 #
 # Usage:
-#   bin/setup-mcp            write or repair .mcp.json
+#   bin/setup-mcp            allocate/repair this checkout's port and .mcp.json
 #   bin/setup-mcp --quiet    same, but only speak up on a change or a problem
 
 set -euo pipefail
@@ -39,9 +42,40 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v node >/dev/null 2>&1; then
+  echo "setup-mcp: node is required — bin/tidewave-router is a node stdio MCP server" >&2
+  exit 1
+fi
+
 say() { $QUIET || echo "$@"; }
 
-root=$(repo_root)
+# The canonical .mcp.json, identical in every checkout — which is what lets it be
+# committed instead of generated.
+#
+# The command is relative on purpose. ${CLAUDE_PROJECT_DIR} is NOT expanded here:
+# Claude Code parses .mcp.json before that variable exists in its own environment and
+# reports "Missing environment variables: CLAUDE_PROJECT_DIR", so an absolute form
+# would fail to spawn. A relative command resolves against the session's directory,
+# which is the checkout root.
+MCP_COMMAND="bin/tidewave-router"
+
+write_mcp_json() {
+  cat >.mcp.json <<EOF
+{
+  "mcpServers": {
+    "tidewave": {
+      "type": "stdio",
+      "command": "${MCP_COMMAND}"
+    }
+  }
+}
+EOF
+}
+
+mcp_json_current() {
+  [[ -f .mcp.json ]] || return 1
+  [[ "$(jq -r '.mcpServers.tidewave.command // empty' .mcp.json 2>/dev/null)" == "$MCP_COMMAND" ]]
+}
 
 # Is $1 a port this checkout may still call its own?
 port_still_ours() {
@@ -54,7 +88,7 @@ port_still_ours() {
     ((port == MAIN_PORT)) || return 1
   fi
 
-  # Written into another live checkout's .mcp.json since we last looked?
+  # Claimed by another live checkout since we last looked?
   grep -qx "$port" <<<"$(claimed_ports)" && return 1
 
   # An orphan holding it is reapable, so try that before judging.
@@ -66,10 +100,21 @@ port_still_ours() {
   esac
 }
 
-existing=""
-[[ -f .mcp.json ]] && existing=$(port_from .mcp.json)
+record_port() {
+  mkdir -p "$RUN_DIR"
+  echo "$1" >"$PORT_FILE"
+}
+
+if ! mcp_json_current; then
+  write_mcp_json
+  say "Wrote .mcp.json -> bin/tidewave-router (stdio)."
+fi
+
+existing=$(my_port)
 
 if [[ -n "$existing" ]] && port_still_ours "$existing"; then
+  # Migrates a legacy checkout whose port was only ever in .mcp.json.
+  record_port "$existing"
   say "Port ${existing} is still this checkout's. Nothing to do."
   exit 0
 fi
@@ -77,7 +122,7 @@ fi
 if [[ -n "$existing" ]]; then
   pid=$(listener_pid "$existing")
   owner=$(port_owner "$existing")
-  echo "Port ${existing} in .mcp.json is no longer usable here (${owner}${pid:+, held by pid ${pid} at $(listener_cwd "$pid")})." >&2
+  echo "Port ${existing} is no longer usable here (${owner}${pid:+, held by pid ${pid} at $(listener_cwd "$pid")})." >&2
   echo "Reallocating." >&2
 fi
 
@@ -99,20 +144,9 @@ else
   fi
 fi
 
-cat >.mcp.json <<EOF
-{
-  "mcpServers": {
-    "tidewave": {
-      "type": "http",
-      "url": "http://localhost:${port}/tidewave/mcp"
-    }
-  }
-}
-EOF
+record_port "$port"
 
 say "Configured port ${port} for ${where}."
 say ""
-say "  wrote .mcp.json  -> tidewave at $(tidewave_url "$port")"
-say "  bin/worktree-up  -> provisions and starts the server on ${port} (live_debugger on $((port + 100)))"
-say ""
-say "Restart Claude Code here — .mcp.json is read at session start."
+say "  wrote ${PORT_FILE}  -> the router resolves this at request time"
+say "  bin/worktree-up     -> provisions and starts the server on ${port} (live_debugger on $((port + 100)))"

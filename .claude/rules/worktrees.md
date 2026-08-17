@@ -45,7 +45,8 @@ You normally never type these. Three hooks in `.claude/settings.json` run them:
 
 | Hook | What it does |
 |---|---|
-| `WorktreeCreate` | creates the worktree and provisions it (`--fast`: DBs + `.mcp.json`, no seeds, no server) |
+| `WorktreeCreate` | creates the worktree and provisions it **fully** — DBs, seeds, and a running dev server, so the first session here finds Tidewave already answering |
+| `CwdChanged` | converges the checkout the session just moved into, so the router has a server to forward to |
 | `SessionStart` | converges the checkout on every session start/resume — the load-bearing path |
 | `WorktreeRemove` | tears the checkout down before its directory disappears |
 
@@ -66,18 +67,45 @@ evaluates code that is gone. `bin/worktree-up` reaps such a listener (and only
 such a listener: one whose own directory is gone). A port held by a *different
 live* checkout is reported, never taken.
 
-### The one thing no script can fix
+### Tidewave follows the session — `bin/tidewave-router`
 
-`.mcp.json` is read **at session start**, and `EnterWorktree` does not restart the
-session — it changes the working directory the way `/cd` does, and does not
-re-fire `SessionStart`. So **a worktree entered mid-session keeps pointing at the
-previous checkout's Tidewave.**
+**A worktree entered mid-session now works.** It did not used to, and the reason is
+worth keeping: `.mcp.json` is read **once, at session start**, and `EnterWorktree`
+does not restart the session or re-fire `SessionStart`. So any per-checkout value
+baked into that file — which is what a `http://localhost:<port>/tidewave/mcp` URL is
+— is frozen at launch and goes stale the moment the session moves. No hook can repair
+it: no hook event carries an MCP field, `/mcp reconnect` only reconnects a server it
+already knows, and `/reload-plugins` is plugin-scoped.
 
-Do not call `project_eval` after a mid-session `EnterWorktree`; you would be
-evaluating against the wrong tree. Start the task's session *in* the worktree
-instead (`cd <worktree> && claude`). If Tidewave is missing where it should be
-present, say so and follow the Unavailability Alert Protocol in
-`.claude/rules/mcp-integration.md` — never silently fall back to bash.
+The fix is to stop encoding the target in config. `.mcp.json` now names a stdio
+server, `bin/tidewave-router`, identical in every checkout — which is why it is
+**committed** rather than generated, and why a fresh worktree has one immediately.
+On each request the router asks Claude Code `roots/list`, which reports the session's
+*current* directory, resolves that to a checkout and its port
+(`.claude/run/port`), and forwards the JSON-RPC call there.
+
+Two behaviours of that design are load-bearing:
+
+- **It re-queries; it does not subscribe.** Claude Code advertises
+  `roots.listChanged: true` but sends no `notifications/roots/list_changed` on
+  `EnterWorktree` (verified empirically — the docs describe roots only in terms of
+  `--add-dir`). A router that waited to be told would never fire.
+- **It never falls back to another checkout.** A target with no running server
+  produces a JSON-RPC error naming the checkout and the fix, because answering from
+  the wrong tree — correctly, and therefore invisibly — is the entire failure this
+  replaced. The one exception is `tools/list`, which serves a cached list when the
+  target is down: that call happens once at session start, and failing it would
+  register no Tidewave tools at all, turning a loud per-call error into a silent
+  session-wide outage.
+
+So `project_eval` after a mid-session `EnterWorktree` is safe. If Tidewave reports no
+server for a checkout, that is a provisioning problem, not a pointer problem — run
+`bin/worktree-up` there. Never silently fall back to bash; follow the Unavailability
+Alert Protocol in `.claude/rules/mcp-integration.md`.
+
+The port lives in `.claude/run/port`, not in `.mcp.json`. That relocation is what
+lets `.mcp.json` be identical everywhere, and it is what `bin/worktree-down` clears
+to release a port.
 
 ## Test DB isolation — derived, not remembered
 
@@ -170,20 +198,31 @@ Tidewave endpoint on that port, so several can run at once.
 pieces, when you need them individually:
 
 ```bash
-bin/setup-mcp    # allocate/repair this checkout's port in .mcp.json
+bin/setup-mcp    # allocate/repair this checkout's port claim
 bin/dev          # foreground server with an IEx shell
 bin/dev --detach # background server, waits until Tidewave answers
 bin/dev --port   # print this checkout's port
+bin/worktree-gc  # list stale worktrees (--prune to remove them and free their ports)
 ```
 
 `bin/setup-mcp` runs in **every** checkout, main included. It is *convergent*, not
-write-once: an existing `.mcp.json` is re-validated rather than trusted, because a
-port can stop being yours between runs — another checkout claims it, or an orphaned
-server keeps answering on it. Main takes 4000; a worktree
-takes the lowest free port in **4010–4039**. It writes `.mcp.json` declaring an MCP
-server named `tidewave` at `http://localhost:<port>/tidewave/mcp`, and `bin/dev` reads
-the port back out of that same file — so the client and the server it talks to cannot
-drift. `.mcp.json` is gitignored, which is why each checkout needs its own run.
+write-once: an existing claim is re-validated rather than trusted, because a port can
+stop being yours between runs — another checkout claims it, or an orphaned server
+keeps answering on it. Main takes 4000; a worktree takes the lowest free port in
+**4010–4089**. The ceiling matters: `live_debugger` binds `PORT + 100`, so a range
+reaching 4090 or beyond would put one checkout's debugger on another's server port.
+
+The port is written to `.claude/run/port`, and `bin/dev` and `bin/tidewave-router`
+both read it from there — so the client and the server it talks to cannot drift.
+`.mcp.json` holds no port at all and is committed, so every checkout has a working
+one the moment it is created.
+
+Ports are a finite pool, and a checkout holds its claim for as long as it exists.
+`bin/worktree-gc` is how you get them back; it reports state and removes nothing
+unless you pass `--prune`, and it never proposes a worktree with uncommitted changes.
+It decides "merged" with `git cherry`, which compares patch-ids rather than commit
+ids — necessary because every PR here is squash-merged, so a fully merged branch
+still looks unmerged to `git log origin/main..branch`.
 
 Ports derive from `PORT` in `config/dev.exs`: the endpoint binds it, `url:` and
 `:app_base_url` follow it (so generated links point at the right server), and
@@ -217,6 +256,20 @@ ignored until a workspace is trusted, which a fresh worktree isn't yet.
   `Project config`. (A parent `.mcp.json` overriding a nested worktree's was reported in
   anthropics/claude-code#42465; verified not to reproduce on 2.1.220, but this is the
   symptom if it regresses.)
+- **`.mcp.json` does not expand `${CLAUDE_PROJECT_DIR}`.** Claude Code parses the file
+  before that variable exists in its own environment and reports `Missing environment
+  variables: CLAUDE_PROJECT_DIR`, then fails to spawn with `ENOENT`. The router is
+  therefore declared with the **relative** command `bin/tidewave-router`, resolved
+  against the session's directory. Do not "fix" it by making the path absolute — that
+  is what breaks it, and it would also make the file per-checkout again.
+- **`bin/tidewave-router` needs `node` on PATH.** It is a stdio MCP server; without
+  node the session starts with no Tidewave tools at all. `bin/setup-mcp` checks for it.
+- **Migration, one time only.** `.mcp.json` used to be gitignored, so every checkout
+  that predates the router holds an *untracked* copy. Git refuses to check out a
+  tracked file over an untracked one, so rebasing such a worktree onto main fails with
+  "untracked working tree files would be overwritten". Delete it first
+  (`rm .mcp.json && git rebase origin/main`), or retire the worktree with
+  `bin/worktree-gc --prune`. Checkouts created after this landed are unaffected.
 - **live_debugger** binds its own endpoint and defaults to 4007. Before ports were
   derived, a second concurrent `mix phx.server` died on `:eaddrinuse` here.
 - **A fresh worktree has no dev DB yet.** Isolation is automatic (see the dev DB

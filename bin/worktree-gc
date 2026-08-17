@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+#
+# Report — and optionally remove — worktrees that have outlived their task.
+#
+# Why this exists: a checkout's port claim lives in .claude/run/port, and
+# allocate_port() excludes every port claimed by a checkout still listed in
+# `git worktree list`. An abandoned worktree therefore holds its port forever. With
+# PORT_MIN..PORT_MAX slots available, enough abandoned worktrees exhaust the range,
+# and the failure — "No free port" at provisioning time — reads as a bug in the
+# allocator rather than as accumulated litter.
+#
+# Safety: dry-run by default, and a worktree with uncommitted changes is NEVER a
+# removal candidate, whatever its branch state. Losing uncommitted work is the one
+# failure this repo has already paid for once (see the recovery section of
+# .claude/rules/worktrees.md); a reclaimed port is not worth risking it again.
+#
+# Usage:
+#   bin/worktree-gc            list every worktree with its state; remove nothing
+#   bin/worktree-gc --prune    remove the clean, fully-merged ones
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+# shellcheck source=bin/lib/worktree-common.sh
+source bin/lib/worktree-common.sh
+
+PRUNE=false
+[[ "${1:-}" == "--prune" ]] && PRUNE=true
+
+main_root=$(repo_root)
+git fetch origin --quiet 2>/dev/null || true
+
+candidates=()
+
+printf '%-52s %-10s %-9s %-8s %s\n' CHECKOUT BRANCH PORT SERVER STATE
+
+while read -r worktree; do
+  [[ "$worktree" == "$main_root" ]] && continue
+
+  branch=$(git -C "$worktree" branch --show-current 2>/dev/null || echo "detached")
+  port=$(port_of_checkout "$worktree")
+
+  if [[ -n "$port" ]] && [[ "$(cd "$worktree" && port_owner "$port")" == "mine" ]]; then
+    server="up"
+  else
+    server="-"
+  fi
+
+  # Untracked files count: a worktree holding scratch work is still work.
+  if [[ -n "$(git -C "$worktree" status --porcelain 2>/dev/null)" ]]; then
+    state="DIRTY — keep"
+  elif [[ "$branch" == "detached" ]]; then
+    state="detached — keep"
+  else
+    # `git cherry` compares patch-ids, not commit ids: it marks a commit "-" when an
+    # equivalent change is already upstream. That is the test this repo needs, because
+    # every PR is squash-merged — the branch's commit never appears in origin/main by
+    # id, so `git log origin/main..branch` calls a fully merged branch unmerged.
+    #
+    # It is conservative by construction: a branch whose several commits were squashed
+    # into one upstream will not match by patch-id and stays "keep". Better to leave
+    # litter than to remove work that is only *probably* merged.
+    cherry=$(git -C "$worktree" cherry origin/main "$branch" 2>/dev/null || echo "?")
+
+    if [[ "$cherry" == "?" ]]; then
+      state="cannot compare — keep"
+    elif ! grep -q '^+' <<<"$cherry"; then
+      state="merged — removable"
+      candidates+=("$worktree")
+    else
+      state="$(grep -c '^+' <<<"$cherry") unmerged commit(s) — keep"
+    fi
+  fi
+
+  printf '%-52s %-10s %-9s %-8s %s\n' \
+    "${worktree#"$main_root"/}" "${branch:0:10}" "${port:-none}" "$server" "$state"
+done < <(git worktree list --porcelain | awk '/^worktree /{print $2}')
+
+echo
+echo "${#candidates[@]} removable, out of $(($(git worktree list | wc -l) - 1)) worktrees."
+echo "ports in use: $(claimed_ports | grep -c . || true) of $((PORT_MAX - PORT_MIN + 1)) (${PORT_MIN}-${PORT_MAX})"
+
+if ! $PRUNE; then
+  ((${#candidates[@]} > 0)) && echo "Run bin/worktree-gc --prune to remove them."
+  exit 0
+fi
+
+# Drop a removed checkout's databases without its cooperation.
+#
+# bin/worktree-down is the normal path, but it only exists on branches cut after it
+# landed — and a worktree old enough to be garbage is exactly the kind whose branch
+# predates it. That case used to print "worktree-down failed; removing anyway" and
+# silently leak two databases per worktree, which is how a Postgres accumulates a
+# hundred of them. The names are derived from the checkout's basename, so we can drop
+# them ourselves; we just cannot ask the worktree to do it.
+drop_databases_of() {
+  local slug dev_db test_db db
+  slug=$(basename "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/_/g')
+  dev_db="klass_hero_dev_${slug}"
+  test_db="klass_hero_test_${slug}"
+
+  # psql rather than dropdb: database_exists already relies on psql, so this adds no
+  # new tool requirement.
+  for db in "${dev_db:0:63}" "${test_db:0:63}"; do
+    if database_exists "$db"; then
+      echo "  dropping ${db}" >&2
+      PGPASSWORD=postgres psql -h localhost -U postgres -q \
+        -c "DROP DATABASE IF EXISTS \"${db}\"" >/dev/null 2>&1 ||
+        echo "  (could not drop ${db} — still in use?)" >&2
+    fi
+  done
+}
+
+for worktree in "${candidates[@]}"; do
+  echo
+  echo "Removing ${worktree}"
+
+  # worktree-down first when it exists: it also stops the dev server, which nothing
+  # else here does. Fall back to dropping the databases directly.
+  if [[ -x "$worktree/bin/worktree-down" ]]; then
+    (cd "$worktree" && bin/worktree-down >&2) || {
+      echo "  (worktree-down failed; dropping databases directly)" >&2
+      drop_databases_of "$worktree"
+    }
+  else
+    echo "  (no bin/worktree-down on this branch; dropping databases directly)" >&2
+    drop_databases_of "$worktree"
+  fi
+
+  git worktree remove "$worktree" || git worktree remove --force "$worktree"
+done
+
+git worktree prune
+echo
+echo "Done. ports now claimed: $(claimed_ports | grep -c . || true)"

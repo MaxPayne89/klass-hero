@@ -2,9 +2,10 @@
 #
 # Start the dev server on this checkout's port.
 #
-# The port is read from .mcp.json — the same file that points Claude Code at this
-# checkout's Tidewave endpoint — so the MCP client and the server it talks to can
-# never drift apart. Falls back to 4000 if the file is missing.
+# The port is read from .claude/run/port, the single record of what this checkout
+# claimed — the same file bin/tidewave-router resolves when it forwards an MCP call
+# here, so the client and the server it talks to cannot drift apart. Falls back to
+# 4000 when no claim has been recorded yet.
 #
 # Run bin/worktree-up once per checkout to create it (it calls bin/setup-mcp).
 #
@@ -19,25 +20,13 @@ cd "$(git rev-parse --show-toplevel)"
 # shellcheck source=bin/lib/worktree-common.sh
 source bin/lib/worktree-common.sh
 
-port=4000
+port=$(my_port)
+port="${port:-4000}"
 
-if [[ -f .mcp.json ]]; then
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "bin/dev: .mcp.json exists but jq is not installed — cannot read the port." >&2
-    exit 1
-  fi
-
-  url=$(jq -r '.mcpServers.tidewave.url // empty' .mcp.json)
-
-  if [[ -n "$url" ]]; then
-    port="${url##*:}"  # http://localhost:4010/tidewave/mcp -> 4010/tidewave/mcp
-    port="${port%%/*}" # 4010/tidewave/mcp                  -> 4010
-  fi
-
-  if ! [[ "$port" =~ ^[0-9]+$ ]]; then
-    echo "bin/dev: could not parse a port out of .mcp.json (url: ${url:-none})" >&2
-    exit 1
-  fi
+if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+  echo "bin/dev: ${PORT_FILE} does not contain a port (got: ${port})." >&2
+  echo "         Run bin/setup-mcp to allocate one." >&2
+  exit 1
 fi
 
 if [[ "${1:-}" == "--port" ]]; then

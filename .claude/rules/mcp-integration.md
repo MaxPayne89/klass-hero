@@ -61,10 +61,10 @@ When Tidewave is not connected or fails to respond:
    | Verdict | Cause |
    |---|---|
    | `NOT RUNNING` | no dev server — run `bin/worktree-up` |
-   | `NOT CONFIGURED` | no `.mcp.json` — run `bin/worktree-up` |
+   | `NOT CONFIGURED` | no port claimed in `.claude/run/port` — run `bin/worktree-up` |
    | `ORPHAN` | a server from a deleted checkout is answering; `bin/worktree-up` reaps it |
    | `WRONG CHECKOUT` | another live checkout holds the port; **do not use Tidewave from here** |
-   | `READY` | the server is fine, so this is an MCP client issue — the session started before the server was up, and `.mcp.json` is read at session start. Reconnect via `/mcp`, or restart the session in this directory |
+   | `READY` | the server is fine. Tidewave calls resolve the target per request via `bin/tidewave-router`, so no restart is needed — retry the call. If it still fails, check `claude mcp get tidewave` reports `Connected` (a missing `node` leaves the session with no Tidewave tools) |
 
 3. **Never silently degrade**: Do not fall back to bash/shell evaluation without explicitly notifying the user that Tidewave is unavailable
 

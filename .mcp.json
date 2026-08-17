@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tidewave": {
+      "type": "stdio",
+      "command": "bin/tidewave-router"
+    }
+  }
+}

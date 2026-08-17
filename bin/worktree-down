@@ -85,6 +85,8 @@ if $DROP_DB; then
   MIX_ENV=test mix ecto.drop >/dev/null 2>&1 || echo "  (already gone)" >&2
 fi
 
-rm -f .mcp.json
+# .mcp.json is NOT removed: it is committed and identical in every checkout, naming
+# bin/tidewave-router rather than a port. The port claim lived in $RUN_DIR and went
+# with it above, which is what actually releases the port for another checkout.
 
 echo "DOWN  ${root}" >&2
