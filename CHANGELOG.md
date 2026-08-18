@@ -5,6 +5,23 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.75.0](https://github.com/MaxPayne89/klass-hero/compare/v0.74.1...v0.75.0) (2026-08-18)
+
+
+### Features
+
+* replay an undelivered event from the admin ([#1400](https://github.com/MaxPayne89/klass-hero/issues/1400)) ([491ac2b](https://github.com/MaxPayne89/klass-hero/commit/491ac2b7404e832bdb24f17888940b5eef02f4b0)), closes [#1395](https://github.com/MaxPayne89/klass-hero/issues/1395)
+
+
+### Bug Fixes
+
+* narrow the exception reason before the error store keeps it ([#1403](https://github.com/MaxPayne89/klass-hero/issues/1403)) ([3846984](https://github.com/MaxPayne89/klass-hero/commit/38469841129173b4d4858dfab0b6e965b5b4eb2e)), closes [#1398](https://github.com/MaxPayne89/klass-hero/issues/1398)
+
+
+### Code Refactoring
+
+* reach replay through a Shared root module ([#1405](https://github.com/MaxPayne89/klass-hero/issues/1405)) ([efaa7a5](https://github.com/MaxPayne89/klass-hero/commit/efaa7a57cd77d985bd602b94afc19fc9279a34b4))
+
 ## [0.74.1](https://github.com/MaxPayne89/klass-hero/compare/v0.74.0...v0.74.1) (2026-08-17)
 
 
