@@ -61,6 +61,13 @@ select context from error_tracker_occurrences
  where error_id = <ID> order by inserted_at desc limit 1;
 ```
 
+`reason` is narrowed before it is stored (#1398), so it reads as the exception's leading clause
+plus a marker — `key :program_id not found in: [redacted]`. A reason of
+`[reason redacted: unrecognised message shape]` means the message matched no known shape and was
+dropped whole; identify the error from `kind`, `source_function` and the occurrence's stacktrace,
+and if the shape is one that carries no user data, add it to
+`KlassHero.Shared.ErrorReasonFilter`'s allowlist so the next occurrence reads properly.
+
 ## Safety model
 
 - `debug-ro` is the MPG `reader` role — **SELECT-only, structurally**. Writes are

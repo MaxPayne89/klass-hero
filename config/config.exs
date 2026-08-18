@@ -40,6 +40,7 @@ alias KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapter
 alias KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker
 alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
 alias KlassHero.Shared.ErrorContextFilter
+alias KlassHero.Shared.ErrorStoreRepo
 alias Swoosh.Adapters.Local
 
 # The supported-locale set, declared once. Config owns it because config.exs is
@@ -64,8 +65,12 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
 # `filter` narrows what gets persisted: Oban job args reach here in full, and some
 # carry child health data. See KlassHero.Shared.ErrorContextFilter.
+#
+# `repo` is deliberately NOT KlassHero.Repo. ErrorTracker's filter reaches the context only,
+# so the exception message lands in `reason` unfiltered; the shim narrows it at the write
+# boundary, which is the one point every report path passes through (#1398).
 config :error_tracker,
-  repo: KlassHero.Repo,
+  repo: ErrorStoreRepo,
   otp_app: :klass_hero,
   enabled: true,
   filter: ErrorContextFilter

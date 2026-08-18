@@ -30,6 +30,16 @@ defmodule KlassHero.Shared.ErrorContextFilter do
   once. Each key is narrowed independently.
 
   Wired via `config :error_tracker, filter: KlassHero.Shared.ErrorContextFilter`.
+
+  ## What this filter does NOT cover
+
+  `reason` — the exception message — is out of reach here, and no configuration can change
+  that: `ErrorTracker.report/3` runs this filter over the context, then passes `reason` to
+  storage separately, and `ErrorTracker.Filter` has no second callback. An exception that
+  interpolates the value that caused it (`MatchError`, `KeyError`, `Oban.PerformError`)
+  therefore leaks through a surface this module cannot see (#1398). Narrowing it happens at
+  the write boundary instead — see `KlassHero.Shared.ErrorReasonFilter` and
+  `KlassHero.Shared.ErrorStoreRepo`.
   """
 
   @behaviour ErrorTracker.Filter
