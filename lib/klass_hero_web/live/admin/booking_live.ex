@@ -21,7 +21,8 @@ defmodule KlassHeroWeb.Admin.BookingLive do
       create_changeset: &KlassHero.Enrollment.Enrollment.admin_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
-    init_order: %{by: :enrolled_at, direction: :desc}
+    init_order: %{by: :enrolled_at, direction: :desc},
+    persist: [:columns]
 
   alias Backpex.Fields.BelongsTo
   alias Backpex.Fields.Text

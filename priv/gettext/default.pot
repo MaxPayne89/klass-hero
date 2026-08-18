@@ -107,7 +107,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:20
+#: lib/klass_hero_web/components/layouts/admin.html.heex:34
 #: lib/klass_hero_web/components/layouts/app.html.heex:150
 #: lib/klass_hero_web/components/layouts/app.html.heex:241
 #: lib/klass_hero_web/live/settings_live.ex:238
@@ -1323,7 +1323,7 @@ msgid "Push, email, SMS settings"
 msgstr ""
 
 #: lib/klass_hero_web/components/composite_components.ex:103
-#: lib/klass_hero_web/components/layouts/admin.html.heex:71
+#: lib/klass_hero_web/components/layouts/admin.html.heex:85
 #: lib/klass_hero_web/components/provider_components.ex:120
 #: lib/klass_hero_web/live/admin/sessions_live.ex:26
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:3
@@ -3514,7 +3514,7 @@ msgstr ""
 msgid "Absent"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:28
+#: lib/klass_hero_web/components/layouts/admin.html.heex:42
 #, elixir-autogen, elixir-format
 msgid "Accounts"
 msgstr ""
@@ -3549,7 +3549,7 @@ msgstr ""
 msgid "Automatic fee calculation (no surprises)"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:16
+#: lib/klass_hero_web/components/layouts/admin.html.heex:30
 #, elixir-autogen, elixir-format
 msgid "Back to App"
 msgstr ""
@@ -3559,7 +3559,7 @@ msgstr ""
 msgid "Back to sessions"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:41
+#: lib/klass_hero_web/components/layouts/admin.html.heex:55
 #, elixir-autogen, elixir-format
 msgid "Bookings"
 msgstr ""
@@ -3733,14 +3733,9 @@ msgid "Klarna (pay later options)"
 msgstr ""
 
 #: lib/klass_hero_web/components/composite_components.ex:452
-#: lib/klass_hero_web/components/layouts/admin.html.heex:5
+#: lib/klass_hero_web/components/layouts/admin.html.heex:15
 #, elixir-autogen, elixir-format
 msgid "Klass Hero"
-msgstr ""
-
-#: lib/klass_hero_web/components/layouts/admin.html.heex:3
-#, elixir-autogen, elixir-format
-msgid "Klass Hero Admin"
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:197
@@ -3822,7 +3817,7 @@ msgstr ""
 msgid "Private lessons and tutoring"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:31
+#: lib/klass_hero_web/components/layouts/admin.html.heex:45
 #: lib/klass_hero_web/components/marketing_components.ex:840
 #, elixir-autogen, elixir-format
 msgid "Providers"
@@ -3873,7 +3868,7 @@ msgstr ""
 msgid "Simple and automated - we handle everything."
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:36
+#: lib/klass_hero_web/components/layouts/admin.html.heex:50
 #, elixir-autogen, elixir-format
 msgid "Staff Members"
 msgstr ""
@@ -3980,6 +3975,7 @@ msgstr ""
 msgid "Add Note"
 msgstr ""
 
+#: lib/klass_hero_web/components/layouts/admin.html.heex:13
 #: lib/klass_hero_web/components/layouts/app.html.heex:120
 #: lib/klass_hero_web/components/layouts/app.html.heex:225
 #: lib/klass_hero_web/components/ui_components.ex:264
@@ -4106,7 +4102,7 @@ msgstr ""
 msgid "Confirm Rejection"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:44
+#: lib/klass_hero_web/components/layouts/admin.html.heex:58
 #, elixir-autogen, elixir-format
 msgid "Consents"
 msgstr ""
@@ -4174,7 +4170,7 @@ msgstr ""
 msgid "Email not found"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:62
+#: lib/klass_hero_web/components/layouts/admin.html.heex:76
 #: lib/klass_hero_web/live/admin/emails_live.ex:21
 #: lib/klass_hero_web/live/admin/emails_live.ex:41
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:4
@@ -7562,7 +7558,7 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:49
+#: lib/klass_hero_web/components/layouts/admin.html.heex:63
 #, elixir-autogen, elixir-format
 msgid "Incidents"
 msgstr ""
@@ -7599,7 +7595,7 @@ msgstr ""
 msgid "Verifying"
 msgstr ""
 
-#: lib/klass_hero_web/components/layouts/admin.html.heex:57
+#: lib/klass_hero_web/components/layouts/admin.html.heex:71
 #, elixir-autogen, elixir-format
 msgid "Undelivered Events"
 msgstr ""

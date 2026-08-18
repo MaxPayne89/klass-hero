@@ -44,7 +44,8 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLive do
     # to `:id` and threads it through URL building, row DOM ids, and the show query.
     primary_key: :event_id,
     pubsub: [server: KlassHero.PubSub],
-    init_order: %{by: :discarded_at, direction: :desc}
+    init_order: %{by: :discarded_at, direction: :desc},
+    persist: [:columns]
 
   alias Backpex.Fields.Text
   alias KlassHeroWeb.Admin.Actions.ReplayEventAction

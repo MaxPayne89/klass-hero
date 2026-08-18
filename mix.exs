@@ -114,7 +114,7 @@ defmodule KlassHero.MixProject do
       {:ex_aws_s3, "~> 2.5"},
       {:sweet_xml, "~> 0.7"},
       # Admin dashboard
-      {:backpex, "~> 0.17"},
+      {:backpex, "~> 0.20"},
       # Pin decimal 3.0+ for CVE-2026-32686 (unbounded exponent DoS). Nothing in
       # the tree caps it below 3.0 any more (backpex 0.19.6 dropped `number`),
       # but the override keeps a future transitive ~> 2.0 from pulling the

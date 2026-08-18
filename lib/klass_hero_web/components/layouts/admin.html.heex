@@ -1,10 +1,24 @@
-<Backpex.HTML.Layout.app_shell fluid={@fluid?} live_resource={@live_resource}>
-  <:topbar>
-    <Backpex.HTML.Layout.topbar_branding title={gettext("Klass Hero Admin")}>
+<Backpex.HTML.Layout.app_shell
+  socket={@socket}
+  fluid={@fluid?}
+  live_resource={@live_resource}
+  sidebar_open={@sidebar_open}
+  preferences_manifest={@preferences_manifest}
+>
+  <%!-- sidebar_branding is a fixed h-14 row in a 256px sidebar, not the full-width topbar
+        this used to live in. The logo is already a "Klass Hero" wordmark, so the old
+        "Klass Hero Admin" title both repeated the brand and wrapped to three lines,
+        overflowing the row. Shorter title + smaller wordmark keeps it on one line. --%>
+  <:sidebar_branding>
+    <Backpex.HTML.Layout.sidebar_branding title={gettext("Admin")}>
       <:logo>
-        <img src={~p"/images/logo.png"} alt={gettext("Klass Hero")} class="h-8" />
+        <img src={~p"/images/logo.png"} alt={gettext("Klass Hero")} class="h-6" />
       </:logo>
-    </Backpex.HTML.Layout.topbar_branding>
+    </Backpex.HTML.Layout.sidebar_branding>
+  </:sidebar_branding>
+
+  <:topbar>
+    <div class="flex-1"></div>
 
     <Backpex.HTML.Layout.topbar_dropdown>
       <:label>
