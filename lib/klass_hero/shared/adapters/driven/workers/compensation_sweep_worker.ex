@@ -57,6 +57,13 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
   # realistic "what did we lose?" investigation still finds the payload.
   @undelivered_retention_days 90
 
+  # A record nobody has replayed is the only trace of a reaction that never ran, and
+  # this is the window where deleting it destroys the payload the recovery needs before
+  # anyone has looked at it. So the ordinary retention above skips such a row — and this
+  # is what stops "skipped" turning into "kept forever", which would be a personal-data
+  # hold rather than a retention rule.
+  @undelivered_backstop_days 365
+
   # A marker carries no personal data; it only has to outlive the `oban_jobs` row it guards,
   # which the Pruner deletes at 7 days. Everything past that is margin for the Pruner running
   # behind — it prunes only while a node is up, and 10_000 rows at a time. Shortening this
@@ -92,12 +99,28 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
   # over a table that is empty in the healthy case costs nothing, and the alternative is a
   # second schedule to keep in agreement with this one.
   defp prune_undelivered_events do
-    cutoff = DateTime.add(DateTime.utc_now(), -@undelivered_retention_days, :day)
+    now = DateTime.utc_now()
+    cutoff = DateTime.add(now, -@undelivered_retention_days, :day)
+    backstop = DateTime.add(now, -@undelivered_backstop_days, :day)
 
-    case UndeliveredEventRepository.prune(cutoff) do
+    report_held(UndeliveredEventRepository.count_held(cutoff, backstop))
+
+    case UndeliveredEventRepository.prune(cutoff, backstop) do
       0 -> :ok
       pruned -> Logger.info("Pruned #{pruned} undelivered event(s) past #{@undelivered_retention_days} days")
     end
+  end
+
+  # Counted before it is spared, because the alternative is a backlog that only ever
+  # shows up when someone opens the admin page — which is the failure the exemption
+  # exists to prevent, not one it should quietly extend.
+  defp report_held(0), do: :ok
+
+  defp report_held(held) do
+    Logger.warning(
+      "Holding #{held} unreplayed undelivered event(s) past #{@undelivered_retention_days} days; " <>
+        "they are deleted at #{@undelivered_backstop_days} days whether replayed or not"
+    )
   end
 
   # After the compensation pass, not before: pruning first could delete a marker and hand

@@ -86,8 +86,30 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
     })
   end
 
-  defp undelivered(event) do
-    Repo.get_by(UndeliveredEvent, event_id: event.event_id)
+  defp undelivered(%{event_id: event_id}) do
+    Repo.get_by(UndeliveredEvent, event_id: event_id)
+  end
+
+  defp worker_name, do: Oban.Worker.to_string(EventDeliveryWorker)
+
+  # Through the real compensation, so the row under replay is the row production
+  # writes — payload, missed consumers and all.
+  defp dead_letter(event, _ctx) do
+    :ok = EventDeliveryWorker.compensate(job([event]), "boom")
+    undelivered(event)
+  end
+
+  # `testing: :inline` would run the delivery job at insert, inside `replay/1`'s own
+  # transaction — a sequencing production never has (.claude/rules/testing.md).
+  defp replay(row) do
+    Oban.Testing.with_testing_mode(:manual, fn -> EventDeliveryWorker.replay(row) end)
+  end
+
+  defp deliver_replay(row) do
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      :ok = EventDeliveryWorker.replay(row)
+      Oban.drain_queue(queue: :events, with_recursion: true)
+    end)
   end
 
   test "delivers each event to every consumer of its topic", ctx do
@@ -266,6 +288,98 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorkerTest do
       assert :ok = EventDeliveryWorker.compensate(job, "boom")
 
       assert [_one] = Repo.all(from(u in UndeliveredEvent, where: u.event_id == ^event.event_id))
+    end
+  end
+
+  describe "replay/1" do
+    # The stored payload IS what `args["events"]` carries, so replay hands it straight
+    # back with no `deserialize/1` round-trip. That is not a shortcut: deserializing
+    # calls `String.to_existing_atom/1`, so a replay of an event whose type was retired
+    # since would raise inside the admin's click instead of re-delivering.
+    test "enqueues a delivery job carrying the stored envelope", ctx do
+      route([{Recorder, :first}], ctx)
+      event = event("thing-1")
+      row = dead_letter(event, ctx)
+
+      assert :ok = replay(row)
+
+      assert [job] = Repo.all(from(j in Oban.Job, where: j.worker == ^worker_name()))
+      assert job.args["events"] == [EventSerializer.serialize(event)]
+      assert job.args["replay_of"] == event.event_id
+    end
+
+    test "stamps the row so the prune can tell it from one nobody noticed", ctx do
+      route([{Recorder, :first}], ctx)
+      row = dead_letter(event("thing-1"), ctx)
+
+      assert :ok = replay(row)
+
+      assert undelivered(row).replayed_at
+    end
+
+    # `consumers_for/1` returns [] for an unrouted topic, so delivery would map over
+    # nothing and report :ok — a green job that did nothing, which is worse than a
+    # refusal because it looks like the recovery worked.
+    test "refuses when a missed consumer is no longer routed, naming it", ctx do
+      route([{Recorder, :first}], ctx)
+      row = dead_letter(event("thing-1"), ctx)
+      route([], ctx)
+
+      assert {:error, {:retired_consumers, [ref]}} = replay(row)
+      assert ref == handler_ref({Recorder, :first})
+    end
+
+    test "enqueues nothing and stamps nothing when it refuses", ctx do
+      route([{Recorder, :first}], ctx)
+      row = dead_letter(event("thing-1"), ctx)
+      route([], ctx)
+
+      assert {:error, _reason} = replay(row)
+
+      assert [] = Repo.all(from(j in Oban.Job, where: j.worker == ^worker_name()))
+      refute undelivered(row).replayed_at
+    end
+
+    # The whole premise of replay being cheap. `processed_events` gates each consumer,
+    # so what is asserted is the state change — the recorder's calls — rather than the
+    # gate's own bookkeeping, which would prove only that the gate was consulted.
+    test "re-runs only the consumers that never succeeded", ctx do
+      route([{Recorder, :first}, {Recorder, :second}], ctx)
+      event = event("thing-1")
+      mark_processed(event, {Recorder, :first})
+      row = dead_letter(event, ctx)
+
+      deliver_replay(row)
+
+      assert [{:second, "thing-1"}] = Recorder.calls()
+    end
+
+    test "forgets the row once every missed consumer has landed", ctx do
+      route([{Recorder, :first}], ctx)
+      row = dead_letter(event("thing-1"), ctx)
+
+      deliver_replay(row)
+
+      refute undelivered(row)
+    end
+
+    test "keeps the row when a consumer fails again", ctx do
+      route([{Recorder, :flaky}], ctx)
+      row = dead_letter(event("thing-1"), ctx)
+
+      capture_log(fn -> deliver_replay(row) end)
+
+      assert undelivered(row)
+    end
+
+    # A replay stamp is never cleared, so a row that failed again is still replayable —
+    # and the second stamp has to survive the re-recording the failure triggers.
+    test "can be replayed again after a replay that failed", ctx do
+      route([{Recorder, :flaky}], ctx)
+      row = dead_letter(event("thing-1"), ctx)
+      capture_log(fn -> deliver_replay(row) end)
+
+      assert :ok = replay(undelivered(row))
     end
   end
 

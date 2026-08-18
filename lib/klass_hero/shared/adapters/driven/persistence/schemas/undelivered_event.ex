@@ -32,5 +32,6 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Schemas.UndeliveredEvent 
     field :job_id, :integer
     field :discarded_at, :utc_datetime_usec
     field :inserted_at, :utc_datetime_usec
+    field :replayed_at, :utc_datetime_usec
   end
 end
