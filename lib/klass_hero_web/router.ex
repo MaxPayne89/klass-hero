@@ -50,11 +50,6 @@ defmodule KlassHeroWeb.Router do
     post "/stripe", StripeWebhookController, :handle
   end
 
-  # Only Backpex layout templates use @theme; skip the session read on non-admin routes.
-  pipeline :backpex_admin do
-    plug Backpex.ThemeSelectorPlug
-  end
-
   # /health is Fly.io's machine check; /health/ready is for external uptime monitoring.
   # See KlassHeroWeb.HealthController for why they must stay separate.
   scope "/", KlassHeroWeb do
@@ -203,8 +198,8 @@ defmodule KlassHeroWeb.Router do
     end
 
     scope "/admin", Admin do
-      pipe_through :backpex_admin
-
+      # backpex_routes/0 mounts POST /admin/backpex_preferences. It is required since
+      # 0.20: app_shell resolves the endpoint on every render and raises without it.
       backpex_routes()
 
       # No layout set here — Backpex resource templates call <.layout> internally;
@@ -228,13 +223,18 @@ defmodule KlassHeroWeb.Router do
     end
 
     scope "/admin", Admin do
+      # These share the :admin layout with the Backpex resources above, so they need the
+      # same Backpex.InitAssigns assigns (@sidebar_open, @preferences_manifest) that
+      # app_shell reads. It must come last: the mount context carries socket.assigns, so
+      # the auth hooks have to have run before it.
       live_session :admin_custom,
         layout: {KlassHeroWeb.Layouts, :admin},
         on_mount: [
           {LiveViewHook, :trace},
           {KlassHeroWeb.UserAuth, :require_authenticated},
           {KlassHeroWeb.UserAuth, :require_admin},
-          {RestoreLocale, :restore_locale}
+          {RestoreLocale, :restore_locale},
+          Backpex.InitAssigns
         ] do
         live "/sessions", SessionsLive, :index
         live "/sessions/:id", SessionsLive, :show

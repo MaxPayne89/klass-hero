@@ -22,7 +22,8 @@ defmodule KlassHeroWeb.Admin.ConsentLive do
       item_query: &__MODULE__.item_query/3
     ],
     pubsub: [server: KlassHero.PubSub],
-    init_order: %{by: :inserted_at, direction: :desc}
+    init_order: %{by: :inserted_at, direction: :desc},
+    persist: [:columns]
 
   import Ecto.Query
 

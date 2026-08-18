@@ -23,7 +23,8 @@ defmodule KlassHeroWeb.Admin.ProviderLive do
       create_changeset: &KlassHero.Provider.ProviderProfile.admin_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
-    init_order: %{by: :inserted_at, direction: :desc}
+    init_order: %{by: :inserted_at, direction: :desc},
+    persist: [:columns]
 
   alias Backpex.Fields.Boolean
   alias Backpex.Fields.Text

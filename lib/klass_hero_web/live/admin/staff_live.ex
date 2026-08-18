@@ -22,7 +22,8 @@ defmodule KlassHeroWeb.Admin.StaffLive do
       create_changeset: &KlassHero.Provider.StaffMember.admin_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
-    init_order: %{by: :inserted_at, direction: :desc}
+    init_order: %{by: :inserted_at, direction: :desc},
+    persist: [:columns]
 
   alias Backpex.Fields.BelongsTo
   alias Backpex.Fields.Boolean
