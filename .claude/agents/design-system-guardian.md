@@ -32,7 +32,7 @@ This agent works on **source code**, not designs or the rendered app. It has no 
 - `button_variant/1` (`:primary`,`:secondary`,`:outline`,`:ghost`), `card_variant/1` (`:default`,`:elevated`,`:outlined`,`:glass`).
 - `brand_color/1`, `color/1` — base color name resolvers.
 
-**Color scale** (`assets/css/app.css` `@theme` + `tailwind.config.js`): `hero-blue`, `hero-yellow`, `hero-pink`, `hero-grey`, `hero-black`, `hero-cream` (shades 50–900). Semantic CSS vars: `--brand-*`, `--bg-*`, `--fg-*`, `--border-*`, `--success`/`--warning`/`--error`/`--info` (+ `-bg` variants), `--grad-*`.
+**Color scale** (`assets/css/app.css` `@theme` — Tailwind v4 is CSS-first here; the root `tailwind.config.js` is a **dead v3 leftover** with a stale hex ramp, read by nothing, and must not be cited as a source): `hero-blue`, `hero-yellow`, `hero-pink`, `hero-grey`, `hero-black`, `hero-cream` (shades 50–900). Semantic CSS vars: `--brand-*`, `--bg-*`, `--fg-*`, `--border-*`, `--success`/`--warning`/`--error`/`--info` (+ `-bg` variants), `--grad-*`.
 
 **Tolerated — do NOT flag as off-system:**
 - `text-[var(--token)]`, `bg-[var(--token)]`, etc. — sanctioned Tailwind→semantic-token bridges (~73 uses across the codebase).

@@ -290,3 +290,10 @@ Five canonical roles use their default label strings (`needs-triage`, `needs-inf
 ### Domain docs
 
 Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Design docs
+
+`DESIGN.md` at the repo root is the visual vocabulary — brand intent, colour roles, voice,
+component vocabulary, and the don'ts list. It states *intent* and points at the code that
+owns the values (`assets/css/app.css` `@theme`, `lib/klass_hero_web/components/theme.ex`);
+it never restates them. Code-level front-end rules stay in `.claude/rules/frontend.md`.
