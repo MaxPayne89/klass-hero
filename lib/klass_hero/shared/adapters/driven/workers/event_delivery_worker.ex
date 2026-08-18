@@ -193,6 +193,9 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
   The inverse of `compensate/2`, and deliberately in the same module: the job-args
   shape is this worker's, and building it anywhere else would give it a third knower.
 
+  Callers outside Shared go through `KlassHero.Shared.EventReplay`, which is the
+  root-level door to this; `adapters/` is Shared's internals.
+
   The stored `payload` is already `EventSerializer.serialize/1` output, so it goes
   straight back into `args` with no `deserialize/1` round-trip — which matters
   because deserializing calls `String.to_existing_atom/1`, and an event whose type

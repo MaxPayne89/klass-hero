@@ -15,7 +15,7 @@ defmodule KlassHeroWeb.Admin.Actions.ReplayEventAction do
 
   ## Refusal is a failure, not a quiet success
 
-  `EventDeliveryWorker.replay/1` refuses a row naming a consumer that has since left
+  `EventReplay.replay/1` refuses a row naming a consumer that has since left
   `:event_consumers`, because delivering to an unrouted topic reports `:ok` having
   done nothing. The flash reports that class rather than the refs — the row already
   lists them, and a bulk refusal would otherwise put a paragraph of fully-qualified
@@ -24,7 +24,7 @@ defmodule KlassHeroWeb.Admin.Actions.ReplayEventAction do
 
   use BackpexWeb, :item_action
 
-  alias KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker
+  alias KlassHero.Shared.EventReplay
 
   require KlassHeroWeb.BackpexCompat
   require Logger
@@ -54,7 +54,7 @@ defmodule KlassHeroWeb.Admin.Actions.ReplayEventAction do
   @impl Backpex.ItemAction
   def handle(socket, items, _data) do
     admin_id = socket.assigns.current_scope.user.id
-    results = Enum.map(items, fn item -> {item, EventDeliveryWorker.replay(item)} end)
+    results = Enum.map(items, fn item -> {item, EventReplay.replay(item)} end)
     failures = Enum.reject(results, fn {_item, result} -> result == :ok end)
 
     Enum.each(failures, &log_refusal(&1, admin_id))
