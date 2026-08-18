@@ -61,6 +61,14 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLiveTest do
       end
     end
 
+    test "offers replay", %{conn: conn} do
+      event_id = record(topic: "integration:accounts:user_registered")
+
+      {:ok, view, _html} = live(conn, ~p"/admin/undelivered-events/#{event_id}/show")
+
+      assert has_element?(view, "#item-action-replay")
+    end
+
     test "renders the full serialized envelope", %{conn: conn} do
       event_id =
         record(
@@ -123,6 +131,25 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLiveTest do
       end
     end
 
+    # Backpex ids a row action `item-action-<key>-<primary_value>`, and the primary
+    # value here is `event_id` — the same `primary_key:` option the show route needs.
+    test "offers replay on each row", %{conn: conn} do
+      event_id = record(topic: "integration:accounts:user_registered")
+
+      {:ok, view, _html} = live(conn, ~p"/admin/undelivered-events")
+
+      assert has_element?(view, "#item-action-replay-#{event_id}")
+    end
+
+    test "renders the replay stamp, and says so when there is none", %{conn: conn} do
+      record(topic: "topic:untouched")
+      record(topic: "topic:replayed", replayed_at: DateTime.utc_now())
+
+      {:ok, _view, html} = live(conn, ~p"/admin/undelivered-events")
+
+      assert html =~ "never"
+    end
+
     test "orders the newest discard first", %{conn: conn} do
       now = DateTime.utc_now()
 
@@ -154,7 +181,8 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLiveTest do
         missed_consumers: Keyword.get(attrs, :missed_consumers, ["Elixir.KlassHero.Whoever:handle_event"]),
         job_id: 1,
         discarded_at: discarded_at,
-        inserted_at: discarded_at
+        inserted_at: discarded_at,
+        replayed_at: Keyword.get(attrs, :replayed_at)
       }
     ])
 

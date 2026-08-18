@@ -2,9 +2,14 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLive do
   @moduledoc """
   Backpex LiveResource for viewing integration events that were never delivered.
 
-  Strictly read-only — no create, edit, or delete. A row here is a terminal
-  record: `EventDeliveryWorker.compensate/2` writes it once delivery has given up
-  permanently, and nothing but the 90-day prune touches it again.
+  No create, edit, or delete. A row is written by
+  `EventDeliveryWorker.compensate/2` once delivery has given up permanently, and the
+  one action offered on it is `Replay` — which re-runs the consumers that never
+  succeeded and deletes the row once they all land.
+
+  Replay is safe to press twice: `EventDispatcher` gates each consumer on
+  `processed_events`, so the ones that already ran are skipped. It is selectable in
+  bulk because one incident produces several rows.
 
   Note: Backpex operates directly on Ecto schemas and Repo, bypassing
   the Ports & Adapters layering used elsewhere. This is a pragmatic
@@ -14,7 +19,8 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLive do
 
   There is no projection and no event behind this view. The failure it reports is
   the one place in the system where delivery has already stopped being reliable —
-  making the record itself reliable is what PR #1250 did; this only shows it.
+  making the record itself reliable is what PR #1250 did; this shows it and offers
+  the one way out.
 
   ## Access
 
@@ -41,15 +47,28 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLive do
     init_order: %{by: :discarded_at, direction: :desc}
 
   alias Backpex.Fields.Text
+  alias KlassHeroWeb.Admin.Actions.ReplayEventAction
 
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
 
-  # Written by the compensation sweep, pruned on a schedule — admins read only.
+  # Written by the compensation sweep, pruned on a schedule. Replay is the only write,
+  # and it is deliberately *not* gated on `replayed_at`: the stamp means "was ever
+  # replayed" and is never cleared, so gating on it would make a replay that failed
+  # again unrepeatable.
   @impl Backpex.LiveResource
   def can?(_assigns, :index, _item), do: true
   def can?(_assigns, :show, _item), do: true
+  def can?(_assigns, :replay, _item), do: true
   def can?(_assigns, _action, _item), do: false
+
+  # No `only:` — the default is row, show *and* the index bulk bar, and bulk is the
+  # realistic shape: one incident dead-letters several events at once (#1376 produced
+  # three). Contrast `StaffLive`, which restricts to `[:row, :show]` on purpose.
+  @impl Backpex.LiveResource
+  def item_actions(default_actions) do
+    Keyword.put(default_actions, :replay, %{module: ReplayEventAction})
+  end
 
   @impl Backpex.LiveResource
   def singular_name, do: "Undelivered Event"
@@ -61,9 +80,10 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLive do
   def render_resource_slot(assigns, :index, :before_main) do
     ~H"""
     <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-      Reactions that never ran. Each row is one integration event delivery gave up on —
-      replaying it means re-inserting its delivery job, and records are pruned 90 days
-      after they are recorded.
+      Reactions that never ran. Replay re-delivers one to the consumers it never
+      reached, skipping any that already succeeded, and the row disappears once they
+      all land. A row nobody has replayed is kept past the usual 90 days, up to a
+      year.
     </div>
     """
   end
@@ -107,6 +127,25 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLive do
           <div>
             {Calendar.strftime(@value, "%Y-%m-%d %H:%M UTC")}
             <span class="text-gray-400">({age(@value)})</span>
+          </div>
+          """
+        end
+      },
+      # A stamp, not a status: it survives a replay that failed again, so it reads as
+      # "someone has acted on this" rather than "this is resolved". A resolved row is
+      # not here at all — `EventDeliveryWorker` deletes it once delivery lands.
+      replayed_at: %{
+        module: Text,
+        label: "Replayed",
+        orderable: true,
+        render: fn assigns ->
+          ~H"""
+          <div>
+            <%= if @value do %>
+              {Calendar.strftime(@value, "%Y-%m-%d %H:%M UTC")}
+            <% else %>
+              <span class="text-gray-400">never</span>
+            <% end %>
           </div>
           """
         end

@@ -35,10 +35,12 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
     queue: :events,
     max_attempts: 10
 
+  alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
   alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.UndeliveredEventRepository
+  alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.UndeliveredEvent
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.EventDispatcher
 
@@ -50,7 +52,21 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
     |> Enum.map(&EventSerializer.deserialize/1)
     |> Enum.map(&deliver(&1, job))
     |> first_error()
+    |> resolve_replay(job)
   end
+
+  # Only a replay carries `replay_of`, so an ordinary delivery pays one failed match.
+  # `:ok` out of `first_error/1` already means every consumer of every event landed,
+  # which for a replay's single event is exactly "nothing outstanding".
+  #
+  # A crash between the delivery and this delete leaves the row behind with its event
+  # in fact delivered; the next replay is then a job whose consumers are all already
+  # recorded, which returns `:ok` and lands back here. Self-healing, not a mechanism.
+  defp resolve_replay(:ok, %Oban.Job{args: %{"replay_of" => event_id}}) when is_binary(event_id) do
+    UndeliveredEventRepository.resolve(event_id)
+  end
+
+  defp resolve_replay(result, _job), do: result
 
   # No broadcast: `integration:` topics have no subscribers. Projections stopped
   # subscribing in PR 3, and no LiveView ever did — those now receive tagged
@@ -169,5 +185,56 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker do
         ref = EventDispatcher.handler_ref(consumer),
         not MapSet.member?(delivered, ref),
         do: ref
+  end
+
+  @doc """
+  Re-delivers a dead-lettered event to the consumers that never received it.
+
+  The inverse of `compensate/2`, and deliberately in the same module: the job-args
+  shape is this worker's, and building it anywhere else would give it a third knower.
+
+  The stored `payload` is already `EventSerializer.serialize/1` output, so it goes
+  straight back into `args` with no `deserialize/1` round-trip — which matters
+  because deserializing calls `String.to_existing_atom/1`, and an event whose type
+  was retired since would raise here rather than in the queue.
+
+  Nothing has to be undone first. `EventDispatcher` gates each consumer on
+  `processed_events`, so re-delivery re-runs only the ones with no row.
+
+  ## A retired consumer is refused rather than replayed
+
+  `consumers_for/1` returns `[]` for a topic nothing routes any more, so delivering
+  to one would map over nothing and report success — a green job that did nothing.
+  That is worse than a failure, because it reads as a recovery that worked, so a
+  missed consumer no longer in `:event_consumers` refuses the whole replay.
+
+  The enqueue and the stamp share one transaction. Oban's table is this database, so
+  that is available for free, and without it a crash between them leaves a row
+  claiming a replay that nothing is running.
+  """
+  @spec replay(UndeliveredEvent.t()) :: :ok | {:error, {:retired_consumers, [String.t()]}}
+  def replay(%UndeliveredEvent{} = row) do
+    case retired_consumers(row) do
+      [] -> enqueue_replay(row)
+      retired -> {:error, {:retired_consumers, retired}}
+    end
+  end
+
+  defp retired_consumers(%UndeliveredEvent{topic: topic, missed_consumers: missed}) do
+    routed = for consumer <- EventConsumerRegistry.consumers_for(topic), do: EventDispatcher.handler_ref(consumer)
+
+    missed -- routed
+  end
+
+  defp enqueue_replay(%UndeliveredEvent{} = row) do
+    args = Context.inject_into_args(%{"events" => [row.payload], "replay_of" => row.event_id})
+
+    {:ok, :ok} =
+      Repo.transaction(fn ->
+        Oban.insert!(new(args))
+        UndeliveredEventRepository.mark_replayed(row.event_id)
+      end)
+
+    :ok
   end
 end

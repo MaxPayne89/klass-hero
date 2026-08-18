@@ -131,14 +131,23 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
       assert Repo.get_by(JobCompensation, job_id: job.id)
     end
 
-    for {age_days, kept?} <- [{89, true}, {91, false}] do
-      test "a record staged #{age_days} days ago is #{if kept?, do: "kept", else: "pruned"}" do
-        event_id = stale_record(unquote(age_days))
+    # Age alone stopped deciding this when replay landed. `UndeliveredEventRepositoryTest`
+    # owns the rule itself; what these prove is that the sweep hands it both cutoffs —
+    # the ordinary one and the backstop — which a single-cutoff call would silently pass.
+    for {age_days, replayed?, kept?} <- [
+          {89, true, true},
+          {91, true, false},
+          {91, false, true},
+          {400, false, false}
+        ] do
+      test "a #{if replayed?, do: "replayed", else: "unreplayed"} record staged #{age_days} days ago is #{if kept?, do: "kept", else: "pruned"}" do
+        event_id = stale_record(unquote(age_days), unquote(replayed?))
 
         assert :ok = CompensationSweepWorker.perform(%Oban.Job{})
 
         assert Repo.get_by(UndeliveredEvent, event_id: event_id) != nil == unquote(kept?),
-               "expected a #{unquote(age_days)}-day-old record to be #{unquote(if kept?, do: "kept", else: "pruned")}"
+               "expected a #{unquote(age_days)}-day-old #{unquote(if replayed?, do: "replayed", else: "unreplayed")} " <>
+                 "record to be #{unquote(if kept?, do: "kept", else: "pruned")}"
       end
     end
   end
@@ -202,7 +211,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   # Written straight to the table rather than produced by a compensation: the prune
   # only cares how old a record is, and staging one by its real route would mean
   # back-dating the `oban_jobs` row it came from as well.
-  defp stale_record(age_days) do
+  defp stale_record(age_days, replayed?) do
     event_id = Ecto.UUID.generate()
     staged_at = DateTime.add(DateTime.utc_now(), -age_days, :day)
 
@@ -214,7 +223,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
         missed_consumers: ["Elixir.Whoever:handle_event"],
         job_id: 1,
         discarded_at: staged_at,
-        inserted_at: staged_at
+        inserted_at: staged_at,
+        replayed_at: if(replayed?, do: staged_at)
       }
     ])
 
