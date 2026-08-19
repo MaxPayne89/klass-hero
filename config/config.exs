@@ -268,6 +268,16 @@ config :klass_hero, :event_consumers, %{
     {StaffAssignmentHandler, :handle_event},
     {ProviderSessionDetails, :project}
   ],
+  # Session-grain overrides. Deliberately NOT routed to StaffAssignmentHandler:
+  # conversation membership is program-scoped, so a one-session substitution does
+  # not change who is in the program's conversation. Extending messaging to
+  # session-level staff is #784.
+  "integration:provider:staff_assigned_to_session" => [
+    {ProviderSessionDetails, :project}
+  ],
+  "integration:provider:staff_unassigned_from_session" => [
+    {ProviderSessionDetails, :project}
+  ],
   # Deliberately NOT routed to StaffAssignmentHandler: deactivation ends the
   # employment link but leaves assignments standing, so conversation membership
   # survives — reactivating cannot give it back (#1237).

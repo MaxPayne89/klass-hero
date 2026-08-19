@@ -141,8 +141,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
 
     test "duplicate delivery preserves evolved state written by other handlers" do
       # session_created must be a no-op on duplicate (at-least-once) delivery — it
-      # must NOT stomp status/counts/cover_staff_* that other handlers evolved
-      # between deliveries.
+      # must NOT stomp the status/counts that other handlers evolved between
+      # deliveries.
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id, title: "Aikido")
       session_id = Ecto.UUID.generate()
@@ -158,17 +158,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       broadcast(:session_created, session_id, payload)
 
       # Simulate evolved state written by other handlers between deliveries.
-      cover_staff_id = Ecto.UUID.generate()
-
       Repo.update_all(
         from(d in SessionDetail, where: d.session_id == ^session_id),
-        set: [
-          status: :in_progress,
-          checked_in_count: 5,
-          total_count: 10,
-          cover_staff_id: cover_staff_id,
-          cover_staff_name: "Cover Person"
-        ]
+        set: [status: :in_progress, checked_in_count: 5, total_count: 10]
       )
 
       # Replay the same event.
@@ -180,8 +172,6 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
       assert row.status == :in_progress
       assert row.checked_in_count == 5
       assert row.total_count == 10
-      assert row.cover_staff_id == cover_staff_id
-      assert row.cover_staff_name == "Cover Person"
     end
 
     test "skips the insert and warns when the program does not exist" do
@@ -460,8 +450,13 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsT
     provider = insert(:provider_profile_schema)
     program = insert(:program_schema, provider_id: provider.id)
 
-    scheduled_session_id = Ecto.UUID.generate()
-    completed_session_id = Ecto.UUID.generate()
+    # Real `program_sessions` rows, not invented ids: attribution is now resolved
+    # per session (#782), and the resolver reads the session through Participation's
+    # facade to find its program. A fabricated id resolves to nothing.
+    scheduled_session_id = insert(:program_session_schema, program_id: program.id).id
+
+    completed_session_id =
+      insert(:program_session_schema, program_id: program.id, session_date: Date.add(Date.utc_today(), 30)).id
 
     for {id, status} <- [{scheduled_session_id, :scheduled}, {completed_session_id, :completed}] do
       insert_program_session(

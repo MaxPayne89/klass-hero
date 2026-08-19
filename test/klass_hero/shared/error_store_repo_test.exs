@@ -94,6 +94,12 @@ defmodule KlassHero.Shared.ErrorStoreRepoTest do
 
       assert dispatched != []
 
+      # `function_exported?/3` answers for *loaded* modules only, so without this it
+      # reports false for every function whenever this test happens to run before the
+      # siblings that call the shim — a seed-dependent failure claiming an upgrade
+      # broke error reporting (reproduces on --seed 178683).
+      Code.ensure_loaded!(ErrorStoreRepo)
+
       for {name, arity} <- dispatched do
         assert function_exported?(ErrorStoreRepo, name, arity),
                "ErrorTracker.Repo dispatches #{name}/#{arity}, which the shim does not export"

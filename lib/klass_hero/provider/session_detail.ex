@@ -10,6 +10,15 @@ defmodule KlassHero.Provider.SessionDetail do
 
   Staff names and counts are denormalized here at projection time so the
   dashboard renders a session without joining across contexts.
+  `current_assigned_staff_*` names whoever is **effectively** on the session —
+  its own override roster where it has one, the program roster otherwise (#782).
+
+  The columns `cover_staff_id` / `cover_staff_name` were dropped here in #782.
+  Nothing had ever written them since they were added in April, and per-session
+  overrides express what they were reserved for. The database columns go one
+  release later: Fly runs migrations while the previous release is still serving
+  (#1347), so a destructive migration cannot ship with the code that stopped
+  reading them.
   """
 
   use Ecto.Schema
@@ -31,8 +40,6 @@ defmodule KlassHero.Provider.SessionDetail do
 
     field :current_assigned_staff_id, :binary_id
     field :current_assigned_staff_name, :string
-    field :cover_staff_id, :binary_id
-    field :cover_staff_name, :string
 
     field :checked_in_count, :integer, default: 0
     field :total_count, :integer, default: 0
@@ -53,8 +60,6 @@ defmodule KlassHero.Provider.SessionDetail do
           status: status() | nil,
           current_assigned_staff_id: Ecto.UUID.t() | nil,
           current_assigned_staff_name: String.t() | nil,
-          cover_staff_id: Ecto.UUID.t() | nil,
-          cover_staff_name: String.t() | nil,
           checked_in_count: non_neg_integer(),
           total_count: non_neg_integer(),
           inserted_at: DateTime.t() | nil,

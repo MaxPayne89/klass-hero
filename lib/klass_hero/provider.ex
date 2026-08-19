@@ -347,6 +347,52 @@ defmodule KlassHero.Provider do
   """
   defdelegate list_program_staffing(program_ids), to: Assignments
 
+  # --- Session ↔ staff overrides -------------------------------------------
+
+  @doc """
+  Adds a staff member to one session, giving that session a roster of its own.
+
+  Additive: a session with no overrides inherits the program roster, and the first
+  add copies that roster across before appending, so nobody is displaced.
+  """
+  defdelegate assign_staff_to_session(attrs), to: Assignments
+
+  @doc """
+  Removes one staff member from a session.
+
+  Returns `{:error, :cannot_unassign_lead}` when the target leads the session, and
+  `{:error, :cannot_empty_session}` when they are its only member — use
+  `revert_session_to_program_roster/2` to drop the session's own roster entirely.
+  """
+  defdelegate unassign_staff_from_session(session_id, staff_member_id, provider_id), to: Assignments
+
+  @doc "Retires every override on a session, returning it to the program roster."
+  defdelegate revert_session_to_program_roster(session_id, provider_id), to: Assignments
+
+  @doc "Flags one of a session's existing overrides as its lead instructor."
+  defdelegate set_session_lead_instructor(session_id, staff_member_id, provider_id), to: Assignments
+
+  @doc "Clears the session's lead instructor, leaving the override active."
+  defdelegate clear_session_lead_instructor(session_id, provider_id), to: Assignments
+
+  @doc """
+  Who is on one session: its overrides when it has any, otherwise the program
+  roster. The single answer to that question — nothing re-derives the fallback.
+  """
+  defdelegate get_session_staffing(session_id), to: Assignments
+
+  @doc "Batch `get_session_staffing/1` keyed by session_id (avoids N+1 in list views)."
+  defdelegate list_session_staffing(session_ids), to: Assignments
+
+  @doc "IDOR-guarded `get_session_staffing/1` for callers taking a session_id from the client."
+  defdelegate get_session_staffing_for_provider(provider_id, session_id), to: Assignments
+
+  @doc "The staff members effectively on a session, oldest assignment first."
+  defdelegate list_session_staff(session_id), to: Assignments
+
+  @doc "The provider's active staff who do not already override the session."
+  defdelegate list_assignable_staff_for_session(provider_id, session_id), to: Assignments
+
   # --- Programs & sessions -------------------------------------------------
 
   @doc "Returns the total completed session count across all programs for a provider."

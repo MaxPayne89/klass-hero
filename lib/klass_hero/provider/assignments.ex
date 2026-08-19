@@ -46,12 +46,15 @@ defmodule KlassHero.Provider.Assignments do
   import Ecto.Query, warn: false
 
   alias Ecto.Multi
+  alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
+  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
   alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.SessionStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
@@ -131,6 +134,314 @@ defmodule KlassHero.Provider.Assignments do
         {:ok, assignment}
       end
     end
+  end
+
+  @doc """
+  Adds a staff member to one session, giving that session a roster of its own.
+
+  Additive. The first add to a session that still inherits copies the program's
+  visible roster across first, so the result is "the usual team plus this person",
+  not "this person instead of the usual team" — see `materialize_program_roster/2`
+  for why that copy is still compatible with a sparse table.
+
+  `attrs.provider_id` is the tenancy authority and must come from the
+  authenticated scope. `attrs.assigned_by_user_id` is optional and records who
+  made the override.
+
+  Returns:
+  - `{:ok, SessionStaffAssignment.t()}` on success
+  - `{:error, :already_assigned}` if the staff member already overrides this session
+  - `{:error, :not_found}` if the staff member or session is missing or foreign, or
+    the staff member is deactivated (#1306 — deactivated ≡ foreign ≡ missing)
+  """
+  @spec assign_staff_to_session(map()) ::
+          {:ok, SessionStaffAssignment.t()}
+          | {:error, :already_assigned | :not_found | term()}
+  def assign_staff_to_session(%{provider_id: provider_id} = attrs) do
+    context_span entity: "session_staff_assignment" do
+      with {:ok, staff_member} <- Provider.get_active_staff_member(attrs.staff_member_id, provider_id),
+           {:ok, session} <- ensure_session_owned(attrs.session_id, provider_id),
+           assignment_attrs = build_assignment_attrs(attrs, staff_member),
+           {:ok, assignment} <- assign_to_session_with_event(assignment_attrs, staff_member, session) do
+        Logger.info("Staff member assigned to session",
+          staff_member_id: assignment.staff_member_id,
+          session_id: assignment.session_id
+        )
+
+        {:ok, assignment}
+      end
+    end
+  end
+
+  @doc """
+  Removes one staff member from a session owned by `provider_id`.
+
+  Works on a session that still inherits: the program roster is materialized first,
+  so removing one person leaves the rest rather than emptying the session.
+
+  Refuses when the target leads the session, for the same reason the program-level
+  sibling does: detaching them would leave the session lead-less off a single
+  click. Promote a replacement or step them down first.
+
+  Refuses to remove the *last* member. Zero override rows means "inherits the
+  program roster", so emptying a session this way would snap it back to showing the
+  whole team — `revert_session_to_program_roster/2` is the honest way to say that,
+  and the only one.
+
+  Returns:
+  - `{:ok, SessionStaffAssignment.t()}` on success
+  - `{:error, :cannot_unassign_lead}` if the staff member currently leads the session
+  - `{:error, :cannot_empty_session}` if they are the session's only member
+  - `{:error, :not_found}` if they are not on the session, or it is foreign
+  """
+  @spec unassign_staff_from_session(String.t(), String.t(), String.t()) ::
+          {:ok, SessionStaffAssignment.t()}
+          | {:error, :not_found | :cannot_unassign_lead | :cannot_empty_session | term()}
+  def unassign_staff_from_session(session_id, staff_member_id, provider_id)
+      when is_binary(session_id) and is_binary(staff_member_id) and is_binary(provider_id) do
+    context_span entity: "session_staff_assignment" do
+      with {:ok, staff_member} <- Provider.get_staff_member(staff_member_id, provider_id),
+           {:ok, session} <- ensure_session_owned(session_id, provider_id),
+           {:ok, assignment} <-
+             unassign_from_session_with_event(session_id, staff_member_id, provider_id, staff_member, session) do
+        Logger.info("Staff member unassigned from session",
+          staff_member_id: staff_member_id,
+          session_id: session_id
+        )
+
+        {:ok, assignment}
+      end
+    end
+  end
+
+  @doc """
+  Retires every override on a session, returning it to the program roster.
+
+  The bulk counterpart of `unassign_staff_from_session/3`, and not expressible as a
+  loop over it: that command refuses to detach the session lead, which is right for
+  an interactive one-row detach and wrong here. Reverting is a deliberate "this
+  session has no staffing of its own", so the lead goes with the rest.
+
+  Returns `{:ok, retired_count}` — zero when the session already inherits — or
+  `{:error, :not_found}` when the session is missing or foreign.
+  """
+  @spec revert_session_to_program_roster(String.t(), String.t()) ::
+          {:ok, non_neg_integer()} | {:error, :not_found | term()}
+  def revert_session_to_program_roster(session_id, provider_id) when is_binary(session_id) and is_binary(provider_id) do
+    context_span entity: "session_staff_assignment" do
+      with {:ok, session} <- ensure_session_owned(session_id, provider_id) do
+        revert_session_with_events(session_id, provider_id, session)
+      end
+    end
+  end
+
+  @doc """
+  Flags one of a session's members as its lead instructor.
+
+  Promoting on a session that still inherits materializes the program roster first
+  (see `materialize_program_roster/2`), so the session keeps everyone it was showing
+  and gains its own lead. This used to refuse with `{:error, :not_found}` precisely
+  because creating a lone override row would have silently discarded the rest of the
+  roster; materialization removes that hazard, so the refusal protected nothing.
+
+  Idempotent and transactional: the roster copy, clearing any previous session lead,
+  and flagging the target all commit together, so the
+  `session_staff_assignments_single_lead` partial unique index is never violated
+  mid-flight.
+
+  Returns `{:error, :not_found}` when the staff member or session is missing or
+  foreign, the staff member is deactivated, or they are not on this session at all.
+  """
+  @spec set_session_lead_instructor(String.t(), String.t(), String.t()) ::
+          {:ok, SessionStaffAssignment.t()} | {:error, :not_found | term()}
+  def set_session_lead_instructor(session_id, staff_member_id, provider_id)
+      when is_binary(session_id) and is_binary(staff_member_id) and is_binary(provider_id) do
+    context_span entity: "session_staff_assignment" do
+      with {:ok, staff_member} <- Provider.get_active_staff_member(staff_member_id, provider_id),
+           {:ok, session} <- ensure_session_owned(session_id, provider_id) do
+        Multi.new()
+        # Ahead of :clear_other_leads on purpose — a materialized program lead has to
+        # exist before the query that steps them down can see them.
+        |> Multi.run(:materialize, fn _repo, _changes ->
+          :ok = materialize_program_roster(session, provider_id)
+          {:ok, :materialized}
+        end)
+        |> Multi.update_all(
+          :clear_other_leads,
+          other_active_session_leads_query(session_id, staff_member.id, provider_id),
+          set: [is_lead_instructor: false]
+        )
+        |> Multi.run(:lead, fn repo, _ -> promote_session_lead(repo, session_id, staff_member.id, provider_id) end)
+        |> Repo.transaction()
+        |> case do
+          {:ok, %{lead: lead}} -> {:ok, lead}
+          {:error, _step, reason, _changes} -> {:error, reason}
+        end
+      end
+    end
+  end
+
+  @doc """
+  Clears the session's lead instructor, leaving the override otherwise active.
+
+  No-op when the session has no lead or is foreign.
+  """
+  @spec clear_session_lead_instructor(String.t(), String.t()) :: :ok
+  def clear_session_lead_instructor(session_id, provider_id) when is_binary(session_id) and is_binary(provider_id) do
+    from(a in SessionStaffAssignment.owned_by(provider_id),
+      where: a.session_id == ^session_id and a.is_lead_instructor and is_nil(a.unassigned_at)
+    )
+    |> Repo.update_all(set: [is_lead_instructor: false])
+
+    :ok
+  end
+
+  @doc """
+  Who is on one session: its overrides when it has any, otherwise the program roster.
+
+  The single answer to that question — see
+  `KlassHero.Provider.Domain.ReadModels.SessionStaffing` for the `:source` fact and
+  the lead rule. The projection, the provider UI, and (later) session-level
+  authorization all call this rather than re-deriving the fallback.
+
+  Returns `SessionStaffing.empty/2` shaped values for an unknown session, so callers
+  rendering a stale row get an empty roster rather than a crash.
+  """
+  @spec get_session_staffing(String.t()) :: SessionStaffing.t() | nil
+  def get_session_staffing(session_id) when is_binary(session_id) do
+    [session_id]
+    |> list_session_staffing()
+    |> Map.get(session_id)
+  end
+
+  @doc """
+  Batch sibling of `get_session_staffing/1`, keyed by `session_id`.
+
+  Four queries regardless of how many sessions are asked for — sessions, overrides,
+  program staffing, and the leads behind them — because the sessions list renders one
+  row per session and a per-row call would N+1 exactly where it hurts most.
+
+  Unknown sessions are omitted; `SessionStaffing.staffed_by?/2` and `led_by?/2` both
+  accept the resulting `nil` so callers need no defaulting step.
+  """
+  @spec list_session_staffing([String.t()]) :: %{optional(String.t()) => SessionStaffing.t()}
+  def list_session_staffing([]), do: %{}
+
+  def list_session_staffing(session_ids) when is_list(session_ids) do
+    sessions = fetch_sessions(session_ids)
+    overrides = session_overrides_by_session(Enum.map(sessions, & &1.id))
+    program_staffing = sessions |> Enum.map(& &1.program_id) |> Enum.uniq() |> Provider.list_program_staffing()
+
+    Map.new(sessions, fn session ->
+      {session.id, resolve_staffing(session, Map.get(overrides, session.id), program_staffing)}
+    end)
+  end
+
+  @doc """
+  Who a session's read-table row should name: the effective roster's earliest
+  active member, with their display name.
+
+  `provider_session_details.current_assigned_staff_*` holds exactly one person
+  while a roster holds several, so *some* rule has to pick. This is that rule, in
+  one place, for the projection's live path — its bootstrap SQL applies the same
+  one in `LATERAL … ORDER BY assigned_at ASC LIMIT 1` form. The two must agree or
+  a restart silently rewrites what the events wrote (#1299).
+
+  "Earliest active" rather than "the lead" on purpose: it is what the program-grain
+  path already meant, so promoting a lead never moves the name and the two grains
+  stay comparable.
+
+  Returns `%{staff_id: nil, staff_name: nil}` when nobody staffs the session —
+  including the case where it is overridden to a set of deactivated people, which
+  is *not* the same as inheriting the program roster.
+  """
+  @spec get_session_attribution(String.t()) :: %{staff_id: String.t() | nil, staff_name: String.t() | nil}
+  def get_session_attribution(session_id) when is_binary(session_id) do
+    with %SessionStaffing{member_ids: [winner | _]} <- get_session_staffing(session_id),
+         %StaffMember{} = staff <- Repo.get(StaffMember, winner) do
+      %{staff_id: staff.id, staff_name: StaffMember.full_name(staff)}
+    else
+      _ -> %{staff_id: nil, staff_name: nil}
+    end
+  end
+
+  @doc """
+  Whether `session_id` carries any active override — i.e. whether its staffing is
+  its own rather than the program's.
+
+  The projection asks this before applying a *program*-level change: a deliberate
+  substitution outranks a roster edit, so re-attributing every scheduled session
+  would silently undo it.
+  """
+  @spec session_overridden?(String.t()) :: boolean()
+  def session_overridden?(session_id) when is_binary(session_id) do
+    Repo.exists?(
+      from a in SessionStaffAssignment,
+        where: a.session_id == ^session_id and is_nil(a.unassigned_at)
+    )
+  end
+
+  @doc """
+  The staff members effectively on a session, oldest assignment first.
+
+  The struct-returning companion to `get_session_staffing/1`, for the panel that
+  has to render names and headshots rather than reason about ids. Falls through to
+  `list_active_staff_for_program/1` when the session inherits, so the two grains
+  render from the same shape.
+  """
+  @spec list_session_staff(String.t()) :: [StaffMember.t()]
+  def list_session_staff(session_id) when is_binary(session_id) do
+    case get_session_staffing(session_id) do
+      nil -> []
+      %SessionStaffing{source: :program, program_id: program_id} -> list_active_staff_for_program(program_id)
+      %SessionStaffing{member_ids: member_ids} -> staff_in_order(member_ids)
+    end
+  end
+
+  @doc """
+  IDOR-guarded `get_session_staffing/1` for interactive callers.
+
+  The UI opens the staffing panel with this: `session_id` arrives from the client,
+  so ownership has to be proven before anything about the session is rendered.
+  The unscoped sibling stays for the projection, which has no scope to check.
+  """
+  @spec get_session_staffing_for_provider(String.t(), String.t()) ::
+          {:ok, SessionStaffing.t()} | {:error, :not_found}
+  def get_session_staffing_for_provider(provider_id, session_id)
+      when is_binary(provider_id) and is_binary(session_id) do
+    with {:ok, _session} <- ensure_session_owned(session_id, provider_id) do
+      {:ok, get_session_staffing(session_id)}
+    end
+  end
+
+  @doc """
+  The provider's active staff who do not already override `session_id` — the
+  addable pool behind the session staffing panel's picker.
+
+  Being on the *program* does not exclude someone: an override names its own
+  people, so adding a program member to a session is the ordinary way to say
+  "of the three of you, these two work Tuesday".
+  """
+  @spec list_assignable_staff_for_session(String.t(), String.t()) :: [StaffMember.t()]
+  def list_assignable_staff_for_session(provider_id, session_id)
+      when is_binary(provider_id) and is_binary(session_id) do
+    # Subtracts the *effective* roster, not just the override rows: a session that
+    # still inherits is showing the program's team, and offering to "add" someone
+    # already on screen is how the picker used to hand out a no-op that read as a
+    # roster wipe.
+    already_on_session =
+      case get_session_staffing(session_id) do
+        %SessionStaffing{member_ids: member_ids} -> member_ids
+        nil -> []
+      end
+
+    from(s in StaffMember,
+      where: s.provider_id == ^provider_id and s.active == true,
+      where: s.id not in ^already_on_session,
+      order_by: [asc: s.first_name, asc: s.last_name]
+    )
+    |> Repo.all()
+    |> Enum.map(&StaffMember.load_pay_rate/1)
   end
 
   @doc "Lists all active staff assignments for a program."
@@ -443,6 +754,314 @@ defmodule KlassHero.Provider.Assignments do
         {:error, :not_found} -> {:error, :not_found}
       end
     end
+  end
+
+  # Sessions are owned by Participation, so the session is read through its public
+  # facade and its program checked against `ensure_program_owned/2` — a session is
+  # this provider's exactly when its program is. Strongly consistent on purpose: the
+  # `provider_session_details` projection lags, so reading ownership from it would
+  # reject an override on a session created moments ago.
+  #
+  # Returns the session itself, not `:ok` — the caller needs its `program_id` for the
+  # event payload, and re-reading it would be a second round-trip for a fact already
+  # in hand.
+  defp ensure_session_owned(session_id, provider_id) do
+    acl_span source: "provider", target: "participation" do
+      with {:ok, session} <- Participation.get_session(session_id),
+           :ok <- ensure_program_owned(session.program_id, provider_id) do
+        {:ok, session}
+      end
+    end
+  end
+
+  defp assign_to_session_with_event(assignment_attrs, staff_member, session) do
+    Outbox.transact(@context, fn ->
+      with :ok <- materialize_program_roster(session, assignment_attrs.provider_id),
+           {:ok, assignment} <- insert_session_staff_assignment(assignment_attrs) do
+        {:ok, assignment, [ProviderEvents.staff_assigned_to_session(assignment, staff_member, session.program_id)]}
+      end
+    end)
+  end
+
+  defp unassign_from_session_with_event(session_id, staff_member_id, provider_id, staff_member, session) do
+    Outbox.transact(@context, fn ->
+      with :ok <- ensure_not_last_member(session_id, staff_member_id),
+           :ok <- materialize_program_roster(session, provider_id),
+           {:ok, assignment} <- retire_session_staff_assignment(session_id, staff_member_id, provider_id) do
+        {:ok, assignment, [ProviderEvents.staff_unassigned_from_session(assignment, staff_member, session.program_id)]}
+      end
+    end)
+  end
+
+  # The first write to a session that still inherits copies the program's visible
+  # roster in *before* the caller's change lands, so "add" adds instead of
+  # replacing and "remove" removes one person instead of all but none.
+  #
+  # This is not the copy-on-create seeding #1321 deleted: rows appear only for a
+  # session a human deliberately made different — one session per explicit action,
+  # not 500 per program — so the other sessions keep inheriting and there is
+  # nothing to reconcile. The cost is stated in the panel: once materialized, later
+  # program roster edits no longer reach this session.
+  #
+  # No events are staged for the copied rows. Consumers re-resolve the whole
+  # session through `get_session_attribution/1`, which reads these rows whether or
+  # not anything announced them; the one event for the caller's own action is what
+  # triggers that re-resolve.
+  defp materialize_program_roster(session, provider_id) do
+    if session_overridden?(session.id) do
+      :ok
+    else
+      now = DateTime.utc_now() |> DateTime.truncate(:microsecond)
+
+      rows =
+        for row <- active_program_roster_rows(session.program_id) do
+          %{
+            id: Ecto.UUID.generate(),
+            provider_id: provider_id,
+            session_id: session.id,
+            staff_member_id: row.staff_member_id,
+            # The *program* assignment's timestamp, not `now`. `assigned_at` is the
+            # resolver's sort key and the projection names a session's earliest active
+            # member, so stamping the copies with one shared `now` would both make
+            # their order arbitrary and place them after the add that triggered the
+            # copy — silently renaming the session card. Carrying the program's own
+            # timestamps keeps the roster in its original order and correctly ranks
+            # everyone who was already there ahead of the person being added.
+            assigned_at: row.assigned_at,
+            is_lead_instructor: row.is_lead_instructor,
+            inserted_at: now,
+            updated_at: now
+          }
+        end
+
+      Repo.insert_all(SessionStaffAssignment, rows)
+      :ok
+    end
+  end
+
+  # Zero override rows means "inherits the program roster", so a session cannot
+  # express "deliberately staffed by nobody" — removing the last member would snap
+  # the roster back to the full program team. Refuse instead and point at
+  # `revert_session_to_program_roster/2`, which is the honest way to say that.
+  defp ensure_not_last_member(session_id, staff_member_id) do
+    case get_session_staffing(session_id) do
+      %SessionStaffing{member_ids: [^staff_member_id]} -> {:error, :cannot_empty_session}
+      _ -> :ok
+    end
+  end
+
+  # The program roster as the panel shows it — active staff only, in assignment
+  # order — because materializing must reproduce what the provider was looking at
+  # when they clicked.
+  defp active_program_roster_rows(program_id) do
+    from(a in ProgramStaffAssignment,
+      join: s in StaffMember,
+      on: s.id == a.staff_member_id and s.active == true,
+      where: a.program_id == ^program_id and is_nil(a.unassigned_at),
+      order_by: [asc: a.assigned_at, asc: a.id],
+      select: %{
+        staff_member_id: a.staff_member_id,
+        is_lead_instructor: a.is_lead_instructor,
+        assigned_at: a.assigned_at
+      }
+    )
+    |> Repo.all()
+  end
+
+  defp insert_session_staff_assignment(attrs) do
+    %SessionStaffAssignment{}
+    |> SessionStaffAssignment.create_changeset(attrs)
+    |> Repo.insert()
+    |> case do
+      {:ok, assignment} ->
+        {:ok, assignment}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        if EctoErrorHelpers.any_unique_constraint_violation?(changeset.errors) do
+          {:error, :already_assigned}
+        else
+          {:error, changeset}
+        end
+    end
+  end
+
+  defp retire_session_staff_assignment(session_id, staff_member_id, provider_id) do
+    session_id
+    |> active_session_assignment_scope(staff_member_id, provider_id)
+    |> Repo.one()
+    |> case do
+      nil ->
+        {:error, :not_found}
+
+      %SessionStaffAssignment{is_lead_instructor: true} ->
+        {:error, :cannot_unassign_lead}
+
+      assignment ->
+        assignment
+        |> SessionStaffAssignment.unassign_changeset()
+        |> Repo.update()
+    end
+  end
+
+  defp revert_session_with_events(session_id, provider_id, session) do
+    Outbox.transact(@context, fn ->
+      doomed =
+        from(a in SessionStaffAssignment.owned_by(provider_id),
+          join: s in StaffMember,
+          on: s.id == a.staff_member_id,
+          where: a.session_id == ^session_id and is_nil(a.unassigned_at),
+          select: {a, s}
+        )
+        |> Repo.all()
+
+      {count, _} =
+        from(a in SessionStaffAssignment.owned_by(provider_id),
+          where: a.session_id == ^session_id and is_nil(a.unassigned_at)
+        )
+        |> Repo.update_all(
+          set: [
+            unassigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond),
+            is_lead_instructor: false
+          ]
+        )
+
+      # One event per retired row rather than a single "reverted" event: consumers
+      # already key on (session, staff member), and #784 will want that granularity
+      # to decide whose messaging membership changed.
+      events =
+        Enum.map(doomed, fn {assignment, staff_member} ->
+          ProviderEvents.staff_unassigned_from_session(assignment, staff_member, session.program_id)
+        end)
+
+      {:ok, count, events}
+    end)
+  end
+
+  # Still no insert branch, unlike the program-level `upsert_lead/4` — but for a
+  # different reason now. Materialization has already put every roster member on the
+  # session, so a miss here means the target genuinely is not on it, and inserting
+  # would be promoting a stranger rather than repairing a gap.
+  defp promote_session_lead(repo, session_id, staff_member_id, provider_id) do
+    case repo.one(active_session_assignment_scope(session_id, staff_member_id, provider_id)) do
+      nil ->
+        {:error, :not_found}
+
+      assignment ->
+        assignment
+        |> SessionStaffAssignment.lead_changeset(true)
+        |> repo.update()
+    end
+  end
+
+  defp other_active_session_leads_query(session_id, staff_member_id, provider_id) do
+    from a in SessionStaffAssignment.owned_by(provider_id),
+      where:
+        a.session_id == ^session_id and a.staff_member_id != ^staff_member_id and
+          a.is_lead_instructor and is_nil(a.unassigned_at)
+  end
+
+  # Sessions belong to Participation, so they are read through its facade (ADR-0015)
+  # rather than joined to from here — which is also why the resolver cannot be one
+  # SQL statement.
+  defp fetch_sessions(session_ids) do
+    acl_span source: "provider", target: "participation" do
+      Participation.get_sessions(session_ids)
+    end
+  end
+
+  # Every active override for these sessions, with the staff member LEFT-joined on
+  # `active`. Left, not inner, because the two facts differ: the *row* existing is
+  # what makes a session overridden, while the staff member being active is what
+  # makes them a member. An inner join would collapse them, and a session whose only
+  # substitute was later deactivated would silently fall back to the program roster —
+  # resurrecting exactly the people the provider took off that day.
+  defp session_overrides_by_session([]), do: %{}
+
+  defp session_overrides_by_session(session_ids) do
+    from(a in SessionStaffAssignment,
+      left_join: s in StaffMember,
+      on: s.id == a.staff_member_id and s.active == true,
+      where: a.session_id in ^session_ids and is_nil(a.unassigned_at),
+      order_by: [asc: a.assigned_at, asc: a.id],
+      select: {a.session_id, a.is_lead_instructor, s}
+    )
+    |> Repo.all()
+    |> Enum.group_by(fn {session_id, _lead?, _staff} -> session_id end)
+  end
+
+  # Ordered by the caller's ids, not by the query: `member_ids` already carries the
+  # earliest-assigned-first order the attribution rule depends on, and an `IN` gives
+  # no order at all.
+  defp staff_in_order(member_ids) do
+    by_id =
+      from(s in StaffMember, where: s.id in ^member_ids)
+      |> Repo.all()
+      |> Map.new(&{&1.id, StaffMember.load_pay_rate(&1)})
+
+    for id <- member_ids, staff = by_id[id], do: staff
+  end
+
+  defp resolve_staffing(session, nil, program_staffing) do
+    inherited_staffing(session, program_staffing)
+  end
+
+  defp resolve_staffing(session, override_rows, program_staffing) do
+    members = for {_id, _lead?, staff} <- override_rows, staff != nil, do: staff
+
+    %SessionStaffing{
+      session_id: session.id,
+      program_id: session.program_id,
+      lead: resolve_session_lead(override_rows, members, session.program_id, program_staffing),
+      member_ids: Enum.map(members, & &1.id),
+      member_count: length(members),
+      source: :override
+    }
+  end
+
+  defp inherited_staffing(session, program_staffing) do
+    case Map.get(program_staffing, session.program_id) do
+      nil ->
+        SessionStaffing.empty(session.id, session.program_id)
+
+      %ProgramStaffing{} = staffing ->
+        %SessionStaffing{
+          session_id: session.id,
+          program_id: session.program_id,
+          lead: staffing.lead,
+          member_ids: staffing.member_ids,
+          member_count: staffing.member_count,
+          source: :program
+        }
+    end
+  end
+
+  # Session lead first; failing that, the program lead — but only when they are
+  # actually working this session. Naming an absent lead is the worse failure: the
+  # roster would claim supervision nobody is providing.
+  defp resolve_session_lead(override_rows, members, program_id, program_staffing) do
+    flagged = Enum.find(override_rows, fn {_id, lead?, staff} -> lead? and staff != nil end)
+
+    case flagged do
+      {_id, _lead?, staff} -> to_lead_map(staff)
+      nil -> inherited_lead(members, program_id, program_staffing)
+    end
+  end
+
+  defp inherited_lead(members, program_id, program_staffing) do
+    with %ProgramStaffing{lead: %{id: lead_id} = lead} <- Map.get(program_staffing, program_id),
+         true <- Enum.any?(members, &(&1.id == lead_id)) do
+      lead
+    else
+      _ -> nil
+    end
+  end
+
+  # The single active (session, staff) override for the provider, if one exists.
+  defp active_session_assignment_scope(session_id, staff_member_id, provider_id) do
+    from a in SessionStaffAssignment.owned_by(provider_id),
+      where:
+        a.session_id == ^session_id and a.staff_member_id == ^staff_member_id and
+          is_nil(a.unassigned_at)
   end
 
   # The assignment and the event announcing it commit together; the outbox job then

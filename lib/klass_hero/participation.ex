@@ -369,6 +369,34 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
+  Retrieves one session, without its roster.
+
+  The cheap read for callers that only need the session's own facts — chiefly
+  Provider, resolving a session's `program_id` to check ownership before a
+  session-staffing write. `get_session_with_roster/1` answers the same question but
+  loads every participation record and resolves child info across two contexts to
+  do it, which is far more than a tenancy check needs.
+
+  Returns `{:ok, %ProgramSession{}}` or `{:error, :not_found}`.
+  """
+  @spec get_session(String.t()) :: {:ok, ProgramSession.t()} | {:error, :not_found}
+  def get_session(session_id) when is_binary(session_id), do: fetch_session(session_id)
+
+  @doc """
+  Batch sibling of `get_session/1` — the sessions matching `session_ids`.
+
+  Unknown ids are omitted rather than reported: the callers are list views
+  resolving many sessions at once, for which a missing row is a row to skip, not
+  an error to propagate. Exists so those callers don't N+1 `get_session/1`.
+  """
+  @spec get_sessions([String.t()]) :: [ProgramSession.t()]
+  def get_sessions([]), do: []
+
+  def get_sessions(session_ids) when is_list(session_ids) do
+    Repo.all(from s in ProgramSession, where: s.id in ^session_ids)
+  end
+
+  @doc """
   Retrieves a session with its complete roster.
 
   Returns `{:ok, %{session: session, roster: roster}}` or `{:error, :not_found}`.
