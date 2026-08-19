@@ -376,6 +376,19 @@ defmodule KlassHero.Enrollment do
   @doc "The current version of every required, active waiver on a program."
   defdelegate list_required_waiver_versions(program_id), to: Waivers
 
+  @doc "The waivers in force for an enrollment's program, each marked signed or not."
+  defdelegate list_enrollment_waivers(enrollment_id), to: Waivers
+
+  @doc """
+  Records signatures on an existing enrollment (the deferred path).
+
+  Only the enrolling parent may sign; anyone else gets `{:error, :not_found}`.
+  """
+  defdelegate sign_waivers(enrollment_id, parent_id, version_ids, audit), to: Waivers
+
+  @doc "Waiver status per enrollment (`:signed | :unsigned | :not_required`), for the roster."
+  defdelegate waiver_status_for_enrollments(enrollment_ids), to: Waivers
+
   defp cancel_with_event(enrollment_id, cancelled, admin_id, reason) do
     Outbox.transact(__MODULE__, fn ->
       fields = %{

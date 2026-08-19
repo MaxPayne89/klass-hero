@@ -161,6 +161,15 @@ defmodule KlassHeroWeb.BookingLive do
           {:error, :child_not_selected} ->
             {:noreply, put_flash(socket, :error, gettext("Please select a child for enrollment."))}
 
+          # Reachable two ways: the parent left a box unticked, or the provider published a
+          # new version while this page was open. Re-read the waivers so the second case
+          # shows the text now in force rather than the stale copy they were looking at.
+          {:error, :waivers_unsigned} ->
+            {:noreply,
+             socket
+             |> assign(waivers: Enrollment.list_program_waivers(socket.assigns.program.id))
+             |> put_flash(:error, gettext("Please read and sign every required waiver before enrolling."))}
+
           {:error, :no_parent_profile} ->
             {:noreply,
              socket
@@ -266,7 +275,7 @@ defmodule KlassHeroWeb.BookingLive do
       # A signer is present here, so the intent is always `:accepted` — never `:deferred`.
       # The context re-checks the set against the program's current required waivers, so a
       # stale or tampered list fails there rather than being trusted from the client.
-      waivers: {:accepted, socket.assigns.signed_waiver_version_ids},
+      waivers: {:accepted, List.wrap(params["waiver_version_ids"])},
       audit: socket.assigns.audit
     }
 
@@ -344,7 +353,7 @@ defmodule KlassHeroWeb.BookingLive do
           </div>
         </div>
 
-        <form phx-submit="complete_enrollment" class="space-y-6">
+        <form id="booking-form" phx-submit="complete_enrollment" class="space-y-6">
           <div class={[Theme.bg(:surface), Theme.rounded(:xl), "p-6 shadow-lg"]}>
             <label class={["block text-sm font-semibold mb-3", Theme.text_color(:body)]}>
               {gettext("Select Child")}
@@ -406,6 +415,56 @@ defmodule KlassHeroWeb.BookingLive do
                 )}
               </p>
               <p class={["text-xs", Theme.text_color(:muted)]}>0/500</p>
+            </div>
+          </div>
+
+          <div
+            :if={@waivers != []}
+            id="booking-waivers"
+            class={[Theme.bg(:surface), Theme.rounded(:xl), "p-6 shadow-lg"]}
+          >
+            <h2 class={["block text-sm font-semibold mb-3", Theme.text_color(:body)]}>
+              {gettext("Waivers")}
+            </h2>
+
+            <div :for={entry <- @waivers} id={"waiver-#{entry.waiver.id}"} class="mb-4 last:mb-0">
+              <h3 class={[Theme.typography(:card_title), Theme.text_color(:heading), "mb-2"]}>
+                {entry.waiver.title}
+                <span
+                  :if={!entry.waiver.required}
+                  class={["text-xs font-normal", Theme.text_color(:muted)]}
+                >
+                  {gettext("(optional)")}
+                </span>
+              </h3>
+
+              <%!-- Scrollable rather than truncated: a parent must be able to read the whole
+                    text before signing, and a "read more" that collapses it would weaken the
+                    claim that they saw it. --%>
+              <div
+                class={[
+                  "max-h-48 overflow-y-auto border p-3 text-sm whitespace-pre-line mb-2",
+                  Theme.rounded(:lg),
+                  Theme.border_color(:medium),
+                  Theme.text_color(:body)
+                ]}
+                tabindex="0"
+              >
+                {entry.version.body}
+              </div>
+
+              <label class="flex items-start gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  id={"sign-waiver-#{entry.waiver.id}"}
+                  name="waiver_version_ids[]"
+                  value={entry.version.id}
+                  class="mt-0.5"
+                />
+                <span class={Theme.text_color(:body)}>
+                  {gettext("I have read and agree to %{title}", title: entry.waiver.title)}
+                </span>
+              </label>
             </div>
           </div>
 

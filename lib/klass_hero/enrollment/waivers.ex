@@ -23,6 +23,7 @@ defmodule KlassHero.Enrollment.Waivers do
 
   import Ecto.Query
 
+  alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Enrollment.Waiver
   alias KlassHero.Enrollment.WaiverAcceptance
   alias KlassHero.Enrollment.WaiverVersion
@@ -94,6 +95,109 @@ defmodule KlassHero.Enrollment.Waivers do
     |> Repo.all()
     |> pair_with_versions()
     |> Enum.map(& &1.version)
+  end
+
+  @doc """
+  The waivers in force for an enrollment's program, each marked signed or not.
+
+  Drives both the booking form's checkboxes and the standalone signing page.
+  """
+  @spec list_enrollment_waivers(binary()) :: [%{waiver: Waiver.t(), version: WaiverVersion.t(), signed?: boolean()}]
+  def list_enrollment_waivers(enrollment_id) do
+    case Repo.get(Enrollment, enrollment_id) do
+      nil ->
+        []
+
+      enrollment ->
+        signed = signed_version_ids(enrollment_id)
+
+        for entry <- list_program_waivers(enrollment.program_id),
+            do: Map.put(entry, :signed?, entry.version.id in signed)
+    end
+  end
+
+  @doc """
+  Records signatures on an enrollment that already exists — the deferred path.
+
+  Only the enrolling parent may sign: `parent_id` must match `enrollment.parent_id`, else
+  `{:error, :not_found}`. The enrollment's own `program_id` decides which versions are
+  signable, so a version id from another program is ignored rather than trusted.
+  """
+  @spec sign_waivers(binary(), binary(), [binary()], map()) ::
+          {:ok, [WaiverAcceptance.t()]} | {:error, :not_found | Ecto.Changeset.t()}
+  def sign_waivers(enrollment_id, parent_id, version_ids, audit) do
+    with {:ok, enrollment} <- fetch_enrollment_for_parent(enrollment_id, parent_id) do
+      signable =
+        Repo
+        |> current_versions_for_program(enrollment.program_id)
+        |> Enum.filter(&(&1.id in version_ids))
+        |> Enum.map(& &1.version)
+
+      record_acceptances(Repo, signable, %{enrollment_id: enrollment.id, parent_id: parent_id}, audit)
+    end
+  end
+
+  @doc """
+  Waiver status per enrollment, for the provider roster.
+
+  `:not_required` when the program has no required waivers at all — distinct from `:signed`,
+  because "nothing to sign" and "signed everything" mean different things to a provider
+  looking for who still owes them a form.
+  """
+  @spec waiver_status_for_enrollments([binary()]) :: %{binary() => :signed | :unsigned | :not_required}
+  def waiver_status_for_enrollments([]), do: %{}
+
+  def waiver_status_for_enrollments(enrollment_ids) do
+    enrollments =
+      Enrollment
+      |> where([e], e.id in ^enrollment_ids)
+      |> select([e], {e.id, e.program_id})
+      |> Repo.all()
+
+    required_by_program =
+      enrollments
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.uniq()
+      |> Map.new(&{&1, MapSet.new(list_required_waiver_versions(&1), fn v -> v.id end)})
+
+    signed_by_enrollment = signed_version_ids_by_enrollment(enrollment_ids)
+
+    Map.new(enrollments, fn {id, program_id} ->
+      required = Map.get(required_by_program, program_id, MapSet.new())
+      signed = Map.get(signed_by_enrollment, id, MapSet.new())
+
+      cond do
+        MapSet.size(required) == 0 -> {id, :not_required}
+        MapSet.subset?(required, signed) -> {id, :signed}
+        true -> {id, :unsigned}
+      end
+    end)
+  end
+
+  defp fetch_enrollment_for_parent(enrollment_id, parent_id) do
+    case Repo.get(Enrollment, enrollment_id) do
+      # Same shape as the create path's ownership guard: a foreign enrollment is
+      # indistinguishable from a missing one, so probing tells an attacker nothing.
+      %Enrollment{parent_id: ^parent_id} = enrollment -> {:ok, enrollment}
+      _otherwise -> {:error, :not_found}
+    end
+  end
+
+  defp signed_version_ids(enrollment_id) do
+    WaiverAcceptance
+    |> where([a], a.enrollment_id == ^enrollment_id)
+    |> select([a], a.waiver_version_id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp signed_version_ids_by_enrollment(enrollment_ids) do
+    WaiverAcceptance
+    |> where([a], a.enrollment_id in ^enrollment_ids)
+    |> select([a], {a.enrollment_id, a.waiver_version_id})
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {id, versions} -> {id, MapSet.new(versions)} end)
   end
 
   @doc """

@@ -30,6 +30,7 @@ defmodule KlassHeroWeb.DashboardLive do
         active_nav: :home,
         user: user,
         loading?: true,
+        waivers_outstanding: [],
         children_count: 0,
         kid_picker_items: [],
         active_program_count: 0,
@@ -70,7 +71,8 @@ defmodule KlassHeroWeb.DashboardLive do
         upcoming_count: length(data.upcoming_sessions),
         upcoming_sessions: data.upcoming_sessions,
         recent_messages: data.recent_messages,
-        family_programs_empty?: active == [] and expired == []
+        family_programs_empty?: active == [] and expired == [],
+        waivers_outstanding: outstanding_waiver_items(active)
       )
       |> stream(:family_programs, build_family_program_items(active, expired), reset: true)
 
@@ -195,6 +197,22 @@ defmodule KlassHeroWeb.DashboardLive do
 
   defp relative_time(_), do: nil
 
+  # An enrollment created by a provider's bulk invite has no signer at creation, so its
+  # required waivers arrive outstanding. Only active programs are worth nagging about — a
+  # finished program's unsigned waiver is a record to keep, not an action to take.
+  defp outstanding_waiver_items([]), do: []
+
+  defp outstanding_waiver_items(active_programs) do
+    statuses =
+      active_programs
+      |> Enum.map(fn {enrollment, _program} -> enrollment.id end)
+      |> Enrollment.waiver_status_for_enrollments()
+
+    for {enrollment, program} <- active_programs,
+        Map.get(statuses, enrollment.id) == :unsigned,
+        do: %{enrollment_id: enrollment.id, program_title: program.title}
+  end
+
   defp load_family_programs(parent_id) do
     enrollments = Enrollment.list_parent_enrollments(parent_id)
 
@@ -294,6 +312,23 @@ defmodule KlassHeroWeb.DashboardLive do
   def render(assigns) do
     ~H"""
     <div class="space-y-6">
+      <%!-- Enrollments created by a provider's bulk invite have no signer at creation, so
+            their waivers arrive outstanding. This is the only place the parent learns that. --%>
+      <section :if={@waivers_outstanding != []} id="waivers-outstanding">
+        <div class="rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <h2 class="font-semibold text-amber-900 mb-2">
+            {gettext("Waivers waiting for your signature")}
+          </h2>
+          <ul class="space-y-1 text-sm">
+            <li :for={item <- @waivers_outstanding} id={"waivers-outstanding-#{item.enrollment_id}"}>
+              <.link navigate={~p"/enrollments/#{item.enrollment_id}/waivers"} class="underline">
+                {gettext("Sign the waivers for %{program}", program: item.program_title)}
+              </.link>
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <section :if={@kid_picker_items != []} id="kid-picker">
         <.pa_kid_picker
           kids={@kid_picker_items}
