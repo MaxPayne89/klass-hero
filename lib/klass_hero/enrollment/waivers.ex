@@ -24,6 +24,7 @@ defmodule KlassHero.Enrollment.Waivers do
   import Ecto.Query
 
   alias KlassHero.Enrollment.Waiver
+  alias KlassHero.Enrollment.WaiverAcceptance
   alias KlassHero.Enrollment.WaiverVersion
   alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
@@ -93,6 +94,95 @@ defmodule KlassHero.Enrollment.Waivers do
     |> Repo.all()
     |> pair_with_versions()
     |> Enum.map(& &1.version)
+  end
+
+  @doc """
+  Validates the caller's waiver intent.
+
+  There is deliberately no default. `[]` would read as both "signed nothing" and "don't
+  care", so a caller that forgets the key would silently skip the gate — the same
+  bypass-by-omission that putting the gate in the LiveView would produce. Missing intent is
+  an error instead.
+  """
+  @spec validate_intent(map()) :: {:ok, :deferred | {:accepted, [binary()]}} | {:error, :waiver_intent_required}
+  def validate_intent(%{waivers: :deferred}), do: {:ok, :deferred}
+
+  def validate_intent(%{waivers: {:accepted, ids}}) when is_list(ids), do: {:ok, {:accepted, ids}}
+
+  def validate_intent(_params), do: {:error, :waiver_intent_required}
+
+  @doc """
+  Resolves which waiver versions a signature set actually covers, failing if a required one
+  is missing.
+
+  Runs on the caller's transaction connection, because a provider publishing a required
+  waiver between a pre-flight check and the insert would otherwise produce an enrollment
+  with an unsigned required waiver — the same TOCTOU the capacity lock exists to prevent.
+
+  Ids that do not belong to this program's active waivers are ignored rather than rejected;
+  they cannot satisfy a requirement, and treating a stale id as a hard error would turn a
+  harmless double-submit into a failed enrolment.
+  """
+  @spec resolve_acceptances(Ecto.Repo.t(), binary() | nil, :deferred | {:accepted, [binary()]}) ::
+          {:ok, [WaiverVersion.t()]} | {:error, :waivers_unsigned}
+  def resolve_acceptances(_repo, _program_id, :deferred), do: {:ok, []}
+
+  def resolve_acceptances(_repo, nil, _intent), do: {:ok, []}
+
+  def resolve_acceptances(repo, program_id, {:accepted, ids}) do
+    current = current_versions_for_program(repo, program_id)
+    accepted = Enum.filter(current, &(&1.id in ids))
+    required_ids = for %{required: true, version: v} <- current, do: v.id
+
+    if Enum.all?(required_ids, fn id -> Enum.any?(accepted, &(&1.version.id == id)) end) do
+      {:ok, Enum.map(accepted, & &1.version)}
+    else
+      {:error, :waivers_unsigned}
+    end
+  end
+
+  @doc """
+  Inserts one acceptance per signed version, on the caller's transaction connection.
+  """
+  @spec record_acceptances(Ecto.Repo.t(), [WaiverVersion.t()], map(), map()) ::
+          {:ok, [WaiverAcceptance.t()]} | {:error, Ecto.Changeset.t()}
+  def record_acceptances(repo, versions, signer, audit) do
+    Enum.reduce_while(versions, {:ok, []}, fn version, {:ok, acc} ->
+      %WaiverAcceptance{}
+      |> WaiverAcceptance.changeset(WaiverAcceptance.accept(version, signer, audit))
+      |> repo.insert()
+      |> case do
+        {:ok, acceptance} -> {:cont, {:ok, [acceptance | acc]}}
+        {:error, changeset} -> {:halt, {:error, changeset}}
+      end
+    end)
+  end
+
+  # Active waivers on the program paired with their current version, flattened so the gate
+  # can filter on `required` and match on `version.id` in one pass.
+  defp current_versions_for_program(repo, program_id) do
+    waivers =
+      Waiver
+      |> where([w], w.program_id == ^program_id and is_nil(w.archived_at))
+      |> repo.all()
+
+    case waivers do
+      [] ->
+        []
+
+      waivers ->
+        versions =
+          WaiverVersion
+          |> where([v], v.waiver_id in ^Enum.map(waivers, & &1.id))
+          |> distinct([v], v.waiver_id)
+          |> order_by([v], asc: v.waiver_id, desc: v.version)
+          |> repo.all()
+          |> Map.new(&{&1.waiver_id, &1})
+
+        for waiver <- waivers,
+            version = Map.get(versions, waiver.id),
+            do: %{id: version.id, required: waiver.required, version: version}
+    end
   end
 
   defp pair_with_versions([]), do: []

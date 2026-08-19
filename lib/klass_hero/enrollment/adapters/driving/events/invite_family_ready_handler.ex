@@ -85,13 +85,18 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler 
   end
 
   # Bulk invites bypass payment/tier/eligibility checks — use "transfer" + "confirmed" directly.
+  #
+  # `waivers: :deferred` because this runs in a background job with no parent present to sign
+  # anything. Any required waiver stays outstanding on the enrollment and is surfaced to the
+  # parent afterwards; blocking here would only strand the invite.
   defp create_enrollment(child_id, parent_id, program_id) do
     Enrollment.create_enrollment(%{
       program_id: program_id,
       child_id: child_id,
       parent_id: parent_id,
       status: :confirmed,
-      payment_method: "transfer"
+      payment_method: "transfer",
+      waivers: :deferred
     })
   end
 

@@ -16,7 +16,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         parent_id: parent.id
       }
 
-      assert {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      assert {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
       assert %Enrollment{} = enrollment
       assert enrollment.program_id == program.id
       assert enrollment.child_id == child.id
@@ -34,7 +34,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         parent_id: parent.id
       }
 
-      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
 
       assert enrollment.status == :pending
     end
@@ -50,7 +50,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
       }
 
       before = DateTime.utc_now() |> DateTime.truncate(:second)
-      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
       after_time = DateTime.utc_now() |> DateTime.add(1, :second)
 
       assert DateTime.compare(enrollment.enrolled_at, before) in [:gt, :eq]
@@ -71,7 +71,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         total_amount: Decimal.new("121.00")
       }
 
-      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
 
       assert enrollment.subtotal == Decimal.new("100.00")
       assert enrollment.vat_amount == Decimal.new("19.00")
@@ -90,7 +90,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         payment_method: "transfer"
       }
 
-      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
 
       assert enrollment.payment_method == "transfer"
     end
@@ -106,7 +106,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         special_requirements: "Allergic to peanuts"
       }
 
-      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
 
       assert enrollment.special_requirements == "Allergic to peanuts"
     end
@@ -120,7 +120,8 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         parent_id: existing.parent_id
       }
 
-      assert {:error, :duplicate_resource} = KlassHero.Enrollment.create_enrollment(params)
+      assert {:error, :duplicate_resource} =
+               KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
     end
 
     test "allows new enrollment after previous one cancelled" do
@@ -132,14 +133,14 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         parent_id: cancelled.parent_id
       }
 
-      assert {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      assert {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
       assert enrollment.status == :pending
     end
 
     test "returns changeset error for missing required fields" do
       params = %{}
 
-      assert {:error, %Ecto.Changeset{}} = KlassHero.Enrollment.create_enrollment(params)
+      assert {:error, %Ecto.Changeset{}} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
     end
 
     test "accepts custom enrolled_at" do
@@ -154,7 +155,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         enrolled_at: enrolled_at
       }
 
-      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
 
       assert enrollment.enrolled_at == enrolled_at
     end
@@ -170,7 +171,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
         status: "confirmed"
       }
 
-      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(params)
+      {:ok, enrollment} = KlassHero.Enrollment.create_enrollment(Map.put(params, :waivers, :deferred))
 
       assert enrollment.status == :confirmed
     end
@@ -198,6 +199,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       result =
         KlassHero.Enrollment.create_enrollment(%{
+          waivers: :deferred,
           identity_id: parent.identity_id,
           program_id: program.id,
           child_id: child.id,
@@ -231,6 +233,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       assert {:ok, enrollment} =
                KlassHero.Enrollment.create_enrollment(%{
+                 waivers: :deferred,
                  identity_id: parent.identity_id,
                  program_id: program.id,
                  child_id: child.id,
@@ -248,6 +251,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       assert {:ok, _enrollment} =
                KlassHero.Enrollment.create_enrollment(%{
+                 waivers: :deferred,
                  identity_id: parent.identity_id,
                  program_id: program.id,
                  child_id: child.id,
@@ -270,6 +274,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
       # as a foreign child, avoiding an existence oracle.
       result =
         KlassHero.Enrollment.create_enrollment(%{
+          waivers: :deferred,
           identity_id: parent.identity_id,
           program_id: program.id,
           child_id: Ecto.UUID.generate(),
@@ -288,6 +293,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       result =
         KlassHero.Enrollment.create_enrollment(%{
+          waivers: :deferred,
           identity_id: parent.identity_id,
           program_id: program.id,
           child_id: other_child.id,
@@ -310,6 +316,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       {:ok, _} =
         KlassHero.Enrollment.create_enrollment(%{
+          waivers: :deferred,
           program_id: program.id,
           child_id: child1.id,
           parent_id: parent1.id
@@ -317,6 +324,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       assert {:error, :program_full} =
                KlassHero.Enrollment.create_enrollment(%{
+                 waivers: :deferred,
                  program_id: program.id,
                  child_id: child2.id,
                  parent_id: parent2.id
@@ -329,6 +337,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       assert {:ok, _} =
                KlassHero.Enrollment.create_enrollment(%{
+                 waivers: :deferred,
                  program_id: program.id,
                  child_id: child.id,
                  parent_id: parent.id
@@ -343,6 +352,7 @@ defmodule KlassHero.Enrollment.CreateEnrollmentTest do
 
       assert {:ok, _} =
                KlassHero.Enrollment.create_enrollment(%{
+                 waivers: :deferred,
                  program_id: program.id,
                  child_id: child.id,
                  parent_id: parent.id

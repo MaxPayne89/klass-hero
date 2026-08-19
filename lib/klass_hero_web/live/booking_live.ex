@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.BookingLive do
   alias KlassHero.Enrollment
   alias KlassHero.Family
   alias KlassHero.ProgramCatalog
+  alias KlassHeroWeb.AuditInfo
   alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
@@ -43,7 +44,12 @@ defmodule KlassHeroWeb.BookingLive do
           eligibility_status: nil,
           special_requirements: "",
           payment_method: "card",
-          total_amount: total_amount
+          total_amount: total_amount,
+          waivers: Enrollment.list_program_waivers(program.id),
+          signed_waiver_version_ids: [],
+          # Connect info exists only on the connected mount, so capture it here and read it
+          # from assigns at submit — it is unreachable from a handle_event.
+          audit: AuditInfo.from_socket(socket)
         )
 
       {:ok, socket}
@@ -256,7 +262,12 @@ defmodule KlassHeroWeb.BookingLive do
       vat_amount: Decimal.new("0.00"),
       card_fee_amount: Decimal.new("0.00"),
       total_amount: socket.assigns.total_amount,
-      special_requirements: params["special_requirements"]
+      special_requirements: params["special_requirements"],
+      # A signer is present here, so the intent is always `:accepted` — never `:deferred`.
+      # The context re-checks the set against the program's current required waivers, so a
+      # stale or tampered list fails there rather than being trusted from the client.
+      waivers: {:accepted, socket.assigns.signed_waiver_version_ids},
+      audit: socket.assigns.audit
     }
 
     Enrollment.create_enrollment(enrollment_params)

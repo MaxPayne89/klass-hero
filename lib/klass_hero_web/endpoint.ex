@@ -15,8 +15,8 @@ defmodule KlassHeroWeb.Endpoint do
   ]
 
   socket "/live", Socket,
-    websocket: [connect_info: [:user_agent, session: @session_options]],
-    longpoll: [connect_info: [:user_agent, session: @session_options]]
+    websocket: [connect_info: [:user_agent, :x_headers, session: @session_options]],
+    longpoll: [connect_info: [:user_agent, :x_headers, session: @session_options]]
 
   if Application.compile_env(:klass_hero, :sql_sandbox) do
     plug Sandbox
