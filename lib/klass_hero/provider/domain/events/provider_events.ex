@@ -28,6 +28,7 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
 
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.SessionStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -94,6 +95,18 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
     assignment_event(:staff_unassigned_from_program, assignment, staff_member, opts)
   end
 
+  @doc "Creates a staff_assigned_to_session event."
+  @spec staff_assigned_to_session(SessionStaffAssignment.t(), StaffMember.t(), String.t()) :: Event.t()
+  def staff_assigned_to_session(%SessionStaffAssignment{} = assignment, %StaffMember{} = staff_member, program_id) do
+    session_assignment_event(:staff_assigned_to_session, assignment, staff_member, program_id)
+  end
+
+  @doc "Creates a staff_unassigned_from_session event."
+  @spec staff_unassigned_from_session(SessionStaffAssignment.t(), StaffMember.t(), String.t()) :: Event.t()
+  def staff_unassigned_from_session(%SessionStaffAssignment{} = assignment, %StaffMember{} = staff_member, program_id) do
+    session_assignment_event(:staff_unassigned_from_session, assignment, staff_member, program_id)
+  end
+
   @doc """
   Creates a `staff_member_deactivated` event.
 
@@ -117,6 +130,26 @@ defmodule KlassHero.Provider.Domain.Events.ProviderEvents do
       staff_member.id,
       payload
     )
+  end
+
+  # `program_id` is passed in rather than read off the assignment: a session
+  # override carries no program_id of its own, and the producer already holds the
+  # session it verified ownership against. Consumers need it to scope the program
+  # roster they fall back to.
+  #
+  # `entity_id` is the *session*, not the staff member — unlike the program-level
+  # sibling. A consumer of this event re-resolves one session's staffing, and the
+  # session is the thing it addresses.
+  defp session_assignment_event(event_type, assignment, staff_member, program_id) do
+    payload = %{
+      provider_id: assignment.provider_id,
+      session_id: assignment.session_id,
+      program_id: program_id,
+      staff_member_id: assignment.staff_member_id,
+      staff_user_id: staff_member.user_id
+    }
+
+    Event.new(event_type, @source_context, :session, assignment.session_id, payload)
   end
 
   # assigned_at/unassigned_at are deliberately absent: no consumer reads them.

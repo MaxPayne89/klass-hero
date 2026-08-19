@@ -635,4 +635,118 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       assert_flash(view, :info, "Session completed successfully")
     end
   end
+
+  describe "session staffing panel (#782)" do
+    setup :register_and_log_in_provider
+
+    setup %{provider: provider} do
+      program = insert(:program_schema, provider_id: provider.id, title: "Judo")
+
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      regular = insert(:staff_member_schema, provider_id: provider.id, first_name: "Ana", last_name: "Stone")
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_program(%{
+          provider_id: provider.id,
+          program_id: program.id,
+          staff_member_id: regular.id
+        })
+
+      {:ok, program: program, session: session, regular: regular}
+    end
+
+    defp open_panel(view, session) do
+      view |> element("#manage-session-staffing-#{session.id}") |> render_click()
+      view
+    end
+
+    test "opens showing the program's roster and says it is inherited", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+
+      open_panel(view, ctx.session)
+
+      assert has_element?(view, "#session-staffing-modal")
+      assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      assert render(view) =~ "Using the program"
+      # Nothing to revert to while the roster is still the program's.
+      refute has_element?(view, "#session-staffing-revert-btn")
+    end
+
+    test "adding a substitute overrides the session and replaces the roster", ctx do
+      substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Bea", last_name: "Stone")
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+      open_panel(view, ctx.session)
+
+      view
+      |> element("#session-staffing-add-form")
+      |> render_submit(%{"staff-id" => substitute.id})
+
+      assert has_element?(view, "#session-staffing-member-#{substitute.id}")
+      refute has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      assert has_element?(view, "#session-staffing-revert-btn")
+      assert render(view) =~ "Staffed just for this session"
+    end
+
+    test "reverting returns the session to the program roster", ctx do
+      substitute = insert(:staff_member_schema, provider_id: ctx.provider.id)
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_session(%{
+          provider_id: ctx.provider.id,
+          session_id: ctx.session.id,
+          staff_member_id: substitute.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+      open_panel(view, ctx.session)
+
+      view |> element("#session-staffing-revert-btn") |> render_click()
+
+      assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      refute has_element?(view, "#session-staffing-revert-btn")
+    end
+
+    test "promoting a session lead badges them and blocks their removal", ctx do
+      substitute = insert(:staff_member_schema, provider_id: ctx.provider.id)
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_session(%{
+          provider_id: ctx.provider.id,
+          session_id: ctx.session.id,
+          staff_member_id: substitute.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+      open_panel(view, ctx.session)
+
+      view |> element("#promote-session-staff-#{substitute.id}") |> render_click()
+
+      assert has_element?(view, "#session-staffing-lead-badge-#{substitute.id}")
+      assert has_element?(view, "#remove-session-staff-#{substitute.id}[disabled]")
+    end
+
+    test "a foreign session cannot be opened", ctx do
+      other_provider = insert(:provider_profile_schema)
+      other_program = insert(:program_schema, provider_id: other_provider.id)
+
+      foreign =
+        insert(:program_session_schema, program_id: other_program.id, session_date: Date.utc_today())
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+
+      # The button is not rendered for a session they cannot see, so drive the
+      # event directly — that is the shape a tampered client takes.
+      render_click(view, "manage_session_staffing", %{"id" => foreign.id})
+
+      refute has_element?(view, "#session-staffing-modal")
+      assert_flash(view, :error, "That session could not be found.")
+    end
+  end
 end

@@ -22,11 +22,23 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   - `:child_checked_out` — intentional no-op (counter is monotonic).
   - `:child_marked_absent` — intentional no-op (no effect on checked_in_count).
   - `:staff_assigned_to_program` / `:staff_unassigned_from_program` — re-resolve
-    current_assigned_staff_* on all `:scheduled` rows for the program, from the
-    assignment table rather than from the event. `current_assigned_staff_*` holds
-    one staff member and a program may carry several, so both directions apply
-    bootstrap's rule (earliest active assignment, active staff only) instead of
-    naming whoever the event happened to mention.
+    current_assigned_staff_* on the program's `:scheduled` rows that are **not**
+    overridden, from the assignment table rather than from the event.
+    `current_assigned_staff_*` holds one staff member and a program may carry
+    several, so both directions apply bootstrap's rule (earliest active
+    assignment, active staff only) instead of naming whoever the event happened
+    to mention.
+  - `:staff_assigned_to_session` / `:staff_unassigned_from_session` — re-resolve
+    the one named session through `Assignments.get_session_attribution/1`.
+
+  ## Attribution has two grains
+
+  `current_assigned_staff_*` names whoever is **effectively** on the session: its
+  own override roster when it has one, the program roster otherwise (#782). The
+  two grains meet in exactly two places — `Assignments.get_session_attribution/1`
+  for live events and the override LATERAL in `bootstrap_session_details/0` — and
+  those two must agree, or the same session reads differently before and after a
+  restart (#1299).
   """
 
   use KlassHero.Shared.Projection,
@@ -42,6 +54,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
       "integration:participation:child_marked_absent",
       "integration:provider:staff_assigned_to_program",
       "integration:provider:staff_unassigned_from_program",
+      "integration:provider:staff_assigned_to_session",
+      "integration:provider:staff_unassigned_from_session",
       "integration:provider:staff_member_deactivated"
     ]
 
@@ -49,7 +63,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
 
   import Ecto.Query
 
+  alias KlassHero.Provider.Assignments
   alias KlassHero.Provider.SessionDetail
+  alias KlassHero.Provider.SessionStaffAssignment
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Projection
@@ -133,6 +149,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     reattribute_scheduled_sessions(program_id)
   end
 
+  # Session-grain overrides (#782). Scoped to the one session named by the event,
+  # not to its program: an override is the provider saying *this day* is staffed
+  # differently, so it must not move its siblings.
+  def handle_event(event, %Event{payload: %{session_id: session_id}})
+      when event in [:staff_assigned_to_session, :staff_unassigned_from_session] do
+    reattribute_session(session_id)
+  end
+
   # Scoped by staff member, not by program: deactivation ends the employment link
   # itself, so it reaches every program they were on. Historical rows keep their
   # attribution, matching :staff_unassigned_from_program.
@@ -145,10 +169,17 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   # Re-resolves rather than blanks: with several staff on a program the departing
   # member's colleague should inherit the attribution, which is what a bootstrap
   # would produce. Blanking only happens to be right when they were the last one.
+  #
+  # Scoped to the sessions that actually name them, rather than to every scheduled
+  # session of the programs they were on: with session-grain overrides, "the
+  # programs they were attributed on" no longer covers the case — a substitute
+  # holds an override on one session and may be on no program at all. Sessions the
+  # departing member does not name would re-resolve to the value they already hold,
+  # so nothing is lost by narrowing.
   def handle_event(:staff_member_deactivated, %Event{payload: %{staff_member_id: staff_member_id}}) do
     staff_member_id
-    |> programs_attributed_to()
-    |> Enum.each(&reattribute_scheduled_sessions/1)
+    |> sessions_attributed_to()
+    |> Enum.each(&reattribute_session/1)
   end
 
   # The single writer for current_assigned_staff_* on live events. Reads the
@@ -160,8 +191,14 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     # :scheduled only — historical rows keep their attribution as an audit trail.
+    #
+    # Overridden sessions are excluded: they are staffed by their own rows, so a
+    # program-roster edit must not reach them. Without this the program event would
+    # re-attribute every scheduled session and silently undo a substitution the
+    # provider set deliberately.
     from(d in SessionDetail,
-      where: d.program_id == ^program_id and d.status == :scheduled
+      where: d.program_id == ^program_id and d.status == :scheduled,
+      where: d.session_id not in subquery(overridden_session_ids())
     )
     |> Repo.update_all(
       set: [
@@ -172,13 +209,37 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
     )
   end
 
-  # Which programs still name the departing staff member on an upcoming session —
-  # the only ones whose attribution can change.
-  defp programs_attributed_to(staff_member_id) do
+  # The single writer for one session's attribution. Delegates the override-vs-program
+  # rule to `Assignments.get_session_attribution/1` rather than restating it, so the
+  # live path and the bootstrap SQL below stay two expressions of one rule (#1299).
+  defp reattribute_session(session_id) do
+    %{staff_id: staff_id, staff_name: staff_name} = Assignments.get_session_attribution(session_id)
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    from(d in SessionDetail,
+      where: d.session_id == ^session_id and d.status == :scheduled
+    )
+    |> Repo.update_all(
+      set: [
+        current_assigned_staff_id: staff_id,
+        current_assigned_staff_name: staff_name,
+        updated_at: now
+      ]
+    )
+  end
+
+  defp overridden_session_ids do
+    from a in SessionStaffAssignment,
+      where: is_nil(a.unassigned_at),
+      select: a.session_id
+  end
+
+  # Which upcoming sessions still name the departing staff member — the only ones
+  # whose attribution can change.
+  defp sessions_attributed_to(staff_member_id) do
     from(d in SessionDetail,
       where: d.current_assigned_staff_id == ^staff_member_id and d.status == :scheduled,
-      distinct: true,
-      select: d.program_id
+      select: d.session_id
     )
     |> Repo.all()
   end
@@ -187,7 +248,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
   # Design notes:
   # * UUIDs cast to ::text so Postgrex returns strings (Ecto :binary_id accepts them on insert).
   # * Status arrives as text; String.to_existing_atom/1 converts (safe: fixed four enum values).
-  # * Upsert preserves session_id, inserted_at, and cover_staff_* (not derivable from write tables).
+  # * Upsert preserves session_id and inserted_at; everything else is derivable from write tables.
   # * Raises on DB failure so WithBootstrapRetry can schedule a retry.
   defp bootstrap_session_details do
     # LATERAL subquery picks exactly one active staff assignment (earliest-assigned wins, matching
@@ -208,9 +269,12 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
       ps.start_time,
       ps.end_time,
       ps.status::text                        AS status,
-      staff.staff_member_id::text            AS current_assigned_staff_id,
-      staff.first_name                       AS staff_first_name,
-      staff.last_name                        AS staff_last_name,
+      CASE WHEN ov.present IS NULL
+           THEN staff.staff_member_id::text
+           ELSE override.staff_member_id::text
+      END                                    AS current_assigned_staff_id,
+      CASE WHEN ov.present IS NULL THEN staff.first_name ELSE override.first_name END AS staff_first_name,
+      CASE WHEN ov.present IS NULL THEN staff.last_name  ELSE override.last_name  END AS staff_last_name,
       COALESCE(counts.checked_in, 0)         AS checked_in_count,
       COALESCE(counts.total, 0)              AS total_count
     FROM program_sessions ps
@@ -224,6 +288,29 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
       ORDER BY psa.assigned_at ASC
       LIMIT 1
     ) staff ON TRUE
+    -- Session-grain override (#782), outranking the program LATERAL above. Same
+    -- earliest-active-wins shape, so `Assignments.get_session_attribution/1` (the
+    -- live path) and this rebuild cannot disagree.
+    LEFT JOIN LATERAL (
+      SELECT ssa.staff_member_id, sm.first_name, sm.last_name
+      FROM session_staff_assignments ssa
+      JOIN staff_members sm ON sm.id = ssa.staff_member_id AND sm.active
+      WHERE ssa.session_id = ps.id
+        AND ssa.unassigned_at IS NULL
+      ORDER BY ssa.assigned_at ASC
+      LIMIT 1
+    ) override ON TRUE
+    -- Whether the session is overridden *at all*, which is a different question
+    -- from who the override names: a session whose only substitute was later
+    -- deactivated is overridden to nobody, and must read blank rather than fall
+    -- back to the program roster it was deliberately taken off.
+    LEFT JOIN LATERAL (
+      SELECT 1 AS present
+      FROM session_staff_assignments ssa
+      WHERE ssa.session_id = ps.id
+        AND ssa.unassigned_at IS NULL
+      LIMIT 1
+    ) ov ON TRUE
     LEFT JOIN (
       SELECT session_id,
              COUNT(*) FILTER (WHERE status IN ('checked_in','checked_out')) AS checked_in,
@@ -278,7 +365,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
           Repo.insert_all(
             SessionDetail,
             attrs_list,
-            on_conflict: {:replace_all_except, [:session_id, :inserted_at, :cover_staff_id, :cover_staff_name]},
+            on_conflict: {:replace_all_except, [:session_id, :inserted_at]},
             conflict_target: [:session_id]
           )
 
@@ -345,9 +432,7 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails 
            :inserted_at,
            :status,
            :checked_in_count,
-           :total_count,
-           :cover_staff_id,
-           :cover_staff_name
+           :total_count
          ]},
       conflict_target: [:session_id]
     )

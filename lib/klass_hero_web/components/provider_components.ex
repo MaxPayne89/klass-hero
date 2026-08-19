@@ -1801,7 +1801,10 @@ defmodule KlassHeroWeb.ProviderComponents do
 
   @doc """
   Renders a modal listing every session of a program with date/time, assigned
-  staff, cover staff (reserved), attendance count, and status.
+  staff, attendance count, and status.
+
+  "Assigned staff" is the session's *effective* staffing: its own override roster
+  where the provider set one, the program roster otherwise (#782).
 
   ## Example
 
@@ -1845,7 +1848,6 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <tr>
                   <th class="px-4 py-3">{gettext("Date / time")}</th>
                   <th class="px-4 py-3">{gettext("Assigned staff")}</th>
-                  <th class="px-4 py-3">{gettext("Cover")}</th>
                   <th class="px-4 py-3">{gettext("Attendance")}</th>
                   <th class="px-4 py-3">{gettext("Status")}</th>
                 </tr>
@@ -1863,9 +1865,6 @@ defmodule KlassHeroWeb.ProviderComponents do
                   </td>
                   <td class="px-4 py-3">
                     {s.current_assigned_staff_name || gettext("Unassigned")}
-                  </td>
-                  <td class="px-4 py-3 text-hero-grey-500">
-                    {s.cover_staff_name || "—"}
                   </td>
                   <td class="px-4 py-3">
                     <span :if={s.status != :cancelled}>
@@ -2021,6 +2020,194 @@ defmodule KlassHeroWeb.ProviderComponents do
             <p class="mt-2 text-xs text-hero-grey-400">
               {gettext("Staff you add can read and reply to this program's parent conversations.")}
             </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the staffing panel for one *session*: who is working it, who leads it,
+  and the controls to add, promote, remove and revert (#782).
+
+  The session sibling of `staffing_modal/1`, and deliberately a separate component
+  rather than a mode on it: this one has to say **where its roster came from**. A
+  session with no overrides shows the program's roster and offers to override it; a
+  session that has been overridden shows its own people and offers to revert. That
+  distinction is the whole feature, and folding it into a flag would bury it.
+
+  ## Example
+
+      <.session_staffing_modal :if={@session_staffing_modal} modal={@session_staffing_modal} />
+  """
+  attr :modal, :map, required: true
+
+  def session_staffing_modal(assigns) do
+    ~H"""
+    <div
+      id="session-staffing-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="session-staffing-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      phx-window-keydown="close_session_staffing"
+      phx-key="escape"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col"
+        phx-click-away="close_session_staffing"
+      >
+        <div class="flex items-start justify-between gap-3 px-4 py-4 sm:px-6 border-b border-hero-grey-200">
+          <div class="min-w-0">
+            <h2 id="session-staffing-modal-title" class={Theme.typography(:section_title)}>
+              {gettext("Staffing — %{date}", date: @modal.session_label)}
+            </h2>
+            <p class="mt-1 truncate text-sm text-hero-grey-500">{@modal.program_title}</p>
+          </div>
+          <button type="button" phx-click="close_session_staffing" aria-label={gettext("Close")}>
+            <.icon name="hero-x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          <%!-- Where this roster came from is the panel's headline fact, not a footnote:
+                everything below reads differently depending on it. --%>
+          <div
+            id="session-staffing-source"
+            class={[
+              "mb-4 flex items-start gap-2 px-3 py-2 text-sm",
+              Theme.rounded(:lg),
+              if(@modal.overridden?,
+                do: "bg-hero-yellow/20 text-hero-charcoal",
+                else: "bg-hero-grey-50 text-hero-grey-600"
+              )
+            ]}
+          >
+            <.icon
+              name={if(@modal.overridden?, do: "hero-user-plus-mini", else: "hero-users-mini")}
+              class="w-5 h-5 shrink-0"
+            />
+            <span>
+              <%= if @modal.overridden? do %>
+                {gettext(
+                  "Staffed just for this session. The program's usual team does not apply here."
+                )}
+              <% else %>
+                {gettext("Using the program's usual team. Adding someone staffs this session only.")}
+              <% end %>
+            </span>
+          </div>
+
+          <ul
+            :if={@modal.members != []}
+            id="session-staffing-members"
+            class="divide-y divide-hero-grey-100"
+          >
+            <li
+              :for={member <- @modal.members}
+              id={"session-staffing-member-#{member.id}"}
+              class="flex items-center gap-3 py-3"
+            >
+              <.staff_avatar member={member} />
+
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-hero-charcoal">
+                  {member.full_name}
+                  <span
+                    :if={member.lead?}
+                    id={"session-staffing-lead-badge-#{member.id}"}
+                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow text-hero-charcoal rounded-full align-middle"
+                  >
+                    {gettext("Lead")}
+                  </span>
+                </p>
+                <p :if={member.role} class="truncate text-sm text-hero-grey-500">{member.role}</p>
+              </div>
+
+              <%!-- Promote and remove act on override rows, so they are only offered
+                    once this session has its own roster. On an inherited roster they
+                    would silently create one. --%>
+              <div :if={@modal.overridden?} class="flex shrink-0 items-center gap-1">
+                <.action_button
+                  :if={!member.lead?}
+                  id={"promote-session-staff-#{member.id}"}
+                  icon="hero-star-mini"
+                  title={gettext("Make lead instructor for this session")}
+                  phx-click="promote_session_lead"
+                  phx-value-staff-id={member.id}
+                />
+                <.action_button
+                  id={"remove-session-staff-#{member.id}"}
+                  icon="hero-user-minus-mini"
+                  title={
+                    if(member.lead?,
+                      do: gettext("Reassign the lead before removing them"),
+                      else: gettext("Remove from this session")
+                    )
+                  }
+                  disabled={member.lead?}
+                  phx-click="remove_session_staff"
+                  phx-value-staff-id={member.id}
+                />
+              </div>
+            </li>
+          </ul>
+
+          <p
+            :if={@modal.members == []}
+            id="session-staffing-empty"
+            class="py-6 text-center text-hero-grey-500"
+          >
+            {gettext("Nobody is working this session yet.")}
+          </p>
+
+          <div class="mt-4 border-t border-hero-grey-200 pt-4">
+            <form
+              phx-submit="assign_session_staff"
+              id="session-staffing-add-form"
+              class="flex flex-col gap-2 sm:flex-row"
+            >
+              <select
+                id="session-staffing-add-select"
+                name="staff-id"
+                disabled={@modal.assignable_options == []}
+                class={[
+                  "flex-1 border border-hero-grey-300 px-3 py-2 text-hero-charcoal disabled:bg-hero-grey-50",
+                  Theme.rounded(:lg)
+                ]}
+              >
+                <option value="">{gettext("Select a staff member…")}</option>
+                <option :for={{label, value} <- @modal.assignable_options} value={value}>
+                  {label}
+                </option>
+              </select>
+              <button
+                type="submit"
+                id="session-staffing-add-btn"
+                disabled={@modal.assignable_options == []}
+                class={[
+                  "flex items-center justify-center gap-2 px-4 py-2 font-semibold",
+                  "bg-hero-yellow hover:bg-hero-yellow-dark text-hero-charcoal",
+                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400",
+                  Theme.rounded(:lg),
+                  Theme.transition(:normal)
+                ]}
+              >
+                <.icon name="hero-plus-mini" class="w-5 h-5" />
+                {gettext("Add")}
+              </button>
+            </form>
+
+            <button
+              :if={@modal.overridden?}
+              type="button"
+              id="session-staffing-revert-btn"
+              phx-click="revert_session_staffing"
+              class="mt-3 text-sm font-medium text-hero-grey-600 underline hover:text-hero-charcoal"
+            >
+              {gettext("Go back to the program's usual team")}
+            </button>
           </div>
         </div>
       </div>

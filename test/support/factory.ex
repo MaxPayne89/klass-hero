@@ -44,6 +44,7 @@ defmodule KlassHero.Factory do
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.SessionStaffAssignment
   alias KlassHero.Provider.SessionStats
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Provider.VerificationDocument
@@ -511,6 +512,40 @@ defmodule KlassHero.Factory do
       assignment,
       %{unassigned_at: DateTime.add(assignment.assigned_at, 3600, :second)}
     )
+  end
+
+  @doc """
+  Factory for `KlassHero.Provider.SessionStaffAssignment` — a per-session staffing
+  override.
+
+  Mints its own provider/program/session/staff, like its program-level sibling.
+  Pass `session_id:` and `staff_member_id:` explicitly when the test needs the
+  override to sit on a session it already built — which is most of them, since an
+  override is only meaningful next to the program roster it replaces.
+
+  ## Examples
+
+      override = insert(:session_staff_assignment_schema)
+
+      insert(:session_staff_assignment_schema,
+        provider_id: provider.id,
+        session_id: session.id,
+        staff_member_id: substitute.id
+      )
+  """
+  def session_staff_assignment_schema_factory do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    session = insert(:program_session_schema, program_id: program.id)
+    staff = insert(:staff_member_schema, provider_id: provider.id)
+
+    %SessionStaffAssignment{
+      id: Ecto.UUID.generate(),
+      provider_id: provider.id,
+      session_id: session.id,
+      staff_member_id: staff.id,
+      assigned_at: DateTime.utc_now() |> DateTime.truncate(:microsecond)
+    }
   end
 
   # =============================================================================
