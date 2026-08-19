@@ -29,6 +29,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.ParticipantPolicy
   alias KlassHero.Enrollment.ParticipantPolicyForm
   alias KlassHero.Enrollment.SingleInviteForm
+  alias KlassHero.Enrollment.Waivers
   alias KlassHero.Family
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
@@ -340,6 +341,26 @@ defmodule KlassHero.Enrollment do
       end
     end
   end
+
+  @doc """
+  Creates a program waiver and publishes its first version.
+
+  Returns `{:ok, %{waiver: Waiver.t(), version: WaiverVersion.t()}}` or `{:error, :not_found}`
+  when the provider does not own the program.
+  """
+  defdelegate create_waiver(provider_id, attrs), to: Waivers
+
+  @doc "Appends a new version of a waiver's text, leaving the previous version untouched."
+  defdelegate publish_waiver_version(provider_id, waiver_id, body), to: Waivers
+
+  @doc "Retires a waiver from future enrollments. Signed acceptances are unaffected."
+  defdelegate archive_waiver(provider_id, waiver_id), to: Waivers
+
+  @doc "Lists a program's active waivers, each paired with its current version."
+  defdelegate list_program_waivers(program_id), to: Waivers
+
+  @doc "The current version of every required, active waiver on a program."
+  defdelegate list_required_waiver_versions(program_id), to: Waivers
 
   defp cancel_with_event(enrollment_id, cancelled, admin_id, reason) do
     Outbox.transact(__MODULE__, fn ->
