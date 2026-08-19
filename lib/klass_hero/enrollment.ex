@@ -610,7 +610,11 @@ defmodule KlassHero.Enrollment do
       enrollments ->
         child_map = child_map_for(enrollments)
         parent_map = parent_map_for(enrollments)
-        Enum.map(enrollments, &build_roster_entry(&1, child_map, parent_map))
+        # A third batched lookup in the shape of the two above — one aggregate query, not
+        # one per row.
+        waiver_status = Waivers.waiver_status_for_enrollments(Enum.map(enrollments, & &1.id))
+
+        Enum.map(enrollments, &build_roster_entry(&1, child_map, parent_map, waiver_status))
     end
   end
 
@@ -638,7 +642,7 @@ defmodule KlassHero.Enrollment do
     |> Map.new(fn p -> {p.id, p} end)
   end
 
-  defp build_roster_entry(enrollment, child_map, parent_map) do
+  defp build_roster_entry(enrollment, child_map, parent_map, waiver_status) do
     child_name =
       case Map.get(child_map, enrollment.child_id) do
         nil -> "Unknown"
@@ -659,7 +663,8 @@ defmodule KlassHero.Enrollment do
       parent_id: enrollment.parent_id,
       parent_user_id: parent_user_id,
       status: enrollment.status,
-      enrolled_at: enrollment.enrolled_at
+      enrolled_at: enrollment.enrolled_at,
+      waiver_status: Map.get(waiver_status, enrollment.id, :not_required)
     }
   end
 

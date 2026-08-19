@@ -2457,6 +2457,9 @@ defmodule KlassHeroWeb.ProviderComponents do
             {gettext("Status")}
           </th>
           <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+            {gettext("Waivers")}
+          </th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
             {gettext("Enrolled")}
           </th>
           <th class="px-3 py-2 text-right text-xs font-semibold text-hero-grey-500 uppercase">
@@ -2473,6 +2476,22 @@ defmodule KlassHeroWeb.ProviderComponents do
             <.status_pill color={enrollment_status_color(entry.status)}>
               {enrollment_status_label(entry.status)}
             </.status_pill>
+          </td>
+          <td class="px-3 py-3">
+            <%!-- A dash rather than "Signed" when the program requires nothing: a provider
+                  scanning for who still owes them a form should not see a green tick that
+                  means "there was never anything to sign". --%>
+            <span id={"waiver-status-#{entry.enrollment_id}"} data-status={entry.waiver_status}>
+              <span :if={entry.waiver_status == :not_required} class="text-sm text-hero-grey-400">
+                —
+              </span>
+              <.status_pill
+                :if={entry.waiver_status != :not_required}
+                color={if entry.waiver_status == :signed, do: "success", else: "warning"}
+              >
+                {if entry.waiver_status == :signed, do: gettext("Signed"), else: gettext("Unsigned")}
+              </.status_pill>
+            </span>
           </td>
           <td class="px-3 py-3 text-sm text-hero-grey-500">
             {format_enrollment_date(entry.enrolled_at)}
