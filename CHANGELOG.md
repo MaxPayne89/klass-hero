@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.76.0](https://github.com/MaxPayne89/klass-hero/compare/v0.75.1...v0.76.0) (2026-08-19)
+
+
+### Features
+
+* custom waivers for providers to create and parents to sign at enrollment ([#1414](https://github.com/MaxPayne89/klass-hero/issues/1414)) ([327a03a](https://github.com/MaxPayne89/klass-hero/commit/327a03abf87623cb4a5b30b54d271403a3851471))
+* per-session staff assignment overrides ([#1413](https://github.com/MaxPayne89/klass-hero/issues/1413)) ([85d1af6](https://github.com/MaxPayne89/klass-hero/commit/85d1af68392fa49b26791c4a06ce85649cdc4b74))
+
 ## [0.75.1](https://github.com/MaxPayne89/klass-hero/compare/v0.75.0...v0.75.1) (2026-08-19)
 
 
