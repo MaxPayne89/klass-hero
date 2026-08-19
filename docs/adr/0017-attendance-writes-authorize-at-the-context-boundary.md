@@ -41,7 +41,7 @@ deterministic answer. `AttendanceAuthorization.authorize/2` takes the first that
 | Order | Rule | Cost |
 |---|---|---|
 | 1. provider | the scope's provider owns the session's program | 1 query (`ProgramProviderResolver`) |
-| 2. staff | the scope's staff member is assigned to it (`StaffProgramAccess`, #1323) | 1 query |
+| 2. staff | the scope's staff member is on the session (`SessionStaffing`, #783) | 4 queries |
 | 3. admin | `scope.user.is_admin` | none |
 | else | `{:error, :unauthorized}` | — |
 
@@ -57,6 +57,28 @@ where a reason *is* demanded. Admin-first would invert exactly this.
 
 A staff member with no assignment is authorized for nothing, per `StaffProgramAccess`'s own
 rule: assignment is a deliberate act, so "not assigned yet" and "not allowed" are the same fact.
+
+## Amended by #783: the staff rule is asked at session grain
+
+`authorize/2` takes the session, not its program id. The provider and admin branches still read
+`session.program_id` — ownership and the admin flag are program-wide facts — but the staff
+branch asks `Provider.get_session_staffing/1`, which returns a session's own overrides when it
+has any and falls back to the program roster when it does not.
+
+This is one question with the program grain as its *fallback*, not two rules OR-ed together, and
+the difference is not cosmetic. #782 lets a provider take one person off a single session:
+`unassign_staff_from_session/3` materializes the program roster onto that session and drops them
+from it, deliberately leaving their `ProgramStaffAssignment` intact. Under an OR they would keep
+authorizing on the program row — the removal silently undone at the layer meant to enforce it.
+Asking the resolver instead means the two grains cannot disagree, because only one of them is
+ever consulted.
+
+The cost is the staff row above: `get_session_staffing/1` resolves sessions, overrides, program
+staffing and leads, so the branch went from one query to four, and one of them re-reads a
+session Participation already holds (`Assignments.fetch_sessions/1` calls back through
+`Participation.get_sessions/1`). Acceptable on a write path that already fetches the record and
+its session. Not acceptable per row — which is why the staff sessions list uses the batch
+`list_session_staffing/1`, four queries regardless of how many sessions the day holds.
 
 ## Derived, not declared
 

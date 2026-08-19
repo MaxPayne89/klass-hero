@@ -2,7 +2,8 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   use KlassHeroWeb, :live_view
 
   alias KlassHero.Participation
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider
+  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 
@@ -14,18 +15,19 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     provider_id = staff_member.provider_id
     selected_date = Date.utc_today()
 
-    {programs, program_access} = StaffLiveHelpers.load_assigned_programs(staff_member)
-
     socket =
       socket
       |> assign(:page_title, gettext("My Sessions"))
-      |> assign(:program_names, Map.new(programs, &{&1.id, &1.title}))
+      # Names every program the provider runs, not only the ones this staff member
+      # is assigned to. A session reaches the stream on its own staffing (#783), so
+      # deriving titles from program assignments would leave an overridden session
+      # rendering the generic "Session" fallback.
+      |> assign(:program_names, StaffLiveHelpers.provider_program_names(provider_id))
       |> assign(:attendance, %{})
       |> assign(:active_nav, :roster)
       |> assign(:provider_id, provider_id)
       |> assign(:staff_member, staff_member)
       |> assign(:selected_date, selected_date)
-      |> assign(:program_access, program_access)
       |> assign(:filter_program_id, nil)
       |> stream(:sessions, [])
 
@@ -149,15 +151,19 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   defp load_sessions(socket) do
     provider_id = socket.assigns.provider_id
     selected_date = socket.assigns.selected_date
-    access = socket.assigns.program_access
+    staff_member_id = socket.assigns.staff_member.id
     filter_program_id = socket.assigns.filter_program_id
 
     {:ok, sessions} = Participation.list_provider_sessions(provider_id, selected_date)
 
+    # Batch, never per row: `list_session_staffing/1` costs four queries whatever
+    # the day's session count, where a per-session call would N+1 the whole list.
+    staffing = Provider.list_session_staffing(Enum.map(sessions, & &1.id))
+
     filtered =
       sessions
-      |> Enum.filter(&StaffProgramAccess.authorized?(access, &1.program_id))
-      |> maybe_filter_by_program(filter_program_id, access)
+      |> Enum.filter(&SessionStaffing.staffed_by?(staffing[&1.id], staff_member_id))
+      |> maybe_filter_by_program(filter_program_id)
 
     socket
     |> stream(:sessions, filtered, reset: true)
@@ -165,21 +171,19 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     |> assign(:sessions_error, nil)
   end
 
-  defp maybe_filter_by_program(sessions, nil, _access), do: sessions
-  defp maybe_filter_by_program(sessions, "", _access), do: sessions
+  # Narrows an already-authorized list, so it carries no access check of its own.
+  # Reachable only by query param — no filter control exists in the template.
+  defp maybe_filter_by_program(sessions, nil), do: sessions
+  defp maybe_filter_by_program(sessions, ""), do: sessions
 
-  defp maybe_filter_by_program(sessions, program_id, access) do
-    if StaffProgramAccess.authorized?(access, program_id) do
-      Enum.filter(sessions, &(&1.program_id == program_id))
-    else
-      sessions
-    end
+  defp maybe_filter_by_program(sessions, program_id) do
+    Enum.filter(sessions, &(&1.program_id == program_id))
   end
 
   defp authorize_session_action(session_id, socket) do
     case Participation.get_session_with_roster(session_id) do
       {:ok, %{session: session}} ->
-        if StaffProgramAccess.authorized?(socket.assigns.program_access, session.program_id) do
+        if staffs_session?(socket, session.id) do
           :ok
         else
           {:error, :unauthorized}
@@ -190,14 +194,24 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
     end
   end
 
+  defp staffs_session?(socket, session_id) do
+    session_id
+    |> Provider.get_session_staffing()
+    |> SessionStaffing.staffed_by?(socket.assigns.staff_member.id)
+  end
+
   defp update_session_in_stream(socket, session_id) do
     case Participation.get_session_with_roster(session_id) do
       {:ok, %{session: session, roster: roster}} ->
         # Session events fan out across dates — a schedule edit cancels every
         # orphaned date, an enrolment seeds every upcoming roster — so check the
         # session's own date rather than trusting the event to concern this day.
-        if StaffProgramAccess.authorized?(socket.assigns.program_access, session.program_id) and
-             session.session_date == socket.assigns.selected_date do
+        # Date first, and deliberately: it is an in-memory comparison while
+        # `staffs_session?/2` costs a round trip, and this topic carries every
+        # participation message for the provider, not only the ones this view
+        # renders. `and` short-circuits, so an off-date message never queries.
+        if session.session_date == socket.assigns.selected_date and
+             staffs_session?(socket, session.id) do
           socket
           |> assign(
             :attendance,

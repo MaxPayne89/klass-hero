@@ -10,10 +10,10 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     ]
 
   alias KlassHero.Participation
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider
+  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
-  alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -22,8 +22,6 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
   def mount(%{"session_id" => session_id}, _session, socket) do
     staff_member = socket.assigns.current_scope.staff_member
 
-    {_programs, program_access} = StaffLiveHelpers.load_assigned_programs(staff_member)
-
     socket =
       socket
       |> assign(:page_title, gettext("Manage Participation"))
@@ -31,7 +29,6 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
       |> assign(:session_id, session_id)
       |> assign(:provider_id, staff_member.provider_id)
       |> assign(:staff_member, staff_member)
-      |> assign(:program_access, program_access)
       |> assign(:session, nil)
       |> assign(:participation_records, [])
       |> assign(:checkout_form_expanded, nil)
@@ -189,6 +186,12 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     {:noreply, socket}
   end
 
+  defp staffs_session?(staff_member, session_id) do
+    session_id
+    |> Provider.get_session_staffing()
+    |> SessionStaffing.staffed_by?(staff_member.id)
+  end
+
   defp load_session_data(socket) do
     session_id = socket.assigns.session_id
 
@@ -198,7 +201,9 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
         # the screen instead of rendering a page whose every button fails. The
         # authorization of record is in the context now (ADR-0017) — this gate is no
         # longer the only thing standing between staff and a child's record (#1353).
-        if StaffProgramAccess.authorized?(socket.assigns.program_access, session.program_id) do
+        # Asked at session grain, so it agrees with the context rather than
+        # shadowing it with a coarser answer (#783).
+        if staffs_session?(socket.assigns.staff_member, session_id) do
           socket
           |> assign(:session, session)
           |> assign(:participation_records, session.participation_records || [])
@@ -212,7 +217,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
           )
 
           socket
-          |> put_flash(:error, gettext("You are not assigned to this program"))
+          |> put_flash(:error, gettext("You are not assigned to this session"))
           |> push_navigate(to: ~p"/staff/sessions")
         end
 

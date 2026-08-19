@@ -622,7 +622,7 @@ msgid "Failed to check out: %{reason}"
 msgstr "Auschecken fehlgeschlagen: %{reason}"
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:160
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:116
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:118
 #, elixir-autogen, elixir-format
 msgid "Failed to complete session: %{reason}"
 msgstr "Sitzung konnte nicht abgeschlossen werden: %{reason}"
@@ -633,7 +633,7 @@ msgid "Failed to delete account. Please try again."
 msgstr "Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:137
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:87
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:89
 #, elixir-autogen, elixir-format
 msgid "Failed to start session: %{reason}"
 msgstr "Sitzung konnte nicht gestartet werden: %{reason}"
@@ -685,7 +685,7 @@ msgstr "Einleitung"
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:115
 #: lib/klass_hero_web/live/provider/sessions_live.ex:565
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:63
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:65
 #, elixir-autogen, elixir-format
 msgid "Invalid date format"
 msgstr "Ungültiges Datumsformat"
@@ -758,8 +758,8 @@ msgstr "Nachricht erfolgreich gesendet!"
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:50
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:4
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:21
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:228
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:20
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:242
 #, elixir-autogen, elixir-format
 msgid "My Sessions"
 msgstr "Meine Sitzungen"
@@ -850,8 +850,8 @@ msgstr "Fragen zu diesen Bedingungen?"
 #: lib/klass_hero_web/live/admin/sessions_live.ex:252
 #: lib/klass_hero_web/live/provider/participation_live.ex:171
 #: lib/klass_hero_web/live/provider/participation_live.ex:217
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:113
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:159
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:110
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "Record not found"
 msgstr "Eintrag nicht gefunden"
@@ -889,7 +889,7 @@ msgid "Send Message"
 msgstr "Nachricht senden"
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:146
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:102
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:104
 #, elixir-autogen, elixir-format
 msgid "Session completed successfully"
 msgstr "Sitzung erfolgreich abgeschlossen"
@@ -897,13 +897,13 @@ msgstr "Sitzung erfolgreich abgeschlossen"
 #: lib/klass_hero_web/live/admin/sessions_live.ex:67
 #: lib/klass_hero_web/live/admin/sessions_live.ex:73
 #: lib/klass_hero_web/live/provider/participation_live.ex:287
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:226
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:231
 #, elixir-autogen, elixir-format
 msgid "Session not found"
 msgstr "Sitzung nicht gefunden"
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:123
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:73
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:75
 #, elixir-autogen, elixir-format
 msgid "Session started successfully"
 msgstr "Sitzung erfolgreich gestartet"
@@ -1384,8 +1384,8 @@ msgstr "Teilnahmeverlauf konnte nicht geladen werden"
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:27
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:65
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:29
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:276
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:27
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:290
 #, elixir-autogen, elixir-format
 msgid "Manage Participation"
 msgstr "Teilnahme verwalten"
@@ -2114,7 +2114,7 @@ msgid "Type a message..."
 msgstr "Nachricht eingeben..."
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:307
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:246
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "Unable to refresh roster. Please reload."
 msgstr "Teilnehmerliste konnte nicht aktualisiert werden. Bitte laden Sie die Seite neu."
@@ -4092,7 +4092,7 @@ msgid "Complete Registration"
 msgstr "Registrierung abschließen"
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:76
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:287
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:301
 #, elixir-autogen, elixir-format
 msgid "Complete Session"
 msgstr "Sitzung abschließen"
@@ -4322,7 +4322,7 @@ msgid "Max Capacity"
 msgstr "Maximale Kapazität"
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:90
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:301
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:315
 #, elixir-autogen, elixir-format
 msgid "No actions available"
 msgstr "Keine Aktionen verfügbar"
@@ -4358,7 +4358,7 @@ msgid "No sessions found for the selected filters."
 msgstr "Keine Sitzungen für die ausgewählten Filter gefunden."
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:122
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:316
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "No sessions scheduled"
 msgstr "Keine Sitzungen geplant"
@@ -4536,7 +4536,7 @@ msgid "Staff Dashboard"
 msgstr "Mitarbeiter-Dashboard"
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:54
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:265
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:279
 #, elixir-autogen, elixir-format
 msgid "Start Session"
 msgstr "Sitzung starten"
@@ -4604,8 +4604,8 @@ msgstr "Ihre Antwort eingeben..."
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:183
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:123
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:92
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:121
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:94
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:123
 #, elixir-autogen, elixir-format
 msgid "Unauthorized"
 msgstr "Nicht autorisiert"
@@ -4632,7 +4632,7 @@ msgid "Upload connection lost. Please try again."
 msgstr "Upload-Verbindung unterbrochen. Bitte versuchen Sie es erneut."
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:87
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:298
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:312
 #, elixir-autogen, elixir-format
 msgid "View Participation"
 msgstr "Teilnahme anzeigen"
@@ -4658,7 +4658,7 @@ msgid "You already have an account. Log in to see your new enrollment."
 msgstr "Sie haben bereits ein Konto. Melden Sie sich an, um Ihre neue Anmeldung zu sehen."
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:125
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:319
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:333
 #, elixir-autogen, elixir-format
 msgid "You have no sessions scheduled for %{date}"
 msgstr "Sie haben keine Sitzungen geplant für %{date}"
@@ -4693,7 +4693,7 @@ msgstr "Teilnehmerliste"
 msgid "Unlimited team seats"
 msgstr "Unbegrenzte Team-Plätze"
 
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:229
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:243
 #, elixir-autogen, elixir-format
 msgid "View and manage your assigned sessions"
 msgstr "Ihre zugewiesenen Sitzungen anzeigen und verwalten"
@@ -4702,7 +4702,6 @@ msgstr "Ihre zugewiesenen Sitzungen anzeigen und verwalten"
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:82
 #: lib/klass_hero_web/live/provider/participation_live.ex:276
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:53
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:215
 #, elixir-autogen, elixir-format
 msgid "You are not assigned to this program"
 msgstr "Sie sind diesem Programm nicht zugewiesen"
@@ -4948,13 +4947,13 @@ msgid "Departure notes"
 msgstr "Notizen zur Abreise"
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:220
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:162
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:159
 #, elixir-autogen, elixir-format
 msgid "Departure time is not a valid date and time"
 msgstr "Abreisezeit ist kein gültiges Datum oder keine gültige Uhrzeit"
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:231
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:173
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:170
 #, elixir-autogen, elixir-format
 msgid "Failed to update record"
 msgstr "Aktualisieren des Datensatzes fehlgeschlagen"
@@ -4995,7 +4994,7 @@ msgid "Medical conditions"
 msgstr "Gesundheitliche Besonderheiten"
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:223
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:165
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:162
 #, elixir-autogen, elixir-format
 msgid "Nothing to update"
 msgstr "Nichts zu aktualisieren"
@@ -5037,7 +5036,7 @@ msgid "Record departure time (optional)"
 msgstr "Abreisezeit erfassen (optional)"
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:211
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:153
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:150
 #, elixir-autogen, elixir-format
 msgid "Record updated"
 msgstr "Datensatz aktualisiert"
@@ -8068,3 +8067,8 @@ msgstr "Einverständniserklärung hinzugefügt."
 #, elixir-autogen, elixir-format
 msgid "Waiver retired. Signatures already collected are kept."
 msgstr "Einverständniserklärung zurückgezogen. Bereits erteilte Unterschriften bleiben erhalten."
+
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:220
+#, elixir-autogen, elixir-format
+msgid "You are not assigned to this session"
+msgstr "Sie sind diesem Termin nicht zugewiesen"

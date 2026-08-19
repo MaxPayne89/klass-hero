@@ -9,8 +9,11 @@ defmodule KlassHero.Participation.RecordCheckInTest do
 
   import KlassHero.Factory
 
+  alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Provider
+  alias KlassHero.ProviderFixtures
 
   describe "execute/1" do
     test "successfully checks in a registered record" do
@@ -127,5 +130,78 @@ defmodule KlassHero.Participation.RecordCheckInTest do
       assert reloaded.check_in_at != nil
       assert reloaded.check_in_by == scope.user.id
     end
+  end
+
+  # The write path is the authorization of record (ADR-0017), so a staff member's
+  # reach has to be proven here and not only at the LiveView gate that shows them
+  # the roster. Both of these are invisible to a program-grain check: the first
+  # has no program assignment to find, the second still has one (#783).
+  describe "execute/1 staff authorization at session grain" do
+    test "a staff member on the session but not the program can check a child in" do
+      %{provider: provider, session: session, record: record} = staffed_session()
+      staff = ProviderFixtures.staff_member_fixture(%{provider_id: provider.id})
+      user = AccountsFixtures.user_fixture()
+
+      assert {:ok, _} =
+               Provider.assign_staff_to_session(%{
+                 provider_id: provider.id,
+                 session_id: session.id,
+                 staff_member_id: staff.id
+               })
+
+      assert {:ok, checked_in} =
+               KlassHero.Participation.record_check_in(
+                 %Scope{user: user, staff_member: staff},
+                 record.id,
+                 notes: nil
+               )
+
+      assert checked_in.status == :checked_in
+      assert checked_in.check_in_by == user.id
+    end
+
+    test "a staff member removed from the session is refused, though still on the program" do
+      %{provider: provider, program: program, session: session, record: record} = staffed_session()
+      staff = assigned_staff(provider, program)
+      _colleague = assigned_staff(provider, program)
+      user = AccountsFixtures.user_fixture()
+
+      assert {:ok, _} = Provider.unassign_staff_from_session(session.id, staff.id, provider.id)
+
+      assert {:error, :unauthorized} =
+               KlassHero.Participation.record_check_in(
+                 %Scope{user: user, staff_member: staff},
+                 record.id,
+                 notes: nil
+               )
+    end
+  end
+
+  defp staffed_session do
+    provider = insert(:provider_profile_schema)
+    program = insert(:program_schema, provider_id: provider.id)
+    session = insert(:program_session_schema, program_id: program.id, status: :in_progress)
+    child = insert(:child_schema)
+
+    record =
+      insert(:participation_record_schema,
+        session_id: session.id,
+        child_id: child.id,
+        status: :registered
+      )
+
+    %{provider: provider, program: program, session: session, record: record}
+  end
+
+  defp assigned_staff(provider, program) do
+    staff = ProviderFixtures.staff_member_fixture(%{provider_id: provider.id})
+
+    ProviderFixtures.program_assignment_fixture(%{
+      provider_id: provider.id,
+      staff_member_id: staff.id,
+      program_id: program.id
+    })
+
+    staff
   end
 end
