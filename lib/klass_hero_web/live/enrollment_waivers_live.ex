@@ -138,12 +138,8 @@ defmodule KlassHeroWeb.EnrollmentWaiversLive do
             {entry.version.body}
           </div>
 
-          <p
-            :if={entry.signed?}
-            id={"waiver-signed-#{entry.waiver.id}"}
-            class="text-sm font-semibold text-green-700"
-          >
-            {gettext("Signed")}
+          <p :if={entry.signed?} id={"waiver-signed-#{entry.waiver.id}"}>
+            <.status_pill color="success">{gettext("Signed")}</.status_pill>
           </p>
 
           <label :if={!entry.signed?} class="flex items-start gap-2 text-sm cursor-pointer">

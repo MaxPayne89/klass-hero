@@ -315,8 +315,13 @@ defmodule KlassHeroWeb.DashboardLive do
       <%!-- Enrollments created by a provider's bulk invite have no signer at creation, so
             their waivers arrive outstanding. This is the only place the parent learns that. --%>
       <section :if={@waivers_outstanding != []} id="waivers-outstanding">
-        <div class="rounded-xl border border-amber-300 bg-amber-50 p-4">
-          <h2 class="font-semibold text-amber-900 mb-2">
+        <div class={[
+          "p-4 border",
+          Theme.rounded(:xl),
+          Theme.bg(:accent_light),
+          Theme.border_color(:accent)
+        ]}>
+          <h2 class={["font-semibold mb-2", Theme.text_color(:heading)]}>
             {gettext("Waivers waiting for your signature")}
           </h2>
           <ul class="space-y-1 text-sm">
