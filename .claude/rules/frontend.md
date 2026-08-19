@@ -3,15 +3,28 @@
 ## Component Organization
 
 - Core UI components in `lib/klass_hero_web/components/core_components.ex`
-- Feature-specific components organized by domain:
-  - `ui_components.ex` - Basic UI elements (buttons, inputs, cards, badges, icons)
+- Shared primitives:
+  - `ui_components.ex` - Basic UI elements, including the `kh_*` primitive vocabulary (`kh_button`, `kh_card`, `kh_pill`, `kh_icon`, `kh_icon_chip`, `kh_list_row`, …)
   - `composite_components.ex` - Complex composite components (search bars, filter pills, navigation)
-  - `program_components.ex` - Domain-specific program components (program cards, hero sections, program lists)
-  - `booking_components.ex` - Booking flow components (booking forms, time slot selection, capacity indicators)
-  - `review_components.ex` - Review and rating components (star ratings, review lists, review forms)
+  - `theme.ex` - Design token authority (see `DESIGN.md`)
+- Per-surface layout families:
+  - `marketing_components.ex` - Public marketing site (`Mk*`)
+  - `parent_components.ex` - Authenticated parent app (`Pa*`)
+  - `provider_layout_components.ex` - Authenticated provider chrome (`Pv*`)
+  - `layouts.ex` - Root/app/admin layout shells
+- Domain components:
+  - `program_components.ex` - Program cards, hero sections, program lists
+  - `booking_components.ex` - Booking forms, time slot selection, capacity indicators
+  - `review_components.ex` - Star ratings, review lists, review forms
+  - `messaging_components.ex` - Conversations and message UI
+  - `participation_components.ex` - Check-in/out and session management
+  - `provider_components.ex` - Provider dashboard UI
+
+Domain UI belongs in its domain file; shared primitives in `ui_`/`core_`/`composite_`. Extraction threshold is three occurrences.
 
 ## Design Principles
 
+- **Visual vocabulary lives in `DESIGN.md`** (repo root) — brand intent, colour roles, voice, and the don'ts list. This file covers the *code* rules; DESIGN.md covers *what things should look like and why*
 - **Mobile-first responsive design** - all UI elements designed for mobile before desktop
 - Reusable component patterns with clear prop interfaces
 - Consistent spacing and typography using Tailwind design tokens

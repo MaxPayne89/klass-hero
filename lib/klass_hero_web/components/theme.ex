@@ -109,26 +109,32 @@ defmodule KlassHeroWeb.Theme do
   - `:primary_hover` - Hover state (hero-blue-700)
   - `:primary_light` - Light background (hero-blue-50)
 
+  ### Secondary Colors
+  - `:secondary` - Neutral secondary (hero-grey-500)
+  - `:secondary_hover` - Secondary hover (hero-grey-600)
+
   ### Accent Colors
-  - `:accent` - Accent highlights (pink-500)
-  - `:accent_hover` - Accent hover (pink-600)
+  - `:accent` - Accent highlights (hero-yellow-400)
+  - `:accent_hover` - Accent hover (hero-yellow-500)
 
   ### Surface Colors
-  - `:surface` - Default background (white)
-  - `:surface_light` - Light surface (slate-50)
+  - `:background` - Page background (hero-pink-50)
+  - `:background_light` - Alternate background (hero-pink-100)
+  - `:surface` - Card surface (white)
+  - `:surface_light` - Light surface (hero-pink-50)
 
   ### Text Colors
-  - `:text_primary` - Primary text (slate-900)
-  - `:text_secondary` - Secondary text (slate-700)
-  - `:text_muted` - Muted text (slate-500)
+  - `:text_primary` - Primary text (hero-black)
+  - `:text_secondary` - Secondary text (hero-black-100)
+  - `:text_muted` - Muted text (hero-grey-500)
 
   ### Border Colors
-  - `:border_light` - Subtle borders (slate-200)
-  - `:border_medium` - Medium borders (slate-300)
+  - `:border_light` - Subtle borders (hero-grey-200)
+  - `:border_medium` - Medium borders (hero-grey-300)
 
   ### Footer Colors
-  - `:footer_bg` - Footer background (slate-900)
-  - `:footer_text` - Footer text (slate-300)
+  - `:footer_bg` - Footer background (hero-black)
+  - `:footer_text` - Footer text (hero-grey-300)
 
   ## Examples
 
@@ -136,10 +142,10 @@ defmodule KlassHeroWeb.Theme do
       "hero-blue-600"
 
       iex> Theme.brand_color(:accent)
-      "pink-500"
+      "hero-yellow-400"
 
       iex> Theme.brand_color(:text_primary)
-      "slate-900"
+      "hero-black"
   """
   def brand_color(key), do: Map.get(@brand_colors, key)
 
