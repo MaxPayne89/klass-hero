@@ -1585,6 +1585,13 @@ defmodule KlassHeroWeb.ProviderComponents do
                     phx-value-id={program.id}
                   />
                   <.action_button
+                    id={"manage-waivers-#{program.id}"}
+                    icon="hero-shield-check-mini"
+                    title={gettext("Manage Waivers")}
+                    phx-click="manage_waivers"
+                    phx-value-id={program.id}
+                  />
+                  <.action_button
                     icon="hero-pencil-square-mini"
                     title={gettext("Edit")}
                     phx-click="edit_program"
@@ -1903,6 +1910,143 @@ defmodule KlassHeroWeb.ProviderComponents do
               </tbody>
             </table>
           <% end %>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the waivers panel for one program: the legal forms parents sign at enrollment.
+
+  Editing publishes a *new* version rather than rewriting the current one, and archiving
+  retires a form without deleting it — both because a signature is only evidence while the
+  wording it was given stays reproducible.
+
+  ## Example
+
+      <.waivers_modal :if={@waivers_modal} modal={@waivers_modal} />
+  """
+  attr :modal, :map, required: true
+
+  def waivers_modal(assigns) do
+    ~H"""
+    <div
+      id="program-waivers-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="program-waivers-modal-title"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      phx-window-keydown="close_waivers"
+      phx-key="escape"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
+        phx-click-away="close_waivers"
+      >
+        <div class="flex items-center justify-between px-4 py-4 sm:px-6 border-b border-hero-grey-200">
+          <h2 id="program-waivers-modal-title" class={Theme.typography(:section_title)}>
+            {gettext("Waivers — %{title}", title: @modal.program_name)}
+          </h2>
+          <button type="button" phx-click="close_waivers" aria-label={gettext("Close")}>
+            <.icon name="hero-x-mark" class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-6">
+          <p :if={@modal.waivers == []} id="waivers-empty" class="text-sm text-hero-grey-500">
+            {gettext("No waivers yet. Parents enrol without signing anything.")}
+          </p>
+
+          <ul :if={@modal.waivers != []} id="waiver-list" class="divide-y divide-hero-grey-100">
+            <li
+              :for={entry <- @modal.waivers}
+              id={"waiver-#{entry.waiver.id}"}
+              class="flex items-start gap-3 py-3"
+            >
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-hero-charcoal">
+                  {entry.waiver.title}
+                  <span
+                    :if={entry.waiver.required}
+                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow text-hero-charcoal rounded-full align-middle"
+                  >
+                    {gettext("Required")}
+                  </span>
+                </p>
+                <p class="text-sm text-hero-grey-500">
+                  {gettext("Version %{number}", number: entry.version.version)}
+                </p>
+              </div>
+
+              <div class="flex shrink-0 items-center gap-1">
+                <.action_button
+                  id={"edit-waiver-#{entry.waiver.id}"}
+                  icon="hero-pencil-square-mini"
+                  title={gettext("Revise text")}
+                  phx-click="edit_waiver"
+                  phx-value-id={entry.waiver.id}
+                />
+                <.action_button
+                  id={"archive-waiver-#{entry.waiver.id}"}
+                  icon="hero-archive-box-mini"
+                  title={gettext("Retire this waiver")}
+                  phx-click="archive_waiver"
+                  phx-value-id={entry.waiver.id}
+                />
+              </div>
+            </li>
+          </ul>
+
+          <.form for={@modal.form} id="waiver-form" phx-submit="save_waiver" class="space-y-4">
+            <h3 class={[Theme.typography(:card_title), "text-hero-charcoal"]}>
+              {if @modal.editing_id,
+                do: gettext("Publish a new version"),
+                else: gettext("Add a waiver")}
+            </h3>
+
+            <.input
+              :if={!@modal.editing_id}
+              field={@modal.form[:title]}
+              type="text"
+              label={gettext("Title")}
+            />
+
+            <.input
+              field={@modal.form[:body]}
+              type="textarea"
+              rows="8"
+              label={gettext("Legal text")}
+            />
+
+            <.input
+              :if={!@modal.editing_id}
+              field={@modal.form[:required]}
+              type="checkbox"
+              label={gettext("Parents must sign this before enrolling")}
+            />
+
+            <p :if={@modal.editing_id} class="text-xs text-hero-grey-500">
+              {gettext(
+                "Publishing keeps every earlier version on record; signatures already given stay bound to the wording they were shown."
+              )}
+            </p>
+
+            <div class="flex gap-2">
+              <.kh_button type="submit" id="save-waiver">
+                {if @modal.editing_id, do: gettext("Publish version"), else: gettext("Add waiver")}
+              </.kh_button>
+              <.kh_button
+                :if={@modal.editing_id}
+                type="button"
+                variant={:secondary}
+                id="cancel-waiver-edit"
+                phx-click="cancel_waiver_edit"
+              >
+                {gettext("Cancel")}
+              </.kh_button>
+            </div>
+          </.form>
         </div>
       </div>
     </div>

@@ -73,6 +73,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       )
       |> assign(sessions_modal: nil)
       |> assign(staffing_modal: nil)
+      |> assign(waivers_modal: nil)
       |> assign(program_form: to_form(ProgramCatalog.new_program_changeset(), as: :program_schema))
       |> assign(enrollment_form: to_form(Enrollment.new_policy_changeset(), as: "enrollment_policy"))
       |> assign(
@@ -260,6 +261,84 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   @impl true
   def handle_event("close_staffing", _params, socket) do
     {:noreply, assign(socket, :staffing_modal, nil)}
+  end
+
+  @impl true
+  def handle_event("manage_waivers", %{"id" => program_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    # Same IDOR guard as manage_staffing/view_roster: program_id is client-supplied.
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+      {:ok, program} ->
+        {:noreply, assign(socket, :waivers_modal, build_waivers_modal(program_id, program.title))}
+
+      {:error, :not_found} ->
+        Logger.warning("[ProgramsLive] Waiver access attempt for unknown or foreign program",
+          program_id: program_id,
+          provider_id: provider_id
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Program not found."))}
+    end
+  end
+
+  @impl true
+  def handle_event("close_waivers", _params, socket) do
+    {:noreply, assign(socket, :waivers_modal, nil)}
+  end
+
+  @impl true
+  def handle_event("edit_waiver", %{"id" => waiver_id}, socket) do
+    modal = socket.assigns.waivers_modal
+    entry = Enum.find(modal.waivers, &(&1.waiver.id == waiver_id))
+
+    {:noreply,
+     assign(socket, :waivers_modal, %{
+       modal
+       | editing_id: waiver_id,
+         form: to_form(%{"body" => entry.version.body}, as: :waiver)
+     })}
+  end
+
+  @impl true
+  def handle_event("cancel_waiver_edit", _params, socket) do
+    modal = socket.assigns.waivers_modal
+    {:noreply, assign(socket, :waivers_modal, %{modal | editing_id: nil, form: blank_waiver_form()})}
+  end
+
+  @impl true
+  def handle_event("save_waiver", %{"waiver" => params}, socket) do
+    %{program_id: program_id, program_name: program_name, editing_id: editing_id} = socket.assigns.waivers_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    save_waiver(provider_id, program_id, editing_id, params)
+    |> case do
+      {:ok, _result} ->
+        {:noreply, assign(socket, :waivers_modal, build_waivers_modal(program_id, program_name))}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, waiver_error_message(reason))
+         |> assign(:waivers_modal, %{
+           socket.assigns.waivers_modal
+           | form: to_form(params, as: :waiver, errors: waiver_form_errors(reason))
+         })}
+    end
+  end
+
+  @impl true
+  def handle_event("archive_waiver", %{"id" => waiver_id}, socket) do
+    %{program_id: program_id, program_name: program_name} = socket.assigns.waivers_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case Enrollment.archive_waiver(provider_id, waiver_id) do
+      {:ok, _waiver} ->
+        {:noreply, assign(socket, :waivers_modal, build_waivers_modal(program_id, program_name))}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, gettext("Waiver not found."))}
+    end
   end
 
   @impl true
@@ -823,6 +902,47 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   # Two facade reads joined by a presenter, the same shape ProgramDetailLive uses
   # for the public "Meet the Heroes" section — `is_lead_instructor` on the
   # assignment is the single source of truth for who leads.
+  # Rebuilt from the context after every write rather than patched in place — the panel is
+  # small, and a stale local copy is how a "current version" display drifts from the row a
+  # signature will actually bind to.
+  defp build_waivers_modal(program_id, program_name) do
+    %{
+      program_id: program_id,
+      program_name: program_name,
+      waivers: Enrollment.list_program_waivers(program_id),
+      editing_id: nil,
+      form: blank_waiver_form()
+    }
+  end
+
+  defp blank_waiver_form do
+    to_form(%{"title" => "", "body" => "", "required" => "true"}, as: :waiver)
+  end
+
+  defp save_waiver(provider_id, _program_id, waiver_id, %{"body" => body}) when is_binary(waiver_id) do
+    Enrollment.publish_waiver_version(provider_id, waiver_id, body)
+  end
+
+  defp save_waiver(provider_id, program_id, nil, params) do
+    Enrollment.create_waiver(provider_id, %{
+      program_id: program_id,
+      title: params["title"],
+      body: params["body"],
+      required: params["required"] == "true"
+    })
+  end
+
+  defp waiver_error_message(:not_found), do: gettext("Program not found.")
+  defp waiver_error_message(_reason), do: gettext("Check the waiver details and try again.")
+
+  # Domain validators return a keyword list of {field, message}; changesets carry their own.
+  defp waiver_form_errors(errors) when is_list(errors) do
+    for {field, message} <- errors, do: {field, {message, []}}
+  end
+
+  defp waiver_form_errors(%Ecto.Changeset{} = changeset), do: changeset.errors
+  defp waiver_form_errors(_reason), do: []
+
   defp build_staffing_modal(program_id, program_name, provider_id) do
     lead_id =
       case Provider.get_lead_instructor(program_id) do
@@ -1336,6 +1456,8 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
         <.sessions_modal :if={@sessions_modal} modal={@sessions_modal} />
 
         <.staffing_modal :if={@staffing_modal} modal={@staffing_modal} />
+
+        <.waivers_modal :if={@waivers_modal} modal={@waivers_modal} />
       </div>
     </.pv_dashboard_shell>
     """
