@@ -195,4 +195,38 @@ defmodule KlassHeroWeb.BookingComponents do
     </div>
     """
   end
+
+  @doc """
+  Marks a waiver as blocking or skippable.
+
+  Every waiver carries one of the two labels. Marking only one state would leave the other
+  readable by absence, and absence is the weakest signal available for the fact that decides
+  whether a parent can enrol at all. Rendered identically on the provider's authoring modal,
+  the booking form, and the standalone signing page, so the two audiences learn one
+  vocabulary rather than opposite ones.
+  """
+  attr :required, :boolean, required: true
+  attr :class, :string, default: ""
+
+  def waiver_requirement(assigns) do
+    ~H"""
+    <span
+      :if={@required}
+      class={[
+        "shrink-0 inline-block px-2 py-0.5 text-xs font-semibold rounded-full",
+        Theme.bg(:accent),
+        Theme.text_color(:heading),
+        @class
+      ]}
+    >
+      {gettext("Required")}
+    </span>
+    <span
+      :if={!@required}
+      class={["shrink-0 text-xs font-normal", Theme.text_color(:muted), @class]}
+    >
+      {gettext("(optional)")}
+    </span>
+    """
+  end
 end

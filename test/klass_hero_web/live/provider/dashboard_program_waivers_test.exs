@@ -71,6 +71,34 @@ defmodule KlassHeroWeb.Provider.DashboardProgramWaiversTest do
     end
   end
 
+  describe "requirement labelling" do
+    # One vocabulary across all three waiver surfaces (provider panel, booking form, signing
+    # page). Labelling only one state would leave the other readable by absence — the weakest
+    # signal for the fact that decides whether a parent can enrol at all.
+    test "labels both required and optional waivers", %{conn: conn, program: program, provider: provider} do
+      {:ok, %{waiver: blocking}} =
+        Enrollment.create_waiver(provider.id, %{
+          program_id: program.id,
+          title: "Liability",
+          required: true,
+          body: "text"
+        })
+
+      {:ok, %{waiver: skippable}} =
+        Enrollment.create_waiver(provider.id, %{
+          program_id: program.id,
+          title: "Photo release",
+          required: false,
+          body: "text"
+        })
+
+      view = open_panel(conn, program)
+
+      assert has_element?(view, "#waiver-#{blocking.id}", "Required")
+      assert has_element?(view, "#waiver-#{skippable.id}", "(optional)")
+    end
+  end
+
   describe "revising a waiver" do
     test "publishing new text bumps the version and keeps the old one readable", %{
       conn: conn,

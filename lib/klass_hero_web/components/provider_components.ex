@@ -10,6 +10,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     router: KlassHeroWeb.Router,
     statics: KlassHeroWeb.static_paths()
 
+  import KlassHeroWeb.BookingComponents, only: [waiver_requirement: 1]
   import KlassHeroWeb.CoreComponents, only: [input: 1]
   import KlassHeroWeb.ParticipationComponents, only: [participation_status: 1]
   import KlassHeroWeb.UIComponents
@@ -1969,12 +1970,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                       on a narrow viewport — losing the one word that says this one blocks. --%>
                 <div class="flex items-center gap-2">
                   <p class="truncate font-medium text-hero-charcoal">{entry.waiver.title}</p>
-                  <span
-                    :if={entry.waiver.required}
-                    class="shrink-0 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow-500 text-hero-grey-900 rounded-full"
-                  >
-                    {gettext("Required")}
-                  </span>
+                  <.waiver_requirement required={entry.waiver.required} />
                 </div>
                 <p class="text-sm text-hero-grey-500">
                   {gettext("Version %{number}", number: entry.version.version)}

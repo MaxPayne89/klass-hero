@@ -428,14 +428,13 @@ defmodule KlassHeroWeb.BookingLive do
             </h2>
 
             <div :for={entry <- @waivers} id={"waiver-#{entry.waiver.id}"} class="mb-4 last:mb-0">
-              <h3 class={[Theme.typography(:card_title), Theme.text_color(:heading), "mb-2"]}>
+              <h3 class={[
+                Theme.typography(:card_title),
+                Theme.text_color(:heading),
+                "mb-2 flex flex-wrap items-center gap-2"
+              ]}>
                 {entry.waiver.title}
-                <span
-                  :if={!entry.waiver.required}
-                  class={["text-xs font-normal", Theme.text_color(:muted)]}
-                >
-                  {gettext("(optional)")}
-                </span>
+                <.waiver_requirement required={entry.waiver.required} />
               </h3>
 
               <%!-- Scrollable rather than truncated: a parent must be able to read the whole

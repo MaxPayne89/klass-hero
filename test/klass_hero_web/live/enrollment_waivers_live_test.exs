@@ -58,6 +58,27 @@ defmodule KlassHeroWeb.EnrollmentWaiversLiveTest do
       assert render(view) =~ "I agree to hold the provider harmless."
     end
 
+    test "labels both required and optional waivers", %{
+      conn: conn,
+      enrollment: enrollment,
+      provider: provider,
+      program: program,
+      waiver: blocking
+    } do
+      {:ok, %{waiver: skippable}} =
+        Enrollment.create_waiver(provider.id, %{
+          program_id: program.id,
+          title: "Photo release",
+          required: false,
+          body: "Optional text."
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/enrollments/#{enrollment.id}/waivers")
+
+      assert has_element?(view, "#waiver-#{blocking.id}", "Required")
+      assert has_element?(view, "#waiver-#{skippable.id}", "(optional)")
+    end
+
     test "redirects when the enrollment belongs to another parent", %{conn: conn} do
       other_provider = insert(:provider_profile_schema)
       other_program = insert(:program_schema, provider_id: other_provider.id)

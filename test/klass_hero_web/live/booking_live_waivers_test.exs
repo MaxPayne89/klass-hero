@@ -47,6 +47,16 @@ defmodule KlassHeroWeb.BookingLiveWaiversTest do
     assert render(view) =~ "I agree to hold the provider harmless."
   end
 
+  test "labels both required and optional waivers", %{conn: conn, provider: provider, program: program} do
+    {blocking, _} = add_waiver(provider, program, title: "Liability", required: true)
+    {skippable, _} = add_waiver(provider, program, title: "Photo release", required: false)
+
+    {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
+
+    assert has_element?(view, "#waiver-#{blocking.id}", "Required")
+    assert has_element?(view, "#waiver-#{skippable.id}", "(optional)")
+  end
+
   test "renders no waiver section when the program has none", %{conn: conn, program: program} do
     {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
 

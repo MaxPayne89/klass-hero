@@ -15,6 +15,8 @@ defmodule KlassHeroWeb.EnrollmentWaiversLive do
   """
   use KlassHeroWeb, :live_view
 
+  import KlassHeroWeb.BookingComponents, only: [waiver_requirement: 1]
+
   alias KlassHero.Enrollment
   alias KlassHero.Family
   alias KlassHero.ProgramCatalog
@@ -116,14 +118,13 @@ defmodule KlassHeroWeb.EnrollmentWaiversLive do
           id={"waiver-#{entry.waiver.id}"}
           class={[Theme.bg(:surface), Theme.rounded(:xl), "p-6 shadow-lg"]}
         >
-          <h2 class={[Theme.typography(:card_title), Theme.text_color(:heading), "mb-2"]}>
+          <h2 class={[
+            Theme.typography(:card_title),
+            Theme.text_color(:heading),
+            "mb-2 flex flex-wrap items-center gap-2"
+          ]}>
             {entry.waiver.title}
-            <span
-              :if={!entry.waiver.required}
-              class={["text-xs font-normal", Theme.text_color(:muted)]}
-            >
-              {gettext("(optional)")}
-            </span>
+            <.waiver_requirement required={entry.waiver.required} />
           </h2>
 
           <div
