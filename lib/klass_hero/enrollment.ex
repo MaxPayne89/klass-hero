@@ -52,6 +52,10 @@ defmodule KlassHero.Enrollment do
   already exists for the child/program, `{:error, :waiver_intent_required}` when `:waivers`
   is missing, `{:error, :waivers_unsigned}` when a required waiver was not signed, or
   `{:error, term()}` on validation failure.
+
+  Note that a returned `%Ecto.Changeset{}` is no longer necessarily the enrollment's own —
+  since the waiver gate joined this transaction it may belong to a `WaiverAcceptance`.
+  Callers that render changeset errors should not assume the enrollment schema.
   """
   def create_enrollment(params) when is_map(params) do
     context_span entity: "enrollment" do
