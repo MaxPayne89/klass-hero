@@ -109,10 +109,10 @@ defmodule KlassHero.Enrollment.Waivers do
         []
 
       enrollment ->
-        signed = signed_version_ids(enrollment_id)
+        signed = signed_waiver_ids(enrollment_id)
 
         for entry <- list_program_waivers(enrollment.program_id),
-            do: Map.put(entry, :signed?, entry.version.id in signed)
+            do: Map.put(entry, :signed?, entry.waiver.id in signed)
     end
   end
 
@@ -158,9 +158,9 @@ defmodule KlassHero.Enrollment.Waivers do
       enrollments
       |> Enum.map(&elem(&1, 1))
       |> Enum.uniq()
-      |> Map.new(&{&1, MapSet.new(list_required_waiver_versions(&1), fn v -> v.id end)})
+      |> Map.new(&{&1, MapSet.new(list_required_waiver_versions(&1), fn v -> v.waiver_id end)})
 
-    signed_by_enrollment = signed_version_ids_by_enrollment(enrollment_ids)
+    signed_by_enrollment = signed_waiver_ids_by_enrollment(enrollment_ids)
 
     Map.new(enrollments, fn {id, program_id} ->
       required = Map.get(required_by_program, program_id, MapSet.new())
@@ -183,21 +183,25 @@ defmodule KlassHero.Enrollment.Waivers do
     end
   end
 
-  defp signed_version_ids(enrollment_id) do
+  # Signatures are counted per *waiver*, never per version — the `(enrollment_id, waiver_id)`
+  # unique index says one signature per waiver is the whole obligation, and decision 8 says a
+  # later version binds future enrollments only. Counting per version would both report a
+  # signed parent as unsigned and invite a re-sign that index refuses.
+  defp signed_waiver_ids(enrollment_id) do
     WaiverAcceptance
     |> where([a], a.enrollment_id == ^enrollment_id)
-    |> select([a], a.waiver_version_id)
+    |> select([a], a.waiver_id)
     |> Repo.all()
     |> MapSet.new()
   end
 
-  defp signed_version_ids_by_enrollment(enrollment_ids) do
+  defp signed_waiver_ids_by_enrollment(enrollment_ids) do
     WaiverAcceptance
     |> where([a], a.enrollment_id in ^enrollment_ids)
-    |> select([a], {a.enrollment_id, a.waiver_version_id})
+    |> select([a], {a.enrollment_id, a.waiver_id})
     |> Repo.all()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Map.new(fn {id, versions} -> {id, MapSet.new(versions)} end)
+    |> Map.new(fn {id, waiver_ids} -> {id, MapSet.new(waiver_ids)} end)
   end
 
   @doc """

@@ -178,4 +178,48 @@ defmodule KlassHero.Enrollment.WaiversTest do
       assert version.version == 2
     end
   end
+
+  describe "a signature survives a later version of the same waiver" do
+    # Decision 8: publishing v2 gates *future* enrollments only. Existing acceptances stand.
+    # Reading signatures per version instead of per waiver broke that twice over — the roster
+    # called a signed parent unsigned, and the re-sign it invited hit the
+    # (enrollment_id, waiver_id) unique index, leaving the parent no way to clear the banner.
+    setup do
+      %{provider: provider, program: program} = provider_with_program()
+      {child, parent} = insert_child_with_guardian()
+
+      {:ok, %{waiver: waiver, version: v1}} =
+        Enrollment.create_waiver(provider.id, %{
+          program_id: program.id,
+          title: "Liability",
+          required: true,
+          body: "v1 text"
+        })
+
+      {:ok, enrollment} =
+        Enrollment.create_enrollment(%{
+          program_id: program.id,
+          child_id: child.id,
+          parent_id: parent.id,
+          waivers: {:accepted, [v1.id]}
+        })
+
+      {:ok, v2} = Enrollment.publish_waiver_version(provider.id, waiver.id, "v2 text")
+
+      %{provider: provider, program: program, waiver: waiver, v1: v1, v2: v2, enrollment: enrollment}
+    end
+
+    test "the roster still reports the enrollment as signed", %{enrollment: enrollment} do
+      id = enrollment.id
+      assert %{^id => :signed} = Enrollment.waiver_status_for_enrollments([id])
+    end
+
+    test "the signing page offers nothing further to sign", %{enrollment: enrollment} do
+      assert [%{signed?: true}] = Enrollment.list_enrollment_waivers(enrollment.id)
+    end
+
+    test "the provider roster entry reads signed", %{program: program, enrollment: _enrollment} do
+      assert [%{waiver_status: :signed}] = Enrollment.list_program_enrollments(program.id)
+    end
+  end
 end

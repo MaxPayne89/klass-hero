@@ -1965,15 +1965,17 @@ defmodule KlassHeroWeb.ProviderComponents do
               class="flex items-start gap-3 py-3"
             >
               <div class="min-w-0 flex-1">
-                <p class="truncate font-medium text-hero-charcoal">
-                  {entry.waiver.title}
+                <%!-- The badge sits outside the truncating title, or a long title swallows it
+                      on a narrow viewport — losing the one word that says this one blocks. --%>
+                <div class="flex items-center gap-2">
+                  <p class="truncate font-medium text-hero-charcoal">{entry.waiver.title}</p>
                   <span
                     :if={entry.waiver.required}
-                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow text-hero-charcoal rounded-full align-middle"
+                    class="shrink-0 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow-500 text-hero-grey-900 rounded-full"
                   >
                     {gettext("Required")}
                   </span>
-                </p>
+                </div>
                 <p class="text-sm text-hero-grey-500">
                   {gettext("Version %{number}", number: entry.version.version)}
                 </p>
@@ -1987,12 +1989,20 @@ defmodule KlassHeroWeb.ProviderComponents do
                   phx-click="edit_waiver"
                   phx-value-id={entry.waiver.id}
                 />
+                <%!-- Retiring cannot be undone from the UI, so it gets the same confirm as
+                      the other one-click destructive actions in this file. --%>
                 <.action_button
                   id={"archive-waiver-#{entry.waiver.id}"}
                   icon="hero-archive-box-mini"
                   title={gettext("Retire this waiver")}
                   phx-click="archive_waiver"
                   phx-value-id={entry.waiver.id}
+                  data-confirm={
+                    gettext(
+                      "Retire \"%{title}\"? Parents will no longer be asked to sign it. Signatures already collected are kept.",
+                      title: entry.waiver.title
+                    )
+                  }
                 />
               </div>
             </li>

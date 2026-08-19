@@ -314,7 +314,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     save_waiver(provider_id, program_id, editing_id, params)
     |> case do
       {:ok, _result} ->
-        {:noreply, assign(socket, :waivers_modal, build_waivers_modal(program_id, program_name))}
+        {:noreply,
+         socket
+         |> assign(:waivers_modal, build_waivers_modal(program_id, program_name))
+         |> put_flash(:info, waiver_saved_message(editing_id))}
 
       {:error, reason} ->
         {:noreply,
@@ -334,7 +337,10 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
     case Enrollment.archive_waiver(provider_id, waiver_id) do
       {:ok, _waiver} ->
-        {:noreply, assign(socket, :waivers_modal, build_waivers_modal(program_id, program_name))}
+        {:noreply,
+         socket
+         |> assign(:waivers_modal, build_waivers_modal(program_id, program_name))
+         |> put_flash(:info, gettext("Waiver retired. Signatures already collected are kept."))}
 
       {:error, :not_found} ->
         {:noreply, put_flash(socket, :error, gettext("Waiver not found."))}
@@ -931,6 +937,9 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       required: params["required"] == "true"
     })
   end
+
+  defp waiver_saved_message(nil), do: gettext("Waiver added.")
+  defp waiver_saved_message(_editing_id), do: gettext("New version published. It applies to future enrolments.")
 
   defp waiver_error_message(:not_found), do: gettext("Program not found.")
   defp waiver_error_message(_reason), do: gettext("Check the waiver details and try again.")
