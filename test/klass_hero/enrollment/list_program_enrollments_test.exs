@@ -127,4 +127,58 @@ defmodule KlassHero.Enrollment.ListProgramEnrollmentsTest do
       assert entry.parent_user_id == nil
     end
   end
+
+  describe "waiver status" do
+    setup do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      {child, parent} = insert_child_with_guardian()
+
+      %{provider: provider, program: program, child: child, parent: parent}
+    end
+
+    test "is :not_required when the program has no required waivers", ctx do
+      {:ok, _} = enroll(ctx, :deferred)
+
+      assert [%{waiver_status: :not_required}] =
+               KlassHero.Enrollment.list_program_enrollments(ctx.program.id)
+    end
+
+    test "is :unsigned while a required waiver is outstanding", ctx do
+      {_waiver, _version} = require_waiver(ctx)
+      {:ok, _} = enroll(ctx, :deferred)
+
+      assert [%{waiver_status: :unsigned}] =
+               KlassHero.Enrollment.list_program_enrollments(ctx.program.id)
+    end
+
+    test "is :signed once the parent has signed", ctx do
+      {_waiver, version} = require_waiver(ctx)
+      {:ok, _} = enroll(ctx, {:accepted, [version.id]})
+
+      assert [%{waiver_status: :signed}] =
+               KlassHero.Enrollment.list_program_enrollments(ctx.program.id)
+    end
+
+    defp require_waiver(%{provider: provider, program: program}) do
+      {:ok, %{waiver: waiver, version: version}} =
+        KlassHero.Enrollment.create_waiver(provider.id, %{
+          program_id: program.id,
+          title: "Liability Waiver",
+          required: true,
+          body: "I agree."
+        })
+
+      {waiver, version}
+    end
+
+    defp enroll(%{program: program, child: child, parent: parent}, intent) do
+      KlassHero.Enrollment.create_enrollment(%{
+        program_id: program.id,
+        child_id: child.id,
+        parent_id: parent.id,
+        waivers: intent
+      })
+    end
+  end
 end

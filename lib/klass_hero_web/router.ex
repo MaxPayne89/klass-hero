@@ -108,6 +108,7 @@ defmodule KlassHeroWeb.Router do
       live "/family/settings/children/:child_id/edit", Settings.ChildrenLive, :edit
 
       live "/programs/:id/booking", BookingLive, :new
+      live "/enrollments/:id/waivers", EnrollmentWaiversLive, :show
       live "/messages", MessagesLive.Index, :index
       live "/messages/:id", MessagesLive.Show, :show
     end

@@ -29,6 +29,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.ParticipantPolicy
   alias KlassHero.Enrollment.ParticipantPolicyForm
   alias KlassHero.Enrollment.SingleInviteForm
+  alias KlassHero.Enrollment.Waivers
   alias KlassHero.Family
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
@@ -41,22 +42,36 @@ defmodule KlassHero.Enrollment do
   @doc """
   Creates a new enrollment.
 
+  `params` must carry a `:waivers` intent — `{:accepted, [waiver_version_id]}` when a parent
+  signed at the point of enrolling, or `:deferred` when there is no signer present (the
+  invite saga). It has no default: `[]` would mean both "signed nothing" and "don't care",
+  so an omitted key would silently skip the gate. `:audit` optionally carries
+  `:ip_address` and `:user_agent` for the acceptance record.
+
   Returns `{:ok, Enrollment.t()}`, `{:error, :duplicate_resource}` if an active enrollment
-  already exists for the child/program, or `{:error, term()}` on validation failure.
+  already exists for the child/program, `{:error, :waiver_intent_required}` when `:waivers`
+  is missing, `{:error, :waivers_unsigned}` when a required waiver was not signed, or
+  `{:error, term()}` on validation failure.
+
+  Note that a returned `%Ecto.Changeset{}` is no longer necessarily the enrollment's own —
+  since the waiver gate joined this transaction it may belong to a `WaiverAcceptance`.
+  Callers that render changeset errors should not assume the enrollment schema.
   """
   def create_enrollment(params) when is_map(params) do
     context_span entity: "enrollment" do
-      do_create_enrollment(params)
+      with {:ok, intent} <- Waivers.validate_intent(params) do
+        do_create_enrollment(params, intent)
+      end
     end
   end
 
-  defp do_create_enrollment(%{identity_id: identity_id} = params) when is_binary(identity_id) do
+  defp do_create_enrollment(%{identity_id: identity_id} = params, intent) when is_binary(identity_id) do
     with {:ok, parent} <- fetch_parent(identity_id),
          :ok <- ensure_child_belongs_to_parent(params[:child_id], parent.id),
          {:ok, :eligible} <- ensure_eligible(params[:program_id], params[:child_id]) do
       params
       |> build_enrollment_attrs(parent.id)
-      |> persist_enrollment(identity_id)
+      |> persist_enrollment(identity_id, waiver_context(params, intent))
     end
   end
 
@@ -65,10 +80,14 @@ defmodule KlassHero.Enrollment do
   # parent_user_id and Messaging's enrolled-children read table requires it — passing
   # the missing key through produced an event that crashed that projection on every
   # invite-claimed enrollment.
-  defp do_create_enrollment(params) do
+  defp do_create_enrollment(params, intent) do
     params
     |> build_enrollment_attrs(params[:parent_id])
-    |> persist_enrollment(params[:identity_id] || parent_user_id(params[:parent_id]))
+    |> persist_enrollment(params[:identity_id] || parent_user_id(params[:parent_id]), waiver_context(params, intent))
+  end
+
+  defp waiver_context(params, intent) do
+    %{intent: intent, audit: params[:audit] || %{}}
   end
 
   defp parent_user_id(nil), do: nil
@@ -161,8 +180,8 @@ defmodule KlassHero.Enrollment do
     }
   end
 
-  defp persist_enrollment(attrs, identity_id) do
-    create_enrollment_with_capacity_check(attrs, attrs[:program_id], identity_id)
+  defp persist_enrollment(attrs, identity_id, waiver_ctx) do
+    create_enrollment_with_capacity_check(attrs, attrs[:program_id], identity_id, waiver_ctx)
   end
 
   defp enrollment_created_event(enrollment, identity_id) do
@@ -340,6 +359,39 @@ defmodule KlassHero.Enrollment do
       end
     end
   end
+
+  @doc """
+  Creates a program waiver and publishes its first version.
+
+  Returns `{:ok, %{waiver: Waiver.t(), version: WaiverVersion.t()}}` or `{:error, :not_found}`
+  when the provider does not own the program.
+  """
+  defdelegate create_waiver(provider_id, attrs), to: Waivers
+
+  @doc "Appends a new version of a waiver's text, leaving the previous version untouched."
+  defdelegate publish_waiver_version(provider_id, waiver_id, body), to: Waivers
+
+  @doc "Retires a waiver from future enrollments. Signed acceptances are unaffected."
+  defdelegate archive_waiver(provider_id, waiver_id), to: Waivers
+
+  @doc "Lists a program's active waivers, each paired with its current version."
+  defdelegate list_program_waivers(program_id), to: Waivers
+
+  @doc "The current version of every required, active waiver on a program."
+  defdelegate list_required_waiver_versions(program_id), to: Waivers
+
+  @doc "The waivers in force for an enrollment's program, each marked signed or not."
+  defdelegate list_enrollment_waivers(enrollment_id), to: Waivers
+
+  @doc """
+  Records signatures on an existing enrollment (the deferred path).
+
+  Only the enrolling parent may sign; anyone else gets `{:error, :not_found}`.
+  """
+  defdelegate sign_waivers(enrollment_id, parent_id, version_ids, audit), to: Waivers
+
+  @doc "Waiver status per enrollment (`:signed | :unsigned | :not_required`), for the roster."
+  defdelegate waiver_status_for_enrollments(enrollment_ids), to: Waivers
 
   defp cancel_with_event(enrollment_id, cancelled, admin_id, reason) do
     Outbox.transact(__MODULE__, fn ->
@@ -562,7 +614,11 @@ defmodule KlassHero.Enrollment do
       enrollments ->
         child_map = child_map_for(enrollments)
         parent_map = parent_map_for(enrollments)
-        Enum.map(enrollments, &build_roster_entry(&1, child_map, parent_map))
+        # A third batched lookup in the shape of the two above — one aggregate query, not
+        # one per row.
+        waiver_status = Waivers.waiver_status_for_enrollments(Enum.map(enrollments, & &1.id))
+
+        Enum.map(enrollments, &build_roster_entry(&1, child_map, parent_map, waiver_status))
     end
   end
 
@@ -590,7 +646,7 @@ defmodule KlassHero.Enrollment do
     |> Map.new(fn p -> {p.id, p} end)
   end
 
-  defp build_roster_entry(enrollment, child_map, parent_map) do
+  defp build_roster_entry(enrollment, child_map, parent_map, waiver_status) do
     child_name =
       case Map.get(child_map, enrollment.child_id) do
         nil -> "Unknown"
@@ -611,7 +667,8 @@ defmodule KlassHero.Enrollment do
       parent_id: enrollment.parent_id,
       parent_user_id: parent_user_id,
       status: enrollment.status,
-      enrolled_at: enrollment.enrolled_at
+      enrolled_at: enrollment.enrolled_at,
+      waiver_status: Map.get(waiver_status, enrollment.id, :not_required)
     }
   end
 
@@ -779,7 +836,8 @@ defmodule KlassHero.Enrollment do
   # (`SELECT FOR UPDATE`) inside a transaction to prevent TOCTOU races where concurrent
   # requests could both pass the capacity check. Falls through to a plain insert when
   # program_id is nil (no policy to lock).
-  defp create_enrollment_with_capacity_check(attrs, nil, identity_id) do
+  # No program means no waivers — they are program-scoped, so there is nothing to gate on.
+  defp create_enrollment_with_capacity_check(attrs, nil, identity_id, _waiver_ctx) do
     Outbox.transact(__MODULE__, fn ->
       with {:ok, enrollment} <- create_enrollment_record(attrs) do
         {:ok, enrollment, [enrollment_created_event(enrollment, identity_id)]}
@@ -787,7 +845,7 @@ defmodule KlassHero.Enrollment do
     end)
   end
 
-  defp create_enrollment_with_capacity_check(attrs, program_id, identity_id)
+  defp create_enrollment_with_capacity_check(attrs, program_id, identity_id, waiver_ctx)
        when is_map(attrs) and is_binary(program_id) do
     Ecto.Multi.new()
     |> Ecto.Multi.run(:lock_and_check, fn repo, _changes ->
@@ -802,7 +860,17 @@ defmodule KlassHero.Enrollment do
           check_capacity(policy, active)
       end
     end)
+    # Resolved inside the Multi for the same reason the capacity row is locked: a provider
+    # publishing a required waiver between a pre-flight check and the insert would otherwise
+    # leave an enrollment with an unsigned required waiver.
+    |> Ecto.Multi.run(:check_waivers, fn repo, _changes ->
+      Waivers.resolve_acceptances(repo, program_id, waiver_ctx.intent)
+    end)
     |> Ecto.Multi.run(:create, fn _repo, _changes -> create_enrollment_record(attrs) end)
+    |> Ecto.Multi.run(:accept_waivers, fn repo, %{create: enrollment, check_waivers: versions} ->
+      signer = %{enrollment_id: enrollment.id, parent_id: enrollment.parent_id}
+      Waivers.record_acceptances(repo, versions, signer, waiver_ctx.audit)
+    end)
     # Staged in the same Multi as the capacity lock, so an enrollment and the event
     # announcing it cannot disagree about whether it happened.
     |> Ecto.Multi.run(:stage, fn _repo, %{create: enrollment} ->
@@ -813,6 +881,8 @@ defmodule KlassHero.Enrollment do
     |> case do
       {:ok, %{create: enrollment}} -> {:ok, enrollment}
       {:error, :lock_and_check, :program_full, _} -> {:error, :program_full}
+      {:error, :check_waivers, :waivers_unsigned, _} -> {:error, :waivers_unsigned}
+      {:error, :accept_waivers, reason, _} -> {:error, reason}
       {:error, :create, reason, _} -> {:error, reason}
     end
   end
