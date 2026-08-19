@@ -72,6 +72,21 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsS
     staff_member
   end
 
+  # The real substitution flow. Adding someone materializes the program roster, so
+  # taking the regular off is a second, separate act — and it takes both for a
+  # session to be genuinely staffed by the substitute alone.
+  defp substitute!(ctx, substitute, regular) do
+    override!(ctx, substitute)
+
+    {:ok, retired} = Provider.unassign_staff_from_session(ctx.session.id, regular.id, ctx.provider.id)
+
+    retired
+    |> ProviderEvents.staff_unassigned_from_session(regular, ctx.program.id)
+    |> ProviderSessionDetails.project()
+
+    substitute
+  end
+
   defp seed_session_row!(ctx) do
     ProviderSessionDetails.project(
       Event.new(:session_created, :participation, :session, ctx.session.id, %{
@@ -90,21 +105,34 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsS
   end
 
   describe "staff_assigned_to_session" do
-    test "attributes the session to the override, not the program roster", ctx do
+    test "keeps naming the program's earliest active member when someone is added", ctx do
       regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
       seed_session_row!(ctx)
       assert attribution(ctx.session.id) == {regular.id, "Ana Stone"}
 
-      substitute = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+      _extra = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+
+      # Adding is additive: the program roster is copied across and Bea appended,
+      # so Ana still wins on earliest-assigned. Materializing with fresh
+      # timestamps would reorder the roster and rename the card for no reason the
+      # provider can see.
+      assert attribution(ctx.session.id) == {regular.id, "Ana Stone"}
+    end
+
+    test "attributes the session to the substitute once the regular is taken off", ctx do
+      regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
+      seed_session_row!(ctx)
+
+      substitute = ctx |> staff("Bea") |> then(&substitute!(ctx, &1, regular))
 
       assert attribution(ctx.session.id) == {substitute.id, "Bea Stone"}
     end
 
     test "blanks the attribution when the only override holder is deactivated", ctx do
-      _regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
+      regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
       seed_session_row!(ctx)
 
-      substitute = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+      substitute = ctx |> staff("Bea") |> then(&substitute!(ctx, &1, regular))
       {:ok, _} = Provider.deactivate_staff_member(substitute)
 
       substitute
@@ -118,26 +146,28 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsS
   end
 
   describe "staff_unassigned_from_session" do
-    test "returns the session to the program roster when the last override goes", ctx do
+    test "re-attributes to whoever is left when someone is taken off", ctx do
       regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
       seed_session_row!(ctx)
-      substitute = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+      extra = ctx |> staff("Bea") |> then(&override!(ctx, &1))
 
-      {:ok, retired} = Provider.unassign_staff_from_session(ctx.session.id, substitute.id, ctx.provider.id)
+      {:ok, retired} = Provider.unassign_staff_from_session(ctx.session.id, extra.id, ctx.provider.id)
 
       retired
-      |> ProviderEvents.staff_unassigned_from_session(substitute, ctx.program.id)
+      |> ProviderEvents.staff_unassigned_from_session(extra, ctx.program.id)
       |> ProviderSessionDetails.project()
 
+      # The session stays overridden — Ana's materialized row survives the removal —
+      # and she is who it names either way.
       assert attribution(ctx.session.id) == {regular.id, "Ana Stone"}
     end
   end
 
   describe "program-level changes do not clobber an overridden session" do
     test "assigning someone to the program leaves the override standing", ctx do
-      _regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
+      regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
       seed_session_row!(ctx)
-      substitute = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+      substitute = ctx |> staff("Bea") |> then(&substitute!(ctx, &1, regular))
 
       newcomer = ctx |> staff("Cal") |> then(&on_program!(ctx, &1))
 
@@ -172,9 +202,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsS
 
   describe "bootstrap agrees with the incremental path (#1299)" do
     test "rebuild reproduces the override attribution", ctx do
-      _regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
+      regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
       seed_session_row!(ctx)
-      substitute = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+      substitute = ctx |> staff("Bea") |> then(&substitute!(ctx, &1, regular))
 
       live = attribution(ctx.session.id)
 
@@ -186,6 +216,29 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsS
 
       assert attribution(ctx.session.id) == live
       assert attribution(ctx.session.id) == {substitute.id, "Bea Stone"}
+    end
+
+    test "rebuild reproduces the attribution of a materialized roster", ctx do
+      # The pairing that matters most for materialization: the live path picks the
+      # earliest active member in Elixir, bootstrap does it in SQL with
+      # ORDER BY assigned_at ASC LIMIT 1. Copies carry the program assignment's own
+      # timestamp precisely so both land on the same person.
+      regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
+      seed_session_row!(ctx)
+      _extra = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+
+      live = attribution(ctx.session.id)
+
+      start_supervised!(
+        Supervisor.child_spec({ProviderSessionDetails, name: :session_staff_bootstrap_materialized},
+          id: :session_staff_bootstrap_materialized
+        )
+      )
+
+      :ok = ProviderSessionDetails.rebuild(:session_staff_bootstrap_materialized)
+
+      assert attribution(ctx.session.id) == live
+      assert attribution(ctx.session.id) == {regular.id, "Ana Stone"}
     end
 
     test "rebuild reproduces the program fallback for an un-overridden session", ctx do
@@ -204,9 +257,9 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsS
     end
 
     test "rebuild blanks an override whose only holder is deactivated", ctx do
-      _regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
+      regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
       seed_session_row!(ctx)
-      substitute = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+      substitute = ctx |> staff("Bea") |> then(&substitute!(ctx, &1, regular))
       {:ok, _} = Provider.deactivate_staff_member(substitute)
 
       start_supervised!(
@@ -223,8 +276,8 @@ defmodule KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetailsS
     test "rebuild keeps a retired override out of the attribution", ctx do
       regular = ctx |> staff("Ana") |> then(&on_program!(ctx, &1))
       seed_session_row!(ctx)
-      substitute = ctx |> staff("Bea") |> then(&override!(ctx, &1))
-      {:ok, _} = Provider.unassign_staff_from_session(ctx.session.id, substitute.id, ctx.provider.id)
+      extra = ctx |> staff("Bea") |> then(&override!(ctx, &1))
+      {:ok, _} = Provider.unassign_staff_from_session(ctx.session.id, extra.id, ctx.provider.id)
 
       start_supervised!(
         Supervisor.child_spec({ProviderSessionDetails, name: :session_staff_bootstrap_retired},

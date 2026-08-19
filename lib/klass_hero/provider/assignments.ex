@@ -137,11 +137,12 @@ defmodule KlassHero.Provider.Assignments do
   end
 
   @doc """
-  Adds a staff member to one session, overriding the program's default roster.
+  Adds a staff member to one session, giving that session a roster of its own.
 
-  The first override on a session flips it from inheriting the program roster to
-  naming its own — see `KlassHero.Provider.SessionStaffAssignment` for why the
-  table is sparse rather than seeded.
+  Additive. The first add to a session that still inherits copies the program's
+  visible roster across first, so the result is "the usual team plus this person",
+  not "this person instead of the usual team" — see `materialize_program_roster/2`
+  for why that copy is still compatible with a sparse table.
 
   `attrs.provider_id` is the tenancy authority and must come from the
   authenticated scope. `attrs.assigned_by_user_id` is optional and records who
@@ -173,23 +174,29 @@ defmodule KlassHero.Provider.Assignments do
   end
 
   @doc """
-  Removes one staff member's override from a session owned by `provider_id`.
+  Removes one staff member from a session owned by `provider_id`.
+
+  Works on a session that still inherits: the program roster is materialized first,
+  so removing one person leaves the rest rather than emptying the session.
 
   Refuses when the target leads the session, for the same reason the program-level
   sibling does: detaching them would leave the session lead-less off a single
   click. Promote a replacement or step them down first.
 
-  Retiring the *last* override on a session returns it to inheriting the program
-  roster — which is why `revert_session_to_program_roster/2` exists as the bulk
-  form rather than making callers loop.
+  Refuses to remove the *last* member. Zero override rows means "inherits the
+  program roster", so emptying a session this way would snap it back to showing the
+  whole team — `revert_session_to_program_roster/2` is the honest way to say that,
+  and the only one.
 
   Returns:
   - `{:ok, SessionStaffAssignment.t()}` on success
   - `{:error, :cannot_unassign_lead}` if the staff member currently leads the session
-  - `{:error, :not_found}` if no active override exists or it is foreign
+  - `{:error, :cannot_empty_session}` if they are the session's only member
+  - `{:error, :not_found}` if they are not on the session, or it is foreign
   """
   @spec unassign_staff_from_session(String.t(), String.t(), String.t()) ::
-          {:ok, SessionStaffAssignment.t()} | {:error, :not_found | :cannot_unassign_lead | term()}
+          {:ok, SessionStaffAssignment.t()}
+          | {:error, :not_found | :cannot_unassign_lead | :cannot_empty_session | term()}
   def unassign_staff_from_session(session_id, staff_member_id, provider_id)
       when is_binary(session_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "session_staff_assignment" do
@@ -229,20 +236,21 @@ defmodule KlassHero.Provider.Assignments do
   end
 
   @doc """
-  Flags one of a session's existing overrides as its lead instructor.
+  Flags one of a session's members as its lead instructor.
 
-  Unlike `set_lead_instructor/3`, this does **not** create the assignment when none
-  exists. At program grain that upsert is a convenience; at session grain it would
-  be a hidden write that silently flips a session from inheriting the program roster
-  to overriding it — a much larger change than "promote this person". Assign first,
-  then promote.
+  Promoting on a session that still inherits materializes the program roster first
+  (see `materialize_program_roster/2`), so the session keeps everyone it was showing
+  and gains its own lead. This used to refuse with `{:error, :not_found}` precisely
+  because creating a lone override row would have silently discarded the rest of the
+  roster; materialization removes that hazard, so the refusal protected nothing.
 
-  Idempotent and transactional: any previous session lead is cleared and the target
-  flagged in one transaction, so the `session_staff_assignments_single_lead` partial
-  unique index is never violated mid-flight.
+  Idempotent and transactional: the roster copy, clearing any previous session lead,
+  and flagging the target all commit together, so the
+  `session_staff_assignments_single_lead` partial unique index is never violated
+  mid-flight.
 
-  Returns `{:error, :not_found}` when the staff member, the session, or an active
-  override for the pair is missing or foreign, or the staff member is deactivated.
+  Returns `{:error, :not_found}` when the staff member or session is missing or
+  foreign, the staff member is deactivated, or they are not on this session at all.
   """
   @spec set_session_lead_instructor(String.t(), String.t(), String.t()) ::
           {:ok, SessionStaffAssignment.t()} | {:error, :not_found | term()}
@@ -250,8 +258,14 @@ defmodule KlassHero.Provider.Assignments do
       when is_binary(session_id) and is_binary(staff_member_id) and is_binary(provider_id) do
     context_span entity: "session_staff_assignment" do
       with {:ok, staff_member} <- Provider.get_active_staff_member(staff_member_id, provider_id),
-           {:ok, _session} <- ensure_session_owned(session_id, provider_id) do
+           {:ok, session} <- ensure_session_owned(session_id, provider_id) do
         Multi.new()
+        # Ahead of :clear_other_leads on purpose — a materialized program lead has to
+        # exist before the query that steps them down can see them.
+        |> Multi.run(:materialize, fn _repo, _changes ->
+          :ok = materialize_program_roster(session, provider_id)
+          {:ok, :materialized}
+        end)
         |> Multi.update_all(
           :clear_other_leads,
           other_active_session_leads_query(session_id, staff_member.id, provider_id),
@@ -411,15 +425,19 @@ defmodule KlassHero.Provider.Assignments do
   @spec list_assignable_staff_for_session(String.t(), String.t()) :: [StaffMember.t()]
   def list_assignable_staff_for_session(provider_id, session_id)
       when is_binary(provider_id) and is_binary(session_id) do
+    # Subtracts the *effective* roster, not just the override rows: a session that
+    # still inherits is showing the program's team, and offering to "add" someone
+    # already on screen is how the picker used to hand out a no-op that read as a
+    # roster wipe.
     already_on_session =
-      from(a in SessionStaffAssignment,
-        where: a.session_id == ^session_id and is_nil(a.unassigned_at),
-        select: a.staff_member_id
-      )
+      case get_session_staffing(session_id) do
+        %SessionStaffing{member_ids: member_ids} -> member_ids
+        nil -> []
+      end
 
     from(s in StaffMember,
       where: s.provider_id == ^provider_id and s.active == true,
-      where: s.id not in subquery(already_on_session),
+      where: s.id not in ^already_on_session,
       order_by: [asc: s.first_name, asc: s.last_name]
     )
     |> Repo.all()
@@ -758,7 +776,8 @@ defmodule KlassHero.Provider.Assignments do
 
   defp assign_to_session_with_event(assignment_attrs, staff_member, session) do
     Outbox.transact(@context, fn ->
-      with {:ok, assignment} <- insert_session_staff_assignment(assignment_attrs) do
+      with :ok <- materialize_program_roster(session, assignment_attrs.provider_id),
+           {:ok, assignment} <- insert_session_staff_assignment(assignment_attrs) do
         {:ok, assignment, [ProviderEvents.staff_assigned_to_session(assignment, staff_member, session.program_id)]}
       end
     end)
@@ -766,10 +785,87 @@ defmodule KlassHero.Provider.Assignments do
 
   defp unassign_from_session_with_event(session_id, staff_member_id, provider_id, staff_member, session) do
     Outbox.transact(@context, fn ->
-      with {:ok, assignment} <- retire_session_staff_assignment(session_id, staff_member_id, provider_id) do
+      with :ok <- ensure_not_last_member(session_id, staff_member_id),
+           :ok <- materialize_program_roster(session, provider_id),
+           {:ok, assignment} <- retire_session_staff_assignment(session_id, staff_member_id, provider_id) do
         {:ok, assignment, [ProviderEvents.staff_unassigned_from_session(assignment, staff_member, session.program_id)]}
       end
     end)
+  end
+
+  # The first write to a session that still inherits copies the program's visible
+  # roster in *before* the caller's change lands, so "add" adds instead of
+  # replacing and "remove" removes one person instead of all but none.
+  #
+  # This is not the copy-on-create seeding #1321 deleted: rows appear only for a
+  # session a human deliberately made different — one session per explicit action,
+  # not 500 per program — so the other sessions keep inheriting and there is
+  # nothing to reconcile. The cost is stated in the panel: once materialized, later
+  # program roster edits no longer reach this session.
+  #
+  # No events are staged for the copied rows. Consumers re-resolve the whole
+  # session through `get_session_attribution/1`, which reads these rows whether or
+  # not anything announced them; the one event for the caller's own action is what
+  # triggers that re-resolve.
+  defp materialize_program_roster(session, provider_id) do
+    if session_overridden?(session.id) do
+      :ok
+    else
+      now = DateTime.utc_now() |> DateTime.truncate(:microsecond)
+
+      rows =
+        for row <- active_program_roster_rows(session.program_id) do
+          %{
+            id: Ecto.UUID.generate(),
+            provider_id: provider_id,
+            session_id: session.id,
+            staff_member_id: row.staff_member_id,
+            # The *program* assignment's timestamp, not `now`. `assigned_at` is the
+            # resolver's sort key and the projection names a session's earliest active
+            # member, so stamping the copies with one shared `now` would both make
+            # their order arbitrary and place them after the add that triggered the
+            # copy — silently renaming the session card. Carrying the program's own
+            # timestamps keeps the roster in its original order and correctly ranks
+            # everyone who was already there ahead of the person being added.
+            assigned_at: row.assigned_at,
+            is_lead_instructor: row.is_lead_instructor,
+            inserted_at: now,
+            updated_at: now
+          }
+        end
+
+      Repo.insert_all(SessionStaffAssignment, rows)
+      :ok
+    end
+  end
+
+  # Zero override rows means "inherits the program roster", so a session cannot
+  # express "deliberately staffed by nobody" — removing the last member would snap
+  # the roster back to the full program team. Refuse instead and point at
+  # `revert_session_to_program_roster/2`, which is the honest way to say that.
+  defp ensure_not_last_member(session_id, staff_member_id) do
+    case get_session_staffing(session_id) do
+      %SessionStaffing{member_ids: [^staff_member_id]} -> {:error, :cannot_empty_session}
+      _ -> :ok
+    end
+  end
+
+  # The program roster as the panel shows it — active staff only, in assignment
+  # order — because materializing must reproduce what the provider was looking at
+  # when they clicked.
+  defp active_program_roster_rows(program_id) do
+    from(a in ProgramStaffAssignment,
+      join: s in StaffMember,
+      on: s.id == a.staff_member_id and s.active == true,
+      where: a.program_id == ^program_id and is_nil(a.unassigned_at),
+      order_by: [asc: a.assigned_at, asc: a.id],
+      select: %{
+        staff_member_id: a.staff_member_id,
+        is_lead_instructor: a.is_lead_instructor,
+        assigned_at: a.assigned_at
+      }
+    )
+    |> Repo.all()
   end
 
   defp insert_session_staff_assignment(attrs) do
@@ -841,9 +937,10 @@ defmodule KlassHero.Provider.Assignments do
     end)
   end
 
-  # Deliberately narrower than the program-level `upsert_lead/4`: no insert branch.
-  # Promoting someone who holds no override would create one, which flips the whole
-  # session off the program roster — a far bigger change than the caller asked for.
+  # Still no insert branch, unlike the program-level `upsert_lead/4` — but for a
+  # different reason now. Materialization has already put every roster member on the
+  # session, so a miss here means the target genuinely is not on it, and inserting
+  # would be promoting a stranger rather than repairing a gap.
   defp promote_session_lead(repo, session_id, staff_member_id, provider_id) do
     case repo.one(active_session_assignment_scope(session_id, staff_member_id, provider_id)) do
       nil ->
@@ -885,7 +982,7 @@ defmodule KlassHero.Provider.Assignments do
       left_join: s in StaffMember,
       on: s.id == a.staff_member_id and s.active == true,
       where: a.session_id in ^session_ids and is_nil(a.unassigned_at),
-      order_by: [asc: a.assigned_at],
+      order_by: [asc: a.assigned_at, asc: a.id],
       select: {a.session_id, a.is_lead_instructor, s}
     )
     |> Repo.all()

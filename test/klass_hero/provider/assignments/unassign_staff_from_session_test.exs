@@ -15,6 +15,22 @@ defmodule KlassHero.Provider.Assignments.UnassignStaffFromSessionTest do
     {:ok, provider: provider, program: program, session: session, staff: staff}
   end
 
+  # Puts a second person on the session, so "remove this one" never doubles as
+  # "empty the session" — which is refused, and has its own describe block. Scoped
+  # to the removal tests rather than the top-level setup, because the revert tests
+  # need a session that carries no overrides at all.
+  defp bystander_on_session(ctx) do
+    bystander = insert(:staff_member_schema, provider_id: ctx.provider.id)
+
+    insert(:session_staff_assignment_schema,
+      provider_id: ctx.provider.id,
+      session_id: ctx.session.id,
+      staff_member_id: bystander.id
+    )
+
+    {:ok, bystander: bystander}
+  end
+
   defp assign!(ctx, staff_member_id \\ nil) do
     {:ok, assignment} =
       Provider.assign_staff_to_session(%{
@@ -27,6 +43,8 @@ defmodule KlassHero.Provider.Assignments.UnassignStaffFromSessionTest do
   end
 
   describe "unassign_staff_from_session/3" do
+    setup :bystander_on_session
+
     test "retires the override and stamps unassigned_at", ctx do
       assign!(ctx)
 
@@ -37,7 +55,7 @@ defmodule KlassHero.Provider.Assignments.UnassignStaffFromSessionTest do
       refute SessionStaffAssignment.active?(retired)
     end
 
-    test "is not_found when no active override exists", ctx do
+    test "is not_found when this staff member holds no active override", ctx do
       assert {:error, :not_found} =
                Provider.unassign_staff_from_session(ctx.session.id, ctx.staff.id, ctx.provider.id)
     end
@@ -59,6 +77,8 @@ defmodule KlassHero.Provider.Assignments.UnassignStaffFromSessionTest do
   end
 
   describe "unassign_staff_from_session/3 lead guard" do
+    setup :bystander_on_session
+
     setup ctx do
       assign!(ctx)
       {:ok, _lead} = Provider.set_session_lead_instructor(ctx.session.id, ctx.staff.id, ctx.provider.id)
@@ -110,6 +130,61 @@ defmodule KlassHero.Provider.Assignments.UnassignStaffFromSessionTest do
 
       assert {:error, :not_found} =
                Provider.revert_session_to_program_roster(ctx.session.id, other_provider.id)
+    end
+  end
+
+  describe "unassign_staff_from_session/3 on a session that still inherits" do
+    defp on_program!(ctx, staff_member) do
+      {:ok, _} =
+        Provider.assign_staff_to_program(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.program.id,
+          staff_member_id: staff_member.id
+        })
+
+      staff_member
+    end
+
+    test "materializes the program roster and removes one, leaving the rest", ctx do
+      regulars =
+        for _ <- 1..3 do
+          ctx.provider.id |> then(&insert(:staff_member_schema, provider_id: &1)) |> then(&on_program!(ctx, &1))
+        end
+
+      [departing | staying] = regulars
+
+      assert {:ok, _} = Provider.unassign_staff_from_session(ctx.session.id, departing.id, ctx.provider.id)
+
+      staffing = Provider.get_session_staffing(ctx.session.id)
+
+      assert staffing.source == :override
+      assert Enum.sort(staffing.member_ids) == Enum.sort(Enum.map(staying, & &1.id))
+    end
+
+    test "refuses to remove the only member, leaving the roster untouched", ctx do
+      only = ctx.provider.id |> then(&insert(:staff_member_schema, provider_id: &1)) |> then(&on_program!(ctx, &1))
+
+      assert {:error, :cannot_empty_session} =
+               Provider.unassign_staff_from_session(ctx.session.id, only.id, ctx.provider.id)
+
+      # Refused *before* materializing, so the session is still inheriting rather
+      # than left holding a roster the caller never asked to create.
+      staffing = Provider.get_session_staffing(ctx.session.id)
+      assert staffing.source == :program
+      assert staffing.member_ids == [only.id]
+    end
+
+    test "refuses to remove the last remaining member of an overridden session", ctx do
+      solo = insert(:staff_member_schema, provider_id: ctx.provider.id)
+
+      insert(:session_staff_assignment_schema,
+        provider_id: ctx.provider.id,
+        session_id: ctx.session.id,
+        staff_member_id: solo.id
+      )
+
+      assert {:error, :cannot_empty_session} =
+               Provider.unassign_staff_from_session(ctx.session.id, solo.id, ctx.provider.id)
     end
   end
 end

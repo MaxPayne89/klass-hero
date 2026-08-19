@@ -678,7 +678,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       refute has_element?(view, "#session-staffing-revert-btn")
     end
 
-    test "adding a substitute overrides the session and replaces the roster", ctx do
+    test "adding someone keeps the program's roster and appends to it", ctx do
       substitute = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Bea", last_name: "Stone")
 
       {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
@@ -686,12 +686,66 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
       view
       |> element("#session-staffing-add-form")
-      |> render_submit(%{"staff-id" => substitute.id})
+      |> render_submit(%{"add_staff" => %{"staff_id" => substitute.id}})
 
+      # Both, not one: "Add" adds. The session takes its own roster, but it takes
+      # the program's team with it rather than discarding them.
       assert has_element?(view, "#session-staffing-member-#{substitute.id}")
-      refute has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      assert has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
       assert has_element?(view, "#session-staffing-revert-btn")
       assert render(view) =~ "Staffed just for this session"
+    end
+
+    test "the picker does not offer people the session already shows", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+      open_panel(view, ctx.session)
+
+      refute has_element?(view, "#session-staffing-add-select option[value='#{ctx.regular.id}']")
+      assert has_element?(view, "#session-staffing-nobody-addable")
+    end
+
+    test "removing works on an inherited roster and leaves the rest", ctx do
+      other = insert(:staff_member_schema, provider_id: ctx.provider.id, first_name: "Cal", last_name: "Stone")
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_program(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.program.id,
+          staff_member_id: other.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+      open_panel(view, ctx.session)
+
+      view |> element("#remove-session-staff-#{ctx.regular.id}") |> render_click()
+
+      refute has_element?(view, "#session-staffing-member-#{ctx.regular.id}")
+      assert has_element?(view, "#session-staffing-member-#{other.id}")
+    end
+
+    test "the last member's removal is disabled rather than hidden", ctx do
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+      open_panel(view, ctx.session)
+
+      assert has_element?(view, "#remove-session-staff-#{ctx.regular.id}[disabled]")
+    end
+
+    test "promote and remove are offered on a roster that is still inherited", ctx do
+      other = insert(:staff_member_schema, provider_id: ctx.provider.id)
+
+      {:ok, _} =
+        KlassHero.Provider.assign_staff_to_program(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.program.id,
+          staff_member_id: other.id
+        })
+
+      {:ok, view, _html} = live(ctx.conn, ~p"/provider/sessions")
+      open_panel(view, ctx.session)
+
+      refute render(view) =~ "Staffed just for this session"
+      assert has_element?(view, "#promote-session-staff-#{ctx.regular.id}")
+      assert has_element?(view, "#remove-session-staff-#{ctx.regular.id}:not([disabled])")
     end
 
     test "reverting returns the session to the program roster", ctx do

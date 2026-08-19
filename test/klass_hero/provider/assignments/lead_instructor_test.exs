@@ -145,4 +145,61 @@ defmodule KlassHero.Provider.Assignments.LeadInstructorTest do
     |> Ecto.Changeset.change(active: false)
     |> Repo.update!()
   end
+
+  describe "set_session_lead_instructor/3 on a session that still inherits" do
+    setup do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      session = insert(:program_session_schema, program_id: program.id)
+
+      regulars =
+        for _ <- 1..3 do
+          staff = insert(:staff_member_schema, provider_id: provider.id)
+
+          {:ok, _} =
+            Provider.assign_staff_to_program(%{
+              provider_id: provider.id,
+              program_id: program.id,
+              staff_member_id: staff.id
+            })
+
+          staff
+        end
+
+      {:ok, provider: provider, program: program, session: session, regulars: regulars}
+    end
+
+    test "materializes the roster and flags the target, keeping everyone", ctx do
+      [_, promoted, _] = ctx.regulars
+
+      assert {:ok, _} = Provider.set_session_lead_instructor(ctx.session.id, promoted.id, ctx.provider.id)
+
+      staffing = Provider.get_session_staffing(ctx.session.id)
+
+      # Used to be {:error, :not_found}: creating a lone override row would have
+      # discarded the other two. Materializing first removes that hazard, so the
+      # promotion no longer has to be refused.
+      assert staffing.source == :override
+      assert Enum.sort(staffing.member_ids) == Enum.sort(Enum.map(ctx.regulars, & &1.id))
+      assert staffing.lead.id == promoted.id
+    end
+
+    test "steps the copied program lead down rather than leaving two", ctx do
+      [old_lead, new_lead, _] = ctx.regulars
+      {:ok, _} = Provider.set_lead_instructor(ctx.program.id, old_lead.id, ctx.provider.id)
+
+      assert {:ok, _} = Provider.set_session_lead_instructor(ctx.session.id, new_lead.id, ctx.provider.id)
+
+      assert Provider.get_session_staffing(ctx.session.id).lead.id == new_lead.id
+      # The program itself is untouched — only this session moved.
+      assert Provider.get_lead_instructor(ctx.program.id).id == old_lead.id
+    end
+
+    test "is not_found for someone who is on neither the session nor the program", ctx do
+      stranger = insert(:staff_member_schema, provider_id: ctx.provider.id)
+
+      assert {:error, :not_found} =
+               Provider.set_session_lead_instructor(ctx.session.id, stranger.id, ctx.provider.id)
+    end
+  end
 end

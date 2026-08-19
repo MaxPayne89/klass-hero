@@ -29,13 +29,15 @@ defmodule KlassHero.Provider.Assignments.GetSessionStaffingTest do
     staff_member
   end
 
-  defp on_session!(ctx, staff_member) do
-    {:ok, _} =
-      Provider.assign_staff_to_session(%{
-        provider_id: ctx.provider.id,
-        session_id: ctx.session.id,
-        staff_member_id: staff_member.id
-      })
+  # Rows are seeded directly rather than through `assign_staff_to_session/1`,
+  # which materializes the program roster on a session's first override. That is
+  # the *command's* policy; these tests are about how the resolver reads whatever
+  # rows exist, so they place the rows themselves and keep the two separable.
+  defp on_session!(ctx, staff_member, opts \\ []) do
+    insert(
+      :session_staff_assignment_schema,
+      [provider_id: ctx.provider.id, session_id: ctx.session.id, staff_member_id: staff_member.id] ++ opts
+    )
 
     staff_member
   end
@@ -95,9 +97,8 @@ defmodule KlassHero.Provider.Assignments.GetSessionStaffingTest do
 
     test "a retired override stops counting and the session falls back to the program", ctx do
       regular = ctx |> staff() |> then(&on_program!(ctx, &1))
-      substitute = ctx |> staff() |> then(&on_session!(ctx, &1))
-
-      {:ok, _} = Provider.unassign_staff_from_session(ctx.session.id, substitute.id, ctx.provider.id)
+      substitute = staff(ctx)
+      on_session!(ctx, substitute, unassigned_at: DateTime.utc_now())
 
       staffing = Provider.get_session_staffing(ctx.session.id)
 
@@ -217,15 +218,28 @@ defmodule KlassHero.Provider.Assignments.GetSessionStaffingTest do
       refute departed.id in ids
     end
 
-    test "offers staff who are on the program but not yet on this session", ctx do
-      # Being on the program is not being on the session — an override names
-      # its own people, so a program member is still addable here.
+    test "offers a program member the session's own roster left out", ctx do
+      # Once a session names its own people, being on the program is not being on
+      # the session — so a program member the override omits is addable again.
       on_program = ctx |> staff() |> then(&on_program!(ctx, &1))
       _substitute = ctx |> staff() |> then(&on_session!(ctx, &1))
 
       ids = ctx.provider.id |> Provider.list_assignable_staff_for_session(ctx.session.id) |> Enum.map(& &1.id)
 
       assert on_program.id in ids
+    end
+
+    test "withholds the program roster from a session that still inherits it", ctx do
+      # The picker subtracts the *effective* roster. On an inherited session the
+      # program's team is already on screen, and offering to "add" them was how
+      # the panel handed out a no-op that read as a roster wipe.
+      inherited = ctx |> staff() |> then(&on_program!(ctx, &1))
+      addable = staff(ctx)
+
+      ids = ctx.provider.id |> Provider.list_assignable_staff_for_session(ctx.session.id) |> Enum.map(& &1.id)
+
+      refute inherited.id in ids
+      assert addable.id in ids
     end
   end
 end

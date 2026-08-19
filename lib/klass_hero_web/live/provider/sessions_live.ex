@@ -209,11 +209,11 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   end
 
   @impl true
-  def handle_event("assign_session_staff", %{"staff-id" => ""}, socket) do
+  def handle_event("assign_session_staff", %{"add_staff" => %{"staff_id" => ""}}, socket) do
     {:noreply, put_flash(socket, :error, gettext("Pick a staff member to add."))}
   end
 
-  def handle_event("assign_session_staff", %{"staff-id" => staff_member_id}, socket) do
+  def handle_event("assign_session_staff", %{"add_staff" => %{"staff_id" => staff_member_id}}, socket) do
     %{session_id: session_id} = socket.assigns.session_staffing_modal
 
     %{
@@ -261,6 +261,19 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
          |> put_flash(
            :error,
            gettext("This person leads the session. Make someone else lead before removing them.")
+         )}
+
+      # The button is disabled for this case, so reaching it means a stale panel —
+      # re-read so the disabled state catches up with what the context enforced.
+      {:error, :cannot_empty_session} ->
+        {:noreply,
+         socket
+         |> refresh_session_staffing()
+         |> put_flash(
+           :error,
+           gettext(
+             "A session needs at least one person. Use “Go back to the program's usual team” to drop this session's own roster."
+           )
          )}
 
       # Already gone — a benign double-click or a second tab, not an error worth a
@@ -368,7 +381,10 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
          program_title: Map.get(socket.assigns.program_names, staffing.program_id, gettext("Program")),
          overridden?: SessionStaffing.overridden?(staffing),
          members: members,
-         assignable_options: assignable
+         assignable_options: assignable,
+         # Rebuilt on every re-read, so the picker resets to its prompt after a
+         # successful add instead of still naming the person now on the roster.
+         add_form: to_form(%{"staff_id" => ""}, as: :add_staff)
        }}
     end
   end

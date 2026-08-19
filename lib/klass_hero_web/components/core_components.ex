@@ -31,12 +31,16 @@ defmodule KlassHeroWeb.CoreComponents do
     assigns = assign_new(assigns, :id, fn -> "flash-#{assigns.kind}" end)
 
     ~H"""
+    <%!-- z-[60] sits above modal chrome (z-50) rather than level with it. A flash
+          rendered earlier in the DOM at the same z-index loses to the modal painted
+          over it, which silently swallowed every error raised from inside one — and
+          a refusal the user never sees reads as a frozen panel. --%>
     <div
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
-      class="fixed top-4 right-4 z-50 max-w-md"
+      class="fixed top-4 right-4 z-[60] max-w-md"
       {@rest}
     >
       <div class={[

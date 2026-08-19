@@ -1640,6 +1640,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :icon, :string, required: true
   attr :title, :string, required: true
   attr :disabled, :boolean, default: false
+  attr :intent, :atom, default: :neutral, values: [:neutral, :promote, :destructive]
   attr :rest, :global, include: ~w(id phx-click phx-value-id phx-value-program-id)
 
   defp action_button(assigns) do
@@ -1649,21 +1650,45 @@ defmodule KlassHeroWeb.ProviderComponents do
       title={@title}
       aria-label={@title}
       disabled={@disabled}
-      class={[
-        "p-2",
-        Theme.rounded(:lg),
-        Theme.transition(:normal),
-        if(@disabled,
-          do: "text-hero-grey-300 cursor-not-allowed",
-          else: "text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100"
-        )
-      ]}
+      class={
+        [
+          # 44px, not the 36px a bare `p-2` glyph gives: on a phone these are the
+          # panel's primary controls and there is no hover to discover them by.
+          "inline-flex min-h-11 min-w-11 items-center justify-center border",
+          Theme.rounded(:md),
+          Theme.transition(:fast),
+          if(@disabled,
+            do: "border-hero-grey-100 bg-hero-grey-50 text-hero-grey-300 cursor-not-allowed",
+            else: action_button_intent(@intent)
+          )
+        ]
+      }
       {@rest}
     >
       <.icon name={@icon} class="w-5 h-5" />
     </button>
     """
   end
+
+  # A resting surface — border plus fill — so the control reads as pressable before
+  # anyone touches it, then a press state and a focus ring. The hover tint splits by
+  # intent because two adjacent icon-only buttons that highlight identically give no
+  # clue which one is the one you cannot undo.
+  @action_button_base "bg-white text-hero-grey-700 border-hero-grey-200 active:scale-95 " <>
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+
+  defp action_button_intent(:destructive),
+    do: @action_button_base <> " hover:border-red-200 hover:bg-red-50 hover:text-red-600 focus-visible:ring-red-400"
+
+  defp action_button_intent(:promote),
+    do:
+      @action_button_base <>
+        " hover:border-hero-yellow-700 hover:bg-hero-yellow-100 hover:text-hero-grey-900 focus-visible:ring-hero-yellow-700"
+
+  defp action_button_intent(:neutral),
+    do:
+      @action_button_base <>
+        " hover:border-hero-grey-300 hover:bg-hero-grey-50 hover:text-hero-grey-900 focus-visible:ring-hero-grey-400"
 
   @doc """
   Renders a tabbed modal displaying the enrollment roster and invites for a program.
@@ -1936,7 +1961,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   <span
                     :if={member.lead?}
                     id={"staffing-lead-badge-#{member.id}"}
-                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow text-hero-charcoal rounded-full align-middle"
+                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow-500 text-hero-grey-900 rounded-full align-middle"
                   >
                     {gettext("Lead")}
                   </span>
@@ -1949,6 +1974,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   :if={!member.lead?}
                   id={"promote-staff-#{member.id}"}
                   icon="hero-star-mini"
+                  intent={:promote}
                   title={gettext("Make lead instructor")}
                   phx-click="promote_to_lead"
                   phx-value-staff-id={member.id}
@@ -1958,6 +1984,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <.action_button
                   id={"remove-staff-#{member.id}"}
                   icon="hero-user-minus-mini"
+                  intent={:destructive}
                   title={
                     if(member.lead?,
                       do: gettext("Reassign the lead before removing them"),
@@ -2065,9 +2092,12 @@ defmodule KlassHeroWeb.ProviderComponents do
             </h2>
             <p class="mt-1 truncate text-sm text-hero-grey-500">{@modal.program_title}</p>
           </div>
-          <button type="button" phx-click="close_session_staffing" aria-label={gettext("Close")}>
-            <.icon name="hero-x-mark" class="w-5 h-5" />
-          </button>
+          <.action_button
+            id="session-staffing-close"
+            icon="hero-x-mark"
+            title={gettext("Close")}
+            phx-click="close_session_staffing"
+          />
         </div>
 
         <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
@@ -2079,7 +2109,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               "mb-4 flex items-start gap-2 px-3 py-2 text-sm",
               Theme.rounded(:lg),
               if(@modal.overridden?,
-                do: "bg-hero-yellow/20 text-hero-charcoal",
+                do: "bg-hero-yellow-100 text-hero-grey-900",
                 else: "bg-hero-grey-50 text-hero-grey-600"
               )
             ]}
@@ -2090,11 +2120,11 @@ defmodule KlassHeroWeb.ProviderComponents do
             />
             <span>
               <%= if @modal.overridden? do %>
-                {gettext(
-                  "Staffed just for this session. The program's usual team does not apply here."
-                )}
+                {gettext("Staffed just for this session. Changes here do not touch the program.")}
               <% else %>
-                {gettext("Using the program's usual team. Adding someone staffs this session only.")}
+                {gettext(
+                  "Using the program's usual team. The first change here copies them onto this session, so later program changes stop reaching it."
+                )}
               <% end %>
             </span>
           </div>
@@ -2112,12 +2142,12 @@ defmodule KlassHeroWeb.ProviderComponents do
               <.staff_avatar member={member} />
 
               <div class="min-w-0 flex-1">
-                <p class="truncate font-medium text-hero-charcoal">
+                <p class="truncate font-medium text-hero-grey-900">
                   {member.full_name}
                   <span
                     :if={member.lead?}
                     id={"session-staffing-lead-badge-#{member.id}"}
-                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow text-hero-charcoal rounded-full align-middle"
+                    class="ml-1 inline-block px-2 py-0.5 text-xs font-semibold bg-hero-yellow-500 text-hero-grey-900 rounded-full align-middle"
                   >
                     {gettext("Lead")}
                   </span>
@@ -2125,14 +2155,15 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <p :if={member.role} class="truncate text-sm text-hero-grey-500">{member.role}</p>
               </div>
 
-              <%!-- Promote and remove act on override rows, so they are only offered
-                    once this session has its own roster. On an inherited roster they
-                    would silently create one. --%>
-              <div :if={@modal.overridden?} class="flex shrink-0 items-center gap-1">
+              <%!-- Offered whether or not the session already has its own roster: the
+                    first change materializes the program's team onto this session
+                    rather than replacing it, so acting here no longer discards anyone. --%>
+              <div class="flex shrink-0 items-center gap-1">
                 <.action_button
                   :if={!member.lead?}
                   id={"promote-session-staff-#{member.id}"}
                   icon="hero-star-mini"
+                  intent={:promote}
                   title={gettext("Make lead instructor for this session")}
                   phx-click="promote_session_lead"
                   phx-value-staff-id={member.id}
@@ -2140,13 +2171,9 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <.action_button
                   id={"remove-session-staff-#{member.id}"}
                   icon="hero-user-minus-mini"
-                  title={
-                    if(member.lead?,
-                      do: gettext("Reassign the lead before removing them"),
-                      else: gettext("Remove from this session")
-                    )
-                  }
-                  disabled={member.lead?}
+                  intent={:destructive}
+                  title={session_removal_title(member, @modal.members)}
+                  disabled={member.lead? or length(@modal.members) == 1}
                   phx-click="remove_session_staff"
                   phx-value-staff-id={member.id}
                 />
@@ -2163,49 +2190,66 @@ defmodule KlassHeroWeb.ProviderComponents do
           </p>
 
           <div class="mt-4 border-t border-hero-grey-200 pt-4">
-            <form
+            <.form
+              for={@modal.add_form}
               phx-submit="assign_session_staff"
               id="session-staffing-add-form"
-              class="flex flex-col gap-2 sm:flex-row"
+              class="flex flex-col items-end gap-2 sm:flex-row"
             >
-              <select
-                id="session-staffing-add-select"
-                name="staff-id"
-                disabled={@modal.assignable_options == []}
-                class={[
-                  "flex-1 border border-hero-grey-300 px-3 py-2 text-hero-charcoal disabled:bg-hero-grey-50",
-                  Theme.rounded(:lg)
-                ]}
-              >
-                <option value="">{gettext("Select a staff member…")}</option>
-                <option :for={{label, value} <- @modal.assignable_options} value={value}>
-                  {label}
-                </option>
-              </select>
+              <%!-- A tracked form input rather than a bare <select>: the option list
+                    changes whenever the roster does, and an untracked select loses the
+                    provider's pick the moment a re-render rebuilds its options. --%>
+              <div class="w-full flex-1">
+                <.input
+                  field={@modal.add_form[:staff_id]}
+                  type="select"
+                  id="session-staffing-add-select"
+                  prompt={gettext("Select a staff member…")}
+                  options={@modal.assignable_options}
+                  disabled={@modal.assignable_options == []}
+                />
+              </div>
               <button
                 type="submit"
                 id="session-staffing-add-btn"
                 disabled={@modal.assignable_options == []}
                 class={[
-                  "flex items-center justify-center gap-2 px-4 py-2 font-semibold",
-                  "bg-hero-yellow hover:bg-hero-yellow-dark text-hero-charcoal",
-                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400",
-                  Theme.rounded(:lg),
-                  Theme.transition(:normal)
+                  "flex min-h-11 w-full items-center justify-center gap-2 px-4 py-2 font-semibold sm:w-auto",
+                  "bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-grey-900",
+                  "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hero-yellow-700",
+                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400 disabled:active:scale-100",
+                  Theme.rounded(:md),
+                  Theme.transition(:fast)
                 ]}
               >
                 <.icon name="hero-plus-mini" class="w-5 h-5" />
                 {gettext("Add")}
               </button>
-            </form>
+            </.form>
+
+            <p
+              :if={@modal.assignable_options == []}
+              id="session-staffing-nobody-addable"
+              class="mt-2 text-sm text-hero-grey-500"
+            >
+              {gettext("Everyone on your team is already working this session.")}
+            </p>
 
             <button
               :if={@modal.overridden?}
               type="button"
               id="session-staffing-revert-btn"
               phx-click="revert_session_staffing"
-              class="mt-3 text-sm font-medium text-hero-grey-600 underline hover:text-hero-charcoal"
+              class={[
+                "mt-3 flex min-h-11 w-full items-center justify-center gap-2 px-4 py-2",
+                "border border-hero-grey-300 bg-white text-sm font-medium text-hero-grey-700",
+                "hover:border-hero-grey-400 hover:bg-hero-grey-50 hover:text-hero-grey-900",
+                "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hero-grey-400",
+                Theme.rounded(:md),
+                Theme.transition(:fast)
+              ]}
             >
+              <.icon name="hero-arrow-uturn-left-mini" class="w-5 h-5" />
               {gettext("Go back to the program's usual team")}
             </button>
           </div>
@@ -2214,6 +2258,16 @@ defmodule KlassHeroWeb.ProviderComponents do
     </div>
     """
   end
+
+  # Disabled rather than hidden, so the tooltip can say *why* — both refusals come
+  # from the context (`:cannot_unassign_lead`, `:cannot_empty_session`), and a
+  # control that silently vanishes teaches the provider nothing about the rule.
+  defp session_removal_title(%{lead?: true}, _members), do: gettext("Reassign the lead before removing them")
+
+  defp session_removal_title(_member, [_only]),
+    do: gettext("A session needs someone — use “Go back to the program's usual team” instead")
+
+  defp session_removal_title(_member, _members), do: gettext("Remove from this session")
 
   attr :member, :map, required: true
 

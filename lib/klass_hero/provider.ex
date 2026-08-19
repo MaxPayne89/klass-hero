@@ -350,18 +350,19 @@ defmodule KlassHero.Provider do
   # --- Session ↔ staff overrides -------------------------------------------
 
   @doc """
-  Adds a staff member to one session, overriding the program's default roster.
+  Adds a staff member to one session, giving that session a roster of its own.
 
-  Sparse by design: a session with no overrides inherits the program roster, so
-  this is the act that flips one session onto its own staffing.
+  Additive: a session with no overrides inherits the program roster, and the first
+  add copies that roster across before appending, so nobody is displaced.
   """
   defdelegate assign_staff_to_session(attrs), to: Assignments
 
   @doc """
-  Removes one staff member's override from a session.
+  Removes one staff member from a session.
 
-  Returns `{:error, :cannot_unassign_lead}` when the target leads the session.
-  Retiring the last override returns the session to the program roster.
+  Returns `{:error, :cannot_unassign_lead}` when the target leads the session, and
+  `{:error, :cannot_empty_session}` when they are its only member — use
+  `revert_session_to_program_roster/2` to drop the session's own roster entirely.
   """
   defdelegate unassign_staff_from_session(session_id, staff_member_id, provider_id), to: Assignments
 

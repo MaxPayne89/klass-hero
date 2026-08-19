@@ -4,6 +4,7 @@ defmodule KlassHero.Provider.Assignments.AssignStaffToSessionTest do
   import KlassHero.Factory
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.Assignments
   alias KlassHero.Provider.SessionStaffAssignment
 
   defp setup_session do
@@ -61,7 +62,10 @@ defmodule KlassHero.Provider.Assignments.AssignStaffToSessionTest do
 
     test "allows re-assignment after the first override was retired" do
       ctx = setup_session()
+      other = insert(:staff_member_schema, provider_id: ctx.provider.id)
       {:ok, _first} = assign(ctx)
+      # Someone has to stay: removing the session's only member is refused.
+      {:ok, _} = assign(ctx, other.id)
       {:ok, _retired} = Provider.unassign_staff_from_session(ctx.session.id, ctx.staff.id, ctx.provider.id)
 
       assert {:ok, _second} = assign(ctx)
@@ -92,6 +96,83 @@ defmodule KlassHero.Provider.Assignments.AssignStaffToSessionTest do
                  session_id: Ecto.UUID.generate(),
                  staff_member_id: ctx.staff.id
                })
+    end
+  end
+
+  describe "assign_staff_to_session/1 on a session that still inherits" do
+    defp on_program!(ctx, staff_member) do
+      {:ok, _} =
+        Provider.assign_staff_to_program(%{
+          provider_id: ctx.provider.id,
+          program_id: ctx.program.id,
+          staff_member_id: staff_member.id
+        })
+
+      staff_member
+    end
+
+    defp regular_staff(ctx, count) do
+      for _ <- 1..count do
+        ctx |> then(&insert(:staff_member_schema, provider_id: &1.provider.id)) |> then(&on_program!(ctx, &1))
+      end
+    end
+
+    test "copies the program roster across and appends, rather than replacing it" do
+      ctx = setup_session()
+      regulars = regular_staff(ctx, 3)
+
+      assert {:ok, _} = assign(ctx)
+
+      staffing = Provider.get_session_staffing(ctx.session.id)
+
+      assert staffing.source == :override
+      assert staffing.member_count == 4
+      assert Enum.sort(staffing.member_ids) == Enum.sort([ctx.staff.id | Enum.map(regulars, & &1.id)])
+    end
+
+    test "keeps naming the same person on the session card" do
+      ctx = setup_session()
+      [first | _] = regular_staff(ctx, 3)
+
+      before = Assignments.get_session_attribution(ctx.session.id)
+      assert before.staff_id == first.id
+
+      assert {:ok, _} = assign(ctx)
+
+      # Materialized rows share a wall-clock instant, so without the per-row
+      # stagger the earliest-active winner would be arbitrary and the card would
+      # rename itself for no reason the provider can see.
+      assert Assignments.get_session_attribution(ctx.session.id) == before
+    end
+
+    test "carries the program lead across, so the session is not left lead-less" do
+      ctx = setup_session()
+      [lead | _] = regular_staff(ctx, 2)
+      {:ok, _} = Provider.set_lead_instructor(ctx.program.id, lead.id, ctx.provider.id)
+
+      assert {:ok, _} = assign(ctx)
+
+      assert %{lead: %{id: lead_id}} = Provider.get_session_staffing(ctx.session.id)
+      assert lead_id == lead.id
+    end
+
+    test "leaves the program's other sessions inheriting" do
+      ctx = setup_session()
+      regular_staff(ctx, 2)
+
+      sibling =
+        insert(:program_session_schema, program_id: ctx.program.id, session_date: Date.add(Date.utc_today(), 7))
+
+      assert {:ok, _} = assign(ctx)
+
+      assert Provider.get_session_staffing(sibling.id).source == :program
+    end
+
+    test "is already_assigned for someone the session already shows via the program" do
+      ctx = setup_session()
+      [regular | _] = regular_staff(ctx, 2)
+
+      assert {:error, :already_assigned} = assign(ctx, regular.id)
     end
   end
 end
