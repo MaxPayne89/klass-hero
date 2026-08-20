@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Domain.Events.AccountsEvents do
+defmodule KlassHero.Accounts.Events do
   @moduledoc """
   Factory for Accounts events. All factories do fail-fast validation and raise
   `ArgumentError` on invalid inputs.

@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Types.UserRole do
+defmodule KlassHero.Accounts.UserRole do
   @moduledoc """
   Valid user roles and associated permissions. Roles: `:parent`, `:provider`, `:staff`
   (ADR-0005: staff is an independent persona, not a kind of provider).

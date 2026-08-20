@@ -11,10 +11,10 @@ defmodule KlassHero.Accounts.User do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.Types.{UserRole, UserRoles}
+  alias KlassHero.Accounts.User
+  alias KlassHero.Accounts.{UserRole, UserRoles}
   # Cross-context references for admin dashboard preloading (read-only).
   # Pragmatic DDD boundary crossing — see AccountLive moduledoc.
-  alias KlassHero.Accounts.User
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Locales

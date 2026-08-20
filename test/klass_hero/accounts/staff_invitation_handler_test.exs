@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest do
+defmodule KlassHero.Accounts.StaffInvitationHandlerTest do
   @moduledoc """
   Tests for StaffInvitationHandler.
 
@@ -14,7 +14,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandlerTest 
   import KlassHero.EventTestHelper
   import Swoosh.TestAssertions
 
-  alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
+  alias KlassHero.Accounts.StaffInvitationHandler
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Shared.Domain.Events.Event
 

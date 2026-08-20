@@ -1,8 +1,8 @@
-defmodule KlassHero.Accounts.Types.UserRoleTest do
+defmodule KlassHero.Accounts.UserRoleTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Accounts.Types.UserRole
+  alias KlassHero.Accounts.UserRole
 
   test "valid_roles/0 returns the known role atoms" do
     assert UserRole.valid_roles() == [:parent, :provider, :staff]

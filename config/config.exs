@@ -9,8 +9,8 @@ import Config
 
 alias ExAws.Request.Req
 alias FunWithFlags.Notifications.PhoenixPubSub
-alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
 alias KlassHero.Accounts.Scope
+alias KlassHero.Accounts.StaffInvitationHandler
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
 alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
