@@ -24,21 +24,21 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpers do
   projection entirely — display may lag, authorization may not, and here the two
   are the same fetch.
 
-  Still narrowed to the staff member's own provider. `get_programs_by_ids/1` is
-  not provider-scoped, and an assignment row naming another provider's program
-  must not put it on this dashboard.
+  Tenancy is not re-checked here. `Provider.get_staff_program_access/1` resolves
+  the assigned programs scoped to the staff member's own provider, so a foreign
+  program never reaches either set — there is nothing left for this function to
+  filter out.
   """
   @spec load_assigned_programs(StaffMember.t()) ::
           {open :: [Program.t()], closed :: [Program.t()], StaffProgramAccess.t()}
-  def load_assigned_programs(%StaffMember{provider_id: provider_id, id: staff_member_id}) do
-    access = Provider.get_staff_program_access(staff_member_id)
+  def load_assigned_programs(%StaffMember{} = staff_member) do
+    access = Provider.get_staff_program_access(staff_member)
 
     programs =
       access.program_ids
       |> MapSet.union(access.closed_program_ids)
       |> MapSet.to_list()
       |> ProgramCatalog.get_programs_by_ids()
-      |> Enum.filter(&(&1.provider_id == provider_id))
       |> Enum.sort_by(& &1.title)
 
     {open, closed} = Enum.split_with(programs, &StaffProgramAccess.authorized?(access, &1.id))

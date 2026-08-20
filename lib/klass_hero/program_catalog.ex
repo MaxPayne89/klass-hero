@@ -160,7 +160,21 @@ defmodule KlassHero.ProgramCatalog do
     end
   end
 
-  @doc "Fetches multiple programs by ID in one query. Missing IDs are silently omitted."
+  @doc """
+  Fetches multiple programs by ID in one query, **unscoped**. Missing IDs are
+  silently omitted.
+
+  Unscoped deliberately, and it should stay that way: its callers resolve programs
+  they cannot name a provider for — the admin session list, which *derives* each
+  provider from the result; `ProgramProviderResolver`, whose whole job is deriving
+  one from a bare program id; and a parent's dashboard, whose enrolments legitimately
+  span providers.
+
+  A caller that *does* hold a `provider_id` should not filter this result by hand —
+  that is a check to forget. Use `get_program_for_provider/2` for a single program,
+  or `list_open_program_ids_for_provider/2` where the question is which ids a
+  provider's staff may act on.
+  """
   @spec get_programs_by_ids([String.t()]) :: [Program.t()]
   def get_programs_by_ids(ids) when is_list(ids) do
     Program
@@ -194,9 +208,36 @@ defmodule KlassHero.ProgramCatalog do
   def list_open_program_ids([]), do: MapSet.new()
 
   def list_open_program_ids(program_ids) when is_list(program_ids) do
+    open_ids(Program, program_ids)
+  end
+
+  @doc """
+  `list_open_program_ids/1` narrowed to one provider: of `program_ids`, those that
+  belong to `provider_id`, exist, and have not closed.
+
+  A foreign id is *unreachable* rather than fetched-then-rejected — `Program.owned_by/2`
+  narrows the query, the same way `get_program_for_provider/2` does — so it lands
+  outside the open set and, by the caller's set difference, grants nothing.
+
+  Use this wherever a provider is in scope. The unscoped sibling exists for the
+  session path, which resolves sessions that may belong to any provider and so has
+  no provider to narrow by.
+  """
+  @spec list_open_program_ids_for_provider(String.t(), [String.t()]) :: MapSet.t(String.t())
+  def list_open_program_ids_for_provider(provider_id, []) when is_binary(provider_id), do: MapSet.new()
+
+  def list_open_program_ids_for_provider(provider_id, program_ids)
+      when is_binary(provider_id) and is_list(program_ids) do
+    Program
+    |> Program.owned_by(provider_id)
+    |> open_ids(program_ids)
+  end
+
+  # One definition of "open", so the scoped and unscoped answers cannot drift.
+  defp open_ids(query, program_ids) do
     cutoff = closed_cutoff()
 
-    Program
+    query
     |> where([p], p.id in ^program_ids)
     |> where([p], is_nil(p.end_date) or p.end_date >= ^cutoff)
     |> select([p], p.id)

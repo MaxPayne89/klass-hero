@@ -10,10 +10,15 @@ defmodule KlassHero.Provider.Domain.ReadModels.StaffProgramAccess do
   **Specialties** and carry no access (#1323).
 
   Both inputs are write-model facts, read strongly-consistently. Closure is asked
-  of `programs` through `ProgramCatalog.list_open_program_ids/1`, never of the
-  `program_listings` projection: projection lag revoking access is the failure
-  `KlassHeroWeb.Helpers.StaffLiveHelpers`'s moduledoc warns about, and it applies
-  to closure exactly as it does to assignment.
+  of `programs` through `ProgramCatalog.list_open_program_ids_for_provider/2`,
+  never of the `program_listings` projection: projection lag revoking access is
+  the failure `KlassHeroWeb.Helpers.StaffLiveHelpers`'s moduledoc warns about, and
+  it applies to closure exactly as it does to assignment.
+
+  That same read carries the **tenancy**, which is why it is the scoped variant: a
+  program belonging to another provider is resolved out, so it reaches neither set
+  and grants nothing. Consumers therefore do not re-check the provider — a filter
+  each caller must remember is a filter one of them eventually omits.
 
   Until #1323 the four staff surfaces derived this by matching a staff member's
   tags against `program.category`, with an empty tag list silently meaning *every*

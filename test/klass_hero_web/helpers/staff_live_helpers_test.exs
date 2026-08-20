@@ -52,6 +52,11 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
       refute StaffProgramAccess.authorized?(access, sports_program.id)
     end
 
+    # Defence in depth, not a reachable state: `assign_staff_to_program/1` proves
+    # ownership of both the staff member and the program before inserting, so only
+    # a fixture (or the facade-bypassing seed script) can build this row. Nothing
+    # in the database enforces it, and this is the surface where such a row would
+    # become a child's roster — so the exclusion is asserted rather than assumed.
     test "excludes an assigned program belonging to another provider" do
       provider = provider_profile_fixture()
       other_provider = provider_profile_fixture()

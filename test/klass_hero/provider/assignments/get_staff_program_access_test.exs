@@ -2,6 +2,7 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.Factory
+  import KlassHero.ProviderFixtures, only: [program_assignment_fixture: 1]
 
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
@@ -32,7 +33,7 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
       assign(program, staff)
       assign(other_program, staff)
 
-      access = Provider.get_staff_program_access(staff.id)
+      access = Provider.get_staff_program_access(staff)
 
       assert %StaffProgramAccess{staff_member_id: staff_member_id} = access
       assert staff_member_id == staff.id
@@ -46,7 +47,7 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
       assign(program, staff)
       {:ok, _} = Provider.unassign_staff_from_program(program.id, staff.id, provider.id)
 
-      refute StaffProgramAccess.authorized?(Provider.get_staff_program_access(staff.id), program.id)
+      refute StaffProgramAccess.authorized?(Provider.get_staff_program_access(staff), program.id)
     end
 
     test "does not leak a colleague's assignments" do
@@ -55,13 +56,13 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
 
       assign(program, colleague)
 
-      refute StaffProgramAccess.authorized?(Provider.get_staff_program_access(staff.id), program.id)
+      refute StaffProgramAccess.authorized?(Provider.get_staff_program_access(staff), program.id)
     end
 
     test "authorizes nothing for a staff member with no assignments" do
       {_provider, program, staff} = setup_provider_program_staff()
 
-      access = Provider.get_staff_program_access(staff.id)
+      access = Provider.get_staff_program_access(staff)
 
       assert %StaffProgramAccess{program_ids: program_ids} = access
       assert MapSet.size(program_ids) == 0
@@ -76,7 +77,7 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
 
       assign(closed, staff)
 
-      access = Provider.get_staff_program_access(staff.id)
+      access = Provider.get_staff_program_access(staff)
 
       refute StaffProgramAccess.authorized?(access, closed.id)
       assert StaffProgramAccess.closed?(access, closed.id)
@@ -88,7 +89,7 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
 
       assign(recent, staff)
 
-      access = Provider.get_staff_program_access(staff.id)
+      access = Provider.get_staff_program_access(staff)
 
       assert StaffProgramAccess.authorized?(access, recent.id)
       refute StaffProgramAccess.closed?(access, recent.id)
@@ -101,10 +102,29 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
       assign(open, staff)
       assign(closed, staff)
 
-      access = Provider.get_staff_program_access(staff.id)
+      access = Provider.get_staff_program_access(staff)
 
       assert access.program_ids == MapSet.new([open.id])
       assert access.closed_program_ids == MapSet.new([closed.id])
+    end
+
+    test "grants nothing for a program belonging to another provider" do
+      {_provider, _program, staff} = setup_provider_program_staff()
+      foreign = insert(:program_schema, provider_id: insert(:provider_profile_schema).id)
+
+      # Only a fixture can build this row: `assign_staff_to_program/1` proves both
+      # the staff member and the program belong to the caller's provider before
+      # inserting. Defence in depth against a write path that skips the facade.
+      program_assignment_fixture(%{
+        provider_id: foreign.provider_id,
+        program_id: foreign.id,
+        staff_member_id: staff.id
+      })
+
+      access = Provider.get_staff_program_access(staff)
+
+      refute StaffProgramAccess.authorized?(access, foreign.id)
+      refute MapSet.member?(access.program_ids, foreign.id)
     end
 
     test "reports a program that is not closed as not closed" do
@@ -112,7 +132,7 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
 
       assign(open, staff)
 
-      refute StaffProgramAccess.closed?(Provider.get_staff_program_access(staff.id), open.id)
+      refute StaffProgramAccess.closed?(Provider.get_staff_program_access(staff), open.id)
     end
   end
 end

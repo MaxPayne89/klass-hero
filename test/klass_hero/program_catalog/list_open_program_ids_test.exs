@@ -68,6 +68,35 @@ defmodule KlassHero.ProgramCatalog.ListOpenProgramIdsTest do
     end
   end
 
+  describe "list_open_program_ids_for_provider/2" do
+    test "omits a program belonging to another provider", %{provider: provider} do
+      own = program(provider, nil)
+      foreign = insert(:program_schema, provider_id: insert(:provider_profile_schema).id)
+
+      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, [own.id, foreign.id]) ==
+               MapSet.new([own.id])
+    end
+
+    test "answers the closure question exactly as the unscoped sibling", %{provider: provider} do
+      open = program(provider, nil)
+      in_grace = program(provider, Date.add(Date.utc_today(), -14))
+      closed = program(provider, Date.add(Date.utc_today(), -15))
+      ids = [open.id, in_grace.id, closed.id]
+
+      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, ids) ==
+               ProgramCatalog.list_open_program_ids(ids)
+    end
+
+    test "omits an id that resolves to no program", %{provider: provider} do
+      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, [Ecto.UUID.generate()]) ==
+               MapSet.new()
+    end
+
+    test "short-circuits on an empty list", %{provider: provider} do
+      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, []) == MapSet.new()
+    end
+  end
+
   describe "closed?/1" do
     test "answers for a program already in hand, without a query", %{provider: provider} do
       closed = program(provider, Date.add(Date.utc_today(), -15))

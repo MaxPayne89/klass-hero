@@ -335,6 +335,9 @@ defmodule KlassHero.Provider.Assignments do
 
     # Over the batch's *distinct* programs, so a full day of sessions costs one
     # closure question rather than one per row (#1082).
+    # Unscoped on purpose: the caller hands us session ids, and a session's
+    # provider is only knowable by resolving it. `AttendanceAuthorization` asks
+    # this for admins too, so there is no one provider to narrow by.
     open_ids = open_program_ids(program_ids)
 
     Map.new(sessions, fn session ->
@@ -619,12 +622,16 @@ defmodule KlassHero.Provider.Assignments do
   `list_active_assignments_for_staff_member/1`: the callers gate a render loop and
   need nothing else off the row.
 
-  Not provider-scoped, because the staff member arrives already resolved from the
-  authenticated scope and carries the tenancy with them; a second narrowing here
-  would only restate it.
+  Takes the `%StaffMember{}` rather than its id, because the tenancy has to arrive
+  with it: the programs are then resolved **scoped to that staff member's own
+  provider**, so an assignment row naming another provider's program grants
+  nothing. Only a caller bypassing `assign_staff_to_program/1` can create such a
+  row — that use case proves ownership of both the staff member and the program
+  before inserting — but nothing at the database level enforces it, and this is
+  the surface where a bad row would become a child's roster.
   """
-  @spec get_staff_program_access(String.t()) :: StaffProgramAccess.t()
-  def get_staff_program_access(staff_member_id) when is_binary(staff_member_id) do
+  @spec get_staff_program_access(StaffMember.t()) :: StaffProgramAccess.t()
+  def get_staff_program_access(%StaffMember{id: staff_member_id, provider_id: provider_id}) do
     assigned =
       from(a in ProgramStaffAssignment,
         where: a.staff_member_id == ^staff_member_id and is_nil(a.unassigned_at),
@@ -632,7 +639,7 @@ defmodule KlassHero.Provider.Assignments do
       )
       |> Repo.all()
 
-    open = open_program_ids(assigned)
+    open = open_program_ids(provider_id, assigned)
 
     %StaffProgramAccess{
       staff_member_id: staff_member_id,
@@ -642,8 +649,16 @@ defmodule KlassHero.Provider.Assignments do
   end
 
   # Subtracting the open set rather than adding a closed one is what makes this
-  # fail closed: an assignment whose program no longer resolves at all comes back
-  # from neither query and lands among the closed, where it grants nothing.
+  # fail closed: an assignment whose program is foreign, or no longer resolves at
+  # all, comes back from neither query and lands among the closed, where it grants
+  # nothing. "Closed" is the honest bucket for it — the program is not actionable,
+  # and the alternative is a third set nobody reads.
+  defp open_program_ids(provider_id, program_ids) do
+    acl_span source: "provider", target: "program_catalog" do
+      ProgramCatalog.list_open_program_ids_for_provider(provider_id, program_ids)
+    end
+  end
+
   defp open_program_ids(program_ids) do
     acl_span source: "provider", target: "program_catalog" do
       ProgramCatalog.list_open_program_ids(program_ids)

@@ -45,7 +45,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
         # would let you broadcast about. Only the rule is shared, not
         # `StaffLiveHelpers.load_assigned_programs/1` — that fetches every listing
         # the provider has, and this page has already resolved its one program.
-        access = Provider.get_staff_program_access(staff_member.id)
+        access = Provider.get_staff_program_access(staff_member)
 
         if StaffProgramAccess.authorized?(access, program.id) do
           mount_form(socket, provider, program)
