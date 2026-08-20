@@ -355,10 +355,14 @@ defmodule KlassHeroWeb.BookingLive do
 
         <form id="booking-form" phx-submit="complete_enrollment" class="space-y-6">
           <div class={[Theme.bg(:surface), Theme.rounded(:xl), "p-6 shadow-lg"]}>
-            <label class={["block text-sm font-semibold mb-3", Theme.text_color(:body)]}>
+            <label
+              for="booking-child-select"
+              class={["block text-sm font-semibold mb-3", Theme.text_color(:body)]}
+            >
               {gettext("Select Child")}
             </label>
             <select
+              id="booking-child-select"
               name="child_id"
               phx-change="select_child"
               class={[
