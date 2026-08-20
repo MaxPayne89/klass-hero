@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.77.0](https://github.com/MaxPayne89/klass-hero/compare/v0.76.0...v0.77.0) (2026-08-20)
+
+
+### Features
+
+* authorize staff session access at session grain ([#1419](https://github.com/MaxPayne89/klass-hero/issues/1419)) ([dc2f6a1](https://github.com/MaxPayne89/klass-hero/commit/dc2f6a1a64df62713e95066a4a73dba1e3bbaa7b)), closes [#783](https://github.com/MaxPayne89/klass-hero/issues/783)
+
 ## [0.76.0](https://github.com/MaxPayne89/klass-hero/compare/v0.75.1...v0.76.0) (2026-08-19)
 
 
