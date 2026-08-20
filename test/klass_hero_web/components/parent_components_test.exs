@@ -52,9 +52,10 @@ defmodule KlassHeroWeb.ParentComponentsTest do
 
       # 'My Kids' must point at the children list, not the settings hub.
       assert html =~ ~s|href="/family/settings/children"|
-      # Settings hub gets its own dedicated nav slot.
+      # Settings hub gets its own dedicated nav slot, now pointing at the
+      # account settings page (the parent-only mock at /family/settings is gone).
       assert html =~ "Settings"
-      assert html =~ ~s|href="/family/settings"|
+      assert html =~ ~s|href="/users/settings"|
     end
   end
 

@@ -1,27 +1,23 @@
 defmodule KlassHeroWeb.UserLive.Settings do
   use KlassHeroWeb, :live_view
 
-  import KlassHeroWeb.MarketingComponents
+  import KlassHeroWeb.MarketingComponents, only: [mk_input: 1]
 
   alias KlassHero.Accounts
   alias KlassHeroWeb.Helpers.FamilyHelpers
+  alias KlassHeroWeb.Layouts
   alias KlassHeroWeb.Locale
+  alias KlassHeroWeb.Persona
   alias KlassHeroWeb.Presenters.ChildPresenter
+
+  require Logger
 
   on_mount {KlassHeroWeb.UserAuth, :require_sudo_mode}
 
   @impl true
   def render(assigns) do
     ~H"""
-    <.mk_page_hero pill={gettext("Account")}>
-      <:title>
-        <span class="bg-hero-yellow-500 px-2 rounded-lg">{gettext("Account")}</span>
-        {gettext("settings")}
-      </:title>
-      <:lede>{gettext("Manage your account, preferences, and privacy in one place.")}</:lede>
-    </.mk_page_hero>
-
-    <section class="relative pb-20 -mt-8 lg:-mt-12 px-6">
+    <section class="relative pb-20 px-0 lg:px-6">
       <div class="max-w-6xl mx-auto lg:flex lg:gap-8 items-start">
         <%!-- Sticky sidebar nav (desktop) --%>
         <aside class="hidden lg:block lg:w-60 lg:flex-shrink-0 sticky top-24">
@@ -37,6 +33,12 @@ defmodule KlassHeroWeb.UserLive.Settings do
                 icon="hero-user-group"
                 title={gettext("Children")}
                 navigate={~p"/settings/children"}
+              />
+              <.settings_nav_link
+                :if={@addable_personas != []}
+                icon="hero-identification"
+                title={gettext("Profiles")}
+                href="#profiles"
               />
               <.settings_nav_link
                 icon="hero-shield-check"
@@ -202,6 +204,80 @@ defmodule KlassHeroWeb.UserLive.Settings do
             </div>
           </.kh_card>
 
+          <%!-- Profiles --%>
+          <.kh_card :if={@addable_personas != []} id="profiles" class="overflow-hidden">
+            <div class="p-5 border-b border-[var(--border-light)] flex items-center gap-3">
+              <.kh_icon_chip icon="hero-identification" gradient={:primary} size={:sm} />
+              <div>
+                <h2 class="font-bold text-hero-black">{gettext("Profiles")}</h2>
+                <p class="text-sm text-[var(--fg-muted)]">
+                  {gettext("One account can be both a family and a provider.")}
+                </p>
+              </div>
+            </div>
+            <div class="p-5 space-y-3">
+              <div
+                :for={persona <- @addable_personas}
+                id={"add-#{persona}-profile"}
+                class="p-4 rounded-xl border border-[var(--border-light)]"
+              >
+                <%= if @confirming_persona == persona do %>
+                  <p class="text-sm text-[var(--fg-muted)]">
+                    {persona_confirm_copy(persona)}
+                  </p>
+                  <div class="flex flex-col sm:flex-row gap-2 mt-4">
+                    <.kh_button
+                      id={"add-#{persona}-profile-confirm"}
+                      variant={:primary}
+                      class="w-full sm:w-auto justify-center"
+                      phx-click="confirm_persona"
+                      phx-value-persona={persona}
+                      phx-disable-with={gettext("Setting up...")}
+                    >
+                      {persona_confirm_label(persona)}
+                    </.kh_button>
+                    <.kh_button
+                      id={"add-#{persona}-profile-cancel"}
+                      variant={:ghost}
+                      class="w-full sm:w-auto justify-center"
+                      phx-click="cancel_persona"
+                    >
+                      {gettext("Not now")}
+                    </.kh_button>
+                  </div>
+                <% else %>
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <.kh_icon_chip
+                        icon={persona_icon(persona)}
+                        gradient={:cool}
+                        size={:sm}
+                      />
+                      <div class="min-w-0">
+                        <p class="font-semibold text-hero-black">
+                          {persona_add_label(persona)}
+                        </p>
+                        <p class="text-sm text-[var(--fg-muted)]">
+                          {persona_add_description(persona)}
+                        </p>
+                      </div>
+                    </div>
+                    <.kh_button
+                      id={"add-#{persona}-profile-button"}
+                      variant={:primary}
+                      size={:sm}
+                      class="shrink-0"
+                      phx-click="request_persona"
+                      phx-value-persona={persona}
+                    >
+                      {gettext("Add")}
+                    </.kh_button>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </.kh_card>
+
           <%!-- My Family --%>
           <.kh_card id="my-family" class="overflow-hidden">
             <div class="p-5 border-b border-[var(--border-light)] flex items-center gap-3">
@@ -349,7 +425,9 @@ defmodule KlassHeroWeb.UserLive.Settings do
 
     socket =
       socket
-      |> assign(:active_nav, :auth)
+      |> assign(:active_nav, :settings)
+      |> assign(:page_title, gettext("Settings"))
+      |> assign(:page_subtitle, gettext("Manage your account, preferences, and privacy."))
       |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
@@ -359,9 +437,103 @@ defmodule KlassHeroWeb.UserLive.Settings do
       |> assign(:user_initials, get_user_initials(user.email))
       |> assign(:member_since, format_member_since(user.inserted_at))
       |> assign(:children_summary, ChildPresenter.children_summary(children))
+      |> assign(:confirming_persona, nil)
+      |> assign(:addable_personas, addable_personas(socket.assigns.current_scope))
 
-    {:ok, socket}
+    {:ok, socket, layout: layout_for(socket.assigns[:active_persona])}
   end
+
+  # Settings used to render in the marketing layout — the only authenticated
+  # non-admin page that did. Arriving from the account menu therefore dropped you
+  # out of your own app shell, and on mobile stranded you: the marketing header's
+  # only way back is `hidden lg:inline-flex`, and kh_user_menu is not rendered on
+  # marketing pages at all. Following the persona restores the sidebar, the
+  # bottom tabs and the switcher on the very page that grants a second persona.
+  defp layout_for(:provider), do: {Layouts, :provider_app}
+  defp layout_for(:staff), do: {Layouts, :provider_app}
+  defp layout_for(_persona), do: {Layouts, :parent_app}
+
+  # Only these two are self-grantable. :staff is an employment link to someone
+  # else's business (ADR-0005) — a provider adds themselves to their own team
+  # from the team page, and nobody can hire themselves into another's.
+  @self_grantable [:parent, :provider]
+
+  defp addable_personas(scope), do: @self_grantable -- Persona.available(scope)
+
+  defp add_persona(socket, :parent) do
+    case Accounts.upgrade_to_parent(socket.assigns.current_scope.user) do
+      {:ok, _user} ->
+        socket
+        |> put_flash(:info, gettext("Family profile added. You can add your children now."))
+        |> push_navigate(to: ~p"/settings/children")
+
+      # Stale tab: added elsewhere. Re-converge rather than reporting a failure.
+      {:error, :already_parent} ->
+        socket
+        |> put_flash(:info, gettext("You already have a family profile."))
+        |> push_navigate(to: ~p"/users/settings")
+
+      {:error, reason} ->
+        persona_failed(socket, :parent, reason)
+    end
+  end
+
+  defp add_persona(socket, :provider) do
+    case Accounts.upgrade_to_provider(socket.assigns.current_scope.user) do
+      {:ok, _user} ->
+        socket
+        |> put_flash(:info, gettext("Welcome aboard! Let's set up your provider profile."))
+        |> push_navigate(to: ~p"/provider/complete-profile")
+
+      {:error, :already_provider} ->
+        socket
+        |> put_flash(:info, gettext("You already have a provider profile."))
+        |> push_navigate(to: ~p"/users/settings")
+
+      {:error, reason} ->
+        persona_failed(socket, :provider, reason)
+    end
+  end
+
+  # A persona this account already holds has no button, so reaching here means a
+  # crafted event; treat it as a no-op rather than dispatching on nil.
+  defp add_persona(socket, _persona), do: assign(socket, :confirming_persona, nil)
+
+  defp persona_failed(socket, persona, reason) do
+    # Log the reason only: a changeset's :changes carries the user's name and
+    # email, which Inspect does not redact.
+    Logger.error("Failed to add #{persona} profile",
+      user_id: socket.assigns.current_scope.user.id,
+      reason: inspect(reason)
+    )
+
+    socket
+    |> assign(:confirming_persona, nil)
+    |> put_flash(:error, gettext("Something went wrong. Please try again."))
+  end
+
+  defp persona_icon(:parent), do: "hero-user-group"
+  defp persona_icon(:provider), do: "hero-building-storefront"
+
+  defp persona_add_label(:parent), do: gettext("Add a family profile")
+  defp persona_add_label(:provider), do: gettext("Add a provider profile")
+
+  defp persona_add_description(:parent), do: gettext("Book activities and manage your children's places.")
+
+  defp persona_add_description(:provider), do: gettext("List your own activities and take bookings.")
+
+  defp persona_confirm_copy(:parent),
+    do:
+      gettext("You'll be able to add your children and book activities. Your provider account stays exactly as it is.")
+
+  defp persona_confirm_copy(:provider),
+    do:
+      gettext(
+        "You'll get a provider profile to fill in, and a dashboard for your activities. Your family account stays exactly as it is."
+      )
+
+  defp persona_confirm_label(:parent), do: gettext("Add family profile")
+  defp persona_confirm_label(:provider), do: gettext("Add provider profile")
 
   defp get_user_initials(email) when is_binary(email) do
     email
@@ -378,6 +550,21 @@ defmodule KlassHeroWeb.UserLive.Settings do
   end
 
   defp format_member_since(_), do: ""
+
+  @impl true
+  def handle_event("request_persona", %{"persona" => persona}, socket) do
+    {:noreply, assign(socket, :confirming_persona, Persona.validate(persona))}
+  end
+
+  @impl true
+  def handle_event("cancel_persona", _params, socket) do
+    {:noreply, assign(socket, :confirming_persona, nil)}
+  end
+
+  @impl true
+  def handle_event("confirm_persona", %{"persona" => persona}, socket) do
+    {:noreply, add_persona(socket, Persona.validate(persona))}
+  end
 
   @impl true
   def handle_event("validate_email", params, socket) do

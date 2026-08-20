@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.Router do
 
   alias KlassHero.Shared.Tracing.LiveViewHook
   alias KlassHeroWeb.Hooks.RestoreLocale
+  alias KlassHeroWeb.Hooks.RestorePersona
   alias KlassHeroWeb.Plugs.SetLocale
   alias KlassHeroWeb.Plugs.VerifyStripeWebhookSignature
   alias KlassHeroWeb.Plugs.VerifyWebhookSignature
@@ -84,8 +85,6 @@ defmodule KlassHeroWeb.Router do
       live "/terms", TermsOfServiceLive, :index
     end
 
-    # /family/settings dual-mounts /settings under the canonical parent path;
-    # both work until a follow-up adds a 301 redirect for the legacy /settings tree.
     live_session :authenticated,
       layout: {KlassHeroWeb.Layouts, :parent_app},
       on_mount: [
@@ -93,16 +92,15 @@ defmodule KlassHeroWeb.Router do
         {KlassHeroWeb.UserAuth, :require_authenticated},
         {KlassHeroWeb.UserAuth, :redirect_provider_or_staff_from_parent_routes},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
-        {RestoreLocale, :restore_locale}
+        {RestoreLocale, :restore_locale},
+        {RestorePersona, :restore_persona}
       ] do
       live "/dashboard", DashboardLive, :index
 
-      live "/settings", SettingsLive, :index
       live "/settings/children", Settings.ChildrenLive, :index
       live "/settings/children/new", Settings.ChildrenLive, :new
       live "/settings/children/:child_id/edit", Settings.ChildrenLive, :edit
 
-      live "/family/settings", SettingsLive, :index
       live "/family/settings/children", Settings.ChildrenLive, :index
       live "/family/settings/children/new", Settings.ChildrenLive, :new
       live "/family/settings/children/:child_id/edit", Settings.ChildrenLive, :edit
@@ -120,7 +118,8 @@ defmodule KlassHeroWeb.Router do
         {KlassHeroWeb.UserAuth, :require_authenticated},
         {KlassHeroWeb.UserAuth, :require_provider},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
-        {RestoreLocale, :restore_locale}
+        {RestoreLocale, :restore_locale},
+        {RestorePersona, :restore_persona}
       ] do
       scope "/provider", Provider do
         live "/sessions", SessionsLive, :index
@@ -152,7 +151,8 @@ defmodule KlassHeroWeb.Router do
         {KlassHeroWeb.UserAuth, :require_authenticated},
         {KlassHeroWeb.UserAuth, :require_parent},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
-        {RestoreLocale, :restore_locale}
+        {RestoreLocale, :restore_locale},
+        {RestorePersona, :restore_persona}
       ] do
       scope "/parent", Parent do
         live "/participation", ParticipationHistoryLive, :index
@@ -172,7 +172,8 @@ defmodule KlassHeroWeb.Router do
         {KlassHeroWeb.UserAuth, :require_authenticated},
         {KlassHeroWeb.UserAuth, :require_staff},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
-        {RestoreLocale, :restore_locale}
+        {RestoreLocale, :restore_locale},
+        {RestorePersona, :restore_persona}
       ] do
       scope "/staff", Staff do
         live "/dashboard", StaffDashboardLive, :index
@@ -277,8 +278,10 @@ defmodule KlassHeroWeb.Router do
       on_mount: [
         {LiveViewHook, :trace},
         {KlassHeroWeb.UserAuth, :require_authenticated},
+        {KlassHeroWeb.UserAuth, :resolve_personas},
         {KlassHeroWeb.UserAuth, :fetch_unread_count},
-        {RestoreLocale, :restore_locale}
+        {RestoreLocale, :restore_locale},
+        {RestorePersona, :restore_persona}
       ] do
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
@@ -286,6 +289,11 @@ defmodule KlassHeroWeb.Router do
 
     post "/users/update-password", UserSessionController, :update_password
     get "/users/export-data", UserDataExportController, :export
+
+    # A dead request on purpose: only the plug pipeline can write the session,
+    # and only a redirect re-runs the on_mounts that pick the new surface's
+    # chrome. See KlassHeroWeb.PersonaController.
+    post "/users/persona/:persona", PersonaController, :switch
   end
 
   scope "/provider", KlassHeroWeb.Provider do

@@ -20,53 +20,6 @@ defmodule KlassHeroWeb.CompositeComponents do
   alias KlassHeroWeb.Theme
 
   @doc """
-  Renders a settings menu item with icon, title, description, and chevron.
-
-  ## Examples
-
-      <.settings_menu_item
-        icon="hero-user"
-        icon_bg={Theme.bg(:primary_light)}
-        icon_color={Theme.text_color(:primary)}
-        title="Profile Information"
-        description="Name, email, profile photo"
-        phx-click="navigate_to"
-        phx-value-section="profile-information"
-      />
-  """
-  attr :icon, :string, required: true, doc: "Heroicon name"
-  attr :icon_bg, :string, required: true, doc: "Background color class for icon"
-  attr :icon_color, :string, required: true, doc: "Text color class for icon"
-  attr :title, :string, required: true
-  attr :description, :string, required: true
-  attr :class, :string, default: ""
-  attr :rest, :global, include: ~w(phx-click phx-value-* disabled)
-
-  def settings_menu_item(assigns) do
-    ~H"""
-    <button
-      type="button"
-      class={[
-        "w-full flex items-center gap-4 p-4 hover:bg-hero-grey-50",
-        Theme.transition(:normal),
-        "border-b border-hero-grey-200 last:border-b-0",
-        @class
-      ]}
-      {@rest}
-    >
-      <.gradient_icon gradient_class={@icon_bg} size="sm" shape="circle" class="flex-shrink-0">
-        <.icon name={@icon} class={"w-5 h-5 #{@icon_color}"} />
-      </.gradient_icon>
-      <div class="flex-1 text-left">
-        <div class="font-medium text-hero-black">{@title}</div>
-        <div class="text-sm text-hero-grey-500">{@description}</div>
-      </div>
-      <.icon name="hero-chevron-right" class="w-5 h-5 text-hero-grey-400 flex-shrink-0" />
-    </button>
-    """
-  end
-
-  @doc """
   Renders a child profile card with progress and activities.
 
   ## Examples

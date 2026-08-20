@@ -38,7 +38,7 @@ defmodule KlassHeroWeb.ParentComponents do
     {:children, "My Kids", "hero-users", "/family/settings/children"},
     {:participation, "Sessions", "hero-check-circle", "/participation"},
     {:billing, "Billing", "hero-currency-euro", nil},
-    {:settings, "Settings", "hero-cog-6-tooth", "/family/settings"}
+    {:settings, "Settings", "hero-cog-6-tooth", "/users/settings"}
   ]
 
   @mobile_tabs [
@@ -200,6 +200,9 @@ defmodule KlassHeroWeb.ParentComponents do
 
   slot :extra_actions
 
+  attr :personas, :list, default: [], doc: "Personas this account holds; drives the switcher."
+  attr :active_persona, :atom, default: nil, doc: "The persona currently being viewed."
+
   def pa_topbar(assigns) do
     ~H"""
     <div class="hidden lg:flex px-8 pt-8 pb-6 bg-white border-b border-hero-grey-200 items-center justify-between">
@@ -218,7 +221,12 @@ defmodule KlassHeroWeb.ParentComponents do
         >
           <.icon name={@cta_icon} class="w-4 h-4" /> {@cta_label}
         </.link>
-        <.kh_user_menu user={@user} id="parent-user-menu-desktop" />
+        <.kh_user_menu
+          user={@user}
+          personas={@personas}
+          active_persona={@active_persona}
+          id="parent-user-menu-desktop"
+        />
       </div>
     </div>
 
@@ -235,7 +243,13 @@ defmodule KlassHeroWeb.ParentComponents do
           {@subtitle}
         </div>
       </div>
-      <.kh_user_menu user={@user} id="parent-user-menu-mobile" class="shrink-0" />
+      <.kh_user_menu
+        user={@user}
+        personas={@personas}
+        active_persona={@active_persona}
+        id="parent-user-menu-mobile"
+        class="shrink-0"
+      />
     </div>
     """
   end

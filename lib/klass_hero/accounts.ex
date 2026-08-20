@@ -9,6 +9,7 @@ defmodule KlassHero.Accounts do
 
   alias KlassHero.Accounts.Events
   alias KlassHero.Accounts.{PersonaGrant, User, UserNotifier, UserToken}
+  alias KlassHero.Family
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
@@ -102,6 +103,38 @@ defmodule KlassHero.Accounts do
   # Race loser hit the unique-index backstop: same condition as the pre-check.
   defp normalize_upgrade_result({:error, :duplicate_resource}), do: {:error, :already_provider}
   defp normalize_upgrade_result({:error, reason}), do: {:error, reason}
+
+  @doc """
+  Gives an existing, authenticated user a Parent persona (#899).
+
+  The mirror of `upgrade_to_provider/1`, and deliberately lighter: a parent
+  profile needs only the identity, so there is no draft state and no completion
+  flow — the persona is usable the moment this returns.
+
+  `user` must come from the session, never params. Returns `{:ok, %User{}}`,
+  `{:error, :already_parent}`, or an error from the underlying writes. The race
+  where another request creates the profile between the pre-check and the insert
+  is normalized from the unique-index backstop (`:duplicate_resource`).
+  """
+  @spec upgrade_to_parent(User.t()) :: {:ok, User.t()} | {:error, :already_parent | term()}
+  def upgrade_to_parent(%User{} = user) do
+    context_span entity: "user" do
+      if Family.has_parent_profile?(user.id) do
+        {:error, :already_parent}
+      else
+        user
+        |> PersonaGrant.grant(:parent, fn fresh_user ->
+          Family.create_parent_profile(%{identity_id: fresh_user.id})
+        end)
+        |> normalize_parent_upgrade_result()
+      end
+    end
+  end
+
+  defp normalize_parent_upgrade_result({:ok, {updated_user, _profile}}), do: {:ok, updated_user}
+  # Race loser hit the unique-index backstop: same condition as the pre-check.
+  defp normalize_parent_upgrade_result({:error, :duplicate_resource}), do: {:error, :already_parent}
+  defp normalize_parent_upgrade_result({:error, reason}), do: {:error, reason}
 
   @doc """
   Adds the user as a staff member of their OWN business (#969, ADR-0005).
@@ -328,6 +361,23 @@ defmodule KlassHero.Accounts do
     context_span entity: "user" do
       user
       |> User.locale_changeset(attrs)
+      |> Repo.update()
+    end
+  end
+
+  @doc """
+  Remembers the surface this user last chose to work in (ADR-0005).
+
+  A preference, not a grant: the caller is responsible for having checked that
+  the user actually holds the persona before asking to store it. Passing `nil`
+  clears the preference and returns them to precedence-based landing.
+  """
+  @spec update_user_active_persona(User.t(), map()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_active_persona(user, attrs) do
+    context_span entity: "user" do
+      user
+      |> User.active_persona_changeset(attrs)
       |> Repo.update()
     end
   end

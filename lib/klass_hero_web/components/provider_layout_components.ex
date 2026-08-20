@@ -40,7 +40,8 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     {:programs, "Programs", "hero-book-open", "/provider/dashboard/programs"},
     {:roster, "Sessions", "hero-users", "/provider/sessions"},
     {:calendar, "Schedule", "hero-calendar", nil},
-    {:messages, "Comms", "hero-inbox", "/provider/messages"}
+    {:messages, "Comms", "hero-inbox", "/provider/messages"},
+    {:settings, "Settings", "hero-cog-6-tooth", "/users/settings"}
   ]
 
   @mobile_tabs [
@@ -55,11 +56,12 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   `active` accepts page-scoped keys that don't all map to a sidebar item.
   Pages without a sidebar entry (e.g. subscription, onboarding) pass their
   own key so nothing lights up — preferable to defaulting to `:home`, which
-  would falsely highlight Overview. Settings is gone until #804 ships.
+  would falsely highlight Overview. Settings points at the shared account
+  page, which now renders in this chrome; the rest of #804 is outstanding.
   """
   attr :active, :atom,
     required: true,
-    values: [:home, :programs, :roster, :calendar, :messages, :subscription, :onboarding]
+    values: [:home, :programs, :roster, :calendar, :messages, :settings, :subscription, :onboarding]
 
   def pv_sidebar(assigns) do
     assigns = assign(assigns, items: @desktop_items, tabs: @mobile_tabs)
@@ -198,6 +200,9 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   attr :show_new_program_cta, :boolean, default: false
   attr :user, :map, required: true, doc: "Current user; needs :name and :email"
 
+  attr :personas, :list, default: [], doc: "Personas this account holds; drives the switcher."
+  attr :active_persona, :atom, default: nil, doc: "The persona currently being viewed."
+
   def pv_topbar(assigns) do
     ~H"""
     <div class="hidden lg:flex px-8 py-6 bg-white border-b border-hero-grey-200 items-center justify-between">
@@ -225,7 +230,12 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
         >
           <.icon name="hero-plus" class="w-4 h-4" /> {gettext("New program")}
         </a>
-        <.kh_user_menu user={@user} id="provider-user-menu-desktop" />
+        <.kh_user_menu
+          user={@user}
+          personas={@personas}
+          active_persona={@active_persona}
+          id="provider-user-menu-desktop"
+        />
       </div>
     </div>
 
@@ -244,7 +254,13 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
           class="w-3.5 h-3.5 text-emerald-500 shrink-0"
         />
       </div>
-      <.kh_user_menu user={@user} id="provider-user-menu-mobile" class="shrink-0" />
+      <.kh_user_menu
+        user={@user}
+        personas={@personas}
+        active_persona={@active_persona}
+        id="provider-user-menu-mobile"
+        class="shrink-0"
+      />
     </div>
     """
   end

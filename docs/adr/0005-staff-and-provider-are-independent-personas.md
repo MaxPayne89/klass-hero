@@ -15,7 +15,7 @@ Previously the two were conflated. Accepting a staff invitation ran a registrati
 ## Consequences
 
 - `StaffInvitationStatusHandler` no longer creates a `ProviderProfile`; `staff_registration_changeset` no longer forces `:provider`. The `originated_from = "staff_invite"` origin becomes vestigial (all Providers are now deliberate/"direct").
-- Landing for a person who is both is **provider-takes-precedence** (`signed_in_path`); a dashboard switcher is deferred.
+- Landing for a person who is both is **provider-takes-precedence** (`signed_in_path`); a dashboard switcher is deferred. *(Superseded — see the amendment below.)*
 - **Migration (blanket):** rename `:staff_provider → :staff` in all `intended_roles`; delete every `ProviderProfile` with `originated_from = "staff_invite"` and strip `:provider` from those Users. Safe as a blanket op because no staff member has yet acted as a side-hustle provider (zero such profiles carry Programs at migration time). Had any existed, the policy would have been activity-gated.
 - The `provider-verification.allium` spec's staff/grandfathering notes (which assume staff hold a "progression-path" provider profile and get a dormant case at invite-claim) are now **wrong** and need a follow-up tend: a verification case attaches to a `ProviderProfile` created by the deliberate act, not at invite-claim.
 - This is the entity/identity separation only. Vetting/gating itself (milestones 16, 23) is downstream and out of scope here; it keys off "does a ProviderProfile exist?" instead of "was someone invited?".
@@ -23,4 +23,30 @@ Previously the two were conflated. Accepting a staff invitation ran a registrati
 ## When to revisit
 
 - If person-level data (bio, headshot, qualifications) needs to be shared across a multi-employer person's many `StaffMember` rows rather than duplicated, factor out a shared Person/Practitioner entity that both `StaffMember` (employment) and `ProviderProfile` reference. Deferred; the `User` plays the person role for now.
-- If the both-persona population grows, replace provider-precedence landing with a remembered/last-used dashboard switcher.
+- ~~If the both-persona population grows, replace provider-precedence landing with a remembered/last-used dashboard switcher.~~ **Done — see the amendment below (#899).**
+
+## Amendment (#899): the switcher landed
+
+The revisit trigger above fired. Provider-precedence landing is now a **default**,
+not a rule.
+
+- `users.active_persona` remembers the surface a person last chose. Nullable with
+  no backfill: `NULL` means "never chose", which resolves by the same
+  `provider > staff > parent` precedence, so nothing changed for anyone who does
+  not switch.
+- **It remains a preference and never a grant.** `KlassHeroWeb.Persona.resolve/1`
+  discards a stored persona the person no longer holds, and the switch controller
+  refuses to store one they do not hold. Authorization is still persona existence,
+  exactly as this ADR requires.
+- **`intended_roles` is no longer read for routing at all.** Two template call
+  sites were passing it to the old `RoleRouting`, contradicting this ADR's own
+  statement that it is a landing hint and not the authorization source of truth.
+  It survives as signup intent and the eventual-consistency bridge, which is still
+  load-bearing: personas are created asynchronously off `user_registered`, so
+  `Persona.from_user/1` falls back to it at login, before any profile row exists.
+- `:redirect_provider_or_staff_from_parent_routes` now also requires that the
+  person does *not* hold a parent persona. It guards the whole `:authenticated`
+  live_session, so the old condition made the parent surface unreachable — not
+  merely un-landed-on — for anyone holding both.
+- A person still cannot grant themselves `:staff`; that remains an employment link
+  to a business, per the decision above.

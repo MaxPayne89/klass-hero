@@ -34,7 +34,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
         socket =
           socket
           |> put_flash(:error, gettext("Please set up your parent profile to manage children."))
-          |> redirect(to: ~p"/settings")
+          |> redirect(to: ~p"/users/settings#profiles")
 
         {:ok, socket}
     end
@@ -317,7 +317,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
       <div class="max-w-4xl mx-auto p-4 space-y-4">
         <div class="flex items-center justify-between mb-4">
           <.link
-            navigate={~p"/settings"}
+            navigate={~p"/users/settings"}
             class={[
               "inline-flex items-center gap-1 text-sm font-medium",
               Theme.text_color(:primary),

@@ -16,7 +16,7 @@ defmodule KlassHeroWeb.UserAuth do
   alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
-  alias KlassHeroWeb.RoleRouting
+  alias KlassHeroWeb.Persona
 
   # Make the remember me cookie valid for 14 days. This should match
   # the session validity setting in UserToken.
@@ -169,13 +169,20 @@ defmodule KlassHeroWeb.UserAuth do
       on user_token.
       Redirects to login page if there's no logged user.
 
+    * `:resolve_personas` - Resolves the scope's personas without gating on any
+      of them. For surfaces that render persona chrome but have no role guard of
+      their own to do the resolving, notably account settings.
+
     * `:require_admin` - Requires the user to have `is_admin: true`.
       Redirects to home page with error flash if the user is not an admin.
       Use this hook for admin-only routes (verification, moderation).
 
     * `:redirect_provider_or_staff_from_parent_routes` - Redirects users with
-      a provider or staff profile away from parent-specific routes to their
-      role's dashboard. Staff takes precedence over provider.
+      a provider or staff persona away from parent-specific routes, unless they
+      also hold a parent persona. Holding parent is what earns access: this hook
+      guards the whole `:authenticated` live_session, so a broader test would
+      make `/dashboard`, `/messages` and booking unreachable for a dual-persona
+      user rather than merely un-landed-on (#899).
 
   ## Examples
 
@@ -269,6 +276,17 @@ defmodule KlassHeroWeb.UserAuth do
     )
   end
 
+  def on_mount(:resolve_personas, _params, session, socket) do
+    socket = mount_current_scope(socket, session)
+
+    if socket.assigns.current_scope && socket.assigns.current_scope.user do
+      scope = Scope.resolve_roles(socket.assigns.current_scope)
+      {:cont, Phoenix.Component.assign(socket, :current_scope, scope)}
+    else
+      {:cont, socket}
+    end
+  end
+
   def on_mount(:require_admin, _params, _session, socket) do
     case socket.assigns[:current_scope] do
       %{user: %{is_admin: true}} ->
@@ -289,16 +307,20 @@ defmodule KlassHeroWeb.UserAuth do
       scope = Scope.resolve_roles(socket.assigns.current_scope)
       socket = Phoenix.Component.assign(socket, :current_scope, scope)
 
-      case RoleRouting.primary_role(scope.roles) do
-        role when role in [:provider, :staff] ->
-          {:halt, Phoenix.LiveView.redirect(socket, to: RoleRouting.dashboard_path(scope.roles))}
-
-        _ ->
-          {:cont, socket}
+      if belongs_elsewhere?(scope) do
+        {:halt, Phoenix.LiveView.redirect(socket, to: Persona.path(Persona.resolve(scope), :dashboard))}
+      else
+        {:cont, socket}
       end
     else
       {:cont, socket}
     end
+  end
+
+  # Provider- or staff-only: nothing on the parent surface belongs to them.
+  # Holding parent — by any route, including one just granted — ends the bounce.
+  defp belongs_elsewhere?(scope) do
+    (Scope.provider?(scope) or Scope.staff?(scope)) and not Scope.parent?(scope)
   end
 
   defp require_role(socket, session, role_check_fn, error_message) do
@@ -342,13 +364,20 @@ defmodule KlassHeroWeb.UserAuth do
     end)
   end
 
-  @doc "Returns the path to redirect to after log in, based on the user's intended roles."
-  def signed_in_path(%Accounts.User{intended_roles: roles}), do: RoleRouting.dashboard_path(roles)
+  @doc """
+  The path to land on after logging in.
+
+  Deliberately query-free: `UserLive.Registration` calls this from `mount/3`,
+  where the personas do not exist yet — they are created asynchronously off
+  `user_registered` — so `Persona.from_user/1` reads the remembered persona and
+  the `intended_roles` hint straight off the struct.
+  """
+  def signed_in_path(%Accounts.User{} = user), do: Persona.path(Persona.from_user(user), :dashboard)
 
   def signed_in_path(_), do: ~p"/"
 
-  @doc "Returns the correct dashboard path based on the user's intended roles."
-  def dashboard_path(%Accounts.User{intended_roles: roles}), do: RoleRouting.dashboard_path(roles)
+  @doc "The dashboard path for a user, from their remembered persona. See `signed_in_path/1`."
+  def dashboard_path(%Accounts.User{} = user), do: Persona.path(Persona.from_user(user), :dashboard)
 
   def dashboard_path(nil), do: ~p"/dashboard"
 

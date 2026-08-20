@@ -35,8 +35,8 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
       assert {:error, {:redirect, _}} = live(conn, ~p"/settings/children")
     end
 
-    test "user without parent profile is redirected to settings", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/settings", flash: flash}}} =
+    test "user without parent profile is redirected to the profiles section", %{conn: conn} do
+      assert {:error, {:redirect, %{to: "/users/settings#profiles", flash: flash}}} =
                live(conn, ~p"/settings/children")
 
       assert flash["error"] =~ "parent profile"
@@ -448,7 +448,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
     setup :register_and_log_in_user
 
     test "settings page has link to children profiles", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/settings")
+      {:ok, _view, html} = live(conn, ~p"/users/settings")
 
       assert html =~ "/settings/children"
       assert html =~ "Children Profiles"
