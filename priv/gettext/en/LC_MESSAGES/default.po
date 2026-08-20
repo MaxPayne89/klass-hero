@@ -844,7 +844,7 @@ msgstr ""
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:37
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:69
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:101
-#: lib/klass_hero_web/live/admin/sessions_live.ex:252
+#: lib/klass_hero_web/live/admin/sessions_live.ex:247
 #: lib/klass_hero_web/live/provider/participation_live.ex:171
 #: lib/klass_hero_web/live/provider/participation_live.ex:217
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:110
@@ -891,8 +891,8 @@ msgstr ""
 msgid "Session completed successfully"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:67
-#: lib/klass_hero_web/live/admin/sessions_live.ex:73
+#: lib/klass_hero_web/live/admin/sessions_live.ex:62
+#: lib/klass_hero_web/live/admin/sessions_live.ex:68
 #: lib/klass_hero_web/live/provider/participation_live.ex:287
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:231
 #, elixir-autogen, elixir-format
@@ -1412,7 +1412,7 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:1635
 #: lib/klass_hero_web/components/provider_components.ex:2952
 #: lib/klass_hero_web/components/provider_components.ex:2970
-#: lib/klass_hero_web/live/admin/sessions_live.ex:298
+#: lib/klass_hero_web/live/admin/sessions_live.ex:293
 #: lib/klass_hero_web/live/admin/verifications_live.ex:197
 #, elixir-autogen, elixir-format
 msgid "Pending"
@@ -1969,7 +1969,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:826
 #: lib/klass_hero_web/components/provider_components.ex:49
-#: lib/klass_hero_web/live/admin/sessions_live.ex:295
+#: lib/klass_hero_web/live/admin/sessions_live.ex:290
 #: lib/klass_hero_web/live/admin/verifications_live.ex:202
 #: lib/klass_hero_web/presenters/vetting_checklist_presenter.ex:141
 #, elixir-autogen, elixir-format
@@ -2213,7 +2213,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:72
 #: lib/klass_hero_web/components/provider_components.ex:2974
-#: lib/klass_hero_web/live/admin/emails_live.ex:212
+#: lib/klass_hero_web/live/admin/emails_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Failed"
 msgstr ""
@@ -2771,7 +2771,7 @@ msgid "Selected instructor could not be found. Please try again."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2971
-#: lib/klass_hero_web/live/admin/emails_live.ex:211
+#: lib/klass_hero_web/live/admin/emails_live.ex:206
 #, elixir-autogen, elixir-format
 msgid "Sent"
 msgstr ""
@@ -3212,7 +3212,7 @@ msgstr ""
 msgid "This deletion request has expired. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:250
+#: lib/klass_hero_web/live/admin/sessions_live.ex:245
 #, elixir-autogen, elixir-format
 msgid "A reason is required for corrections"
 msgstr ""
@@ -3238,7 +3238,7 @@ msgstr ""
 msgid "All payments processed securely through Stripe."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:262
+#: lib/klass_hero_web/live/admin/sessions_live.ex:257
 #, elixir-autogen, elixir-format
 msgid "An error occurred"
 msgstr ""
@@ -3248,7 +3248,7 @@ msgstr ""
 msgid "Apple Pay / Google Pay"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:178
+#: lib/klass_hero_web/live/admin/sessions_live.ex:173
 #, elixir-autogen, elixir-format
 msgid "Attendance corrected successfully"
 msgstr ""
@@ -3293,7 +3293,7 @@ msgstr ""
 msgid "Can I list my programs on Klass Hero and what does it cost?"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:256
+#: lib/klass_hero_web/live/admin/sessions_live.ex:251
 #, elixir-autogen, elixir-format
 msgid "Cannot check out without a check-in"
 msgstr ""
@@ -3324,13 +3324,13 @@ msgstr ""
 msgid "Check-out time"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:277
+#: lib/klass_hero_web/live/admin/sessions_live.ex:272
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:199
 #, elixir-autogen, elixir-format
 msgid "Checked In"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:278
+#: lib/klass_hero_web/live/admin/sessions_live.ex:273
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:200
 #, elixir-autogen, elixir-format
 msgid "Checked Out"
@@ -3421,7 +3421,7 @@ msgid "How does the booking system work?"
 msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:807
-#: lib/klass_hero_web/live/admin/sessions_live.ex:276
+#: lib/klass_hero_web/live/admin/sessions_live.ex:271
 #, elixir-autogen, elixir-format, fuzzy
 msgid "In Progress"
 msgstr ""
@@ -3452,7 +3452,7 @@ msgstr ""
 msgid "No change"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:251
+#: lib/klass_hero_web/live/admin/sessions_live.ex:246
 #, elixir-autogen, elixir-format
 msgid "No changes detected"
 msgstr ""
@@ -3542,7 +3542,7 @@ msgstr ""
 msgid "Reason for correction"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:254
+#: lib/klass_hero_web/live/admin/sessions_live.ex:249
 #, elixir-autogen, elixir-format
 msgid "Record was modified by someone else. Please refresh."
 msgstr ""
@@ -3717,7 +3717,7 @@ msgstr ""
 msgid "Archive"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:207
+#: lib/klass_hero_web/live/admin/emails_live.ex:202
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:57
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Archived"
@@ -3750,7 +3750,7 @@ msgstr ""
 msgid "Check In"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:258
+#: lib/klass_hero_web/live/admin/sessions_live.ex:253
 #, elixir-autogen, elixir-format
 msgid "Check-in time must be before check-out time"
 msgstr ""
@@ -3821,7 +3821,7 @@ msgstr ""
 msgid "Content fetch failed"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:119
+#: lib/klass_hero_web/live/admin/emails_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "Content fetch retrying..."
 msgstr ""
@@ -3864,24 +3864,24 @@ msgstr ""
 msgid "Edit & Resubmit"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:136
+#: lib/klass_hero_web/live/admin/emails_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Email archived"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:156
+#: lib/klass_hero_web/live/admin/emails_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Email marked as unread"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:66
+#: lib/klass_hero_web/live/admin/emails_live.ex:61
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Email not found"
 msgstr ""
 
 #: lib/klass_hero_web/components/layouts/admin.html.heex:76
 #: lib/klass_hero_web/live/admin/emails_live.ex:21
-#: lib/klass_hero_web/live/admin/emails_live.ex:41
+#: lib/klass_hero_web/live/admin/emails_live.ex:36
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:4
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Emails"
@@ -3902,7 +3902,7 @@ msgstr ""
 msgid "Expected"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:139
+#: lib/klass_hero_web/live/admin/emails_live.ex:134
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Failed to archive email"
 msgstr ""
@@ -3917,7 +3917,7 @@ msgstr ""
 msgid "Failed to fetch email content."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:159
+#: lib/klass_hero_web/live/admin/emails_live.ex:154
 #, elixir-autogen, elixir-format
 msgid "Failed to mark email as unread"
 msgstr ""
@@ -3927,12 +3927,12 @@ msgstr ""
 msgid "Failed to resend invitation. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:122
+#: lib/klass_hero_web/live/admin/emails_live.ex:117
 #, elixir-autogen, elixir-format
 msgid "Failed to schedule retry"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:103
+#: lib/klass_hero_web/live/admin/emails_live.ex:98
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Failed to send reply"
 msgstr ""
@@ -3963,7 +3963,7 @@ msgstr ""
 msgid "Invalid Invitation"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/sessions_live.ex:260
+#: lib/klass_hero_web/live/admin/sessions_live.ex:255
 #: lib/klass_hero_web/live/provider/sessions_live.ex:578
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Invalid time format"
@@ -4141,7 +4141,7 @@ msgstr ""
 msgid "Provider observation"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:206
+#: lib/klass_hero_web/live/admin/emails_live.ex:201
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:46
 #, elixir-autogen, elixir-format
 msgid "Read"
@@ -4167,7 +4167,7 @@ msgstr ""
 msgid "Reply privately is only available for broadcast messages"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:100
+#: lib/klass_hero_web/live/admin/emails_live.ex:95
 #, elixir-autogen, elixir-format
 msgid "Reply sent successfully"
 msgstr ""
@@ -4207,7 +4207,7 @@ msgstr ""
 msgid "Send Reply"
 msgstr ""
 
-#: lib/klass_hero_web/live/admin/emails_live.ex:210
+#: lib/klass_hero_web/live/admin/emails_live.ex:205
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Sending"
 msgstr ""
@@ -4307,7 +4307,7 @@ msgid "Unauthorized"
 msgstr ""
 
 #: lib/klass_hero_web/components/parent_components.ex:495
-#: lib/klass_hero_web/live/admin/emails_live.ex:205
+#: lib/klass_hero_web/live/admin/emails_live.ex:200
 #: lib/klass_hero_web/live/admin/emails_live.html.heex:35
 #, elixir-autogen, elixir-format
 msgid "Unread"

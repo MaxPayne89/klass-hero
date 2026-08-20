@@ -33,6 +33,16 @@ defmodule KlassHeroWeb.Admin.EmailsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/admin/emails")
       assert has_element?(view, "#emails-empty")
     end
+
+    # @current_url comes from Backpex.InitAssigns' handle_params hook, attached in
+    # the :admin_custom live_session. Nothing else asserts that hook is wired, so
+    # dropping it from the router would otherwise surface as a runtime KeyError.
+    test "highlights the Emails sidebar item", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/emails")
+
+      assert has_element?(view, ~s|a[href="/admin/emails"].bg-neutral|)
+      refute has_element?(view, ~s|a[href="/admin/sessions"].bg-neutral|)
+    end
   end
 
   describe "Show" do
