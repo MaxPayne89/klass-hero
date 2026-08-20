@@ -210,8 +210,8 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     test "shows tooltip explaining verification requirement", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard")
 
-      html = render(view)
-      assert html =~ "Complete business verification to create programs."
+      assert view |> element("#new-program-tooltip") |> render() =~
+               "Complete verification to create programs."
     end
   end
 
