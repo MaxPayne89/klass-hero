@@ -1,7 +1,7 @@
 defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandlerTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Accounts.Domain.Events.AccountsEvents
+  alias KlassHero.Accounts
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
@@ -21,7 +21,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
     test "transitions pending staff member to :sent and sets invitation_sent_at" do
       staff = ProviderFixtures.staff_member_fixture(invitation_status: :pending)
 
-      event = AccountsEvents.staff_invitation_sent(staff.id)
+      event = Accounts.Events.staff_invitation_sent(staff.id)
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
@@ -37,7 +37,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
           invitation_sent_at: ~U[2025-01-01 10:00:00Z]
         )
 
-      event = AccountsEvents.staff_invitation_sent(staff.id)
+      event = Accounts.Events.staff_invitation_sent(staff.id)
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
@@ -50,7 +50,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       # Staff already in :sent — the :pending -> :sent transition is invalid
       staff = ProviderFixtures.staff_member_fixture(invitation_status: :sent)
 
-      event = AccountsEvents.staff_invitation_sent(staff.id)
+      event = Accounts.Events.staff_invitation_sent(staff.id)
 
       # Returns :ok instead of {:error, _} — idempotent by design
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
@@ -65,7 +65,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
     test "transitions pending staff member to :failed" do
       staff = ProviderFixtures.staff_member_fixture(invitation_status: :pending)
 
-      event = AccountsEvents.staff_invitation_failed(staff.id)
+      event = Accounts.Events.staff_invitation_failed(staff.id)
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
@@ -76,7 +76,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
     test "is idempotent when staff already in :failed status (was re-enqueued)" do
       staff = ProviderFixtures.staff_member_fixture(invitation_status: :failed)
 
-      event = AccountsEvents.staff_invitation_failed(staff.id)
+      event = Accounts.Events.staff_invitation_failed(staff.id)
 
       assert :ok = StaffInvitationStatusHandler.handle_event(event)
 
@@ -96,7 +96,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
         )
 
       event =
-        AccountsEvents.staff_user_registered(user.id, %{
+        Accounts.Events.staff_user_registered(user.id, %{
           staff_member_id: staff.id
         })
 
@@ -114,7 +114,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       staff = ProviderFixtures.staff_member_fixture(invitation_status: :pending)
 
       event =
-        AccountsEvents.staff_user_registered(user.id, %{
+        Accounts.Events.staff_user_registered(user.id, %{
           staff_member_id: staff.id
         })
 
@@ -135,7 +135,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
         )
 
       event =
-        AccountsEvents.staff_user_registered(user.id, %{
+        Accounts.Events.staff_user_registered(user.id, %{
           staff_member_id: staff.id
         })
 
@@ -152,12 +152,12 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
   describe "handle_event/1 with non-existent staff member" do
     test "returns error for :staff_invitation_sent with unknown staff_member_id" do
-      event = AccountsEvents.staff_invitation_sent(Ecto.UUID.generate())
+      event = Accounts.Events.staff_invitation_sent(Ecto.UUID.generate())
       assert {:error, :not_found} = StaffInvitationStatusHandler.handle_event(event)
     end
 
     test "returns error for :staff_invitation_failed with unknown staff_member_id" do
-      event = AccountsEvents.staff_invitation_failed(Ecto.UUID.generate())
+      event = Accounts.Events.staff_invitation_failed(Ecto.UUID.generate())
       assert {:error, :not_found} = StaffInvitationStatusHandler.handle_event(event)
     end
 
@@ -165,7 +165,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
       user = AccountsFixtures.unconfirmed_user_fixture()
 
       event =
-        AccountsEvents.staff_user_registered(user.id, %{
+        Accounts.Events.staff_user_registered(user.id, %{
           staff_member_id: Ecto.UUID.generate()
         })
 
@@ -190,7 +190,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
         )
 
       event =
-        AccountsEvents.staff_user_registered(
+        Accounts.Events.staff_user_registered(
           user.id,
           %{staff_member_id: staff.id, provider_id: provider.id}
         )
@@ -222,7 +222,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
   describe "handle_event/1 for malformed payloads" do
     test "returns error for missing staff_member_id" do
       event =
-        AccountsEvents.staff_invitation_sent(Ecto.UUID.generate(), %{
+        Accounts.Events.staff_invitation_sent(Ecto.UUID.generate(), %{
           provider_id: Ecto.UUID.generate()
         })
 
@@ -234,7 +234,7 @@ defmodule KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitati
 
     test "returns error for missing user_id in staff_user_registered" do
       event =
-        AccountsEvents.staff_user_registered(Ecto.UUID.generate(), %{
+        Accounts.Events.staff_user_registered(Ecto.UUID.generate(), %{
           staff_member_id: Ecto.UUID.generate(),
           provider_id: Ecto.UUID.generate()
         })

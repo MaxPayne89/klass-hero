@@ -116,7 +116,7 @@ For each confirmed finding, in order:
 2. Re-read the file to get current state (it may have changed from prior fixes)
 3. Respect the project's conventional-Phoenix layout (flattened from DDD, #986–#1002):
    - **Entity logic + persistence** → the schema-as-struct module at the context root, e.g. `lib/klass_hero/{context}/{entity}.ex` (Ecto schema + struct + functional core); the context API is `lib/klass_hero/{context}.ex`
-   - **CQRS projections / read-tables** → `lib/klass_hero/{context}/adapters/driven/projections/` and `.../persistence/` (projection tables only)
+   - **CQRS projections** → `lib/klass_hero/{context}/projections/`; read-table schemas sit at the context root. (Contexts not yet migrated to the flat layout still use `.../adapters/driven/projections/` — see `domain-architecture.md`.)
    - **Migrations** → `priv/repo/migrations/`
    - **LiveView** → `lib/klass_hero_web/live/`
    - **Tests** → mirror the source file path under `test/`

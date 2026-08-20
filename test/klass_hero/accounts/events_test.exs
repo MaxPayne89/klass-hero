@@ -1,7 +1,7 @@
-defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
+defmodule KlassHero.Accounts.EventsTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Accounts.Domain.Events.AccountsEvents
+  alias KlassHero.Accounts.Events
   alias KlassHero.Shared.Domain.Events.Event
 
   # The staff factories take an id, because their producers hold one and not a
@@ -22,7 +22,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       @entity entity
 
       test "builds an event with stable identity fields" do
-        event = apply(AccountsEvents, @fun, ["id-1"])
+        event = apply(Events, @fun, ["id-1"])
 
         assert %Event{} = event
         assert event.event_type == @fun
@@ -34,7 +34,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
       test "the id argument wins over a caller-supplied one and preserves extras" do
         payload = %{@id => "overridden", :extra => "data"}
-        event = apply(AccountsEvents, @fun, ["real-id", payload])
+        event = apply(Events, @fun, ["real-id", payload])
 
         assert Map.get(event.payload, @id) == "real-id"
         assert event.payload.extra == "data"
@@ -43,7 +43,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       test "raises for a nil or blank id" do
         for bad_id <- [nil, ""] do
           assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
-            apply(AccountsEvents, @fun, [bad_id])
+            apply(Events, @fun, [bad_id])
           end
         end
       end
@@ -63,7 +63,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
     test "raises for a user missing a required field" do
       for {user, message} <- @invalid do
-        assert_raise ArgumentError, message, fn -> AccountsEvents.user_registered(user) end
+        assert_raise ArgumentError, message, fn -> Events.user_registered(user) end
       end
     end
 
@@ -72,13 +72,13 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
       assert_raise ArgumentError,
                    ~r/User.intended_roles must be a list/,
-                   fn -> AccountsEvents.user_registered(user) end
+                   fn -> Events.user_registered(user) end
     end
 
     test "succeeds with valid user" do
       user = %{id: 1, email: "test@example.com", name: "Test User"}
 
-      event = AccountsEvents.user_registered(user)
+      event = Events.user_registered(user)
 
       assert %Event{} = event
       assert event.event_type == :user_registered
@@ -93,7 +93,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
     test "succeeds with valid user and custom payload" do
       user = %{id: 1, email: "test@example.com", name: "Test User"}
 
-      event = AccountsEvents.user_registered(user, %{source: "web"})
+      event = Events.user_registered(user, %{source: "web"})
 
       assert event.payload.source == "web"
     end
@@ -107,7 +107,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
           ] do
         user = %{id: 1, email: "test@example.com", name: "Test User", intended_roles: roles}
 
-        assert AccountsEvents.user_registered(user).payload.intended_roles == expected
+        assert Events.user_registered(user).payload.intended_roles == expected
       end
     end
 
@@ -115,7 +115,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       # Provider tiers removed (ADR-0004)
       user = %{id: 1, email: "test@example.com", name: "Test User", intended_roles: [:provider]}
 
-      event = AccountsEvents.user_registered(user)
+      event = Events.user_registered(user)
 
       refute Map.has_key?(event.payload, :provider_subscription_tier)
     end
@@ -134,14 +134,14 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
     test "raises for a user missing a required field" do
       for {user, message} <- @invalid_confirmed do
-        assert_raise ArgumentError, message, fn -> AccountsEvents.user_confirmed(user) end
+        assert_raise ArgumentError, message, fn -> Events.user_confirmed(user) end
       end
     end
 
     test "succeeds with valid user" do
       user = %{id: 1, email: "test@example.com", confirmed_at: @confirmed_at}
 
-      event = AccountsEvents.user_confirmed(user)
+      event = Events.user_confirmed(user)
 
       assert %Event{} = event
       assert event.event_type == :user_confirmed
@@ -159,7 +159,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
     test "succeeds with valid user and custom payload" do
       user = %{id: 1, email: "test@example.com", confirmed_at: @confirmed_at}
 
-      event = AccountsEvents.user_confirmed(user, %{confirmation_token: "abc123"})
+      event = Events.user_confirmed(user, %{confirmation_token: "abc123"})
 
       assert event.payload.confirmation_token == "abc123"
     end
@@ -173,7 +173,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
         intended_roles: [:provider]
       }
 
-      event = AccountsEvents.user_confirmed(user)
+      event = Events.user_confirmed(user)
 
       assert event.payload.name == "Test Provider"
       assert event.payload.intended_roles == ["provider"]
@@ -187,7 +187,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
 
       for payload <- [%{}, %{previous_email: nil}, %{previous_email: ""}] do
         assert_raise ArgumentError, ~r/requires :previous_email in payload/, fn ->
-          AccountsEvents.user_anonymized(user, payload)
+          Events.user_anonymized(user, payload)
         end
       end
     end
@@ -198,14 +198,14 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       assert_raise ArgumentError,
                    "User.id cannot be nil for user_anonymized event",
                    fn ->
-                     AccountsEvents.user_anonymized(user, %{previous_email: "old@example.com"})
+                     Events.user_anonymized(user, %{previous_email: "old@example.com"})
                    end
     end
 
     test "succeeds with valid user and previous_email" do
       user = %{id: 1, email: "deleted_1@anonymized.local"}
 
-      event = AccountsEvents.user_anonymized(user, %{previous_email: "old@example.com"})
+      event = Events.user_anonymized(user, %{previous_email: "old@example.com"})
 
       assert %Event{} = event
       assert event.event_type == :user_anonymized
@@ -222,7 +222,7 @@ defmodule KlassHero.Accounts.Domain.Events.AccountsEventsTest do
       user = %{id: 1, email: "deleted_1@anonymized.local"}
 
       event =
-        AccountsEvents.user_anonymized(user, %{
+        Events.user_anonymized(user, %{
           previous_email: "old@example.com",
           deletion_reason: "user_requested"
         })

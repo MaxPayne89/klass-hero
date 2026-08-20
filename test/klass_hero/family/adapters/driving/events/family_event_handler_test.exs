@@ -8,7 +8,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
   import KlassHero.EventTestHelper
   import KlassHero.Factory
 
-  alias KlassHero.Accounts.Domain.Events.AccountsEvents
+  alias KlassHero.Accounts
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
   alias KlassHero.Family.Child
@@ -43,7 +43,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
       )
 
       event =
-        AccountsEvents.user_anonymized(
+        Accounts.Events.user_anonymized(
           %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
           %{previous_email: user.email}
         )
@@ -69,7 +69,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
       {child, _parent} = insert_child_with_guardian(parent: parent)
 
       event =
-        AccountsEvents.user_anonymized(
+        Accounts.Events.user_anonymized(
           %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
           %{previous_email: user.email}
         )
@@ -84,7 +84,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
       user = AccountsFixtures.user_fixture()
 
       event =
-        AccountsEvents.user_anonymized(
+        Accounts.Events.user_anonymized(
           %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
           %{previous_email: user.email}
         )

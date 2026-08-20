@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Types.UserRoles do
+defmodule KlassHero.Accounts.UserRoles do
   @moduledoc """
   Custom Ecto type for user role arrays. Stores as `text[]` in PostgreSQL,
   loads as atoms in Elixir. Accepts both atoms and strings; deduplicates on cast.
@@ -8,7 +8,7 @@ defmodule KlassHero.Accounts.Types.UserRoles do
 
   use Ecto.Type
 
-  alias KlassHero.Accounts.Types.UserRole
+  alias KlassHero.Accounts.UserRole
 
   @impl true
   def type, do: {:array, :string}

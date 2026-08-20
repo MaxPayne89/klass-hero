@@ -1,8 +1,8 @@
-defmodule KlassHero.Accounts.Types.UserRolesTest do
+defmodule KlassHero.Accounts.UserRolesTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Accounts.Types.UserRoles
+  alias KlassHero.Accounts.UserRoles
 
   test "type/0 is an array of strings" do
     assert UserRoles.type() == {:array, :string}
