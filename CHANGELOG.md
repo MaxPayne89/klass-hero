@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.79.0](https://github.com/MaxPayne89/klass-hero/compare/v0.78.0...v0.79.0) (2026-08-20)
+
+
+### Features
+
+* persona switching for multi-persona accounts ([#1436](https://github.com/MaxPayne89/klass-hero/issues/1436)) ([cdd7fcb](https://github.com/MaxPayne89/klass-hero/commit/cdd7fcbf53a73a25474052a735c315d3aef72964))
+* rename provider-facing "Business" copy to "Provider" ([#1433](https://github.com/MaxPayne89/klass-hero/issues/1433)) ([3914fc4](https://github.com/MaxPayne89/klass-hero/commit/3914fc4e25cfb025684ddb77b2527fea1dbeb0db)), closes [#1083](https://github.com/MaxPayne89/klass-hero/issues/1083)
+
+
+### Code Refactoring
+
+* flatten the accounts context layout ([#1432](https://github.com/MaxPayne89/klass-hero/issues/1432)) ([ddfede6](https://github.com/MaxPayne89/klass-hero/commit/ddfede622d086ca836f41afffc4dd24fbb436846))
+
 ## [0.78.0](https://github.com/MaxPayne89/klass-hero/compare/v0.77.0...v0.78.0) (2026-08-20)
 
 
