@@ -593,54 +593,6 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
   end
 
   @doc """
-  Pending booking-request card with Accept / Decline footer actions.
-
-  `request` keys: `:id, :parent, :program, :child, :when, :color`.
-  """
-  attr :request, :map, required: true
-  attr :on_accept, :string, default: "accept_request"
-  attr :on_decline, :string, default: "decline_request"
-
-  def pv_request_card(assigns) do
-    ~H"""
-    <.kh_list_row
-      class="border border-hero-grey-200 bg-white"
-      meta={[@request[:program], @request[:child]]}
-    >
-      <:media>
-        <div
-          class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-black text-sm"
-          style={"background: #{@request[:color] || "#FFEAC9"}"}
-        >
-          {String.first(@request[:parent] || "?") |> String.upcase()}
-        </div>
-      </:media>
-      <:title>{@request[:parent] || gettext("Unknown parent")}</:title>
-      <:footer>
-        <div class="flex gap-2 justify-end">
-          <button
-            type="button"
-            phx-click={@on_decline}
-            phx-value-request-id={@request[:id]}
-            class="px-3 py-1.5 text-xs font-bold rounded-lg border border-hero-grey-300 hover:bg-hero-grey-100"
-          >
-            {gettext("Decline")}
-          </button>
-          <button
-            type="button"
-            phx-click={@on_accept}
-            phx-value-request-id={@request[:id]}
-            class="px-3 py-1.5 text-xs font-bold rounded-lg bg-[var(--brand-primary)] text-black hover:shadow-md"
-          >
-            {gettext("Accept")}
-          </button>
-        </div>
-      </:footer>
-    </.kh_list_row>
-    """
-  end
-
-  @doc """
   Pending enrollment card with an Approve button.
 
   `entry` keys: `:enrollment_id, :child_name, :program_title, :enrolled_at`.

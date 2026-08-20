@@ -18,6 +18,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
   alias KlassHero.Provider
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
+  alias KlassHeroWeb.Provider.Dashboard.InviteActions
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -37,7 +38,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     enrollment_counts = Enrollment.count_active_enrollments_batch(program_ids)
     enrolled_total = enrollment_counts |> Map.values() |> Enum.sum()
 
-    pending_requests = load_pending_requests(program_ids)
+    outstanding_invites = Enrollment.list_outstanding_invites_for_provider(provider.id)
     pending_enrollments = Enrollment.list_pending_enrollments_for_provider(program_ids)
     top_programs = build_top_programs(program_listings, enrollment_counts)
 
@@ -62,7 +63,8 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
       |> assign(programs_count: length(program_listings))
       |> assign(total_sessions_completed: total_sessions)
       |> assign(enrolled_total: enrolled_total)
-      |> assign(pending_requests: pending_requests)
+      |> assign(outstanding_invites: outstanding_invites)
+      |> assign(invites_modal_open?: false)
       |> assign(pending_enrollments: pending_enrollments)
       |> assign(top_programs: top_programs)
 
@@ -104,6 +106,26 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
     end
   end
 
+  @impl true
+  def handle_event("open_invites", _params, socket) do
+    {:noreply, assign(socket, :invites_modal_open?, true)}
+  end
+
+  @impl true
+  def handle_event("close_invites", _params, socket) do
+    {:noreply, assign(socket, :invites_modal_open?, false)}
+  end
+
+  @impl true
+  def handle_event("resend_invite", %{"id" => invite_id}, socket) do
+    {:noreply, invite_action(&InviteActions.resend/4, invite_id, socket)}
+  end
+
+  @impl true
+  def handle_event("delete_invite", %{"id" => invite_id}, socket) do
+    {:noreply, invite_action(&InviteActions.delete/4, invite_id, socket)}
+  end
+
   # The shared dashboard header's "New Program" CTA lives on every tab; from
   # Overview it navigates to the Programs tab with the create form opened.
   @impl true
@@ -140,30 +162,6 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
   defp fetch_verification_docs(provider_id) do
     {:ok, docs} = Provider.get_provider_verification_documents(provider_id)
     docs
-  end
-
-  defp load_pending_requests(program_ids) do
-    palette = ["#FFEAC9", "#33CFFF", "#FFFF36", "#FFD896"]
-
-    program_ids
-    |> Enum.flat_map(&safe_list_invites/1)
-    |> Enum.with_index()
-    |> Enum.map(fn {invite, idx} ->
-      %{
-        id: invite.id,
-        parent: invite.invitee_name || invite.invitee_email || "Unknown",
-        program: invite.program_id,
-        child: invite[:child_name] || "—",
-        when: invite[:created_at] && Calendar.strftime(invite.created_at, "%b %d"),
-        color: Enum.at(palette, rem(idx, length(palette)))
-      }
-    end)
-    |> Enum.take(5)
-  end
-
-  defp safe_list_invites(program_id) do
-    {:ok, invites} = Enrollment.list_program_invites(program_id)
-    Enum.filter(invites, &(&1.status == :pending))
   end
 
   # Top 5 provider programs sorted by active-enrollment count desc.
@@ -204,6 +202,20 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
 
   defp past?(nil, _today), do: false
   defp past?(date, today), do: Date.after?(today, date)
+
+  # Both invite actions reload the same provider-wide list, so only the
+  # InviteActions function varies.
+  defp invite_action(action, invite_id, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    action.(socket, invite_id, provider_id, &refresh_outstanding_invites/1)
+  end
+
+  defp refresh_outstanding_invites(socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    assign(socket, :outstanding_invites, Enrollment.list_outstanding_invites_for_provider(provider_id))
+  end
 
   defp refresh_pending_enrollments(socket) do
     provider = socket.assigns.current_scope.provider
@@ -301,19 +313,39 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
             </div>
           </.kh_card>
 
-          <.kh_card class="p-5">
+          <%!-- Provider-wide, not per-program: the whole point is to see invites nobody
+                answered without opening each program's roster in turn (#1073). --%>
+          <.kh_card id="outstanding-invites-card" class="p-5">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-bold text-lg">{gettext("Pending booking requests")}</h3>
-              <span class="text-xs text-hero-grey-600 font-semibold">
-                {length(@pending_requests)} {gettext("pending")}
+              <h3 class="font-bold text-lg">{gettext("Invitations awaiting a reply")}</h3>
+              <span id="outstanding-invites-count" class="text-xs text-hero-grey-600 font-semibold">
+                {length(@outstanding_invites)} {gettext("waiting")}
               </span>
             </div>
-            <div :if={@pending_requests == []} class="text-sm text-hero-grey-600">
-              {gettext("No pending requests right now.")}
+            <%!-- Not "outstanding-invites-empty": `invite_table id="outstanding-invites"`
+                  in the modal below derives that exact id for its own empty state. --%>
+            <div
+              :if={@outstanding_invites == []}
+              id="outstanding-invites-card-empty"
+              class="text-sm text-hero-grey-600"
+            >
+              {gettext("Every invitation you sent has been answered.")}
             </div>
-            <div class="space-y-3">
-              <.pv_request_card :for={r <- @pending_requests} request={r} />
-            </div>
+            <button
+              :if={@outstanding_invites != []}
+              id="open-outstanding-invites"
+              type="button"
+              phx-click="open_invites"
+              class={[
+                "w-full px-4 py-2 text-sm font-bold border border-hero-grey-300",
+                "hover:bg-hero-grey-50 text-left flex items-center justify-between gap-2",
+                Theme.rounded(:lg),
+                Theme.transition(:normal)
+              ]}
+            >
+              {gettext("Review invitations")}
+              <.icon name="hero-chevron-right" class="w-4 h-4 shrink-0" />
+            </button>
           </.kh_card>
 
           <.kh_card id="pending-enrollments-card" class="p-5">
@@ -336,6 +368,55 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
         </section>
 
         <.business_profile_card business={@business} />
+      </div>
+
+      <%!-- Assign-driven rather than URL-param driven, matching `roster_modal/1`:
+            the modal is a detail view of state this page already holds, not a
+            separately addressable page. --%>
+      <div
+        :if={@invites_modal_open?}
+        id="outstanding-invites-modal"
+        class="fixed inset-0 z-50 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="outstanding-invites-modal-title"
+        phx-window-keydown="close_invites"
+        phx-key="Escape"
+      >
+        <div class="flex min-h-screen items-center justify-center p-4">
+          <div class="fixed inset-0 bg-black/50" phx-click="close_invites"></div>
+          <div class={["relative bg-white w-full max-w-2xl shadow-xl", Theme.rounded(:xl)]}>
+            <div class="flex items-center justify-between p-4 border-b border-hero-grey-200">
+              <h3
+                id="outstanding-invites-modal-title"
+                class="text-lg font-semibold text-hero-charcoal"
+              >
+                {gettext("Invitations awaiting a reply")}
+              </h3>
+              <button
+                id="close-outstanding-invites"
+                type="button"
+                phx-click="close_invites"
+                aria-label={gettext("Close")}
+                class={[
+                  "p-2 text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100",
+                  Theme.rounded(:lg),
+                  Theme.transition(:normal)
+                ]}
+              >
+                <.icon name="hero-x-mark-mini" class="w-5 h-5" />
+              </button>
+            </div>
+            <div class="p-4">
+              <.invite_table
+                id="outstanding-invites"
+                invites={@outstanding_invites}
+                show_program?={true}
+                empty_message={gettext("Every invitation you sent has been answered.")}
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </.pv_dashboard_shell>
     """
