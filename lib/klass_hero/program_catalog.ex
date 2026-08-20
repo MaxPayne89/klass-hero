@@ -479,22 +479,23 @@ defmodule KlassHero.ProgramCatalog do
   end
 
   defp program_created_event(program) do
-    program.id
-    |> ProgramEvents.program_created(%{
-      provider_id: program.provider_id,
-      title: program.title,
-      category: program.category,
-      meeting_days: program.meeting_days,
-      meeting_start_time: program.meeting_start_time,
-      meeting_end_time: program.meeting_end_time,
-      start_date: program.start_date,
-      end_date: program.end_date
-    })
+    ProgramEvents.program_created(program.id, listing_payload(program))
   end
 
   defp program_updated_event(program) do
-    program.id
-    |> ProgramEvents.program_updated(%{
+    ProgramEvents.program_updated(program.id, listing_payload(program))
+  end
+
+  # One payload for both events, because ProgramListings reads the same fields from
+  # each. They used to be written out separately and drifted: `program_created`
+  # omitted description, age_range, price, pricing_period, location, cover_image_url
+  # and season, so a brand-new program reached the public catalog blank and priced at
+  # €0.00 until an unrelated edit fired `program_updated` and filled it in.
+  #
+  # `season` is read on create and deliberately ignored on update — see
+  # `@update_fields` in the projection — so carrying it here is correct for both.
+  defp listing_payload(program) do
+    %{
       provider_id: program.provider_id,
       title: program.title,
       description: program.description,
@@ -504,6 +505,7 @@ defmodule KlassHero.ProgramCatalog do
       pricing_period: program.pricing_period,
       location: program.location,
       cover_image_url: program.cover_image_url,
+      season: program.season,
       start_date: program.start_date,
       end_date: program.end_date,
       meeting_days: program.meeting_days,
@@ -511,6 +513,6 @@ defmodule KlassHero.ProgramCatalog do
       meeting_end_time: program.meeting_end_time,
       registration_start_date: program.registration_start_date,
       registration_end_date: program.registration_end_date
-    })
+    }
   end
 end
