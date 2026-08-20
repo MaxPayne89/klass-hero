@@ -40,6 +40,13 @@ context/
 holds **3+ files**; below that its modules sit at the context root. Same
 extraction threshold the front end uses for components (`frontend.md`).
 
+The threshold covers **only the kinds listed above**. It does not license a
+catch-all: `services/`, `helpers/`, `support/` are not kinds — "service" is DDD
+for "module I could not otherwise place", and such a directory sorts modules by
+having no category. Pure domain-logic modules (`program_pricing.ex`,
+`csv_parser.ex`, `referral_code_generator.ex`) sit at the **context root** beside
+the use cases, however many there are.
+
 There is no `adapters/` or `domain/` layer, and no `driven`/`driving` split. The
 kind name already carries directionality — a handler or worker is inbound, a
 projection, ACL, or notification is outbound — so encoding it a second time in

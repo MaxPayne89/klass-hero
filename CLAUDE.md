@@ -71,7 +71,7 @@ context/
 
 **Key rule — schema-as-struct:** an entity module is simultaneously the Ecto schema, the struct callers match on, and the functional core. Changesets are the validation gatekeeper at the DB boundary; pure business logic (invitation state machines, `full_name/1`, domain validators returning `{:error, [msg]}` lists) lives in the same file. See `provider/staff_member.ex`'s moduledoc for the canonical explanation.
 
-**Key rule — one level, only when earned:** a kind gets its own directory at **3+ files**; below that its modules sit at the context root. There is no `adapters/` or `domain/` layer and no `driven`/`driving` split — the kind name already carries directionality. `accounts/` is the reference: nothing reaches three files there, so it is entirely flat.
+**Key rule — one level, only when earned:** a kind gets its own directory at **3+ files**; below that its modules sit at the context root. There is no `adapters/` or `domain/` layer and no `driven`/`driving` split — the kind name already carries directionality. `accounts/` is the reference: nothing reaches three files there, so it is entirely flat. The threshold covers only the kinds listed above — `services/`/`helpers/` are not kinds, so pure domain-logic modules (`program_pricing.ex`, `csv_parser.ex`) go at the context root however many there are.
 
 > **Migration in progress.** Accounts is flat; the other six contexts still carry the old `adapters/{driven,driving}/…` + `domain/…` tree and convert one PR at a time. **Both shapes are legal until that finishes** — don't flag an unconverted context, and don't half-convert one as a drive-by.
 

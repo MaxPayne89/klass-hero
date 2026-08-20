@@ -53,6 +53,18 @@ A directory earns its place when it saves you from scanning; below three files i
 hop. This is the same extraction threshold the front end already applies to components
 (`.claude/rules/frontend.md`), so it is one rule for the codebase rather than two.
 
+The threshold applies **only to the named kinds above** — `projections/`, `workers/`, `acl/`,
+`notifications/`, `queries/`, `read_models/`. Each names something a module *is*, so the
+directory answers a question.
+
+It does **not** license a catch-all. `domain/services/` — which today holds
+`program_pricing.ex`, `program_filter.ex`, `csv_parser.ex`, `referral_code_generator.ex` and
+friends — is not a kind; "service" is DDD for "module I could not otherwise place", and a
+`services/` directory sorts modules by having no category. Those are ordinary domain-logic
+modules and belong at the **context root** beside the use cases, whatever their number:
+`program_catalog/program_pricing.ex`. Same for anything that would be tempted into a
+`helpers/`, `support/`, or `lib/` bucket.
+
 It also means the convention scales in both directions. Accounts has nine modules and no
 subdirectories at all. Provider has enough projections and workers that both keep a directory —
 one level, holding files, rather than three levels holding one.
