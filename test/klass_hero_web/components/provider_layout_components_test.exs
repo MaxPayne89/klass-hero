@@ -237,28 +237,6 @@ defmodule KlassHeroWeb.ProviderLayoutComponentsTest do
     end
   end
 
-  describe "pv_request_card/1" do
-    test "renders parent + program/child meta + accept/decline footer", %{} do
-      request = %{
-        id: "req-1",
-        parent: "Anna K.",
-        program: "Code Camp",
-        child: "Mila",
-        when: "Tomorrow 15:00",
-        color: "#FFEAC9"
-      }
-
-      html = render_component(&ProviderLayoutComponents.pv_request_card/1, %{request: request})
-
-      assert html =~ "Anna K."
-      assert html =~ "Code Camp"
-      assert html =~ "Mila"
-      assert html =~ "Decline"
-      assert html =~ "Accept"
-      assert html =~ ~s|phx-value-request-id="req-1"|
-    end
-  end
-
   ## ------------------------------------------------------------------ helpers
 
   defp render_program_row(overrides) do

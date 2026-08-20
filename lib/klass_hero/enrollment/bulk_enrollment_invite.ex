@@ -183,6 +183,16 @@ defmodule KlassHero.Enrollment.BulkEnrollmentInvite do
   def invite_sent?(%__MODULE__{status: :invite_sent}), do: true
   def invite_sent?(%__MODULE__{}), do: false
 
+  @doc """
+  Statuses meaning the invite was sent but nobody has accepted it yet.
+
+  Identical to the resendable set, and deliberately so: an invite is worth
+  resending exactly while it is still outstanding. `:registered` and `:enrolled`
+  are answered, so they are neither.
+  """
+  @spec outstanding_statuses() :: [atom()]
+  def outstanding_statuses, do: @resendable_statuses
+
   @doc "Returns true if the invite status allows resending."
   @spec resendable?(t()) :: boolean()
   def resendable?(%__MODULE__{status: status}) when status in @resendable_statuses, do: true

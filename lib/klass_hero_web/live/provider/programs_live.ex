@@ -28,6 +28,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
+  alias KlassHeroWeb.Provider.Dashboard.InviteActions
 
   require Logger
 
@@ -466,43 +467,12 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   @impl true
   def handle_event("resend_invite", %{"id" => invite_id}, socket) do
-    provider_id = socket.assigns.current_scope.provider.id
-
-    case Enrollment.resend_invite(invite_id, provider_id) do
-      {:ok, _} ->
-        socket = refresh_invites_silent(socket, socket.assigns.roster_program_id)
-
-        {:noreply, put_flash(socket, :info, gettext("Invite resent successfully."))}
-
-      {:error, :not_resendable} ->
-        {:noreply, put_flash(socket, :error, gettext("This invite cannot be resent."))}
-
-      {:error, reason} ->
-        Logger.warning("[ProgramsLive] Resend invite failed unexpectedly",
-          invite_id: invite_id,
-          reason: inspect(reason)
-        )
-
-        {:noreply, put_flash(socket, :error, gettext("Failed to resend invite."))}
-    end
+    {:noreply, invite_action(&InviteActions.resend/4, invite_id, socket)}
   end
 
   @impl true
   def handle_event("delete_invite", %{"id" => invite_id}, socket) do
-    provider_id = socket.assigns.current_scope.provider.id
-
-    case Enrollment.delete_invite(invite_id, provider_id) do
-      :ok ->
-        socket = refresh_invites_silent(socket, socket.assigns.roster_program_id)
-
-        {:noreply, put_flash(socket, :info, gettext("Invite removed."))}
-
-      {:error, :not_found} ->
-        {:noreply, put_flash(socket, :error, gettext("Invite not found."))}
-
-      {:error, :delete_failed} ->
-        {:noreply, put_flash(socket, :error, gettext("Could not remove invite."))}
-    end
+    {:noreply, invite_action(&InviteActions.delete/4, invite_id, socket)}
   end
 
   @impl true
@@ -853,6 +823,15 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     {:ok, assign(socket, roster_invites: invites, roster_invite_count: invite_count)}
   end
 
+  # Both invite actions reload the same thing — the open roster's invites — so the
+  # only part that varies is which InviteActions function runs.
+  defp invite_action(action, invite_id, socket) do
+    program_id = socket.assigns.roster_program_id
+    provider_id = socket.assigns.current_scope.provider.id
+
+    action.(socket, invite_id, provider_id, &refresh_invites_silent(&1, program_id))
+  end
+
   defp refresh_invites_silent(socket, program_id) do
     case refresh_invites(socket, program_id) do
       {:ok, socket} -> socket
@@ -864,8 +843,6 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     to_form(Enrollment.change_single_invite(), as: "single_invite")
   end
 
-  # Aggregate pending invites across all provider programs and shape them
-  # for `pv_request_card` (parent name, program, child, when, color).
   defp fetch_staff_members(provider_id) do
     {:ok, members} = Provider.list_staff_members(provider_id)
     members

@@ -19,6 +19,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Enrollment.ClaimInvite
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
+  alias KlassHero.Enrollment.Domain.ReadModels.OutstandingInvite
   alias KlassHero.Enrollment.Domain.Services.EnrollmentClassifier
   alias KlassHero.Enrollment.EnqueueInviteEmails
   alias KlassHero.Enrollment.Enrollment
@@ -31,6 +32,7 @@ defmodule KlassHero.Enrollment do
   alias KlassHero.Enrollment.SingleInviteForm
   alias KlassHero.Enrollment.Waivers
   alias KlassHero.Family
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Outbox
@@ -1114,6 +1116,43 @@ defmodule KlassHero.Enrollment do
       |> Repo.all()
 
     {:ok, invites}
+  end
+
+  @doc """
+  Lists every invite this provider has sent that nobody has accepted yet, across
+  all of their programs, oldest first.
+
+  Oldest-first because the list exists to be followed up on: the invite that has
+  gone unanswered longest is the one that needs chasing.
+
+  Returns `[%OutstandingInvite{}]` — see that module for why it mirrors the invite
+  schema's field names.
+  """
+  @spec list_outstanding_invites_for_provider(binary()) :: [OutstandingInvite.t()]
+  def list_outstanding_invites_for_provider(provider_id) when is_binary(provider_id) do
+    # One query for every program's invites. This replaced a per-program
+    # `list_program_invites/1` in a `flat_map`, which N+1'd across the dashboard's
+    # whole program list on every Overview mount (#1073).
+    invites =
+      BulkEnrollmentInvite
+      |> where([i], i.provider_id == ^provider_id)
+      |> where([i], i.status in ^BulkEnrollmentInvite.outstanding_statuses())
+      |> order_by([i], asc: i.inserted_at)
+      |> Repo.all()
+
+    # Titles come from ProgramCatalog's facade, not a join on its table:
+    # `get_titles/1` is batched and documented for exactly this cross-context need,
+    # so ADR 0015's direct-read exception does not apply here. (`list_pending/1`
+    # above still joins `programs`; its cycle-breaking rationale predates this
+    # facade and is worth revisiting separately.)
+    titles =
+      acl_span source: "enrollment", target: "program_catalog" do
+        invites |> Enum.map(& &1.program_id) |> Enum.uniq() |> ProgramCatalog.get_titles()
+      end
+
+    for invite <- invites do
+      OutstandingInvite.from_invite(invite, Map.get(titles, invite.program_id))
+    end
   end
 
   @doc """

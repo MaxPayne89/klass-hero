@@ -2690,75 +2690,117 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
       <% end %>
 
-      <div :if={@invites == []} id="invites-empty" class="text-center py-8">
-        <.icon name="hero-envelope" class="w-12 h-12 mx-auto text-hero-grey-300 mb-3" />
-        <p class="text-hero-grey-500">
-          {gettext("No invites yet. Upload a CSV to invite families.")}
-        </p>
-      </div>
+      <.invite_table
+        id="invites"
+        invites={@invites}
+        empty_message={gettext("No invites yet. Upload a CSV to invite families.")}
+      />
+    </div>
+    """
+  end
 
-      <div :if={@invites != []} class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <table id="invites-table" class="w-full min-w-[500px]">
-          <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
-            <tr>
-              <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
-                {gettext("Child Name")}
-              </th>
-              <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
-                {gettext("Guardian Email")}
-              </th>
-              <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
-                {gettext("Status")}
-              </th>
-              <th class="px-3 py-2 text-right text-xs font-semibold text-hero-grey-500 uppercase">
-                {gettext("Actions")}
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-hero-grey-200">
-            <tr :for={invite <- @invites} id={"invite-#{invite.id}"} class="hover:bg-hero-grey-50">
-              <td class="px-3 py-3 text-sm text-hero-charcoal font-medium">
-                {invite.child_first_name} {invite.child_last_name}
-              </td>
-              <td class="px-3 py-3 text-sm text-hero-grey-500">
-                {invite.guardian_email}
-              </td>
-              <td class="px-3 py-3">
-                <.status_pill color={invite_status_color(invite.status)}>
-                  {invite_status_label(invite.status)}
-                </.status_pill>
-                <%!-- Written by three places and shown by none until #1221: a red pill with no
-                      reason tells a provider that something is wrong but not what to do about it. --%>
-                <p
-                  :if={invite.status == :failed && failure_message(invite)}
-                  id={"invite-error-#{invite.id}"}
-                  class="mt-1 text-xs text-hero-grey-500 break-words"
-                >
-                  {failure_message(invite)}
-                </p>
-              </td>
-              <td class="px-3 py-3 text-right">
-                <div class="flex items-center justify-end gap-1">
-                  <.action_button
-                    :if={invite.status in [:pending, :invite_sent, :failed]}
-                    icon="hero-arrow-path-mini"
-                    title={gettext("Resend Invite")}
-                    phx-click="resend_invite"
-                    phx-value-id={invite.id}
-                  />
-                  <.action_button
-                    :if={invite.status in [:pending, :invite_sent, :failed]}
-                    icon="hero-trash-mini"
-                    title={gettext("Remove")}
-                    phx-click="delete_invite"
-                    phx-value-id={invite.id}
-                  />
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  @doc """
+  Renders invites as a table with per-row Resend / Remove actions, or an empty state.
+
+  Serves two callers with different scopes: the per-program roster tab, and the
+  Overview card's provider-wide outstanding list (#1073). `show_program?` adds the
+  column the second one needs — the first has a single program in its heading, so
+  repeating it on every row would be noise.
+
+  Renders any struct carrying the invite field names, which is why
+  `Enrollment.Domain.ReadModels.OutstandingInvite` mirrors them rather than being
+  translated by a mapper here.
+  """
+  attr :id, :string, required: true
+  attr :invites, :list, required: true
+  attr :empty_message, :string, required: true
+  attr :show_program?, :boolean, default: false
+
+  def invite_table(assigns) do
+    ~H"""
+    <div :if={@invites == []} id={"#{@id}-empty"} class="text-center py-8">
+      <.icon name="hero-envelope" class="w-12 h-12 mx-auto text-hero-grey-300 mb-3" />
+      <p class="text-hero-grey-500">{@empty_message}</p>
+    </div>
+
+    <div :if={@invites != []} class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <table id={"#{@id}-table"} class="w-full min-w-[500px]">
+        <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
+          <tr>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+              {gettext("Child Name")}
+            </th>
+            <%!-- Hidden below `sm`: a fifth column pushes Actions off a 375px viewport,
+                  so on mobile the program rides under the child's name instead. --%>
+            <th
+              :if={@show_program?}
+              class="hidden sm:table-cell px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase"
+            >
+              {gettext("Program")}
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+              {gettext("Guardian Email")}
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+              {gettext("Status")}
+            </th>
+            <th class="px-3 py-2 text-right text-xs font-semibold text-hero-grey-500 uppercase">
+              {gettext("Actions")}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-hero-grey-200">
+          <tr :for={invite <- @invites} id={"invite-#{invite.id}"} class="hover:bg-hero-grey-50">
+            <td class="px-3 py-3 text-sm text-hero-charcoal font-medium">
+              {invite.child_first_name} {invite.child_last_name}
+              <span
+                :if={@show_program?}
+                class="block sm:hidden text-xs font-normal text-hero-grey-500"
+              >
+                {invite.program_title || gettext("Unknown program")}
+              </span>
+            </td>
+            <td :if={@show_program?} class="hidden sm:table-cell px-3 py-3 text-sm text-hero-grey-500">
+              {invite.program_title || gettext("Unknown program")}
+            </td>
+            <td class="px-3 py-3 text-sm text-hero-grey-500">
+              {invite.guardian_email}
+            </td>
+            <td class="px-3 py-3">
+              <.status_pill color={invite_status_color(invite.status)}>
+                {invite_status_label(invite.status)}
+              </.status_pill>
+              <%!-- Written by three places and shown by none until #1221: a red pill with no
+                    reason tells a provider that something is wrong but not what to do about it. --%>
+              <p
+                :if={invite.status == :failed && failure_message(invite)}
+                id={"invite-error-#{invite.id}"}
+                class="mt-1 text-xs text-hero-grey-500 break-words"
+              >
+                {failure_message(invite)}
+              </p>
+            </td>
+            <td class="px-3 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                <.action_button
+                  :if={invite.status in [:pending, :invite_sent, :failed]}
+                  icon="hero-arrow-path-mini"
+                  title={gettext("Resend Invite")}
+                  phx-click="resend_invite"
+                  phx-value-id={invite.id}
+                />
+                <.action_button
+                  :if={invite.status in [:pending, :invite_sent, :failed]}
+                  icon="hero-trash-mini"
+                  title={gettext("Remove")}
+                  phx-click="delete_invite"
+                  phx-value-id={invite.id}
+                />
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     """
   end

@@ -155,4 +155,77 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
       assert html =~ "No sessions scheduled yet"
     end
   end
+
+  describe "invite_table/1" do
+    # Serves the per-program roster (one program, no column) and the Overview card's
+    # provider-wide list (many programs, column shown) — #1073.
+    defp render_invites(opts) do
+      invites = Keyword.get(opts, :invites, [outstanding_invite()])
+
+      render_component(&KlassHeroWeb.ProviderComponents.invite_table/1,
+        id: Keyword.get(opts, :id, "invites"),
+        invites: invites,
+        show_program?: Keyword.get(opts, :show_program?, false),
+        empty_message: Keyword.get(opts, :empty_message, "Nothing here")
+      )
+    end
+
+    defp outstanding_invite(overrides \\ %{}) do
+      Map.merge(
+        %{
+          id: "inv-1",
+          program_title: "Chess Club",
+          child_first_name: "Jane",
+          child_last_name: "Smith",
+          guardian_email: "guardian@test.com",
+          status: :pending,
+          failure_code: nil,
+          failure_context: nil,
+          error_details: nil
+        },
+        overrides
+      )
+    end
+
+    test "omits the program column by default" do
+      html = render_invites([])
+
+      assert html =~ "Jane"
+      assert html =~ "guardian@test.com"
+      refute html =~ "Chess Club"
+    end
+
+    test "shows the program column when asked" do
+      html = render_invites(show_program?: true)
+
+      assert html =~ "Chess Club"
+    end
+
+    test "names a missing program rather than leaving the cell blank" do
+      html = render_invites(show_program?: true, invites: [outstanding_invite(%{program_title: nil})])
+
+      assert html =~ "Unknown program"
+    end
+
+    test "derives its DOM ids from the id attr so two instances never collide" do
+      html = render_invites(id: "outstanding-invites")
+
+      assert html =~ ~s|id="outstanding-invites-table"|
+    end
+
+    test "shows the caller's empty message when there are no invites" do
+      html = render_invites(invites: [], id: "outstanding-invites", empty_message: "All answered")
+
+      assert html =~ "All answered"
+      assert html =~ ~s|id="outstanding-invites-empty"|
+    end
+
+    # Resend/Remove are offered only while the invite can still be acted on.
+    test "hides row actions for an answered invite" do
+      html = render_invites(invites: [outstanding_invite(%{status: :enrolled})])
+
+      refute html =~ "resend_invite"
+      refute html =~ "delete_invite"
+    end
+  end
 end
