@@ -597,7 +597,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 class="text-xl font-semibold text-hero-charcoal">
+            <h2 class="text-xl font-semibold text-hero-black-100">
               {gettext("Team & Provider Profiles")}
             </h2>
             <p class="text-sm text-hero-grey-500">

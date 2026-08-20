@@ -92,6 +92,9 @@ jobs:
       - name: Typography lint
         run: mix lint_typography
 
+      - name: Hero colour tokens resolve
+        run: mix lint_hero_colors
+
       - name: Gettext catalog check (structure + DE completeness)
         run: mix lint_translations
 

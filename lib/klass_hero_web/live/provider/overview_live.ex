@@ -389,7 +389,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
             <div class="flex items-center justify-between p-4 border-b border-hero-grey-200">
               <h3
                 id="outstanding-invites-modal-title"
-                class="text-lg font-semibold text-hero-charcoal"
+                class="text-lg font-semibold text-hero-black-100"
               >
                 {gettext("Invitations awaiting a reply")}
               </h3>
@@ -399,7 +399,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
                 phx-click="close_invites"
                 aria-label={gettext("Close")}
                 class={[
-                  "p-2 text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100",
+                  "p-2 text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100",
                   Theme.rounded(:lg),
                   Theme.transition(:normal)
                 ]}

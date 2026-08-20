@@ -102,7 +102,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       program = insert(:program_schema, title: "Chess Club", cover_image_url: nil)
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
 
-      refute has_element?(view, "#program-hero-image")
+      refute has_element?(view, "#program-cover-image")
       assert has_element?(view, "#program-hero")
     end
   end
@@ -123,7 +123,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
 
       assert has_element?(view, "h1", "Yoga for Kids")
-      assert has_element?(view, "#program-hero-image")
+      assert has_element?(view, "#program-cover-image")
       assert has_element?(view, "[phx-click='back_to_programs']")
     end
 
@@ -142,7 +142,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
 
       assert has_element?(view, "h1", "Chess Club")
-      refute has_element?(view, "#program-hero-image")
+      refute has_element?(view, "#program-cover-image")
       assert has_element?(view, "#program-hero")
       assert has_element?(view, "[phx-click='back_to_programs']")
     end

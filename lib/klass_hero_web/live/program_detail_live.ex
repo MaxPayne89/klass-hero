@@ -240,7 +240,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
       <%= if @program.cover_image_url do %>
         <div id="program-hero" class="relative">
           <img
-            id="program-hero-image"
+            id="program-cover-image"
             src={@program.cover_image_url}
             alt={@program.title}
             class="w-full h-64 sm:h-80 object-cover"

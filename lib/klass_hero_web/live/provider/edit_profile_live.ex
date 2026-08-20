@@ -184,17 +184,17 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
           <div class="flex items-center gap-4 mb-6">
             <.link
               navigate={~p"/provider/dashboard"}
-              class="flex items-center gap-1 text-hero-grey-500 hover:text-hero-charcoal transition-colors"
+              class="flex items-center gap-1 text-hero-grey-500 hover:text-hero-black-100 transition-colors"
             >
               <.icon name="hero-arrow-left-mini" class="w-5 h-5" />
               {gettext("Back to Dashboard")}
             </.link>
           </div>
 
-          <h1 class="text-2xl font-bold text-hero-charcoal">{gettext("Edit Profile")}</h1>
+          <h1 class="text-2xl font-bold text-hero-black-100">{gettext("Edit Profile")}</h1>
 
           <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
-            <h2 class="text-lg font-semibold text-hero-charcoal mb-4">
+            <h2 class="text-lg font-semibold text-hero-black-100 mb-4">
               {gettext("Provider Information")}
             </h2>
 
@@ -214,7 +214,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
               />
 
               <div>
-                <label class="block text-sm font-semibold text-hero-charcoal mb-2">
+                <label class="block text-sm font-semibold text-hero-black-100 mb-2">
                   {gettext("Provider Logo")}
                 </label>
 
@@ -265,7 +265,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
                     for={@uploads.logo.ref}
                     class={[
                       "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                      "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium cursor-pointer",
+                      "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                       Theme.rounded(:lg),
                       Theme.transition(:normal)
                     ]}
@@ -284,8 +284,8 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
                   type="submit"
                   id="save-profile-btn"
                   class={[
-                    "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow hover:bg-hero-yellow-dark",
-                    "text-hero-charcoal font-semibold",
+                    "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
+                    "text-hero-black-100 font-semibold",
                     Theme.rounded(:lg),
                     Theme.transition(:normal)
                   ]}

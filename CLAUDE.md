@@ -190,6 +190,7 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 | `mix format --check-formatted` | Formatting issues |
 | `mix credo --strict` | Style violations, code smells, long lines, TODO tags |
 | `mix lint_typography` | Font/typography usage violations |
+| `mix lint_hero_colors` | A `hero-*` colour utility with no matching `--color-*` token in `app.css`'s `@theme` — Tailwind v4 emits no rule for these, silently, so they render unstyled |
 | `mix lint_translations` | Stale `.pot` templates, empty/fuzzy German `msgstr` |
 | `mix lint_read_tables` | Projection read-table convention: a context-root schema that is neither an entity nor a declared read table, a read table carrying a changeset, or a read table outside the context root |
 | `mix lint_acl_boundary` | A function reading another context's table (`in "<table>"`) without an `acl_span` — ADR 0015 permits the direct read but requires the hop stay visible in traces |

@@ -152,6 +152,7 @@ defmodule KlassHero.MixProject do
         "deps.unlock --unused",
         "format",
         "lint_typography",
+        "lint_hero_colors",
         "lint_translations",
         "lint_read_tables",
         "lint_acl_boundary",
