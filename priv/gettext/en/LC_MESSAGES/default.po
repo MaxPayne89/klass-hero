@@ -1611,11 +1611,6 @@ msgstr ""
 msgid "Book Now"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:207
-#, elixir-autogen, elixir-format
-msgid "Business Profile"
-msgstr ""
-
 #: lib/klass_hero_web/presenters/provider_presenter.ex:83
 #: lib/klass_hero_web/presenters/provider_presenter.ex:93
 #, elixir-autogen, elixir-format
@@ -1730,11 +1725,6 @@ msgstr ""
 msgid "Team & Provider Profiles"
 msgstr ""
 
-#: lib/klass_hero_web/components/provider_components.ex:210
-#, elixir-autogen, elixir-format
-msgid "This is your main business identity. Verification is required to list programs."
-msgstr ""
-
 #: lib/klass_hero_web/components/provider_components.ex:1539
 #: lib/klass_hero_web/components/provider_components.ex:1900
 #, elixir-autogen, elixir-format
@@ -1748,11 +1738,6 @@ msgstr ""
 #: lib/klass_hero_web/presenters/provider_presenter.ex:103
 #, elixir-autogen, elixir-format
 msgid "Unknown"
-msgstr ""
-
-#: lib/klass_hero_web/components/provider_components.ex:402
-#, elixir-autogen, elixir-format
-msgid "Verified Business"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1577
@@ -2293,22 +2278,6 @@ msgstr ""
 msgid "Business"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/edit_profile_live.ex:211
-#, elixir-autogen, elixir-format, fuzzy
-msgid "Business Description"
-msgstr ""
-
-#: lib/klass_hero_web/live/provider/edit_profile_live.ex:198
-#, elixir-autogen, elixir-format
-msgid "Business Information"
-msgstr ""
-
-#: lib/klass_hero_web/live/provider/edit_profile_live.ex:218
-#: lib/klass_hero_web/live/provider/profile_completion_live.ex:344
-#, elixir-autogen, elixir-format
-msgid "Business Logo"
-msgstr ""
-
 #: lib/klass_hero_web/components/provider_components.ex:983
 #: lib/klass_hero_web/live/provider/incident_report_live.ex:306
 #, elixir-autogen, elixir-format
@@ -2354,11 +2323,6 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:985
 #, elixir-autogen, elixir-format
 msgid "Choose a category"
-msgstr ""
-
-#: lib/klass_hero_web/components/provider_components.ex:429
-#, elixir-autogen, elixir-format
-msgid "Complete business verification to create programs."
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/verifications_live.ex:467
@@ -3205,11 +3169,6 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:3115
 #, elixir-autogen, elixir-format
 msgid "Upload New Document"
-msgstr ""
-
-#: lib/klass_hero_web/components/provider_components.ex:3083
-#, elixir-autogen, elixir-format
-msgid "Upload documents to verify your business. Documents are reviewed by our team."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:3063
@@ -4556,19 +4515,9 @@ msgstr ""
 msgid "Support: %{details}"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:55
-#, elixir-autogen, elixir-format
-msgid "The business associated with your account could not be found."
-msgstr ""
-
 #: lib/klass_hero_web/live/provider/team_live.ex:253
 #, elixir-autogen, elixir-format
 msgid "This invitation cannot be resent in its current state."
-msgstr ""
-
-#: lib/klass_hero_web/live/user_live/staff_invitation.ex:29
-#, elixir-autogen, elixir-format
-msgid "This invitation has expired. Please ask your business to resend it."
 msgstr ""
 
 #: lib/klass_hero_web/live/user_live/staff_invitation.ex:18
@@ -4721,11 +4670,6 @@ msgstr ""
 msgid "Built for the Berlin international community. Integrated secure encrypted messaging to connect with local families and trusted educators nearby."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/profile_completion_live.ex:278
-#, elixir-autogen, elixir-format, fuzzy
-msgid "Business Name"
-msgstr ""
-
 #: lib/klass_hero_web/components/participation_components.ex:813
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Cancelled"
@@ -4790,11 +4734,6 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:228
 #, elixir-autogen, elixir-format
 msgid "Fill in your business details. Your profile will be reviewed by Klass Hero before going live."
-msgstr ""
-
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:263
-#, elixir-autogen, elixir-format
-msgid "Manage your business"
 msgstr ""
 
 #: lib/klass_hero_web/live/messaging_live_helper.ex:444
@@ -4870,16 +4809,6 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:303
 #, elixir-autogen, elixir-format
 msgid "Website"
-msgstr ""
-
-#: lib/klass_hero_web/live/provider/profile_completion_live.ex:312
-#, elixir-autogen, elixir-format
-msgid "Your business address"
-msgstr ""
-
-#: lib/klass_hero_web/live/provider/profile_completion_live.ex:279
-#, elixir-autogen, elixir-format
-msgid "Your business or organization name"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:30
@@ -5378,6 +5307,7 @@ msgstr ""
 msgid "Become a Hero →"
 msgstr ""
 
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:269
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Become a provider"
@@ -6519,11 +6449,6 @@ msgstr ""
 msgid "Start teaching today"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:269
-#, elixir-autogen, elixir-format
-msgid "Start your own business"
-msgstr ""
-
 #: lib/klass_hero_web/live/for_providers_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Still curious?"
@@ -6542,11 +6467,6 @@ msgstr ""
 #: lib/klass_hero_web/live/about_live.ex:25
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Supporting local programs and eco-conscious practices."
-msgstr ""
-
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:229
-#, elixir-autogen, elixir-format
-msgid "Switch business"
 msgstr ""
 
 #: lib/klass_hero_web/live/for_providers_live.ex:240
@@ -6749,11 +6669,6 @@ msgstr ""
 msgid "Welcome"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:72
-#, elixir-autogen, elixir-format
-msgid "Welcome aboard! Let's set up your business profile."
-msgstr ""
-
 #: lib/klass_hero_web/live/contact_live.ex:177
 #, elixir-autogen, elixir-format
 msgid "What's on your mind?"
@@ -6798,11 +6713,6 @@ msgstr ""
 #: lib/klass_hero_web/live/user_live/staff_invitation.ex:89
 #, elixir-autogen, elixir-format
 msgid "You already have an account for %{email}."
-msgstr ""
-
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:274
-#, elixir-autogen, elixir-format
-msgid "You'll get your own provider profile to fill in, and your account will open on your business dashboard from now on. You stay on %{business}'s team."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/team_live.ex:336
@@ -8056,4 +7966,90 @@ msgstr ""
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:220
 #, elixir-autogen, elixir-format, fuzzy
 msgid "You are not assigned to this session"
+msgstr ""
+
+#: lib/klass_hero_web/components/provider_components.ex:429
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Complete verification to create programs."
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:263
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Manage your provider profile"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/edit_profile_live.ex:211
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Provider Description"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/edit_profile_live.ex:198
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Provider Information"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/edit_profile_live.ex:218
+#: lib/klass_hero_web/live/provider/profile_completion_live.ex:344
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Provider Logo"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/profile_completion_live.ex:278
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Provider Name"
+msgstr ""
+
+#: lib/klass_hero_web/components/provider_components.ex:207
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Provider Profile"
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:229
+#, elixir-autogen, elixir-format
+msgid "Switch provider"
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:55
+#, elixir-autogen, elixir-format
+msgid "The provider associated with your account could not be found."
+msgstr ""
+
+#: lib/klass_hero_web/live/user_live/staff_invitation.ex:29
+#, elixir-autogen, elixir-format, fuzzy
+msgid "This invitation has expired. Please ask your provider to resend it."
+msgstr ""
+
+#: lib/klass_hero_web/components/provider_components.ex:210
+#, elixir-autogen, elixir-format, fuzzy
+msgid "This is your main provider identity. Verification is required to list programs."
+msgstr ""
+
+#: lib/klass_hero_web/components/provider_components.ex:3083
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Upload documents to be verified. Documents are reviewed by our team."
+msgstr ""
+
+#: lib/klass_hero_web/components/provider_components.ex:402
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Verified Provider"
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:72
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Welcome aboard! Let's set up your provider profile."
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:274
+#, elixir-autogen, elixir-format, fuzzy
+msgid "You'll get your own provider profile to fill in, and your account will open on your provider dashboard from now on. You stay on %{business}'s team."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/profile_completion_live.ex:312
+#, elixir-autogen, elixir-format
+msgid "Your address"
+msgstr ""
+
+#: lib/klass_hero_web/live/provider/profile_completion_live.ex:279
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Your provider or organization name"
 msgstr ""

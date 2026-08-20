@@ -26,7 +26,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
         <.mk_page_hero pill={gettext("Invitation")}>
           <:title>{gettext("Invitation Expired")}</:title>
           <:lede>
-            {gettext("This invitation has expired. Please ask your business to resend it.")}
+            {gettext("This invitation has expired. Please ask your provider to resend it.")}
           </:lede>
         </.mk_page_hero>
         <section class="relative pb-20 -mt-8 lg:-mt-12 px-6 text-center">

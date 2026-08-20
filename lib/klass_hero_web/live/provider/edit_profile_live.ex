@@ -195,7 +195,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
 
           <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
             <h2 class="text-lg font-semibold text-hero-charcoal mb-4">
-              {gettext("Business Information")}
+              {gettext("Provider Information")}
             </h2>
 
             <.form
@@ -208,14 +208,14 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
               <.input
                 field={@form[:description]}
                 type="textarea"
-                label={gettext("Business Description")}
+                label={gettext("Provider Description")}
                 placeholder={gettext("Tell parents about your organization...")}
                 rows="4"
               />
 
               <div>
                 <label class="block text-sm font-semibold text-hero-charcoal mb-2">
-                  {gettext("Business Logo")}
+                  {gettext("Provider Logo")}
                 </label>
 
                 <div

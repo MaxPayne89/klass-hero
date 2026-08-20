@@ -275,8 +275,8 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             <.input
               field={@form[:business_name]}
               type="text"
-              label={gettext("Business Name")}
-              placeholder={gettext("Your business or organization name")}
+              label={gettext("Provider Name")}
+              placeholder={gettext("Your provider or organization name")}
             />
 
             <.input
@@ -309,7 +309,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
               field={@form[:address]}
               type="text"
               label={gettext("Address")}
-              placeholder={gettext("Your business address")}
+              placeholder={gettext("Your address")}
             />
 
             <div>
@@ -341,7 +341,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             <%!-- Logo Upload --%>
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-2">
-                {gettext("Business Logo")}
+                {gettext("Provider Logo")}
               </label>
               <div
                 id="logo-upload"

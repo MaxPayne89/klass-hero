@@ -204,11 +204,11 @@ defmodule KlassHeroWeb.ProviderComponents do
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
         <div>
           <h2 class="text-xl font-semibold text-hero-charcoal mb-1">
-            {gettext("Business Profile")}
+            {gettext("Provider Profile")}
           </h2>
           <p class="text-sm text-hero-grey-500">
             {gettext(
-              "This is your main business identity. Verification is required to list programs."
+              "This is your main provider identity. Verification is required to list programs."
             )}
           </p>
         </div>
@@ -399,7 +399,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             ]}
           >
             <.icon name="hero-check-badge-mini" class="w-4 h-4" />
-            {gettext("Verified Business")}
+            {gettext("Verified Provider")}
           </span>
         </div>
       </div>
@@ -426,7 +426,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               Theme.transition(:normal)
             ]}
           >
-            {gettext("Complete business verification to create programs.")}
+            {gettext("Complete verification to create programs.")}
           </div>
         </div>
       </div>
@@ -3080,7 +3080,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         {gettext("Verification Documents")}
       </h2>
       <p class="text-sm text-hero-grey-500 mb-6">
-        {gettext("Upload documents to verify your business. Documents are reviewed by our team.")}
+        {gettext("Upload documents to be verified. Documents are reviewed by our team.")}
       </p>
 
       <div id="verification-docs" phx-update="stream" class="space-y-3 mb-6">

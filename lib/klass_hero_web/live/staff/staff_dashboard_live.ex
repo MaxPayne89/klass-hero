@@ -52,7 +52,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
          socket
          |> put_flash(
            :error,
-           gettext("The business associated with your account could not be found.")
+           gettext("The provider associated with your account could not be found.")
          )
          |> push_navigate(to: ~p"/")}
     end
@@ -69,7 +69,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
       {:ok, _user} ->
         {:noreply,
          socket
-         |> put_flash(:info, gettext("Welcome aboard! Let's set up your business profile."))
+         |> put_flash(:info, gettext("Welcome aboard! Let's set up your provider profile."))
          |> push_navigate(to: ~p"/provider/complete-profile")}
 
       {:error, :already_provider} ->
@@ -226,7 +226,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
             "text-sm font-medium text-brand hover:text-brand/80"
           ]}>
             <.icon name="hero-building-storefront-mini" class="w-4 h-4" />
-            {gettext("Switch business")}
+            {gettext("Switch provider")}
             <.icon name="hero-chevron-down-mini" class="w-4 h-4" />
           </summary>
           <ul class={[
@@ -260,19 +260,19 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           navigate={~p"/provider/dashboard"}
           class="inline-flex items-center gap-1 text-sm text-brand hover:text-brand/80 mt-2"
         >
-          {gettext("Manage your business")} →
+          {gettext("Manage your provider profile")} →
         </.link>
       </div>
 
       <.kh_card :if={not @provider?} id="become-provider-cta" class="p-5 mt-6">
         <h2 class={Theme.typography(:card_title)}>
-          {gettext("Start your own business")}
+          {gettext("Become a provider")}
         </h2>
         <%= if @upgrade_confirm? do %>
           <div id="become-provider-confirm" class="mt-1">
             <p class="text-sm text-hero-grey-600">
               {gettext(
-                "You'll get your own provider profile to fill in, and your account will open on your business dashboard from now on. You stay on %{business}'s team.",
+                "You'll get your own provider profile to fill in, and your account will open on your provider dashboard from now on. You stay on %{business}'s team.",
                 business: @provider.business_name
               )}
             </p>
