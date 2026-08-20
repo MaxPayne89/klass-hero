@@ -66,7 +66,7 @@ defmodule KlassHeroWeb.I18n.Phase8ResponsiveI18nTest do
       assert_locale(view, "en")
 
       # Navigate to settings page
-      {:ok, view, _html} = setup_locale_for_navigation(conn, "en") |> live(~p"/settings")
+      {:ok, view, _html} = setup_locale_for_navigation(conn, "en") |> live(~p"/users/settings")
 
       # Locale should persist
       assert_locale(view, "en")
@@ -234,17 +234,17 @@ defmodule KlassHeroWeb.I18n.Phase8ResponsiveI18nTest do
     setup :register_and_log_in_user
 
     test "settings page displays German menu items", %{conn: conn} do
-      {:ok, view, _html} = setup_locale_for_navigation(conn, "de") |> live(~p"/settings")
+      {:ok, view, _html} = setup_locale_for_navigation(conn, "de") |> live(~p"/users/settings")
 
       assert_locale(view, "de")
 
       # Check for German settings menu items
-      assert_translation(view, "Settings", "de")
-      assert_translation(view, "Account & Profile", "de")
+      assert_translation(view, "Preferences", "de")
+      assert_translation(view, "My Family", "de")
     end
 
     test "user can change language preference in settings", %{conn: conn} do
-      {:ok, view, _html} = setup_locale_for_navigation(conn, "de") |> live(~p"/settings")
+      {:ok, view, _html} = setup_locale_for_navigation(conn, "de") |> live(~p"/users/settings")
 
       assert_locale(view, "de")
 

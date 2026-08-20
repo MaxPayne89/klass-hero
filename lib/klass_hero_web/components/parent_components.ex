@@ -38,7 +38,7 @@ defmodule KlassHeroWeb.ParentComponents do
     {:children, "My Kids", "hero-users", "/family/settings/children"},
     {:participation, "Sessions", "hero-check-circle", "/participation"},
     {:billing, "Billing", "hero-currency-euro", nil},
-    {:settings, "Settings", "hero-cog-6-tooth", "/family/settings"}
+    {:settings, "Settings", "hero-cog-6-tooth", "/users/settings"}
   ]
 
   @mobile_tabs [

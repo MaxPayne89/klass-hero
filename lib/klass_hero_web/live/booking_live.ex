@@ -177,7 +177,7 @@ defmodule KlassHeroWeb.BookingLive do
                :error,
                gettext("Please complete your profile before making a booking.")
              )
-             |> push_navigate(to: ~p"/settings")}
+             |> push_navigate(to: ~p"/users/settings#profiles")}
 
           {:error, :ineligible, reasons} ->
             {:noreply,

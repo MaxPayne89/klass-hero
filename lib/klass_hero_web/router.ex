@@ -84,8 +84,6 @@ defmodule KlassHeroWeb.Router do
       live "/terms", TermsOfServiceLive, :index
     end
 
-    # /family/settings dual-mounts /settings under the canonical parent path;
-    # both work until a follow-up adds a 301 redirect for the legacy /settings tree.
     live_session :authenticated,
       layout: {KlassHeroWeb.Layouts, :parent_app},
       on_mount: [
@@ -97,12 +95,10 @@ defmodule KlassHeroWeb.Router do
       ] do
       live "/dashboard", DashboardLive, :index
 
-      live "/settings", SettingsLive, :index
       live "/settings/children", Settings.ChildrenLive, :index
       live "/settings/children/new", Settings.ChildrenLive, :new
       live "/settings/children/:child_id/edit", Settings.ChildrenLive, :edit
 
-      live "/family/settings", SettingsLive, :index
       live "/family/settings/children", Settings.ChildrenLive, :index
       live "/family/settings/children/new", Settings.ChildrenLive, :new
       live "/family/settings/children/:child_id/edit", Settings.ChildrenLive, :edit
