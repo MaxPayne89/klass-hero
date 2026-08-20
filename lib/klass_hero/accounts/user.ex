@@ -32,6 +32,7 @@ defmodule KlassHero.Accounts.User do
     field :authenticated_at, :utc_datetime, virtual: true
     field :intended_roles, UserRoles, default: []
     field :locale, :string, default: "en"
+    field :active_persona, Ecto.Enum, values: UserRole.valid_roles()
     field :is_admin, :boolean, default: false
 
     has_one :parent_profile, ParentProfile, foreign_key: :identity_id
@@ -252,6 +253,23 @@ defmodule KlassHero.Accounts.User do
     |> cast(attrs, [:locale])
     |> validate_required([:locale])
     |> validate_inclusion(:locale, Locales.supported())
+  end
+
+  @doc """
+  A user changeset for the remembered persona — the surface this person last
+  chose to work in (ADR-0005's "remembered/last-used dashboard switcher").
+
+  Nullable on purpose: `nil` means "never chose", which the read path resolves
+  by the same provider > staff > parent precedence that has always applied, so
+  every pre-existing row keeps its current landing surface.
+
+  This guards the *vocabulary* only. Storing `:provider` never grants
+  provider-hood — `Scope.provider?/1` and its siblings stay the sole authority
+  (ADR-0005), and a stored persona the user no longer holds is ignored at read
+  time rather than corrected here.
+  """
+  def active_persona_changeset(user, attrs) do
+    cast(user, attrs, [:active_persona])
   end
 
   @doc """

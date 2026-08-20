@@ -333,6 +333,23 @@ defmodule KlassHero.Accounts do
   end
 
   @doc """
+  Remembers the surface this user last chose to work in (ADR-0005).
+
+  A preference, not a grant: the caller is responsible for having checked that
+  the user actually holds the persona before asking to store it. Passing `nil`
+  clears the preference and returns them to precedence-based landing.
+  """
+  @spec update_user_active_persona(User.t(), map()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_active_persona(user, attrs) do
+    context_span entity: "user" do
+      user
+      |> User.active_persona_changeset(attrs)
+      |> Repo.update()
+    end
+  end
+
+  @doc """
   Generates a session token.
   """
   def generate_user_session_token(user) do
