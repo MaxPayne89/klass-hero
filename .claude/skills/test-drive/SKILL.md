@@ -64,8 +64,7 @@ Use these tools:
 | Tool | When to use |
 |------|------------|
 | `project_eval` | Call context functions with test data, verify return shapes |
-| `get_ecto_schemas` | Verify schema fields match migrations and domain models |
-| `execute_sql_query` | Spot-check data if migrations were added |
+| `execute_sql_query` | Spot-check data if migrations were added; verify columns match the schema via `information_schema` |
 | `get_logs` | Monitor for warnings/errors after each eval |
 
 **Focus on:**
