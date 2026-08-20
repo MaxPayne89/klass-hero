@@ -161,14 +161,14 @@ defmodule KlassHeroWeb.ProviderComponents do
         value="12,500"
         icon="hero-currency-euro-mini"
         icon_bg="bg-hero-blue-100"
-        icon_color="text-hero-blue-800"
+        icon_color="text-hero-blue-600"
       />
   """
   attr :label, :string, required: true
   attr :value, :string, required: true
   attr :icon, :string, required: true
   attr :icon_bg, :string, default: "bg-hero-blue-100"
-  attr :icon_color, :string, default: "text-hero-blue-800"
+  attr :icon_color, :string, default: "text-hero-blue-600"
 
   def provider_stat_card(assigns) do
     ~H"""
