@@ -57,6 +57,12 @@ defmodule KlassHeroWeb.Journeys do
     Application.put_env(:klass_hero, :outbox, module: ObanOutbox)
 
     try do
+      # Settle first, then act, then settle again. Without the leading drain, a job
+      # left pending by an earlier act is delivered by *this* act's drain — i.e.
+      # after it — and replays its event out of order. That is how a `messages_read`
+      # staged by a previous page visit came to re-zero an unread count that the
+      # message just sent had correctly incremented.
+      drain_until_settled(@max_drain_passes)
       result = Oban.Testing.with_testing_mode(:manual, fun)
       drain_until_settled(@max_drain_passes)
       result
@@ -71,9 +77,7 @@ defmodule KlassHeroWeb.Journeys do
     executed =
       for {queue, _limit} <- Application.get_env(:klass_hero, Oban)[:queues], reduce: 0 do
         acc ->
-          # with_scheduled drives a backing-off job through its retries rather than
-          # stopping at the first backoff.
-          result = Oban.drain_queue(queue: queue, with_recursion: true, with_scheduled: true)
+          result = Oban.drain_queue(queue: queue, with_recursion: true)
           acc + result.success + result.failure + result.discard
       end
 

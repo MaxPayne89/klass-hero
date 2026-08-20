@@ -377,12 +377,14 @@ defmodule KlassHeroWeb.MessagingComponents do
           ]}
         >
           <.icon name="hero-paper-clip" class="w-5 h-5" />
+          <span class="sr-only">{gettext("Attach files")}</span>
           <.live_file_input upload={@uploads.attachments} class="hidden" />
         </label>
         <div class="flex-1">
           <textarea
             name="content"
             id="message-input"
+            aria-label={gettext("Message")}
             rows="1"
             class={[
               "w-full px-4 py-2 border resize-none focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent",
@@ -399,6 +401,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           type="submit"
           disabled={@disabled}
           data-role="send-message-btn"
+          aria-label={gettext("Send message")}
           class={[
             "w-10 h-10 flex items-center justify-center bg-hero-blue-600 text-white hover:bg-hero-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
             Theme.rounded(:full)
