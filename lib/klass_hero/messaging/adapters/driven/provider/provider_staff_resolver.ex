@@ -15,16 +15,21 @@ defmodule KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver do
   end
 
   @doc """
-  User IDs of the staff currently active on a program.
+  User IDs of the staff entitled to a program's conversations.
 
   Messaging mirrored this in `program_staff_participants` until #1321. The mirror
   had no projection, bootstrap or rebuild, so only an event could correct it —
   and three bugs (#1309, #1312, #1320) were drift between it and this source.
+
+  Provider unions the two staffing grains here — the program roster plus anyone
+  overriding one of its sessions (#784) — rather than resolving between them as
+  `get_session_staffing/1` does for attendance. A conversation spans every session,
+  so it takes the wider set; ADR-0017 has the full reasoning.
   """
-  @spec list_active_staff_user_ids(String.t()) :: [String.t()]
-  def list_active_staff_user_ids(program_id) do
+  @spec list_conversation_staff_user_ids(String.t()) :: [String.t()]
+  def list_conversation_staff_user_ids(program_id) do
     acl_span source: "messaging", target: "provider" do
-      KlassHero.Provider.list_active_staff_user_ids_for_program(program_id)
+      KlassHero.Provider.list_conversation_staff_user_ids_for_program(program_id)
     end
   end
 
@@ -34,7 +39,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver do
   Only the render path wants this, and only for messages written before
   `messages.sender_role` existed (#1348). Employment *ever* is the closest available
   approximation of who was provider-side at send time; employment *now* — which is
-  what `list_active_staff_user_ids/1` answers — is the question that rewrote history.
+  what `list_conversation_staff_user_ids/1` answers — is the question that rewrote history.
   """
   @spec list_staff_user_ids(String.t()) :: [String.t()]
   def list_staff_user_ids(provider_id) do

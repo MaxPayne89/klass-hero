@@ -658,19 +658,24 @@ defmodule KlassHero.Messaging do
   defdelegate get_display_name(user_id), to: KlassHero.Accounts
 
   @doc """
-  Returns the user IDs of staff currently active on a program, read from
+  Returns the user IDs entitled to a program's conversations, read from
   Provider (#1321) rather than from a mirror Messaging maintained itself.
 
   Access-granting, and only that: `AddAssignedStaff` seeds these users as
-  participants when a conversation is created. The render path used to share it to
-  decide which senders show branded attribution, which is how deactivating a staff
-  member restyled every message they had ever sent (#1348) — attribution now comes
-  from `messages.sender_role`, so a change here can no longer reach the past.
+  participants when a conversation is created, and `StaffAssignmentHandler` asks
+  the same question again before evicting anyone. The render path used to share it
+  to decide which senders show branded attribution, which is how deactivating a
+  staff member restyled every message they had ever sent (#1348) — attribution now
+  comes from `messages.sender_role`, so a change here can no longer reach the past.
+
+  Named for entitlement rather than for the program roster because since #784 it is
+  wider than one: Provider unions the roster with anyone overriding one of the
+  program's sessions.
   """
-  @spec get_active_staff_user_ids(String.t()) :: [String.t()]
-  defdelegate get_active_staff_user_ids(program_id),
+  @spec get_conversation_staff_user_ids(String.t()) :: [String.t()]
+  defdelegate get_conversation_staff_user_ids(program_id),
     to: ProviderStaffResolver,
-    as: :list_active_staff_user_ids
+    as: :list_conversation_staff_user_ids
 
   @doc """
   User IDs of everyone who has ever been staff at the provider.

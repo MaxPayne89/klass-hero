@@ -80,6 +80,31 @@ session Participation already holds (`Assignments.fetch_sessions/1` calls back t
 its session. Not acceptable per row — which is why the staff sessions list uses the batch
 `list_session_staffing/1`, four queries regardless of how many sessions the day holds.
 
+## Amended by #784: messaging unions the two grains instead
+
+Messaging combines the same two grains with the opposite operator.
+`Provider.list_conversation_staff_user_ids_for_program/1` returns the program roster **plus**
+everyone holding an active override on one of the program's sessions, and Messaging seeds
+conversation participants from that union.
+
+The operator follows the artifact, not a house style. Attendance authorizes a write against **one
+session**, so exactly one roster can be the right answer and a fallback is the honest way to pick
+it — which is the whole argument two sections up. A conversation is **program-scoped**: there is
+no `conversations.session_id`, and there is no per-session thread to be excluded from. Its
+question is "may you talk to this program's parents", and someone running any one of its sessions
+may. Being taken off a single Tuesday is a reason to lose that Tuesday's attendance rights; it is
+not a reason to lose the thread.
+
+The union is also what closes #784 at all. `assign_staff_to_session/1` requires only active
+employment, never a `ProgramStaffAssignment`, so a substitute can hold no program-level row —
+under replacement semantics the program conversation would simply never see them.
+
+The cost is a second removal rule. One retired row no longer settles whether someone leaves, so
+`StaffAssignmentHandler` re-asks the union before evicting anyone, in both directions. Without
+that, unassigning someone from the program would evict them from conversations for a session they
+still run — #784 through the opposite door — and it is the exact mirror of the failure OR-ing
+would have caused here.
+
 ## Derived, not declared
 
 `is_admin` lives on the user and is deliberately absent from `registration_changeset`'s cast

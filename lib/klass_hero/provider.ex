@@ -320,6 +320,13 @@ defmodule KlassHero.Provider do
   @doc "Lists the user IDs of claimed, active staff assigned to a program."
   defdelegate list_active_staff_user_ids_for_program(program_id), to: Assignments
 
+  @doc """
+  Lists the user IDs entitled to a program's conversations: its roster **plus**
+  anyone overriding one of its sessions (#784). A union, not `get_session_staffing/1`'s
+  replacement — see that function's docs for which question takes which grain.
+  """
+  defdelegate list_conversation_staff_user_ids_for_program(program_id), to: Assignments
+
   @doc "Lists the provider's active staff who are not currently assigned to the program."
   defdelegate list_assignable_staff_for_program(provider_id, program_id), to: Assignments
 

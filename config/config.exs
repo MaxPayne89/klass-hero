@@ -268,15 +268,20 @@ config :klass_hero, :event_consumers, %{
     {StaffAssignmentHandler, :handle_event},
     {ProviderSessionDetails, :project}
   ],
-  # Session-grain overrides. Deliberately NOT routed to StaffAssignmentHandler:
-  # conversation membership is program-scoped, so a one-session substitution does
-  # not change who is in the program's conversation. Extending messaging to
-  # session-level staff is #784.
+  # Session-grain overrides, routed to StaffAssignmentHandler since #784.
+  # Conversation membership is still program-scoped — what changed is that
+  # entitlement to it is the *union* of the two grains, because a session override
+  # admits someone holding no program assignment at all. So a substitute joins the
+  # program's conversations, and leaves them only once no claim of either grain
+  # remains. This registry is also `Outbox.stage/2`'s filter, so these two lines
+  # are the wiring, not a preference.
   "integration:provider:staff_assigned_to_session" => [
-    {ProviderSessionDetails, :project}
+    {ProviderSessionDetails, :project},
+    {StaffAssignmentHandler, :handle_event}
   ],
   "integration:provider:staff_unassigned_from_session" => [
-    {ProviderSessionDetails, :project}
+    {ProviderSessionDetails, :project},
+    {StaffAssignmentHandler, :handle_event}
   ],
   # Deliberately NOT routed to StaffAssignmentHandler: deactivation ends the
   # employment link but leaves assignments standing, so conversation membership
