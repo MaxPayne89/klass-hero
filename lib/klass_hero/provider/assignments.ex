@@ -639,23 +639,24 @@ defmodule KlassHero.Provider.Assignments do
       )
       |> Repo.all()
 
-    open = open_program_ids(provider_id, assigned)
+    {open, closed} = split_by_closure(provider_id, assigned)
 
     %StaffProgramAccess{
       staff_member_id: staff_member_id,
-      program_ids: MapSet.intersection(MapSet.new(assigned), open),
-      closed_program_ids: MapSet.difference(MapSet.new(assigned), open)
+      program_ids: open,
+      closed_program_ids: closed
     }
   end
 
-  # Subtracting the open set rather than adding a closed one is what makes this
-  # fail closed: an assignment whose program is foreign, or no longer resolves at
-  # all, comes back from neither query and lands among the closed, where it grants
-  # nothing. "Closed" is the honest bucket for it — the program is not actionable,
-  # and the alternative is a third set nobody reads.
-  defp open_program_ids(provider_id, program_ids) do
+  # Both sets come from what the query *returned*, never from subtracting one from
+  # the assignment list. An assignment naming a foreign or deleted program lands in
+  # neither: it grants nothing, and — since `closed_program_ids` is also what the
+  # dashboard renders as "Completed" — it is not shown either. Deriving closed as
+  # "assigned minus open" would have listed another provider's program back to the
+  # staff member.
+  defp split_by_closure(provider_id, program_ids) do
     acl_span source: "provider", target: "program_catalog" do
-      ProgramCatalog.list_open_program_ids_for_provider(provider_id, program_ids)
+      ProgramCatalog.split_programs_by_closure(provider_id, program_ids)
     end
   end
 

@@ -66,9 +66,12 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
 
       for p <- [own, foreign], do: assign(p, staff)
 
-      {open, _closed, _access} = StaffLiveHelpers.load_assigned_programs(staff)
+      {open, closed, _access} = StaffLiveHelpers.load_assigned_programs(staff)
 
       assert Enum.map(open, & &1.id) == [own.id]
+      # And not merely absent from the actionable list: a foreign program must not
+      # be rendered in the read-only "Completed" section either.
+      refute foreign.id in Enum.map(closed, & &1.id)
     end
 
     test "returns no programs and an empty access when the provider has none" do

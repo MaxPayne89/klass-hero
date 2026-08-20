@@ -68,32 +68,50 @@ defmodule KlassHero.ProgramCatalog.ListOpenProgramIdsTest do
     end
   end
 
-  describe "list_open_program_ids_for_provider/2" do
-    test "omits a program belonging to another provider", %{provider: provider} do
+  describe "split_programs_by_closure/2" do
+    test "puts a foreign program in NEITHER set", %{provider: provider} do
       own = program(provider, nil)
       foreign = insert(:program_schema, provider_id: insert(:provider_profile_schema).id)
 
-      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, [own.id, foreign.id]) ==
-               MapSet.new([own.id])
+      {open, closed} = ProgramCatalog.split_programs_by_closure(provider.id, [own.id, foreign.id])
+
+      assert open == MapSet.new([own.id])
+      # Not "closed" — that set is rendered back to the staff member as their
+      # Completed programs, so another provider's program must not land in it.
+      assert closed == MapSet.new()
     end
 
-    test "answers the closure question exactly as the unscoped sibling", %{provider: provider} do
-      open = program(provider, nil)
+    test "puts an id resolving to no program in neither set", %{provider: provider} do
+      {open, closed} = ProgramCatalog.split_programs_by_closure(provider.id, [Ecto.UUID.generate()])
+
+      assert open == MapSet.new()
+      assert closed == MapSet.new()
+    end
+
+    test "splits the provider's own programs on the grace window", %{provider: provider} do
+      never_ends = program(provider, nil)
       in_grace = program(provider, Date.add(Date.utc_today(), -14))
-      closed = program(provider, Date.add(Date.utc_today(), -15))
-      ids = [open.id, in_grace.id, closed.id]
+      closed_one = program(provider, Date.add(Date.utc_today(), -15))
 
-      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, ids) ==
-               ProgramCatalog.list_open_program_ids(ids)
+      {open, closed} =
+        ProgramCatalog.split_programs_by_closure(provider.id, [never_ends.id, in_grace.id, closed_one.id])
+
+      assert open == MapSet.new([never_ends.id, in_grace.id])
+      assert closed == MapSet.new([closed_one.id])
     end
 
-    test "omits an id that resolves to no program", %{provider: provider} do
-      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, [Ecto.UUID.generate()]) ==
-               MapSet.new()
+    test "agrees with the unscoped sibling on the open side", %{provider: provider} do
+      ids =
+        for end_date <- [nil, Date.add(Date.utc_today(), -14), Date.add(Date.utc_today(), -15)],
+            do: program(provider, end_date).id
+
+      {open, _closed} = ProgramCatalog.split_programs_by_closure(provider.id, ids)
+
+      assert open == ProgramCatalog.list_open_program_ids(ids)
     end
 
     test "short-circuits on an empty list", %{provider: provider} do
-      assert ProgramCatalog.list_open_program_ids_for_provider(provider.id, []) == MapSet.new()
+      assert ProgramCatalog.split_programs_by_closure(provider.id, []) == {MapSet.new(), MapSet.new()}
     end
   end
 

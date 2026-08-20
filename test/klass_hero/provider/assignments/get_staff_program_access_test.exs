@@ -125,6 +125,9 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
 
       refute StaffProgramAccess.authorized?(access, foreign.id)
       refute MapSet.member?(access.program_ids, foreign.id)
+      # And not in the closed set either: that one is rendered as "Completed", so
+      # landing there would list another provider's program back to this person.
+      refute StaffProgramAccess.closed?(access, foreign.id)
     end
 
     test "reports a program that is not closed as not closed" do
