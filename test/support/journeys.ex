@@ -30,31 +30,54 @@ defmodule KlassHeroWeb.Journeys do
 
   @endpoint KlassHeroWeb.Endpoint
 
+  # A saga crosses queues: `invite_claimed` is delivered on :events, the family hop
+  # it enqueues runs on :family, and the `invite_family_ready` that hop stages goes
+  # back onto :events. Draining one queue once truncates the chain silently, which is
+  # the same class of bug this tier exists to catch — so drain every configured queue
+  # in a loop until a whole pass does no work.
+  @max_drain_passes 6
+
   @doc """
-  Runs `fun` with the real `ObanOutbox` staged, then drains the events queue.
+  Runs `fun` with the real `ObanOutbox` staged and delivers everything it sets off.
 
   Manual testing mode rather than the suite's `testing: :inline` is what makes this
   resemble production: inline executes the delivery job at insert, inside the
   producer's own transaction, so consumers would run before the write they describe
   had committed.
 
+  The swap stays in place across the drains. Restoring it first — the shape the
+  eight hand-rolled copies of this recipe use — sends anything a *consumer* stages
+  into `TestOutbox`, so a multi-hop saga stops after its first hop.
+
   Because the swap is a global `Application.put_env`, every module using this must
-  be `async: false`.
+  be `async: false`; `KlassHeroWeb.FlowCase` enforces that.
   """
   def with_real_outbox(fun) when is_function(fun, 0) do
     original = Application.get_env(:klass_hero, :outbox)
     Application.put_env(:klass_hero, :outbox, module: ObanOutbox)
 
-    result =
-      try do
-        Oban.Testing.with_testing_mode(:manual, fun)
-      after
-        Application.put_env(:klass_hero, :outbox, original)
+    try do
+      result = Oban.Testing.with_testing_mode(:manual, fun)
+      drain_until_settled(@max_drain_passes)
+      result
+    after
+      Application.put_env(:klass_hero, :outbox, original)
+    end
+  end
+
+  defp drain_until_settled(0), do: :ok
+
+  defp drain_until_settled(passes) do
+    executed =
+      for {queue, _limit} <- Application.get_env(:klass_hero, Oban)[:queues], reduce: 0 do
+        acc ->
+          # with_scheduled drives a backing-off job through its retries rather than
+          # stopping at the first backoff.
+          result = Oban.drain_queue(queue: queue, with_recursion: true, with_scheduled: true)
+          acc + result.success + result.failure + result.discard
       end
 
-    Oban.drain_queue(queue: :events, with_recursion: true)
-
-    result
+    if executed > 0, do: drain_until_settled(passes - 1), else: :ok
   end
 
   @doc """
