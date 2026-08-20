@@ -11,10 +11,10 @@ defmodule KlassHero.Accounts.User do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.Types.{UserRole, UserRoles}
+  alias KlassHero.Accounts.User
+  alias KlassHero.Accounts.{UserRole, UserRoles}
   # Cross-context references for admin dashboard preloading (read-only).
   # Pragmatic DDD boundary crossing — see AccountLive moduledoc.
-  alias KlassHero.Accounts.User
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Locales
@@ -118,10 +118,10 @@ defmodule KlassHero.Accounts.User do
   end
 
   defp put_default_role(changeset) do
-    case get_field(changeset, :intended_roles) do
-      nil -> put_change(changeset, :intended_roles, [:parent])
-      [] -> put_change(changeset, :intended_roles, [:parent])
-      _ -> changeset
+    if get_field(changeset, :intended_roles) in [nil, []] do
+      put_change(changeset, :intended_roles, [:parent])
+    else
+      changeset
     end
   end
 

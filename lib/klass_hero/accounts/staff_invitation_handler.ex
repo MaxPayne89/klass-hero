@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
+defmodule KlassHero.Accounts.StaffInvitationHandler do
   @moduledoc """
   Integration event handler for `:staff_member_invited` events from Provider context.
 
@@ -15,7 +15,7 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
   @behaviour KlassHero.Shared.ForHandlingEvents
 
   alias KlassHero.Accounts
-  alias KlassHero.Accounts.Domain.Events.AccountsEvents
+  alias KlassHero.Accounts.Events
   alias KlassHero.Accounts.User
   alias KlassHero.Accounts.UserNotifier
   alias KlassHero.Shared.Domain.Events.Event
@@ -78,13 +78,13 @@ defmodule KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler do
 
   defp emit_sent(staff_member_id, provider_id) do
     staff_member_id
-    |> AccountsEvents.staff_invitation_sent(%{provider_id: provider_id})
+    |> Events.staff_invitation_sent(%{provider_id: provider_id})
     |> then(&Outbox.stage(KlassHero.Accounts, &1))
   end
 
   defp emit_failed(staff_member_id, provider_id, reason) do
     staff_member_id
-    |> AccountsEvents.staff_invitation_failed(%{
+    |> Events.staff_invitation_failed(%{
       provider_id: provider_id,
       reason: reason
     })

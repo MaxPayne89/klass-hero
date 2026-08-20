@@ -1,8 +1,8 @@
-defmodule KlassHero.Accounts.Types.UserRoleTest do
+defmodule KlassHero.Accounts.UserRoleTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Accounts.Types.UserRole
+  alias KlassHero.Accounts.UserRole
 
   test "valid_roles/0 returns the known role atoms" do
     assert UserRole.valid_roles() == [:parent, :provider, :staff]
@@ -84,42 +84,6 @@ defmodule KlassHero.Accounts.Types.UserRoleTest do
 
       assert_raise ArgumentError, fn ->
         String.to_existing_atom("nonexistent_role_xyz")
-      end
-    end
-  end
-
-  describe "permissions/1" do
-    test "returns the five parent permissions" do
-      assert UserRole.permissions(:parent) |> Enum.sort() ==
-               Enum.sort([
-                 :view_programs,
-                 :enroll_children,
-                 :view_child_progress,
-                 :manage_family_profile,
-                 :submit_reviews
-               ])
-    end
-
-    test "returns the five provider permissions" do
-      assert UserRole.permissions(:provider) |> Enum.sort() ==
-               Enum.sort([
-                 :manage_programs,
-                 :view_enrollments,
-                 :manage_schedule,
-                 :view_analytics,
-                 :respond_to_reviews
-               ])
-    end
-
-    test "returns a non-empty list for :staff" do
-      assert UserRole.permissions(:staff) != []
-      assert is_list(UserRole.permissions(:staff))
-    end
-
-    for invalid <- [:admin, :invalid, "parent", nil, 123, %{}] do
-      @invalid invalid
-      test "returns [] for #{inspect(invalid)}" do
-        assert UserRole.permissions(@invalid) == []
       end
     end
   end

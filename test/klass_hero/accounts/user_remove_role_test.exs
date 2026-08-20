@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserRemoveRoleTest do
+defmodule KlassHero.Accounts.UserRemoveRoleTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Accounts.User

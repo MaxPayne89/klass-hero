@@ -6,6 +6,19 @@ defmodule KlassHero.Shared.ForHandlingEvents do
   usually another context's, since an event is the public contract between
   contexts.
 
+  ## Routing is config, not this behaviour
+
+  Implementing this behaviour does **not** subscribe you to anything.
+  `EventDeliveryWorker` resolves consumers solely through
+  `EventConsumerRegistry.consumers_for/1`, which reads the `:event_consumers`
+  map in `config/config.exs`. Nothing calls `subscribed_events/0` at runtime.
+
+  A handler is wired when, and only when, it appears under its topic there:
+
+      "integration:provider:staff_member_invited" => [
+        {StaffInvitationHandler, :handle_event}
+      ]
+
   ## Example
 
       defmodule MyApp.Participation.ChildAnonymizedHandler do
@@ -31,9 +44,12 @@ defmodule KlassHero.Shared.ForHandlingEvents do
   @callback handle_event(Event.t()) :: :ok | {:error, term()} | :ignore
 
   @doc """
-  Returns the list of event types this handler subscribes to.
+  Declares the event types this handler expects to be routed.
 
-  Return `[:all]` to receive all events (use sparingly).
+  This is a declaration checked against config, not a subscription — see the
+  moduledoc. `event_consumer_wiring_test.exs` asserts it agrees with the topics
+  `:event_consumers` actually routes here, which is what catches the silent
+  failure of adding a `handle_event/1` clause and forgetting the registry entry.
   """
-  @callback subscribed_events() :: [atom()] | [:all]
+  @callback subscribed_events() :: [atom()]
 end

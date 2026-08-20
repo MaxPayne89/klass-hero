@@ -22,6 +22,13 @@ defmodule KlassHero.Shared.Tracing do
 
   """
 
+  # Module-name segments stripped before a span is named, so a span reads
+  # `Provider.ProviderPrograms.handle_event/2` rather than repeating the tree.
+  #
+  # This list is scaffolding for the nested context layout and should shrink
+  # with it — but only once *every* context is flat. While contexts still carry
+  # `Adapters.Driven.Projections.*` and friends in their module names, pruning
+  # an entry here silently renames live production spans (#1259).
   @noise_segments ~w[
     Elixir KlassHero Adapters Driven Driving Persistence Repositories
     Schemas Mappers Queries Events EventHandlers Workers Projections

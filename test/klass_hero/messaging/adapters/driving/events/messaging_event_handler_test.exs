@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandlerTest 
   import KlassHero.EventTestHelper
   import KlassHero.Factory
 
-  alias KlassHero.Accounts.Domain.Events.AccountsEvents
+  alias KlassHero.Accounts
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler
   alias KlassHero.Messaging.Message
@@ -37,7 +37,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandlerTest 
       )
 
       event =
-        AccountsEvents.user_anonymized(
+        Accounts.Events.user_anonymized(
           %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
           %{previous_email: user.email}
         )
@@ -69,7 +69,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandlerTest 
       user = AccountsFixtures.user_fixture()
 
       event =
-        AccountsEvents.user_anonymized(
+        Accounts.Events.user_anonymized(
           %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
           %{previous_email: user.email}
         )
@@ -84,7 +84,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandlerTest 
       user = AccountsFixtures.user_fixture()
 
       event =
-        AccountsEvents.user_anonymized(
+        Accounts.Events.user_anonymized(
           %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
           %{previous_email: user.email}
         )

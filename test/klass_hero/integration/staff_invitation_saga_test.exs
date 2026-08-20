@@ -26,9 +26,8 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
   import Swoosh.TestAssertions
 
   alias KlassHero.Accounts
-  alias KlassHero.Accounts.Adapters.Driving.Events.StaffInvitationHandler
-  alias KlassHero.Accounts.Domain.Events.AccountsEvents
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Accounts.StaffInvitationHandler
   alias KlassHero.Provider
   alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
   alias KlassHero.Provider.Domain.Events.ProviderEvents
@@ -48,21 +47,21 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
   end
 
   defp build_sent_event(staff) do
-    AccountsEvents.staff_invitation_sent(
+    Accounts.Events.staff_invitation_sent(
       staff.id,
       %{provider_id: staff.provider_id}
     )
   end
 
   defp build_failed_event(staff, reason \\ "delivery_error") do
-    AccountsEvents.staff_invitation_failed(
+    Accounts.Events.staff_invitation_failed(
       staff.id,
       %{provider_id: staff.provider_id, reason: reason}
     )
   end
 
   defp build_registered_event(user_id, staff, opts) do
-    AccountsEvents.staff_user_registered(
+    Accounts.Events.staff_user_registered(
       user_id,
       Map.merge(%{staff_member_id: staff.id, provider_id: staff.provider_id}, opts)
     )

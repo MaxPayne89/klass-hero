@@ -25,14 +25,44 @@ context/
 ├── <entity>.ex             # Schema-as-struct (see below)
 ├── <read_table>.ex         # Projection read-table schema — IS the DTO, no changeset
 ├── <use_case>.ex           # Command/query modules at the root
-├── domain/
-│   ├── events/             # Domain & integration event structs
-│   └── read_models/        # Query-shaped structs over WRITE tables only (no logic,
-│                           #   no schema twin) — see "CQRS Read Models"
-└── adapters/
-    ├── driven/{projections,persistence,acl,notifications}/
-    └── driving/{events,workers}/
+├── events.ex               # Factory for this context's integration events
+├── <handler>.ex            # Consumes another context's events
+├── <worker>.ex             # Oban worker
+├── projections/            # CQRS projection GenServers          (3+ files)
+├── workers/                # Oban workers                         (3+ files)
+├── acl/                    # Cross-context read adapters          (3+ files)
+├── notifications/          # Email/notification senders           (3+ files)
+├── queries/                # Composable write-side query builders (3+ files)
+└── read_models/            # Query-shaped structs over WRITE tables (3+ files)
 ```
+
+**One level, and only when it earns it.** A kind gets its own directory once it
+holds **3+ files**; below that its modules sit at the context root. Same
+extraction threshold the front end uses for components (`frontend.md`).
+
+The threshold covers **only the kinds listed above**. It does not license a
+catch-all: `services/`, `helpers/`, `support/` are not kinds — "service" is DDD
+for "module I could not otherwise place", and such a directory sorts modules by
+having no category. Pure domain-logic modules (`program_pricing.ex`,
+`csv_parser.ex`, `referral_code_generator.ex`) sit at the **context root** beside
+the use cases, however many there are.
+
+There is no `adapters/` or `domain/` layer, and no `driven`/`driving` split. The
+kind name already carries directionality — a handler or worker is inbound, a
+projection, ACL, or notification is outbound — so encoding it a second time in
+the path bought nothing and cost two segments on every module name.
+
+`accounts/` is the reference: nothing there reaches three files, so the whole
+context is flat.
+
+See ADR 0018 for the reasoning.
+
+> **Migration in progress.** Accounts is flat. The other six contexts still carry
+> the old `adapters/{driven,driving}/…` + `domain/…` tree and are being converted
+> one PR at a time. **Both shapes are legal until that finishes** — do not flag an
+> unconverted context as a violation, and do not half-convert one as a drive-by.
+> When reading the sections below, `adapters/driven/projections/` and
+> `projections/` name the same thing.
 
 ### Schema-as-struct
 
@@ -43,51 +73,52 @@ An entity is **one module** that is simultaneously:
 
 `provider/staff_member.ex` is the canonical example — read its moduledoc. No separate `domain/models/`, no mappers, no ports.
 
-### What survives in `adapters/`
+### Which kinds exist
 
-The flatten deleted aggregate ports, mappers, and DI wiring. Subdirectories remain only where indirection earns its place:
+The flatten deleted aggregate ports, mappers, and DI wiring. These kinds remain — each at
+the context root, or in a same-named directory once it holds 3+ files:
 
-- `adapters/driven/projections/` — CQRS projection GenServers
-- `adapters/driven/persistence/queries/` — composable query builders over a context's own
-  **write-side** tables (Messaging's `conversation_queries.ex`, `message_queries.ex`). Only
-  earns its place when the bindings are genuinely composed by more than one caller
-- `adapters/driven/persistence/{repositories,schemas}/` — **Shared only**, for the event and
-  job infrastructure tables (`processed_events`, `job_compensations`, `undelivered_events`).
-  Internal to Shared's exactly-once and dead-letter machinery — each schema's moduledoc says
-  so — never domain models. No bounded context has a repository left; do not copy this into one
-- `adapters/driven/acl/` — cross-context read adapters (anti-corruption layer)
-- `adapters/driven/notifications/` — email/notification senders
-- `adapters/driving/events/` — event handlers reacting to other contexts' events
-- `adapters/driving/workers/` — Oban workers
+- `projections/` — CQRS projection GenServers
+- `queries/` — composable query builders over a context's own **write-side** tables
+  (Messaging's `conversation_queries.ex`, `message_queries.ex`). Only earns its place when
+  the bindings are genuinely composed by more than one caller
+- `acl/` — cross-context read adapters (anti-corruption layer)
+- `notifications/` — email/notification senders
+- event handlers reacting to other contexts' events — named for what they consume
+  (`staff_invitation_handler.ex`), not filed under an `events/` directory
+- `workers/` — Oban workers
+- `events.ex` — the factory for the context's own integration event structs
+
+**Shared is the exception.** `shared/adapters/driven/persistence/{repositories,schemas}/`
+holds the event and job infrastructure tables (`processed_events`, `job_compensations`,
+`undelivered_events`) — internal to Shared's exactly-once and dead-letter machinery, as each
+schema's moduledoc says, never domain models. No bounded context has a repository left; do
+not copy this into one.
 
 ## Cross-Context Access
 
 - Call other contexts **only** through their root `<context>.ex` module — never their internal schemas/Repo.
 - For cross-context **reads**: **call the owning context's root facade directly** (ADR 0015). This is the default at every layer — a projection, event handler, worker or web helper calls the facade with no adapter in between. Reach for something heavier only when it earns its place:
-  - an **ACL adapter** (`adapters/driven/acl/`) when there is genuine translation to do — remapping the other context's errors into your vocabulary, masking fields behind a business rule, cycle-breaking direct table access, or a query no facade expresses. An ACL that only forwards a call is indirection without a payer; fold it into the caller.
+  - an **ACL adapter** (`acl/`) when there is genuine translation to do — remapping the other context's errors into your vocabulary, masking fields behind a business rule, cycle-breaking direct table access, or a query no facade expresses. An ACL that only forwards a call is indirection without a payer; fold it into the caller.
   - a **projection** when a per-render facade call cannot serve the read path.
 - There is **no** per-context *aggregate* `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly. (Shared is the exception: its genuine env-swapped adapter seams — `outbox`, `feature_flags`, `storage`, `for_tracking_processed_events` — keep a slim behaviour at the Shared root + a config-selected impl. That is idiomatic Elixir DI, not ceremony; see ADR 0006.)
 
 ## Event System
 
-Directionality still classifies the surviving event code:
-
-> If Oban triggers it, it's **driving**. If the application calls it outward, it's **driven**.
-
 - **One `Event` struct**, staged inside the producer's transaction via `Shared.Outbox.transact/2` and delivered by `EventDeliveryWorker`, an Oban job. Consumers are registered per topic under `:event_consumers` in `config/config.exs`; that registry is also the staging filter, so an event nobody consumes is dropped rather than staged.
 - **Same-context reactions are not events.** A producer calls them directly, inside its own transaction, so the write and its consequence commit together.
 - **UI updates are not events either.** A LiveView receives a plain tagged tuple over `Phoenix.PubSub` naming what changed, broadcast post-commit by whoever wrote the data.
-- **Shared event infrastructure** (`shared/outbox.ex`, `shared/adapters/driven/events/`, `shared/adapters/driven/workers/event_delivery_worker.ex`): staging adapters, the consumer registry, the exactly-once gate, retry helpers, test doubles — driven, because the application calls them outward. Context consumers live under their own `adapters/driving/events/`.
+- **Shared event infrastructure** (`shared/outbox.ex`, `shared/adapters/driven/events/`, `shared/adapters/driven/workers/event_delivery_worker.ex`): staging adapters, the consumer registry, the exactly-once gate, retry helpers, test doubles. Context consumers live in the context that consumes the event.
 
 ## CQRS Read Models
 
-- Projection GenServers in `adapters/driven/projections/` subscribe to events and denormalize into dedicated read tables.
+- Projection GenServers in `projections/` subscribe to events and denormalize into dedicated read tables.
 - **Three read-side kinds, three homes.** Getting this wrong is what produced #1254/#1258, so pick deliberately:
 
   | Kind | Home | Shape | Example |
   |---|---|---|---|
   | Projection read **table** | context root | Ecto schema **is** the DTO; **no changeset** — the projection owns every write; string columns are **`text`**, never a capped `varchar` | `provider/provider_program.ex`, `messaging/enrolled_child.ex` |
-  | Query-shaped struct over **write** tables | `domain/read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/domain/read_models/staff_membership.ex` |
+  | Query-shaped struct over **write** tables | `read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/domain/read_models/staff_membership.ex` |
   | Event-maintained table with **no** projection | context root + an ops submodule | schema **keeps** its changeset, because a handler writes it directly | *none — see below* |
 
 - **A length cap on a read table is unenforceable, so it is a liability.** The

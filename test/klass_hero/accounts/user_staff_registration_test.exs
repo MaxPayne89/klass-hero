@@ -1,4 +1,4 @@
-defmodule KlassHero.Accounts.Adapters.Driven.Persistence.Schemas.UserStaffRegistrationTest do
+defmodule KlassHero.Accounts.UserStaffRegistrationTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Accounts.User
