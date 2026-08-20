@@ -397,8 +397,8 @@ defmodule KlassHeroWeb.DashboardLive do
       </section>
       <section id="family-programs" class="mb-8">
         <div class="flex items-center gap-2 mb-4">
-          <.icon name="hero-academic-cap-mini" class="w-6 h-6 text-hero-cyan" />
-          <h2 class="text-xl font-semibold text-hero-charcoal">
+          <.icon name="hero-academic-cap-mini" class="w-6 h-6 text-hero-blue-600" />
+          <h2 class="text-xl font-semibold text-hero-black-100">
             {gettext("Family Programs")}
           </h2>
         </div>

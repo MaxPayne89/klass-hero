@@ -656,7 +656,7 @@ defmodule KlassHeroWeb.ProgramComponents do
           <span
             :for={tag <- @tags}
             class={[
-              "px-2 py-0.5 text-xs font-medium bg-hero-cyan-100 text-hero-cyan",
+              "px-2 py-0.5 text-xs font-medium bg-hero-blue-100 text-hero-blue-800",
               Theme.rounded(:full)
             ]}
           >

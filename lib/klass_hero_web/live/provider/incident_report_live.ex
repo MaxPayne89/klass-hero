@@ -326,14 +326,14 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
           />
 
           <div>
-            <label class="block text-sm font-medium text-hero-charcoal mb-2">
+            <label class="block text-sm font-medium text-hero-black-100 mb-2">
               {gettext("Photo (optional)")}
             </label>
 
             <label
               for={@uploads.photo.ref}
               phx-drop-target={@uploads.photo.ref}
-              class="flex flex-col items-center justify-center border-2 border-dashed border-hero-grey-300 rounded-lg p-6 cursor-pointer hover:border-hero-cyan"
+              class="flex flex-col items-center justify-center border-2 border-dashed border-hero-grey-300 rounded-lg p-6 cursor-pointer hover:border-hero-blue-500"
             >
               <.live_file_input upload={@uploads.photo} class="hidden" />
               <span class={Theme.typography(:body_small)}>
@@ -351,7 +351,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
           <div class="flex justify-end gap-3 pt-4">
             <.link
               navigate={~p"/provider/dashboard"}
-              class="text-hero-grey-600 hover:text-hero-charcoal"
+              class="text-hero-grey-600 hover:text-hero-black-100"
             >
               {gettext("Cancel")}
             </.link>

@@ -100,7 +100,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
               </p>
             </div>
           </div>
-          <p class={[Theme.typography(:body_small), "mt-3 text-hero-charcoal whitespace-pre-line"]}>
+          <p class={[Theme.typography(:body_small), "mt-3 text-hero-black-100 whitespace-pre-line"]}>
             {row.description}
           </p>
         </div>
@@ -112,7 +112,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
             Theme.shadow(:sm)
           ]}>
             <.icon name="hero-document-text" class="w-12 h-12 mx-auto mb-3 text-hero-grey-400" />
-            <h3 class="text-lg font-medium text-hero-charcoal mb-1">
+            <h3 class="text-lg font-medium text-hero-black-100 mb-1">
               {gettext("No incident reports yet")}
             </h3>
             <p class="text-hero-grey-600">

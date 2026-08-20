@@ -241,7 +241,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                 phx-value-provider-id={membership.provider_id}
                 class={[
                   "flex w-full items-center justify-between gap-2 px-4 py-3",
-                  "text-left text-sm text-hero-charcoal hover:bg-hero-grey-50"
+                  "text-left text-sm text-hero-black-100 hover:bg-hero-grey-50"
                 ]}
               >
                 {membership.business_name}
@@ -382,7 +382,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           ]}
         >
           <div class="flex items-center justify-between p-4 border-b border-hero-grey-200">
-            <h2 class="text-lg font-semibold text-hero-charcoal">
+            <h2 class="text-lg font-semibold text-hero-black-100">
               {gettext("Roster: %{name}", name: @roster_program_name)}
             </h2>
             <div class="flex items-center gap-1">
@@ -394,7 +394,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                   aria-label={gettext("Send Broadcast")}
                   class={[
                     "p-2 rounded-lg transition-colors",
-                    "text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100"
+                    "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
                   ]}
                 >
                   <.icon name="hero-megaphone-mini" class="w-5 h-5" />
@@ -430,7 +430,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                 <%= for entry <- @roster_entries do %>
                   <li class="py-3 flex items-center justify-between">
                     <div>
-                      <span class="font-medium text-hero-charcoal">
+                      <span class="font-medium text-hero-black-100">
                         {Map.get(entry, :child_name, gettext("Unknown"))}
                       </span>
                     </div>
@@ -448,7 +448,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                           aria-label={gettext("Send Message")}
                           class={[
                             "p-2 inline-flex rounded-lg transition-colors",
-                            "text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100"
+                            "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
                           ]}
                         >
                           <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />

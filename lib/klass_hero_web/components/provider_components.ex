@@ -139,7 +139,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       class={[
         "flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors",
         if(@active,
-          do: "border-hero-cyan text-hero-cyan",
+          do: "border-hero-blue-500 text-hero-blue-600",
           else:
             "border-transparent text-hero-grey-500 hover:text-hero-grey-700 hover:border-hero-grey-300"
         )
@@ -160,15 +160,15 @@ defmodule KlassHeroWeb.ProviderComponents do
         label="Total Revenue"
         value="12,500"
         icon="hero-currency-euro-mini"
-        icon_bg="bg-hero-cyan-100"
-        icon_color="text-hero-cyan"
+        icon_bg="bg-hero-blue-100"
+        icon_color="text-hero-blue-600"
       />
   """
   attr :label, :string, required: true
   attr :value, :string, required: true
   attr :icon, :string, required: true
-  attr :icon_bg, :string, default: "bg-hero-cyan-100"
-  attr :icon_color, :string, default: "text-hero-cyan"
+  attr :icon_bg, :string, default: "bg-hero-blue-100"
+  attr :icon_color, :string, default: "text-hero-blue-600"
 
   def provider_stat_card(assigns) do
     ~H"""
@@ -182,7 +182,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
         <div>
           <p class="text-sm text-hero-grey-500">{@label}</p>
-          <p class="text-2xl font-bold text-hero-charcoal">{@value}</p>
+          <p class="text-2xl font-bold text-hero-black-100">{@value}</p>
         </div>
       </div>
     </div>
@@ -203,7 +203,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
         <div>
-          <h2 class="text-xl font-semibold text-hero-charcoal mb-1">
+          <h2 class="text-xl font-semibold text-hero-black-100 mb-1">
             {gettext("Provider Profile")}
           </h2>
           <p class="text-sm text-hero-grey-500">
@@ -216,7 +216,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           navigate={~p"/provider/dashboard/edit"}
           class={[
             "flex items-center gap-2 px-4 py-2 border border-hero-grey-300 bg-white",
-            "hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+            "hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
             Theme.rounded(:lg),
             Theme.transition(:normal)
           ]}
@@ -246,7 +246,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           {@business.initials}
         </div>
         <div>
-          <h3 class="text-xl font-semibold text-hero-charcoal">{@business.name}</h3>
+          <h3 class="text-xl font-semibold text-hero-black-100">{@business.name}</h3>
           <p class="text-hero-grey-500 mb-2">{@business.tagline}</p>
           <div class="flex flex-wrap gap-2">
             <.verification_status_badge status={@business.verification_status} />
@@ -387,7 +387,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     ~H"""
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-hero-charcoal mb-2">
+        <h1 class="text-2xl font-bold text-hero-black-100 mb-2">
           {@business.name} {gettext("Dashboard")}
         </h1>
         <div class="flex flex-wrap items-center gap-2">
@@ -420,7 +420,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             :if={@business.verification_status != :verified}
             id="new-program-tooltip"
             class={[
-              "absolute right-0 top-full mt-2 w-64 p-3 bg-hero-charcoal text-white text-xs",
+              "absolute right-0 top-full mt-2 w-64 p-3 bg-hero-black text-white text-xs",
               "opacity-0 group-hover:opacity-100 pointer-events-none z-10",
               Theme.rounded(:lg),
               Theme.transition(:normal)
@@ -457,7 +457,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         <div
           :if={@member.role}
           class={[
-            "absolute top-2 right-2 px-2 py-1 bg-white/90 text-xs font-medium text-hero-charcoal",
+            "absolute top-2 right-2 px-2 py-1 bg-white/90 text-xs font-medium text-hero-black-100",
             Theme.rounded(:md)
           ]}
         >
@@ -487,7 +487,7 @@ defmodule KlassHeroWeb.ProviderComponents do
 
       <div class="pt-10 px-4 pb-4">
         <div class="flex items-start justify-between gap-2 mb-1">
-          <h3 class="font-semibold text-hero-charcoal">{@member.full_name}</h3>
+          <h3 class="font-semibold text-hero-black-100">{@member.full_name}</h3>
           <.invitation_status_badge
             :if={@member.invitation_status != nil}
             status={@member.invitation_status}
@@ -501,7 +501,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <span
             :for={tag <- @member.tags}
             class={[
-              "px-2 py-1 text-xs font-medium bg-hero-cyan-100 text-hero-cyan",
+              "px-2 py-1 text-xs font-medium bg-hero-blue-100 text-hero-blue-800",
               Theme.rounded(:full)
             ]}
           >
@@ -521,7 +521,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           </span>
         </div>
 
-        <p :if={@rate_label} class="text-sm text-hero-charcoal mb-3">
+        <p :if={@rate_label} class="text-sm text-hero-black-100 mb-3">
           <span class="font-semibold">{gettext("Pay rate")}:</span> {@rate_label}
         </p>
 
@@ -532,7 +532,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             phx-value-id={@member.id}
             class={[
               "flex-1 px-4 py-2 border border-hero-grey-300 bg-white",
-              "hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+              "hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -546,7 +546,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             phx-click="resend_invitation"
             phx-value-id={@member.id}
             class={[
-              "px-3 py-2 bg-hero-yellow hover:bg-hero-yellow-dark text-hero-charcoal text-xs font-medium",
+              "px-3 py-2 bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-black-100 text-xs font-medium",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -568,7 +568,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             }
             class={[
               "px-3 py-2 border border-hero-grey-300 bg-white",
-              "hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+              "hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -622,7 +622,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       Theme.rounded(:xl)
     ]}>
       <div class="min-w-0">
-        <p class="font-medium text-hero-charcoal truncate">{@member.full_name}</p>
+        <p class="font-medium text-hero-black-100 truncate">{@member.full_name}</p>
         <p :if={@member.role} class="text-xs text-hero-grey-500 truncate">{@member.role}</p>
       </div>
       <button
@@ -632,7 +632,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         phx-value-id={@member.id}
         class={[
           "shrink-0 px-3 py-2 border border-hero-grey-300 bg-white",
-          "hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+          "hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
           Theme.rounded(:lg),
           Theme.transition(:normal)
         ]}
@@ -666,7 +666,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}
     >
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-hero-charcoal">
+        <h3 class="text-lg font-semibold text-hero-black-100">
           <%= if @editing do %>
             {gettext("Edit Team Member")}
           <% else %>
@@ -677,7 +677,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           type="button"
           phx-click="close_staff_form"
           class={[
-            "p-2 text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100",
+            "p-2 text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100",
             Theme.rounded(:lg)
           ]}
         >
@@ -731,7 +731,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         />
 
         <div>
-          <label class="block text-sm font-semibold text-hero-charcoal mb-2">
+          <label class="block text-sm font-semibold text-hero-black-100 mb-2">
             {gettext("Specialties")}
           </label>
           <div class="flex flex-wrap gap-3">
@@ -741,7 +741,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[tags][]"
                 value={cat}
                 checked={cat in ((@form[:tags] && @form[:tags].value) || [])}
-                class="rounded border-hero-grey-300 text-hero-cyan focus:ring-hero-cyan"
+                class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
               />
               {cat}
             </label>
@@ -763,7 +763,7 @@ defmodule KlassHeroWeb.ProviderComponents do
 
         <%!-- Pay Rate (visible only to the business account; not rendered in parent-facing views) --%>
         <div>
-          <label class="block text-sm font-semibold text-hero-charcoal mb-2">
+          <label class="block text-sm font-semibold text-hero-black-100 mb-2">
             {gettext("Pay Rate")}
           </label>
           <div class="flex flex-wrap items-center gap-4">
@@ -773,7 +773,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value=""
                 checked={empty_rate_type?(@form[:rate_type])}
-                class="border-hero-grey-300 text-hero-cyan focus:ring-hero-cyan"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
               />
               {gettext("None")}
             </label>
@@ -783,7 +783,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value="hourly"
                 checked={rate_type_is?(@form[:rate_type], "hourly")}
-                class="border-hero-grey-300 text-hero-cyan focus:ring-hero-cyan"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
               />
               {gettext("Hourly")}
             </label>
@@ -793,13 +793,13 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value="per_session"
                 checked={rate_type_is?(@form[:rate_type], "per_session")}
-                class="border-hero-grey-300 text-hero-cyan focus:ring-hero-cyan"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
               />
               {gettext("Per Session")}
             </label>
           </div>
           <div class="mt-2 flex items-center gap-2">
-            <span class="text-hero-charcoal font-medium" aria-hidden="true">€</span>
+            <span class="text-hero-black-100 font-medium" aria-hidden="true">€</span>
             <.input
               field={@form[:rate_amount]}
               type="number"
@@ -814,7 +814,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div>
-          <label class="block text-sm font-semibold text-hero-charcoal mb-2">
+          <label class="block text-sm font-semibold text-hero-black-100 mb-2">
             {gettext("Headshot Photo")}
           </label>
           <div
@@ -846,7 +846,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               for={@uploads.headshot.ref}
               class={[
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium cursor-pointer",
+                "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg)
               ]}
             >
@@ -864,8 +864,8 @@ defmodule KlassHeroWeb.ProviderComponents do
             type="submit"
             id="save-staff-btn"
             class={[
-              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow hover:bg-hero-yellow-dark",
-              "text-hero-charcoal font-semibold active:scale-[0.98]",
+              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
+              "text-hero-black-100 font-semibold active:scale-[0.98]",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -882,7 +882,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             phx-click="close_staff_form"
             class={[
               "px-4 py-2.5 border border-hero-grey-300 bg-white",
-              "hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+              "hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -946,7 +946,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     ~H"""
     <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-hero-charcoal">
+        <h3 class="text-lg font-semibold text-hero-black-100">
           <%= if @editing do %>
             {gettext("Edit Program")}
           <% else %>
@@ -1006,7 +1006,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div class="space-y-3">
-          <p class="text-sm font-semibold text-hero-charcoal">{gettext("Schedule (optional)")}</p>
+          <p class="text-sm font-semibold text-hero-black-100">{gettext("Schedule (optional)")}</p>
 
           <fieldset id="meeting-days-fieldset">
             <legend class="text-sm text-hero-grey-600 mb-2">{gettext("Meeting Days")}</legend>
@@ -1017,7 +1017,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   "inline-flex items-center gap-1.5 px-3 py-1.5 border text-sm cursor-pointer",
                   Theme.rounded(:lg),
                   Theme.transition(:normal),
-                  "has-[:checked]:bg-hero-yellow has-[:checked]:border-hero-yellow-dark has-[:checked]:font-semibold",
+                  "has-[:checked]:bg-hero-yellow-500 has-[:checked]:border-hero-yellow-600 has-[:checked]:font-semibold",
                   "border-hero-grey-300 hover:border-hero-grey-400"
                 ]}
               >
@@ -1063,7 +1063,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div class="space-y-3">
-          <p class="text-sm font-semibold text-hero-charcoal">
+          <p class="text-sm font-semibold text-hero-black-100">
             {gettext("Registration Period (optional)")}
           </p>
           <p class="text-xs text-hero-grey-500">
@@ -1084,7 +1084,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div class="space-y-3">
-          <p class="text-sm font-semibold text-hero-charcoal">
+          <p class="text-sm font-semibold text-hero-black-100">
             {gettext("Enrollment Capacity (optional)")}
           </p>
           <p class="text-xs text-hero-grey-500">
@@ -1132,7 +1132,7 @@ defmodule KlassHeroWeb.ProviderComponents do
 
         <div class="space-y-4">
           <div>
-            <p class="text-sm font-semibold text-hero-charcoal">
+            <p class="text-sm font-semibold text-hero-black-100">
               {gettext("Participant Restrictions (optional)")}
             </p>
             <p class="text-xs text-hero-grey-500">
@@ -1156,7 +1156,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                       nil
                     ]
                   }
-                  class="border-hero-grey-300 text-hero-cyan focus:ring-hero-cyan"
+                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
                 />
                 {gettext("Registration")}
               </label>
@@ -1169,7 +1169,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     Phoenix.HTML.Form.input_value(@participant_policy_form, :eligibility_at) ==
                       "program_start"
                   }
-                  class="border-hero-grey-300 text-hero-cyan focus:ring-hero-cyan"
+                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
                 />
                 {gettext("Program Start")}
               </label>
@@ -1221,7 +1221,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                               ) ||
                                 [])
                   }
-                  class="rounded border-hero-grey-300 text-hero-cyan focus:ring-hero-cyan"
+                  class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
                 />
                 {label}
               </label>
@@ -1258,7 +1258,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         />
 
         <div>
-          <label class="block text-sm font-semibold text-hero-charcoal mb-2">
+          <label class="block text-sm font-semibold text-hero-black-100 mb-2">
             {gettext("Cover Image")}
           </label>
           <div
@@ -1297,7 +1297,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               for={@uploads.program_cover.ref}
               class={[
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium cursor-pointer",
+                "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),
                 Theme.transition(:normal)
               ]}
@@ -1326,7 +1326,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             type="button"
             phx-click="close_program_form"
             class={[
-              "px-4 py-2 border border-hero-grey-300 text-hero-charcoal",
+              "px-4 py-2 border border-hero-grey-300 text-hero-black-100",
               Theme.rounded(:lg),
               Theme.transition(:normal),
               "hover:bg-hero-grey-50"
@@ -1338,8 +1338,8 @@ defmodule KlassHeroWeb.ProviderComponents do
             type="submit"
             id="save-program-btn"
             class={[
-              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow hover:bg-hero-yellow-dark",
-              "text-hero-charcoal font-semibold",
+              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
+              "text-hero-black-100 font-semibold",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -1380,7 +1380,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       class={[
         "w-full h-full min-h-[200px] border-2 border-dashed border-hero-grey-300",
         "flex flex-col items-center justify-center gap-2",
-        "text-hero-grey-400 hover:border-hero-cyan hover:text-hero-cyan active:scale-[0.98]",
+        "text-hero-grey-400 hover:border-hero-blue-500 hover:text-hero-blue-600 active:scale-[0.98]",
         Theme.rounded(:xl),
         Theme.transition(:normal),
         @class
@@ -1415,7 +1415,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     <div class={["bg-white shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
       <div class="p-4 border-b border-hero-grey-200">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 class="text-lg font-semibold text-hero-charcoal">
+          <h3 class="text-lg font-semibold text-hero-black-100">
             {gettext("Program Inventory")}
           </h3>
           <%!-- Each control needs its own <form>: LiveView refuses a phx-change on a
@@ -1436,7 +1436,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 placeholder={gettext("Search by name...")}
                 class={[
                   "pl-10 pr-4 py-2 w-full sm:w-64 border border-hero-grey-300 bg-white",
-                  "text-sm placeholder-hero-grey-400 focus:border-hero-cyan focus:ring-1 focus:ring-hero-cyan",
+                  "text-sm placeholder-hero-grey-400 focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500",
                   Theme.rounded(:lg)
                 ]}
                 phx-debounce="300"
@@ -1451,7 +1451,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_filter"
                 class={[
                   "pl-10 pr-8 py-2 w-full sm:w-40 border border-hero-grey-300 bg-white",
-                  "text-sm focus:border-hero-cyan focus:ring-1 focus:ring-hero-cyan appearance-none",
+                  "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500 appearance-none",
                   Theme.rounded(:lg)
                 ]}
               >
@@ -1492,7 +1492,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <tbody id="programs-table-body" phx-update="stream" class="divide-y divide-hero-grey-200">
             <tr :for={{dom_id, program} <- @programs} id={dom_id} class="hover:bg-hero-grey-50">
               <td class="px-4 py-4">
-                <div class="font-medium text-hero-charcoal">{program.name}</div>
+                <div class="font-medium text-hero-black-100">{program.name}</div>
                 <div class="text-sm text-hero-grey-500">
                   {program.category} • €{program.price}
                 </div>
@@ -1512,7 +1512,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   ]}>
                     {program.assigned_staff.lead.initials}
                   </div>
-                  <span class="text-sm text-hero-charcoal">{program.assigned_staff.lead.name}</span>
+                  <span class="text-sm text-hero-black-100">{program.assigned_staff.lead.name}</span>
                   <span
                     :if={program.assigned_staff.others_count > 0}
                     class="text-sm text-hero-grey-500 whitespace-nowrap"
@@ -1548,7 +1548,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <div class="flex items-center gap-3">
                   <div class="w-24 h-2 bg-hero-grey-200 rounded-full overflow-hidden">
                     <div
-                      class="h-full bg-hero-cyan rounded-full"
+                      class="h-full bg-hero-blue-500 rounded-full"
                       style={"width: #{enrollment_percentage(program)}%"}
                     >
                     </div>
@@ -1732,7 +1732,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           Theme.rounded(:xl)
         ]}>
           <div class="flex items-center justify-between p-4 border-b border-hero-grey-200">
-            <h3 class="text-lg font-semibold text-hero-charcoal">
+            <h3 class="text-lg font-semibold text-hero-black-100">
               {gettext("Roster: %{name}", name: @program_name)}
             </h3>
             <div class="flex items-center gap-1">
@@ -1747,7 +1747,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     "p-2",
                     Theme.rounded(:lg),
                     Theme.transition(:normal),
-                    "text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100"
+                    "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
                   ]}
                 >
                   <.icon name="hero-megaphone-mini" class="w-5 h-5" />
@@ -1782,8 +1782,8 @@ defmodule KlassHeroWeb.ProviderComponents do
               class={[
                 "px-4 py-3 text-sm font-medium border-b-2 -mb-px",
                 if(@active_tab == "enrolled",
-                  do: "border-hero-primary text-hero-primary",
-                  else: "border-transparent text-hero-grey-500 hover:text-hero-charcoal"
+                  do: "border-hero-blue-500 text-hero-blue-600",
+                  else: "border-transparent text-hero-grey-500 hover:text-hero-black-100"
                 )
               ]}
             >
@@ -1799,8 +1799,8 @@ defmodule KlassHeroWeb.ProviderComponents do
               class={[
                 "px-4 py-3 text-sm font-medium border-b-2 -mb-px",
                 if(@active_tab == "invites",
-                  do: "border-hero-primary text-hero-primary",
-                  else: "border-transparent text-hero-grey-500 hover:text-hero-charcoal"
+                  do: "border-hero-blue-500 text-hero-blue-600",
+                  else: "border-transparent text-hero-grey-500 hover:text-hero-black-100"
                 )
               ]}
             >
@@ -1969,7 +1969,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <%!-- The badge sits outside the truncating title, or a long title swallows it
                       on a narrow viewport — losing the one word that says this one blocks. --%>
                 <div class="flex items-center gap-2">
-                  <p class="truncate font-medium text-hero-charcoal">{entry.waiver.title}</p>
+                  <p class="truncate font-medium text-hero-black-100">{entry.waiver.title}</p>
                   <.waiver_requirement required={entry.waiver.required} />
                 </div>
                 <p class="text-sm text-hero-grey-500">
@@ -2005,7 +2005,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           </ul>
 
           <.form for={@modal.form} id="waiver-form" phx-submit="save_waiver" class="space-y-4">
-            <h3 class={[Theme.typography(:card_title), "text-hero-charcoal"]}>
+            <h3 class={[Theme.typography(:card_title), "text-hero-black-100"]}>
               {if @modal.editing_id,
                 do: gettext("Publish a new version"),
                 else: gettext("Add a waiver")}
@@ -2106,7 +2106,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               <.staff_avatar member={member} />
 
               <div class="min-w-0 flex-1">
-                <p class="truncate font-medium text-hero-charcoal">
+                <p class="truncate font-medium text-hero-black-100">
                   {member.full_name}
                   <span
                     :if={member.lead?}
@@ -2168,7 +2168,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff-id"
                 disabled={@modal.assignable_options == []}
                 class={[
-                  "flex-1 border border-hero-grey-300 px-3 py-2 text-hero-charcoal disabled:bg-hero-grey-50",
+                  "flex-1 border border-hero-grey-300 px-3 py-2 text-hero-black-100 disabled:bg-hero-grey-50",
                   Theme.rounded(:lg)
                 ]}
               >
@@ -2183,7 +2183,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 disabled={@modal.assignable_options == []}
                 class={[
                   "flex items-center justify-center gap-2 px-4 py-2 font-semibold",
-                  "bg-hero-yellow hover:bg-hero-yellow-dark text-hero-charcoal",
+                  "bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-black-100",
                   "disabled:bg-hero-grey-100 disabled:text-hero-grey-400",
                   Theme.rounded(:lg),
                   Theme.transition(:normal)
@@ -2433,7 +2433,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       :if={!@member.headshot_url}
       class={[
         "w-9 h-9 shrink-0 rounded-full flex items-center justify-center",
-        "text-xs font-semibold text-hero-charcoal",
+        "text-xs font-semibold text-hero-black-100",
         Theme.gradient(:primary)
       ]}
       aria-hidden="true"
@@ -2475,7 +2475,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       </thead>
       <tbody class="divide-y divide-hero-grey-200">
         <tr :for={entry <- @entries} class="hover:bg-hero-grey-50">
-          <td class="px-3 py-3 text-sm text-hero-charcoal font-medium">
+          <td class="px-3 py-3 text-sm text-hero-black-100 font-medium">
             {entry.child_name}
           </td>
           <td class="px-3 py-3">
@@ -2515,7 +2515,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   "p-2 inline-flex",
                   Theme.rounded(:lg),
                   Theme.transition(:normal),
-                  "text-hero-grey-400 hover:text-hero-charcoal hover:bg-hero-grey-100"
+                  "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
                 ]}
               >
                 <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />
@@ -2582,7 +2582,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             Theme.rounded(:lg),
             Theme.transition(:normal),
             if(@invite_mode == "single",
-              do: "border-hero-primary bg-hero-primary/5 text-hero-primary",
+              do: "border-hero-blue-500 bg-hero-blue-500/5 text-hero-blue-600",
               else: "border-hero-grey-300 text-hero-grey-600 hover:bg-hero-grey-50"
             )
           ]}
@@ -2600,7 +2600,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             Theme.rounded(:lg),
             Theme.transition(:normal),
             if(@invite_mode == "csv",
-              do: "border-hero-primary bg-hero-primary/5 text-hero-primary",
+              do: "border-hero-blue-500 bg-hero-blue-500/5 text-hero-blue-600",
               else: "border-hero-grey-300 text-hero-grey-600 hover:bg-hero-grey-50"
             )
           ]}
@@ -2633,7 +2633,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <.live_file_input upload={@uploads.csv_file} class="hidden" />
 
             <div :for={entry <- @uploads.csv_file.entries} class="mt-3 flex items-center gap-3">
-              <span class="text-sm text-hero-charcoal">{entry.client_name}</span>
+              <span class="text-sm text-hero-black-100">{entry.client_name}</span>
               <button
                 type="submit"
                 class={[
@@ -2648,7 +2648,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 type="button"
                 phx-click="cancel_csv_upload"
                 phx-value-ref={entry.ref}
-                class="text-sm text-hero-grey-500 hover:text-hero-charcoal"
+                class="text-sm text-hero-grey-500 hover:text-hero-black-100"
               >
                 {gettext("Cancel")}
               </button>
@@ -2751,7 +2751,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </thead>
         <tbody class="divide-y divide-hero-grey-200">
           <tr :for={invite <- @invites} id={"invite-#{invite.id}"} class="hover:bg-hero-grey-50">
-            <td class="px-3 py-3 text-sm text-hero-charcoal font-medium">
+            <td class="px-3 py-3 text-sm text-hero-black-100 font-medium">
               {invite.child_first_name} {invite.child_last_name}
               <span
                 :if={@show_program?}
@@ -2825,7 +2825,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <section aria-labelledby="single-invite-child-heading">
         <h4
           id="single-invite-child-heading"
-          class={[Theme.typography(:card_title), "mb-3 text-hero-charcoal"]}
+          class={[Theme.typography(:card_title), "mb-3 text-hero-black-100"]}
         >
           {gettext("Child")}
         </h4>
@@ -2846,7 +2846,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <section aria-labelledby="single-invite-guardian-heading">
         <h4
           id="single-invite-guardian-heading"
-          class={[Theme.typography(:card_title), "mb-3 text-hero-charcoal"]}
+          class={[Theme.typography(:card_title), "mb-3 text-hero-black-100"]}
         >
           {gettext("Primary guardian")}
         </h4>
@@ -2867,7 +2867,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <section aria-labelledby="single-invite-guardian2-heading">
         <h4
           id="single-invite-guardian2-heading"
-          class={[Theme.typography(:card_title), "mb-3 text-hero-charcoal"]}
+          class={[Theme.typography(:card_title), "mb-3 text-hero-black-100"]}
         >
           {gettext("Second guardian (optional)")}
         </h4>
@@ -2883,7 +2883,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <section aria-labelledby="single-invite-school-heading">
         <h4
           id="single-invite-school-heading"
-          class={[Theme.typography(:card_title), "mb-3 text-hero-charcoal"]}
+          class={[Theme.typography(:card_title), "mb-3 text-hero-black-100"]}
         >
           {gettext("School (optional)")}
         </h4>
@@ -2902,7 +2902,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <section aria-labelledby="single-invite-medical-heading">
         <h4
           id="single-invite-medical-heading"
-          class={[Theme.typography(:card_title), "mb-3 text-hero-charcoal"]}
+          class={[Theme.typography(:card_title), "mb-3 text-hero-black-100"]}
         >
           {gettext("Medical & consents (optional)")}
         </h4>
@@ -3118,7 +3118,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   def verification_documents_panel(assigns) do
     ~H"""
     <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
-      <h2 class="text-lg font-semibold text-hero-charcoal mb-4">
+      <h2 class="text-lg font-semibold text-hero-black-100 mb-4">
         {gettext("Verification Documents")}
       </h2>
       <p class="text-sm text-hero-grey-500 mb-6">
@@ -3140,7 +3140,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <div class="flex items-center gap-3">
             <.icon name="hero-document-text-mini" class="w-5 h-5 text-hero-grey-400" />
             <div>
-              <p class="text-sm font-medium text-hero-charcoal">
+              <p class="text-sm font-medium text-hero-black-100">
                 {ProviderPresenter.document_type_label(doc.document_type)}
               </p>
               <p class="text-xs text-hero-grey-500">{doc.original_filename}</p>
@@ -3153,7 +3153,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <div class={[
         "border-t border-hero-grey-200 pt-6"
       ]}>
-        <h3 class="text-sm font-semibold text-hero-charcoal mb-3">
+        <h3 class="text-sm font-semibold text-hero-black-100 mb-3">
           {gettext("Upload New Document")}
         </h3>
 
@@ -3173,7 +3173,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               phx-change="select_doc_type"
               class={[
                 "w-full sm:w-64 px-3 py-2 border border-hero-grey-300 bg-white",
-                "text-sm focus:border-hero-cyan focus:ring-1 focus:ring-hero-cyan",
+                "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500",
                 Theme.rounded(:lg)
               ]}
             >
@@ -3193,7 +3193,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               for={@uploads.verification_doc.ref}
               class={[
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium cursor-pointer",
+                "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),
                 Theme.transition(:normal)
               ]}
@@ -3213,7 +3213,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               ]}
             >
               <.icon name="hero-document-text-mini" class="w-5 h-5 text-hero-grey-500 shrink-0" />
-              <span class="text-sm text-hero-charcoal truncate flex-1">{entry.client_name}</span>
+              <span class="text-sm text-hero-black-100 truncate flex-1">{entry.client_name}</span>
               <button
                 type="button"
                 phx-click="cancel_upload"
@@ -3238,7 +3238,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             disabled={@uploads.verification_doc.entries == []}
             class={[
               "flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-              "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+              "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               Theme.rounded(:lg),
               Theme.transition(:normal)
@@ -3251,7 +3251,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       </div>
 
       <div :if={@video_upload?} class="border-t border-hero-grey-200 pt-6 mt-6">
-        <h3 class="text-sm font-semibold text-hero-charcoal mb-1">
+        <h3 class="text-sm font-semibold text-hero-black-100 mb-1">
           {gettext("Video Screening")}
         </h3>
         <p class="text-sm text-hero-grey-500 mb-3">
@@ -3272,7 +3272,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               for={@uploads.verification_video.ref}
               class={[
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium cursor-pointer",
+                "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),
                 Theme.transition(:normal)
               ]}
@@ -3292,7 +3292,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               ]}
             >
               <.icon name="hero-film-mini" class="w-5 h-5 text-hero-grey-500 shrink-0" />
-              <span class="text-sm text-hero-charcoal truncate flex-1">{entry.client_name}</span>
+              <span class="text-sm text-hero-black-100 truncate flex-1">{entry.client_name}</span>
               <button
                 type="button"
                 phx-click="cancel_upload"
@@ -3317,7 +3317,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             disabled={@uploads.verification_video.entries == []}
             class={[
               "flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-              "bg-white hover:bg-hero-grey-50 text-hero-charcoal text-sm font-medium",
+              "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
               "disabled:opacity-50 disabled:cursor-not-allowed",
               Theme.rounded(:lg),
               Theme.transition(:normal)
@@ -3491,7 +3491,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             href={community_guidelines_pdf_path(@version)}
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 text-sm font-medium text-hero-cyan hover:underline"
+            class="inline-flex items-center gap-2 text-sm font-medium text-hero-blue-600 hover:underline"
           >
             <.icon name="hero-arrow-down-tray-mini" class="w-4 h-4" />
             {gettext("Download the agreement (PDF)")}
