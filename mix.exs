@@ -71,7 +71,7 @@ defmodule KlassHero.MixProject do
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.1"},
-      {:phoenix_test, "~> 0.9", only: :test, runtime: false},
+      {:phoenix_test, "~> 0.12", only: :test, runtime: false},
       {:wallaby, "~> 0.30", only: :test, runtime: false},
       {:lazy_html, ">= 0.1.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.9"},

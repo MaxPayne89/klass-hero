@@ -165,6 +165,12 @@
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
           {Credo.Check.Warning.WrongTestFilename, []}
+
+          # `PhoenixTest.Credo.NoOpenBrowser` would catch a debugging `open_browser/1`
+          # left in a flow test, but it cannot be enabled here: `mix credo` runs in
+          # :dev and phoenix_test is `only: :test, runtime: false`, so credo reports
+          # "Ignoring an undefined check" on every run. Moving credo to the test env
+          # to reach it would make the quality job compile the test build.
         ],
         disabled: [
           #
