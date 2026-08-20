@@ -1,34 +1,10 @@
 defmodule KlassHero.Accounts.UserRole do
   @moduledoc """
-  Valid user roles and associated permissions. Roles: `:parent`, `:provider`, `:staff`
+  Valid user roles. Roles: `:parent`, `:provider`, `:staff`
   (ADR-0005: staff is an independent persona, not a kind of provider).
-
-  Permissions are defined structurally for future authorization — not yet enforced.
   """
 
   @valid_roles [:parent, :provider, :staff]
-
-  @role_permissions %{
-    parent: [
-      :view_programs,
-      :enroll_children,
-      :view_child_progress,
-      :manage_family_profile,
-      :submit_reviews
-    ],
-    provider: [
-      :manage_programs,
-      :view_enrollments,
-      :manage_schedule,
-      :view_analytics,
-      :respond_to_reviews
-    ],
-    staff: [
-      :view_assigned_programs,
-      :view_staff_dashboard,
-      :manage_own_profile
-    ]
-  }
 
   @type t :: :parent | :provider | :staff
 
@@ -59,12 +35,4 @@ defmodule KlassHero.Accounts.UserRole do
   end
 
   def from_string(_), do: {:error, :invalid_role}
-
-  @doc "Returns permissions for a role (structural definition only — not yet enforced)."
-  @spec permissions(term()) :: [atom()]
-  def permissions(role) when is_atom(role) do
-    Map.get(@role_permissions, role, [])
-  end
-
-  def permissions(_), do: []
 end

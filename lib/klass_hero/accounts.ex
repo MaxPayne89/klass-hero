@@ -289,9 +289,10 @@ defmodule KlassHero.Accounts do
   end
 
   defp normalize_email_change_result({:ok, %{update_email: updated_user}}), do: {:ok, updated_user}
-  defp normalize_email_change_result({:error, :verify_token, _reason, _}), do: {:error, :invalid_token}
-  defp normalize_email_change_result({:error, :fetch_token, _reason, _}), do: {:error, :invalid_token}
-  defp normalize_email_change_result({:error, :update_email, changeset, _}), do: {:error, changeset}
+
+  defp normalize_email_change_result({:error, step, _reason, _}) when step in [:verify_token, :fetch_token],
+    do: {:error, :invalid_token}
+
   defp normalize_email_change_result({:error, _step, reason, _}), do: {:error, reason}
 
   @doc """
@@ -429,19 +430,16 @@ defmodule KlassHero.Accounts do
   """
   def deliver_user_update_email_instructions(%User{} = user, current_email, update_email_url_fun)
       when is_function(update_email_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "change:#{current_email}")
-
-    Repo.insert!(user_token)
-    UserNotifier.deliver_update_email_instructions(user, update_email_url_fun.(encoded_token))
+    token = issue_email_token(user, "change:#{current_email}")
+    UserNotifier.deliver_update_email_instructions(user, update_email_url_fun.(token))
   end
 
   @doc """
   Delivers the magic link login instructions to the given user.
   """
   def deliver_login_instructions(%User{} = user, magic_link_url_fun) when is_function(magic_link_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "login")
-    Repo.insert!(user_token)
-    UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
+    token = issue_email_token(user, "login")
+    UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(token))
   end
 
   @doc """
@@ -452,8 +450,11 @@ defmodule KlassHero.Accounts do
 
   Returns the URL-safe encoded token string.
   """
-  def generate_magic_link_token(%User{} = user) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "login")
+  def generate_magic_link_token(%User{} = user), do: issue_email_token(user, "login")
+
+  # Persists a hashed email token and hands back the URL-safe half to send out.
+  defp issue_email_token(user, context) do
+    {encoded_token, user_token} = UserToken.build_email_token(user, context)
     Repo.insert!(user_token)
     encoded_token
   end
@@ -495,7 +496,6 @@ defmodule KlassHero.Accounts do
     |> Repo.transaction()
     |> case do
       {:ok, %{anonymize_user: user}} -> {:ok, user}
-      {:error, :anonymize_user, changeset, _} -> {:error, changeset}
       {:error, _step, reason, _} -> {:error, reason}
     end
   end
@@ -541,9 +541,9 @@ defmodule KlassHero.Accounts do
   """
   @spec get_display_name(String.t()) :: {:ok, String.t()} | {:error, :not_found}
   def get_display_name(user_id) do
-    case Repo.one(from(u in User, where: u.id == ^user_id, select: u.name)) do
-      nil -> {:error, :not_found}
-      name -> {:ok, name}
+    case get_display_names([user_id]) do
+      %{^user_id => name} -> {:ok, name}
+      _ -> {:error, :not_found}
     end
   end
 
@@ -686,7 +686,6 @@ defmodule KlassHero.Accounts do
     |> Repo.transaction()
     |> case do
       {:ok, %{update_user: user, fetch_tokens: tokens}} -> {:ok, {user, tokens}}
-      {:error, :update_user, changeset, _} -> {:error, changeset}
       {:error, _step, reason, _} -> {:error, reason}
     end
   end
