@@ -13,7 +13,9 @@ The project uses **Model Context Protocol (MCP) servers** for enhanced developme
 - Finding source code: `get_source_location`
 - Executing SQL queries: `execute_sql_query`
 - Checking logs: `get_logs`
-- Inspecting Ecto schemas: `get_ecto_schemas`
+- Inspecting Ecto schemas: `execute_sql_query` against `information_schema` for column truth,
+  plus CodeGraph (or `get_source_location`) to find the schema module. Tidewave 0.9.0 removed
+  the dedicated `get_ecto_schemas` tool — do not re-add it here.
 
 ### Common Tidewave Commands
 

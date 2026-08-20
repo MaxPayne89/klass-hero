@@ -156,7 +156,7 @@ Router defines 5 `live_session` scopes with role-based access:
 
 ## MCP Integration
 
-**Tidewave MCP** (ALWAYS prefer over bash for Phoenix work): `project_eval`, `get_docs`, `execute_sql_query`, `get_logs`, `get_source_location`, `get_ecto_schemas`.
+**Tidewave MCP** (ALWAYS prefer over bash for Phoenix work): `project_eval`, `get_docs`, `execute_sql_query`, `get_logs`, `get_source_location`.
 
 If Tidewave unavailable: Alert user immediately - indicates Phoenix server not running or MCP issue.
 
