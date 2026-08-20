@@ -53,7 +53,7 @@ defmodule KlassHero.Provider.StaffOffboardingCascadeTest do
         # Precondition: assignment put them in the conversation, and Messaging
         # counts them as staff on the program.
         assert Messaging.participant?(conversation.id, staff_user.id)
-        assert staff_user.id in Messaging.get_active_staff_user_ids(program.id)
+        assert staff_user.id in Messaging.get_conversation_staff_user_ids(program.id)
 
         {:ok, %{unassigned_count: 1}} = Provider.offboard_staff_member(staff)
 
@@ -61,7 +61,7 @@ defmodule KlassHero.Provider.StaffOffboardingCascadeTest do
         # "Counts as staff" is derived, so it flips with the write itself;
         # the participant row is event-maintained, so it survives until the
         # staged unassignment is consumed.
-        refute staff_user.id in Messaging.get_active_staff_user_ids(program.id)
+        refute staff_user.id in Messaging.get_conversation_staff_user_ids(program.id)
         assert Messaging.participant?(conversation.id, staff_user.id)
 
         drain()

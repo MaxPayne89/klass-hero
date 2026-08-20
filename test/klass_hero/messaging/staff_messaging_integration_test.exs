@@ -64,7 +64,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
       # 2. Messaging now sees the staff member — derived from Provider (#1321),
       #    so this is true the moment the assignment commits, with no dependence
       #    on the handler above having run.
-      staff_ids = Messaging.get_active_staff_user_ids(ctx.program.id)
+      staff_ids = Messaging.get_conversation_staff_user_ids(ctx.program.id)
       assert ctx.staff_user.id in staff_ids
 
       # 3. Create a conversation — staff should be auto-added (new conversations
@@ -105,7 +105,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
       refute KlassHero.Messaging.participant?(conversation.id, ctx.staff_user.id)
 
       # 7. And Messaging no longer counts them as staff on the program
-      assert [] = Messaging.get_active_staff_user_ids(ctx.program.id)
+      assert [] = Messaging.get_conversation_staff_user_ids(ctx.program.id)
     end
   end
 

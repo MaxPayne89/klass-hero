@@ -75,7 +75,7 @@ defmodule KlassHero.Provider.StaffInviteAcceptMessagingTest do
 
         # Derived, so already true: no event has been consumed yet — the job is
         # staged, not run — and Messaging nonetheless counts them as staff.
-        assert Messaging.get_active_staff_user_ids(program.id) == [user.id]
+        assert Messaging.get_conversation_staff_user_ids(program.id) == [user.id]
 
         # The participant row is the half that still needs the replay to land.
         refute participant?(conversation.id, user.id)

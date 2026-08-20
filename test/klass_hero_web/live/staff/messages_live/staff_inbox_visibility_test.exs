@@ -22,8 +22,10 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Messaging.CreateDirectConversation
+  alias KlassHero.Provider
+  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.ProviderProfile
-  alias KlassHero.Shared.Domain.Events.Event
+  alias KlassHero.Provider.StaffMember
 
   @projection_name :inbox_e2e_projection
 
@@ -51,6 +53,24 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
 
     clear_integration_events()
     :ok
+  end
+
+  # Retires the real assignment row *before* delivering the event, and builds the
+  # event through the producer's own constructor.
+  #
+  # Both mattered as of #784. Entitlement to a program's conversations is now the
+  # union of the program roster and any session override, and the handler re-reads
+  # it before evicting anyone — so an event fired over a row that still stands is
+  # correctly ignored. The hand-rolled payloads this replaced also carried an
+  # `unassigned_at`/`assigned_at` that `ProviderEvents` deliberately omits, which is
+  # the payload drift #1309 was about.
+  defp unassign_and_deliver(provider, program, assignment, staff_user) do
+    {:ok, retired} =
+      Provider.unassign_staff_from_program(program.id, assignment.staff_member_id, provider.id)
+
+    StaffAssignmentHandler.handle_event(
+      ProviderEvents.staff_unassigned_from_program(retired, %StaffMember{user_id: staff_user.id})
+    )
   end
 
   describe "staff inbox visibility" do
@@ -137,23 +157,17 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      assignment_event = %Event{
-        event_id: Ecto.UUID.generate(),
-        event_type: :staff_assigned_to_program,
-        source_context: :provider,
-        entity_type: :staff_member,
-        entity_id: Ecto.UUID.generate(),
-        occurred_at: DateTime.utc_now(),
-        payload: %{
+      assignment =
+        assign_active_staff(%{
           provider_id: provider.id,
           program_id: program.id,
-          staff_member_id: Ecto.UUID.generate(),
-          staff_user_id: staff_user.id,
-          assigned_at: DateTime.utc_now()
-        }
-      }
+          staff_user_id: staff_user.id
+        })
 
-      assert :ok = StaffAssignmentHandler.handle_event(assignment_event)
+      assert :ok =
+               StaffAssignmentHandler.handle_event(
+                 ProviderEvents.staff_assigned_to_program(assignment, %StaffMember{user_id: staff_user.id})
+               )
 
       flush_to_projection()
 
@@ -180,11 +194,12 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      assign_active_staff(%{
-        provider_id: provider.id,
-        program_id: program.id,
-        staff_user_id: staff_user.id
-      })
+      assignment =
+        assign_active_staff(%{
+          provider_id: provider.id,
+          program_id: program.id,
+          staff_user_id: staff_user.id
+        })
 
       scope = %Scope{
         user: provider_owner,
@@ -202,24 +217,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
 
       flush_to_projection()
 
-      # Now unassign the staff
-      unassignment_event = %Event{
-        event_id: Ecto.UUID.generate(),
-        event_type: :staff_unassigned_from_program,
-        source_context: :provider,
-        entity_type: :staff_member,
-        entity_id: Ecto.UUID.generate(),
-        occurred_at: DateTime.utc_now(),
-        payload: %{
-          provider_id: provider.id,
-          program_id: program.id,
-          staff_member_id: Ecto.UUID.generate(),
-          staff_user_id: staff_user.id,
-          unassigned_at: DateTime.utc_now()
-        }
-      }
-
-      assert :ok = StaffAssignmentHandler.handle_event(unassignment_event)
+      assert :ok = unassign_and_deliver(provider, program, assignment, staff_user)
 
       flush_to_projection()
 
@@ -246,11 +244,12 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         invitation_status: :accepted
       })
 
-      assign_active_staff(%{
-        provider_id: provider.id,
-        program_id: program.id,
-        staff_user_id: staff_user.id
-      })
+      assignment =
+        assign_active_staff(%{
+          provider_id: provider.id,
+          program_id: program.id,
+          staff_user_id: staff_user.id
+        })
 
       scope = %Scope{
         user: provider_owner,
@@ -276,23 +275,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
              "ACT 1: staff should see the conversation after initial create"
 
       # ACT 2 — unassign staff; conversation disappears from inbox
-      unassignment_event = %Event{
-        event_id: Ecto.UUID.generate(),
-        event_type: :staff_unassigned_from_program,
-        source_context: :provider,
-        entity_type: :staff_member,
-        entity_id: Ecto.UUID.generate(),
-        occurred_at: DateTime.utc_now(),
-        payload: %{
-          provider_id: provider.id,
-          program_id: program.id,
-          staff_member_id: Ecto.UUID.generate(),
-          staff_user_id: staff_user.id,
-          unassigned_at: DateTime.utc_now()
-        }
-      }
-
-      assert :ok = StaffAssignmentHandler.handle_event(unassignment_event)
+      assert :ok = unassign_and_deliver(provider, program, assignment, staff_user)
       flush_to_projection()
 
       {:ok, view, _html} = live(log_in_user(conn, staff_user), ~p"/staff/messages")
@@ -301,23 +284,18 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
              "ACT 2: staff should NOT see the conversation after unassignment"
 
       # ACT 3 — re-assign the SAME staff; conversation must re-appear
-      reassignment_event = %Event{
-        event_id: Ecto.UUID.generate(),
-        event_type: :staff_assigned_to_program,
-        source_context: :provider,
-        entity_type: :staff_member,
-        entity_id: Ecto.UUID.generate(),
-        occurred_at: DateTime.utc_now(),
-        payload: %{
+      reassignment =
+        assign_active_staff(%{
           provider_id: provider.id,
           program_id: program.id,
-          staff_member_id: Ecto.UUID.generate(),
-          staff_user_id: staff_user.id,
-          assigned_at: DateTime.utc_now()
-        }
-      }
+          staff_user_id: staff_user.id
+        })
 
-      assert :ok = StaffAssignmentHandler.handle_event(reassignment_event)
+      assert :ok =
+               StaffAssignmentHandler.handle_event(
+                 ProviderEvents.staff_assigned_to_program(reassignment, %StaffMember{user_id: staff_user.id})
+               )
+
       flush_to_projection()
 
       {:ok, view, _html} = live(log_in_user(conn, staff_user), ~p"/staff/messages")

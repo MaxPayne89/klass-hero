@@ -31,7 +31,7 @@ defmodule KlassHero.Messaging.AddAssignedStaff do
 
   def execute(conversation_id, program_id, excluded_user_id) do
     program_id
-    |> ProviderStaffResolver.list_active_staff_user_ids()
+    |> ProviderStaffResolver.list_conversation_staff_user_ids()
     |> Enum.reject(&(&1 == excluded_user_id))
     |> add(conversation_id)
   end

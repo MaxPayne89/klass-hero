@@ -1,6 +1,7 @@
 defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   @moduledoc """
-  Handles Provider integration events for staff-program assignment changes.
+  Handles Provider integration events for staff assignment changes, at both the
+  program and the session grain.
 
   On assignment, adds the staff user as a participant to every active program
   conversation where they are not already an active participant. The participant
@@ -11,6 +12,21 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   On unassignment, delegates to `RemoveAssignedStaff` to soft-leave the staff in
   every active program conversation; the returned `:participant_removed` events
   are dispatched after the wrapping transaction commits.
+
+  ## Both grains, one pair of paths (#784)
+
+  A conversation is program-scoped, so entitlement to one is the **union** of the
+  two staffing grains: on the program's roster, or overriding any one of its
+  sessions. `Provider.list_conversation_staff_user_ids_for_program/1` is that
+  union, and it is the only rule here — this module never re-derives it.
+
+  Session events therefore need no paths of their own. Their payload is a superset
+  of the program-level one, carrying the `program_id` the producer verified
+  ownership against, so both grains land on the same add and remove functions.
+
+  What the second grain does change is that a single retired row no longer settles
+  removal, which is what the guard in `remove_staff_from_existing_conversations/2`
+  is for.
 
   ## Why this handler survived #1321
 
@@ -40,15 +56,24 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   @context Messaging
 
-  @impl true
-  def subscribed_events, do: [:staff_assigned_to_program, :staff_unassigned_from_program]
+  # Program and session grain land on the same two paths: the session payload is a
+  # superset of the program one (`ProviderEvents.session_assignment_event/4`), so
+  # nothing downstream has to know which grain produced the event. Derived lists
+  # rather than four literals, so `subscribed_events/0` and the guard below cannot
+  # drift apart — an event subscribed to but not guarded falls through to `:ignore`
+  # and is silently dropped.
+  @assignment_events [:staff_assigned_to_program, :staff_assigned_to_session]
+  @unassignment_events [:staff_unassigned_from_program, :staff_unassigned_from_session]
+  @handled_events @assignment_events ++ @unassignment_events
 
-  # One guard for both directions, deliberately: when each clause carried its own,
-  # only the assign side ever got one, and the unassign side compared a column
-  # against nil for as long as nothing could reach it (#1309).
   @impl true
-  def handle_event(%{event_type: event_type, payload: payload})
-      when event_type in [:staff_assigned_to_program, :staff_unassigned_from_program] do
+  def subscribed_events, do: @handled_events
+
+  # One guard for every direction and grain, deliberately: when each clause carried
+  # its own, only the assign side ever got one, and the unassign side compared a
+  # column against nil for as long as nothing could reach it (#1309).
+  @impl true
+  def handle_event(%{event_type: event_type, payload: payload}) when event_type in @handled_events do
     if is_nil(Map.get(payload, :staff_user_id)) do
       Logger.debug("Skipping #{event_type} — staff member has no user_id yet",
         staff_member_id: payload.staff_member_id
@@ -62,8 +87,13 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
 
   def handle_event(_event), do: :ignore
 
-  defp with_retry(:staff_assigned_to_program, payload), do: handle_assignment_with_retry(payload)
-  defp with_retry(:staff_unassigned_from_program, payload), do: handle_unassignment_with_retry(payload)
+  defp with_retry(event_type, payload) when event_type in @assignment_events do
+    handle_assignment_with_retry(payload)
+  end
+
+  defp with_retry(event_type, payload) when event_type in @unassignment_events do
+    handle_unassignment_with_retry(payload)
+  end
 
   defp handle_assignment_with_retry(payload) do
     operation = fn ->
@@ -122,7 +152,31 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   end
 
   # Symmetric to add: RemoveAssignedStaff returns events as data.
+  #
+  # Guarded because entitlement is a union of two grains (#784), so retiring one
+  # row does not settle the question. Without this, unassigning someone from the
+  # *program* would evict them from conversations for a session they still run —
+  # #784 reintroduced through the opposite door — and retiring one session override
+  # would evict a member of the program roster.
+  #
+  # Safe to state as a plain re-read: delivery is post-commit, so the row this
+  # event describes is already gone when the question is asked. The policy lives
+  # here rather than in `RemoveAssignedStaff`, whose contract is the mechanical
+  # "remove this user from every active conversation of this program".
   defp remove_staff_from_existing_conversations(program_id, staff_user_id) do
+    if staff_user_id in Messaging.get_conversation_staff_user_ids(program_id) do
+      Logger.debug("Keeping conversation membership — another staffing claim remains",
+        program_id: program_id,
+        user_id: staff_user_id
+      )
+
+      :ok
+    else
+      leave_all_conversations(program_id, staff_user_id)
+    end
+  end
+
+  defp leave_all_conversations(program_id, staff_user_id) do
     Outbox.transact(@context, fn ->
       with {:ok, {_removals, events}} <- RemoveAssignedStaff.execute(program_id, staff_user_id) do
         {:ok, :ok, events}

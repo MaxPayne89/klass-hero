@@ -134,6 +134,49 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       assert {:ok, {[], []}} = AddAssignedStaff.execute(conversation_id, nil, owner.id)
     end
 
+    # #784: `assign_staff_to_session/1` requires only active employment, so a
+    # substitute covering one session can hold no `ProgramStaffAssignment` at all.
+    # Seeding from the program roster alone cut them off from parent messaging for
+    # a session they were running.
+    test "seeds a staff member who only overrides one of the program's sessions" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      session = insert(:program_session_schema, program_id: program.id)
+      owner = AccountsFixtures.user_fixture()
+      substitute = AccountsFixtures.user_fixture()
+
+      staff_member =
+        insert(:staff_member_schema,
+          provider_id: provider.id,
+          user_id: substitute.id,
+          invitation_status: :accepted
+        )
+
+      insert(:session_staff_assignment_schema,
+        provider_id: provider.id,
+        session_id: session.id,
+        staff_member_id: staff_member.id
+      )
+
+      conversation_id = Ecto.UUID.generate()
+
+      Repo.insert!(%Conversation{
+        id: conversation_id,
+        type: :direct,
+        provider_id: provider.id,
+        program_id: program.id
+      })
+
+      assert {:ok, {:ok, {added_ids, [event]}}} =
+               Repo.transaction(fn ->
+                 AddAssignedStaff.execute(conversation_id, program.id, owner.id)
+               end)
+
+      assert added_ids == [substitute.id]
+      assert KlassHero.Messaging.participant?(conversation_id, substitute.id)
+      assert event.payload.participant_user_ids == [substitute.id]
+    end
+
     test "owner is the only staff member — returns {:ok, {[], []}}" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)

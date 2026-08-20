@@ -489,6 +489,54 @@ defmodule KlassHero.Provider.Assignments do
     |> Repo.all()
   end
 
+  @doc """
+  Lists the *user* IDs of staff who may take part in a program's conversations.
+
+  The program roster **plus** anyone holding an active override on one of the
+  program's sessions. Wider than `list_active_staff_user_ids_for_program/1` on
+  purpose: `assign_staff_to_session/1` requires only active employment, so a
+  substitute covering one Tuesday can hold no `ProgramStaffAssignment` at all and
+  was cut off from parent messaging for a session they were running (#784).
+
+  A **union**, not the replacement `get_session_staffing/1` performs, and the
+  difference is the question being asked. Attendance asks "may you write *this
+  session's* records", so the session's own roster must win — see ADR-0017. A
+  conversation is program-scoped and spans every session, so being taken off one
+  Tuesday is no reason to lose the thread.
+  """
+  @spec list_conversation_staff_user_ids_for_program(String.t()) :: [String.t()]
+  def list_conversation_staff_user_ids_for_program(program_id) when is_binary(program_id) do
+    Enum.uniq(
+      list_active_staff_user_ids_for_program(program_id) ++
+        session_override_staff_user_ids(program_id)
+    )
+  end
+
+  # One query rather than "fetch the program's sessions, then their overrides":
+  # the session ids are never wanted for themselves, and a term program holds
+  # hundreds. Sessions belong to Participation, so the table is named directly
+  # inside an `acl_span` (ADR-0015) — the same shape `ParticipationSessionStatsACL`
+  # uses, and what `mix lint_acl_boundary` requires of it.
+  #
+  # Inner join on the staff member, unlike `session_overrides_by_session/1`'s LEFT:
+  # that one keeps the override row alive when its member is deactivated so the
+  # session does not snap back to the program roster. This one only collects user
+  # ids, and a deactivated member contributes none.
+  defp session_override_staff_user_ids(program_id) do
+    acl_span source: "provider", target: "participation" do
+      from(a in SessionStaffAssignment,
+        join: sess in "program_sessions",
+        on: sess.id == a.session_id,
+        join: s in StaffMember,
+        on: s.id == a.staff_member_id,
+        where: sess.program_id == type(^program_id, :binary_id),
+        where: is_nil(a.unassigned_at) and s.active == true and not is_nil(s.user_id),
+        select: s.user_id
+      )
+      |> Repo.all()
+    end
+  end
+
   # "Currently staffing a program" — no `unassigned_at`, and the person still
   # employed — in one place, because three reads need exactly this and had each
   # spelled it out. Callers add their own program filter and `select:`; the
