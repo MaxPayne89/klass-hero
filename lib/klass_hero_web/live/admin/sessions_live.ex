@@ -35,16 +35,11 @@ defmodule KlassHeroWeb.Admin.SessionsLive do
      |> assign(:selected_status, nil)}
   end
 
+  # @current_url is assigned by Backpex.InitAssigns' handle_params hook, attached
+  # in the :admin_custom live_session.
   @impl true
-  def handle_params(params, uri, socket) do
-    current_url = URI.parse(uri).path
-
-    socket =
-      socket
-      |> assign(:current_url, current_url)
-      |> apply_action(socket.assigns.live_action, params)
-
-    {:noreply, socket}
+  def handle_params(params, _uri, socket) do
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
   defp apply_action(socket, :index, _params) do
