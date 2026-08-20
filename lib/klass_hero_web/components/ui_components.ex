@@ -9,6 +9,7 @@ defmodule KlassHeroWeb.UIComponents do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
+  alias KlassHeroWeb.Persona
   alias KlassHeroWeb.Theme
 
   @doc """
@@ -148,6 +149,13 @@ defmodule KlassHeroWeb.UIComponents do
 
   attr :class, :string, default: ""
 
+  attr :personas, :list,
+    default: [],
+    doc:
+      "Personas this account holds, as plain atoms. Not a Scope: this is a design-system primitive and must not know about Accounts."
+
+  attr :active_persona, :atom, default: nil, doc: "The persona currently being viewed."
+
   def kh_user_menu(assigns) do
     ~H"""
     <div class={["relative", @class]}>
@@ -196,6 +204,7 @@ defmodule KlassHeroWeb.UIComponents do
         <.kh_menu_item href={~p"/users/settings"} icon="hero-cog-6-tooth">
           {gettext("Settings")}
         </.kh_menu_item>
+        <.persona_switcher personas={@personas} active_persona={@active_persona} />
         <.admin_nav is_admin={Map.get(@user, :is_admin, false)} />
         <.kh_menu_item
           href={~p"/users/log-out"}
@@ -269,6 +278,41 @@ defmodule KlassHeroWeb.UIComponents do
       </.kh_menu_item>
       <.kh_menu_item navigate={~p"/admin/verifications"} icon="hero-shield-check">
         {gettext("Verifications")}
+      </.kh_menu_item>
+    </div>
+    """
+  end
+
+  @doc """
+  Switches which persona's surface you are looking at (#899).
+
+  Renders nothing for an account holding a single persona, which is almost every
+  account: there is nothing to switch between, and a control that only ever names
+  your own one role is noise.
+
+  Each entry POSTs. Only the plug pipeline can write the session, so a LiveView
+  event could not make the switch survive the next request (#1161). The chrome is
+  its own confirmation — the parent surface is white-with-blue and the provider
+  surface black-with-yellow — so the switch is visible before any copy is read.
+  """
+  attr :personas, :list, default: []
+  attr :active_persona, :atom, default: nil
+
+  def persona_switcher(assigns) do
+    ~H"""
+    <div :if={length(@personas) > 1} class="border-t border-hero-grey-200">
+      <div class="px-4 py-2 bg-hero-cream-100">
+        <div class="text-xs text-hero-grey-600 font-semibold uppercase tracking-wider">
+          {gettext("Viewing as %{persona}", persona: Persona.label(@active_persona))}
+        </div>
+      </div>
+      <.kh_menu_item
+        :for={persona <- @personas -- [@active_persona]}
+        href={~p"/users/persona/#{persona}"}
+        method="post"
+        icon="hero-arrows-right-left"
+      >
+        {gettext("Switch to %{persona}", persona: Persona.label(persona))}
       </.kh_menu_item>
     </div>
     """

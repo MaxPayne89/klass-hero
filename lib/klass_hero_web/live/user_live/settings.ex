@@ -1,10 +1,11 @@
 defmodule KlassHeroWeb.UserLive.Settings do
   use KlassHeroWeb, :live_view
 
-  import KlassHeroWeb.MarketingComponents
+  import KlassHeroWeb.MarketingComponents, only: [mk_input: 1]
 
   alias KlassHero.Accounts
   alias KlassHeroWeb.Helpers.FamilyHelpers
+  alias KlassHeroWeb.Layouts
   alias KlassHeroWeb.Locale
   alias KlassHeroWeb.Persona
   alias KlassHeroWeb.Presenters.ChildPresenter
@@ -16,15 +17,7 @@ defmodule KlassHeroWeb.UserLive.Settings do
   @impl true
   def render(assigns) do
     ~H"""
-    <.mk_page_hero pill={gettext("Account")}>
-      <:title>
-        <span class="bg-hero-yellow-500 px-2 rounded-lg">{gettext("Account")}</span>
-        {gettext("settings")}
-      </:title>
-      <:lede>{gettext("Manage your account, preferences, and privacy in one place.")}</:lede>
-    </.mk_page_hero>
-
-    <section class="relative pb-20 -mt-8 lg:-mt-12 px-6">
+    <section class="relative pb-20 px-0 lg:px-6">
       <div class="max-w-6xl mx-auto lg:flex lg:gap-8 items-start">
         <%!-- Sticky sidebar nav (desktop) --%>
         <aside class="hidden lg:block lg:w-60 lg:flex-shrink-0 sticky top-24">
@@ -432,7 +425,9 @@ defmodule KlassHeroWeb.UserLive.Settings do
 
     socket =
       socket
-      |> assign(:active_nav, :auth)
+      |> assign(:active_nav, :settings)
+      |> assign(:page_title, gettext("Settings"))
+      |> assign(:page_subtitle, gettext("Manage your account, preferences, and privacy."))
       |> assign(:current_email, user.email)
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
@@ -445,8 +440,18 @@ defmodule KlassHeroWeb.UserLive.Settings do
       |> assign(:confirming_persona, nil)
       |> assign(:addable_personas, addable_personas(socket.assigns.current_scope))
 
-    {:ok, socket}
+    {:ok, socket, layout: layout_for(socket.assigns[:active_persona])}
   end
+
+  # Settings used to render in the marketing layout — the only authenticated
+  # non-admin page that did. Arriving from the account menu therefore dropped you
+  # out of your own app shell, and on mobile stranded you: the marketing header's
+  # only way back is `hidden lg:inline-flex`, and kh_user_menu is not rendered on
+  # marketing pages at all. Following the persona restores the sidebar, the
+  # bottom tabs and the switcher on the very page that grants a second persona.
+  defp layout_for(:provider), do: {Layouts, :provider_app}
+  defp layout_for(:staff), do: {Layouts, :provider_app}
+  defp layout_for(_persona), do: {Layouts, :parent_app}
 
   # Only these two are self-grantable. :staff is an employment link to someone
   # else's business (ADR-0005) — a provider adds themselves to their own team

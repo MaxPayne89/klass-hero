@@ -10,6 +10,8 @@
       cta_label={assigns[:topbar_cta_label]}
       cta_navigate={assigns[:topbar_cta_navigate]}
       user={@current_scope.user}
+      personas={assigns[:personas] || []}
+      active_persona={assigns[:active_persona]}
     />
     <main class="flex-1 px-4 py-6 lg:px-8 pb-[80px] lg:pb-8">
       <.flash_group flash={@flash} />
