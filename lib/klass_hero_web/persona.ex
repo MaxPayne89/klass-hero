@@ -2,7 +2,7 @@ defmodule KlassHeroWeb.Persona do
   @moduledoc """
   Everything the web layer needs to know about personas.
 
-  The *set* is not declared here — `KlassHero.Accounts.Types.UserRole` owns it,
+  The *set* is not declared here — `KlassHero.Accounts.UserRole` owns it,
   and this module delegates. Keeping a second copy is what bit the locale seam
   (#1227): the two lists drifted, and choosing a value the UI offered failed
   with no explanation anywhere.
@@ -43,8 +43,8 @@ defmodule KlassHeroWeb.Persona do
   use Gettext, backend: KlassHeroWeb.Gettext
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Accounts.Types.UserRole
   alias KlassHero.Accounts.User
+  alias KlassHero.Accounts.UserRole
 
   @type t :: :parent | :provider | :staff
   @type page :: :dashboard | :messages

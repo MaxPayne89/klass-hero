@@ -13,8 +13,8 @@ defmodule KlassHero.Accounts.UserActivePersonaTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Changeset
-  alias KlassHero.Accounts.Types.UserRole
   alias KlassHero.Accounts.User
+  alias KlassHero.Accounts.UserRole
 
   describe "active_persona_changeset/2" do
     test "accepts every persona the app claims to know" do

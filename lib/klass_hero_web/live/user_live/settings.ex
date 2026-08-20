@@ -211,7 +211,7 @@ defmodule KlassHeroWeb.UserLive.Settings do
               <div>
                 <h2 class="font-bold text-hero-black">{gettext("Profiles")}</h2>
                 <p class="text-sm text-[var(--fg-muted)]">
-                  {gettext("One account can be both a family and a business.")}
+                  {gettext("One account can be both a family and a provider.")}
                 </p>
               </div>
             </div>
@@ -482,12 +482,12 @@ defmodule KlassHeroWeb.UserLive.Settings do
     case Accounts.upgrade_to_provider(socket.assigns.current_scope.user) do
       {:ok, _user} ->
         socket
-        |> put_flash(:info, gettext("Welcome aboard! Let's set up your business profile."))
+        |> put_flash(:info, gettext("Welcome aboard! Let's set up your provider profile."))
         |> push_navigate(to: ~p"/provider/complete-profile")
 
       {:error, :already_provider} ->
         socket
-        |> put_flash(:info, gettext("You already have a business profile."))
+        |> put_flash(:info, gettext("You already have a provider profile."))
         |> push_navigate(to: ~p"/users/settings")
 
       {:error, reason} ->
@@ -516,7 +516,7 @@ defmodule KlassHeroWeb.UserLive.Settings do
   defp persona_icon(:provider), do: "hero-building-storefront"
 
   defp persona_add_label(:parent), do: gettext("Add a family profile")
-  defp persona_add_label(:provider), do: gettext("Add a business profile")
+  defp persona_add_label(:provider), do: gettext("Add a provider profile")
 
   defp persona_add_description(:parent), do: gettext("Book activities and manage your children's places.")
 
@@ -524,16 +524,16 @@ defmodule KlassHeroWeb.UserLive.Settings do
 
   defp persona_confirm_copy(:parent),
     do:
-      gettext("You'll be able to add your children and book activities. Your business account stays exactly as it is.")
+      gettext("You'll be able to add your children and book activities. Your provider account stays exactly as it is.")
 
   defp persona_confirm_copy(:provider),
     do:
       gettext(
-        "You'll get a business profile to fill in, and a dashboard for your activities. Your family account stays exactly as it is."
+        "You'll get a provider profile to fill in, and a dashboard for your activities. Your family account stays exactly as it is."
       )
 
   defp persona_confirm_label(:parent), do: gettext("Add family profile")
-  defp persona_confirm_label(:provider), do: gettext("Add business profile")
+  defp persona_confirm_label(:provider), do: gettext("Add provider profile")
 
   defp get_user_initials(email) when is_binary(email) do
     email

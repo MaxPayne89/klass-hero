@@ -19,8 +19,8 @@ defmodule KlassHeroWeb.PersonaTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Accounts.Types.UserRole
   alias KlassHero.Accounts.User
+  alias KlassHero.Accounts.UserRole
   alias KlassHeroWeb.Persona
 
   # A Scope carrying exactly the personas named. resolve/1 reads presence of the
