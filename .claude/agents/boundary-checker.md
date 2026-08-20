@@ -86,8 +86,21 @@ schemas, or `adapters/` modules.
    catches the old tree's `KlassHero.B.Adapters.*` / `KlassHero.B.<...>Schema` just as
    well as a flattened context's `KlassHero.B.<Entity>` or `KlassHero.B.<HandlerName>`,
    which carry no `Adapters` segment to grep for
-4. Exception: Shared infrastructure (`KlassHero.Shared.*` — `Tracing`, `Projection`,
-   `Outbox`, `FeatureFlags`, `RepositoryHelpers`) is universal
+4. Exceptions — these are `KlassHero.B.<Something>` but are NOT internals:
+   - Shared infrastructure (`KlassHero.Shared.*` — `Tracing`, `Projection`, `Outbox`,
+     `FeatureFlags`, `RepositoryHelpers`) is universal
+   - **B's event factory** (`KlassHero.B.Events`, or `KlassHero.B.Domain.Events.BEvents`
+     in the old shape). An event is the public contract *between* contexts, so its
+     constructor is public surface. Constructing one from another context's **test** to
+     build a real envelope is the documented pattern — hand-rolling the struct instead is
+     what hides payload drift.
+   - **B's handler modules named in the `:event_consumers` registry** in
+     `config/config.exs`. That registry names every context's handlers by design; it is
+     the wiring, not a boundary crossing. Test code invoking such a handler directly to
+     exercise the wiring is integration-test infrastructure, not production reach-in.
+
+   Note the asymmetry these exceptions preserve: **production** code in A must still never
+   name B's handler or entity modules. Only config wiring and test construction may.
 
 **Example violation:**
 ```elixir
