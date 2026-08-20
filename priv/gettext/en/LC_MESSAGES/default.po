@@ -140,7 +140,7 @@ msgstr ""
 msgid "close"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:375
+#: lib/klass_hero_web/live/booking_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "%{name} (Age %{age})"
 msgstr ""
@@ -155,7 +155,7 @@ msgstr ""
 msgid "Activity Summary"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:388
+#: lib/klass_hero_web/live/booking_live.ex:392
 #, elixir-autogen, elixir-format
 msgid "Add another child"
 msgstr ""
@@ -170,12 +170,12 @@ msgstr ""
 msgid "Ages %{range}"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:510
+#: lib/klass_hero_web/live/booking_live.ex:514
 #, elixir-autogen, elixir-format
 msgid "An invoice will be emailed to you after enrollment completion"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:405
+#: lib/klass_hero_web/live/booking_live.ex:409
 #, elixir-autogen, elixir-format
 msgid "Any allergies, medical conditions, or special instructions..."
 msgstr ""
@@ -185,12 +185,12 @@ msgstr ""
 msgid "Book camps, tutors, and workshops instantly. Our integrated planner helps you manage your child's busy life."
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:487
+#: lib/klass_hero_web/live/booking_live.ex:491
 #, elixir-autogen, elixir-format
 msgid "Cash / Bank Transfer"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:512
+#: lib/klass_hero_web/live/booking_live.ex:516
 #, elixir-autogen, elixir-format
 msgid "Cash/transfer payments will show as \"Pending\" until received"
 msgstr ""
@@ -200,17 +200,17 @@ msgstr ""
 msgid "Community Focused"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:529
+#: lib/klass_hero_web/live/booking_live.ex:533
 #, elixir-autogen, elixir-format
 msgid "Complete Enrollment"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:478
+#: lib/klass_hero_web/live/booking_live.ex:482
 #, elixir-autogen, elixir-format
 msgid "Credit Card"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:511
+#: lib/klass_hero_web/live/booking_live.ex:515
 #, elixir-autogen, elixir-format
 msgid "Credit card payments are processed immediately"
 msgstr ""
@@ -272,7 +272,7 @@ msgstr ""
 msgid "Invalid pagination state. Please refresh the page."
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:508
+#: lib/klass_hero_web/live/booking_live.ex:512
 #, elixir-autogen, elixir-format
 msgid "Invoice & Payment Confirmation"
 msgstr ""
@@ -294,22 +294,22 @@ msgstr[1] ""
 msgid "No programs found"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:413
+#: lib/klass_hero_web/live/booking_live.ex:417
 #, elixir-autogen, elixir-format
 msgid "Optional: Include any important information we should know about your child."
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:479
+#: lib/klass_hero_web/live/booking_live.ex:483
 #, elixir-autogen, elixir-format
 msgid "Pay securely with Visa, Mastercard, or other cards"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:473
+#: lib/klass_hero_web/live/booking_live.ex:477
 #, elixir-autogen, elixir-format
 msgid "Payment Method"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:497
+#: lib/klass_hero_web/live/booking_live.ex:501
 #, elixir-autogen, elixir-format
 msgid "Payment Summary"
 msgstr ""
@@ -352,12 +352,12 @@ msgstr ""
 msgid "Search programs..."
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:359
+#: lib/klass_hero_web/live/booking_live.ex:362
 #, elixir-autogen, elixir-format
 msgid "Select Child"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:369
+#: lib/klass_hero_web/live/booking_live.ex:373
 #, elixir-autogen, elixir-format
 msgid "Select a child"
 msgstr ""
@@ -372,7 +372,7 @@ msgstr ""
 msgid "Sorry, this program is now full. Please choose another program."
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:398
+#: lib/klass_hero_web/live/booking_live.ex:402
 #, elixir-autogen, elixir-format
 msgid "Special Requirements"
 msgstr ""
@@ -382,7 +382,7 @@ msgstr ""
 msgid "Total Price:"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:503
+#: lib/klass_hero_web/live/booking_live.ex:507
 #, elixir-autogen, elixir-format
 msgid "Total due today:"
 msgstr ""
@@ -741,6 +741,7 @@ msgstr ""
 msgid "Magic link is invalid or it has expired."
 msgstr ""
 
+#: lib/klass_hero_web/components/messaging_components.ex:387
 #: lib/klass_hero_web/live/contact_live.ex:176
 #: lib/klass_hero_web/live/provider/broadcast_live.ex:181
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:205
@@ -1476,7 +1477,7 @@ msgstr ""
 msgid "Unassigned"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:722
+#: lib/klass_hero_web/components/messaging_components.ex:725
 #: lib/klass_hero_web/components/provider_components.ex:51
 #: lib/klass_hero_web/components/provider_components.ex:1637
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:465
@@ -1495,7 +1496,7 @@ msgstr ""
 msgid "%{age} years old"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:742
+#: lib/klass_hero_web/components/messaging_components.ex:745
 #, elixir-autogen, elixir-format
 msgid "%{n}m ago"
 msgstr ""
@@ -1690,8 +1691,8 @@ msgid "Message content is required"
 msgstr ""
 
 #: lib/klass_hero_web/components/layouts/app.html.heex:212
-#: lib/klass_hero_web/components/messaging_components.ex:499
-#: lib/klass_hero_web/components/messaging_components.ex:522
+#: lib/klass_hero_web/components/messaging_components.ex:502
+#: lib/klass_hero_web/components/messaging_components.ex:525
 #: lib/klass_hero_web/live/messages_live/index.ex:19
 #: lib/klass_hero_web/live/messaging_live_helper.ex:288
 #, elixir-autogen, elixir-format, fuzzy
@@ -1704,13 +1705,13 @@ msgstr ""
 msgid "No children yet"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:469
+#: lib/klass_hero_web/components/messaging_components.ex:472
 #, elixir-autogen, elixir-format
 msgid "No conversations yet"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:438
-#: lib/klass_hero_web/components/messaging_components.ex:764
+#: lib/klass_hero_web/components/messaging_components.ex:441
+#: lib/klass_hero_web/components/messaging_components.ex:767
 #, elixir-autogen, elixir-format
 msgid "No messages yet"
 msgstr ""
@@ -1742,7 +1743,7 @@ msgstr ""
 msgid "Note resubmitted for review"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:741
+#: lib/klass_hero_web/components/messaging_components.ex:744
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr ""
@@ -1782,7 +1783,7 @@ msgstr ""
 msgid "Please set up your parent profile to manage children."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:715
+#: lib/klass_hero_web/components/messaging_components.ex:718
 #: lib/klass_hero_web/live/messaging_live_helper.ex:332
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Program Broadcast"
@@ -1814,7 +1815,7 @@ msgstr ""
 msgid "Send Broadcast"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:441
+#: lib/klass_hero_web/components/messaging_components.ex:444
 #, elixir-autogen, elixir-format
 msgid "Send a message to start the conversation"
 msgstr ""
@@ -1838,7 +1839,7 @@ msgstr ""
 msgid "This message will be sent to all parents with active enrollments in this program."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:392
+#: lib/klass_hero_web/components/messaging_components.ex:394
 #, elixir-autogen, elixir-format
 msgid "Type a message..."
 msgstr ""
@@ -1875,12 +1876,12 @@ msgstr ""
 msgid "You don't have permission to edit this child."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:478
+#: lib/klass_hero_web/components/messaging_components.ex:481
 #, elixir-autogen, elixir-format
 msgid "Your conversations with parents will appear here"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:480
+#: lib/klass_hero_web/components/messaging_components.ex:483
 #, elixir-autogen, elixir-format
 msgid "Your conversations with providers will appear here"
 msgstr ""
@@ -2080,7 +2081,7 @@ msgstr ""
 msgid "Confirmed"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:816
+#: lib/klass_hero_web/components/messaging_components.ex:819
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Contact Provider"
 msgstr ""
@@ -3071,12 +3072,12 @@ msgstr ""
 msgid "Monitoring provider activity and feedback"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:488
+#: lib/klass_hero_web/live/booking_live.ex:492
 #, elixir-autogen, elixir-format
 msgid "Pay by cash or direct bank transfer"
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:499
+#: lib/klass_hero_web/live/booking_live.ex:503
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Program fee:"
 msgstr ""
@@ -3739,7 +3740,7 @@ msgstr ""
 msgid "Back to emails"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:682
+#: lib/klass_hero_web/components/messaging_components.ex:685
 #, elixir-autogen, elixir-format
 msgid "Broadcast messages are one-way"
 msgstr ""
@@ -4157,7 +4158,7 @@ msgstr ""
 msgid "Reply"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:693
+#: lib/klass_hero_web/components/messaging_components.ex:696
 #, elixir-autogen, elixir-format
 msgid "Reply privately"
 msgstr ""
@@ -4458,7 +4459,7 @@ msgstr ""
 msgid "Failed to upload files. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:768
+#: lib/klass_hero_web/components/messaging_components.ex:771
 #, elixir-autogen, elixir-format, fuzzy
 msgid "File is too large (max %{mb} MB)"
 msgstr ""
@@ -4468,7 +4469,7 @@ msgstr ""
 msgid "File is too large (max %{mb} MB)."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:771
+#: lib/klass_hero_web/components/messaging_components.ex:774
 #, elixir-autogen, elixir-format, fuzzy
 msgid "File type not accepted (images only)"
 msgstr ""
@@ -4488,8 +4489,8 @@ msgstr ""
 msgid "Only images are accepted (JPG, PNG, GIF, WebP)."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:753
-#: lib/klass_hero_web/components/messaging_components.ex:757
+#: lib/klass_hero_web/components/messaging_components.ex:756
+#: lib/klass_hero_web/components/messaging_components.ex:760
 #, elixir-autogen, elixir-format
 msgid "Photo"
 msgstr ""
@@ -4529,7 +4530,7 @@ msgstr ""
 msgid "Tell parents about your organization and what makes you unique..."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:775
+#: lib/klass_hero_web/components/messaging_components.ex:778
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Too many files (max %{max})"
 msgstr ""
@@ -4539,12 +4540,12 @@ msgstr ""
 msgid "Too many files (max %{max})."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:779
+#: lib/klass_hero_web/components/messaging_components.ex:782
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Upload error"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:778
+#: lib/klass_hero_web/components/messaging_components.ex:781
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
 msgstr ""
@@ -7519,7 +7520,7 @@ msgstr ""
 msgid "Enrollment not found."
 msgstr ""
 
-#: lib/klass_hero_web/live/booking_live.ex:464
+#: lib/klass_hero_web/live/booking_live.ex:468
 #: lib/klass_hero_web/live/enrollment_waivers_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "I have read and agree to %{title}"
@@ -7632,7 +7633,7 @@ msgid "Waiver not found."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2466
-#: lib/klass_hero_web/live/booking_live.ex:427
+#: lib/klass_hero_web/live/booking_live.ex:431
 #: lib/klass_hero_web/live/enrollment_waivers_live.ex:33
 #: lib/klass_hero_web/live/enrollment_waivers_live.ex:105
 #, elixir-autogen, elixir-format, fuzzy
@@ -7905,4 +7906,14 @@ msgstr ""
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:135
 #, elixir-autogen, elixir-format
 msgid "This program has closed. Its sessions are no longer available."
+msgstr ""
+
+#: lib/klass_hero_web/components/messaging_components.ex:380
+#, elixir-autogen, elixir-format
+msgid "Attach files"
+msgstr ""
+
+#: lib/klass_hero_web/components/messaging_components.ex:404
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Send message"
 msgstr ""

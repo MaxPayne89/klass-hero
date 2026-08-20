@@ -2,7 +2,7 @@ defmodule KlassHeroWeb.Journeys do
   @moduledoc """
   Arrange- and act-helpers shared by the flow tests under `test/flows/`.
 
-  Two rules this module exists to enforce, both from ADR-0019:
+  Two rules this module exists to enforce, both from ADR-0020:
 
   1. **Arrange through the facade, never the read table.** A flow test that seeds
      `program_listings` directly can never prove a program reached the catalog —
@@ -172,7 +172,7 @@ defmodule KlassHeroWeb.Journeys do
   desktop) and `phoenix_test` raises `"Found multiple forms with phx-trigger-action."`
   on more than one. The real session write and `signed_in_path/1` redirect still run;
   only the duplicated client-side trigger is skipped, and that is browser-tier work
-  (ADR-0019).
+  (ADR-0020).
   """
   def follow_magic_link(conn) do
     magic_token =

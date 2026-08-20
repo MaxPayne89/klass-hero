@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.Flows.LoginTest do
   The *password* login is deliberately absent: `UserLive.Login` renders a mobile and
   a desktop copy of the same `phx-trigger-action` form, and `phoenix_test` raises on
   more than one. That path belongs to the browser tier — see
-  `test/e2e/login_browser_test.exs` and ADR-0019.
+  `test/e2e/login_browser_test.exs` and ADR-0020.
   """
 
   use KlassHeroWeb.FlowCase, async: false

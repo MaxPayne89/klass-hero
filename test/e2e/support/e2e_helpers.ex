@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.E2E.Helpers do
   The tier is small on purpose: every test here must fail for a reason a browser
   is required to observe — real JavaScript, duplicated `phx-trigger-action` forms,
   two concurrent live sessions, or a real file input. Anything assertable from
-  server-rendered HTML belongs in `test/flows/` (ADR-0019).
+  server-rendered HTML belongs in `test/flows/` (ADR-0020).
 
   Three things this module does *not* do any more, all deleted with the messaging
   migration: start a projection GenServer, rebuild a read model, and sleep. They

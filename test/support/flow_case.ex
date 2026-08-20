@@ -7,7 +7,7 @@ defmodule KlassHeroWeb.FlowCase do
   with no browser involved. It is the tier for anything assertable from
   server-rendered HTML. Browser-shaped behaviour (JS hooks, duplicated
   `phx-trigger-action` forms, two concurrent live sessions, CSS visibility) stays
-  in `test/e2e/` under Wallaby. See ADR-0019 for the full boundary.
+  in `test/e2e/` under Wallaby. See ADR-0020 for the full boundary.
 
   No tag, and no runner to register: `test/flows/` sits under the default
   `mix test` path and is picked up with the rest of the suite.

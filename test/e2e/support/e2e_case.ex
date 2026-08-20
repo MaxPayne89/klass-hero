@@ -9,7 +9,7 @@ defmodule KlassHeroWeb.E2ECase do
   sessions watching each other, a real `<input type=file>`, and CSS-driven
   visibility. Everything assertable from server-rendered HTML is a flow test under
   `test/flows/` — faster, no chromedriver, and (since it drives the real outbox)
-  more faithful about event delivery. See ADR-0019.
+  more faithful about event delivery. See ADR-0020.
 
   Handles:
   - Starting Wallaby (once per test module, lazily)
