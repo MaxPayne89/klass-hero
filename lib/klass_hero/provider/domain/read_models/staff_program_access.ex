@@ -43,9 +43,13 @@ defmodule KlassHero.Provider.Domain.ReadModels.StaffProgramAccess do
   """
 
   @typedoc """
-  Every Program one Staff Member is currently assigned to, split by whether it is
-  still open. The two sets are disjoint and together are the whole assignment
-  roster.
+  The Programs one Staff Member may see, split by whether each is still open.
+
+  Disjoint, but **not** exhaustive over their assignment rows: an assignment naming
+  a program that belongs to another provider, or one since deleted, is in neither
+  set. Do not "restore" exhaustiveness — putting the unresolvable ones in
+  `closed_program_ids` lists them back to the staff member, because that set is
+  rendered as their Completed programs.
   """
   @type t :: %__MODULE__{
           staff_member_id: String.t(),
