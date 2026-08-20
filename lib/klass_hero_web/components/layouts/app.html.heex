@@ -73,7 +73,7 @@
             <!-- Messages Indicator -->
             <.messages_indicator
               unread_count={assigns[:total_unread_count] || 0}
-              href={RoleRouting.messages_path(@current_scope.user.intended_roles || [])}
+              href={Persona.path(Persona.from_user(@current_scope.user), :messages)}
             />
 
             <!-- Authenticated User Dropdown -->
@@ -206,7 +206,7 @@
             </li>
             <li>
               <.link
-                navigate={RoleRouting.messages_path(@current_scope.user.intended_roles || [])}
+                navigate={Persona.path(Persona.from_user(@current_scope.user), :messages)}
                 class="flex items-center justify-between"
               >
                 {gettext("Messages")}

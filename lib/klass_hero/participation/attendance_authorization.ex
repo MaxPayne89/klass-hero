@@ -14,7 +14,7 @@ defmodule KlassHero.Participation.AttendanceAuthorization do
   A person is one User and may hold several personas at once, so "which rule
   applies" needs a deterministic answer. The order is **provider → staff →
   admin**: narrow to broad, first match wins, mirroring the precedence
-  `KlassHeroWeb.RoleRouting.primary_role/1` already uses.
+  `KlassHeroWeb.Persona` already uses.
 
   The order is load-bearing, not alphabetical. An admin who also owns a provider
   gets *provider* rules on their own programs — correct, they are the provider,

@@ -973,28 +973,28 @@ msgstr ""
 msgid "You are running the local mail adapter."
 msgstr ""
 
-#: lib/klass_hero_web/user_auth.ex:326
+#: lib/klass_hero_web/user_auth.ex:348
 #, elixir-autogen, elixir-format
 msgid "You must be authenticated to access this page."
 msgstr ""
 
-#: lib/klass_hero_web/user_auth.ex:250
+#: lib/klass_hero_web/user_auth.ex:257
 #, elixir-autogen, elixir-format
 msgid "You must have a parent profile to access this page."
 msgstr ""
 
-#: lib/klass_hero_web/user_auth.ex:259
+#: lib/klass_hero_web/user_auth.ex:266
 #, elixir-autogen, elixir-format
 msgid "You must have a provider profile to access this page."
 msgstr ""
 
-#: lib/klass_hero_web/user_auth.ex:220
-#: lib/klass_hero_web/user_auth.ex:363
+#: lib/klass_hero_web/user_auth.ex:227
+#: lib/klass_hero_web/user_auth.ex:392
 #, elixir-autogen, elixir-format
 msgid "You must log in to access this page."
 msgstr ""
 
-#: lib/klass_hero_web/user_auth.ex:237
+#: lib/klass_hero_web/user_auth.ex:244
 #, elixir-autogen, elixir-format
 msgid "You must re-authenticate to access this page."
 msgstr ""
@@ -2954,7 +2954,7 @@ msgstr ""
 msgid "We are Klass Hero — parents, brothers, and partners of educators — building the infrastructure that helps every child learn and thrive."
 msgstr ""
 
-#: lib/klass_hero_web/user_auth.ex:280
+#: lib/klass_hero_web/user_auth.ex:298
 #, elixir-autogen, elixir-format, fuzzy
 msgid "You don't have access to that page."
 msgstr ""
@@ -4356,7 +4356,7 @@ msgstr ""
 msgid "You have no sessions scheduled for %{date}"
 msgstr ""
 
-#: lib/klass_hero_web/user_auth.ex:268
+#: lib/klass_hero_web/user_auth.ex:275
 #, elixir-autogen, elixir-format, fuzzy
 msgid "You must be a staff member to access this page."
 msgstr ""
@@ -7796,4 +7796,14 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/profile_completion_live.ex:279
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Your provider or organization name"
+msgstr ""
+
+#: lib/klass_hero_web/controllers/persona_controller.ex:53
+#, elixir-autogen, elixir-format
+msgid "Could not switch profile."
+msgstr ""
+
+#: lib/klass_hero_web/controllers/persona_controller.ex:35
+#, elixir-autogen, elixir-format
+msgid "You don't have that profile."
 msgstr ""

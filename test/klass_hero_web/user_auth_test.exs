@@ -547,6 +547,57 @@ defmodule KlassHeroWeb.UserAuthTest do
       assert {:redirect, redirect_opts} = updated_socket.redirected
       assert redirect_opts.to == "/provider/dashboard"
     end
+
+    # The bug #899 reports. This guard is on the whole :authenticated
+    # live_session, so before this it made /dashboard, /messages, /settings and
+    # booking unreachable for anyone who held a provider persona too — the
+    # parent surface was not merely un-landed-on, it was inaccessible.
+    test "continues for a provider who also holds a parent persona", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, _parent} = Family.create_parent_profile(%{identity_id: user.id})
+
+      {:ok, _provider} =
+        Provider.create_provider_profile(%{identity_id: user.id, business_name: "Test Business"})
+
+      user_token = Accounts.generate_user_session_token(user)
+      session = conn |> put_session(:user_token, user_token) |> get_session()
+
+      {:cont, updated_socket} =
+        UserAuth.on_mount(
+          :redirect_provider_or_staff_from_parent_routes,
+          %{},
+          session,
+          build_socket()
+        )
+
+      assert updated_socket.assigns.current_scope.user.id == user.id
+    end
+
+    # Holding parent is what earns access, not the stored preference: navigating
+    # to a parent URL is itself a choice to look at the parent surface, so a
+    # remembered :provider must not undo it.
+    test "continues for a dual-persona user whose remembered persona is provider", %{conn: conn} do
+      user = user_fixture()
+
+      {:ok, _parent} = Family.create_parent_profile(%{identity_id: user.id})
+
+      {:ok, _provider} =
+        Provider.create_provider_profile(%{identity_id: user.id, business_name: "Test Business"})
+
+      {:ok, user} = Accounts.update_user_active_persona(user, %{active_persona: :provider})
+
+      user_token = Accounts.generate_user_session_token(user)
+      session = conn |> put_session(:user_token, user_token) |> get_session()
+
+      {:cont, _socket} =
+        UserAuth.on_mount(
+          :redirect_provider_or_staff_from_parent_routes,
+          %{},
+          session,
+          build_socket()
+        )
+    end
   end
 
   describe "require_authenticated_user/2" do

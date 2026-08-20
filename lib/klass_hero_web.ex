@@ -77,7 +77,7 @@ defmodule KlassHeroWeb do
       alias KlassHeroWeb.Layouts
 
       # Role → landing/section path resolver (single source of truth)
-      alias KlassHeroWeb.RoleRouting
+      alias KlassHeroWeb.Persona
       alias Phoenix.LiveView.JS
 
       unquote(verified_routes())
