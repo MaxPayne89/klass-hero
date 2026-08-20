@@ -92,3 +92,21 @@ flow test instead.
 **A flow test is not free.** It is `async: false` and each `with_real_outbox/1` costs a drain.
 The tier is meant to stay in the tens, covering main journeys — not to become where all
 integration testing goes.
+
+**A visited LiveView stays mounted for the rest of a flow test**, even after navigating
+away, so "the user closed the tab" is not expressible in this tier. It matters wherever a
+mounted page keeps reacting: a thread left open keeps marking arrivals read, which is why
+`messaging_conversation_list_test.exs` arranges one read through the facade rather than
+through the UI.
+
+**`Oban.Testing.with_testing_mode/2` is process-local** (`Process.put`). A LiveView is a
+different process, so a UI-driven act never sees `:manual` and its delivery jobs run inline,
+inside the producer's transaction. Delivery still happens — which is what the tier needs —
+but the manual-mode sequencing only applies to acts driven from the test process itself.
+`with_real_outbox/1` therefore also drains *before* the act: a job left pending by an earlier
+act would otherwise be delivered after this one, replaying a stale event out of order.
+
+**Uploads are not covered yet.** A real `<input type=file>` was the fourth charter test and
+was dropped: the inputs are `class="hidden"`, WebDriver will not type into a `display:none`
+element, and unhiding it races LiveView's DOM patching into `Wallaby.StaleReferenceError`.
+Fifteen `allow_upload/3` sites remain browser-untested; tracked separately.
