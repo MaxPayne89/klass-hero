@@ -4,17 +4,22 @@ The project uses **Phoenix's standard `phx.gen.auth` authentication** for simpli
 
 ## Directory Structure
 
-Accounts is conventional Phoenix (flattened from DDD, #993):
+Accounts is conventional Phoenix (flattened from DDD, #993) and was the first
+context to adopt the flat layout — every module sits at the context root, with
+no `adapters/`, `domain/`, or `types/` nesting. See `domain-architecture.md`.
 
 ```
+lib/klass_hero/accounts.ex          # Public API
 lib/klass_hero/accounts/
-  user.ex              # Schema-as-struct: Ecto schema + struct + functional core
-  user_token.ex        # Token generation/verification
-  scope.ex             # Accounts.Scope (auth scope)
-  persona_grant.ex     # Role/persona grants
-  user_notifier.ex     # Email sending utility
-  types/               # user_role.ex, user_roles.ex (Ecto.Enum types)
-  domain/events/       # user_events.ex, accounts_integration_events.ex
+  user.ex                    # Schema-as-struct: Ecto schema + struct + functional core
+  user_token.ex              # Token generation/verification
+  scope.ex                   # Accounts.Scope (auth scope)
+  persona_grant.ex           # Role/persona grants
+  user_notifier.ex           # Email sending utility
+  user_role.ex               # Valid role atoms (:parent, :provider, :staff)
+  user_roles.ex              # Custom Ecto.Type mapping the text[] roles column
+  events.ex                  # Accounts.Events — factory for emitted integration events
+  staff_invitation_handler.ex # Consumes Provider's :staff_member_invited
 
 lib/klass_hero_web/
   user_auth.ex         # Authentication plug and helpers
