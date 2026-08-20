@@ -53,6 +53,59 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       assert {:error, {:live_redirect, %{to: "/staff/sessions"}}} =
                live(conn, ~p"/staff/participation/#{session.id}")
     end
+
+    test "opens the roster for a session the staff member covers without the program", %{conn: conn} do
+      %{conn: conn, provider: provider, staff: staff} = register_and_log_in_staff(%{conn: conn})
+      session = session_in_new_program(provider)
+
+      assert {:ok, _} =
+               KlassHero.Provider.assign_staff_to_session(%{
+                 provider_id: provider.id,
+                 session_id: session.id,
+                 staff_member_id: staff.id
+               })
+
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
+
+      assert has_element?(view, "#staff-participation")
+    end
+
+    test "redirects a staff member taken off the session, though still on the program", %{conn: conn} do
+      %{conn: conn, provider: provider, staff: staff} = register_and_log_in_staff(%{conn: conn})
+      session = session_in_new_program(provider)
+
+      for member <- [staff, ProviderFixtures.staff_member_fixture(%{provider_id: provider.id})] do
+        ProviderFixtures.program_assignment_fixture(%{
+          provider_id: provider.id,
+          program_id: session.program_id,
+          staff_member_id: member.id
+        })
+      end
+
+      assert {:ok, _} =
+               KlassHero.Provider.unassign_staff_from_session(session.id, staff.id, provider.id)
+
+      assert {:error, {:live_redirect, %{to: "/staff/sessions"}}} =
+               live(conn, ~p"/staff/participation/#{session.id}")
+    end
+  end
+
+  defp session_in_new_program(provider) do
+    program = insert(:program_schema, provider_id: provider.id, category: "sports")
+
+    _listing =
+      insert(:program_listing_schema,
+        id: program.id,
+        provider_id: provider.id,
+        category: "sports",
+        title: "Soccer Training"
+      )
+
+    insert(:program_session_schema,
+      program_id: program.id,
+      session_date: Date.utc_today(),
+      status: :in_progress
+    )
   end
 
   describe "participation management" do

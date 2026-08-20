@@ -137,6 +137,91 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
              )
     end
 
+    # Session grain (#783). Visibility follows the effective roster, so it tracks a
+    # per-session override in both directions — someone put on one session sees it
+    # without a program assignment, someone taken off one stops seeing it despite
+    # keeping theirs.
+    test "shows a session the staff member covers without a program assignment",
+         %{conn: conn} = ctx do
+      program = unassigned_program(ctx, category: "arts", title: "Art Workshop")
+      session = session_on(program, Date.utc_today(), :scheduled)
+
+      assert {:ok, _} =
+               KlassHero.Provider.assign_staff_to_session(%{
+                 provider_id: ctx.provider.id,
+                 session_id: session.id,
+                 staff_member_id: ctx.staff.id
+               })
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      assert has_element?(
+               view,
+               "button[phx-value-session_id='#{session.id}']",
+               "Start Session"
+             )
+
+      # The program title has to survive the same path: it used to come only from
+      # the staff member's assigned programs, which this session is not among.
+      assert has_element?(view, "h3", "Art Workshop")
+    end
+
+    test "hides a session the staff member was taken off, though still on the program",
+         %{conn: conn} = ctx do
+      program = assigned_program(ctx, title: "Soccer Training")
+      session = session_on(program, Date.utc_today(), :scheduled)
+
+      colleague = ProviderFixtures.staff_member_fixture(%{provider_id: ctx.provider.id})
+
+      ProviderFixtures.program_assignment_fixture(%{
+        provider_id: ctx.provider.id,
+        program_id: program.id,
+        staff_member_id: colleague.id
+      })
+
+      assert {:ok, _} =
+               KlassHero.Provider.unassign_staff_from_session(
+                 session.id,
+                 ctx.staff.id,
+                 ctx.provider.id
+               )
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      refute has_element?(
+               view,
+               "button[phx-value-session_id='#{session.id}']",
+               "Start Session"
+             )
+    end
+
+    test "rejects start_session for a session the staff member was taken off",
+         %{conn: conn} = ctx do
+      program = assigned_program(ctx, title: "Soccer Training")
+      session = session_on(program, Date.utc_today(), :scheduled)
+
+      colleague = ProviderFixtures.staff_member_fixture(%{provider_id: ctx.provider.id})
+
+      ProviderFixtures.program_assignment_fixture(%{
+        provider_id: ctx.provider.id,
+        program_id: program.id,
+        staff_member_id: colleague.id
+      })
+
+      assert {:ok, _} =
+               KlassHero.Provider.unassign_staff_from_session(
+                 session.id,
+                 ctx.staff.id,
+                 ctx.provider.id
+               )
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      render_click(view, "start_session", %{"session_id" => session.id})
+
+      assert render(view) =~ "Unauthorized"
+    end
+
     test "filters sessions by program_id query param", %{conn: conn} = ctx do
       program_a = assigned_program(ctx, title: "Soccer")
       session_on(program_a, Date.utc_today(), :scheduled)

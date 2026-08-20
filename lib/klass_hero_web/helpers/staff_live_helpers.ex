@@ -38,4 +38,20 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpers do
 
     {programs, access}
   end
+
+  @doc """
+  Every program the provider runs, as `%{program_id => title}`.
+
+  For naming rows that were let through on a session-grain gate (#783): a staff
+  member covering a single session has no assignment to the program behind it, so
+  a titles map built from assignments would come up empty for exactly the row the
+  override put on screen. Titles carry no access — the caller has already decided
+  what to render — so scoping this to the provider is the honest boundary.
+  """
+  @spec provider_program_names(String.t()) :: %{optional(String.t()) => String.t()}
+  def provider_program_names(provider_id) when is_binary(provider_id) do
+    provider_id
+    |> ProgramCatalog.list_programs_for_provider()
+    |> Map.new(&{&1.id, &1.title})
+  end
 end

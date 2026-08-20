@@ -828,12 +828,12 @@ defmodule KlassHero.Participation do
     end
   end
 
-  # The record names its session and the session names its program; the program is
-  # what a role is authorized against. Kept here rather than in the authorizer so
-  # that module stays free of this context's own tables.
+  # The record names its session, and the session is what a role is authorized
+  # against. Fetched here rather than in the authorizer so that module stays free
+  # of this context's own tables.
   defp authorize_for_record(%Scope{} = scope, %ParticipationRecord{} = record) do
     with {:ok, session} <- fetch_session(record.session_id) do
-      AttendanceAuthorization.authorize(scope, session.program_id)
+      AttendanceAuthorization.authorize(scope, session)
     end
   end
 

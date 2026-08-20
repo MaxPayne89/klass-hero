@@ -26,23 +26,44 @@ defmodule KlassHero.Participation.AttendanceAuthorization do
   A staff member with no assignment is authorized for nothing, per
   `StaffProgramAccess`'s own rule (#1323): assignment is a deliberate act, so
   "not assigned yet" and "not allowed" are the same fact.
+
+  ## The staff rule is asked at session grain (#783)
+
+  Since #782 a provider can staff one session differently from its program, so
+  "assigned to the program" stopped being the whole answer. The staff branch asks
+  `Provider.get_session_staffing/1`, which resolves a session's own overrides when
+  it has any and falls back to the program roster when it does not — one question,
+  with the program grain as its fallback rather than as a second rule beside it.
+
+  That distinction is the point, and it is *not* what #783 originally specified.
+  OR-ing a session check onto a program check reads as more permissive in the
+  right direction only. It is also more permissive in the wrong one:
+  `unassign_staff_from_session/3` takes someone off a single session by
+  materializing the program roster and dropping them from it, and their
+  `ProgramStaffAssignment` deliberately survives that. Under an OR they would
+  still authorize — the removal silently undone at the layer that enforces it.
   """
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
 
   @type role :: :provider | :staff | :admin
 
   @doc """
-  Resolves the scope's role for `program_id`, or refuses.
+  Resolves the scope's role for `session`, or refuses.
+
+  Takes the session rather than its program id because the staff rule is answered
+  at session grain; ownership and the admin flag are still program-wide facts, so
+  those two branches read `session.program_id`.
   """
-  @spec authorize(Scope.t(), String.t()) :: {:ok, role()} | {:error, :unauthorized}
-  def authorize(%Scope{} = scope, program_id) when is_binary(program_id) do
+  @spec authorize(Scope.t(), ProgramSession.t()) :: {:ok, role()} | {:error, :unauthorized}
+  def authorize(%Scope{} = scope, %ProgramSession{} = session) do
     cond do
-      provider_owns?(scope, program_id) -> {:ok, :provider}
-      staff_assigned?(scope, program_id) -> {:ok, :staff}
+      provider_owns?(scope, session.program_id) -> {:ok, :provider}
+      staff_on_session?(scope, session) -> {:ok, :staff}
       admin?(scope) -> {:ok, :admin}
       true -> {:error, :unauthorized}
     end
@@ -54,12 +75,12 @@ defmodule KlassHero.Participation.AttendanceAuthorization do
     ProgramProviderResolver.resolve_provider_id(program_id) == {:ok, provider.id}
   end
 
-  defp staff_assigned?(%Scope{staff_member: nil}, _program_id), do: false
+  defp staff_on_session?(%Scope{staff_member: nil}, _session), do: false
 
-  defp staff_assigned?(%Scope{staff_member: staff_member}, program_id) do
-    staff_member.id
-    |> Provider.get_staff_program_access()
-    |> StaffProgramAccess.authorized?(program_id)
+  defp staff_on_session?(%Scope{staff_member: staff_member}, session) do
+    session.id
+    |> Provider.get_session_staffing()
+    |> SessionStaffing.staffed_by?(staff_member.id)
   end
 
   defp admin?(%Scope{user: %{is_admin: true}}), do: true
