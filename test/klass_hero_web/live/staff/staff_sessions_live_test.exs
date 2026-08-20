@@ -35,7 +35,15 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
 
   defp build_program(provider, attrs) do
     category = Keyword.get(attrs, :category, "sports")
-    program = insert(:program_schema, provider_id: provider.id, category: category)
+
+    # `end_date` belongs on the write row: closure is read from `programs`, never
+    # from the projection (#1082).
+    program =
+      insert(:program_schema,
+        provider_id: provider.id,
+        category: category,
+        end_date: Keyword.get(attrs, :end_date)
+      )
 
     insert(
       :program_listing_schema,
@@ -220,6 +228,43 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
       render_click(view, "start_session", %{"session_id" => session.id})
 
       assert render(view) =~ "Unauthorized"
+    end
+
+    test "hides a Closed Program's sessions, on the day they fell (#1082)",
+         %{conn: conn} = ctx do
+      closed = assigned_program(ctx, title: "Spring Term", end_date: Date.add(Date.utc_today(), -20))
+      session = session_on(closed, Date.add(Date.utc_today(), -25), :completed)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      render_change(view, "change_date", %{"date" => Date.to_iso8601(session.session_date)})
+
+      refute has_element?(view, "#sessions-#{session.id}")
+      refute render(view) =~ "Spring Term"
+    end
+
+    test "still shows an open program's old sessions — an old date is not a closed program",
+         %{conn: conn} = ctx do
+      open = assigned_program(ctx, title: "Year Long Club")
+      session = session_on(open, Date.add(Date.utc_today(), -25), :completed)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      render_change(view, "change_date", %{"date" => Date.to_iso8601(session.session_date)})
+
+      assert render(view) =~ "Year Long Club"
+    end
+
+    test "rejects start_session on a Closed Program, naming the reason",
+         %{conn: conn} = ctx do
+      closed = assigned_program(ctx, title: "Spring Term", end_date: Date.add(Date.utc_today(), -20))
+      session = session_on(closed, Date.utc_today(), :scheduled)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      render_click(view, "start_session", %{"session_id" => session.id})
+
+      assert render(view) =~ "This program has closed"
     end
 
     test "filters sessions by program_id query param", %{conn: conn} = ctx do

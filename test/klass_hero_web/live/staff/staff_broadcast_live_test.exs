@@ -109,6 +109,30 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLiveTest do
       assert flash["info"] =~ "Broadcast sent"
     end
 
+    # The issue's acceptance criteria never mentioned this surface. It closes with
+    # no change here: composing is gated on `StaffProgramAccess.authorized?/2`,
+    # which stopped saying yes once the program closed (#1082).
+    test "rejects broadcast for a Closed Program the staff member is still assigned to",
+         %{conn: conn, provider: provider, staff: staff} do
+      closed =
+        insert(:program_schema,
+          provider_id: provider.id,
+          category: "sports",
+          end_date: Date.add(Date.utc_today(), -20)
+        )
+
+      insert(:program_listing_schema, id: closed.id, provider_id: provider.id, category: "sports")
+
+      program_assignment_fixture(%{
+        provider_id: provider.id,
+        program_id: closed.id,
+        staff_member_id: staff.id
+      })
+
+      assert {:error, {:live_redirect, %{to: "/staff/dashboard"}}} =
+               live(conn, ~p"/staff/programs/#{closed.id}/broadcast")
+    end
+
     test "rejects broadcast for non-assigned program", %{conn: conn, provider: provider} do
       # Category "sports" matches the staff member's Specialties deliberately: what
       # rejects this is the missing Program Staff Assignment (#1323). Compose and the

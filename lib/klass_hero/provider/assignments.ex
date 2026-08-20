@@ -330,10 +330,17 @@ defmodule KlassHero.Provider.Assignments do
   def list_session_staffing(session_ids) when is_list(session_ids) do
     sessions = fetch_sessions(session_ids)
     overrides = session_overrides_by_session(Enum.map(sessions, & &1.id))
-    program_staffing = sessions |> Enum.map(& &1.program_id) |> Enum.uniq() |> Provider.list_program_staffing()
+    program_ids = sessions |> Enum.map(& &1.program_id) |> Enum.uniq()
+    program_staffing = Provider.list_program_staffing(program_ids)
+
+    # Over the batch's *distinct* programs, so a full day of sessions costs one
+    # closure question rather than one per row (#1082).
+    open_ids = open_program_ids(program_ids)
 
     Map.new(sessions, fn session ->
-      {session.id, resolve_staffing(session, Map.get(overrides, session.id), program_staffing)}
+      closed? = not MapSet.member?(open_ids, session.program_id)
+
+      {session.id, resolve_staffing(session, Map.get(overrides, session.id), program_staffing, closed?)}
     end)
   end
 
@@ -618,15 +625,29 @@ defmodule KlassHero.Provider.Assignments do
   """
   @spec get_staff_program_access(String.t()) :: StaffProgramAccess.t()
   def get_staff_program_access(staff_member_id) when is_binary(staff_member_id) do
-    program_ids =
+    assigned =
       from(a in ProgramStaffAssignment,
         where: a.staff_member_id == ^staff_member_id and is_nil(a.unassigned_at),
         select: a.program_id
       )
       |> Repo.all()
-      |> MapSet.new()
 
-    %StaffProgramAccess{staff_member_id: staff_member_id, program_ids: program_ids}
+    open = open_program_ids(assigned)
+
+    %StaffProgramAccess{
+      staff_member_id: staff_member_id,
+      program_ids: MapSet.intersection(MapSet.new(assigned), open),
+      closed_program_ids: MapSet.difference(MapSet.new(assigned), open)
+    }
+  end
+
+  # Subtracting the open set rather than adding a closed one is what makes this
+  # fail closed: an assignment whose program no longer resolves at all comes back
+  # from neither query and lands among the closed, where it grants nothing.
+  defp open_program_ids(program_ids) do
+    acl_span source: "provider", target: "program_catalog" do
+      ProgramCatalog.list_open_program_ids(program_ids)
+    end
   end
 
   @doc """
@@ -1049,11 +1070,11 @@ defmodule KlassHero.Provider.Assignments do
     for id <- member_ids, staff = by_id[id], do: staff
   end
 
-  defp resolve_staffing(session, nil, program_staffing) do
-    inherited_staffing(session, program_staffing)
+  defp resolve_staffing(session, nil, program_staffing, closed?) do
+    inherited_staffing(session, program_staffing, closed?)
   end
 
-  defp resolve_staffing(session, override_rows, program_staffing) do
+  defp resolve_staffing(session, override_rows, program_staffing, closed?) do
     members = for {_id, _lead?, staff} <- override_rows, staff != nil, do: staff
 
     %SessionStaffing{
@@ -1062,14 +1083,15 @@ defmodule KlassHero.Provider.Assignments do
       lead: resolve_session_lead(override_rows, members, session.program_id, program_staffing),
       member_ids: Enum.map(members, & &1.id),
       member_count: length(members),
-      source: :override
+      source: :override,
+      program_closed?: closed?
     }
   end
 
-  defp inherited_staffing(session, program_staffing) do
+  defp inherited_staffing(session, program_staffing, closed?) do
     case Map.get(program_staffing, session.program_id) do
       nil ->
-        SessionStaffing.empty(session.id, session.program_id)
+        SessionStaffing.empty(session.id, session.program_id, closed?)
 
       %ProgramStaffing{} = staffing ->
         %SessionStaffing{
@@ -1078,7 +1100,8 @@ defmodule KlassHero.Provider.Assignments do
           lead: staffing.lead,
           member_ids: staffing.member_ids,
           member_count: staffing.member_count,
-          source: :program
+          source: :program,
+          program_closed?: closed?
         }
     end
   end

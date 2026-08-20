@@ -68,4 +68,51 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
       refute StaffProgramAccess.authorized?(access, program.id)
     end
   end
+
+  describe "get_staff_program_access/1 and Closed Programs (#1082)" do
+    test "refuses a program that closed, while still naming it as assigned" do
+      {provider, _program, staff} = setup_provider_program_staff()
+      closed = insert(:program_schema, provider_id: provider.id, end_date: Date.add(Date.utc_today(), -15))
+
+      assign(closed, staff)
+
+      access = Provider.get_staff_program_access(staff.id)
+
+      refute StaffProgramAccess.authorized?(access, closed.id)
+      assert StaffProgramAccess.closed?(access, closed.id)
+    end
+
+    test "keeps a program that ended inside the grace window" do
+      {provider, _program, staff} = setup_provider_program_staff()
+      recent = insert(:program_schema, provider_id: provider.id, end_date: Date.add(Date.utc_today(), -1))
+
+      assign(recent, staff)
+
+      access = Provider.get_staff_program_access(staff.id)
+
+      assert StaffProgramAccess.authorized?(access, recent.id)
+      refute StaffProgramAccess.closed?(access, recent.id)
+    end
+
+    test "partitions a mixed roster into open and closed" do
+      {provider, open, staff} = setup_provider_program_staff()
+      closed = insert(:program_schema, provider_id: provider.id, end_date: Date.add(Date.utc_today(), -30))
+
+      assign(open, staff)
+      assign(closed, staff)
+
+      access = Provider.get_staff_program_access(staff.id)
+
+      assert access.program_ids == MapSet.new([open.id])
+      assert access.closed_program_ids == MapSet.new([closed.id])
+    end
+
+    test "reports a program that is not closed as not closed" do
+      {_provider, open, staff} = setup_provider_program_staff()
+
+      assign(open, staff)
+
+      refute StaffProgramAccess.closed?(Provider.get_staff_program_access(staff.id), open.id)
+    end
+  end
 end

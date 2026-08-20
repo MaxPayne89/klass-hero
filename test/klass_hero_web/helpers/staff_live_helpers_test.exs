@@ -7,13 +7,22 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
   alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
 
-  # The write row backs ownership checks; the listing row is what
-  # `ProgramCatalog.list_programs_for_provider/1` reads, and it only matches when
-  # the two share an id (the projection would normally keep them in step).
-  defp program(provider, category) do
-    program = insert(:program_schema, provider_id: provider.id, category: category)
+  # The listing row is no longer what this helper reads — it fetches the write
+  # rows its assignments name (#1082) — but it is still inserted here so these
+  # tests keep exercising the shape the rest of the staff surfaces see.
+  defp program(provider, category, attrs \\ []) do
+    attrs = Keyword.merge([provider_id: provider.id, category: category], attrs)
+    program = insert(:program_schema, attrs)
     insert(:program_listing_schema, id: program.id, provider_id: provider.id, category: category)
     program
+  end
+
+  defp assign(program, staff) do
+    program_assignment_fixture(%{
+      provider_id: program.provider_id,
+      program_id: program.id,
+      staff_member_id: staff.id
+    })
   end
 
   describe "load_assigned_programs/1" do
@@ -22,15 +31,12 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
       staff = staff_member_fixture(provider_id: provider.id, tags: ["sports"])
       arts_program = program(provider, "arts")
 
-      program_assignment_fixture(%{
-        provider_id: provider.id,
-        program_id: arts_program.id,
-        staff_member_id: staff.id
-      })
+      assign(arts_program, staff)
 
-      {programs, access} = StaffLiveHelpers.load_assigned_programs(staff)
+      {open, closed, access} = StaffLiveHelpers.load_assigned_programs(staff)
 
-      assert Enum.map(programs, & &1.id) == [arts_program.id]
+      assert Enum.map(open, & &1.id) == [arts_program.id]
+      assert closed == []
       assert StaffProgramAccess.authorized?(access, arts_program.id)
     end
 
@@ -39,9 +45,10 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
       staff = staff_member_fixture(provider_id: provider.id, tags: [])
       sports_program = program(provider, "sports")
 
-      {programs, access} = StaffLiveHelpers.load_assigned_programs(staff)
+      {open, closed, access} = StaffLiveHelpers.load_assigned_programs(staff)
 
-      assert programs == []
+      assert open == []
+      assert closed == []
       refute StaffProgramAccess.authorized?(access, sports_program.id)
     end
 
@@ -52,27 +59,77 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
       own = program(provider, "sports")
       foreign = program(other_provider, "sports")
 
-      for p <- [own, foreign] do
-        program_assignment_fixture(%{
-          provider_id: p.provider_id,
-          program_id: p.id,
-          staff_member_id: staff.id
-        })
-      end
+      for p <- [own, foreign], do: assign(p, staff)
 
-      {programs, _access} = StaffLiveHelpers.load_assigned_programs(staff)
+      {open, _closed, _access} = StaffLiveHelpers.load_assigned_programs(staff)
 
-      assert Enum.map(programs, & &1.id) == [own.id]
+      assert Enum.map(open, & &1.id) == [own.id]
     end
 
     test "returns no programs and an empty access when the provider has none" do
       provider = provider_profile_fixture()
       staff = staff_member_fixture(provider_id: provider.id, tags: [])
 
-      assert {[], %StaffProgramAccess{program_ids: program_ids}} =
+      assert {[], [], %StaffProgramAccess{program_ids: program_ids}} =
                StaffLiveHelpers.load_assigned_programs(staff)
 
       assert MapSet.size(program_ids) == 0
+    end
+
+    test "orders each list by title" do
+      provider = provider_profile_fixture()
+      staff = staff_member_fixture(provider_id: provider.id, tags: [])
+      zebra = program(provider, "sports", title: "Zebra")
+      alpha = program(provider, "sports", title: "Alpha")
+
+      for p <- [zebra, alpha], do: assign(p, staff)
+
+      {open, _closed, _access} = StaffLiveHelpers.load_assigned_programs(staff)
+
+      assert Enum.map(open, & &1.title) == ["Alpha", "Zebra"]
+    end
+  end
+
+  describe "load_assigned_programs/1 and Closed Programs (#1082)" do
+    setup do
+      provider = provider_profile_fixture()
+      staff = staff_member_fixture(provider_id: provider.id, tags: [])
+
+      %{provider: provider, staff: staff}
+    end
+
+    test "splits the roster into open and closed", %{provider: provider, staff: staff} do
+      open = program(provider, "sports", title: "Still Running")
+      closed = program(provider, "arts", title: "Last Spring", end_date: Date.add(Date.utc_today(), -20))
+
+      for p <- [open, closed], do: assign(p, staff)
+
+      {open_programs, closed_programs, _access} = StaffLiveHelpers.load_assigned_programs(staff)
+
+      assert Enum.map(open_programs, & &1.id) == [open.id]
+      assert Enum.map(closed_programs, & &1.id) == [closed.id]
+    end
+
+    test "keeps a program inside its grace window open", %{provider: provider, staff: staff} do
+      recent = program(provider, "sports", end_date: Date.add(Date.utc_today(), -2))
+
+      assign(recent, staff)
+
+      {open_programs, closed_programs, _access} = StaffLiveHelpers.load_assigned_programs(staff)
+
+      assert Enum.map(open_programs, & &1.id) == [recent.id]
+      assert closed_programs == []
+    end
+
+    test "still names a closed program, so it can be listed read-only", %{provider: provider, staff: staff} do
+      closed = program(provider, "arts", title: "Autumn Club", end_date: Date.add(Date.utc_today(), -60))
+
+      assign(closed, staff)
+
+      {_open, [listed], _access} = StaffLiveHelpers.load_assigned_programs(staff)
+
+      assert listed.title == "Autumn Club"
+      assert listed.category == "arts"
     end
   end
 end

@@ -38,10 +38,11 @@ defmodule KlassHero.Provider.Domain.ReadModels.SessionStaffing do
           lead: lead(),
           member_ids: [String.t()],
           member_count: non_neg_integer(),
-          source: source()
+          source: source(),
+          program_closed?: boolean()
         }
 
-  @enforce_keys [:session_id, :program_id, :member_ids, :member_count, :source]
+  @enforce_keys [:session_id, :program_id, :member_ids, :member_count, :source, :program_closed?]
 
   defstruct [
     :session_id,
@@ -49,7 +50,8 @@ defmodule KlassHero.Provider.Domain.ReadModels.SessionStaffing do
     :lead,
     member_ids: [],
     member_count: 0,
-    source: :program
+    source: :program,
+    program_closed?: false
   ]
 
   @doc """
@@ -58,35 +60,48 @@ defmodule KlassHero.Provider.Domain.ReadModels.SessionStaffing do
   `source` is `:program`, not `:override`: a session nobody staffs is inheriting an
   empty program roster. An override is a row a provider deliberately created, so
   "no rows anywhere" can never be one.
+
+  `program_closed?` still has to be carried: having no staff and belonging to a
+  closed program are independent facts, and the caller knows the second one.
   """
-  @spec empty(String.t(), String.t()) :: t()
-  def empty(session_id, program_id) when is_binary(session_id) and is_binary(program_id) do
+  @spec empty(String.t(), String.t(), boolean()) :: t()
+  def empty(session_id, program_id, program_closed? \\ false)
+      when is_binary(session_id) and is_binary(program_id) and is_boolean(program_closed?) do
     %__MODULE__{
       session_id: session_id,
       program_id: program_id,
       lead: nil,
       member_ids: [],
       member_count: 0,
-      source: :program
+      source: :program,
+      program_closed?: program_closed?
     }
   end
 
   @doc """
-  Whether `staff_member_id` is on this session, leading it or not.
+  Whether `staff_member_id` may act on this session: on it, and its program still
+  open.
 
   Accepts `nil` so a caller can pass a batch-read lookup straight through without
   first defaulting an absent session.
+
+  A **Closed Program** refuses everyone, member and lead alike (#1082). The check
+  lives here rather than at the five call sites because every one of them is an
+  authorization decision, and a rule they each have to remember is a rule one of
+  them eventually forgets — which is what #1323 was.
   """
   @spec staffed_by?(t() | nil, String.t()) :: boolean()
   def staffed_by?(nil, _staff_member_id), do: false
+  def staffed_by?(%__MODULE__{program_closed?: true}, _staff_member_id), do: false
 
   def staffed_by?(%__MODULE__{member_ids: member_ids}, staff_member_id) do
     staff_member_id in member_ids
   end
 
-  @doc "Whether `staff_member_id` leads this session."
+  @doc "Whether `staff_member_id` leads this session. Closed programs have no lead to act."
   @spec led_by?(t() | nil, String.t()) :: boolean()
   def led_by?(nil, _staff_member_id), do: false
+  def led_by?(%__MODULE__{program_closed?: true}, _staff_member_id), do: false
   def led_by?(%__MODULE__{lead: nil}, _staff_member_id), do: false
   def led_by?(%__MODULE__{lead: %{id: lead_id}}, staff_member_id), do: lead_id == staff_member_id
 

@@ -186,11 +186,16 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     {:noreply, socket}
   end
 
-  defp staffs_session?(staff_member, session_id) do
-    session_id
-    |> Provider.get_session_staffing()
-    |> SessionStaffing.staffed_by?(staff_member.id)
-  end
+  # Why the refusal — for the message only. The refusal itself is
+  # `SessionStaffing.staffed_by?/2`'s, and it already refuses a Closed Program on
+  # its own; this only reads the reason off the same struct so the flash can say
+  # which of the two it was, without a second round trip (#1082).
+  defp refusal_reason(%SessionStaffing{program_closed?: true}), do: :program_closed
+  defp refusal_reason(_staffing), do: :not_assigned
+
+  defp refusal_message(:program_closed), do: gettext("This program has closed. Its sessions are no longer available.")
+
+  defp refusal_message(:not_assigned), do: gettext("You are not assigned to this session")
 
   defp load_session_data(socket) do
     session_id = socket.assigns.session_id
@@ -203,21 +208,26 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
         # longer the only thing standing between staff and a child's record (#1353).
         # Asked at session grain, so it agrees with the context rather than
         # shadowing it with a coarser answer (#783).
-        if staffs_session?(socket.assigns.staff_member, session_id) do
+        staffing = Provider.get_session_staffing(session_id)
+
+        if SessionStaffing.staffed_by?(staffing, socket.assigns.staff_member.id) do
           socket
           |> assign(:session, session)
           |> assign(:participation_records, session.participation_records || [])
           |> assign(:session_error, nil)
           |> load_provider_notes()
         else
+          reason = refusal_reason(staffing)
+
           Logger.warning(
             "[StaffParticipationLive] Unauthorized access to session",
             session_id: session_id,
-            staff_member_id: socket.assigns.staff_member.id
+            staff_member_id: socket.assigns.staff_member.id,
+            reason: reason
           )
 
           socket
-          |> put_flash(:error, gettext("You are not assigned to this session"))
+          |> put_flash(:error, refusal_message(reason))
           |> push_navigate(to: ~p"/staff/sessions")
         end
 

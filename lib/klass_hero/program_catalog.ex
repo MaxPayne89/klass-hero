@@ -169,6 +169,50 @@ defmodule KlassHero.ProgramCatalog do
     |> Enum.map(&Program.load_value_objects/1)
   end
 
+  @doc """
+  Whether `program` has closed to its staff (#1082).
+
+  Reads the grace window from `config :klass_hero, :program_access,
+  closed_after_days:` at runtime, so a test can vary it and a deploy is not
+  needed to change it. `Program.closed?/2` does the comparison.
+  """
+  @spec closed?(Program.t()) :: boolean()
+  def closed?(%Program{} = program), do: Program.closed?(program, closed_cutoff())
+
+  @doc """
+  Of `program_ids`, those that exist **and** have not closed to their staff.
+
+  Returns the **open** side on purpose: callers derive closed by set difference,
+  so an id matching no program lands on the closed side rather than being read as
+  open. Fail-closed by construction — see `KlassHero.Provider.Assignments`.
+
+  Not to be confused with `list_ended_program_ids/1`, which is Messaging's
+  unscoped retention sweep over every program and takes its own cutoff. This one
+  is scoped to ids the caller already holds and owns the access grace window.
+  """
+  @spec list_open_program_ids([String.t()]) :: MapSet.t(String.t())
+  def list_open_program_ids([]), do: MapSet.new()
+
+  def list_open_program_ids(program_ids) when is_list(program_ids) do
+    cutoff = closed_cutoff()
+
+    Program
+    |> where([p], p.id in ^program_ids)
+    |> where([p], is_nil(p.end_date) or p.end_date >= ^cutoff)
+    |> select([p], p.id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp closed_cutoff do
+    days =
+      :klass_hero
+      |> Application.get_env(:program_access, [])
+      |> Keyword.get(:closed_after_days, 14)
+
+    Date.add(Date.utc_today(), -days)
+  end
+
   @doc "Returns IDs of programs with end_date before cutoff. Used by Messaging retention policy."
   @spec list_ended_program_ids(Date.t()) :: [String.t()]
   def list_ended_program_ids(cutoff_date) do

@@ -64,6 +64,60 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
     end
   end
 
+  # The write path is the one the issue's acceptance criteria never mentioned: the
+  # LiveViews could all be closed and this would still have accepted the check-in.
+  # `authorize/2` itself is unchanged — the refusal arrives through the read model.
+  describe "authorize/2 and Closed Programs (#1082)" do
+    test "a staff member assigned to the program is refused once it closes" do
+      %{provider: provider, program: program, session: session} = provider_with_closed_session()
+      scope = scope_for(staff_member: assigned_staff(provider, program))
+
+      assert {:error, :unauthorized} = AttendanceAuthorization.authorize(scope, session)
+    end
+
+    test "a staff member overridden onto that one session is refused too" do
+      %{provider: provider, program: program, session: session} = provider_with_closed_session()
+      staff = ProviderFixtures.staff_member_fixture(%{provider_id: provider.id})
+
+      {:ok, _} =
+        Provider.assign_staff_to_session(%{
+          provider_id: provider.id,
+          program_id: program.id,
+          session_id: session.id,
+          staff_member_id: staff.id
+        })
+
+      assert {:error, :unauthorized} =
+               AttendanceAuthorization.authorize(scope_for(staff_member: staff), session)
+    end
+
+    test "the owning provider still corrects their own closed roster" do
+      %{provider: provider, session: session} = provider_with_closed_session()
+
+      assert {:ok, :provider} =
+               AttendanceAuthorization.authorize(scope_for(provider_profile: provider), session)
+    end
+
+    test "an admin still reaches a closed program" do
+      %{session: session} = provider_with_closed_session()
+      scope = scope_for(user: AccountsFixtures.user_fixture(is_admin: true))
+
+      assert {:ok, :admin} = AttendanceAuthorization.authorize(scope, session)
+    end
+
+    test "a staff member keeps access while the program is inside its grace window" do
+      provider = ProviderFixtures.provider_profile_fixture()
+
+      program =
+        insert(:program_schema, provider_id: provider.id, end_date: Date.add(Date.utc_today(), -1))
+
+      session = insert(:program_session_schema, program_id: program.id)
+      scope = scope_for(staff_member: assigned_staff(provider, program))
+
+      assert {:ok, :staff} = AttendanceAuthorization.authorize(scope, session)
+    end
+  end
+
   # These four pin the fall-through order itself. Each one returns a different
   # role under a different precedence, so they are what fails if the order is
   # ever reshuffled — the single-persona cases above pass under all of them.
@@ -178,6 +232,21 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
   defp provider_with_session do
     %{provider: provider, program: program} = provider_with_program()
     session = insert(:program_session_schema, program_id: program.id)
+
+    %{provider: provider, program: program, session: session}
+  end
+
+  defp provider_with_closed_session do
+    provider = ProviderFixtures.provider_profile_fixture()
+
+    program =
+      insert(:program_schema, provider_id: provider.id, end_date: Date.add(Date.utc_today(), -15))
+
+    session =
+      insert(:program_session_schema,
+        program_id: program.id,
+        session_date: Date.add(Date.utc_today(), -20)
+      )
 
     %{provider: provider, program: program, session: session}
   end

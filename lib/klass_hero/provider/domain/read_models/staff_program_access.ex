@@ -4,8 +4,16 @@ defmodule KlassHero.Provider.Domain.ReadModels.StaffProgramAccess do
 
   Derived from live **Program Staff Assignments** — the rows a provider creates
   deliberately, which already decide conversation membership, session-detail
-  attribution and the offboarding teardown. Never from `staff_members.tags`,
-  which are descriptive **Specialties** and carry no access (#1323).
+  attribution and the offboarding teardown — narrowed by whether each of those
+  programs is still open. Assignment says *who*; closure says *whether it still
+  counts* (#1082). Never from `staff_members.tags`, which are descriptive
+  **Specialties** and carry no access (#1323).
+
+  Both inputs are write-model facts, read strongly-consistently. Closure is asked
+  of `programs` through `ProgramCatalog.list_open_program_ids/1`, never of the
+  `program_listings` projection: projection lag revoking access is the failure
+  `KlassHeroWeb.Helpers.StaffLiveHelpers`'s moduledoc warns about, and it applies
+  to closure exactly as it does to assignment.
 
   Until #1323 the four staff surfaces derived this by matching a staff member's
   tags against `program.category`, with an empty tag list silently meaning *every*
@@ -23,15 +31,20 @@ defmodule KlassHero.Provider.Domain.ReadModels.StaffProgramAccess do
   membership test.
   """
 
-  @typedoc "Every Program one Staff Member is currently assigned to."
+  @typedoc """
+  Every Program one Staff Member is currently assigned to, split by whether it is
+  still open. The two sets are disjoint and together are the whole assignment
+  roster.
+  """
   @type t :: %__MODULE__{
           staff_member_id: String.t(),
-          program_ids: MapSet.t(String.t())
+          program_ids: MapSet.t(String.t()),
+          closed_program_ids: MapSet.t(String.t())
         }
 
-  @enforce_keys [:staff_member_id, :program_ids]
+  @enforce_keys [:staff_member_id, :program_ids, :closed_program_ids]
 
-  defstruct [:staff_member_id, :program_ids]
+  defstruct [:staff_member_id, :program_ids, :closed_program_ids]
 
   @doc """
   Whether the staff member may see and act on `program_id`.
@@ -40,9 +53,25 @@ defmodule KlassHero.Provider.Domain.ReadModels.StaffProgramAccess do
   case where they have only just been hired. That is the correct answer, not a
   degenerate one: assignment is a deliberate act, so "not assigned yet" and "not
   allowed" are the same fact.
+
+  Says nothing about *why* a program is refused. A caller that needs to tell a
+  Closed Program apart from one that was never assigned asks `closed?/2`.
   """
   @spec authorized?(t(), String.t()) :: boolean()
   def authorized?(%__MODULE__{program_ids: program_ids}, program_id) do
     MapSet.member?(program_ids, program_id)
+  end
+
+  @doc """
+  Whether `program_id` is assigned to this staff member but **Closed** — so it
+  may be named and listed, but not acted on (#1082).
+
+  This is the read-only half of the roster: the dashboard's "Completed" section
+  is built from it, and it is what lets a refusal say "this program has closed"
+  rather than "you are not assigned".
+  """
+  @spec closed?(t(), String.t()) :: boolean()
+  def closed?(%__MODULE__{closed_program_ids: closed_program_ids}, program_id) do
+    MapSet.member?(closed_program_ids, program_id)
   end
 end
