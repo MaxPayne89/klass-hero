@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.81.0](https://github.com/MaxPayne89/klass-hero/compare/v0.80.0...v0.81.0) (2026-08-21)
+
+
+### Features
+
+* revoke staff access to closed programs ([#1442](https://github.com/MaxPayne89/klass-hero/issues/1442)) ([39b5d83](https://github.com/MaxPayne89/klass-hero/commit/39b5d830a18c758811002ef7ef5fc0a712b0e04a))
+
+
+### Bug Fixes
+
+* replace dead hero-* colour utilities and guard against new ones ([#1445](https://github.com/MaxPayne89/klass-hero/issues/1445)) ([4958934](https://github.com/MaxPayne89/klass-hero/commit/49589344f35eb2a806c5c9c7fe940f04040e50d0))
+
 ## [0.80.0](https://github.com/MaxPayne89/klass-hero/compare/v0.79.0...v0.80.0) (2026-08-20)
 
 
