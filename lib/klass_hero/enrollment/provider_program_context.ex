@@ -39,7 +39,7 @@ defmodule KlassHero.Enrollment.ProviderProgramContext do
       programs_by_title
       |> Map.keys()
       |> Enum.group_by(&String.downcase/1)
-      |> Enum.filter(fn {_downcased, titles} -> length(titles) > 1 end)
+      |> Enum.filter(fn {_downcased, titles} -> match?([_, _ | _], titles) end)
 
     if collisions == [] do
       downcased =

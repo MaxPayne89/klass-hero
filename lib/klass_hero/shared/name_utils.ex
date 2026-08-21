@@ -21,7 +21,7 @@ defmodule KlassHero.Shared.NameUtils do
       tokens ->
         tokens
         |> Enum.take(2)
-        |> Enum.map_join("", &(&1 |> String.first() |> String.upcase()))
+        |> Enum.map_join(&(&1 |> String.first() |> String.upcase()))
     end
   end
 

@@ -90,7 +90,7 @@ defmodule Mix.Tasks.LintPalette do
   def parse_declarations(css) do
     css
     |> String.split("\n")
-    |> Enum.with_index(1)
+    |> Stream.with_index(1)
     |> Enum.reduce(%{}, fn {line, num}, acc ->
       case Regex.run(@declaration, line, capture: :all_but_first) do
         [name, l, c, h, rest] ->
