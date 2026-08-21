@@ -43,13 +43,28 @@ defmodule KlassHero.Messaging.StartConversationWithMessage do
           | {:error, :empty_message | :not_entitled | :not_found | term()}
   def execute(%Scope{} = scope, provider_id, target_user_id, content, opts \\ []) do
     attachments = Keyword.get(opts, :attachments, [])
+    creation_opts = maybe_skip_entitlement(scope, provider_id, opts)
 
     with {:ok, _trimmed} <- SendMessage.validate_content(content, attachments),
-         {:ok, conversation} <- find_or_create(scope, provider_id, target_user_id, opts),
+         {:ok, conversation} <- find_or_create(scope, provider_id, target_user_id, creation_opts),
          {:ok, message} <- send_first_message(conversation, scope.user.id, content, attachments) do
       {:ok, conversation, message}
     end
   end
+
+  # A staff scope carries no `:provider`, so `can_initiate_messaging?/1` denies it
+  # deliberately. Their authority is employment by *this* provider — the same fact
+  # the roster gate and `build_compose_target/3` check — so it is verified here
+  # rather than skipped outright. A staff member of another provider still fails.
+  defp maybe_skip_entitlement(%Scope{provider: nil, parent: nil} = scope, provider_id, opts) do
+    if KlassHero.Messaging.acting_provider_id(scope) == provider_id do
+      Keyword.put(opts, :skip_entitlement_check, true)
+    else
+      opts
+    end
+  end
+
+  defp maybe_skip_entitlement(_scope, _provider_id, opts), do: opts
 
   # A parent's conversation is looked up by their own user id, a provider's by the
   # target's — the two commands differ only in that key, and using the wrong one

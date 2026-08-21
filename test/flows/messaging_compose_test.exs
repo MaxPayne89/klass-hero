@@ -9,6 +9,8 @@ defmodule KlassHeroWeb.Flows.MessagingComposeTest do
 
   use KlassHeroWeb.FlowCase, async: false
 
+  import KlassHero.ProviderFixtures, only: [assign_active_staff: 1]
+
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Repo
 
@@ -35,6 +37,8 @@ defmodule KlassHeroWeb.Flows.MessagingComposeTest do
     %{
       provider_user: provider_user,
       parent_user: parent_user,
+      provider: provider,
+      program: program,
       compose_path: compose_path
     }
   end
@@ -60,6 +64,43 @@ defmodule KlassHeroWeb.Flows.MessagingComposeTest do
     |> log_in_user(parent_user)
     |> visit(~p"/messages")
     |> assert_has("#conversations-empty-state")
+  end
+
+  # A staff scope carries no :provider, so the entitlement predicate denies it by
+  # design. Compose gated on employment instead, and a review caught that the send
+  # path did not — staff could reach the box and fail on send.
+  test "a staff member of the provider can send the first message", %{
+    conn: conn,
+    parent_user: parent_user,
+    provider: provider,
+    program: program
+  } do
+    staff_user = user_fixture(%{intended_roles: [:staff]})
+
+    assign_active_staff(%{
+      provider_id: provider.id,
+      program_id: program.id,
+      staff_user_id: staff_user.id
+    })
+
+    staff_compose =
+      "/staff/messages/new?provider_id=#{provider.id}&user_id=#{parent_user.id}&program_id=#{program.id}"
+
+    with_real_outbox(fn ->
+      conn
+      |> log_in_user(staff_user)
+      |> visit(staff_compose)
+      |> fill_in("#message-input", "Message", with: "Staff here, quick note.")
+      |> submit()
+    end)
+
+    assert Repo.aggregate(Conversation, :count, :id) == 1
+
+    build_conn()
+    |> log_in_user(parent_user)
+    |> visit(~p"/messages")
+    |> click_link("Staff here, quick note.")
+    |> assert_has("[data-role=message]", text: "Staff here, quick note.")
   end
 
   test "sending the first message creates the thread and it reaches the parent", %{

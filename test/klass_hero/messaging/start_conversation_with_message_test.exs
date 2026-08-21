@@ -94,6 +94,41 @@ defmodule KlassHero.Messaging.StartConversationWithMessageTest do
       assert message.attachments != []
     end
 
+    test "a staff member of the provider can send, though their scope carries no provider" do
+      provider = insert(:provider_profile_schema)
+      target_user = AccountsFixtures.user_fixture()
+
+      staff_scope = %Scope{
+        user: AccountsFixtures.user_fixture(),
+        roles: [:staff],
+        parent: nil,
+        provider: nil,
+        staff_member: %{provider_id: provider.id}
+      }
+
+      assert {:ok, _conversation, %Message{}} =
+               StartConversationWithMessage.execute(staff_scope, provider.id, target_user.id, "Hello")
+    end
+
+    test "a staff member of another provider is refused" do
+      provider = insert(:provider_profile_schema)
+      other_provider = insert(:provider_profile_schema)
+      target_user = AccountsFixtures.user_fixture()
+
+      staff_scope = %Scope{
+        user: AccountsFixtures.user_fixture(),
+        roles: [:staff],
+        parent: nil,
+        provider: nil,
+        staff_member: %{provider_id: other_provider.id}
+      }
+
+      assert {:error, :not_entitled} =
+               StartConversationWithMessage.execute(staff_scope, provider.id, target_user.id, "Hello")
+
+      assert conversation_count() == 0
+    end
+
     test "a parent initiating about a program reaches the provider owner" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)
