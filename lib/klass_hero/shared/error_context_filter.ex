@@ -25,9 +25,24 @@ defmodule KlassHero.Shared.ErrorContextFilter do
   Everything else in the context passes through — `KlassHeroWeb.Router.set_error_tracker_context/2`'s
   user_id/email predate this filter and are deliberate.
 
-  `sanitize/1` is called once, on the fully merged context at report time, so a single
+  On the report path `sanitize/1` is called once, on the fully merged context, so a single
   LiveView crash can arrive carrying mount, `handle_params` and `handle_event` params at
   once. Each key is narrowed independently.
+
+  ## Idempotence
+
+  `sanitize/1` is a fixpoint: narrowing an already-narrowed context returns it unchanged. The
+  report path never needed that, but a backfill does — #1406 narrows the rows written before
+  this filter existed, and cannot avoid meeting rows it has already narrowed. Without the
+  property, a second pass would read a params marker as an unlisted *string* and collapse
+  `"[8 keys redacted: allergies, …]"` to `"[redacted]"`, destroying the field names that are the
+  entire point of the params half.
+
+  The args half is a fixpoint for free — `Map.take/2` of an already-taken map keeps everything,
+  so nothing is dropped and no sibling key is rewritten. The params half needs `already_narrowed?/1`,
+  which recognises a marker by its exact shape. The cost is that a value the user typed which
+  matches that shape survives verbatim; `@nested_marker` is anchored end to end to keep that
+  surface as small as it can be without changing what a marker *is*.
 
   Wired via `config :error_tracker, filter: KlassHero.Shared.ErrorContextFilter`.
 
@@ -52,6 +67,21 @@ defmodule KlassHero.Shared.ErrorContextFilter do
   @param_keys ~w(live_view.event_params live_view.params request.params)
 
   @scalar_marker "[redacted]"
+
+  # Exactly what nested_marker/1 emits: a count, then its sorted field names joined by ", ".
+  # Recognising a marker by its shape is what makes sanitize/1 idempotent, and every part of
+  # this pattern is holding that surface down:
+  #
+  #   * `\A`/`\z`, not `^`/`$` — the latter also match either side of a trailing newline.
+  #   * Tokens may not contain whitespace. Field names never do; typed prose always does, so
+  #     this is what stops "[3 keys redacted: severe peanut allergy, born 2015-01-01]" from
+  #     being mistaken for a marker and stored verbatim.
+  #
+  # The charset is otherwise left open on purpose. Names come from form fields, so `_target`,
+  # `Child-Name` and any casing are all real, and a marker this fails to recognise is worse
+  # than a permissive one: it gets collapsed to `@scalar_marker`, losing the names — the very
+  # bug idempotence exists to prevent.
+  @nested_marker ~r/\A\[\d+ keys redacted: (?:[^,\s\[\]]+(?:, [^,\s\[\]]+)*)?\]\z/
 
   # Correlation ids only — enough to find the row this job was about, never its contents.
   # "trace_context" carries OTel propagation (`Shared.Tracing.Context.inject_into_args/1`);
@@ -111,10 +141,17 @@ defmodule KlassHero.Shared.ErrorContextFilter do
   defp narrow_param({key, value}) do
     cond do
       to_string(key) in @allowed_params -> {key, value}
+      already_narrowed?(value) -> {key, value}
       is_map(value) -> {key, nested_marker(value)}
       true -> {key, @scalar_marker}
     end
   end
+
+  defp already_narrowed?(value) when is_binary(value) do
+    value == @scalar_marker or Regex.match?(@nested_marker, value)
+  end
+
+  defp already_narrowed?(_value), do: false
 
   defp nested_marker(map) do
     names = map |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort()
