@@ -5,6 +5,15 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.81.1](https://github.com/MaxPayne89/klass-hero/compare/v0.81.0...v0.81.1) (2026-08-21)
+
+
+### Bug Fixes
+
+* defer conversation creation until the first message is sent ([#1461](https://github.com/MaxPayne89/klass-hero/issues/1461)) ([17f90bc](https://github.com/MaxPayne89/klass-hero/commit/17f90bc200f37081036fe3cfcf5078327b173cc1)), closes [#1446](https://github.com/MaxPayne89/klass-hero/issues/1446)
+* scrub historical error_tracker context ([#1455](https://github.com/MaxPayne89/klass-hero/issues/1455)) ([af3ee39](https://github.com/MaxPayne89/klass-hero/commit/af3ee395c88fe8909b68875a8a5f310cedc45e6e))
+* unify Hero Blue, clear WCAG AA across the daisyUI palette ([#1457](https://github.com/MaxPayne89/klass-hero/issues/1457)) ([c732f4b](https://github.com/MaxPayne89/klass-hero/commit/c732f4b5f2ca4e9724d9f25994577010e2d08da4)), closes [#1408](https://github.com/MaxPayne89/klass-hero/issues/1408)
+
 ## [0.81.0](https://github.com/MaxPayne89/klass-hero/compare/v0.80.0...v0.81.0) (2026-08-21)
 
 
