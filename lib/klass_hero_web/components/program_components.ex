@@ -541,7 +541,6 @@ defmodule KlassHeroWeb.ProgramComponents do
 
   defp has_any_restriction?(_policy), do: true
 
-  @doc false
   defp format_age_restriction(%{min_age_months: min, max_age_months: max}) when not is_nil(min) and not is_nil(max) do
     gettext("Ages %{min} to %{max}", min: format_months(min), max: format_months(max))
   end
@@ -574,7 +573,6 @@ defmodule KlassHeroWeb.ProgramComponents do
     "#{years_str} #{months_str}"
   end
 
-  @doc false
   defp format_gender_restriction(genders) when is_list(genders) do
     labels = Enum.map(genders, &humanize_gender/1)
 
@@ -685,7 +683,6 @@ defmodule KlassHeroWeb.ProgramComponents do
   defp humanize_gender("not_specified"), do: gettext("Not specified")
   defp humanize_gender(other), do: other
 
-  @doc false
   defp format_grade_restriction(%{min_grade: min, max_grade: max})
        when not is_nil(min) and not is_nil(max) and min == max do
     gettext("Grade %{grade}", grade: min)

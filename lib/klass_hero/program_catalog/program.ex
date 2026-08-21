@@ -330,14 +330,10 @@ defmodule KlassHero.ProgramCatalog.Program do
     start_date = get_field(changeset, :registration_start_date)
     end_date = get_field(changeset, :registration_end_date)
 
-    if is_nil(start_date) or is_nil(end_date) do
-      changeset
-    else
-      if Date.before?(start_date, end_date) do
-        changeset
-      else
-        add_error(changeset, :registration_start_date, "must be before registration end date")
-      end
+    cond do
+      is_nil(start_date) or is_nil(end_date) -> changeset
+      Date.before?(start_date, end_date) -> changeset
+      true -> add_error(changeset, :registration_start_date, "must be before registration end date")
     end
   end
 

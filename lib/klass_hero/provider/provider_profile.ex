@@ -173,9 +173,6 @@ defmodule KlassHero.Provider.ProviderProfile do
 
   defp validate_website_protocol(changeset) do
     case get_change(changeset, :website) do
-      nil ->
-        changeset
-
       website when is_binary(website) ->
         if String.starts_with?(website, "https://") do
           changeset

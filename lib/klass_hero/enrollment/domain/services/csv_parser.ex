@@ -346,13 +346,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
   end
 
   defp parse_boolean(raw) do
-    raw
-    |> String.trim()
-    |> String.downcase()
-    |> case do
-      v when v in ["yes", "true", "1"] -> true
-      _ -> false
-    end
+    String.downcase(String.trim(raw)) in ["yes", "true", "1"]
   end
 
   defp parse_grade(raw) do

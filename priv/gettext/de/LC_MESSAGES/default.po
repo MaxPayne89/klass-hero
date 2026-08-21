@@ -1905,23 +1905,23 @@ msgid_plural "%{count} documents"
 msgstr[0] "%{count} Dokument"
 msgstr[1] "%{count} Dokumente"
 
-#: lib/klass_hero_web/components/program_components.ex:564
-#: lib/klass_hero_web/components/program_components.ex:572
+#: lib/klass_hero_web/components/program_components.ex:563
+#: lib/klass_hero_web/components/program_components.ex:571
 #, elixir-autogen, elixir-format
 msgid "%{count} month"
 msgid_plural "%{count} months"
 msgstr[0] "%{count} Monat"
 msgstr[1] "%{count} Monate"
 
-#: lib/klass_hero_web/components/program_components.ex:560
-#: lib/klass_hero_web/components/program_components.ex:571
+#: lib/klass_hero_web/components/program_components.ex:559
+#: lib/klass_hero_web/components/program_components.ex:570
 #, elixir-autogen, elixir-format
 msgid "%{count} year"
 msgid_plural "%{count} years"
 msgstr[0] "%{count} Jahr"
 msgstr[1] "%{count} Jahre"
 
-#: lib/klass_hero_web/components/program_components.ex:582
+#: lib/klass_hero_web/components/program_components.ex:580
 #, elixir-autogen, elixir-format
 msgid "%{gender} only"
 msgstr "Nur %{gender}"
@@ -1941,12 +1941,12 @@ msgstr "Mitglied hinzufügen"
 msgid "Add your first staff member to get started!"
 msgstr "Fügen Sie Ihren ersten Mitarbeiter hinzu, um loszulegen!"
 
-#: lib/klass_hero_web/components/program_components.ex:546
+#: lib/klass_hero_web/components/program_components.ex:545
 #, elixir-autogen, elixir-format
 msgid "Ages %{min} to %{max}"
 msgstr "Alter %{min} bis %{max}"
 
-#: lib/klass_hero_web/components/program_components.ex:550
+#: lib/klass_hero_web/components/program_components.ex:549
 #, elixir-autogen, elixir-format
 msgid "Ages %{min}+"
 msgstr "Alter %{min}+"
@@ -2118,7 +2118,7 @@ msgstr "Beschreiben Sie Ihr Programm..."
 msgid "Description"
 msgstr "Beschreibung"
 
-#: lib/klass_hero_web/components/program_components.ex:684
+#: lib/klass_hero_web/components/program_components.ex:682
 #: lib/klass_hero_web/components/provider_components.ex:1207
 #: lib/klass_hero_web/live/settings/children_live.ex:635
 #, elixir-autogen, elixir-format
@@ -2245,7 +2245,7 @@ msgstr "Dokument konnte nicht hochgeladen werden."
 msgid "Family Programs"
 msgstr "Familienprogramme"
 
-#: lib/klass_hero_web/components/program_components.ex:682
+#: lib/klass_hero_web/components/program_components.ex:680
 #: lib/klass_hero_web/components/provider_components.ex:1206
 #: lib/klass_hero_web/live/settings/children_live.ex:634
 #, elixir-autogen, elixir-format
@@ -2282,17 +2282,17 @@ msgstr "Vorname"
 msgid "Gender"
 msgstr "Geschlecht"
 
-#: lib/klass_hero_web/components/program_components.ex:691
+#: lib/klass_hero_web/components/program_components.ex:688
 #, elixir-autogen, elixir-format
 msgid "Grade %{grade}"
 msgstr "Klassenstufe %{grade}"
 
-#: lib/klass_hero_web/components/program_components.ex:699
+#: lib/klass_hero_web/components/program_components.ex:696
 #, elixir-autogen, elixir-format
 msgid "Grade %{min}+"
 msgstr "Klassenstufe %{min}+"
 
-#: lib/klass_hero_web/components/program_components.ex:695
+#: lib/klass_hero_web/components/program_components.ex:692
 #, elixir-autogen, elixir-format
 msgid "Grades %{min} – %{max}"
 msgstr "Klassenstufen %{min} – %{max}"
@@ -2391,7 +2391,7 @@ msgstr "Ort"
 msgid "Logo upload failed. Please try again."
 msgstr "Logo-Upload fehlgeschlagen. Bitte versuchen Sie es erneut."
 
-#: lib/klass_hero_web/components/program_components.ex:683
+#: lib/klass_hero_web/components/program_components.ex:681
 #: lib/klass_hero_web/components/provider_components.ex:1205
 #: lib/klass_hero_web/live/settings/children_live.ex:633
 #, elixir-autogen, elixir-format
@@ -2510,7 +2510,7 @@ msgstr "Keine (optional)"
 msgid "Not Verified"
 msgstr "Nicht verifiziert"
 
-#: lib/klass_hero_web/components/program_components.ex:685
+#: lib/klass_hero_web/components/program_components.ex:683
 #: lib/klass_hero_web/components/provider_components.ex:1208
 #: lib/klass_hero_web/live/settings/children_live.ex:632
 #, elixir-autogen, elixir-format
@@ -2892,12 +2892,12 @@ msgstr "Zu viele Dateien."
 msgid "Unable to load document preview."
 msgstr "Die Dokumentvorschau konnte nicht geladen werden."
 
-#: lib/klass_hero_web/components/program_components.ex:554
+#: lib/klass_hero_web/components/program_components.ex:553
 #, elixir-autogen, elixir-format
 msgid "Up to %{max}"
 msgstr "Bis zu %{max}"
 
-#: lib/klass_hero_web/components/program_components.ex:703
+#: lib/klass_hero_web/components/program_components.ex:700
 #, elixir-autogen, elixir-format
 msgid "Up to Grade %{max}"
 msgstr "Bis Klassenstufe %{max}"

@@ -275,10 +275,7 @@ defmodule KlassHero.Messaging.SendMessage do
   end
 
   defp provider_owner?(provider_id, sender_id) do
-    case ProviderUserResolver.get_user_id_for_provider(provider_id) do
-      {:ok, ^sender_id} -> true
-      _ -> false
-    end
+    match?({:ok, ^sender_id}, ProviderUserResolver.get_user_id_for_provider(provider_id))
   end
 
   # Current employment at the provider is the whole authorization fact — staff may

@@ -109,12 +109,8 @@ defmodule KlassHero.Shared.ErrorContextFilter do
     |> filter_params()
   end
 
-  defp filter_args(context) do
-    case context do
-      %{@args_key => args} when is_map(args) -> put_filtered_args(context, args)
-      _ -> context
-    end
-  end
+  defp filter_args(%{@args_key => args} = context) when is_map(args), do: put_filtered_args(context, args)
+  defp filter_args(context), do: context
 
   defp put_filtered_args(context, args) do
     kept = Map.take(args, @allowed_args)

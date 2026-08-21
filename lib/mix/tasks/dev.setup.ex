@@ -51,13 +51,11 @@ defmodule Mix.Tasks.Dev.Setup do
   end
 
   defp start_containers(opts) do
-    case containers_running?() do
-      true ->
-        handle_already_running(opts)
-
-      false ->
-        Mix.shell().info("Starting containers...")
-        start_compose(opts)
+    if containers_running?() do
+      handle_already_running(opts)
+    else
+      Mix.shell().info("Starting containers...")
+      start_compose(opts)
     end
   end
 
