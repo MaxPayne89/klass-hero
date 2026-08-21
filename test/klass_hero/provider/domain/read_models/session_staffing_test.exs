@@ -11,7 +11,8 @@ defmodule KlassHero.Provider.Domain.ReadModels.SessionStaffingTest do
         lead: nil,
         member_ids: [],
         member_count: 0,
-        source: :program
+        source: :program,
+        program_closed?: false
       },
       overrides
     )
@@ -70,6 +71,43 @@ defmodule KlassHero.Provider.Domain.ReadModels.SessionStaffingTest do
     test "distinguishes a deliberate override from an inherited roster" do
       assert SessionStaffing.overridden?(staffing(%{source: :override}))
       refute SessionStaffing.overridden?(staffing(%{source: :program}))
+    end
+  end
+
+  describe "a Closed Program (#1082)" do
+    setup do
+      %{
+        closed:
+          staffing(%{
+            member_ids: ["staff-1", "staff-2"],
+            member_count: 2,
+            lead: %{id: "staff-1"},
+            source: :override,
+            program_closed?: true
+          })
+      }
+    end
+
+    test "refuses a member who is genuinely on the session", %{closed: closed} do
+      refute SessionStaffing.staffed_by?(closed, "staff-1")
+      refute SessionStaffing.staffed_by?(closed, "staff-2")
+    end
+
+    test "refuses the lead", %{closed: closed} do
+      refute SessionStaffing.led_by?(closed, "staff-1")
+    end
+
+    test "still reports the roster and its source", %{closed: closed} do
+      # Display facts, not authorization: the provider's own staffing panel keeps
+      # working on a closed program, and only the two predicates are gated.
+      assert closed.member_ids == ["staff-1", "staff-2"]
+      assert closed.member_count == 2
+      assert closed.lead == %{id: "staff-1"}
+      assert SessionStaffing.overridden?(closed)
+    end
+
+    test "empty/2 is open — closure is a fact about a program, not about having no staff" do
+      refute SessionStaffing.empty("sess-1", "prog-1").program_closed?
     end
   end
 end

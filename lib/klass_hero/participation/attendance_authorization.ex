@@ -35,6 +35,20 @@ defmodule KlassHero.Participation.AttendanceAuthorization do
   it has any and falls back to the program roster when it does not — one question,
   with the program grain as its fallback rather than as a second rule beside it.
 
+  ## A Closed Program refuses staff, and this module does not mention it (#1082)
+
+  Once a program has been over for longer than the access grace window, its staff
+  lose it. That rule is enforced here, but no line below states it: it arrives
+  inside `SessionStaffing.staffed_by?/2`, which answers `false` for a closed
+  program's session however genuinely staffed it is.
+
+  Deliberate. The staff branch is one of five places that ask the same question,
+  and a rule spelled out at each of them is a rule one of them eventually omits —
+  the failure #1323 was. So closure is folded into the read model every asker
+  already uses, and the *provider* and *admin* branches are untouched: the
+  provider owns the roster and still corrects it after the season, and an admin
+  correction still demands its reason.
+
   That distinction is the point, and it is *not* what #783 originally specified.
   OR-ing a session check onto a program check reads as more permissive in the
   right direction only. It is also more permissive in the wrong one:

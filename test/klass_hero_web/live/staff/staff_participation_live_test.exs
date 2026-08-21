@@ -54,6 +54,35 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
                live(conn, ~p"/staff/participation/#{session.id}")
     end
 
+    test "redirects a staff member off a Closed Program's roster, saying why (#1082)", %{conn: conn} do
+      %{conn: conn, provider: provider, staff: staff} = register_and_log_in_staff(%{conn: conn})
+
+      closed =
+        insert(:program_schema,
+          provider_id: provider.id,
+          category: "sports",
+          end_date: Date.add(Date.utc_today(), -20)
+        )
+
+      ProviderFixtures.program_assignment_fixture(%{
+        provider_id: provider.id,
+        program_id: closed.id,
+        staff_member_id: staff.id
+      })
+
+      session =
+        insert(:program_session_schema,
+          program_id: closed.id,
+          session_date: Date.add(Date.utc_today(), -25),
+          status: :completed
+        )
+
+      assert {:error, {:live_redirect, %{to: "/staff/sessions", flash: flash}}} =
+               live(conn, ~p"/staff/participation/#{session.id}")
+
+      assert flash["error"] =~ "This program has closed"
+    end
+
     test "opens the roster for a session the staff member covers without the program", %{conn: conn} do
       %{conn: conn, provider: provider, staff: staff} = register_and_log_in_staff(%{conn: conn})
       session = session_in_new_program(provider)

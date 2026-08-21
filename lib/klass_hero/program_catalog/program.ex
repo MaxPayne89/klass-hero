@@ -185,6 +185,20 @@ defmodule KlassHero.ProgramCatalog.Program do
   @spec free?(t()) :: boolean()
   def free?(%__MODULE__{price: price}), do: Decimal.equal?(price, Decimal.new(0))
 
+  @doc """
+  Whether the program has closed to its staff — ended on or before `cutoff`.
+
+  `cutoff` is today minus the grace window, computed by the caller
+  (`KlassHero.ProgramCatalog.closed?/1`) so this stays pure and the window stays
+  configurable. An open-ended program (`end_date: nil`) never closes.
+
+  Gates **staff** only: the provider owns the data and corrects rosters after a
+  season ends, and an admin correction is a separate path (ADR-0017).
+  """
+  @spec closed?(t(), Date.t()) :: boolean()
+  def closed?(%__MODULE__{end_date: nil}, _cutoff), do: false
+  def closed?(%__MODULE__{end_date: end_date}, cutoff), do: Date.before?(end_date, cutoff)
+
   @doc "Whether registration is currently open. Requires `load_value_objects/1` first."
   @spec registration_open?(t()) :: boolean()
   def registration_open?(%__MODULE__{registration_period: %RegistrationPeriod{} = rp}) do

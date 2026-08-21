@@ -160,13 +160,121 @@ defmodule KlassHero.ProgramCatalog do
     end
   end
 
-  @doc "Fetches multiple programs by ID in one query. Missing IDs are silently omitted."
+  @doc """
+  Fetches multiple programs by ID in one query, **unscoped**. Missing IDs are
+  silently omitted.
+
+  Unscoped deliberately, and it should stay that way: its callers resolve programs
+  they cannot name a provider for — the admin session list, which *derives* each
+  provider from the result; `ProgramProviderResolver`, whose whole job is deriving
+  one from a bare program id; and a parent's dashboard, whose enrolments legitimately
+  span providers.
+
+  A caller that *does* hold a `provider_id` should not filter this result by hand —
+  that is a check to forget. Use `get_program_for_provider/2` for a single program,
+  or `split_programs_by_closure/2` where the question is which ids a provider's
+  staff may act on.
+  """
   @spec get_programs_by_ids([String.t()]) :: [Program.t()]
   def get_programs_by_ids(ids) when is_list(ids) do
     Program
     |> where([p], p.id in ^ids)
     |> Repo.all()
     |> Enum.map(&Program.load_value_objects/1)
+  end
+
+  @doc """
+  Whether `program` has closed to its staff (#1082).
+
+  Reads the grace window from `config :klass_hero, :program_access,
+  closed_after_days:` at runtime, so a test can vary it and a deploy is not
+  needed to change it. `Program.closed?/2` does the comparison.
+  """
+  @spec closed?(Program.t()) :: boolean()
+  def closed?(%Program{} = program), do: Program.closed?(program, closed_cutoff())
+
+  @doc """
+  Of `program_ids`, those that exist **and** have not closed to their staff.
+
+  Returns the **open** side on purpose: an id matching no program is absent, so a
+  caller gating on membership fails closed rather than reading it as open.
+
+  Only for the session path, which has no provider to narrow by. Where one is in
+  scope, `split_programs_by_closure/2` answers the same question tenancy-safely
+  and distinguishes "closed" from "not yours" — a distinction this function cannot
+  make, and one that matters as soon as the closed set is rendered rather than
+  merely gated on.
+
+  Not to be confused with `list_ended_program_ids/1`, which is Messaging's
+  unscoped retention sweep over every program and takes its own cutoff. This one
+  is scoped to ids the caller already holds and owns the access grace window.
+  """
+  @spec list_open_program_ids([String.t()]) :: MapSet.t(String.t())
+  def list_open_program_ids([]), do: MapSet.new()
+
+  def list_open_program_ids(program_ids) when is_list(program_ids) do
+    open_ids(Program, program_ids)
+  end
+
+  @doc """
+  Of `program_ids`, those belonging to `provider_id`, split into `{open, closed}`.
+
+  Returns **both** sets rather than the open ones alone, because the caller must not
+  derive one from the other: "everything I asked about that did not come back open"
+  conflates three different things — closed, owned by someone else, and deleted —
+  and only the first of those may be listed back to a staff member. An id that is
+  foreign or missing appears in neither set.
+
+  `Program.owned_by/2` narrows the query, so a foreign program is *unreachable*
+  rather than fetched-then-rejected, the same way `get_program_for_provider/2`
+  works. Closure is decided by `Program.closed?/2` — the pure predicate, not a
+  second SQL encoding of the grace window.
+
+  Use this wherever a provider is in scope. `list_open_program_ids/1` exists for
+  the session path, which resolves sessions that may belong to any provider and so
+  has none to narrow by.
+  """
+  @spec split_programs_by_closure(String.t(), [String.t()]) ::
+          {open :: MapSet.t(String.t()), closed :: MapSet.t(String.t())}
+  def split_programs_by_closure(provider_id, []) when is_binary(provider_id) do
+    {MapSet.new(), MapSet.new()}
+  end
+
+  def split_programs_by_closure(provider_id, program_ids) when is_binary(provider_id) and is_list(program_ids) do
+    cutoff = closed_cutoff()
+
+    Program
+    |> Program.owned_by(provider_id)
+    |> where([p], p.id in ^program_ids)
+    |> select([p], {p.id, p.end_date})
+    |> Repo.all()
+    |> Enum.split_with(fn {_id, end_date} ->
+      not Program.closed?(%Program{end_date: end_date}, cutoff)
+    end)
+    |> then(fn {open, closed} -> {ids_of(open), ids_of(closed)} end)
+  end
+
+  defp ids_of(rows), do: MapSet.new(rows, fn {id, _end_date} -> id end)
+
+  # One definition of "open", so the scoped and unscoped answers cannot drift.
+  defp open_ids(query, program_ids) do
+    cutoff = closed_cutoff()
+
+    query
+    |> where([p], p.id in ^program_ids)
+    |> where([p], is_nil(p.end_date) or p.end_date >= ^cutoff)
+    |> select([p], p.id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  defp closed_cutoff do
+    days =
+      :klass_hero
+      |> Application.get_env(:program_access, [])
+      |> Keyword.get(:closed_after_days, 14)
+
+    Date.add(Date.utc_today(), -days)
   end
 
   @doc "Returns IDs of programs with end_date before cutoff. Used by Messaging retention policy."

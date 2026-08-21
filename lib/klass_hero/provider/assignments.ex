@@ -330,10 +330,20 @@ defmodule KlassHero.Provider.Assignments do
   def list_session_staffing(session_ids) when is_list(session_ids) do
     sessions = fetch_sessions(session_ids)
     overrides = session_overrides_by_session(Enum.map(sessions, & &1.id))
-    program_staffing = sessions |> Enum.map(& &1.program_id) |> Enum.uniq() |> Provider.list_program_staffing()
+    program_ids = sessions |> Enum.map(& &1.program_id) |> Enum.uniq()
+    program_staffing = Provider.list_program_staffing(program_ids)
+
+    # Over the batch's *distinct* programs, so a full day of sessions costs one
+    # closure question rather than one per row (#1082).
+    # Unscoped on purpose: the caller hands us session ids, and a session's
+    # provider is only knowable by resolving it. `AttendanceAuthorization` asks
+    # this for admins too, so there is no one provider to narrow by.
+    open_ids = open_program_ids(program_ids)
 
     Map.new(sessions, fn session ->
-      {session.id, resolve_staffing(session, Map.get(overrides, session.id), program_staffing)}
+      closed? = not MapSet.member?(open_ids, session.program_id)
+
+      {session.id, resolve_staffing(session, Map.get(overrides, session.id), program_staffing, closed?)}
     end)
   end
 
@@ -612,21 +622,48 @@ defmodule KlassHero.Provider.Assignments do
   `list_active_assignments_for_staff_member/1`: the callers gate a render loop and
   need nothing else off the row.
 
-  Not provider-scoped, because the staff member arrives already resolved from the
-  authenticated scope and carries the tenancy with them; a second narrowing here
-  would only restate it.
+  Takes the `%StaffMember{}` rather than its id, because the tenancy has to arrive
+  with it: the programs are then resolved **scoped to that staff member's own
+  provider**, so an assignment row naming another provider's program grants
+  nothing. Only a caller bypassing `assign_staff_to_program/1` can create such a
+  row — that use case proves ownership of both the staff member and the program
+  before inserting — but nothing at the database level enforces it, and this is
+  the surface where a bad row would become a child's roster.
   """
-  @spec get_staff_program_access(String.t()) :: StaffProgramAccess.t()
-  def get_staff_program_access(staff_member_id) when is_binary(staff_member_id) do
-    program_ids =
+  @spec get_staff_program_access(StaffMember.t()) :: StaffProgramAccess.t()
+  def get_staff_program_access(%StaffMember{id: staff_member_id, provider_id: provider_id}) do
+    assigned =
       from(a in ProgramStaffAssignment,
         where: a.staff_member_id == ^staff_member_id and is_nil(a.unassigned_at),
         select: a.program_id
       )
       |> Repo.all()
-      |> MapSet.new()
 
-    %StaffProgramAccess{staff_member_id: staff_member_id, program_ids: program_ids}
+    {open, closed} = split_by_closure(provider_id, assigned)
+
+    %StaffProgramAccess{
+      staff_member_id: staff_member_id,
+      program_ids: open,
+      closed_program_ids: closed
+    }
+  end
+
+  # Both sets come from what the query *returned*, never from subtracting one from
+  # the assignment list. An assignment naming a foreign or deleted program lands in
+  # neither: it grants nothing, and — since `closed_program_ids` is also what the
+  # dashboard renders as "Completed" — it is not shown either. Deriving closed as
+  # "assigned minus open" would have listed another provider's program back to the
+  # staff member.
+  defp split_by_closure(provider_id, program_ids) do
+    acl_span source: "provider", target: "program_catalog" do
+      ProgramCatalog.split_programs_by_closure(provider_id, program_ids)
+    end
+  end
+
+  defp open_program_ids(program_ids) do
+    acl_span source: "provider", target: "program_catalog" do
+      ProgramCatalog.list_open_program_ids(program_ids)
+    end
   end
 
   @doc """
@@ -1049,11 +1086,11 @@ defmodule KlassHero.Provider.Assignments do
     for id <- member_ids, staff = by_id[id], do: staff
   end
 
-  defp resolve_staffing(session, nil, program_staffing) do
-    inherited_staffing(session, program_staffing)
+  defp resolve_staffing(session, nil, program_staffing, closed?) do
+    inherited_staffing(session, program_staffing, closed?)
   end
 
-  defp resolve_staffing(session, override_rows, program_staffing) do
+  defp resolve_staffing(session, override_rows, program_staffing, closed?) do
     members = for {_id, _lead?, staff} <- override_rows, staff != nil, do: staff
 
     %SessionStaffing{
@@ -1062,14 +1099,15 @@ defmodule KlassHero.Provider.Assignments do
       lead: resolve_session_lead(override_rows, members, session.program_id, program_staffing),
       member_ids: Enum.map(members, & &1.id),
       member_count: length(members),
-      source: :override
+      source: :override,
+      program_closed?: closed?
     }
   end
 
-  defp inherited_staffing(session, program_staffing) do
+  defp inherited_staffing(session, program_staffing, closed?) do
     case Map.get(program_staffing, session.program_id) do
       nil ->
-        SessionStaffing.empty(session.id, session.program_id)
+        SessionStaffing.empty(session.id, session.program_id, closed?)
 
       %ProgramStaffing{} = staffing ->
         %SessionStaffing{
@@ -1078,7 +1116,8 @@ defmodule KlassHero.Provider.Assignments do
           lead: staffing.lead,
           member_ids: staffing.member_ids,
           member_count: staffing.member_count,
-          source: :program
+          source: :program,
+          program_closed?: closed?
         }
     end
   end

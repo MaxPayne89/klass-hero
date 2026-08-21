@@ -8,35 +8,42 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpers do
   """
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
   alias KlassHero.Provider.StaffMember
 
   @doc """
-  Loads the programs the staff member is assigned to, alongside the
-  `StaffProgramAccess` that says which programs they may act on.
+  Loads the programs the staff member is assigned to — split into the ones they
+  may act on and the **Closed** ones they may only be shown (#1082) — alongside
+  the `StaffProgramAccess` that decided the split.
 
-  Composes `ProgramCatalog.list_programs_for_provider/1` with
-  `Provider.get_staff_program_access/1`, keeping the cross-context fetch out of
-  the Provider bounded context.
+  Fetches the write rows the assignments name rather than listing the provider's
+  whole catalogue and filtering it down: a staff member on three of two hundred
+  programs costs three rows. That also keeps this path off the `program_listings`
+  projection entirely — display may lag, authorization may not, and here the two
+  are the same fetch.
 
-  The returned access comes from the assignment rows, **not** from the filtered
-  program list. Listings are read from the `provider_programs` projection, so
-  deriving the gate from them would let projection lag revoke access to a program
-  assigned moments ago: display may lag, authorization may not.
+  Tenancy is not re-checked here. `Provider.get_staff_program_access/1` resolves
+  the assigned programs scoped to the staff member's own provider, so a foreign
+  program never reaches either set — there is nothing left for this function to
+  filter out.
   """
   @spec load_assigned_programs(StaffMember.t()) ::
-          {[ProgramListing.t()], StaffProgramAccess.t()}
-  def load_assigned_programs(%StaffMember{provider_id: provider_id, id: staff_member_id}) do
-    access = Provider.get_staff_program_access(staff_member_id)
+          {open :: [Program.t()], closed :: [Program.t()], StaffProgramAccess.t()}
+  def load_assigned_programs(%StaffMember{} = staff_member) do
+    access = Provider.get_staff_program_access(staff_member)
 
     programs =
-      provider_id
-      |> ProgramCatalog.list_programs_for_provider()
-      |> Enum.filter(&StaffProgramAccess.authorized?(access, &1.id))
+      access.program_ids
+      |> MapSet.union(access.closed_program_ids)
+      |> MapSet.to_list()
+      |> ProgramCatalog.get_programs_by_ids()
+      |> Enum.sort_by(& &1.title)
 
-    {programs, access}
+    {open, closed} = Enum.split_with(programs, &StaffProgramAccess.authorized?(access, &1.id))
+
+    {open, closed, access}
   end
 
   @doc """

@@ -619,7 +619,7 @@ msgid "Failed to check out: %{reason}"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:160
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:118
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:126
 #, elixir-autogen, elixir-format
 msgid "Failed to complete session: %{reason}"
 msgstr ""
@@ -756,7 +756,7 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/sessions_live.ex:50
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:4
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:20
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:242
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:260
 #, elixir-autogen, elixir-format
 msgid "My Sessions"
 msgstr ""
@@ -878,15 +878,15 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:2512
 #: lib/klass_hero_web/components/provider_components.ex:2513
 #: lib/klass_hero_web/components/provider_components.ex:2550
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:447
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:448
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:484
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:478
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:479
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:515
 #, elixir-autogen, elixir-format
 msgid "Send Message"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:146
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:104
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:112
 #, elixir-autogen, elixir-format
 msgid "Session completed successfully"
 msgstr ""
@@ -894,7 +894,7 @@ msgstr ""
 #: lib/klass_hero_web/live/admin/sessions_live.ex:62
 #: lib/klass_hero_web/live/admin/sessions_live.ex:68
 #: lib/klass_hero_web/live/provider/participation_live.ex:287
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:231
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:241
 #, elixir-autogen, elixir-format
 msgid "Session not found"
 msgstr ""
@@ -1102,7 +1102,7 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:121
 #: lib/klass_hero_web/live/admin/sessions_live.ex:26
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:3
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:348
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:351
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Sessions"
 msgstr ""
@@ -1130,7 +1130,7 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/participation_live.ex:27
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:65
 #: lib/klass_hero_web/live/staff/staff_participation_live.ex:27
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:290
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:308
 #, elixir-autogen, elixir-format
 msgid "Manage Participation"
 msgstr ""
@@ -1479,7 +1479,7 @@ msgstr ""
 #: lib/klass_hero_web/components/messaging_components.ex:722
 #: lib/klass_hero_web/components/provider_components.ex:51
 #: lib/klass_hero_web/components/provider_components.ex:1637
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:434
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:465
 #: lib/klass_hero_web/presenters/provider_presenter.ex:103
 #, elixir-autogen, elixir-format
 msgid "Unknown"
@@ -1808,8 +1808,8 @@ msgstr ""
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:66
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:175
 #: lib/klass_hero_web/live/staff/staff_broadcast_live.ex:250
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:393
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:394
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:424
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:425
 #, elixir-autogen, elixir-format
 msgid "Send Broadcast"
 msgstr ""
@@ -1844,7 +1844,7 @@ msgid "Type a message..."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/participation_live.ex:307
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:251
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:261
 #, elixir-autogen, elixir-format
 msgid "Unable to refresh roster. Please reload."
 msgstr ""
@@ -2443,7 +2443,7 @@ msgid "No documents uploaded yet."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2453
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:426
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:457
 #, elixir-autogen, elixir-format
 msgid "No enrollments yet."
 msgstr ""
@@ -2728,7 +2728,7 @@ msgid "Role"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1736
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:386
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:417
 #, elixir-autogen, elixir-format
 msgid "Roster: %{name}"
 msgstr ""
@@ -3299,7 +3299,7 @@ msgid "Cannot check out without a check-in"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/programs_live.ex:451
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:147
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:150
 #, elixir-autogen, elixir-format
 msgid "Cannot message this parent."
 msgstr ""
@@ -3364,7 +3364,7 @@ msgstr ""
 
 #: lib/klass_hero_web/live/dashboard_live.ex:306
 #: lib/klass_hero_web/live/provider/programs_live.ex:448
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:201
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:204
 #, elixir-autogen, elixir-format
 msgid "Could not start conversation. Please try again."
 msgstr ""
@@ -3390,7 +3390,7 @@ msgid "Download monthly statements for taxes"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2549
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:483
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:514
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Enrollment not confirmed"
 msgstr ""
@@ -3463,7 +3463,7 @@ msgid "No chasing payments or sending invoices"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:1759
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:407
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:438
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No enrolled parents"
 msgstr ""
@@ -3486,7 +3486,7 @@ msgid "Or: Request instant payout anytime (minimum €50)"
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:2548
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:482
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:513
 #, elixir-autogen, elixir-format
 msgid "Parent account not available"
 msgstr ""
@@ -3588,7 +3588,7 @@ msgid "Track Everything:"
 msgstr ""
 
 #: lib/klass_hero_web/live/dashboard_live.ex:293
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:144
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:147
 #, elixir-autogen, elixir-format
 msgid "Upgrade your plan to send messages."
 msgstr ""
@@ -3723,7 +3723,7 @@ msgstr ""
 msgid "Archived"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:321
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:324
 #, elixir-autogen, elixir-format
 msgid "Assigned Programs"
 msgstr ""
@@ -3796,7 +3796,7 @@ msgid "Complete Registration"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:76
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:301
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:319
 #, elixir-autogen, elixir-format
 msgid "Complete Session"
 msgstr ""
@@ -4026,7 +4026,7 @@ msgid "Max Capacity"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:90
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:315
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:333
 #, elixir-autogen, elixir-format
 msgid "No actions available"
 msgstr ""
@@ -4046,7 +4046,7 @@ msgstr ""
 msgid "No participation records yet"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:325
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:328
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No programs assigned yet."
 msgstr ""
@@ -4062,7 +4062,7 @@ msgid "No sessions found for the selected filters."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:122
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:330
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:348
 #, elixir-autogen, elixir-format
 msgid "No sessions scheduled"
 msgstr ""
@@ -4236,13 +4236,13 @@ msgstr ""
 msgid "Session created successfully"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:30
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:31
 #, elixir-autogen, elixir-format
 msgid "Staff Dashboard"
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:54
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:279
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:297
 #, elixir-autogen, elixir-format
 msgid "Start Session"
 msgstr ""
@@ -4299,9 +4299,9 @@ msgid "Type your reply..."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.ex:183
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:123
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:94
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:123
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:126
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:102
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:139
 #, elixir-autogen, elixir-format
 msgid "Unauthorized"
 msgstr ""
@@ -4328,7 +4328,7 @@ msgid "Upload connection lost. Please try again."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:87
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:312
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "View Participation"
 msgstr ""
@@ -4338,7 +4338,7 @@ msgstr ""
 msgid "View your children's participation records"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:214
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:217
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Welcome, %{name}"
 msgstr ""
@@ -4354,7 +4354,7 @@ msgid "You already have an account. Log in to see your new enrollment."
 msgstr ""
 
 #: lib/klass_hero_web/live/provider/sessions_live.html.heex:125
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:333
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:351
 #, elixir-autogen, elixir-format
 msgid "You have no sessions scheduled for %{date}"
 msgstr ""
@@ -4379,7 +4379,7 @@ msgstr ""
 msgid "Your children's participation will appear here"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:363
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:366
 #, elixir-autogen, elixir-format
 msgid "Roster"
 msgstr ""
@@ -4389,7 +4389,7 @@ msgstr ""
 msgid "Unlimited team seats"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:243
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:261
 #, elixir-autogen, elixir-format
 msgid "View and manage your assigned sessions"
 msgstr ""
@@ -4890,7 +4890,7 @@ msgstr ""
 msgid "Submit report"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:221
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:224
 #, elixir-autogen, elixir-format
 msgid "Your pay rate"
 msgstr ""
@@ -5045,8 +5045,8 @@ msgstr ""
 msgid "Become a Hero →"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:269
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:314
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:272
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:317
 #, elixir-autogen, elixir-format
 msgid "Become a provider"
 msgstr ""
@@ -5234,7 +5234,7 @@ msgstr ""
 msgid "Could not link your account. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:176
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:179
 #, elixir-autogen, elixir-format
 msgid "Could not set up your provider profile. Please try again."
 msgstr ""
@@ -5800,13 +5800,13 @@ msgstr ""
 msgid "Not allowed to approve this enrollment"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:297
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:300
 #: lib/klass_hero_web/live/user_live/settings.ex:245
 #, elixir-autogen, elixir-format
 msgid "Not now"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:303
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:306
 #, elixir-autogen, elixir-format
 msgid "Offer your own programs on Klass Hero — alongside your work for %{business}."
 msgstr ""
@@ -6107,7 +6107,7 @@ msgstr ""
 msgid "Send us a message"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:286
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:289
 #: lib/klass_hero_web/live/user_live/settings.ex:235
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Setting up..."
@@ -6410,7 +6410,7 @@ msgstr ""
 msgid "Year"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:288
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:291
 #, elixir-autogen, elixir-format
 msgid "Yes, become a provider"
 msgstr ""
@@ -6420,7 +6420,7 @@ msgstr ""
 msgid "Yes. You can run unlimited programs, each with its own schedule and venue, and add as many team members as you need to delegate management across instructors."
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:80
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:83
 #: lib/klass_hero_web/live/user_live/settings.ex:490
 #, elixir-autogen, elixir-format
 msgid "You already have a provider profile."
@@ -6441,7 +6441,7 @@ msgstr ""
 msgid "You're logged in as %{current}. Log into the matching account to accept."
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:167
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:170
 #, elixir-autogen, elixir-format
 msgid "You're no longer on that team."
 msgstr ""
@@ -7674,7 +7674,7 @@ msgstr ""
 msgid "Waiver retired. Signatures already collected are kept."
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_participation_live.ex:220
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:198
 #, elixir-autogen, elixir-format, fuzzy
 msgid "You are not assigned to this session"
 msgstr ""
@@ -7684,7 +7684,7 @@ msgstr ""
 msgid "Complete verification to create programs."
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:263
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:266
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Manage your provider profile"
 msgstr ""
@@ -7715,12 +7715,12 @@ msgstr ""
 msgid "Provider Profile"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:229
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:232
 #, elixir-autogen, elixir-format
 msgid "Switch provider"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:55
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:58
 #, elixir-autogen, elixir-format
 msgid "The provider associated with your account could not be found."
 msgstr ""
@@ -7745,13 +7745,13 @@ msgstr ""
 msgid "Verified Provider"
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:72
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:75
 #: lib/klass_hero_web/live/user_live/settings.ex:485
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Welcome aboard! Let's set up your provider profile."
 msgstr ""
 
-#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:274
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:277
 #, elixir-autogen, elixir-format, fuzzy
 msgid "You'll get your own provider profile to fill in, and your account will open on your provider dashboard from now on. You stay on %{business}'s team."
 msgstr ""
@@ -7888,4 +7888,21 @@ msgstr ""
 #: lib/klass_hero_web/live/provider/overview_live.ex:322
 #, elixir-autogen, elixir-format
 msgid "waiting"
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:380
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Completed Programs"
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:384
+#, elixir-autogen, elixir-format
+msgid "These programs have finished. Their sessions and rosters are no longer available."
+msgstr ""
+
+#: lib/klass_hero_web/live/staff/staff_participation_live.ex:196
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:98
+#: lib/klass_hero_web/live/staff/staff_sessions_live.ex:135
+#, elixir-autogen, elixir-format
+msgid "This program has closed. Its sessions are no longer available."
 msgstr ""

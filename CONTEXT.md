@@ -16,6 +16,10 @@ _Avoid_: Type, Kind, Tag
 The window during which parents may enrol in a Program. When unbounded, registration is "always open".
 _Avoid_: Enrolment window, Signup period, Booking window
 
+**Closed Program**:
+A **Program** whose end date passed longer ago than the access grace window (14 days). Its assigned **Staff Members** lose it: no sessions, no roster, no check-in or correction, no broadcast — it appears on their dashboard as a read-only "Completed" entry and nothing more. The **Provider** who owns it and an **Admin** are unaffected, because they still have to correct what happened. Derived from the end date, never stored, so a Program is never "closed" by anyone's action; it simply has been over for long enough. See [ADR-0019](adr/0019-closed-programs-revoke-staff-access.md).
+_Avoid_: Archived (that is a **Conversation**), Completed (that is a **Session**'s lifecycle), Expired, Ended (the date fact, not its consequence)
+
 **Price**:
 What a **Program** costs a parent, always **gross** — the final amount payable, VAT included whatever the rate turns out to be. A Provider entering "100" means the parent pays €100. Net and VAT are *derived* from it, never the other way round.
 _Avoid_: Net price, Fee (reserved for the platform's success-based fee), Cost
@@ -125,7 +129,7 @@ _Avoid_: using this word for an employee leaving — that is **offboarding**
 
 **Program Staff Assignment**:
 The link recording that a **Staff Member** works on a **Program**. Many Staff Members may be assigned to one Program because a class can need several people. Survives the Staff Member's **deactivation**, but not their **offboarding**.
-This is the **only** thing that decides which Programs a Staff Member sees and may act on — their dashboard, their sessions, participation, and broadcast compose all read it. A **Specialty** never grants access (#1323).
+This is the **only** thing that *grants* a Staff Member access to a Program — their dashboard, their sessions, participation, and broadcast compose all read it. A **Specialty** never grants access (#1323). Access additionally *lapses* once the Program becomes a **Closed Program** (#1082): the assignment says who, closure says whether it still counts.
 _Avoid_: Membership, Posting
 
 **Specialty**:

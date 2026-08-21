@@ -23,7 +23,8 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
     # memberships read model carries id + business_name — no separate profile lookup needed.
     case Enum.find(memberships, &(&1.provider_id == staff_member.provider_id)) do
       %{provider_id: provider_id, business_name: business_name} ->
-        {programs, program_access} = StaffLiveHelpers.load_assigned_programs(staff_member)
+        {programs, completed_programs, program_access} =
+          StaffLiveHelpers.load_assigned_programs(staff_member)
 
         socket =
           socket
@@ -35,6 +36,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           |> assign(:self_view, StaffMemberPresenter.to_self_view(staff_member))
           |> assign(:program_access, program_access)
           |> assign(:programs_empty?, programs == [])
+          |> assign(:completed_empty?, completed_programs == [])
           |> assign(:provider?, Scope.provider?(socket.assigns.current_scope))
           |> assign(:upgrade_confirm?, false)
           |> assign(:show_roster, false)
@@ -44,6 +46,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
           |> assign(:can_message?, false)
           |> assign(:roster_enrolled_count, 0)
           |> stream(:programs, programs)
+          |> stream(:completed_programs, completed_programs)
 
         {:ok, socket}
 
@@ -363,6 +366,34 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                 {gettext("Roster")}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <%!--
+        Closed programs: named, never actionable. No Sessions link and no Roster
+        button, because `StaffProgramAccess.authorized?/2` refuses both — the
+        markup agrees with the gate rather than being the gate (#1082).
+      --%>
+      <div :if={not @completed_empty?} class="mt-8">
+        <h2 class={Theme.typography(:section_title)}>
+          {gettext("Completed Programs")}
+        </h2>
+
+        <p class="text-sm text-zinc-500 mt-1">
+          {gettext(
+            "These programs have finished. Their sessions and rosters are no longer available."
+          )}
+        </p>
+
+        <div id="completed-programs" phx-update="stream" class="mt-4 space-y-3">
+          <div
+            :for={{dom_id, program} <- @streams.completed_programs}
+            id={dom_id}
+            class="p-4 bg-hero-grey-50 rounded-lg border border-zinc-200"
+          >
+            <h3 class={[Theme.typography(:card_title), "text-zinc-500"]}>{program.title}</h3>
+            <p :if={program.category} class="text-sm text-zinc-400 mt-1">{program.category}</p>
           </div>
         </div>
       </div>

@@ -14,12 +14,28 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   # these tests no longer derive it from `staff.tags`.
   defp assigned_listing(provider, staff, attrs \\ []) do
     category = Keyword.get(attrs, :category, "sports")
-    write = insert(:program_schema, provider_id: provider.id, category: category)
 
+    # `end_date` goes on the **write** row as well as the listing: closure is read
+    # from `programs`, never from the projection, so setting it only on the
+    # listing would leave the program open however long ago it ended (#1082).
+    write =
+      insert(:program_schema,
+        provider_id: provider.id,
+        category: category,
+        end_date: Keyword.get(attrs, :end_date)
+      )
+
+    # `title:` is copied from the write row rather than left to the factory
+    # sequence: the projection keeps the two in step in production, and since
+    # #1082 the dashboard reads the write row, so a fixture that let them drift
+    # would be testing a state that cannot occur.
     listing =
       insert(
         :program_listing_schema,
-        Keyword.merge([id: write.id, provider_id: provider.id, category: category], attrs)
+        Keyword.merge(
+          [id: write.id, provider_id: provider.id, category: category, title: write.title],
+          attrs
+        )
       )
 
     program_assignment_fixture(%{
@@ -86,6 +102,59 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       refute html =~ "rate-label"
       refute html =~ "/ hour"
       refute html =~ "/ session"
+    end
+
+    test "a Closed Program is listed read-only, with no way to act on it (#1082)", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      closed = assigned_listing(provider, staff, end_date: Date.add(Date.utc_today(), -20))
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      assert has_element?(view, "#completed-programs")
+      refute has_element?(view, "#sessions-link-#{closed.id}")
+      refute has_element?(view, "#roster-btn-#{closed.id}")
+    end
+
+    test "a Closed Program's roster refuses a forged event, not only a hidden button", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      closed = assigned_listing(provider, staff, end_date: Date.add(Date.utc_today(), -20))
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      render_click(view, "view_roster", %{"id" => closed.id, "title" => closed.title})
+
+      refute has_element?(view, "#staff-roster-modal")
+    end
+
+    test "a program inside its grace window stays actionable", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      recent = assigned_listing(provider, staff, end_date: Date.add(Date.utc_today(), -2))
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      assert has_element?(view, "#roster-btn-#{recent.id}")
+      refute has_element?(view, "#completed-programs")
+    end
+
+    test "the Completed section is absent when nothing has closed", %{
+      conn: conn,
+      provider: provider,
+      staff: staff
+    } do
+      assigned_listing(provider, staff)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
+
+      refute has_element?(view, "#completed-programs")
     end
 
     test "non-staff user is redirected", %{} do

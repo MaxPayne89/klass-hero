@@ -90,6 +90,14 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
              )}
         end
 
+      {:error, :program_closed} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("This program has closed. Its sessions are no longer available.")
+         )}
+
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
     end
@@ -118,6 +126,14 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
                gettext("Failed to complete session: %{reason}", reason: inspect(reason))
              )}
         end
+
+      {:error, :program_closed} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           gettext("This program has closed. Its sessions are no longer available.")
+         )}
 
       {:error, :unauthorized} ->
         {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
@@ -183,10 +199,12 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   defp authorize_session_action(session_id, socket) do
     case Participation.get_session_with_roster(session_id) do
       {:ok, %{session: session}} ->
-        if staffs_session?(socket, session.id) do
-          :ok
-        else
-          {:error, :unauthorized}
+        staffing = Provider.get_session_staffing(session.id)
+
+        cond do
+          SessionStaffing.staffed_by?(staffing, socket.assigns.staff_member.id) -> :ok
+          match?(%SessionStaffing{program_closed?: true}, staffing) -> {:error, :program_closed}
+          true -> {:error, :unauthorized}
         end
 
       {:error, _reason} ->

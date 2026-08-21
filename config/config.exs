@@ -115,12 +115,13 @@ config :klass_hero, KlassHeroWeb.Endpoint,
     formats: [html: KlassHeroWeb.ErrorHTML, json: KlassHeroWeb.ErrorJSON],
     layout: false
   ],
+
+  # `:locales` is not a Gettext option — the backend derives its own set from the
+  # .po files on disk. It lives under this key because `mix lint_translations`
+  # reads it here to decide which locales require translations.
   pubsub_server: KlassHero.PubSub,
   live_view: [signing_salt: "JU2osypv"]
 
-# `:locales` is not a Gettext option — the backend derives its own set from the
-# .po files on disk. It lives under this key because `mix lint_translations`
-# reads it here to decide which locales require translations.
 config :klass_hero, KlassHeroWeb.Gettext,
   default_locale: default_locale,
   locales: supported_locales
@@ -373,6 +374,13 @@ config :klass_hero, :messaging,
 
 # Durable delivery for staged events. See Shared.Outbox.
 config :klass_hero, :outbox, module: ObanOutbox
+
+# How long after a program's end_date its staff keep access to its sessions and
+# rosters (#1082). Its own key, not `:messaging, :retention` below: that window
+# governs when a conversation is archived for data retention, this one governs
+# when a person stops being allowed to see a child's record. Same shape today,
+# different reasons to change.
+config :klass_hero, :program_access, closed_after_days: 14
 config :klass_hero, :resend_req_options, []
 
 config :klass_hero, :scopes,
