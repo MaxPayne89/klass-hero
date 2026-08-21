@@ -48,6 +48,9 @@ defmodule KlassHeroWeb.Flows.MessagingComposeTest do
     conn
     |> log_in_user(provider_user)
     |> visit(compose_path)
+    |> assert_has("h1", text: parent_user.name)
+    |> assert_has("a[href='/provider/messages']")
+    |> refute_has("[data-role=message]")
     |> assert_has("#message-input")
     |> visit(~p"/provider/messages")
 
