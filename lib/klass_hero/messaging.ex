@@ -29,6 +29,7 @@ defmodule KlassHero.Messaging do
   import Ecto.Query
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Enrollment
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
@@ -49,6 +50,7 @@ defmodule KlassHero.Messaging do
     ReplyToEmail,
     ScheduleEmailContentFetch,
     SendMessage,
+    StartConversationWithMessage,
     StartProgramConversation
   }
 
@@ -104,6 +106,36 @@ defmodule KlassHero.Messaging do
   def can_initiate_messaging?(%{parent: parent}), do: not is_nil(parent)
   def can_initiate_messaging?(%{provider: provider}), do: not is_nil(provider)
   def can_initiate_messaging?(_scope), do: false
+
+  @doc """
+  Opens a direct conversation and sends its first message in one call.
+
+  The only way a compose screen creates a conversation — see
+  `StartConversationWithMessage` for why creation waits for the message.
+  """
+  @spec start_conversation_with_message(
+          Scope.t(),
+          String.t(),
+          String.t() | nil,
+          String.t() | nil,
+          keyword()
+        ) ::
+          {:ok, Conversation.t(), Message.t()}
+          | {:error, :empty_message | :not_entitled | :not_found | term()}
+  def start_conversation_with_message(scope, provider_id, target_user_id, content, opts \\ []) do
+    StartConversationWithMessage.execute(scope, provider_id, target_user_id, content, opts)
+  end
+
+  @doc """
+  Returns whether `scope` may open a conversation with `parent_user_id` about `program_id`.
+
+  Gates the compose screen: the target's name is rendered there, so a hand-typed
+  URL must be refused before it discloses anything.
+  """
+  @spec can_message_parent?(map(), String.t(), String.t()) :: boolean()
+  def can_message_parent?(scope, program_id, parent_user_id) when is_binary(program_id) and is_binary(parent_user_id) do
+    can_initiate_messaging?(scope) and Enrollment.confirmed_enrollment?(program_id, parent_user_id)
+  end
 
   @doc """
   Starts (or retrieves) a direct conversation between a parent and a provider

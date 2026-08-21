@@ -109,6 +109,12 @@ defmodule KlassHero.Enrollment do
     end
   end
 
+  defp fetch_parent_by_identity(identity_id) do
+    acl_span source: "enrollment", target: "family" do
+      Family.get_parent_by_identity(identity_id)
+    end
+  end
+
   defp fetch_children(child_ids) do
     acl_span source: "enrollment", target: "family" do
       Family.get_children_by_ids(child_ids)
@@ -621,6 +627,28 @@ defmodule KlassHero.Enrollment do
         waiver_status = Waivers.waiver_status_for_enrollments(Enum.map(enrollments, & &1.id))
 
         Enum.map(enrollments, &build_roster_entry(&1, child_map, parent_map, waiver_status))
+    end
+  end
+
+  @doc """
+  True when `parent_user_id` has a child holding a confirmed enrollment on the program.
+
+  Answers "may this provider/staff member message that parent?" for a single
+  program, the same question the roster UI asks before offering a message button.
+  """
+  @spec confirmed_enrollment?(String.t(), String.t()) :: boolean()
+  def confirmed_enrollment?(program_id, parent_user_id)
+      when is_binary(program_id) and is_binary(parent_user_id) do
+    case fetch_parent_by_identity(parent_user_id) do
+      {:ok, parent} ->
+        EnrollmentQueries.base()
+        |> EnrollmentQueries.by_program(program_id)
+        |> EnrollmentQueries.by_parent(parent.id)
+        |> EnrollmentQueries.by_status("confirmed")
+        |> Repo.exists?()
+
+      {:error, :not_found} ->
+        false
     end
   end
 

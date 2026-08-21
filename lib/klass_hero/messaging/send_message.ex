@@ -50,9 +50,8 @@ defmodule KlassHero.Messaging.SendMessage do
     message_type = Keyword.get(opts, :message_type, :text)
     conversation = Keyword.get(opts, :conversation)
     attachment_files = Keyword.get(opts, :attachments, [])
-    trimmed_content = trim_content(content)
 
-    with :ok <- validate_message_content(trimmed_content, attachment_files),
+    with {:ok, trimmed_content} <- validate_content(content, attachment_files),
          :ok <- validate_attachment_files(attachment_files),
          :ok <- Shared.verify_participant(conversation_id, sender_id),
          {:ok, loaded_conversation} <- load_conversation(conversation_id, conversation),
@@ -77,6 +76,23 @@ defmodule KlassHero.Messaging.SendMessage do
       )
 
       {:ok, message_with_attachments}
+    end
+  end
+
+  @doc """
+  Trims `content` and checks the message carries something to send.
+
+  Public so `StartConversationWithMessage` can apply the rule *before* creating a
+  conversation — creating one for a message about to be rejected is #1446.
+  """
+  @spec validate_content(String.t() | nil, list()) ::
+          {:ok, String.t() | nil} | {:error, :empty_message}
+  def validate_content(content, attachment_files) do
+    trimmed = trim_content(content)
+
+    case validate_message_content(trimmed, attachment_files) do
+      :ok -> {:ok, trimmed}
+      error -> error
     end
   end
 
