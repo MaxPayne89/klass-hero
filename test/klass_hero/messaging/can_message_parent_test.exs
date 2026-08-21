@@ -4,11 +4,70 @@ defmodule KlassHero.Messaging.CanMessageParentTest do
   import KlassHero.Factory
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging
+  alias KlassHero.Provider.ProviderProfile
 
-  defp provider_scope do
+  setup do
     provider = insert(:provider_profile_schema)
-    %Scope{user: %{id: provider.identity_id}, roles: [:provider], parent: nil, provider: provider}
+    program = insert(:program_schema, provider_id: provider.id)
+
+    scope = %Scope{
+      user: AccountsFixtures.user_fixture(),
+      roles: [:provider],
+      parent: nil,
+      provider: %ProviderProfile{id: provider.id, identity_id: provider.identity_id}
+    }
+
+    %{provider: provider, program: program, scope: scope}
+  end
+
+  describe "can_message_parent?/4" do
+    test "true for a confirmed parent on the provider's program", ctx do
+      parent_user_id = confirmed_parent_on(ctx.program)
+
+      assert Messaging.can_message_parent?(ctx.scope, ctx.provider.id, ctx.program.id, parent_user_id)
+    end
+
+    test "false when the parent holds no confirmed enrollment", ctx do
+      {_child, parent} = insert_child_with_guardian()
+
+      refute Messaging.can_message_parent?(ctx.scope, ctx.provider.id, ctx.program.id, parent.identity_id)
+    end
+
+    test "false when the scope acts for a different provider", ctx do
+      parent_user_id = confirmed_parent_on(ctx.program)
+      other_provider = insert(:provider_profile_schema)
+
+      refute Messaging.can_message_parent?(ctx.scope, other_provider.id, ctx.program.id, parent_user_id)
+    end
+
+    test "false for a scope acting for no provider at all", ctx do
+      parent_user_id = confirmed_parent_on(ctx.program)
+      unaffiliated = %Scope{user: AccountsFixtures.user_fixture(), parent: nil, provider: nil}
+
+      refute Messaging.can_message_parent?(unaffiliated, ctx.provider.id, ctx.program.id, parent_user_id)
+    end
+
+    test "true for a staff member of that provider, whose scope carries no provider", ctx do
+      parent_user_id = confirmed_parent_on(ctx.program)
+
+      staff_scope = %Scope{
+        user: AccountsFixtures.user_fixture(),
+        roles: [:staff],
+        parent: nil,
+        provider: nil,
+        staff_member: %{provider_id: ctx.provider.id}
+      }
+
+      assert Messaging.can_message_parent?(staff_scope, ctx.provider.id, ctx.program.id, parent_user_id)
+    end
+
+    test "false when a nil program_id reaches it", ctx do
+      parent_user_id = confirmed_parent_on(ctx.program)
+
+      refute Messaging.can_message_parent?(ctx.scope, ctx.provider.id, nil, parent_user_id)
+    end
   end
 
   defp confirmed_parent_on(program) do
@@ -22,29 +81,5 @@ defmodule KlassHero.Messaging.CanMessageParentTest do
     )
 
     parent.identity_id
-  end
-
-  describe "can_message_parent?/3" do
-    test "true for a confirmed parent on the program when the scope may initiate" do
-      program = insert(:program_schema)
-      parent_user_id = confirmed_parent_on(program)
-
-      assert Messaging.can_message_parent?(provider_scope(), program.id, parent_user_id)
-    end
-
-    test "false when the parent holds no confirmed enrollment on the program" do
-      program = insert(:program_schema)
-      {_child, parent} = insert_child_with_guardian()
-
-      refute Messaging.can_message_parent?(provider_scope(), program.id, parent.identity_id)
-    end
-
-    test "false when the scope may not initiate messaging" do
-      program = insert(:program_schema)
-      parent_user_id = confirmed_parent_on(program)
-      staff_only = %Scope{user: %{id: Ecto.UUID.generate()}, parent: nil, provider: nil}
-
-      refute Messaging.can_message_parent?(staff_only, program.id, parent_user_id)
-    end
   end
 end

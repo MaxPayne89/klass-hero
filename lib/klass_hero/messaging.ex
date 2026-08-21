@@ -136,7 +136,7 @@ defmodule KlassHero.Messaging do
     program_id = Keyword.get(opts, :program_id)
 
     if is_binary(target_user_id) and is_binary(program_id) and
-         can_message_parent?(scope, program_id, target_user_id) do
+         can_message_parent?(scope, provider_id, program_id, target_user_id) do
       {:ok,
        %ComposeTarget{
          provider_id: provider_id,
@@ -193,10 +193,26 @@ defmodule KlassHero.Messaging do
   Gates the compose screen: the target's name is rendered there, so a hand-typed
   URL must be refused before it discloses anything.
   """
-  @spec can_message_parent?(map(), String.t(), String.t()) :: boolean()
-  def can_message_parent?(scope, program_id, parent_user_id) when is_binary(program_id) and is_binary(parent_user_id) do
-    can_initiate_messaging?(scope) and Enrollment.confirmed_enrollment?(program_id, parent_user_id)
+  @spec can_message_parent?(map(), String.t(), String.t(), String.t()) :: boolean()
+  def can_message_parent?(scope, provider_id, program_id, parent_user_id)
+      when is_binary(provider_id) and is_binary(program_id) and is_binary(parent_user_id) do
+    acting_provider_id(scope) == provider_id and
+      Enrollment.confirmed_enrollment?(program_id, parent_user_id)
   end
+
+  def can_message_parent?(_scope, _provider_id, _program_id, _parent_user_id), do: false
+
+  @doc """
+  The provider a scope acts for — its own profile, or the one employing it.
+
+  A staff scope carries no `:provider`; the employer lives on `:staff_member`, and
+  only the staff dashboard used to know that. Comparing this against the provider a
+  request names is what stops a staff member composing for someone else's provider.
+  """
+  @spec acting_provider_id(map()) :: String.t() | nil
+  def acting_provider_id(%{provider: %{id: id}}), do: id
+  def acting_provider_id(%{staff_member: %{provider_id: id}}), do: id
+  def acting_provider_id(_scope), do: nil
 
   @doc """
   Starts (or retrieves) a direct conversation between a parent and a provider
@@ -926,44 +942,6 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Lists a user's active conversations with unread counts, most-recent first. Limit+1 paginated."
-  @spec list_conversations_for_user(String.t(), keyword()) ::
-          {:ok, [Conversation.t()], boolean()}
-  def list_conversations_for_user(user_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 50)
-
-    results =
-      ConversationQueries.base()
-      |> ConversationQueries.active_only()
-      |> ConversationQueries.where_user_is_participant(user_id)
-      |> ConversationQueries.with_unread_count(user_id)
-      |> ConversationQueries.order_by_recent_message()
-      |> ConversationQueries.paginate(opts)
-      |> Repo.all()
-
-    {:ok, Enum.take(results, limit), length(results) > limit}
-  end
-
-  @doc "Lists a provider's active conversations, most-recent first. Optional `:type` filter."
-  @spec list_conversations_for_provider(String.t(), keyword()) ::
-          {:ok, [Conversation.t()], boolean()}
-  def list_conversations_for_provider(provider_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 50)
-    type = Keyword.get(opts, :type)
-
-    query =
-      ConversationQueries.base()
-      |> ConversationQueries.by_provider(provider_id)
-      |> ConversationQueries.active_only()
-      |> ConversationQueries.order_by_recent_message()
-      |> ConversationQueries.paginate(opts)
-
-    query = if type, do: ConversationQueries.by_type(query, type), else: query
-
-    results = Repo.all(query)
-    {:ok, Enum.take(results, limit), length(results) > limit}
-  end
-
   @doc "Total unread message count across a user's conversations."
   @spec conversation_total_unread_count(String.t()) :: non_neg_integer()
   def conversation_total_unread_count(user_id) do
@@ -1013,6 +991,11 @@ defmodule KlassHero.Messaging do
   Returns the `ConversationSummary` read-table structs themselves: the schema is the
   DTO (`KlassHero.Shared.ReadTable`), so callers read its flat fields directly.
 
+  Rows with no message are excluded — the SQL form of
+  `ConversationSummary.has_latest_message?/1`. Creation now waits for the first
+  message, so this only catches rows predating that and the window where a send
+  failed after its conversation committed.
+
   ## Examples
 
       iex> Messaging.list_conversations(user_id)
@@ -1026,7 +1009,9 @@ defmodule KlassHero.Messaging do
 
     schemas =
       from(s in ConversationSummary,
-        where: s.user_id == ^user_id and is_nil(s.archived_at),
+        where:
+          s.user_id == ^user_id and is_nil(s.archived_at) and
+            (not is_nil(s.latest_message_content) or s.has_attachments),
         order_by: [desc: s.latest_message_at, desc: s.id],
         limit: ^(limit + 1)
       )

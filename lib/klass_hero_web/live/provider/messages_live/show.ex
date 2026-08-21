@@ -12,6 +12,22 @@ defmodule KlassHeroWeb.Provider.MessagesLive.Show do
   import KlassHeroWeb.MessagingComponents
 
   @impl true
+  def mount(%{"provider_id" => provider_id} = params, _session, socket) do
+    {:ok, socket} =
+      MessagingLiveHelper.mount_compose(
+        socket,
+        [
+          provider_id: provider_id,
+          target_user_id: params["user_id"],
+          program_id: params["program_id"]
+        ],
+        back_path: ~p"/provider/messages",
+        navigate_base: "/provider/messages"
+      )
+
+    {:ok, assign(socket, active_nav: :messages)}
+  end
+
   def mount(%{"id" => conversation_id}, _session, socket) do
     {:ok, socket} =
       MessagingLiveHelper.mount_conversation_show(socket, conversation_id,
@@ -30,7 +46,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.Show do
       streams={@streams}
       messages_empty?={@messages_empty?}
       page_title={@page_title}
-      conversation={@conversation}
+      broadcast?={@broadcast?}
       back_path={@back_path}
       form={@form}
       current_user_id={@current_scope.user.id}

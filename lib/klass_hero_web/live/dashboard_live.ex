@@ -281,30 +281,10 @@ defmodule KlassHeroWeb.DashboardLive do
   end
 
   def handle_event("contact_provider", %{"program-id" => program_id, "provider-id" => provider_id}, socket) do
-    case Messaging.start_program_conversation(
-           socket.assigns.current_scope,
-           provider_id,
-           program_id
-         ) do
-      {:ok, conversation} ->
-        {:noreply, push_navigate(socket, to: ~p"/messages/#{conversation.id}")}
-
-      {:error, :not_entitled} ->
-        {:noreply, put_flash(socket, :error, gettext("Upgrade your plan to send messages."))}
-
-      {:error, reason} ->
-        Logger.error("Failed to start program conversation from dashboard",
-          reason: inspect(reason),
-          provider_id: provider_id,
-          program_id: program_id
-        )
-
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("Could not start conversation. Please try again.")
-         )}
+    if Messaging.can_initiate_messaging?(socket.assigns.current_scope) do
+      {:noreply, push_navigate(socket, to: ~p"/messages/new?provider_id=#{provider_id}&program_id=#{program_id}")}
+    else
+      {:noreply, put_flash(socket, :error, gettext("Upgrade your plan to send messages."))}
     end
   end
 

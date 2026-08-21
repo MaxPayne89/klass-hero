@@ -168,19 +168,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
     end
   end
 
-  describe "order_by_recent_message/1" do
-    test "adds LEFT JOIN on messages, group by, and order by" do
-      query =
-        ConversationQueries.base()
-        |> ConversationQueries.order_by_recent_message()
-
-      assert %Ecto.Query{} = query
-      assert length(query.joins) == 1
-      assert length(query.group_bys) == 1
-      assert length(query.order_bys) == 1
-    end
-  end
-
   describe "preload_assocs/2" do
     test "adds preload for given associations" do
       query =
@@ -201,26 +188,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
     end
   end
 
-  describe "paginate/2" do
-    test "sets LIMIT to specified limit plus one" do
-      query =
-        ConversationQueries.base()
-        |> ConversationQueries.paginate(limit: 25)
-
-      assert %Ecto.Query{} = query
-      assert query.limit != nil
-    end
-
-    test "uses default limit of 50 when not specified" do
-      query =
-        ConversationQueries.base()
-        |> ConversationQueries.paginate([])
-
-      assert %Ecto.Query{} = query
-      assert query.limit != nil
-    end
-  end
-
   describe "select_ids/1" do
     test "sets custom SELECT for conversation IDs" do
       query =
@@ -229,21 +196,6 @@ defmodule KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQu
 
       assert %Ecto.Query{} = query
       assert query.select != nil
-    end
-  end
-
-  describe "with_unread_count/2" do
-    test "adds two LEFT JOINs and group by for unread aggregation" do
-      user_id = Ecto.UUID.generate()
-
-      query =
-        ConversationQueries.base()
-        |> ConversationQueries.with_unread_count(user_id)
-
-      assert %Ecto.Query{} = query
-      # participant join + unread message join
-      assert length(query.joins) == 2
-      assert length(query.group_bys) == 1
     end
   end
 

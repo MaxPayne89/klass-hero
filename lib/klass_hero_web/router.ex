@@ -108,6 +108,7 @@ defmodule KlassHeroWeb.Router do
       live "/programs/:id/booking", BookingLive, :new
       live "/enrollments/:id/waivers", EnrollmentWaiversLive, :show
       live "/messages", MessagesLive.Index, :index
+      live "/messages/new", MessagesLive.Show, :new
       live "/messages/:id", MessagesLive.Show, :show
     end
 
@@ -139,6 +140,7 @@ defmodule KlassHeroWeb.Router do
         live "/dashboard/edit", EditProfileLive, :index
 
         live "/messages", MessagesLive.Index, :index
+        live "/messages/new", MessagesLive.Show, :new
         live "/messages/:id", MessagesLive.Show, :show
         live "/programs/:program_id/broadcast", BroadcastLive, :new
       end
@@ -180,6 +182,7 @@ defmodule KlassHeroWeb.Router do
         live "/sessions", StaffSessionsLive, :index
         live "/participation/:session_id", StaffParticipationLive, :show
         live "/messages", MessagesLive.Index, :index
+        live "/messages/new", MessagesLive.Show, :new
         live "/messages/:id", MessagesLive.Show, :show
         live "/programs/:program_id/broadcast", StaffBroadcastLive, :new
       end
