@@ -58,7 +58,7 @@ defmodule KlassHero.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:error_tracker, "~> 0.7"},
+      {:error_tracker, "~> 0.9.0"},
       {:fun_with_flags, "~> 1.12"},
       {:usage_rules, "~> 1.0", only: [:dev]},
       {:bcrypt_elixir, "~> 3.0"},
