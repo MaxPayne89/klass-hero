@@ -68,11 +68,20 @@ defmodule KlassHero.Shared.ErrorContextFilter do
 
   @scalar_marker "[redacted]"
 
-  # Exactly what nested_marker/1 emits, anchored end to end. Recognising a marker by its shape
-  # is what makes sanitize/1 idempotent, and the anchoring is what keeps that cheap: a value
-  # the user typed passes through only if it matches this whole string, which no name, date or
-  # medical note does.
-  @nested_marker ~r/^\[\d+ keys redacted: [^\[\]]*\]$/
+  # Exactly what nested_marker/1 emits: a count, then its sorted field names joined by ", ".
+  # Recognising a marker by its shape is what makes sanitize/1 idempotent, and every part of
+  # this pattern is holding that surface down:
+  #
+  #   * `\A`/`\z`, not `^`/`$` — the latter also match either side of a trailing newline.
+  #   * Tokens may not contain whitespace. Field names never do; typed prose always does, so
+  #     this is what stops "[3 keys redacted: severe peanut allergy, born 2015-01-01]" from
+  #     being mistaken for a marker and stored verbatim.
+  #
+  # The charset is otherwise left open on purpose. Names come from form fields, so `_target`,
+  # `Child-Name` and any casing are all real, and a marker this fails to recognise is worse
+  # than a permissive one: it gets collapsed to `@scalar_marker`, losing the names — the very
+  # bug idempotence exists to prevent.
+  @nested_marker ~r/\A\[\d+ keys redacted: (?:[^,\s\[\]]+(?:, [^,\s\[\]]+)*)?\]\z/
 
   # Correlation ids only — enough to find the row this job was about, never its contents.
   # "trace_context" carries OTel propagation (`Shared.Tracing.Context.inject_into_args/1`);

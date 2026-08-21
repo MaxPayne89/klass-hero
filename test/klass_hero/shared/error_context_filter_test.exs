@@ -194,11 +194,10 @@ defmodule KlassHero.Shared.ErrorContextFilterTest do
       assert ErrorContextFilter.sanitize(once) == once
     end
 
-    # The cost of recognising the marker by its shape: a value the user typed that happens to
-    # look like one survives verbatim. Bounded on purpose — the regex is anchored to the exact
-    # string nested_marker/1 emits, and no plausible PII (a name, a date, an allergy) matches it.
-    # Only a structural marker could close this, and that would change the shape every stored
-    # context is read in.
+    # The cost of recognising a marker by its shape: a value the user typed that matches it
+    # survives verbatim. Bounded on purpose, and this test is where that bound is stated.
+    # Closing it entirely would need a structural marker, which would change the shape every
+    # stored context is read in.
     test "passes through a user-submitted string shaped like a marker" do
       context = %{"live_view.event_params" => %{"note" => "[2 keys redacted: a, b]"}}
 
@@ -206,18 +205,60 @@ defmodule KlassHero.Shared.ErrorContextFilterTest do
       assert params["note"] == "[2 keys redacted: a, b]"
     end
 
-    # ...but only that exact shape. Anything merely resembling it is still redacted.
+    # ...but only that exact shape. The interesting cases are the last three: whitespace inside
+    # a token is what separates a field-name list from typed prose, and it is the whole reason
+    # @nested_marker forbids it. Without that, wrapping health data in the marker's syntax
+    # would smuggle it past the filter verbatim.
     test "redacts a string that only resembles a marker" do
       context = %{
         "live_view.event_params" => %{
           "a" => "[keys redacted: allergies]",
           "b" => "see [2 keys redacted: x, y]",
-          "c" => "[2 keys redacted: x, y] and more"
+          "c" => "[2 keys redacted: x, y] and more",
+          "d" => "[3 keys redacted: severe peanut allergy, born 2015-01-01, asthma]",
+          "e" => "[2 keys redacted: a, b]\nleaked",
+          "f" => "[2 keys redacted: a, b]\n"
         }
       }
 
       assert %{"live_view.event_params" => params} = ErrorContextFilter.sanitize(context)
-      assert params == %{"a" => "[redacted]", "b" => "[redacted]", "c" => "[redacted]"}
+
+      assert params ==
+               %{
+                 "a" => "[redacted]",
+                 "b" => "[redacted]",
+                 "c" => "[redacted]",
+                 "d" => "[redacted]",
+                 "e" => "[redacted]",
+                 "f" => "[redacted]"
+               }
+    end
+
+    # Field names come from form inputs, so they are not restricted to a tidy charset. A marker
+    # this failed to recognise would be collapsed to "[redacted]" on the next pass — the bug
+    # idempotence exists to prevent — so the recognised charset stays wide.
+    test "recognises a marker whose field names are not plain lowercase words" do
+      context = %{
+        "live_view.event_params" => %{
+          "child" => %{"_target" => 1, "Child-Name" => 2, "school.grade" => 3}
+        }
+      }
+
+      once = ErrorContextFilter.sanitize(context)
+
+      assert once["live_view.event_params"]["child"] ==
+               "[3 keys redacted: Child-Name, _target, school.grade]"
+
+      assert ErrorContextFilter.sanitize(once) == once
+    end
+
+    # Map.keys/1 of an empty map joins to nothing, so the marker carries a trailing space before
+    # the bracket. It still has to be recognised as one.
+    test "recognises the marker for an empty nested map" do
+      once = ErrorContextFilter.sanitize(%{"request.params" => %{"child" => %{}}})
+
+      assert once["request.params"]["child"] == "[0 keys redacted: ]"
+      assert ErrorContextFilter.sanitize(once) == once
     end
   end
 
