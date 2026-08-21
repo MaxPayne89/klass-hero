@@ -28,6 +28,7 @@ defmodule KlassHero.Messaging do
 
   import Ecto.Query
 
+  alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
@@ -55,6 +56,7 @@ defmodule KlassHero.Messaging do
   }
 
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.ComposeTarget
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.EmailReply
@@ -106,6 +108,65 @@ defmodule KlassHero.Messaging do
   def can_initiate_messaging?(%{parent: parent}), do: not is_nil(parent)
   def can_initiate_messaging?(%{provider: provider}), do: not is_nil(provider)
   def can_initiate_messaging?(_scope), do: false
+
+  @doc """
+  Resolves who a compose screen is writing to, refusing targets the scope may not write to.
+
+  The gate lives here rather than in the callers: the compose screen renders the
+  target's name, so a hand-typed URL must fail before it discloses one.
+
+  ## Options
+  - `:target_user_id` — required when a provider or staff member writes to a parent
+  - `:program_id` — required for that direction, since the roster check is per-program
+  """
+  @spec build_compose_target(map(), String.t(), keyword()) ::
+          {:ok, ComposeTarget.t()} | {:error, :not_found | :unauthorized}
+  def build_compose_target(scope, provider_id, opts \\ [])
+
+  def build_compose_target(%{provider: nil, parent: parent} = scope, provider_id, opts) when not is_nil(parent) do
+    if can_initiate_messaging?(scope) do
+      build_provider_target(provider_id, Keyword.get(opts, :program_id))
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def build_compose_target(scope, provider_id, opts) do
+    target_user_id = Keyword.get(opts, :target_user_id)
+    program_id = Keyword.get(opts, :program_id)
+
+    if is_binary(target_user_id) and is_binary(program_id) and
+         can_message_parent?(scope, program_id, target_user_id) do
+      {:ok,
+       %ComposeTarget{
+         provider_id: provider_id,
+         target_user_id: target_user_id,
+         program_id: program_id,
+         target_name: Map.get(Accounts.get_display_names([target_user_id]), target_user_id)
+       }}
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  # One lookup covers both fields — the owner to converse with and the name to show.
+  defp build_provider_target(provider_id, program_id) do
+    acl_span source: "messaging", target: "provider" do
+      case KlassHero.Provider.get_provider_profile(provider_id) do
+        {:ok, provider} ->
+          {:ok,
+           %ComposeTarget{
+             provider_id: provider_id,
+             target_user_id: provider.identity_id,
+             program_id: program_id,
+             target_name: provider.business_name
+           }}
+
+        {:error, _reason} ->
+          {:error, :not_found}
+      end
+    end
+  end
 
   @doc """
   Opens a direct conversation and sends its first message in one call.
