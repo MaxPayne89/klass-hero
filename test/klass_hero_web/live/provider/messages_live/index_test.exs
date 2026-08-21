@@ -94,7 +94,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.IndexTest do
       subject: nil,
       other_participant_name: "Other User",
       participant_count: 2,
-      latest_message_content: nil,
+      latest_message_content: "Hello",
       latest_message_sender_id: nil,
       latest_message_at: nil,
       unread_count: 0,

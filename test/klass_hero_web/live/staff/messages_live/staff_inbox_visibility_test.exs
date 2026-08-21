@@ -21,7 +21,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
-  alias KlassHero.Messaging.CreateDirectConversation
+  alias KlassHero.Messaging.StartConversationWithMessage
   alias KlassHero.Provider
   alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.ProviderProfile
@@ -107,8 +107,8 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         }
       }
 
-      assert {:ok, conversation} =
-               CreateDirectConversation.execute(scope, provider.id, parent.id, program_id: program.id)
+      assert {:ok, conversation, _message} =
+               StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
       flush_to_projection()
 
@@ -142,8 +142,8 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         }
       }
 
-      assert {:ok, conversation} =
-               CreateDirectConversation.execute(scope, provider.id, parent.id, program_id: program.id)
+      assert {:ok, conversation, _message} =
+               StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
       flush_to_projection()
 
@@ -212,8 +212,8 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
         }
       }
 
-      assert {:ok, conversation} =
-               CreateDirectConversation.execute(scope, provider.id, parent.id, program_id: program.id)
+      assert {:ok, conversation, _message} =
+               StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
       flush_to_projection()
 
@@ -263,8 +263,8 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       }
 
       # ACT 1 — create conversation; staff is included from the start
-      assert {:ok, conversation} =
-               CreateDirectConversation.execute(scope, provider.id, parent.id, program_id: program.id)
+      assert {:ok, conversation, _message} =
+               StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
       flush_to_projection()
 

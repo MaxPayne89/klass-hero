@@ -637,8 +637,7 @@ defmodule KlassHero.Enrollment do
   program, the same question the roster UI asks before offering a message button.
   """
   @spec confirmed_enrollment?(String.t(), String.t()) :: boolean()
-  def confirmed_enrollment?(program_id, parent_user_id)
-      when is_binary(program_id) and is_binary(parent_user_id) do
+  def confirmed_enrollment?(program_id, parent_user_id) when is_binary(program_id) and is_binary(parent_user_id) do
     case fetch_parent_by_identity(parent_user_id) do
       {:ok, parent} ->
         EnrollmentQueries.base()
