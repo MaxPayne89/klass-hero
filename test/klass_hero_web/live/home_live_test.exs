@@ -1,5 +1,5 @@
 defmodule KlassHeroWeb.HomeLiveTest do
-  use KlassHeroWeb.FeatureCase, async: true
+  use KlassHeroWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
 

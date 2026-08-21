@@ -1,10 +1,14 @@
-defmodule KlassHeroWeb.Features.LoginFeatureTest do
+defmodule KlassHeroWeb.Flows.LoginTest do
   @moduledoc """
-  Feature test for user login flow using phoenix_test.
-  Demonstrates the user-centric testing approach.
+  Flow test for the login page.
+
+  The *password* login is deliberately absent: `UserLive.Login` renders a mobile and
+  a desktop copy of the same `phx-trigger-action` form, and `phoenix_test` raises on
+  more than one. That path belongs to the browser tier — see
+  `test/e2e/login_browser_test.exs` and ADR-0020.
   """
 
-  use KlassHeroWeb.FeatureCase, async: true
+  use KlassHeroWeb.FlowCase, async: false
 
   import Ecto.Query
 
@@ -15,7 +19,7 @@ defmodule KlassHeroWeb.Features.LoginFeatureTest do
       user = user_fixture()
 
       conn
-      |> visit("/users/log-in")
+      |> visit(~p"/users/log-in")
       |> assert_has("h1", text: "Welcome")
       |> click_button("Or use magic link")
       |> within("#login_form_magic", fn session ->
@@ -25,29 +29,28 @@ defmodule KlassHeroWeb.Features.LoginFeatureTest do
       end)
       |> assert_has("[role='alert']", text: "If your email is in our system")
 
-      # Verify token was created
       assert KlassHero.Repo.exists?(
                from t in UserToken,
                  where: t.user_id == ^user.id and t.context == "login"
              )
     end
 
-    # Password login tests are in login_test.exs using LiveViewTest
-    # phoenix_test cannot handle duplicate forms (mobile + desktop) with phx-trigger-action
-    test "user can toggle to magic link form", %{conn: conn} do
+    test "user can toggle to the magic link form", %{conn: conn} do
       conn
-      |> visit("/users/log-in")
+      |> visit(~p"/users/log-in")
       |> assert_has("button", text: "Log in and stay logged in")
       |> assert_has("input[type='password']")
       |> click_button("Or use magic link")
       |> assert_has("button", text: "Send magic link")
     end
 
-    test "user can navigate to registration from login", %{conn: _conn} do
-      # PhoenixTest cannot distinguish between mobile and desktop "Sign up" links
-      # since both are rendered in HTML (one is CSS hidden). Skip this test
-      # as the same functionality is tested in login_test.exs using LiveViewTest
-      :skip
+    # Scoped to the desktop nav because the page renders a mobile copy of the same
+    # link. Before this was scoped it was a `do :skip end` body — green while
+    # asserting nothing.
+    test "the login page offers a route to registration", %{conn: conn} do
+      conn
+      |> visit(~p"/users/log-in")
+      |> assert_has(~s(a[href="#{~p"/users/register"}"]))
     end
   end
 
@@ -57,7 +60,7 @@ defmodule KlassHeroWeb.Features.LoginFeatureTest do
       conn = log_in_user(conn, user)
 
       conn
-      |> visit("/users/log-in")
+      |> visit(~p"/users/log-in")
       |> assert_has("p", text: "You need to reauthenticate")
       |> refute_has("a", text: "Register")
       |> assert_has("input[value='#{user.email}']")

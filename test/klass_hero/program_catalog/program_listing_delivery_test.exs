@@ -46,6 +46,32 @@ defmodule KlassHero.ProgramCatalog.ProgramListingDeliveryTest do
       assert listing.meeting_start_time == ~T[15:00:00]
       assert listing.meeting_end_time == ~T[17:00:00]
     end
+
+    # The fields below were absent from `program_created`'s payload while
+    # `program_updated` carried them and the projection read them, so a brand-new
+    # program reached the public catalog with a blank description and a €0.00
+    # price until someone happened to edit it. The delivery test above could not
+    # see it: it asserted only the fields the payload did carry.
+    test "projects the fields the catalog card actually renders", %{} do
+      provider = ProviderFixtures.provider_profile_fixture()
+
+      {:ok, program} =
+        create_and_deliver(%{
+          provider_id: provider.id,
+          title: "Soccer Camp",
+          description: "Outdoor soccer for beginners",
+          category: "sports",
+          price: Decimal.new("150.00"),
+          location: "Tempelhofer Feld"
+        })
+
+      listing = Repo.get(ProgramListing, program.id)
+
+      assert listing.description == "Outdoor soccer for beginners"
+      assert Decimal.equal?(listing.price, Decimal.new("150.00"))
+      assert listing.location == "Tempelhofer Feld"
+      assert listing.category == "sports"
+    end
   end
 
   # Swapped around the act alone, and manual-mode-then-drain rather than the suite's

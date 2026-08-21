@@ -134,6 +134,28 @@ step "Test database ${test_db}"
 MIX_ENV=test mix ecto.create >/dev/null || fail "test-env ecto.create failed for ${test_db}"
 MIX_ENV=test mix ecto.migrate >/dev/null || fail "test-env ecto.migrate failed for ${test_db}"
 
+# --- 5b. chromedriver -------------------------------------------------------
+# Wallaby needs a driver whose major matches the installed Chrome; a mismatch
+# fails every browser test with "invalid session id". Chrome auto-updates and
+# _build/ is per-checkout, so this drifts silently and leaves `mix test.e2e`
+# CI-only. Only pay the npx download when the majors have actually diverged.
+chrome_major=""
+for candidate in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" google-chrome chromium; do
+  if command -v "$candidate" &>/dev/null || [[ -x "$candidate" ]]; then
+    chrome_major=$("$candidate" --version 2>/dev/null | grep -oE '[0-9]+' | head -1)
+    break
+  fi
+done
+
+if [[ -n "$chrome_major" ]]; then
+  driver_major=$(_build/chromedriver/chromedriver --version 2>/dev/null | grep -oE '[0-9]+' | head -1 || true)
+
+  if [[ "$driver_major" != "$chrome_major" ]]; then
+    step "ChromeDriver ${driver_major:-none} -> ${chrome_major}"
+    bin/setup-chromedriver >/dev/null 2>&1 || note "chromedriver install failed; mix test.e2e will not run here"
+  fi
+fi
+
 # --- 6. MCP endpoint --------------------------------------------------------
 step "Tidewave endpoint"
 bin/setup-mcp --quiet >&2 || fail "bin/setup-mcp failed"
