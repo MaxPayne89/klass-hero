@@ -7,11 +7,11 @@ defmodule KlassHeroWeb.MarketingComponents do
   `KlassHeroWeb.UIComponents` plus marketing-only chrome (header, footer)
   that is not used by the parent or provider apps.
 
-  The legacy `hero_section` / `feature_card` / `provider_step_card` /
-  `faq_item` components in `UIComponents` stay in place — they're still
-  consumed by `AboutLive`, `ContactLive`, `ForProvidersLive`,
-  `TrustSafetyLive`, `ProgramsLive`. Those pages migrate to the
-  marketing chrome in follow-up PRs.
+  Of the legacy primitives this note used to list, only `faq_item` survives in
+  `UIComponents` — `HomeLive` and `ForProvidersLive` still render it. The
+  migration those pages were waiting on had already happened, leaving
+  `hero_section`, `feature_card`, and `provider_step_card` unreachable, so
+  #1408 deleted them. Prefer the `Mk*` family in new work.
   """
 
   use Phoenix.Component

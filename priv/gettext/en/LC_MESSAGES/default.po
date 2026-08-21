@@ -2946,7 +2946,7 @@ msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:278
 #: lib/klass_hero_web/components/provider_layout_components.ex:217
-#: lib/klass_hero_web/components/ui_components.ex:1974
+#: lib/klass_hero_web/components/ui_components.ex:1671
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Verified"
 msgstr ""
@@ -7192,22 +7192,22 @@ msgid_plural "%{count} children enrolled"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/components/ui_components.ex:1971
+#: lib/klass_hero_web/components/ui_components.ex:1668
 #, elixir-autogen, elixir-format
 msgid "This provider completed Klass Hero's verification checks"
 msgstr ""
 
-#: lib/klass_hero_web/components/ui_components.ex:1987
+#: lib/klass_hero_web/components/ui_components.ex:1684
 #, elixir-autogen, elixir-format
 msgid "This provider is working through Klass Hero's verification checks"
 msgstr ""
 
-#: lib/klass_hero_web/components/ui_components.ex:1994
+#: lib/klass_hero_web/components/ui_components.ex:1691
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Verification in progress"
 msgstr ""
 
-#: lib/klass_hero_web/components/ui_components.ex:1992
+#: lib/klass_hero_web/components/ui_components.ex:1689
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Verifying"
 msgstr ""
