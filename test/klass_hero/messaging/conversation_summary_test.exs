@@ -59,6 +59,33 @@ defmodule KlassHero.Messaging.ConversationSummaryTest do
       assert {:ok, [], false} = Messaging.list_conversations(user_id)
     end
 
+    test "excludes a conversation that has never carried a message" do
+      user_id = Ecto.UUID.generate()
+
+      insert(:conversation_summary_schema,
+        user_id: user_id,
+        latest_message_content: nil,
+        latest_message_at: nil,
+        has_attachments: false
+      )
+
+      assert {:ok, [], false} = Messaging.list_conversations(user_id)
+    end
+
+    test "includes an attachments-only conversation, which has no text content" do
+      user_id = Ecto.UUID.generate()
+
+      summary =
+        insert(:conversation_summary_schema,
+          user_id: user_id,
+          latest_message_content: nil,
+          has_attachments: true
+        )
+
+      assert {:ok, [listed], false} = Messaging.list_conversations(user_id)
+      assert listed.id == summary.id
+    end
+
     test "reports has_more via the limit+1 probe" do
       user_id = Ecto.UUID.generate()
       insert_list(3, :conversation_summary_schema, user_id: user_id)

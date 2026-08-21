@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.Child
+  alias KlassHero.Messaging.Conversation
 
   describe "DashboardLive (Phase 2.1 — Pa* component layout)" do
     setup :register_and_log_in_user
@@ -116,7 +117,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
   end
 
   describe "Contact Provider flow" do
-    test "clicking contact_provider starts a conversation and navigates to it", %{conn: conn} do
+    test "clicking contact_provider opens compose without creating a conversation", %{conn: conn} do
       user = AccountsFixtures.user_fixture(intended_roles: [:parent])
       parent = insert(:parent_profile_schema, identity_id: user.id)
       owner = AccountsFixtures.user_fixture()
@@ -142,7 +143,9 @@ defmodule KlassHeroWeb.DashboardLiveTest do
       assert {:error, {:live_redirect, %{to: path}}} =
                view |> element(selector) |> render_click()
 
-      assert path =~ ~r"^/messages/[0-9a-f-]+$"
+      assert path == "/messages/new?provider_id=#{provider.id}&program_id=#{program.id}"
+
+      assert KlassHero.Repo.aggregate(Conversation, :count, :id) == 0
     end
   end
 

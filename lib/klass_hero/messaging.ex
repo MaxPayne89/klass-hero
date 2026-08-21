@@ -28,7 +28,9 @@ defmodule KlassHero.Messaging do
 
   import Ecto.Query
 
+  alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Enrollment
   alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
@@ -49,10 +51,12 @@ defmodule KlassHero.Messaging do
     ReplyToEmail,
     ScheduleEmailContentFetch,
     SendMessage,
+    StartConversationWithMessage,
     StartProgramConversation
   }
 
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.ComposeTarget
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.EmailReply
@@ -104,6 +108,111 @@ defmodule KlassHero.Messaging do
   def can_initiate_messaging?(%{parent: parent}), do: not is_nil(parent)
   def can_initiate_messaging?(%{provider: provider}), do: not is_nil(provider)
   def can_initiate_messaging?(_scope), do: false
+
+  @doc """
+  Resolves who a compose screen is writing to, refusing targets the scope may not write to.
+
+  The gate lives here rather than in the callers: the compose screen renders the
+  target's name, so a hand-typed URL must fail before it discloses one.
+
+  ## Options
+  - `:target_user_id` — required when a provider or staff member writes to a parent
+  - `:program_id` — required for that direction, since the roster check is per-program
+  """
+  @spec build_compose_target(map(), String.t(), keyword()) ::
+          {:ok, ComposeTarget.t()} | {:error, :not_found | :unauthorized}
+  def build_compose_target(scope, provider_id, opts \\ [])
+
+  def build_compose_target(%{provider: nil, parent: parent} = scope, provider_id, opts) when not is_nil(parent) do
+    if can_initiate_messaging?(scope) do
+      build_provider_target(provider_id, Keyword.get(opts, :program_id))
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  def build_compose_target(scope, provider_id, opts) do
+    target_user_id = Keyword.get(opts, :target_user_id)
+    program_id = Keyword.get(opts, :program_id)
+
+    if is_binary(target_user_id) and is_binary(program_id) and
+         can_message_parent?(scope, provider_id, program_id, target_user_id) do
+      {:ok,
+       %ComposeTarget{
+         provider_id: provider_id,
+         target_user_id: target_user_id,
+         program_id: program_id,
+         target_name: Map.get(Accounts.get_display_names([target_user_id]), target_user_id)
+       }}
+    else
+      {:error, :unauthorized}
+    end
+  end
+
+  # One lookup covers both fields — the owner to converse with and the name to show.
+  defp build_provider_target(provider_id, program_id) do
+    acl_span source: "messaging", target: "provider" do
+      case KlassHero.Provider.get_provider_profile(provider_id) do
+        {:ok, provider} ->
+          {:ok,
+           %ComposeTarget{
+             provider_id: provider_id,
+             target_user_id: provider.identity_id,
+             program_id: program_id,
+             target_name: provider.business_name
+           }}
+
+        {:error, _reason} ->
+          {:error, :not_found}
+      end
+    end
+  end
+
+  @doc """
+  Opens a direct conversation and sends its first message in one call.
+
+  The only way a compose screen creates a conversation — see
+  `StartConversationWithMessage` for why creation waits for the message.
+  """
+  @spec start_conversation_with_message(
+          Scope.t(),
+          String.t(),
+          String.t() | nil,
+          String.t() | nil,
+          keyword()
+        ) ::
+          {:ok, Conversation.t(), Message.t()}
+          | {:error, :empty_message | :not_entitled | :not_found | term()}
+  def start_conversation_with_message(scope, provider_id, target_user_id, content, opts \\ []) do
+    StartConversationWithMessage.execute(scope, provider_id, target_user_id, content, opts)
+  end
+
+  @doc """
+  Returns whether `scope` may open a conversation with `parent_user_id` about `program_id`.
+
+  Gates the compose screen: the target's name is rendered there, so a hand-typed
+  URL must be refused before it discloses anything.
+  """
+  @spec can_message_parent?(map(), String.t(), String.t(), String.t()) :: boolean()
+  def can_message_parent?(scope, provider_id, program_id, parent_user_id)
+      when is_binary(provider_id) and is_binary(program_id) and is_binary(parent_user_id) do
+    acting_provider_id(scope) == provider_id and
+      Enrollment.confirmed_enrollment?(program_id, parent_user_id)
+  end
+
+  def can_message_parent?(_scope, _provider_id, _program_id, _parent_user_id), do: false
+
+  @doc """
+  The provider a scope acts for — its own profile, or the one employing it.
+
+  A staff scope carries no `:provider`; the employer lives on `:staff_member`, and
+  only the staff dashboard used to know that. Comparing this against the provider a
+  request names is what stops a staff member composing for someone else's provider.
+  """
+  @spec acting_provider_id(map()) :: String.t() | nil
+  def acting_provider_id(%{provider: %{id: id}}), do: id
+  def acting_provider_id(%{staff_member: %{provider_id: id}}), do: id
+  def acting_provider_id(_scope), do: nil
 
   @doc """
   Starts (or retrieves) a direct conversation between a parent and a provider
@@ -833,44 +942,6 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Lists a user's active conversations with unread counts, most-recent first. Limit+1 paginated."
-  @spec list_conversations_for_user(String.t(), keyword()) ::
-          {:ok, [Conversation.t()], boolean()}
-  def list_conversations_for_user(user_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 50)
-
-    results =
-      ConversationQueries.base()
-      |> ConversationQueries.active_only()
-      |> ConversationQueries.where_user_is_participant(user_id)
-      |> ConversationQueries.with_unread_count(user_id)
-      |> ConversationQueries.order_by_recent_message()
-      |> ConversationQueries.paginate(opts)
-      |> Repo.all()
-
-    {:ok, Enum.take(results, limit), length(results) > limit}
-  end
-
-  @doc "Lists a provider's active conversations, most-recent first. Optional `:type` filter."
-  @spec list_conversations_for_provider(String.t(), keyword()) ::
-          {:ok, [Conversation.t()], boolean()}
-  def list_conversations_for_provider(provider_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 50)
-    type = Keyword.get(opts, :type)
-
-    query =
-      ConversationQueries.base()
-      |> ConversationQueries.by_provider(provider_id)
-      |> ConversationQueries.active_only()
-      |> ConversationQueries.order_by_recent_message()
-      |> ConversationQueries.paginate(opts)
-
-    query = if type, do: ConversationQueries.by_type(query, type), else: query
-
-    results = Repo.all(query)
-    {:ok, Enum.take(results, limit), length(results) > limit}
-  end
-
   @doc "Total unread message count across a user's conversations."
   @spec conversation_total_unread_count(String.t()) :: non_neg_integer()
   def conversation_total_unread_count(user_id) do
@@ -920,6 +991,11 @@ defmodule KlassHero.Messaging do
   Returns the `ConversationSummary` read-table structs themselves: the schema is the
   DTO (`KlassHero.Shared.ReadTable`), so callers read its flat fields directly.
 
+  Rows with no message are excluded — the SQL form of
+  `ConversationSummary.has_latest_message?/1`. Creation now waits for the first
+  message, so this only catches rows predating that and the window where a send
+  failed after its conversation committed.
+
   ## Examples
 
       iex> Messaging.list_conversations(user_id)
@@ -933,7 +1009,9 @@ defmodule KlassHero.Messaging do
 
     schemas =
       from(s in ConversationSummary,
-        where: s.user_id == ^user_id and is_nil(s.archived_at),
+        where:
+          s.user_id == ^user_id and is_nil(s.archived_at) and
+            (not is_nil(s.latest_message_content) or s.has_attachments),
         order_by: [desc: s.latest_message_at, desc: s.id],
         limit: ^(limit + 1)
       )

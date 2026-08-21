@@ -561,7 +561,7 @@ defmodule KlassHeroWeb.MessagingComponents do
   attr :streams, :any, required: true
   attr :messages_empty?, :boolean, required: true
   attr :page_title, :string, required: true
-  attr :conversation, :map, required: true
+  attr :broadcast?, :boolean, default: false
   attr :back_path, :string, required: true
   attr :form, :map, required: true
   attr :current_user_id, :string, required: true
@@ -586,7 +586,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           </div>
           <div class="flex-1">
             <h1 class="text-lg font-semibold text-white truncate">{@page_title}</h1>
-            <.broadcast_badge :if={@conversation.type == :program_broadcast} class="text-white/80" />
+            <.broadcast_badge :if={@broadcast?} class="text-white/80" />
           </div>
         </header>
         <div class={[Theme.bg(:surface), "flex-1 flex flex-col shadow-sm overflow-hidden"]}>
@@ -596,7 +596,7 @@ defmodule KlassHeroWeb.MessagingComponents do
             form={@form}
             current_user_id={@current_user_id}
             sender_names={@sender_names}
-            conversation={@conversation}
+            broadcast?={@broadcast?}
             provider_user_ids={@provider_user_ids}
             provider_name={@provider_name}
             uploads={@uploads}
@@ -618,7 +618,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           </.link>
           <div class="flex-1">
             <h1 class="text-lg font-semibold text-gray-900 truncate">{@page_title}</h1>
-            <.broadcast_badge :if={@conversation.type == :program_broadcast} />
+            <.broadcast_badge :if={@broadcast?} />
           </div>
         </header>
         <.message_area
@@ -627,7 +627,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           form={@form}
           current_user_id={@current_user_id}
           sender_names={@sender_names}
-          conversation={@conversation}
+          broadcast?={@broadcast?}
           provider_user_ids={@provider_user_ids}
           provider_name={@provider_name}
           uploads={@uploads}
@@ -661,7 +661,7 @@ defmodule KlassHeroWeb.MessagingComponents do
     <%= cond do %>
       <% @variant == :provider -> %>
         <.message_input form={@form} uploads={@uploads} />
-      <% @conversation.type == :program_broadcast -> %>
+      <% @broadcast? -> %>
         <.broadcast_reply_bar />
       <% true -> %>
         <.message_input form={@form} uploads={@uploads} />

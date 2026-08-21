@@ -35,6 +35,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.ComposeTarget
   alias KlassHero.Messaging.Message
   alias Phoenix.LiveView.Socket
 
@@ -128,12 +129,14 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
 
         reversed_messages = Enum.reverse(messages)
 
-        {provider_user_ids, provider_name} = resolve_provider_info(conversation)
+        {provider_user_ids, provider_name} = resolve_provider_info(conversation.provider_id)
 
         socket =
           socket
           |> assign(:page_title, build_page_title(conversation, user_id, variant))
           |> assign(:conversation, conversation)
+          |> assign(:compose_target, nil)
+          |> assign(:broadcast?, conversation.type == :program_broadcast)
           |> assign(:has_more, has_more)
           |> assign(:messages_empty?, Enum.empty?(messages))
           |> assign(:sender_names, sender_names)
@@ -165,7 +168,58 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   end
 
   @doc """
+  Mounts the compose view for a `ComposeTarget` — a thread that does not exist yet.
+
+  Options: `:back_path` (required), `:navigate_base` (required, where the created
+  conversation will live). No subscription and no mark-as-read: there is no
+  conversation to subscribe to until the first message creates one.
+  """
+  def mount_compose(socket, target_opts, opts) do
+    back_path = Keyword.fetch!(opts, :back_path)
+    navigate_base = Keyword.fetch!(opts, :navigate_base)
+    scope = socket.assigns.current_scope
+    provider_id = Keyword.fetch!(target_opts, :provider_id)
+
+    case Messaging.build_compose_target(scope, provider_id, target_opts) do
+      {:ok, target} ->
+        {provider_user_ids, provider_name} = resolve_provider_info(target.provider_id)
+
+        socket =
+          socket
+          |> assign(:page_title, target.target_name || gettext("New message"))
+          |> assign(:conversation, nil)
+          |> assign(:compose_target, target)
+          |> assign(:broadcast?, false)
+          |> assign(:has_more, false)
+          |> assign(:messages_empty?, true)
+          |> assign(:sender_names, %{})
+          |> assign(:provider_user_ids, provider_user_ids)
+          |> assign(:provider_name, provider_name)
+          |> assign(:form, Phoenix.Component.to_form(%{"content" => ""}))
+          |> assign(:back_path, back_path)
+          |> assign(:navigate_base, navigate_base)
+          |> allow_upload(:attachments,
+            accept: ~w(.jpg .jpeg .png .gif .webp),
+            max_entries: 5,
+            max_file_size: 10_485_760
+          )
+          |> stream(:messages, [])
+
+        {:ok, socket}
+
+      {:error, _reason} ->
+        {:ok,
+         socket
+         |> put_flash(:error, gettext("You can't start a conversation with this person"))
+         |> push_navigate(to: back_path)}
+    end
+  end
+
+  @doc """
   Handles the send_message event. Consumes pending uploads and sends with optional attachments.
+
+  On a compose target this is where the conversation is created — see
+  `KlassHero.Messaging.StartConversationWithMessage`.
   """
   def handle_send_message(%{"content" => content}, socket) do
     content = String.trim(content)
@@ -175,26 +229,49 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     if content == "" and not has_attachments do
       {:noreply, socket}
     else
-      conversation_id = socket.assigns.conversation.id
-      sender_id = socket.assigns.current_scope.user.id
       message_content = if content != "", do: content
+      dispatch_send(socket, message_content, file_data)
+    end
+  end
 
-      opts = [
-        conversation: socket.assigns.conversation,
-        attachments: file_data
-      ]
+  defp dispatch_send(%{assigns: %{compose_target: %ComposeTarget{} = target}} = socket, content, file_data) do
+    scope = socket.assigns.current_scope
 
-      case Messaging.send_message(conversation_id, sender_id, message_content, opts) do
-        {:ok, _message} ->
-          {:noreply,
-           socket
-           |> assign(:form, Phoenix.Component.to_form(%{"content" => ""}))
-           |> push_event("clear_message_input", %{})}
+    Messaging.start_conversation_with_message(
+      scope,
+      target.provider_id,
+      target.target_user_id,
+      content,
+      program_id: target.program_id,
+      attachments: file_data
+    )
+    |> case do
+      {:ok, conversation, _message} ->
+        {:noreply, push_navigate(socket, to: "#{socket.assigns.navigate_base}/#{conversation.id}")}
 
-        {:error, reason} ->
-          Logger.error("Failed to send message", reason: reason)
-          {:noreply, put_flash(socket, :error, upload_error_message(reason))}
-      end
+      {:error, reason} ->
+        Logger.error("Failed to start conversation", reason: inspect(reason))
+        {:noreply, put_flash(socket, :error, upload_error_message(reason))}
+    end
+  end
+
+  defp dispatch_send(socket, content, file_data) do
+    conversation = socket.assigns.conversation
+    sender_id = socket.assigns.current_scope.user.id
+
+    case Messaging.send_message(conversation.id, sender_id, content,
+           conversation: conversation,
+           attachments: file_data
+         ) do
+      {:ok, _message} ->
+        {:noreply,
+         socket
+         |> assign(:form, Phoenix.Component.to_form(%{"content" => ""}))
+         |> push_event("clear_message_input", %{})}
+
+      {:error, reason} ->
+        Logger.error("Failed to send message", reason: reason)
+        {:noreply, put_flash(socket, :error, upload_error_message(reason))}
     end
   end
 
@@ -205,7 +282,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
     conversation = socket.assigns.conversation
 
     # Handler is injected into all show LiveViews; UI hides the button, but crafted events could bypass it.
-    if conversation.type == :program_broadcast do
+    if conversation && conversation.type == :program_broadcast do
       scope = socket.assigns.current_scope
       back_path = socket.assigns.back_path
 
@@ -375,10 +452,10 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   # rewrote history and disagreed with the send guard, which is provider-wide (#669).
   #
   # Single fetch avoids separate round-trips for identity_id and business_name.
-  defp resolve_provider_info(conversation) do
-    staff_ids = Messaging.get_provider_staff_user_ids(conversation.provider_id)
+  defp resolve_provider_info(provider_id) do
+    staff_ids = Messaging.get_provider_staff_user_ids(provider_id)
 
-    case KlassHero.Provider.get_provider_profile(conversation.provider_id) do
+    case KlassHero.Provider.get_provider_profile(provider_id) do
       {:ok, provider} ->
         {MapSet.new([provider.identity_id | staff_ids]), provider.business_name}
 

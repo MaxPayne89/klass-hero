@@ -431,22 +431,15 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   def handle_event("send_message_to_parent", %{"parent-user-id" => parent_user_id}, socket) do
     scope = socket.assigns.current_scope
     provider_id = scope.provider.id
-    roster_entries = socket.assigns.roster_entries
+    program_id = socket.assigns.roster_program_id
 
-    # parent_user_id is untrusted; validate against server-side roster to block unauthorized messaging.
-    valid_confirmed? =
-      Enum.any?(roster_entries, fn entry ->
-        entry.parent_user_id == parent_user_id and entry.status == :confirmed
-      end)
-
-    if valid_confirmed? do
-      case Messaging.create_direct_conversation(scope, provider_id, parent_user_id) do
-        {:ok, conversation} ->
-          {:noreply, push_navigate(socket, to: ~p"/provider/messages/#{conversation.id}")}
-
-        {:error, _reason} ->
-          {:noreply, put_flash(socket, :error, gettext("Could not start conversation. Please try again."))}
-      end
+    # parent_user_id is untrusted; re-checked here so the flash lands on the roster
+    # rather than bouncing the provider to the inbox, and again on the compose mount.
+    if Messaging.can_message_parent?(scope, provider_id, program_id, parent_user_id) do
+      {:noreply,
+       push_navigate(socket,
+         to: ~p"/provider/messages/new?provider_id=#{provider_id}&user_id=#{parent_user_id}&program_id=#{program_id}"
+       )}
     else
       {:noreply, put_flash(socket, :error, gettext("Cannot message this parent."))}
     end
