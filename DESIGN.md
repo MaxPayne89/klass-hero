@@ -252,9 +252,10 @@ Domain UI lives in its domain module (`program_`, `booking_`, `messaging_`,
 **Extraction threshold is three.** A one-off stays a one-off; the third occurrence becomes a
 component.
 
-Some legacy primitives (`hero_section`, `feature_card`, `provider_step_card`, `faq_item`)
-still live in `ui_components.ex` and are still consumed by several marketing LiveViews,
-pending migration to the `Mk*` family. Prefer `Mk*` in new work.
+One legacy primitive, `faq_item`, still lives in `ui_components.ex` and is still consumed
+by `HomeLive` and `ForProvidersLive`, pending migration to the `Mk*` family. Its former
+companions — `hero_section`, `feature_card`, `provider_step_card` — outlived their callers
+and were deleted. Prefer `Mk*` in new work.
 
 ---
 

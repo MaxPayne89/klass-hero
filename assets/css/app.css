@@ -28,25 +28,25 @@
   default: true;
   prefersdark: false;
   color-scheme: "light";
-  --color-base-100: oklch(93% 0.06 75); /* Hero Pink #FFEAC9 */
+  --color-base-100: oklch(93% 0.06 75); /* Hero Pink #FFE3BC */
   --color-base-200: oklch(90% 0.08 75);
   --color-base-300: oklch(87% 0.10 75);
   --color-base-content: oklch(0% 0 0); /* Hero Black #000000 */
-  --color-primary: oklch(78% 0.16 195); /* Hero Blue #00D4FF */
-  --color-primary-content: oklch(98% 0.02 195);
-  --color-secondary: oklch(82% 0 0); /* Hero Grey #C7C7C7 */
+  --color-primary: oklch(78% 0.155 210); /* Hero Blue #00D1EE */
+  --color-primary-content: oklch(20% 0.05 210);
+  --color-secondary: oklch(82% 0 0); /* Hero Grey #C4C4C4 */
   --color-secondary-content: oklch(20% 0 0);
-  --color-accent: oklch(97% 0.22 105); /* Hero Yellow #FFFF36 */
+  --color-accent: oklch(97% 0.22 105); /* Hero Yellow #FFFB00 */
   --color-accent-content: oklch(20% 0.10 105);
   --color-neutral: oklch(44% 0.017 285.786);
   --color-neutral-content: oklch(98% 0 0);
   --color-info: oklch(62% 0.214 259.815);
-  --color-info-content: oklch(97% 0.014 254.604);
+  --color-info-content: oklch(15% 0.05 259.815);
   --color-success: oklch(70% 0.14 182.503);
-  --color-success-content: oklch(98% 0.014 180.72);
+  --color-success-content: oklch(20% 0.05 182.503);
   --color-warning: oklch(66% 0.179 58.318);
-  --color-warning-content: oklch(98% 0.022 95.277);
-  --color-error: oklch(58% 0.253 17.585);
+  --color-warning-content: oklch(20% 0.05 58.318);
+  --color-error: oklch(52% 0.253 17.585);
   --color-error-content: oklch(96% 0.015 12.422);
   --radius-selector: 0.25rem;
   --radius-field: 0.25rem;
@@ -70,44 +70,44 @@
 
 /* Klass Hero Superhero Brand Colors */
 @theme {
-  /* Hero Blue #0fc3ff */
+  /* Hero Blue #00D1EE */
   --color-hero-blue-50: oklch(96% 0.03 210);
   --color-hero-blue-100: oklch(92% 0.06 210);
   --color-hero-blue-200: oklch(88% 0.09 210);
   --color-hero-blue-300: oklch(84% 0.12 210);
   --color-hero-blue-400: oklch(81% 0.14 210);
-  --color-hero-blue-500: oklch(78% 0.155 210); /* Primary #0fc3ff */
+  --color-hero-blue-500: oklch(78% 0.155 210); /* Primary #00D1EE */
   --color-hero-blue-600: oklch(68% 0.14 210);
   --color-hero-blue-700: oklch(58% 0.12 210);
   --color-hero-blue-800: oklch(48% 0.10 210);
   --color-hero-blue-900: oklch(38% 0.08 210);
 
-  /* Hero Yellow #FFFF36 */
+  /* Hero Yellow #FFFB00 */
   --color-hero-yellow-50: oklch(99% 0.05 105);
   --color-hero-yellow-100: oklch(98% 0.10 105);
   --color-hero-yellow-200: oklch(98% 0.15 105);
   --color-hero-yellow-300: oklch(97.5% 0.18 105);
   --color-hero-yellow-400: oklch(97.2% 0.20 105);
-  --color-hero-yellow-500: oklch(97% 0.22 105); /* Primary #FFFF36 */
+  --color-hero-yellow-500: oklch(97% 0.22 105); /* Primary #FFFB00 */
   --color-hero-yellow-600: oklch(87% 0.20 105);
   --color-hero-yellow-700: oklch(77% 0.18 105);
   --color-hero-yellow-800: oklch(67% 0.16 105);
   --color-hero-yellow-900: oklch(57% 0.14 105);
 
-  /* Hero Grey #C7C7C7 */
+  /* Hero Grey #C4C4C4 */
   --color-hero-grey-50: oklch(97% 0 0);
   --color-hero-grey-100: oklch(94% 0 0);
   --color-hero-grey-200: oklch(88% 0 0);
   --color-hero-grey-300: oklch(85% 0 0);
-  --color-hero-grey-400: oklch(82% 0 0); /* Primary #C7C7C7 */
+  --color-hero-grey-400: oklch(82% 0 0); /* Primary #C4C4C4 */
   --color-hero-grey-500: oklch(72% 0 0);
   --color-hero-grey-600: oklch(62% 0 0);
   --color-hero-grey-700: oklch(52% 0 0);
   --color-hero-grey-800: oklch(42% 0 0);
   --color-hero-grey-900: oklch(32% 0 0);
 
-  /* Hero Pink #FFEAC9 */
-  --color-hero-pink-50: oklch(93% 0.06 75); /* Primary #FFEAC9 */
+  /* Hero Pink #FFE3BC */
+  --color-hero-pink-50: oklch(93% 0.06 75); /* Primary #FFE3BC */
   --color-hero-pink-100: oklch(91% 0.07 75);
   --color-hero-pink-200: oklch(89% 0.08 75);
   --color-hero-pink-300: oklch(87% 0.09 75);
@@ -137,9 +137,9 @@
   /* Default body font — drives Tailwind v4 preflight and font-sans utility */
   --font-sans: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
 
-  /* Hero Cream #F5F1E8 */
+  /* Hero Cream #FAF0E3 */
   --color-hero-cream-50: oklch(99% 0.01 75);
-  --color-hero-cream-100: oklch(96% 0.02 75); /* Primary #F5F1E8 */
+  --color-hero-cream-100: oklch(96% 0.02 75); /* Primary #FAF0E3 */
   --color-hero-cream-200: oklch(93% 0.03 75);
   --color-hero-cream-300: oklch(90% 0.04 75);
   --color-hero-cream-400: oklch(87% 0.05 75);
