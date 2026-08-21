@@ -97,6 +97,10 @@ defmodule KlassHero.MixProject do
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      # Semantic linter for the layer the compiler, Credo and our lint_* tasks all miss:
+      # idiom and performance rewrites at the AST level. No project-wide task ships with
+      # it, so the driver is priv/credence/scan.exs.
+      {:credence, "~> 0.8.1", only: [:dev, :test], runtime: false},
       # Testing infrastructure
       {:excoveralls, "~> 0.18", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
