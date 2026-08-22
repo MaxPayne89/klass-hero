@@ -6,7 +6,7 @@ defmodule KlassHero.Provider.Incidents.IncidentReportQueriesTest do
   import KlassHero.ProviderFixtures
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
+  alias KlassHero.Provider.ReadModels.IncidentReportSummary
 
   describe "list_for_program/2" do
     test "delegates to the configured query repository and returns summaries" do

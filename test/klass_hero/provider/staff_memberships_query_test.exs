@@ -8,7 +8,7 @@ defmodule KlassHero.Provider.StaffMembershipsQueryTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.StaffMembership
+  alias KlassHero.Provider.ReadModels.StaffMembership
   alias KlassHero.ProviderFixtures
 
   describe "list_active_staff_memberships/1" do

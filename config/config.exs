@@ -28,11 +28,11 @@ alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionR
 alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
 alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
-alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
-alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
-alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
-alias KlassHero.Provider.Adapters.Driving.Events.EventHandlers.StaffInvitationStatusHandler
-alias KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler
+alias KlassHero.Provider.Projections.ProviderPrograms
+alias KlassHero.Provider.Projections.ProviderSessionDetails
+alias KlassHero.Provider.Projections.ProviderSessionStats
+alias KlassHero.Provider.ProviderEventHandler
+alias KlassHero.Provider.StaffInvitationStatusHandler
 alias KlassHero.Shared.Adapters.Driven.Events.ObanOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.FunWithFlagsAdapter
 alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository

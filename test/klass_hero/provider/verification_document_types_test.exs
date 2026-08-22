@@ -7,7 +7,7 @@ defmodule KlassHero.Provider.VerificationDocumentTypesTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Types.DocumentType
+  alias KlassHero.Provider.DocumentType
   alias KlassHero.Provider.VerificationDocument
 
   describe "valid_document_types/1" do

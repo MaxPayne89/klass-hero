@@ -25,8 +25,8 @@ defmodule KlassHero.Provider.VerificationDocument do
   alias KlassHero.Accounts.User
   # Parked alias to the still-DDD ProviderProfile schema — repointed to the
   # flattened KlassHero.Provider.ProviderProfile in Slice 5.
+  alias KlassHero.Provider.DocumentType
   alias KlassHero.Provider.ProviderProfile
-  alias KlassHero.Provider.Types.DocumentType
   alias KlassHero.Provider.Vetting
 
   @primary_key {:id, :binary_id, autogenerate: true}

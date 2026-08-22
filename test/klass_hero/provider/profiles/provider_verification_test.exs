@@ -14,7 +14,7 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
 
   alias KlassHero.AccountsFixtures
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider.Events
   alias KlassHero.ProviderFixtures
 
   setup do
@@ -53,7 +53,7 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
     # observable outcome of the command is the `verified` fact above.
     test "builds a provider_verified event carrying the provider's identity", %{provider: provider} do
       {:ok, profile} = Provider.get_provider_profile(provider.id)
-      event = ProviderEvents.provider_verified(profile, "admin-1")
+      event = Events.provider_verified(profile, "admin-1")
 
       assert event.entity_id == provider.id
       assert event.source_context == :provider
@@ -103,7 +103,7 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
     # since #1195, so `Outbox.stage/2` drops it. Shape is asserted on the constructor.
     test "builds a provider_unverified event carrying the provider's identity", %{provider: provider} do
       {:ok, profile} = Provider.get_provider_profile(provider.id)
-      event = ProviderEvents.provider_unverified(profile, "admin-1")
+      event = Events.provider_unverified(profile, "admin-1")
 
       assert event.entity_id == provider.id
       assert event.source_context == :provider

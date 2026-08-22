@@ -10,7 +10,7 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpers do
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider.ReadModels.StaffProgramAccess
   alias KlassHero.Provider.StaffMember
 
   @doc """

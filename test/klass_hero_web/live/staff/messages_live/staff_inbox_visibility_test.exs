@@ -23,7 +23,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
   alias KlassHero.Messaging.StartConversationWithMessage
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
 
@@ -62,14 +61,14 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   # union of the program roster and any session override, and the handler re-reads
   # it before evicting anyone — so an event fired over a row that still stands is
   # correctly ignored. The hand-rolled payloads this replaced also carried an
-  # `unassigned_at`/`assigned_at` that `ProviderEvents` deliberately omits, which is
+  # `unassigned_at`/`assigned_at` that `Provider.Events` deliberately omits, which is
   # the payload drift #1309 was about.
   defp unassign_and_deliver(provider, program, assignment, staff_user) do
     {:ok, retired} =
       Provider.unassign_staff_from_program(program.id, assignment.staff_member_id, provider.id)
 
     StaffAssignmentHandler.handle_event(
-      ProviderEvents.staff_unassigned_from_program(retired, %StaffMember{user_id: staff_user.id})
+      Provider.Events.staff_unassigned_from_program(retired, %StaffMember{user_id: staff_user.id})
     )
   end
 
@@ -166,7 +165,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
 
       assert :ok =
                StaffAssignmentHandler.handle_event(
-                 ProviderEvents.staff_assigned_to_program(assignment, %StaffMember{user_id: staff_user.id})
+                 Provider.Events.staff_assigned_to_program(assignment, %StaffMember{user_id: staff_user.id})
                )
 
       flush_to_projection()
@@ -293,7 +292,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
 
       assert :ok =
                StaffAssignmentHandler.handle_event(
-                 ProviderEvents.staff_assigned_to_program(reassignment, %StaffMember{user_id: staff_user.id})
+                 Provider.Events.staff_assigned_to_program(reassignment, %StaffMember{user_id: staff_user.id})
                )
 
       flush_to_projection()

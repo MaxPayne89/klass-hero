@@ -6,7 +6,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
+  alias KlassHero.Provider.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter

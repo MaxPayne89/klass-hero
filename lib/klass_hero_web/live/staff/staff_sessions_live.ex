@@ -3,7 +3,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
 
   alias KlassHero.Participation
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
+  alias KlassHero.Provider.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 

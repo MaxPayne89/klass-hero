@@ -11,7 +11,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
 
   alias KlassHero.Participation
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
+  alias KlassHero.Provider.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Theme

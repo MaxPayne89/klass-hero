@@ -49,11 +49,11 @@ defmodule KlassHero.Provider.Assignments do
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
-  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
-  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider.Events
   alias KlassHero.Provider.ProgramStaffAssignment
+  alias KlassHero.Provider.ReadModels.ProgramStaffing
+  alias KlassHero.Provider.ReadModels.SessionStaffing
+  alias KlassHero.Provider.ReadModels.StaffProgramAccess
   alias KlassHero.Provider.SessionStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
@@ -300,7 +300,7 @@ defmodule KlassHero.Provider.Assignments do
   Who is on one session: its overrides when it has any, otherwise the program roster.
 
   The single answer to that question — see
-  `KlassHero.Provider.Domain.ReadModels.SessionStaffing` for the `:source` fact and
+  `KlassHero.Provider.ReadModels.SessionStaffing` for the `:source` fact and
   the lead rule. The projection, the provider UI, and (later) session-level
   authorization all call this rather than re-deriving the fallback.
 
@@ -863,7 +863,7 @@ defmodule KlassHero.Provider.Assignments do
     Outbox.transact(@context, fn ->
       with :ok <- materialize_program_roster(session, assignment_attrs.provider_id),
            {:ok, assignment} <- insert_session_staff_assignment(assignment_attrs) do
-        {:ok, assignment, [ProviderEvents.staff_assigned_to_session(assignment, staff_member, session.program_id)]}
+        {:ok, assignment, [Events.staff_assigned_to_session(assignment, staff_member, session.program_id)]}
       end
     end)
   end
@@ -873,7 +873,7 @@ defmodule KlassHero.Provider.Assignments do
       with :ok <- ensure_not_last_member(session_id, staff_member_id),
            :ok <- materialize_program_roster(session, provider_id),
            {:ok, assignment} <- retire_session_staff_assignment(session_id, staff_member_id, provider_id) do
-        {:ok, assignment, [ProviderEvents.staff_unassigned_from_session(assignment, staff_member, session.program_id)]}
+        {:ok, assignment, [Events.staff_unassigned_from_session(assignment, staff_member, session.program_id)]}
       end
     end)
   end
@@ -1015,7 +1015,7 @@ defmodule KlassHero.Provider.Assignments do
       # to decide whose messaging membership changed.
       events =
         Enum.map(doomed, fn {assignment, staff_member} ->
-          ProviderEvents.staff_unassigned_from_session(assignment, staff_member, session.program_id)
+          Events.staff_unassigned_from_session(assignment, staff_member, session.program_id)
         end)
 
       {:ok, count, events}
@@ -1157,7 +1157,7 @@ defmodule KlassHero.Provider.Assignments do
   defp assign_with_event(assignment_attrs, staff_member) do
     Outbox.transact(@context, fn ->
       with {:ok, assignment} <- insert_program_staff_assignment(assignment_attrs) do
-        {:ok, assignment, [ProviderEvents.staff_assigned_to_program(assignment, staff_member)]}
+        {:ok, assignment, [Events.staff_assigned_to_program(assignment, staff_member)]}
       end
     end)
   end
@@ -1165,7 +1165,7 @@ defmodule KlassHero.Provider.Assignments do
   defp unassign_with_event(program_id, staff_member_id, provider_id, staff_member) do
     Outbox.transact(@context, fn ->
       with {:ok, assignment} <- unassign_program_staff_assignment(program_id, staff_member_id, provider_id) do
-        {:ok, assignment, [ProviderEvents.staff_unassigned_from_program(assignment, staff_member)]}
+        {:ok, assignment, [Events.staff_unassigned_from_program(assignment, staff_member)]}
       end
     end)
   end

@@ -33,7 +33,7 @@ defmodule KlassHero.Shared.Projection do
         end
       end
 
-  See `KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms` for the
+  See `KlassHero.Provider.Projections.ProviderPrograms` for the
   canonical example.
   """
 

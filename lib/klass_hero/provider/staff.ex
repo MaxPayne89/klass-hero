@@ -12,11 +12,11 @@ defmodule KlassHero.Provider.Staff do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
-  alias KlassHero.Provider.Domain.ReadModels.StaffMembership
+  alias KlassHero.Provider.Events
   alias KlassHero.Provider.Profiles
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.ReadModels.StaffMembership
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
@@ -250,7 +250,7 @@ defmodule KlassHero.Provider.Staff do
       clear_lead_instructor_flags(staff)
 
       with {:ok, deactivated} <- Repo.update(StaffMember.deactivate_changeset(staff)) do
-        {:ok, deactivated, [ProviderEvents.staff_member_deactivated(deactivated)]}
+        {:ok, deactivated, [Events.staff_member_deactivated(deactivated)]}
       end
     end)
   end
@@ -672,7 +672,7 @@ defmodule KlassHero.Provider.Staff do
       where: a.staff_member_id == ^staff_id and is_nil(a.unassigned_at)
     )
     |> Repo.all()
-    |> Enum.map(&ProviderEvents.staff_assigned_to_program(&1, linked))
+    |> Enum.map(&Events.staff_assigned_to_program(&1, linked))
   end
 
   defp insert_invited_staff(attrs, provider, raw_token) do
@@ -700,7 +700,7 @@ defmodule KlassHero.Provider.Staff do
   # the event is staged inside the staff member's own transaction, so anything the
   # event needs has to be in hand before that transaction opens.
   defp staff_invited_event(staff_member, provider, raw_token) do
-    ProviderEvents.staff_member_invited(staff_member.id, %{
+    Events.staff_member_invited(staff_member.id, %{
       provider_id: staff_member.provider_id,
       email: staff_member.email,
       first_name: staff_member.first_name,

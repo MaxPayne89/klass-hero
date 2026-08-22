@@ -15,7 +15,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
   alias Ecto.Adapters.SQL.Sandbox
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.ProgramCatalog.ProgramListing
-  alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
+  alias KlassHero.Provider.Projections.ProviderSessionDetails
   alias KlassHero.ProviderFixtures
   alias KlassHero.Repo
 

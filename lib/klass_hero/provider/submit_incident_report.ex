@@ -12,8 +12,8 @@ defmodule KlassHero.Provider.SubmitIncidentReport do
   """
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driving.Workers.NotifyIncidentReportedWorker
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.NotifyIncidentReportedWorker
   alias KlassHero.Provider.Programs
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo

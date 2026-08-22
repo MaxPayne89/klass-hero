@@ -7,7 +7,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
-  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
+  alias KlassHero.Provider.ReadModels.ProgramStaffing
   alias KlassHero.Shared.NameUtils
 
   require Logger
