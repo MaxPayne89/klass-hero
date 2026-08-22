@@ -222,6 +222,78 @@ defmodule KlassHero.Participation.SessionAuthorizationTest do
     end
   end
 
+  # `authorize/2` collapses every refusal to `:unauthorized`, because no attendance
+  # caller ever needed to tell them apart. Session lifecycle does: the staff sessions
+  # list says "This program has closed" rather than "Unauthorized", and that copy is
+  # the only reason this second entry point exists. Same `resolve/2` underneath — the
+  # two differ in how much of its answer they pass on, never in how they get it.
+  describe "authorize_lifecycle/2" do
+    test "grants the same three roles authorize/2 grants" do
+      %{provider: provider, program: program, session: session} = provider_with_session()
+      admin = AccountsFixtures.user_fixture(is_admin: true)
+
+      assert {:ok, :provider} =
+               SessionAuthorization.authorize_lifecycle(scope_for(provider_profile: provider), session)
+
+      assert {:ok, :staff} =
+               SessionAuthorization.authorize_lifecycle(
+                 scope_for(staff_member: assigned_staff(provider, program)),
+                 session
+               )
+
+      assert {:ok, :admin} =
+               SessionAuthorization.authorize_lifecycle(scope_for(user: admin), session)
+    end
+
+    test "names closure as the reason a staff member was refused" do
+      %{provider: provider, program: program, session: session} = provider_with_closed_session()
+      scope = scope_for(staff_member: assigned_staff(provider, program))
+
+      assert {:error, :program_closed} = SessionAuthorization.authorize_lifecycle(scope, session)
+    end
+
+    test "the owning provider is untouched by closure" do
+      %{provider: provider, session: session} = provider_with_closed_session()
+
+      assert {:ok, :provider} =
+               SessionAuthorization.authorize_lifecycle(scope_for(provider_profile: provider), session)
+    end
+
+    # Closure is a staff rule, so it must be asked after the admin branch, not
+    # before it — otherwise a person who happens to hold both personas loses the
+    # broader one to the narrower one's refusal.
+    test "an admin refused as staff is still authorized as :admin" do
+      %{provider: provider, program: program, session: session} = provider_with_closed_session()
+      staff = assigned_staff(provider, program)
+      admin = AccountsFixtures.user_fixture(is_admin: true)
+
+      assert {:ok, :admin} =
+               SessionAuthorization.authorize_lifecycle(
+                 scope_for(user: admin, staff_member: staff),
+                 session
+               )
+    end
+
+    # `Provider.get_session_staffing/1` answers for any session id at all, so a
+    # reason read off `program_closed?` alone would tell any staff-persona caller
+    # the closure state of a program they had merely guessed an id for. The reason
+    # is "you would have been staff", not "this program is closed".
+    test "a staff member who was never on the session learns nothing about closure" do
+      %{session: session} = provider_with_closed_session()
+      other_provider = ProviderFixtures.provider_profile_fixture()
+      stranger = ProviderFixtures.staff_member_fixture(%{provider_id: other_provider.id})
+
+      assert {:error, :unauthorized} =
+               SessionAuthorization.authorize_lifecycle(scope_for(staff_member: stranger), session)
+    end
+
+    test "an actor with no persona is refused without a reason" do
+      %{session: session} = provider_with_closed_session()
+
+      assert {:error, :unauthorized} = SessionAuthorization.authorize_lifecycle(scope_for([]), session)
+    end
+  end
+
   defp provider_with_program do
     provider = ProviderFixtures.provider_profile_fixture()
     program = insert(:program_schema, provider_id: provider.id)
