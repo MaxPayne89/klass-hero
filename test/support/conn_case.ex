@@ -38,6 +38,7 @@ defmodule KlassHeroWeb.ConnCase do
 
   setup tags do
     KlassHero.DataCase.setup_sandbox(tags)
+    KlassHero.DataCase.setup_storage()
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 

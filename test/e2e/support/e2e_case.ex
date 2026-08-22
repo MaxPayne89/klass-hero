@@ -19,6 +19,19 @@ defmodule KlassHeroWeb.E2ECase do
   All tests using this case are tagged `@moduletag :e2e` and excluded from regular
   `mix test` runs. Run with `mix test.e2e`, which needs a chromedriver matching the
   installed Chrome — `bin/worktree-up` installs one when the two have drifted.
+
+  ## File storage does not work here yet
+
+  `StubStorageAdapter` resolves its per-test store by walking `$callers` back to the
+  owning test. That reaches a `Phoenix.LiveViewTest` view, which is handed the test pid
+  as its caller, but never a Wallaby one: a LiveView on a real websocket gets its
+  transport pid instead, and no ancestry links it to the test process. So the first
+  upload flow tested here — `<input type=file>` is squarely this tier's turf — will
+  raise from the adapter rather than silently faking a URL, as it did before #1416.
+
+  The fix when that day comes is a real adapter, the way
+  `KlassHero.StorageIntegrationCase` points `:storage` at MinIO for its `setup_all`;
+  no `$callers` walk is involved. Nothing here touches storage today.
   """
 
   use ExUnit.CaseTemplate

@@ -10,6 +10,12 @@
 ExUnit.start(exclude: [:minio, :e2e, :slow], capture_log: true)
 Ecto.Adapters.SQL.Sandbox.mode(KlassHero.Repo, :manual)
 
+# Per-test stub storage stores, keyed by the owning test's pid. StubStorageAdapter walks
+# `$callers` back to that owner, so a LiveView or an Oban job reaches the right store
+# without any lib/ caller passing options. Lives here rather than in the application
+# supervision tree, which stays prod-only.
+Registry.start_link(keys: :unique, name: KlassHero.StorageRegistry)
+
 # Mockable seams (Mimic). Copied modules pass through to the real implementation
 # unless a test sets an explicit stub/expect.
 Mimic.copy(KlassHero.Shared.Tracing.ObanEnqueue)

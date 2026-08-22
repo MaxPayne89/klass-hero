@@ -239,8 +239,8 @@ defmodule KlassHero.Messaging.EnforceRetentionPolicyTest do
       file_url = "https://bucket.fly.storage.tigris.dev/messaging/attachments/#{message.id}/photo.jpg"
       MessagingFixtures.attachment_fixture(message.id, %{file_url: file_url})
 
-      # Retention enforcement must succeed even with attachments present.
-      # The stub storage adapter gracefully handles delete calls without a running agent.
+      # Retention enforcement must succeed even with attachments present. Deleting a key
+      # this test's store never held is a no-op, so the sweep reports success either way.
       assert {:ok, result} = EnforceRetentionPolicy.execute()
       assert result.messages_deleted >= 1
       assert result.conversations_deleted >= 1
