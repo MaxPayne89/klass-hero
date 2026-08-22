@@ -161,6 +161,13 @@ would take the broader persona from someone who holds both.
   `ParticipationLiveHandlers.session_refusal_message/1`.
 - Providers and admins remain ungated by closure (ADR-0019). A provider completing their own
   Closed Program's session is pinned by tests at both the authorizer and the use case.
+- **A refusal must not say whether the session exists.** Authorizing at the context boundary
+  means resolving the session *first*, so `:not_found` and `:unauthorized` become two
+  distinguishable answers to a caller who supplied the id — an enumeration oracle the deleted
+  LiveView guard had closed by accident, by treating every lookup failure as a refusal.
+  `ParticipationLiveHandlers.session_refusal_message/1` answers both identically. The reason
+  still reaches the log; only the user-visible answer is flattened. Any future write that
+  takes a client-supplied id and authorizes after fetching inherits this problem.
 
 ## Derived, not declared
 
