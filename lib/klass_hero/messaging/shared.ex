@@ -7,8 +7,9 @@ defmodule KlassHero.Messaging.Shared do
   `KlassHero.Messaging.AddAssignedStaff`.
   """
 
+  use KlassHero.Shared.Tracing
+
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
 
   require Logger
 
@@ -46,7 +47,7 @@ defmodule KlassHero.Messaging.Shared do
   # which is `limit: 1` and not provider-scoped, so it would authorize a
   # multi-employer staffer against the wrong provider.
   defp authorize_acting_provider(provider_id, %Scope{} = scope) do
-    if ProviderStaffResolver.active_staff_for_provider?(provider_id, scope.user.id) do
+    if active_staff_for_provider?(provider_id, scope.user.id) do
       {:ok, provider_id}
     else
       Logger.warning("Scope not authorised to act as provider",
@@ -55,6 +56,12 @@ defmodule KlassHero.Messaging.Shared do
       )
 
       {:error, :not_found}
+    end
+  end
+
+  defp active_staff_for_provider?(provider_id, user_id) do
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.active_staff_for_provider?(provider_id, user_id)
     end
   end
 

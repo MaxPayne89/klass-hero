@@ -7,9 +7,10 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
   conversation ID for navigation.
   """
 
+  use KlassHero.Shared.Tracing
+
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderUserResolver
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Shared
@@ -34,7 +35,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
     # broadcast participants can initiate private replies.
     with {:ok, broadcast} <- fetch_broadcast(broadcast_conversation_id),
          :ok <- Shared.verify_participant(broadcast.id, scope.user.id),
-         {:ok, provider_user_id} <- ProviderUserResolver.get_user_id_for_provider(broadcast.provider_id),
+         {:ok, provider_user_id} <- provider_owner_user_id(broadcast.provider_id),
          {:ok, direct_conversation} <-
            find_or_create_direct_conversation(
              scope,
@@ -55,6 +56,12 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
       )
 
       {:ok, direct_conversation.id}
+    end
+  end
+
+  defp provider_owner_user_id(provider_id) do
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.get_identity_id_for_provider(provider_id)
     end
   end
 

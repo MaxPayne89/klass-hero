@@ -8,8 +8,8 @@ defmodule KlassHero.Messaging.SendMessage do
   DB failure), updates sender's last_read_at, and publishes a message_sent event.
   """
 
-  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
-  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderUserResolver
+  use KlassHero.Shared.Tracing
+
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
   alias KlassHero.Messaging.Message
@@ -275,7 +275,12 @@ defmodule KlassHero.Messaging.SendMessage do
   end
 
   defp provider_owner?(provider_id, sender_id) do
-    match?({:ok, ^sender_id}, ProviderUserResolver.get_user_id_for_provider(provider_id))
+    owner =
+      acl_span source: "messaging", target: "provider" do
+        KlassHero.Provider.get_identity_id_for_provider(provider_id)
+      end
+
+    match?({:ok, ^sender_id}, owner)
   end
 
   # Current employment at the provider is the whole authorization fact — staff may
@@ -286,7 +291,9 @@ defmodule KlassHero.Messaging.SendMessage do
   # (#1320). Deriving from `staff_members.active` also means reactivation restores
   # access with no event, replay, or backfill.
   defp active_staff_for_provider?(provider_id, sender_id) do
-    ProviderStaffResolver.active_staff_for_provider?(provider_id, sender_id)
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.active_staff_for_provider?(provider_id, sender_id)
+    end
   end
 
   defp update_sender_read_status(conversation_id, sender_id) do

@@ -50,8 +50,8 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
 - **The default is the shortest path.** New cross-context reads call the facade; adding an ACL
   now requires naming which of the four justifications applies.
 - **Observability is preserved at the call site, not by the adapter.** Where a folded ACL carried
-  `acl_span source:/target:`, the direct call keeps it — `provider/assignments.ex:307` is the
-  reference shape. Folding shifts the emitted spans in three ways, all of which a saved
+  `acl_span source:/target:`, the direct call keeps it — `provider/assignments.ex:835`
+  (`ensure_program_owned/2`) is the reference shape. Folding shifts the emitted spans in three ways, all of which a saved
   Honeycomb query could notice:
 
   1. **`acl.operation` is renamed.** The macro derives it from the enclosing function, so the
@@ -76,7 +76,8 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
   — but the "no columns at all" premise is spent, so a future rename needs the board and
   trigger check rather than this exemption.
 - **A facade read is strongly consistent; a projection is not.** That is sometimes the reason to
-  choose it. `provider/assignments.ex:307` reads `ProgramCatalog.get_program_for_provider/2`
+  choose it. `provider/assignments.ex:835` (`ensure_program_owned/2`) reads
+  `ProgramCatalog.get_program_for_provider/2`
   rather than the `provider_programs` projection precisely because an ownership guard cannot
   tolerate projection lag (#1134).
 - **Projections remain for hot read paths**, where a per-render facade call would not serve. This
@@ -92,7 +93,8 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
 
 ## Precedents in the tree
 
-- `lib/klass_hero/provider/assignments.ex:307` — domain module, facade call inside an `acl_span`
+- `lib/klass_hero/provider/assignments.ex:835` (`ensure_program_owned/2`) — domain module,
+  facade call inside an `acl_span`
 - `lib/klass_hero_web/helpers/provider_display.ex:30` — web helper, bare facade calls (#1195/#1196)
 - `lib/klass_hero/messaging/adapters/driven/persistence/queries/conversation_queries.ex:175` —
   query builder calling `ProgramCatalog.list_ended_program_ids/1`
