@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.82.0](https://github.com/MaxPayne89/klass-hero/compare/v0.81.2...v0.82.0) (2026-08-22)
+
+
+### Features
+
+* complete a session from the Participant Management page ([#1477](https://github.com/MaxPayne89/klass-hero/issues/1477)) ([c4d1d61](https://github.com/MaxPayne89/klass-hero/commit/c4d1d61a59238cc43cfa17e1ab21ea8364230695)), closes [#1373](https://github.com/MaxPayne89/klass-hero/issues/1373)
+
 ## [0.81.2](https://github.com/MaxPayne89/klass-hero/compare/v0.81.1...v0.81.2) (2026-08-22)
 
 
