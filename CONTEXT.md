@@ -27,7 +27,7 @@ _Avoid_: Net price, Fee (reserved for the platform's success-based fee), Cost
 ## Scheduling
 
 **Session**:
-A single dated occurrence of a Program (a date plus start/end time) that children attend and staff run. The Program attachment is implicit — we just say "Session", never "Program Session". Has its own lifecycle: `scheduled → in_progress → completed`, or `cancelled`.
+A single dated occurrence of a Program (a date plus start/end time) that children attend and staff run. The Program attachment is implicit — we just say "Session", never "Program Session". Has its own lifecycle: `scheduled → in_progress → completed`, or `cancelled`. Who may drive that lifecycle is decided inside the Participation context, from the actor's Scope, in the same Provider → Staff Member → admin order as **Attendance** — see [ADR-0017](docs/adr/0017-attendance-writes-authorize-at-the-context-boundary.md). Completing a Session marks every still-`registered` **Participation Record** `absent`, which is why it is a guarded write and not a display change.
 _Avoid_: Class, Meeting, Occurrence, Program Session; and never reuse "Session" for the authentication session
 
 ## Enrollment & Attendance

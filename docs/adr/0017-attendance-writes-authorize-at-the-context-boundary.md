@@ -105,6 +105,63 @@ that, unassigning someone from the program would evict them from conversations f
 still run — #784 through the opposite door — and it is the exact mirror of the failure OR-ing
 would have caused here.
 
+## Amended by #1373: session lifecycle joined the gate, and refusals name their reason
+
+`start_session/1` and `complete_session/1` were never brought in. They took a bare session
+id and authorized nothing, which meant the provider sessions list handed a client-supplied
+`phx-value-session_id` straight to a write that marks **every remaining registered child
+absent**. Staff was covered only because `StaffSessionsLive` had hand-rolled
+`authorize_session_action/2` in the LiveView — the same "guard that lives in one of four
+callers" this ADR rejected, re-grown on the write path it did not cover.
+
+Both now take the scope:
+
+```elixir
+Participation.start_session(scope, session_id)
+Participation.complete_session(scope, session_id)
+```
+
+The module was renamed `AttendanceAuthorization` → **`SessionAuthorization`**, because it
+now answers two questions rather than one, and both are about a `ProgramSession`. It holds
+a single private `resolve/2` — the fall-through above, unchanged — under two entry points:
+
+| Entry point | Refusals |
+|---|---|
+| `authorize/2` | always `:unauthorized` |
+| `authorize_lifecycle/2` | `:unauthorized` or `:program_closed` |
+
+**The narrowing is the design, not a leftover.** Widening `authorize/2` itself was smaller
+and wrong: `:program_closed` would reach the attendance path, where
+`ParticipationLiveHandlers` matches only `{:error, :unauthorized}` and everything else falls
+to `"Failed to check in: …"`. A closed-program check-in would silently change its message,
+compile clean, and break no test. So attendance keeps the contract it has, and the ~10
+assertions in `session_authorization_test.exs` pass untouched — which is how we know it kept
+it.
+
+Only the lifecycle path needs the distinction, and only because the staff sessions list has
+said "This program has closed." since #1082 and should keep saying it.
+
+### The reason is narrower than the rule
+
+`Provider.get_session_staffing/1` answers for **any** session id. A reason read off
+`program_closed?` alone would therefore tell any staff-persona caller the closure state of a
+program they had merely guessed an id for — a disclosure introduced by the change that closes
+the IDOR. `refused_for_closure?/2` asks instead whether the caller is in `member_ids`, which
+ADR-0019 deliberately left ungated, so `:program_closed` means *you would have been staff,
+but the program closed*. A stranger gets a bare `:unauthorized`.
+
+Closure is also asked **after** the admin branch. It is a staff rule, and asking it earlier
+would take the broader persona from someone who holds both.
+
+### Consequences
+
+- `StaffSessionsLive.authorize_session_action/2` is deleted; both sessions lists are now the
+  same three-clause `case`. `staffs_session?/2` stays — it filters PubSub messages.
+- The closed-program sentence lived at three call sites as a literal. It is now
+  `ParticipationLiveHandlers.session_refusal_message/1`.
+- Providers and admins remain ungated by closure (ADR-0019). A provider completing their own
+  Closed Program's session is pinned by tests at both the authorizer and the use case.
+
 ## Derived, not declared
 
 `is_admin` lives on the user and is deliberately absent from `registration_changeset`'s cast
