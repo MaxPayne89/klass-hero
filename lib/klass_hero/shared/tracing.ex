@@ -131,8 +131,11 @@ defmodule KlassHero.Shared.Tracing do
   Wraps a public context function body in a span tagged with the standard
   `context.{name,operation}` attributes.
 
-  `name` is derived from the calling module's last segment (`KlassHero.Family` →
-  `"Family"`); `operation` from the calling function name — both at compile time.
+  `name` is the bounded context the calling module belongs to — the segment after
+  `KlassHero`, so `KlassHero.Family` → `"Family"` and `KlassHero.Provider.Staff` →
+  `"Provider"`, not `"Staff"`. `operation` is the calling function name. Both are
+  resolved at compile time.
+
   This is the coarse, semantic seam for the flattened contexts: one span per
   business operation, under which fine-grained DB spans (bridged from Ecto
   telemetry) nest automatically.
@@ -152,7 +155,7 @@ defmodule KlassHero.Shared.Tracing do
   defp build_context_span(opts, block, caller) do
     {function, _arity} = caller.function
     operation = Atom.to_string(function)
-    name = caller.module |> Module.split() |> List.last()
+    name = context_name(caller.module)
 
     quote do
       span do
@@ -163,6 +166,19 @@ defmodule KlassHero.Shared.Tracing do
 
         unquote(block)
       end
+    end
+  end
+
+  # The bounded context, not the module's own last segment. Provider is built
+  # from `defdelegate`, so all 26 of its spans are emitted from submodules and
+  # reported `Staff`/`Profiles`/`Assignments` — `Provider` never appeared in
+  # production at all, and no context-level trigger could be written for it
+  # (#1424). Every other context calls `context_span` from its facade, where the
+  # two rules coincide, which is why this went unnoticed.
+  defp context_name(module) do
+    case Module.split(module) do
+      ["KlassHero", context | _] -> context
+      segments -> List.last(segments)
     end
   end
 
