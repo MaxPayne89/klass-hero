@@ -58,6 +58,13 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
     ParticipationLiveHandlers.check_in(socket, record_id, &load_session_data/1)
   end
 
+  # No session id in the params: this page shows one session and already holds its
+  # id, put there by the mount-time guard.
+  @impl true
+  def handle_event("complete_session", _params, socket) do
+    ParticipationLiveHandlers.complete_session(socket, &load_session_data/1)
+  end
+
   @impl true
   def handle_event("expand_checkout_form", %{"id" => record_id}, socket) do
     {:noreply,

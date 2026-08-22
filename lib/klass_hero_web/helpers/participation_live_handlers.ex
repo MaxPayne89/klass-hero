@@ -8,6 +8,10 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
   (a `socket -> socket` function, typically `&load_session_data/1`) so that
   divergence stays in the LiveView while the orchestration lives here.
 
+  `session_refusal_message/1` is the one exception to "these two surfaces": the two
+  *sessions list* LiveViews call it too, because a refused session write should not
+  read differently depending on which page asked.
+
   The `find_participation_record/2` lookup below is **not** the authorization
   check. It reads the roster already in the socket, for the "Record not found"
   flash and the `child_id` on the failure log. Until #1353 it was the only thing
@@ -130,6 +134,39 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
 
             {:noreply, put_flash(socket, :error, gettext("Failed to submit note"))}
         end
+    end
+  end
+
+  @doc """
+  Completes the session the page is showing, then reloads via `reload_fn`.
+
+  The session id comes from `socket.assigns`, where a mount-time guard put it —
+  never from the event params. The sessions lists have to send it from the client
+  because they render one row per session; a roster page showing exactly one
+  session does not, and taking it back off the client here would hand a tampered
+  event the id the context gate exists to check (#1373).
+  """
+  @spec complete_session(Socket.t(), reload_fn()) :: {:noreply, Socket.t()}
+  def complete_session(socket, reload_fn) do
+    session_id = socket.assigns.session_id
+
+    case KlassHero.Participation.complete_session(socket.assigns.current_scope, session_id) do
+      {:ok, _session} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Session completed successfully"))
+         |> reload_fn.()}
+
+      {:error, reason} when reason in [:unauthorized, :program_closed] ->
+        {:noreply, put_flash(socket, :error, session_refusal_message(reason))}
+
+      {:error, reason} ->
+        Logger.error("[ParticipationLiveHandlers.complete_session] Failed to complete session",
+          session_id: session_id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Failed to complete session: %{reason}", reason: inspect(reason)))}
     end
   end
 
