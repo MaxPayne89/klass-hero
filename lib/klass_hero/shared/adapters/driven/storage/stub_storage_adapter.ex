@@ -2,30 +2,40 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   @moduledoc """
   In-memory stub adapter for testing file storage operations.
 
-  Stores files in an Agent for test assertions.
+  ## One store per test, resolved from the caller
+
+  Each test owns its own `Agent`, registered in `KlassHero.StorageRegistry` under the
+  owning test's pid. Callers that cannot pass options — LiveViews, use cases invoked
+  from an Oban job — are reached by walking `$callers` back to that owner, so nothing
+  in `lib/` has to know this adapter exists.
+
+  `KlassHero.DataCase` and `KlassHeroWeb.ConnCase` start the owner's store in `setup`,
+  which covers every test. A test needing two stores at once (upload here, read there)
+  starts extra ones itself and passes `agent:` explicitly; that wins over the walk.
+
+  ## No store means raise, never a plausible answer
+
+  This adapter used to fall back to `{:ok, "stub://signed/..."}` and `{:ok, true}` when
+  no `Agent` was running. That made assertions pass for files nobody stored (#1416), so
+  a missing owner is now a loud failure.
   """
 
   @behaviour KlassHero.Shared.ForStoringFiles
 
   use Agent
 
+  @registry KlassHero.StorageRegistry
+
   def start_link(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
-    Agent.start_link(fn -> %{} end, name: name)
+    case Keyword.fetch(opts, :owner) do
+      {:ok, owner} -> Agent.start_link(fn -> %{} end, name: {:via, Registry, {@registry, owner}})
+      :error -> Agent.start_link(fn -> %{} end, name: explicit_name!(opts))
+    end
   end
 
   @impl true
-  # Agent may not be started in LiveView integration tests (can't pass custom
-  # storage_opts) — store if alive, return stub URL regardless.
   def upload(bucket_type, path, binary, opts) do
-    agent = Keyword.get(opts, :agent, __MODULE__)
-    key = make_key(bucket_type, path)
-
-    if agent_alive?(agent) do
-      Agent.update(agent, fn state ->
-        Map.put(state, key, binary)
-      end)
-    end
+    Agent.update(store!(opts), &Map.put(&1, make_key(bucket_type, path), binary))
 
     case bucket_type do
       :public -> {:ok, "stub://public/#{path}"}
@@ -34,50 +44,22 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   end
 
   @impl true
-  # Agent may not be started in all test setups — return stub URL when not running.
   def signed_url(bucket_type, key, expires_in, opts) do
-    agent = Keyword.get(opts, :agent, __MODULE__)
-
-    if agent_alive?(agent) do
-      store_key = make_key(bucket_type, key)
-      exists? = Agent.get(agent, fn state -> Map.has_key?(state, store_key) end)
-
-      if exists? do
-        {:ok, "stub://signed/#{key}?expires=#{expires_in}"}
-      else
-        {:error, :file_not_found}
-      end
-    else
+    if stored?(opts, bucket_type, key) do
       {:ok, "stub://signed/#{key}?expires=#{expires_in}"}
-    end
-  end
-
-  @impl true
-  # Defaults to true when Agent not started (some test setups don't start it).
-  def file_exists?(bucket_type, path, opts) do
-    agent = Keyword.get(opts, :agent, __MODULE__)
-    key = make_key(bucket_type, path)
-
-    if agent_alive?(agent) do
-      exists? = Agent.get(agent, fn state -> Map.has_key?(state, key) end)
-      {:ok, exists?}
     else
-      {:ok, true}
+      {:error, :file_not_found}
     end
   end
 
   @impl true
-  # Agent may not be started in tests that don't exercise storage (e.g. retention policy tests) — no-op if not running.
+  def file_exists?(bucket_type, path, opts) do
+    {:ok, stored?(opts, bucket_type, path)}
+  end
+
+  @impl true
   def delete(bucket_type, path, opts) do
-    agent = Keyword.get(opts, :agent, __MODULE__)
-    key = make_key(bucket_type, path)
-
-    if agent_alive?(agent) do
-      Agent.update(agent, fn state ->
-        Map.delete(state, key)
-      end)
-    end
-
+    Agent.update(store!(opts), &Map.delete(&1, make_key(bucket_type, path)))
     :ok
   end
 
@@ -85,10 +67,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   Test helper to retrieve uploaded file content.
   """
   def get_uploaded(bucket_type, path, opts \\ []) do
-    agent = Keyword.get(opts, :agent, __MODULE__)
-    key = make_key(bucket_type, path)
-
-    case Agent.get(agent, fn state -> Map.get(state, key) end) do
+    case Agent.get(store!(opts), &Map.get(&1, make_key(bucket_type, path))) do
       nil -> {:error, :file_not_found}
       binary -> {:ok, binary}
     end
@@ -98,12 +77,56 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
   Test helper to clear all stored files.
   """
   def clear(opts \\ []) do
-    agent = Keyword.get(opts, :agent, __MODULE__)
-    Agent.update(agent, fn _state -> %{} end)
+    Agent.update(store!(opts), fn _state -> %{} end)
   end
 
-  defp agent_alive?(pid) when is_pid(pid), do: Process.alive?(pid)
-  defp agent_alive?(name) when is_atom(name), do: Process.whereis(name) != nil
+  defp stored?(opts, bucket_type, path) do
+    Agent.get(store!(opts), &Map.has_key?(&1, make_key(bucket_type, path)))
+  end
+
+  defp store!(opts), do: Keyword.get_lazy(opts, :agent, &owned_store!/0)
+
+  defp owned_store!, do: Enum.find_value([self() | callers()], &registered/1) || no_owner!()
+
+  defp callers, do: Process.get(:"$callers", [])
+
+  defp registered(pid) do
+    case Registry.lookup(@registry, pid) do
+      [{agent, _value}] -> agent
+      [] -> nil
+    end
+  end
+
+  defp no_owner! do
+    raise """
+    no storage owner for #{inspect(self())} or its $callers.
+
+    Every test owns a stub storage Agent, started for you in KlassHero.DataCase and
+    KlassHeroWeb.ConnCase. Reaching this means the calling process is outside that
+    test's $callers chain — pass `agent:` explicitly, or start one with
+    `start_supervised!({#{inspect(__MODULE__)}, owner: self()})`.
+    """
+  end
+
+  # A single registered name is what raced across async files in #1416: one file's
+  # per-test teardown emptied the store another file was still reading.
+  defp explicit_name!(opts) do
+    case Keyword.fetch(opts, :name) do
+      {:ok, __MODULE__} ->
+        raise ArgumentError, """
+        #{inspect(__MODULE__)} cannot be registered under its own module name.
+
+        Pass a per-test owner instead — `{#{inspect(__MODULE__)}, owner: self()}` — or a
+        unique name when a test genuinely needs a second store.
+        """
+
+      {:ok, name} ->
+        name
+
+      :error ->
+        raise ArgumentError, "#{inspect(__MODULE__)} requires either :owner or a unique :name"
+    end
+  end
 
   defp make_key(bucket_type, path), do: "#{bucket_type}:#{path}"
 end

@@ -141,17 +141,6 @@ defmodule KlassHero.Provider.Incidents.NotifyIncidentReportedTest do
   end
 
   describe "execute/1 — photo signing" do
-    setup do
-      # Trigger: photo signing tests need a default-named StubStorageAdapter agent
-      # Why: Storage.signed_url passes no opts to the adapter, so the adapter falls
-      #      back to its default registered name (StubStorageAdapter) for the agent
-      # Outcome: starting an agent under that name lets us drive signed_url's
-      #          {:ok, url} / {:error, :file_not_found} branches deterministically
-      {:ok, _pid} = StubStorageAdapter.start_link(name: StubStorageAdapter)
-      :ok = StubStorageAdapter.clear()
-      :ok
-    end
-
     test "sends a no-photo email when signed_url fails", %{
       provider: provider,
       program: program,

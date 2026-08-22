@@ -4,6 +4,8 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
+
   # Authentication & Authorization
 
   describe "authentication" do
@@ -249,6 +251,9 @@ defmodule KlassHeroWeb.Admin.VerificationsLiveTest do
           document_type: "video_screening",
           original_filename: "screening.mp4"
         )
+
+      # The player only renders off a signed URL, which requires the file to be there.
+      StubStorageAdapter.upload(:private, doc.file_url, "video-bytes", [])
 
       {:ok, view, _html} = live(conn, ~p"/admin/verifications/#{doc.id}")
 

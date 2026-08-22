@@ -17,6 +17,7 @@ defmodule KlassHero.DataCase do
   use ExUnit.CaseTemplate
 
   alias Ecto.Adapters.SQL.Sandbox
+  alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
   using do
     quote do
@@ -31,6 +32,7 @@ defmodule KlassHero.DataCase do
 
   setup tags do
     KlassHero.DataCase.setup_sandbox(tags)
+    KlassHero.DataCase.setup_storage()
     :ok
   end
 
@@ -40,6 +42,18 @@ defmodule KlassHero.DataCase do
   def setup_sandbox(tags) do
     pid = Sandbox.start_owner!(KlassHero.Repo, shared: not tags[:async])
     on_exit(fn -> Sandbox.stop_owner(pid) end)
+  end
+
+  @doc """
+  Gives this test its own stub storage store, keyed by the test pid.
+
+  `StubStorageAdapter` walks `$callers` back to that pid, so a LiveView or an inline
+  Oban job reads and writes the same store without any `lib/` caller passing options.
+  A test wanting a second store starts one itself and passes `agent:`.
+  """
+  def setup_storage do
+    start_supervised!({StubStorageAdapter, owner: self()})
+    :ok
   end
 
   @doc """

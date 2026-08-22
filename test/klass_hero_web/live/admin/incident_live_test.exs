@@ -6,6 +6,7 @@ defmodule KlassHeroWeb.Admin.IncidentLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
   # A provider distinct from the logged-in admin, plus a program it owns.
   # `provider_profile_fixture/1` creates the backing user, which doubles as the
@@ -296,6 +297,9 @@ defmodule KlassHeroWeb.Admin.IncidentLiveTest do
           photo_url: "incident-reports/providers/#{provider.id}/123_photo.jpg",
           original_filename: "photo.jpg"
         )
+
+      # The <img> only renders off a signed URL, which requires the file to be there.
+      StubStorageAdapter.upload(:private, report.photo_url, "photo-bytes", [])
 
       {:ok, view, _html} = live(conn, ~p"/admin/incidents/#{report.id}/show")
 
