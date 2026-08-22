@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.81.2](https://github.com/MaxPayne89/klass-hero/compare/v0.81.1...v0.81.2) (2026-08-22)
+
+
+### Bug Fixes
+
+* give each test its own stub storage store ([#1471](https://github.com/MaxPayne89/klass-hero/issues/1471)) ([792ce81](https://github.com/MaxPayne89/klass-hero/commit/792ce815b5429e8c3df7d96b900934b8c34fc81a))
+
+
+### Code Refactoring
+
+* flatten the provider context layout ([#1469](https://github.com/MaxPayne89/klass-hero/issues/1469)) ([c90f7f8](https://github.com/MaxPayne89/klass-hero/commit/c90f7f873476f074623f99a00f45a4b20a498256)), closes [#1425](https://github.com/MaxPayne89/klass-hero/issues/1425)
+* fold Messaging's pure-delegation ACL adapters and fix context.name derivation ([#1470](https://github.com/MaxPayne89/klass-hero/issues/1470)) ([da045f3](https://github.com/MaxPayne89/klass-hero/commit/da045f361a4b207e64c1e7f950611f404ee22c65)), closes [#1424](https://github.com/MaxPayne89/klass-hero/issues/1424)
+
 ## [0.81.1](https://github.com/MaxPayne89/klass-hero/compare/v0.81.0...v0.81.1) (2026-08-21)
 
 
