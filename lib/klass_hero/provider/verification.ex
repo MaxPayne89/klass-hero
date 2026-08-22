@@ -191,7 +191,7 @@ defmodule KlassHero.Provider.Verification do
   @doc """
   Get a verification document with a verified preview URL for admin review.
   """
-  @spec get_verification_document_preview(String.t()) ::
+  @spec get_verification_document_preview(String.t(), keyword()) ::
           {:ok,
            %{
              document: VerificationDocument.t(),
@@ -202,9 +202,9 @@ defmodule KlassHero.Provider.Verification do
              preview_type: :image | :pdf | :other
            }}
           | {:error, :not_found}
-  def get_verification_document_preview(document_id) do
+  def get_verification_document_preview(document_id, opts \\ []) do
     with {:ok, result} <- get_verification_document_for_admin(document_id) do
-      signed_url = verified_preview_url(result.document.file_url)
+      signed_url = verified_preview_url(result.document.file_url, opts)
       preview_type = verification_preview_type(result.document.original_filename)
       {:ok, Map.merge(result, %{signed_url: signed_url, preview_type: preview_type})}
     end
@@ -319,9 +319,9 @@ defmodule KlassHero.Provider.Verification do
 
   # Checks existence before signing: signed_url/3 is URL math and succeeds even
   # for missing files, which would render broken previews.
-  defp verified_preview_url(file_url) when is_binary(file_url) do
-    with {:ok, true} <- Storage.file_exists?(:private, file_url),
-         {:ok, url} <- Storage.signed_url(:private, file_url, 900) do
+  defp verified_preview_url(file_url, opts) when is_binary(file_url) do
+    with {:ok, true} <- Storage.file_exists?(:private, file_url, opts),
+         {:ok, url} <- Storage.signed_url(:private, file_url, 900, opts) do
       url
     else
       {:ok, false} ->
@@ -335,7 +335,7 @@ defmodule KlassHero.Provider.Verification do
     end
   end
 
-  defp verified_preview_url(_), do: nil
+  defp verified_preview_url(_file_url, _opts), do: nil
 
   defp verification_preview_type(filename) when is_binary(filename) do
     filename

@@ -167,7 +167,7 @@ defmodule KlassHero.Provider do
   defdelegate get_verification_document_for_admin(document_id), to: Verification
 
   @doc "Returns a verification document with a verified preview URL for admin review."
-  defdelegate get_verification_document_preview(document_id), to: Verification
+  defdelegate get_verification_document_preview(document_id, opts \\ []), to: Verification
 
   @doc "Returns the list of valid verification document types."
   defdelegate valid_document_types, to: Verification

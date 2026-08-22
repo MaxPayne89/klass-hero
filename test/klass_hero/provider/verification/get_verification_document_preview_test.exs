@@ -5,12 +5,29 @@ defmodule KlassHero.Provider.Verification.GetVerificationDocumentPreviewTest do
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
   setup do
-    # The use case calls Storage without opts, hitting the globally configured adapter.
-    # Start a named Agent so StubStorageAdapter can track file state for this test.
-    start_supervised!({StubStorageAdapter, name: StubStorageAdapter})
-
     provider = Factory.insert(:provider_profile_schema)
     %{provider: provider}
+  end
+
+  describe "execute/2" do
+    test "signs against the store passed in opts, not the caller's", %{provider: provider} do
+      doc = Factory.insert(:verification_document_schema, provider_profile_id: provider.id)
+
+      {:ok, other_store} =
+        StubStorageAdapter.start_link(name: :"storage_#{System.unique_integer([:positive])}")
+
+      StubStorageAdapter.upload(:private, doc.file_url, "file-content", agent: other_store)
+
+      assert {:ok, %{signed_url: nil}} =
+               KlassHero.Provider.get_verification_document_preview(doc.id)
+
+      assert {:ok, %{signed_url: url}} =
+               KlassHero.Provider.get_verification_document_preview(doc.id,
+                 agent: other_store
+               )
+
+      assert url =~ "stub://signed/#{doc.file_url}"
+    end
   end
 
   describe "execute/1" do
