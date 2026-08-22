@@ -200,7 +200,8 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
     test "updates session in stream when session_started event received", %{
       conn: conn,
-      provider: provider
+      provider: provider,
+      scope: scope
     } do
       program = insert(:program_schema, provider_id: provider.id)
       # Need listing so mount can build provider_program_ids MapSet
@@ -219,7 +220,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       assert has_element?(view, "button", "Start Session")
 
       # Transition the session in DB so the re-fetch picks it up
-      {:ok, _} = Participation.start_session(session.id)
+      {:ok, _} = Participation.start_session(scope, session.id)
 
       send(view.pid, {:session_changed, session.id})
 

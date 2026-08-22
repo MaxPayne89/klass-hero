@@ -118,7 +118,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   @impl true
   def handle_event("start_session", %{"session_id" => session_id}, socket) do
-    case Participation.start_session(session_id) do
+    case Participation.start_session(socket.assigns.current_scope, session_id) do
       {:ok, _session} ->
         {:noreply, put_flash(socket, :info, gettext("Session started successfully"))}
 

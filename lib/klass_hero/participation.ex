@@ -126,13 +126,20 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Starts a scheduled session.
+  Starts a scheduled session on behalf of `scope`.
 
-  Returns `{:ok, session}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
+  Gated like `complete_session/2` and for the same reason (#1373): both took a
+  bare session id until the guard moved here.
+
+  Returns `{:ok, session}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  `{:error, :program_closed}`, or `{:error, :invalid_status_transition}`.
   """
-  def start_session(session_id) when is_binary(session_id) do
+  @spec start_session(Scope.t(), String.t()) ::
+          {:ok, ProgramSession.t()} | {:error, :not_found | SessionAuthorization.refusal() | :invalid_status_transition}
+  def start_session(%Scope{} = scope, session_id) when is_binary(session_id) do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
+           {:ok, _role} <- SessionAuthorization.authorize_lifecycle(scope, session),
            {:ok, started} <- ProgramSession.start(session),
            {:ok, {persisted, events}} <- update_session_with_event(started, &ParticipationEvents.session_started/1) do
         Notifications.notify_all(events)

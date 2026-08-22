@@ -127,7 +127,7 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
       assert {:ok, %{generated: 2}} = Participation.sync_sessions_for_program(program.id)
 
       [first | _] = sessions_for(program.id)
-      {:ok, _} = Participation.start_session(first.id)
+      {:ok, _} = Participation.start_session(admin_scope(), first.id)
       {:ok, _} = Participation.complete_session(admin_scope(), first.id)
 
       tomorrow = Date.add(Date.utc_today(), 1)
