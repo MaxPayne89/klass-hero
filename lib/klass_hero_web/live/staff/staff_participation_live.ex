@@ -54,6 +54,13 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
     ParticipationLiveHandlers.check_in(socket, record_id, &load_session_data/1)
   end
 
+  # No session id in the params: this page shows one session and already holds its
+  # id, put there by the mount-time guard.
+  @impl true
+  def handle_event("complete_session", _params, socket) do
+    ParticipationLiveHandlers.complete_session(socket, &load_session_data/1)
+  end
+
   @impl true
   def handle_event("expand_checkout_form", %{"id" => record_id}, socket) do
     {:noreply,
@@ -193,7 +200,7 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLive do
   defp refusal_reason(%SessionStaffing{program_closed?: true}), do: :program_closed
   defp refusal_reason(_staffing), do: :not_assigned
 
-  defp refusal_message(:program_closed), do: gettext("This program has closed. Its sessions are no longer available.")
+  defp refusal_message(:program_closed), do: ParticipationLiveHandlers.session_refusal_message(:program_closed)
 
   defp refusal_message(:not_assigned), do: gettext("You are not assigned to this session")
 

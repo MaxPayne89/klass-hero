@@ -6,8 +6,10 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionNote
   alias KlassHero.ProviderFixtures
+  alias KlassHero.Repo
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do
@@ -188,6 +190,31 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       scope = %Scope{user: user, staff_member: staff}
 
       %{session: session, parent: parent, child: child, record: record, program: program, scope: scope}
+    end
+
+    test "offers Complete Session while the session is in progress", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
+
+      assert has_element?(view, "#complete-session-btn")
+    end
+
+    test "completing absents the stragglers and locks the roster", %{
+      conn: conn,
+      session: session,
+      record: record,
+      scope: scope
+    } do
+      {:ok, _} = KlassHero.Participation.record_check_in(scope, record.id)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
+      assert has_element?(view, "#edit-btn-#{record.id}")
+
+      view |> element("#complete-session-btn") |> render_click()
+
+      assert_flash(view, :info, "Session completed successfully")
+      assert Repo.get!(ProgramSession, session.id).status == :completed
+      refute has_element?(view, "#complete-session-btn")
+      refute has_element?(view, "#edit-btn-#{record.id}")
     end
 
     test "renders staff-participation element and child names in roster", %{
