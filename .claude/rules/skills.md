@@ -55,7 +55,7 @@ Reads a Daily QA GitHub Discussion by number, triages Carried-Forward and New Co
 
 ### build-elixir
 
-User-invoked umbrella router for TDD-first, design-heavy Elixir/Phoenix development. Sequences `/design-an-interface` (surface rival designs — user picks), `/tdd` (red→green), `exunit-testing` (fold tests lean via tabular for-comprehensions + property tests), auto-attaching idiom/Iron-Law/LiveView guidance, then verify. Generic Elixir idioms live in `.claude/rules/elixir-style.md` + `domain-architecture.md` and the `elixir-phoenix` plugin (auto-loaded), not a skill.
+User-invoked umbrella router for TDD-first, design-heavy Elixir/Phoenix development. Sequences `/design-an-interface` (surface rival designs — user picks), `/tdd` (red→green), `exunit-testing` (fold tests lean via tabular for-comprehensions + property tests), auto-attaching idiom/Iron-Law/LiveView guidance, then verify. Generic Elixir idioms live in `.claude/rules/elixir-style.md` + `domain-architecture.md` and the `phx` plugin, not a skill — see [Elixir/Phoenix Plugin (`phx`)](#elixirphoenix-plugin-phx) below for what it adds and who wins on overlap.
 
 **Use when:** `/build-elixir <what you're building>`
 
@@ -126,3 +126,47 @@ Reviews code for conventional-Phoenix convention compliance (post-flatten). Runs
 Detects semantic cross-context boundary violations (boundaries are convention-only since the `boundary` library was removed). Checks for reaching into another context's internals instead of its root facade, cross-context Repo/schema access, event-handler facade use, event/read-model purity, and ACL adapter correctness. Supports `changed-files` or `full` scan scope.
 
 **Use when:** Deep boundary analysis needed, especially after adding cross-context features. Spawn as a subagent.
+
+## Elixir/Phoenix Plugin (`phx`)
+
+Installed as `elixir-phoenix` (marketplace `oliver-kriska`, v3.0.1); invoked as `/phx:*` because its `plugin.json` sets `"name": "phx"`. Ships **51 skills and 25 agents**. The sibling `ecto@oliver-kriska` and `lv@oliver-kriska` plugins are thin aliases onto the same codebase (`/ecto:*`, `/lv:*`) — no separate capability.
+
+### Reach for these — no project equivalent exists
+
+| Command / agent | What it does that nothing here does |
+|---|---|
+| `/phx:investigate` | Structured root-cause on a stack trace. `--parallel` fans `deep-bug-investigator` across 4 tracks (repro / root cause / impact / fix strategy). |
+| `/phx:trace`, `phx:call-tracer`, `phx:xref-analyzer` | Call trees from entry points and module-dependency maps via `mix xref` — run before a signature change or a refactor. |
+| `/phx:n1-check`, `/phx:perf`, `/phx:assigns-audit` | N+1 detection, Ecto/GenServer bottlenecks, LiveView assign bloat and missing `temporary_assigns`/streams. |
+| `/phx:boundaries` | `mix xref` coupling analysis — **structural**, where `boundary-checker` is semantic. Different instruments; run both. |
+| `/phx:oban` + `phx:oban-specialist` | Worker idempotency, queue config, cron, string-keyed args. Five contexts here have `workers/` and no Oban review skill. |
+| `/phx:verify` + `phx:verification-runner` | Project-aware verify loop that reads `mix.exs` to discover credo/dialyzer/sobelow aliases. |
+| `/phx:techdebt`, `/phx:audit` | Duplicate detection and whole-project health sweeps. |
+| `/phx:compound`, `/phx:recall` | Capture a solved bug as a searchable solution doc; recall past fixes. Complements the `remember` memory store. |
+| `/phx:watch-pr` | Background-watches a PR for new bot/human comments and CI results. |
+| `phx:requirements-verifier` | Cross-checks an implementation against the originating GitHub issue — pairs with `/read-and-assess-issue`. |
+| `phx:otp-advisor`, `phx:liveview-architect`, `phx:ecto-schema-designer` | Design-stage specialists. Spawn directly rather than reasoning solo. |
+
+### Precedence where they overlap
+
+**Project rules win on project-specific conventions; phx wins on generic Elixir/OTP.**
+
+| phx | project | Who wins |
+|---|---|---|
+| `phx:phoenix-contexts` | `domain-architecture.md` | **Project** — this repo is post-flatten conventional Phoenix with schema-as-struct, not generic contexts. |
+| `phx:testing` | `exunit-testing` | **Project** — both auto-attach to `test/**/*_test.exs`; ours knows the `async: false` projection rule. |
+| `phx:ecto-patterns` | `database.md`, `/gen-migration` | **Project** for schema/migration shape; phx for generic changeset/Multi idiom. |
+| `phx:liveview-patterns` | `liveview.md` | **Project.** |
+| `phx:security` | `authentication.md` | **Project** on scopes/`phx.gen.auth`; phx for generic OWASP sweeps. |
+| `phx:pr-review` | `/address-pr-comments` | **Project** for triage; phx `watch-pr` still useful for the background watch. |
+| `phx:deps-audit`/`update`/`vet` | `/dep-upgrade` | **Project** for routine bumps; `phx:deps-audit` adds supply-chain checks (bidi chars, compile-time exec, typosquats) ours lacks. |
+| `phx:review` | `/review-architecture` | **Both** — phx checks generic Elixir/OTP/security/test quality and Iron Laws; ours checks structural conventions. |
+| `phx:elixir-idioms` | `elixir-style.md` | **Both** — different altitude: OTP process design vs syntax-level gotchas. |
+
+### Already active — don't re-invent
+
+- **Auto-attaching skills** load themselves on matching files (`user-invocable: false` + `paths:` globs): `ecto-patterns`, `liveview-patterns`, `testing`, `security`, `phoenix-contexts`, `elixir-idioms`, `oban`, `ash-framework`.
+- **`SubagentStart` → `inject-iron-laws.sh`** puts the Iron Laws into *every* subagent spawned — one more reason fan-out is cheap here.
+- **`UserPromptSubmit` → `route-intent.sh`** suggests `/phx:pr-review`, or `/phx:investigate` on a stack-trace paste or Tidewave page context. Silent on any prompt starting with `/`; fires at most once per category per session.
+- **`PostToolUseFailure` → `error-critic.sh` / `elixir-failure-hints.sh`** fire on failing `mix` commands.
+- **`PostToolUse` → `format-elixir.sh`** is check-only by design (never writes, avoiding a "file modified since read" race). The project's `.claude/hooks/format.sh` is the one that actually formats, and also covers `.heex`. Both stay.
