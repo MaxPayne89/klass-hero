@@ -11,8 +11,9 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
      publication
   """
 
+  use KlassHero.Shared.Tracing
+
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Messaging.Adapters.Driven.Enrollment.EnrollmentResolver
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
@@ -108,7 +109,9 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
   end
 
   defp get_enrolled_parent_user_ids(program_id) do
-    {:ok, EnrollmentResolver.get_enrolled_parent_user_ids(program_id)}
+    acl_span source: "messaging", target: "enrollment" do
+      {:ok, KlassHero.Enrollment.list_enrolled_identity_ids(program_id)}
+    end
   end
 
   defp verify_has_recipients([]), do: {:error, :no_enrollments}

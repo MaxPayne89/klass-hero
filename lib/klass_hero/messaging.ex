@@ -35,7 +35,6 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
-  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderStaffResolver
 
   alias KlassHero.Messaging.{
     AnonymizeUserData,
@@ -768,7 +767,10 @@ defmodule KlassHero.Messaging do
 
   @doc """
   Returns the user IDs entitled to a program's conversations, read from
-  Provider (#1321) rather than from a mirror Messaging maintained itself.
+  Provider (#1321) rather than from a mirror Messaging maintained itself. That
+  mirror had no projection, bootstrap or rebuild, so only an event could ever
+  correct it — and #1309, #1312 and #1320 were all drift between it and this
+  source.
 
   Access-granting, and only that: `AddAssignedStaff` seeds these users as
   participants when a conversation is created, and `StaffAssignmentHandler` asks
@@ -782,9 +784,11 @@ defmodule KlassHero.Messaging do
   program's sessions.
   """
   @spec get_conversation_staff_user_ids(String.t()) :: [String.t()]
-  defdelegate get_conversation_staff_user_ids(program_id),
-    to: ProviderStaffResolver,
-    as: :list_conversation_staff_user_ids
+  def get_conversation_staff_user_ids(program_id) do
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.list_conversation_staff_user_ids_for_program(program_id)
+    end
+  end
 
   @doc """
   User IDs of everyone who has ever been staff at the provider.
@@ -794,9 +798,11 @@ defmodule KlassHero.Messaging do
   whose employment has ended.
   """
   @spec get_provider_staff_user_ids(String.t()) :: [String.t()]
-  defdelegate get_provider_staff_user_ids(provider_id),
-    to: ProviderStaffResolver,
-    as: :list_staff_user_ids
+  def get_provider_staff_user_ids(provider_id) do
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.list_staff_user_ids_for_provider(provider_id)
+    end
+  end
 
   @doc """
   Returns the PubSub topic for a conversation.

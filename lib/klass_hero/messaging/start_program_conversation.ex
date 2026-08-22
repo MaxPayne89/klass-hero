@@ -8,8 +8,9 @@ defmodule KlassHero.Messaging.StartProgramConversation do
   as participants and publishing a `conversation_created` event.
   """
 
+  use KlassHero.Shared.Tracing
+
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Messaging.Adapters.Driven.Provider.ProviderUserResolver
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Domain.Events.MessagingEvents
@@ -24,8 +25,14 @@ defmodule KlassHero.Messaging.StartProgramConversation do
           {:ok, Conversation.t()} | {:error, :not_found | :not_entitled | term()}
   def execute(%Scope{} = scope, provider_id, program_id) do
     with :ok <- Shared.maybe_check_entitlement(scope, []),
-         {:ok, owner_user_id} <- ProviderUserResolver.get_user_id_for_provider(provider_id) do
+         {:ok, owner_user_id} <- provider_owner_user_id(provider_id) do
       find_or_create(scope, provider_id, program_id, owner_user_id)
+    end
+  end
+
+  defp provider_owner_user_id(provider_id) do
+    acl_span source: "messaging", target: "provider" do
+      KlassHero.Provider.get_identity_id_for_provider(provider_id)
     end
   end
 
