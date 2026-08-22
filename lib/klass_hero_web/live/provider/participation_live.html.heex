@@ -22,7 +22,18 @@
         session={@session}
         role={:provider}
         attendance={Participation.attendance_from_records(@participation_records)}
-      />
+      >
+        <:actions>
+          <.kh_button
+            :if={@session.status == :in_progress}
+            id="complete-session-btn"
+            variant={:dark}
+            phx-click="complete_session"
+          >
+            {gettext("Complete Session")}
+          </.kh_button>
+        </:actions>
+      </.participation_card>
     </div>
 
     <div class="mt-6">
@@ -32,7 +43,7 @@
       <.roster_list
         participation_records={@participation_records}
         session={@session}
-        editable={true}
+        editable={@session.status == :in_progress}
         checkout_form_expanded={@checkout_form_expanded}
         checkout_forms={@checkout_forms}
       >

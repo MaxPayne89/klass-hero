@@ -5,6 +5,8 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Participation
+  alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Repo
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do
@@ -200,7 +202,8 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
     test "updates session in stream when session_started event received", %{
       conn: conn,
-      provider: provider
+      provider: provider,
+      scope: scope
     } do
       program = insert(:program_schema, provider_id: provider.id)
       # Need listing so mount can build provider_program_ids MapSet
@@ -219,7 +222,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       assert has_element?(view, "button", "Start Session")
 
       # Transition the session in DB so the re-fetch picks it up
-      {:ok, _} = Participation.start_session(session.id)
+      {:ok, _} = Participation.start_session(scope, session.id)
 
       send(view.pid, {:session_changed, session.id})
 
@@ -583,6 +586,72 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   describe "session actions" do
     setup :register_and_log_in_provider
 
+    # Both buttons carry the session id in a phx-value, so a tampered client can
+    # name any session it likes. Until #1373 nothing between that event and the
+    # write checked whose session it was -- and completing one marks every
+    # remaining registered child absent.
+    # sessions_live.ex states the rule for the staffing panel: "foreign and unknown
+    # are indistinguishable, leaking no oracle." The lifecycle events send a
+    # client-supplied id the same way, so they answer the same. Without this,
+    # fetch_session/1 running before the gate lets a tampering client tell "exists
+    # but is not yours" from "does not exist" and enumerate session ids.
+    test "an unknown session is refused exactly like a foreign one", %{conn: conn} do
+      other_provider = insert(:provider_profile_schema)
+      other_program = insert(:program_schema, provider_id: other_provider.id)
+
+      foreign =
+        insert(:program_session_schema,
+          program_id: other_program.id,
+          session_date: Date.utc_today(),
+          status: :in_progress
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      render_click(view, "complete_session", %{"session_id" => foreign.id})
+      foreign_flash = flash_error(view)
+
+      render_click(view, "complete_session", %{"session_id" => Ecto.UUID.generate()})
+      unknown_flash = flash_error(view)
+
+      assert unknown_flash == foreign_flash
+      assert unknown_flash =~ "Unauthorized"
+    end
+
+    test "a foreign session cannot be started or completed", %{conn: conn} do
+      other_provider = insert(:provider_profile_schema)
+      other_program = insert(:program_schema, provider_id: other_provider.id)
+
+      scheduled =
+        insert(:program_session_schema,
+          program_id: other_program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      in_progress =
+        insert(:program_session_schema,
+          program_id: other_program.id,
+          session_date: Date.utc_today(),
+          # Distinct from the session above: (program_id, session_date, start_time)
+          # is uniquely indexed.
+          start_time: ~T[14:00:00],
+          end_time: ~T[16:00:00],
+          status: :in_progress
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      render_click(view, "start_session", %{"session_id" => scheduled.id})
+      assert_flash(view, :error, "Unauthorized")
+
+      render_click(view, "complete_session", %{"session_id" => in_progress.id})
+      assert_flash(view, :error, "Unauthorized")
+
+      assert Repo.get!(ProgramSession, scheduled.id).status == :scheduled
+      assert Repo.get!(ProgramSession, in_progress.id).status == :in_progress
+    end
+
     test "start_session transitions scheduled session to in_progress", %{
       conn: conn,
       provider: provider
@@ -802,5 +871,12 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       refute has_element?(view, "#session-staffing-modal")
       assert_flash(view, :error, "That session could not be found.")
     end
+  end
+
+  # Reads the current :error flash without asserting on it, so two refusals can be
+  # compared to each other rather than each to a literal. Same source
+  # `assert_flash/3` uses — the socket, not the rendered HTML.
+  defp flash_error(view) do
+    Phoenix.Flash.get(:sys.get_state(view.pid).socket.assigns.flash, :error)
   end
 end

@@ -336,7 +336,7 @@ defmodule KlassHero.Provider.Assignments do
     # Over the batch's *distinct* programs, so a full day of sessions costs one
     # closure question rather than one per row (#1082).
     # Unscoped on purpose: the caller hands us session ids, and a session's
-    # provider is only knowable by resolving it. `AttendanceAuthorization` asks
+    # provider is only knowable by resolving it. `SessionAuthorization` asks
     # this for admins too, so there is no one provider to narrow by.
     open_ids = open_program_ids(program_ids)
 

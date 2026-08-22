@@ -7,7 +7,9 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Participation
   alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionNote
+  alias KlassHero.Repo
 
   setup :register_and_log_in_provider
 
@@ -817,6 +819,52 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       )
 
       assert render(view) =~ "edit-btn-#{record.id}"
+    end
+  end
+
+  describe "completing the session from the roster" do
+    setup [:create_session_with_child]
+
+    test "offers Complete Session while the session is in progress", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      assert has_element?(view, "#complete-session-btn")
+    end
+
+    test "does not offer it once the session is completed", %{conn: conn, session: session} do
+      {:ok, _} = Repo.update(Ecto.Changeset.change(session, status: :completed))
+
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      refute has_element?(view, "#complete-session-btn")
+    end
+
+    test "completing absents the stragglers without leaving the page", %{
+      conn: conn,
+      session: session,
+      record: record
+    } do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      view |> element("#complete-session-btn") |> render_click()
+
+      assert_flash(view, :info, "Session completed successfully")
+      assert Repo.get!(ProgramSession, session.id).status == :completed
+      assert Repo.get!(ParticipationRecord, record.id).status == :absent
+      refute has_element?(view, "#complete-session-btn")
+    end
+
+    # The check-in is what makes this non-vacuous: an absent row has no actions to
+    # lose, so a roster asserted read-only without one proves nothing.
+    test "the roster stops being editable", %{conn: conn, session: session, record: record, scope: scope} do
+      {:ok, _} = Participation.record_check_in(scope, record.id)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+      assert has_element?(view, "#edit-btn-#{record.id}")
+
+      view |> element("#complete-session-btn") |> render_click()
+
+      refute has_element?(view, "#edit-btn-#{record.id}")
     end
   end
 end

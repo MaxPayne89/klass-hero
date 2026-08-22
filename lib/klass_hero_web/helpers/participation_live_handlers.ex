@@ -8,6 +8,10 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
   (a `socket -> socket` function, typically `&load_session_data/1`) so that
   divergence stays in the LiveView while the orchestration lives here.
 
+  `session_refusal_message/1` is the one exception to "these two surfaces": the two
+  *sessions list* LiveViews call it too, because a refused session write should not
+  read differently depending on which page asked.
+
   The `find_participation_record/2` lookup below is **not** the authorization
   check. It reads the roster already in the socket, for the "Record not found"
   flash and the `child_id` on the failure log. Until #1353 it was the only thing
@@ -132,4 +136,60 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
         end
     end
   end
+
+  @doc """
+  Completes the session the page is showing, then reloads via `reload_fn`.
+
+  The session id comes from `socket.assigns`, where a mount-time guard put it —
+  never from the event params. The sessions lists have to send it from the client
+  because they render one row per session; a roster page showing exactly one
+  session does not, and taking it back off the client here would hand a tampered
+  event the id the context gate exists to check (#1373).
+  """
+  @spec complete_session(Socket.t(), reload_fn()) :: {:noreply, Socket.t()}
+  def complete_session(socket, reload_fn) do
+    session_id = socket.assigns.session_id
+
+    case KlassHero.Participation.complete_session(socket.assigns.current_scope, session_id) do
+      {:ok, _session} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Session completed successfully"))
+         |> reload_fn.()}
+
+      {:error, reason} when reason in [:unauthorized, :not_found, :program_closed] ->
+        {:noreply, put_flash(socket, :error, session_refusal_message(reason))}
+
+      {:error, reason} ->
+        Logger.error("[ParticipationLiveHandlers.complete_session] Failed to complete session",
+          session_id: session_id,
+          reason: inspect(reason)
+        )
+
+        {:noreply, put_flash(socket, :error, gettext("Failed to complete session: %{reason}", reason: inspect(reason)))}
+    end
+  end
+
+  @doc """
+  The flash for a session write `KlassHero.Participation` refused.
+
+  One function rather than a literal at each surface. Before #1373 the closed-program
+  sentence was copy-pasted at three call sites and the two sessions lists disagreed
+  about whether the distinction existed at all — ADR-0019's argument about a rule
+  respelled at N surfaces, applied to the copy that reports it.
+
+  `:not_found` deliberately answers the same as `:unauthorized`. The sessions lists
+  send a client-supplied session id, and `Participation` resolves the session before
+  it authorizes, so a distinct "no such session" would let a tampering client tell
+  *exists but is not yours* from *does not exist* and enumerate ids. The staffing
+  panel in the same file already states the rule — "foreign and unknown are
+  indistinguishable, leaking no oracle" — and the guard this replaced happened to
+  honour it by collapsing every lookup failure into a refusal. The reason still
+  reaches the log; only the user-visible answer is flattened.
+  """
+  @spec session_refusal_message(:unauthorized | :not_found | :program_closed) :: String.t()
+  def session_refusal_message(:program_closed),
+    do: gettext("This program has closed. Its sessions are no longer available.")
+
+  def session_refusal_message(reason) when reason in [:unauthorized, :not_found], do: gettext("Unauthorized")
 end

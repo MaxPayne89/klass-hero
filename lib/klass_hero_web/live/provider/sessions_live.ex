@@ -7,6 +7,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.ReadModels.SessionStaffing
+  alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
@@ -118,9 +119,12 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   @impl true
   def handle_event("start_session", %{"session_id" => session_id}, socket) do
-    case Participation.start_session(session_id) do
+    case Participation.start_session(socket.assigns.current_scope, session_id) do
       {:ok, _session} ->
         {:noreply, put_flash(socket, :info, gettext("Session started successfully"))}
+
+      {:error, reason} when reason in [:unauthorized, :not_found, :program_closed] ->
+        {:noreply, put_flash(socket, :error, ParticipationLiveHandlers.session_refusal_message(reason))}
 
       {:error, reason} ->
         Logger.error(
@@ -141,9 +145,12 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   @impl true
   def handle_event("complete_session", %{"session_id" => session_id}, socket) do
-    case Participation.complete_session(session_id) do
+    case Participation.complete_session(socket.assigns.current_scope, session_id) do
       {:ok, _session} ->
         {:noreply, put_flash(socket, :info, gettext("Session completed successfully"))}
+
+      {:error, reason} when reason in [:unauthorized, :not_found, :program_closed] ->
+        {:noreply, put_flash(socket, :error, ParticipationLiveHandlers.session_refusal_message(reason))}
 
       {:error, reason} ->
         Logger.error(

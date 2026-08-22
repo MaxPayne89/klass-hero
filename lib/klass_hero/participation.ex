@@ -23,11 +23,11 @@ defmodule KlassHero.Participation do
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
-  alias KlassHero.Participation.AttendanceAuthorization
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.SessionAuthorization
   alias KlassHero.Participation.SessionNote
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
@@ -126,13 +126,20 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Starts a scheduled session.
+  Starts a scheduled session on behalf of `scope`.
 
-  Returns `{:ok, session}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
+  Gated like `complete_session/2` and for the same reason (#1373): both took a
+  bare session id until the guard moved here.
+
+  Returns `{:ok, session}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  `{:error, :program_closed}`, or `{:error, :invalid_status_transition}`.
   """
-  def start_session(session_id) when is_binary(session_id) do
+  @spec start_session(Scope.t(), String.t()) ::
+          {:ok, ProgramSession.t()} | {:error, :not_found | SessionAuthorization.refusal() | :invalid_status_transition}
+  def start_session(%Scope{} = scope, session_id) when is_binary(session_id) do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
+           {:ok, _role} <- SessionAuthorization.authorize_lifecycle(scope, session),
            {:ok, started} <- ProgramSession.start(session),
            {:ok, {persisted, events}} <- update_session_with_event(started, &ParticipationEvents.session_started/1) do
         Notifications.notify_all(events)
@@ -142,13 +149,24 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Completes an in-progress session, marking all registered (not checked-in) children as absent.
+  Completes an in-progress session on behalf of `scope`, marking all registered
+  (not checked-in) children as absent.
 
-  Returns `{:ok, session}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
+  Authorized at this boundary rather than by the caller, for the reason ADR-0017
+  gives for attendance: a guard that lives in one of four callers is not a guard.
+  Completing a session marks every remaining registered child absent, and until
+  #1373 the provider sessions list handed this function a client-supplied id with
+  no check at all.
+
+  Returns `{:ok, session}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  `{:error, :program_closed}`, or `{:error, :invalid_status_transition}`.
   """
-  def complete_session(session_id) when is_binary(session_id) do
+  @spec complete_session(Scope.t(), String.t()) ::
+          {:ok, ProgramSession.t()} | {:error, :not_found | SessionAuthorization.refusal() | :invalid_status_transition}
+  def complete_session(%Scope{} = scope, session_id) when is_binary(session_id) do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
+           {:ok, _role} <- SessionAuthorization.authorize_lifecycle(scope, session),
            {:ok, completed} <- ProgramSession.complete(session),
            {:ok, {persisted, events}} <- complete_session_with_events(completed) do
         Notifications.notify_all(events)
@@ -833,7 +851,7 @@ defmodule KlassHero.Participation do
   # of this context's own tables.
   defp authorize_for_record(%Scope{} = scope, %ParticipationRecord{} = record) do
     with {:ok, session} <- fetch_session(record.session_id) do
-      AttendanceAuthorization.authorize(scope, session)
+      SessionAuthorization.authorize(scope, session)
     end
   end
 
