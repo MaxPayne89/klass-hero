@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.AttendanceAuthorization do
+defmodule KlassHero.Participation.SessionAuthorization do
   @moduledoc """
   Who may write a child's attendance record.
 

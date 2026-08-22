@@ -23,11 +23,11 @@ defmodule KlassHero.Participation do
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
-  alias KlassHero.Participation.AttendanceAuthorization
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Participation.SessionAuthorization
   alias KlassHero.Participation.SessionNote
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
@@ -833,7 +833,7 @@ defmodule KlassHero.Participation do
   # of this context's own tables.
   defp authorize_for_record(%Scope{} = scope, %ParticipationRecord{} = record) do
     with {:ok, session} <- fetch_session(record.session_id) do
-      AttendanceAuthorization.authorize(scope, session)
+      SessionAuthorization.authorize(scope, session)
     end
   end
 

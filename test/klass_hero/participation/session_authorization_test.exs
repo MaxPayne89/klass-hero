@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.AttendanceAuthorizationTest do
+defmodule KlassHero.Participation.SessionAuthorizationTest do
   @moduledoc """
   Who may write a child's attendance record (#1353).
 
@@ -12,7 +12,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Participation.AttendanceAuthorization
+  alias KlassHero.Participation.SessionAuthorization
   alias KlassHero.Provider
   alias KlassHero.ProviderFixtures
 
@@ -21,7 +21,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       %{provider: provider, session: session} = provider_with_session()
       scope = scope_for(provider_profile: provider)
 
-      assert {:ok, :provider} = AttendanceAuthorization.authorize(scope, session)
+      assert {:ok, :provider} = SessionAuthorization.authorize(scope, session)
     end
 
     test "a provider is refused on another provider's program" do
@@ -29,7 +29,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       %{session: foreign_session} = provider_with_session()
       scope = scope_for(provider_profile: provider)
 
-      assert {:error, :unauthorized} = AttendanceAuthorization.authorize(scope, foreign_session)
+      assert {:error, :unauthorized} = SessionAuthorization.authorize(scope, foreign_session)
     end
 
     test "a staff member assigned to the program is authorized as :staff" do
@@ -37,7 +37,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       staff = assigned_staff(provider, program)
       scope = scope_for(staff_member: staff)
 
-      assert {:ok, :staff} = AttendanceAuthorization.authorize(scope, session)
+      assert {:ok, :staff} = SessionAuthorization.authorize(scope, session)
     end
 
     test "a staff member with no assignment to the program is refused" do
@@ -45,7 +45,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       staff = ProviderFixtures.staff_member_fixture(%{provider_id: provider.id})
       scope = scope_for(staff_member: staff)
 
-      assert {:error, :unauthorized} = AttendanceAuthorization.authorize(scope, session)
+      assert {:error, :unauthorized} = SessionAuthorization.authorize(scope, session)
     end
 
     test "a platform admin holding no persona is authorized as :admin" do
@@ -54,13 +54,13 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       # never casts `is_admin`, so the unconfirmed variant drops the flag silently.
       scope = scope_for(user: AccountsFixtures.user_fixture(is_admin: true))
 
-      assert {:ok, :admin} = AttendanceAuthorization.authorize(scope, session)
+      assert {:ok, :admin} = SessionAuthorization.authorize(scope, session)
     end
 
     test "a user with no persona and no admin flag is refused" do
       %{session: session} = provider_with_session()
 
-      assert {:error, :unauthorized} = AttendanceAuthorization.authorize(scope_for([]), session)
+      assert {:error, :unauthorized} = SessionAuthorization.authorize(scope_for([]), session)
     end
   end
 
@@ -72,7 +72,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       %{provider: provider, program: program, session: session} = provider_with_closed_session()
       scope = scope_for(staff_member: assigned_staff(provider, program))
 
-      assert {:error, :unauthorized} = AttendanceAuthorization.authorize(scope, session)
+      assert {:error, :unauthorized} = SessionAuthorization.authorize(scope, session)
     end
 
     test "a staff member overridden onto that one session is refused too" do
@@ -88,21 +88,21 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
         })
 
       assert {:error, :unauthorized} =
-               AttendanceAuthorization.authorize(scope_for(staff_member: staff), session)
+               SessionAuthorization.authorize(scope_for(staff_member: staff), session)
     end
 
     test "the owning provider still corrects their own closed roster" do
       %{provider: provider, session: session} = provider_with_closed_session()
 
       assert {:ok, :provider} =
-               AttendanceAuthorization.authorize(scope_for(provider_profile: provider), session)
+               SessionAuthorization.authorize(scope_for(provider_profile: provider), session)
     end
 
     test "an admin still reaches a closed program" do
       %{session: session} = provider_with_closed_session()
       scope = scope_for(user: AccountsFixtures.user_fixture(is_admin: true))
 
-      assert {:ok, :admin} = AttendanceAuthorization.authorize(scope, session)
+      assert {:ok, :admin} = SessionAuthorization.authorize(scope, session)
     end
 
     test "a staff member keeps access while the program is inside its grace window" do
@@ -114,7 +114,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       session = insert(:program_session_schema, program_id: program.id)
       scope = scope_for(staff_member: assigned_staff(provider, program))
 
-      assert {:ok, :staff} = AttendanceAuthorization.authorize(scope, session)
+      assert {:ok, :staff} = SessionAuthorization.authorize(scope, session)
     end
   end
 
@@ -131,7 +131,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
           provider_profile: provider
         )
 
-      assert {:ok, :provider} = AttendanceAuthorization.authorize(scope, session)
+      assert {:ok, :provider} = SessionAuthorization.authorize(scope, session)
     end
 
     test "an admin who does not own the program falls through to :admin" do
@@ -144,7 +144,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
           provider_profile: provider
         )
 
-      assert {:ok, :admin} = AttendanceAuthorization.authorize(scope, foreign_session)
+      assert {:ok, :admin} = SessionAuthorization.authorize(scope, foreign_session)
     end
 
     test "a provider who is also staff is authorized as :provider on their own program" do
@@ -152,7 +152,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       staff = assigned_staff(provider, program)
       scope = scope_for(provider_profile: provider, staff_member: staff)
 
-      assert {:ok, :provider} = AttendanceAuthorization.authorize(scope, session)
+      assert {:ok, :provider} = SessionAuthorization.authorize(scope, session)
     end
 
     test "a provider who is also staff elsewhere is authorized as :staff on that program" do
@@ -164,7 +164,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       staff = assigned_staff(other_provider, other_program)
       scope = scope_for(provider_profile: own_provider, staff_member: staff)
 
-      assert {:ok, :staff} = AttendanceAuthorization.authorize(scope, other_session)
+      assert {:ok, :staff} = SessionAuthorization.authorize(scope, other_session)
     end
   end
 
@@ -183,10 +183,10 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       assert {:ok, _} = Provider.unassign_staff_from_session(session.id, staff.id, provider.id)
 
       assert {:error, :unauthorized} =
-               AttendanceAuthorization.authorize(scope_for(staff_member: staff), session)
+               SessionAuthorization.authorize(scope_for(staff_member: staff), session)
 
       assert {:ok, :staff} =
-               AttendanceAuthorization.authorize(scope_for(staff_member: colleague), session)
+               SessionAuthorization.authorize(scope_for(staff_member: colleague), session)
     end
 
     test "a staff member on the session but not the program is authorized as :staff" do
@@ -201,7 +201,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
                })
 
       assert {:ok, :staff} =
-               AttendanceAuthorization.authorize(scope_for(staff_member: staff), session)
+               SessionAuthorization.authorize(scope_for(staff_member: staff), session)
     end
 
     test "a deactivated staff member on the session is refused" do
@@ -218,7 +218,7 @@ defmodule KlassHero.Participation.AttendanceAuthorizationTest do
       {:ok, _} = Provider.deactivate_staff_member(staff)
 
       assert {:error, :unauthorized} =
-               AttendanceAuthorization.authorize(scope_for(staff_member: staff), session)
+               SessionAuthorization.authorize(scope_for(staff_member: staff), session)
     end
   end
 

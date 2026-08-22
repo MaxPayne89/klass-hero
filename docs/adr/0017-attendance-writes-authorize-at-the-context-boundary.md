@@ -14,7 +14,7 @@ Participation.correct_attendance(scope, record_id, attrs)
 
 No caller names the actor or declares its own role any more. `checked_in_by`, `checked_out_by`
 and `actor_role` are gone from the interface; identity is `scope.user.id` and the role is
-resolved by `Participation.AttendanceAuthorization`.
+resolved by `Participation.SessionAuthorization`.
 
 ## Why
 
@@ -36,7 +36,7 @@ one of four callers is not a guard.
 ## The fall-through order
 
 A person is one User and may hold several personas at once, so *which* rule applies needs a
-deterministic answer. `AttendanceAuthorization.authorize/2` takes the first that matches:
+deterministic answer. `SessionAuthorization.authorize/2` takes the first that matches:
 
 | Order | Rule | Cost |
 |---|---|---|

@@ -44,7 +44,7 @@ at all and became correct:
 
 | Surface | Change |
 |---|---|
-| `Participation.AttendanceAuthorization` | none |
+| `Participation.SessionAuthorization` | none |
 | `StaffBroadcastLive` | none |
 | `StaffDashboardLive` roster handler | none |
 | `StaffSessionsLive` list + action gate | none for the gate; message copy only |
