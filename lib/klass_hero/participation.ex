@@ -142,13 +142,24 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Completes an in-progress session, marking all registered (not checked-in) children as absent.
+  Completes an in-progress session on behalf of `scope`, marking all registered
+  (not checked-in) children as absent.
 
-  Returns `{:ok, session}`, `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
+  Authorized at this boundary rather than by the caller, for the reason ADR-0017
+  gives for attendance: a guard that lives in one of four callers is not a guard.
+  Completing a session marks every remaining registered child absent, and until
+  #1373 the provider sessions list handed this function a client-supplied id with
+  no check at all.
+
+  Returns `{:ok, session}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  `{:error, :program_closed}`, or `{:error, :invalid_status_transition}`.
   """
-  def complete_session(session_id) when is_binary(session_id) do
+  @spec complete_session(Scope.t(), String.t()) ::
+          {:ok, ProgramSession.t()} | {:error, :not_found | SessionAuthorization.refusal() | :invalid_status_transition}
+  def complete_session(%Scope{} = scope, session_id) when is_binary(session_id) do
     context_span entity: "session" do
       with {:ok, session} <- fetch_session(session_id),
+           {:ok, _role} <- SessionAuthorization.authorize_lifecycle(scope, session),
            {:ok, completed} <- ProgramSession.complete(session),
            {:ok, {persisted, events}} <- complete_session_with_events(completed) do
         Notifications.notify_all(events)

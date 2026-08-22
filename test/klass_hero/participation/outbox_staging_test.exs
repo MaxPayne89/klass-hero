@@ -62,7 +62,7 @@ defmodule KlassHero.Participation.OutboxStagingTest do
     {:ok, _started} = Participation.start_session(session.id)
     TestOutbox.setup()
 
-    {:ok, _completed} = Participation.complete_session(session.id)
+    {:ok, _completed} = Participation.complete_session(admin_scope(), session.id)
 
     assert :session_completed in staged_types()
   end
@@ -115,4 +115,8 @@ defmodule KlassHero.Participation.OutboxStagingTest do
 
     assert [] = TestOutbox.staged()
   end
+
+  # An admin is authorized everywhere, so the scope stays out of a test whose
+  # subject is not authorization.
+  defp admin_scope, do: KlassHero.AccountsFixtures.admin_scope_fixture()
 end

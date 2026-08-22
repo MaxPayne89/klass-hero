@@ -128,7 +128,7 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
 
       [first | _] = sessions_for(program.id)
       {:ok, _} = Participation.start_session(first.id)
-      {:ok, _} = Participation.complete_session(first.id)
+      {:ok, _} = Participation.complete_session(admin_scope(), first.id)
 
       tomorrow = Date.add(Date.utc_today(), 1)
       {:ok, program} = update_meeting_days(program, [weekday_name(tomorrow)])
@@ -154,4 +154,8 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
     |> Ecto.Changeset.change(%{meeting_days: days})
     |> Repo.update()
   end
+
+  # An admin is authorized everywhere, so the scope stays out of a test whose
+  # subject is not authorization.
+  defp admin_scope, do: KlassHero.AccountsFixtures.admin_scope_fixture()
 end

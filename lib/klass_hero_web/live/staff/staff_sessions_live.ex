@@ -107,7 +107,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   def handle_event("complete_session", %{"session_id" => session_id}, socket) do
     case authorize_session_action(session_id, socket) do
       :ok ->
-        case Participation.complete_session(session_id) do
+        case Participation.complete_session(socket.assigns.current_scope, session_id) do
           {:ok, _session} ->
             {:noreply, put_flash(socket, :info, gettext("Session completed successfully"))}
 
