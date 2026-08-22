@@ -105,6 +105,11 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter do
     KlassHeroWeb.ConnCase. Reaching this means the calling process is outside that
     test's $callers chain — pass `agent:` explicitly, or start one with
     `start_supervised!({#{inspect(__MODULE__)}, owner: self()})`.
+
+    A Wallaby e2e test cannot get there by either route: a LiveView reached over a
+    real websocket carries its transport pid in $callers, not the test's, so no
+    ancestry links the two. Storage in `test/e2e/` needs a real adapter, the way
+    KlassHero.StorageIntegrationCase points `:storage` at MinIO.
     """
   end
 
