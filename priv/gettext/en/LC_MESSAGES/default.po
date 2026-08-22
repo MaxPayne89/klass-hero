@@ -4296,7 +4296,7 @@ msgstr ""
 msgid "Type your reply..."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:185
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:194
 #: lib/klass_hero_web/live/provider/sessions_live.ex:190
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:126
 #, elixir-autogen, elixir-format
@@ -7897,7 +7897,7 @@ msgstr ""
 msgid "These programs have finished. Their sessions and rosters are no longer available."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/participation_live_handlers.ex:183
+#: lib/klass_hero_web/helpers/participation_live_handlers.ex:192
 #, elixir-autogen, elixir-format
 msgid "This program has closed. Its sessions are no longer available."
 msgstr ""

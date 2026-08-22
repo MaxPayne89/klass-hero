@@ -73,7 +73,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
       {:ok, _session} ->
         {:noreply, put_flash(socket, :info, gettext("Session started successfully"))}
 
-      {:error, reason} when reason in [:unauthorized, :program_closed] ->
+      {:error, reason} when reason in [:unauthorized, :not_found, :program_closed] ->
         {:noreply, put_flash(socket, :error, ParticipationLiveHandlers.session_refusal_message(reason))}
 
       {:error, reason} ->
@@ -99,7 +99,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
       {:ok, _session} ->
         {:noreply, put_flash(socket, :info, gettext("Session completed successfully"))}
 
-      {:error, reason} when reason in [:unauthorized, :program_closed] ->
+      {:error, reason} when reason in [:unauthorized, :not_found, :program_closed] ->
         {:noreply, put_flash(socket, :error, ParticipationLiveHandlers.session_refusal_message(reason))}
 
       {:error, reason} ->

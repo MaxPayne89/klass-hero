@@ -157,7 +157,7 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
          |> put_flash(:info, gettext("Session completed successfully"))
          |> reload_fn.()}
 
-      {:error, reason} when reason in [:unauthorized, :program_closed] ->
+      {:error, reason} when reason in [:unauthorized, :not_found, :program_closed] ->
         {:noreply, put_flash(socket, :error, session_refusal_message(reason))}
 
       {:error, reason} ->
@@ -177,10 +177,19 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
   sentence was copy-pasted at three call sites and the two sessions lists disagreed
   about whether the distinction existed at all — ADR-0019's argument about a rule
   respelled at N surfaces, applied to the copy that reports it.
+
+  `:not_found` deliberately answers the same as `:unauthorized`. The sessions lists
+  send a client-supplied session id, and `Participation` resolves the session before
+  it authorizes, so a distinct "no such session" would let a tampering client tell
+  *exists but is not yours* from *does not exist* and enumerate ids. The staffing
+  panel in the same file already states the rule — "foreign and unknown are
+  indistinguishable, leaking no oracle" — and the guard this replaced happened to
+  honour it by collapsing every lookup failure into a refusal. The reason still
+  reaches the log; only the user-visible answer is flattened.
   """
-  @spec session_refusal_message(:unauthorized | :program_closed) :: String.t()
+  @spec session_refusal_message(:unauthorized | :not_found | :program_closed) :: String.t()
   def session_refusal_message(:program_closed),
     do: gettext("This program has closed. Its sessions are no longer available.")
 
-  def session_refusal_message(:unauthorized), do: gettext("Unauthorized")
+  def session_refusal_message(reason) when reason in [:unauthorized, :not_found], do: gettext("Unauthorized")
 end
