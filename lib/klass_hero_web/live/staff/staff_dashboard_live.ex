@@ -6,7 +6,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
   alias KlassHero.Enrollment
   alias KlassHero.Messaging
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
   alias KlassHeroWeb.Theme

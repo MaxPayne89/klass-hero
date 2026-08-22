@@ -13,9 +13,9 @@ defmodule KlassHero.ProjectionSupervisor do
   alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
-  alias KlassHero.Provider.Adapters.Driven.Projections.ProviderPrograms
-  alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionDetails
-  alias KlassHero.Provider.Adapters.Driven.Projections.ProviderSessionStats
+  alias KlassHero.Provider.Projections.ProviderPrograms
+  alias KlassHero.Provider.Projections.ProviderSessionDetails
+  alias KlassHero.Provider.Projections.ProviderSessionStats
 
   def start_link(init_arg) do
     Supervisor.start_link(__MODULE__, init_arg, name: __MODULE__)

@@ -23,7 +23,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   alias KlassHero.Messaging
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
+  alias KlassHero.Provider.ReadModels.ProgramStaffing
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter

@@ -5,7 +5,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   import KlassHero.Factory
 
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.SessionStaffAssignment
   alias KlassHero.Provider.StaffMember
@@ -285,21 +285,21 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   # payloads deliberately omit (provider_events.ex) — so the tests asserted
   # against a payload shape the handler never actually receives (#1309).
   defp build_assignment_event(provider_id, program_id, staff_user_id) do
-    ProviderEvents.staff_assigned_to_program(
+    Provider.Events.staff_assigned_to_program(
       assignment(provider_id, program_id),
       %StaffMember{user_id: staff_user_id}
     )
   end
 
   defp build_unassignment_event(provider_id, program_id, staff_user_id) do
-    ProviderEvents.staff_unassigned_from_program(
+    Provider.Events.staff_unassigned_from_program(
       assignment(provider_id, program_id),
       %StaffMember{user_id: staff_user_id}
     )
   end
 
   defp build_session_assignment_event(provider_id, program_id, staff_user_id) do
-    ProviderEvents.staff_assigned_to_session(
+    Provider.Events.staff_assigned_to_session(
       session_assignment(provider_id),
       %StaffMember{user_id: staff_user_id},
       program_id
@@ -307,7 +307,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandlerTest
   end
 
   defp build_session_unassignment_event(provider_id, program_id, staff_user_id) do
-    ProviderEvents.staff_unassigned_from_session(
+    Provider.Events.staff_unassigned_from_session(
       session_assignment(provider_id),
       %StaffMember{user_id: staff_user_id},
       program_id

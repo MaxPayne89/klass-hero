@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
   import ExUnit.CaptureLog
 
   alias KlassHero.ProgramCatalog.Program
-  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
+  alias KlassHero.Provider.ReadModels.ProgramStaffing
   alias KlassHero.Shared.Categories
   alias KlassHeroWeb.Presenters.ProgramPresenter
 

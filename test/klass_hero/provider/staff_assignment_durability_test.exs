@@ -18,7 +18,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
   use ExUnit.Case, async: true
 
   alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider.Events
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
@@ -36,7 +36,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
 
   describe "durable-delivery wiring: factory → topic → registry" do
     test "staff_assigned_to_program resolves to the Messaging handler" do
-      event = ProviderEvents.staff_assigned_to_program(@assignment, @staff_member)
+      event = Events.staff_assigned_to_program(@assignment, @staff_member)
 
       assert Event.topic(event) ==
                "integration:provider:staff_assigned_to_program"
@@ -47,7 +47,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
     end
 
     test "staff_unassigned_from_program resolves to the Messaging handler" do
-      event = ProviderEvents.staff_unassigned_from_program(@assignment, @staff_member)
+      event = Events.staff_unassigned_from_program(@assignment, @staff_member)
 
       assert Event.topic(event) ==
                "integration:provider:staff_unassigned_from_program"
@@ -60,7 +60,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
 
   describe "serialization safety: no DateTime in the integration payload" do
     test "staff_assigned_to_program payload round-trips losslessly through the serializer" do
-      event = ProviderEvents.staff_assigned_to_program(@assignment, @staff_member)
+      event = Events.staff_assigned_to_program(@assignment, @staff_member)
 
       round_tripped =
         event
@@ -80,7 +80,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
     end
 
     test "staff_unassigned_from_program payload round-trips losslessly through the serializer" do
-      event = ProviderEvents.staff_unassigned_from_program(@assignment, @staff_member)
+      event = Events.staff_unassigned_from_program(@assignment, @staff_member)
 
       round_tripped =
         event

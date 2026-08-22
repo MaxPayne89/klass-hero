@@ -30,7 +30,7 @@ defmodule KlassHero.Provider.OffboardStaffMember do
   use KlassHero.Shared.Tracing
 
   alias KlassHero.Provider.Assignments
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider.Events
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
@@ -82,7 +82,7 @@ defmodule KlassHero.Provider.OffboardStaffMember do
     |> Enum.reduce_while({:ok, [], []}, fn assignment, {:ok, retired, events} ->
       case Repo.update(ProgramStaffAssignment.unassign_changeset(assignment)) do
         {:ok, unassigned} ->
-          event = ProviderEvents.staff_unassigned_from_program(unassigned, staff)
+          event = Events.staff_unassigned_from_program(unassigned, staff)
           {:cont, {:ok, [unassigned | retired], [event | events]}}
 
         {:error, reason} ->
@@ -101,7 +101,7 @@ defmodule KlassHero.Provider.OffboardStaffMember do
 
   defp end_employment(%StaffMember{} = staff) do
     with {:ok, ended} <- Repo.update(StaffMember.deactivate_changeset(staff)) do
-      {:ok, ended, [ProviderEvents.staff_member_deactivated(ended)]}
+      {:ok, ended, [Events.staff_member_deactivated(ended)]}
     end
   end
 end

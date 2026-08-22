@@ -15,7 +15,7 @@ defmodule KlassHero.Accounts.StaffInvitationHandlerTest do
   import Swoosh.TestAssertions
 
   alias KlassHero.Accounts.StaffInvitationHandler
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider
   alias KlassHero.Shared.Domain.Events.Event
 
   setup do
@@ -26,7 +26,7 @@ defmodule KlassHero.Accounts.StaffInvitationHandlerTest do
   defp build_staff_member_invited_event(attrs) do
     staff_member_id = Map.get(attrs, :staff_member_id, Ecto.UUID.generate())
 
-    ProviderEvents.staff_member_invited(
+    Provider.Events.staff_member_invited(
       staff_member_id,
       Map.delete(attrs, :staff_member_id)
     )
@@ -155,7 +155,7 @@ defmodule KlassHero.Accounts.StaffInvitationHandlerTest do
   describe "handle_event/1 — malformed payloads" do
     test "returns error for missing email in payload" do
       event =
-        ProviderEvents.staff_member_invited(Ecto.UUID.generate(), %{
+        Provider.Events.staff_member_invited(Ecto.UUID.generate(), %{
           provider_id: Ecto.UUID.generate(),
           first_name: "Jane",
           business_name: "Test Co",

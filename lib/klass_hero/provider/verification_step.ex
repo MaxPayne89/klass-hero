@@ -20,9 +20,9 @@ defmodule KlassHero.Provider.VerificationStep do
   import Ecto.Changeset
 
   alias KlassHero.Accounts.User
+  alias KlassHero.Provider.CompletedVia
   alias KlassHero.Provider.StepDefinition
-  alias KlassHero.Provider.Types.CompletedVia
-  alias KlassHero.Provider.Types.StepKey
+  alias KlassHero.Provider.StepKey
   alias KlassHero.Provider.VettingCase
 
   @primary_key {:id, :binary_id, autogenerate: true}

@@ -57,7 +57,7 @@ defmodule KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler do
   @context Messaging
 
   # Program and session grain land on the same two paths: the session payload is a
-  # superset of the program one (`ProviderEvents.session_assignment_event/4`), so
+  # superset of the program one (`Provider.Events.session_assignment_event/4`), so
   # nothing downstream has to know which grain produced the event. Derived lists
   # rather than four literals, so `subscribed_events/0` and the guard below cannot
   # drift apart — an event subscribed to but not guarded falls through to `:ignore`

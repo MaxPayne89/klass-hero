@@ -4,7 +4,7 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
   import KlassHero.Factory
   import KlassHero.ProviderFixtures
 
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
 
   # The listing row is no longer what this helper reads — it fetches the write

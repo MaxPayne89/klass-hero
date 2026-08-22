@@ -12,7 +12,7 @@ defmodule KlassHeroWeb.Staff.StaffBroadcastLive do
   alias KlassHero.Messaging.Attachment
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider.ReadModels.StaffProgramAccess
   alias KlassHeroWeb.MessagingComponents
   alias KlassHeroWeb.MessagingLiveHelper
 

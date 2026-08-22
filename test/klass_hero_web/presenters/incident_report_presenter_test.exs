@@ -1,7 +1,7 @@
 defmodule KlassHeroWeb.Presenters.IncidentReportPresenterTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
+  alias KlassHero.Provider.ReadModels.IncidentReportSummary
   alias KlassHeroWeb.Presenters.IncidentReportPresenter
 
   # Single source of truth for the finite enum→display lookups, shared between

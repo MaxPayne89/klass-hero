@@ -5,7 +5,7 @@ defmodule KlassHero.Provider.Assignments.GetStaffProgramAccessTest do
   import KlassHero.ProviderFixtures, only: [program_assignment_fixture: 1]
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.StaffProgramAccess
+  alias KlassHero.Provider.ReadModels.StaffProgramAccess
 
   defp setup_provider_program_staff do
     provider = insert(:provider_profile_schema)

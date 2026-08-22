@@ -10,8 +10,8 @@ defmodule KlassHero.Provider.NotifyIncidentReported do
   """
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Adapters.Driven.Notifications.IncidentReportedEmailNotifier
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.IncidentReportedEmailNotifier
   alias KlassHero.Provider.Programs
   alias KlassHero.Shared.Storage
 

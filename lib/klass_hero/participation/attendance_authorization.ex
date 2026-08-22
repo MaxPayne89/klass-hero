@@ -62,7 +62,7 @@ defmodule KlassHero.Participation.AttendanceAuthorization do
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
+  alias KlassHero.Provider.ReadModels.SessionStaffing
 
   @type role :: :provider | :staff | :admin
 

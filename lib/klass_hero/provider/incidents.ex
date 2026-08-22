@@ -9,8 +9,8 @@ defmodule KlassHero.Provider.Incidents do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Provider.Domain.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.IncidentReport
+  alias KlassHero.Provider.ReadModels.IncidentReportSummary
   alias KlassHero.Provider.SessionDetail
   alias KlassHero.Provider.SubmitIncidentReport
   alias KlassHero.Repo

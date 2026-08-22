@@ -4,7 +4,7 @@ defmodule KlassHero.Provider.Assignments.ListProgramStaffingTest do
   import KlassHero.Factory
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.ProgramStaffing
+  alias KlassHero.Provider.ReadModels.ProgramStaffing
   alias KlassHero.Repo
 
   defp setup_provider_program_staff do

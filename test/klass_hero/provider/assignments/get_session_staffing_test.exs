@@ -4,7 +4,7 @@ defmodule KlassHero.Provider.Assignments.GetSessionStaffingTest do
   import KlassHero.Factory
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.Domain.ReadModels.SessionStaffing
+  alias KlassHero.Provider.ReadModels.SessionStaffing
 
   setup do
     provider = insert(:provider_profile_schema)

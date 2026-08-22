@@ -89,13 +89,20 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLiveTest do
     # The stored refs are fully qualified. Only the context and the handler name are
     # worth a table cell — the fixed `Adapters.Driving.Events` path in between is
     # boilerplate wide enough to squeeze every other column off the page.
-    test "lists the consumers that never received the event, minus the boilerplate path",
+    #
+    # Both fixtures are load-bearing and neither is redundant, because the contexts
+    # are mid-migration to the flat layout (ADR 0018) and produce two ref shapes:
+    # Family is still nested, so it is the case that actually exercises the strip;
+    # Provider is flattened, so it proves a ref with no boilerplate passes through
+    # unharmed. Deleting either one silently drops a shape from coverage — and
+    # because these are string literals, no compiler will tell you.
+    test "shortens nested consumer refs and leaves already-flat ones alone",
          %{conn: conn} do
       record(
         topic: "integration:accounts:user_registered",
         missed_consumers: [
           "Elixir.KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler:handle_event",
-          "Elixir.KlassHero.Provider.Adapters.Driving.Events.ProviderEventHandler:handle_event"
+          "Elixir.KlassHero.Provider.ProviderEventHandler:handle_event"
         ]
       )
 
@@ -104,6 +111,7 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLiveTest do
       assert html =~ "Family.FamilyEventHandler:handle_event"
       assert html =~ "Provider.ProviderEventHandler:handle_event"
       refute html =~ "Adapters.Driving.Events"
+      refute html =~ "Elixir.KlassHero"
     end
 
     # Ages are offset well clear of the 1h/24h boundaries: the column is rendered

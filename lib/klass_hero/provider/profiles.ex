@@ -11,7 +11,7 @@ defmodule KlassHero.Provider.Profiles do
 
   import Ecto.Query, warn: false
 
-  alias KlassHero.Provider.Domain.Events.ProviderEvents
+  alias KlassHero.Provider.Events
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
@@ -234,7 +234,7 @@ defmodule KlassHero.Provider.Profiles do
     end)
   end
 
-  defp verification_event(profile, admin_id, :verified), do: ProviderEvents.provider_verified(profile, admin_id)
+  defp verification_event(profile, admin_id, :verified), do: Events.provider_verified(profile, admin_id)
 
-  defp verification_event(profile, admin_id, :unverified), do: ProviderEvents.provider_unverified(profile, admin_id)
+  defp verification_event(profile, admin_id, :unverified), do: Events.provider_unverified(profile, admin_id)
 end
