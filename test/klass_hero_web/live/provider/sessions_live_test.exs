@@ -5,6 +5,8 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Participation
+  alias KlassHero.Participation.ProgramSession
+  alias KlassHero.Repo
 
   describe "authentication and authorization" do
     test "redirects unauthenticated users to login", %{conn: conn} do
@@ -583,6 +585,44 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
 
   describe "session actions" do
     setup :register_and_log_in_provider
+
+    # Both buttons carry the session id in a phx-value, so a tampered client can
+    # name any session it likes. Until #1373 nothing between that event and the
+    # write checked whose session it was -- and completing one marks every
+    # remaining registered child absent.
+    test "a foreign session cannot be started or completed", %{conn: conn} do
+      other_provider = insert(:provider_profile_schema)
+      other_program = insert(:program_schema, provider_id: other_provider.id)
+
+      scheduled =
+        insert(:program_session_schema,
+          program_id: other_program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      in_progress =
+        insert(:program_session_schema,
+          program_id: other_program.id,
+          session_date: Date.utc_today(),
+          # Distinct from the session above: (program_id, session_date, start_time)
+          # is uniquely indexed.
+          start_time: ~T[14:00:00],
+          end_time: ~T[16:00:00],
+          status: :in_progress
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      render_click(view, "start_session", %{"session_id" => scheduled.id})
+      assert_flash(view, :error, "Unauthorized")
+
+      render_click(view, "complete_session", %{"session_id" => in_progress.id})
+      assert_flash(view, :error, "Unauthorized")
+
+      assert Repo.get!(ProgramSession, scheduled.id).status == :scheduled
+      assert Repo.get!(ProgramSession, in_progress.id).status == :in_progress
+    end
 
     test "start_session transitions scheduled session to in_progress", %{
       conn: conn,

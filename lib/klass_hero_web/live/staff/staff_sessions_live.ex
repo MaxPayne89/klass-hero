@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
   alias KlassHero.Participation
   alias KlassHero.Provider
   alias KlassHero.Provider.ReadModels.SessionStaffing
+  alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
   alias KlassHeroWeb.Helpers.StaffLiveHelpers
   alias KlassHeroWeb.Theme
 
@@ -68,75 +69,53 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
 
   @impl true
   def handle_event("start_session", %{"session_id" => session_id}, socket) do
-    case authorize_session_action(session_id, socket) do
-      :ok ->
-        case Participation.start_session(socket.assigns.current_scope, session_id) do
-          {:ok, _session} ->
-            {:noreply, put_flash(socket, :info, gettext("Session started successfully"))}
+    case Participation.start_session(socket.assigns.current_scope, session_id) do
+      {:ok, _session} ->
+        {:noreply, put_flash(socket, :info, gettext("Session started successfully"))}
 
-          {:error, reason} ->
-            Logger.error(
-              "[StaffSessionsLive.start_session] Failed to start session",
-              session_id: session_id,
-              reason: inspect(reason),
-              staff_member_id: socket.assigns.staff_member.id
-            )
+      {:error, reason} when reason in [:unauthorized, :program_closed] ->
+        {:noreply, put_flash(socket, :error, ParticipationLiveHandlers.session_refusal_message(reason))}
 
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               gettext("Failed to start session: %{reason}", reason: inspect(reason))
-             )}
-        end
+      {:error, reason} ->
+        Logger.error(
+          "[StaffSessionsLive.start_session] Failed to start session",
+          session_id: session_id,
+          reason: inspect(reason),
+          staff_member_id: socket.assigns.staff_member.id
+        )
 
-      {:error, :program_closed} ->
         {:noreply,
          put_flash(
            socket,
            :error,
-           gettext("This program has closed. Its sessions are no longer available.")
+           gettext("Failed to start session: %{reason}", reason: inspect(reason))
          )}
-
-      {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
     end
   end
 
   @impl true
   def handle_event("complete_session", %{"session_id" => session_id}, socket) do
-    case authorize_session_action(session_id, socket) do
-      :ok ->
-        case Participation.complete_session(socket.assigns.current_scope, session_id) do
-          {:ok, _session} ->
-            {:noreply, put_flash(socket, :info, gettext("Session completed successfully"))}
+    case Participation.complete_session(socket.assigns.current_scope, session_id) do
+      {:ok, _session} ->
+        {:noreply, put_flash(socket, :info, gettext("Session completed successfully"))}
 
-          {:error, reason} ->
-            Logger.error(
-              "[StaffSessionsLive.complete_session] Failed to complete session",
-              session_id: session_id,
-              reason: inspect(reason),
-              staff_member_id: socket.assigns.staff_member.id
-            )
+      {:error, reason} when reason in [:unauthorized, :program_closed] ->
+        {:noreply, put_flash(socket, :error, ParticipationLiveHandlers.session_refusal_message(reason))}
 
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               gettext("Failed to complete session: %{reason}", reason: inspect(reason))
-             )}
-        end
+      {:error, reason} ->
+        Logger.error(
+          "[StaffSessionsLive.complete_session] Failed to complete session",
+          session_id: session_id,
+          reason: inspect(reason),
+          staff_member_id: socket.assigns.staff_member.id
+        )
 
-      {:error, :program_closed} ->
         {:noreply,
          put_flash(
            socket,
            :error,
-           gettext("This program has closed. Its sessions are no longer available.")
+           gettext("Failed to complete session: %{reason}", reason: inspect(reason))
          )}
-
-      {:error, :unauthorized} ->
-        {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
     end
   end
 
@@ -194,22 +173,6 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
 
   defp maybe_filter_by_program(sessions, program_id) do
     Enum.filter(sessions, &(&1.program_id == program_id))
-  end
-
-  defp authorize_session_action(session_id, socket) do
-    case Participation.get_session_with_roster(session_id) do
-      {:ok, %{session: session}} ->
-        staffing = Provider.get_session_staffing(session.id)
-
-        cond do
-          SessionStaffing.staffed_by?(staffing, socket.assigns.staff_member.id) -> :ok
-          match?(%SessionStaffing{program_closed?: true}, staffing) -> {:error, :program_closed}
-          true -> {:error, :unauthorized}
-        end
-
-      {:error, _reason} ->
-        {:error, :unauthorized}
-    end
   end
 
   defp staffs_session?(socket, session_id) do

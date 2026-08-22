@@ -371,6 +371,35 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
       assert_flash(view, :info, "Session completed successfully")
     end
 
+    # Twins of the two start_session refusals above. Completing is the destructive
+    # half of the pair -- it marks every remaining registered child absent -- and
+    # until #1373 only start_session had either refusal pinned.
+    test "rejects complete_session on a Closed Program, naming the reason",
+         %{conn: conn} = ctx do
+      closed = assigned_program(ctx, title: "Autumn Term", end_date: Date.add(Date.utc_today(), -20))
+      session = session_on(closed, Date.utc_today(), :in_progress)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      render_click(view, "complete_session", %{"session_id" => session.id})
+
+      assert render(view) =~ "This program has closed"
+    end
+
+    test "rejects complete_session for a program the staff member is not assigned to",
+         %{conn: conn} = ctx do
+      session =
+        ctx
+        |> unassigned_program(category: "sports")
+        |> session_on(Date.utc_today(), :in_progress)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+
+      render_hook(view, "complete_session", %{"session_id" => session.id})
+
+      assert_flash(view, :error, "Unauthorized")
+    end
+
     test "rejects start_session for a program the staff member is not assigned to",
          %{conn: conn} = ctx do
       # Category "sports" matches the staff member's Specialties on purpose: a matching

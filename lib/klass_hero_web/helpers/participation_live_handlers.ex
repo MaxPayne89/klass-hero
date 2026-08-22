@@ -132,4 +132,18 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
         end
     end
   end
+
+  @doc """
+  The flash for a session write `KlassHero.Participation` refused.
+
+  One function rather than a literal at each surface. Before #1373 the closed-program
+  sentence was copy-pasted at three call sites and the two sessions lists disagreed
+  about whether the distinction existed at all — ADR-0019's argument about a rule
+  respelled at N surfaces, applied to the copy that reports it.
+  """
+  @spec session_refusal_message(:unauthorized | :program_closed) :: String.t()
+  def session_refusal_message(:program_closed),
+    do: gettext("This program has closed. Its sessions are no longer available.")
+
+  def session_refusal_message(:unauthorized), do: gettext("Unauthorized")
 end
