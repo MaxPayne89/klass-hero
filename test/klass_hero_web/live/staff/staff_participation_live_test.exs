@@ -198,6 +198,46 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       assert has_element?(view, "#complete-session-btn")
     end
 
+    # One handler serves both surfaces, so this proves the staff wiring reaches
+    # it — not that the absence logic works, which `record_absence_test.exs` owns.
+    test "a staff member can mark a child absent with a reason", %{
+      conn: conn,
+      session: session,
+      record: record
+    } do
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
+
+      view |> element("#mark-absent-btn-#{record.id}") |> render_click()
+
+      view
+      |> form("#absence-form-#{record.id}", %{"absence" => %{"content" => "Dentist appointment"}})
+      |> render_submit()
+
+      assert_flash(view, :info, "Child marked absent")
+      assert Repo.get!(ParticipationRecord, record.id).status == :absent
+      assert render(view) =~ "Dentist appointment"
+    end
+
+    # Defect 4, on the staff roster too.
+    test "an absent row offers a late arrival instead of a dead Check In", %{
+      conn: conn,
+      session: session,
+      record: record,
+      scope: scope
+    } do
+      {:ok, _} = KlassHero.Participation.record_absence(scope, record.id, reason: "No-show")
+
+      {:ok, view, _html} = live(conn, ~p"/staff/participation/#{session.id}")
+
+      refute has_element?(view, "#mark-absent-btn-#{record.id}")
+
+      view
+      |> element("button[phx-click='check_in'][phx-value-id='#{record.id}']")
+      |> render_click()
+
+      assert Repo.get!(ParticipationRecord, record.id).status == :checked_in
+    end
+
     test "completing absents the stragglers and locks the roster", %{
       conn: conn,
       session: session,

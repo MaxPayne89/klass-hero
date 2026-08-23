@@ -95,28 +95,27 @@ defmodule KlassHero.Participation.ParticipationRecordTest do
       assert checked_in.check_in_notes == nil
     end
 
-    test "returns error when checking in already checked-in record" do
-      record = build(:participation_record, status: :checked_in)
-      provider_id = Ecto.UUID.generate()
-
-      assert {:error, :invalid_status_transition} =
-               ParticipationRecord.check_in(record, provider_id)
-    end
-
-    test "returns error when checking in checked-out record" do
-      record = build(:participation_record, status: :checked_out)
-      provider_id = Ecto.UUID.generate()
-
-      assert {:error, :invalid_status_transition} =
-               ParticipationRecord.check_in(record, provider_id)
-    end
-
-    test "returns error when checking in absent record" do
+    # Reversed by #1329. An absent child who turns up late used to have no path
+    # back but an admin correction; now the roster's own button works.
+    test "checks in an absent record — the child arrived late" do
       record = build(:participation_record, status: :absent)
       provider_id = Ecto.UUID.generate()
 
-      assert {:error, :invalid_status_transition} =
-               ParticipationRecord.check_in(record, provider_id)
+      assert {:ok, checked_in} = ParticipationRecord.check_in(record, provider_id, "Arrived 09:20")
+
+      assert checked_in.status == :checked_in
+      assert checked_in.check_in_by == provider_id
+      assert %DateTime{} = checked_in.check_in_at
+    end
+
+    test "returns error when the child has already arrived" do
+      for status <- [:checked_in, :checked_out] do
+        record = build(:participation_record, status: status)
+
+        assert {:error, :invalid_status_transition} =
+                 ParticipationRecord.check_in(record, Ecto.UUID.generate()),
+               "a #{status} child should not be checkable in again"
+      end
     end
   end
 
@@ -188,22 +187,35 @@ defmodule KlassHero.Participation.ParticipationRecordTest do
       assert absent.status == :absent
     end
 
-    test "returns error when marking :checked_in as absent" do
-      record = build(:participation_record, status: :checked_in)
+    test "returns error from any status but :registered" do
+      for status <- [:checked_in, :checked_out, :absent] do
+        record = build(:participation_record, status: status)
 
-      assert {:error, :invalid_status_transition} = ParticipationRecord.mark_absent(record)
+        assert {:error, :invalid_status_transition} = ParticipationRecord.mark_absent(record),
+               "a #{status} child should not be markable absent"
+      end
     end
+  end
 
-    test "returns error when marking :checked_out as absent" do
-      record = build(:participation_record, status: :checked_out)
+  describe "mark_absent/3" do
+    # The extra arguments exist only so the verb fits the shared attendance path;
+    # neither is stored on the record. This pins that they are truly ignored,
+    # rather than silently landing in a field.
+    test "ignores the actor and reason, and gates exactly as mark_absent/1 does" do
+      registered = build(:participation_record, status: :registered)
 
-      assert {:error, :invalid_status_transition} = ParticipationRecord.mark_absent(record)
-    end
+      assert {:ok, absent} =
+               ParticipationRecord.mark_absent(registered, Ecto.UUID.generate(), "Mum called")
 
-    test "returns error when marking :absent as absent" do
-      record = build(:participation_record, status: :absent)
+      assert absent.status == :absent
+      assert Map.delete(absent, :status) == Map.delete(registered, :status)
 
-      assert {:error, :invalid_status_transition} = ParticipationRecord.mark_absent(record)
+      assert {:error, :invalid_status_transition} =
+               ParticipationRecord.mark_absent(
+                 build(:participation_record, status: :checked_in),
+                 Ecto.UUID.generate(),
+                 "Mum called"
+               )
     end
   end
 

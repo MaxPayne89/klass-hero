@@ -65,6 +65,14 @@ _Avoid_: Attendance record, Booking
 The act and result of checking a child in and out of a **Session** (the state changes recorded on a **Participation Record**). Who may record it is decided inside the Participation context, from the actor's Scope, in the order Provider → Staff Member → admin — see [ADR-0017](docs/adr/0017-attendance-writes-authorize-at-the-context-boundary.md). The Staff Member's authority comes from a **Program Staff Assignment**, never from their **Specialties**.
 _Avoid_: Presence, Sign-in
 
+**Absence Reason**:
+Why a child was marked absent, in the Instructor's own words ("mum called, off sick"). Operational and immediate — it tells whoever is running the Session where the child is, and it is deliberately **not** a **Session Note**: a note is feedback about the child that the **Parent** must approve before it is shared, and nobody should have to approve a dispatch note. Recorded against the **Attendance Transition** that made the child absent, not stored on the Participation Record, so a child marked absent twice keeps both reasons. Absent only when someone chose it: completing a Session sweeps every still-`registered` child to `absent` with no reason and no actor, which is how an automatic absence is told from a deliberate one.
+_Avoid_: Absence Note, Excuse, Sick Note
+
+**Attendance Transition**:
+One recorded change to a **Participation Record**'s state — from and to, by whom, when, and why. Every attendance write appends one, so the roster's history survives the record only holding its latest state. A transition with no actor was made by the system, not a person.
+_Avoid_: Attendance Event ("Event" means an integration event here), Audit Log entry
+
 ## Payments & Invoicing
 
 **Invoice**:

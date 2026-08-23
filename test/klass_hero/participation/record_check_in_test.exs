@@ -7,6 +7,7 @@ defmodule KlassHero.Participation.RecordCheckInTest do
 
   use KlassHero.DataCase, async: true
 
+  import KlassHero.AttendanceLogHelper
   import KlassHero.Factory
 
   alias KlassHero.Accounts.Scope
@@ -174,6 +175,50 @@ defmodule KlassHero.Participation.RecordCheckInTest do
                  record.id,
                  notes: nil
                )
+    end
+  end
+
+  # The log is only worth having if every verb writes to it (#1329). Asserting it
+  # here, in the same shape as `record_absence_test.exs`, is what catches a later
+  # refactor that routes check-in around the shared write path.
+  describe "record_check_in/3 attendance log" do
+    test "logs the transition, its actor, and the notes as the reason" do
+      %{record: record} = staffed_session()
+      scope = AccountsFixtures.admin_scope_fixture()
+
+      {:ok, checked_in} =
+        KlassHero.Participation.record_check_in(scope, record.id, notes: "Arrived early")
+
+      assert transition = only_transition(record.id)
+      assert transition.from_status == :registered
+      assert transition.to_status == :checked_in
+      assert transition.reason == "Arrived early"
+
+      # The agreement that matters, and the one that is exact: the log and the
+      # column name the same actor. The timestamps are two clock reads, so they
+      # get a tolerance rather than an equality that would flake on a second
+      # boundary.
+      assert transition.actor_id == checked_in.check_in_by
+      assert abs(DateTime.diff(transition.occurred_at, checked_in.check_in_at)) <= 1
+    end
+
+    test "a late arrival logs both legs of the absence" do
+      %{record: record} = staffed_session()
+      scope = AccountsFixtures.admin_scope_fixture()
+
+      {:ok, _} = KlassHero.Participation.record_absence(scope, record.id, reason: "No-show")
+
+      assert {:ok, checked_in} =
+               KlassHero.Participation.record_check_in(scope, record.id, notes: "Arrived 09:20")
+
+      assert checked_in.status == :checked_in
+
+      # Both rows land in the same second, so assert on content, not position.
+      legs = record.id |> transitions_for() |> Enum.map(&{&1.from_status, &1.to_status})
+
+      assert length(legs) == 2
+      assert {:registered, :absent} in legs
+      assert {:absent, :checked_in} in legs
     end
   end
 

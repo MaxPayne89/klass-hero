@@ -2,18 +2,10 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   @moduledoc """
   Factory module for creating participation domain events.
 
-  ## Event Types
-
-  - `session_created` - A new program session was created
-  - `session_started` - A session has begun
-  - `session_completed` - A session has ended
-  - `roster_seeded` - Participation records were bulk-seeded for a session
-  - `child_checked_in` - A child was checked into a session
-  - `child_checked_out` - A child was checked out of a session
-  - `child_marked_absent` - A child was marked absent from a session
-  - `session_note_submitted` - A session note was submitted for review
-  - `session_note_approved` - A session note was approved by a parent
-  - `session_note_rejected` - A session note was rejected by a parent
+  `@event_entities` below is the authoritative list of what this module emits,
+  and `entity_type_for/1` raises on anything missing from it. A prose copy of
+  that list used to live here and had silently fallen three events behind, so
+  there is deliberately no second list to keep in step.
 
   All events are returned as `Event` structs.
   """

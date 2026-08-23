@@ -93,6 +93,27 @@
               </button>
               <%!-- A form for this record is expanded — suppress row actions while editing. --%>
             <% record.status in [:checked_in, :checked_out] -> %>
+            <% @absence_form_expanded == to_string(record.id) -> %>
+              <%!-- The absence reason form is open below this row. --%>
+            <% record.status == :absent -> %>
+              <%!--
+                Absent rows used to fall through to "Check In" below, a button
+                the state machine rejected every time. It was invisible because
+                absences only existed after a session was completed, when no
+                actions render at all (#1329).
+              --%>
+              <button
+                phx-click="check_in"
+                phx-value-id={record.id}
+                class={[
+                  "px-3 py-1.5 text-sm bg-white text-hero-black-100 font-medium border border-hero-grey-300",
+                  "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                  Theme.rounded(:md),
+                  Theme.transition(:normal)
+                ]}
+              >
+                {gettext("Arrived late")}
+              </button>
             <% true -> %>
               <button
                 phx-click="check_in"
@@ -105,6 +126,19 @@
                 ]}
               >
                 {gettext("Check In")}
+              </button>
+              <button
+                id={"mark-absent-btn-#{record.id}"}
+                phx-click="expand_absence_form"
+                phx-value-id={record.id}
+                class={[
+                  "px-3 py-1.5 text-sm bg-white text-hero-black-100 font-medium border border-hero-grey-300",
+                  "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                  Theme.rounded(:md),
+                  Theme.transition(:normal)
+                ]}
+              >
+                {gettext("Mark absent")}
               </button>
           <% end %>
 
@@ -136,6 +170,14 @@
         </:actions>
 
         <:expanded_content :let={record}>
+          <%!-- Inline absence reason form (full-width below record row) --%>
+          <%= if @absence_form_expanded == to_string(record.id) do %>
+            <.absence_reason_form
+              form={Map.get(@absence_forms, to_string(record.id))}
+              record_id={to_string(record.id)}
+            />
+          <% end %>
+
           <%!-- Inline edit form (notes + optional departure time) --%>
           <%= if @edit_form_expanded == to_string(record.id) do %>
             <.edit_record_form

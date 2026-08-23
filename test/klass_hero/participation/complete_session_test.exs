@@ -7,6 +7,7 @@ defmodule KlassHero.Participation.CompleteSessionTest do
 
   use KlassHero.DataCase, async: true
 
+  import KlassHero.AttendanceLogHelper
   import KlassHero.Factory
 
   alias KlassHero.Accounts.Scope
@@ -83,6 +84,48 @@ defmodule KlassHero.Participation.CompleteSessionTest do
 
       reloaded = KlassHero.Repo.get(ParticipationRecord, record.id)
       assert reloaded.status == :absent
+    end
+
+    # A log that skipped the batch would have a hole exactly where most absences
+    # are. The NULL actor and reason are what distinguish this from a provider
+    # deliberately marking one child absent (#1329).
+    test "logs each swept absence with no actor and no reason" do
+      session_schema = insert(:program_session_schema, status: :in_progress)
+
+      records =
+        for _ <- 1..2 do
+          insert(:participation_record_schema,
+            session_id: session_schema.id,
+            child_id: insert(:child_schema).id,
+            status: :registered
+          )
+        end
+
+      assert {:ok, _} = Participation.complete_session(admin_scope(), session_schema.id)
+
+      for record <- records do
+        assert transition = only_transition(record.id)
+        assert transition.from_status == :registered
+        assert transition.to_status == :absent
+        assert transition.actor_id == nil
+        assert transition.reason == nil
+      end
+    end
+
+    test "logs nothing for children who were already checked in" do
+      session_schema = insert(:program_session_schema, status: :in_progress)
+
+      record =
+        insert(:participation_record_schema,
+          session_id: session_schema.id,
+          child_id: insert(:child_schema).id,
+          status: :checked_in,
+          check_in_at: DateTime.utc_now() |> DateTime.truncate(:second)
+        )
+
+      assert {:ok, _} = Participation.complete_session(admin_scope(), session_schema.id)
+
+      assert only_transition(record.id) == nil
     end
 
     test "leaves checked_in and checked_out participants unchanged when completing" do

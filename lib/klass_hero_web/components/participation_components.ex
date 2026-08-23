@@ -385,6 +385,18 @@ defmodule KlassHeroWeb.ParticipationComponents do
                   <% end %>
                 </div>
               <% end %>
+
+              <%!--
+                Only ever present on an absent row, and only when a person gave
+                one — the batch sweep at session completion records no reason
+                (#1329).
+              --%>
+              <%= if Map.get(record, :absence_reason) do %>
+                <div id={"absence-reason-#{record.id}"} class="mt-2 text-sm text-hero-grey-600 italic">
+                  <span class="font-medium text-hero-black-100">{gettext("Absent:")}</span>
+                  "{record.absence_reason}"
+                </div>
+              <% end %>
             </div>
 
             <div class="flex flex-col items-end gap-2">
@@ -524,7 +536,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
         cancel_event: "cancel_note"
       )
 
-    session_note_inline_form(assigns)
+    inline_text_form(assigns)
   end
 
   @doc """
@@ -554,7 +566,41 @@ defmodule KlassHeroWeb.ParticipationComponents do
         cancel_event: "cancel_revision"
       )
 
-    session_note_inline_form(assigns)
+    inline_text_form(assigns)
+  end
+
+  @doc """
+  Renders an inline form for the reason a child is being marked absent.
+
+  Operational, and deliberately not a session note: a note is parent-approved
+  feedback about the child, while "mum called, sick" is dispatch information
+  nobody should be asked to approve (#1329).
+
+  ## Examples
+
+      <.absence_reason_form
+        form={@absence_forms["record-id"]}
+        record_id="record-id"
+      />
+  """
+  attr :form, Form, required: true, doc: "Form struct from to_form/2"
+  attr :record_id, :string, required: true, doc: "Participation record ID"
+
+  def absence_reason_form(assigns) do
+    assigns =
+      assign(assigns,
+        entity_id: assigns.record_id,
+        id_prefix: "absence-form",
+        wrapper_id_prefix: "absence-reason",
+        label: gettext("Reason for absence (optional)"),
+        placeholder: gettext("e.g. Mum called — off sick today"),
+        submit_label: gettext("Mark absent"),
+        submit_event: "confirm_absence",
+        change_event: "update_absence_reason",
+        cancel_event: "cancel_absence"
+      )
+
+    inline_text_form(assigns)
   end
 
   @doc """
@@ -563,7 +609,8 @@ defmodule KlassHeroWeb.ParticipationComponents do
   Lets the caller patch the record's primary notes field and, when the child
   hasn't departed yet, optionally record a departure time. Submits the
   `submit_edit` event with the form values; the LiveView wires that to
-  `Participation.correct_attendance/1` with the appropriate `actor_role`.
+  `Participation.correct_attendance/3`, which derives the actor's role from the
+  scope rather than taking it from the caller (ADR-0017).
 
   ## Examples
 
@@ -662,6 +709,11 @@ defmodule KlassHeroWeb.ParticipationComponents do
     """
   end
 
+  # One expandable textarea keyed by an entity id. Named for its shape rather
+  # than for session notes since #1329, when the absence reason became a third
+  # caller that is not a note.
+  #
+  # The field is always `:content`, so every wrapper's form must use that key.
   attr :form, Form, required: true
   attr :entity_id, :string, required: true
   attr :id_prefix, :string, required: true
@@ -673,7 +725,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
   attr :change_event, :string, required: true
   attr :cancel_event, :string, required: true
 
-  defp session_note_inline_form(assigns) do
+  defp inline_text_form(assigns) do
     ~H"""
     <div class="mt-3 border-t border-hero-grey-200 pt-3" id={"#{@wrapper_id_prefix}-#{@entity_id}"}>
       <.form

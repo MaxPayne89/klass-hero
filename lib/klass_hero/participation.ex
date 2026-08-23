@@ -24,6 +24,7 @@ defmodule KlassHero.Participation do
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
+  alias KlassHero.Participation.AttendanceTransition
   alias KlassHero.Participation.Domain.Events.ParticipationEvents
   alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.ParticipationRecord
@@ -423,14 +424,17 @@ defmodule KlassHero.Participation do
   def get_session_with_roster(session_id) when is_binary(session_id) do
     with {:ok, session} <- fetch_session(session_id) do
       records = list_records_by_session(session_id)
-      {child_info_map, notes_map} = batch_resolve_roster(records)
+      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
 
       roster =
         Enum.map(records, fn record ->
           info = Map.get(child_info_map, record.child_id, unknown_child_info())
           notes = Map.get(notes_map, record.child_id, [])
 
-          Map.merge(%{record: record}, build_enrichment_fields(info, notes))
+          Map.merge(
+            %{record: record},
+            build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id))
+          )
         end)
 
       {:ok, %{session: session, roster: roster}}
@@ -445,7 +449,7 @@ defmodule KlassHero.Participation do
   def get_session_with_roster_enriched(session_id) when is_binary(session_id) do
     with {:ok, session} <- fetch_session(session_id) do
       records = list_records_by_session(session_id)
-      {child_info_map, notes_map} = batch_resolve_roster(records)
+      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
 
       enriched_records =
         Enum.map(records, fn record ->
@@ -455,7 +459,7 @@ defmodule KlassHero.Participation do
           # Convert struct to plain map so presentation fields can be merged without struct enforcement.
           record
           |> Map.from_struct()
-          |> Map.merge(build_enrichment_fields(info, notes))
+          |> Map.merge(build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id)))
         end)
 
       enriched_session =
@@ -655,6 +659,30 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
+  Marks a child absent by hand, on behalf of `scope`.
+
+  The deliberate counterpart to the batch absence that `complete_session/2`
+  applies to every straggler: this one names an actor and takes a reason, and
+  the `AttendanceTransition` it writes is where the two are told apart (#1329).
+
+  Options: `:reason`. Returns `{:ok, record}`, `{:error, :unauthorized}`,
+  `{:error, :not_found}`, or `{:error, :invalid_status_transition}`.
+  """
+  @spec record_absence(Scope.t(), String.t(), keyword()) ::
+          {:ok, ParticipationRecord.t()} | {:error, atom()}
+  def record_absence(%Scope{} = scope, record_id, opts \\ []) when is_binary(record_id) do
+    context_span entity: "participation_record" do
+      run_attendance_action(
+        scope,
+        record_id,
+        Keyword.get(opts, :reason),
+        &ParticipationRecord.mark_absent/3,
+        &ParticipationEvents.child_marked_absent/2
+      )
+    end
+  end
+
+  @doc """
   Corrects a participation record's attendance data, on behalf of `scope`.
 
   The correction rules follow the scope's derived role: an `:admin` must supply a
@@ -675,7 +703,8 @@ defmodule KlassHero.Participation do
            :ok <- validate_correction_reason(actor_role, attrs),
            correction_attrs = build_correction_attrs(actor_role, record, attrs),
            {:ok, corrected} <- ParticipationRecord.admin_correct(record, correction_attrs),
-           {:ok, {persisted, events}} <- correct_record_with_event(corrected, record.status) do
+           {:ok, {persisted, events}} <-
+             correct_record_with_event(record, corrected, scope.user.id, Map.get(attrs, :reason)) do
         Notifications.notify_all(events)
         {:ok, persisted}
       end
@@ -873,7 +902,10 @@ defmodule KlassHero.Participation do
     with {:ok, record} <- fetch_record(record_id),
          {:ok, _role} <- authorize_for_record(scope, record),
          {:ok, updated} <- domain_fn.(record, scope.user.id, notes),
-         {:ok, {persisted, events}} <- update_record_with_event(updated, event_fn) do
+         # Every verb logs its transition, so there is no condition here to get
+         # wrong and a new verb is covered by using this path (#1329).
+         transition = AttendanceTransition.between(record, updated, scope.user.id, notes),
+         {:ok, {persisted, events}} <- update_record_with_event(updated, event_fn, transition) do
       Notifications.notify_all(events)
       {:ok, persisted}
     end
@@ -934,6 +966,7 @@ defmodule KlassHero.Participation do
       |> Enum.filter(&(&1.status == :registered))
 
     {:ok, _count} = mark_records_absent(Enum.map(registered, & &1.id))
+    {:ok, _logged} = log_batch_absences(registered)
 
     events =
       Enum.map(registered, &ParticipationEvents.child_marked_absent(%{&1 | status: :absent}, session))
@@ -1037,10 +1070,30 @@ defmodule KlassHero.Participation do
         list_notes_approved_by_children(consented_child_ids)
       end
 
-    {child_info_map, notes_map}
+    {child_info_map, notes_map, latest_absence_reasons(records)}
   end
 
-  defp build_enrichment_fields(child_info, notes) do
+  # Why each currently-absent child is absent, in one query for the whole roster
+  # rather than one per row. Only the latest `:absent` transition counts — a child
+  # marked absent, checked in late, then absented again should show the second
+  # reason, not the first.
+  defp latest_absence_reasons(records) do
+    absent_ids = for %{status: :absent, id: id} <- records, do: id
+
+    if absent_ids == [] do
+      %{}
+    else
+      AttendanceTransition
+      |> where([t], t.record_id in ^absent_ids and t.to_status == :absent)
+      |> distinct([t], t.record_id)
+      |> order_by([t], asc: t.record_id, desc: t.occurred_at, desc: t.inserted_at)
+      |> select([t], {t.record_id, t.reason})
+      |> Repo.all()
+      |> Map.new()
+    end
+  end
+
+  defp build_enrichment_fields(child_info, notes, absence_reason) do
     %{
       child_name: "#{child_info.first_name} #{child_info.last_name}",
       child_first_name: child_info.first_name,
@@ -1048,7 +1101,8 @@ defmodule KlassHero.Participation do
       allergies: child_info.allergies,
       support_needs: child_info.support_needs,
       emergency_contact: child_info.emergency_contact,
-      session_notes: notes
+      session_notes: notes,
+      absence_reason: absence_reason
     }
   end
 
@@ -1127,18 +1181,25 @@ defmodule KlassHero.Participation do
   # `previous_status` is read off the record as it was *before* `admin_correct/2`,
   # and has to be: the corrected struct no longer knows where it came from, and the
   # row is about to stop knowing too.
-  defp correct_record_with_event(corrected, previous_status) do
+  # The one attendance write that does not ride `run_attendance_action/5`, so it
+  # logs its own transition. Keeping the two in step is a live obligation, not a
+  # one-off — a correction missing from the log is a hole exactly where someone
+  # would look for it (#1329).
+  defp correct_record_with_event(record, corrected, actor_id, reason) do
     Outbox.transact_with_events(@context, fn ->
-      with {:ok, persisted} <- update_record(corrected) do
+      with {:ok, persisted} <- update_record(corrected),
+           {:ok, _transition} <-
+             Repo.insert(AttendanceTransition.between(record, persisted, actor_id, reason)) do
         session = resolve_session_best_effort(persisted.session_id)
-        {:ok, persisted, [ParticipationEvents.attendance_corrected(persisted, session, previous_status)]}
+        {:ok, persisted, [ParticipationEvents.attendance_corrected(persisted, session, record.status)]}
       end
     end)
   end
 
-  defp update_record_with_event(updated, event_fn) do
+  defp update_record_with_event(updated, event_fn, transition) do
     Outbox.transact_with_events(@context, fn ->
-      with {:ok, persisted} <- update_record(updated) do
+      with {:ok, persisted} <- update_record(updated),
+           {:ok, _transition} <- Repo.insert(transition) do
         # Best-effort: attendance already succeeded; a session fetch failure enriches
         # the event less, it does not fail the write.
         session = resolve_session_best_effort(persisted.session_id)
@@ -1289,6 +1350,34 @@ defmodule KlassHero.Participation do
     |> ParticipationQueries.by_date_range(start_date, end_date)
     |> ParticipationQueries.order_by_session_date_desc()
     |> Repo.all()
+  end
+
+  # The sweep is a bulk `update_all`, so its log entries are a bulk `insert_all` —
+  # neither goes through a changeset, and `insert_all` autogenerates nothing, so
+  # ids and timestamps are set here. NULL actor and reason are the record of the
+  # fact that nobody decided these child by child (#1329).
+  defp log_batch_absences([]), do: {:ok, 0}
+
+  defp log_batch_absences(records) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    rows =
+      for record <- records do
+        %{
+          id: Ecto.UUID.generate(),
+          record_id: record.id,
+          from_status: :registered,
+          to_status: :absent,
+          actor_id: nil,
+          reason: nil,
+          occurred_at: now,
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    {count, _} = Repo.insert_all(AttendanceTransition, rows)
+    {:ok, count}
   end
 
   defp mark_records_absent([]), do: {:ok, 0}
