@@ -12,7 +12,8 @@ defmodule KlassHero.Participation.NotificationsTest do
   @attendance_kinds %{
     child_checked_in: :checked_in,
     child_checked_out: :checked_out,
-    child_marked_absent: :marked_absent
+    child_marked_absent: :marked_absent,
+    attendance_corrected: :corrected
   }
 
   @note_events [:session_note_submitted, :session_note_approved, :session_note_rejected]

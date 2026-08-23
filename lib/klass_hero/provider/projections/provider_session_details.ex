@@ -18,9 +18,12 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
   - `:session_completed` — sets status to `:completed`.
   - `:session_cancelled` — sets status to `:cancelled`.
   - `:roster_seeded` — sets total_count from the seeded roster size.
-  - `:child_checked_in` — increments checked_in_count (monotonic; not reversed).
-  - `:child_checked_out` — intentional no-op (counter is monotonic).
-  - `:child_marked_absent` — intentional no-op (no effect on checked_in_count).
+  - `:child_checked_in` — increments checked_in_count.
+  - `:child_checked_out` — intentional no-op (a departure does not un-attend).
+  - `:child_marked_absent` — intentional no-op. Absence only ever follows
+    `:registered`, so the record was never counted; `ParticipationRecord.mark_absent/1`
+    is what holds that invariant, and this no-op depends on it.
+  - `:attendance_corrected` — applies a delta from `previous_status`/`new_status`.
   - `:staff_assigned_to_program` / `:staff_unassigned_from_program` — re-resolve
     current_assigned_staff_* on the program's `:scheduled` rows that are **not**
     overridden, from the assignment table rather than from the event.
@@ -30,6 +33,16 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
     to mention.
   - `:staff_assigned_to_session` / `:staff_unassigned_from_session` — re-resolve
     the one named session through `Assignments.get_session_attribution/1`.
+
+  ## The counter is monotonic under attendance, not under correction
+
+  Forward attendance only ever adds: a check-out leaves the record counted, because
+  the question is "how many showed up", not "how many are still here". A
+  *correction* is the one thing that can subtract, and must — it says the check-in
+  did not happen. Bootstrap recomputes
+  `COUNT(*) FILTER (WHERE status IN ('checked_in','checked_out'))` from current
+  rows, so without the delta the live counter and a rebuilt one disagree, and the
+  number silently jumps at the next restart with no event explaining it (#1329).
 
   ## Attribution has two grains
 
@@ -52,6 +65,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
       "integration:participation:child_checked_in",
       "integration:participation:child_checked_out",
       "integration:participation:child_marked_absent",
+      "integration:participation:attendance_corrected",
       "integration:provider:staff_assigned_to_program",
       "integration:provider:staff_unassigned_from_program",
       "integration:provider:staff_assigned_to_session",
@@ -128,11 +142,30 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
     )
   end
 
-  # Intentional no-op: absences are the complement of check-in and don't affect the counter.
+  # Intentional no-op: absence only ever follows :registered, so the record was
+  # never counted. This rests on `ParticipationRecord.mark_absent/1` refusing any
+  # other source status — widen that and this clause becomes wrong.
   def handle_event(:child_marked_absent, %Event{} = event) do
     Logger.debug("ProviderSessionDetails ignoring child_marked_absent (no effect on checked_in_count)",
       record_id: event.entity_id
     )
+  end
+
+  # The only event that can subtract — a correction says the check-in did not happen.
+  def handle_event(:attendance_corrected, %Event{payload: payload} = event) do
+    session_id = payload.session_id
+
+    case delta(payload.previous_status, payload.new_status) do
+      0 ->
+        :ok
+
+      delta ->
+        now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+        from(d in SessionDetail, where: d.session_id == ^session_id)
+        |> Repo.update_all(inc: [checked_in_count: delta], set: [updated_at: now])
+        |> warn_if_missing("attendance_corrected", session_id: session_id, record_id: event.entity_id)
+    end
   end
 
   # Both directions re-resolve the program's attribution from
@@ -455,6 +488,18 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
   end
 
   defp warn_if_missing(_result, _event_name, _metadata), do: :ok
+
+  defp delta(previous, new) do
+    case {counted?(previous), counted?(new)} do
+      {false, true} -> 1
+      {true, false} -> -1
+      _unchanged -> 0
+    end
+  end
+
+  # Mirrors bootstrap's `status IN ('checked_in','checked_out')` filter. The two
+  # must keep agreeing, or the live counter and a rebuilt one diverge.
+  defp counted?(status), do: status in [:checked_in, :checked_out]
 
   # Deliberately the same LATERAL shape as bootstrap_session_details/0, not a
   # second spelling of it: both answer "which staff member is currently assigned

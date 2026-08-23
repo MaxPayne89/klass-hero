@@ -660,6 +660,11 @@ defmodule KlassHero.Participation do
   The correction rules follow the scope's derived role: an `:admin` must supply a
   `:reason`, which is appended to the notes of whichever field changed; a
   `:provider` or `:staff` actor corrects their own roster without one.
+
+  Announces itself like every other attendance write. Until #1329 it ended at a
+  bare update: no event, no broadcast — so a correction reached neither the other
+  connected clients nor `ProviderSessionDetails`, whose `checked_in_count` then
+  drifted from what a rebuild would compute.
   """
   @spec correct_attendance(Scope.t(), String.t(), map()) ::
           {:ok, ParticipationRecord.t()} | {:error, atom()}
@@ -669,8 +674,10 @@ defmodule KlassHero.Participation do
            {:ok, actor_role} <- authorize_for_record(scope, record),
            :ok <- validate_correction_reason(actor_role, attrs),
            correction_attrs = build_correction_attrs(actor_role, record, attrs),
-           {:ok, corrected} <- ParticipationRecord.admin_correct(record, correction_attrs) do
-        update_record(corrected)
+           {:ok, corrected} <- ParticipationRecord.admin_correct(record, correction_attrs),
+           {:ok, {persisted, events}} <- correct_record_with_event(corrected, record.status) do
+        Notifications.notify_all(events)
+        {:ok, persisted}
       end
     end
   end
@@ -1113,6 +1120,18 @@ defmodule KlassHero.Participation do
       with {:ok, persisted} <- update_session(completed),
            {:ok, absence_events} <- mark_remaining_as_absent(persisted) do
         {:ok, persisted, absence_events ++ [session_completed_event(persisted)]}
+      end
+    end)
+  end
+
+  # `previous_status` is read off the record as it was *before* `admin_correct/2`,
+  # and has to be: the corrected struct no longer knows where it came from, and the
+  # row is about to stop knowing too.
+  defp correct_record_with_event(corrected, previous_status) do
+    Outbox.transact_with_events(@context, fn ->
+      with {:ok, persisted} <- update_record(corrected) do
+        session = resolve_session_best_effort(persisted.session_id)
+        {:ok, persisted, [ParticipationEvents.attendance_corrected(persisted, session, previous_status)]}
       end
     end)
   end
