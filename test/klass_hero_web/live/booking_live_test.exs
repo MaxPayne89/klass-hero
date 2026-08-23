@@ -96,6 +96,13 @@ defmodule KlassHeroWeb.BookingLiveTest do
       assert line_item_count(view) == 1
     end
 
+    test "a free program's total reads Free, not €0.00", %{conn: conn} do
+      program = insert(:program_schema, price: Decimal.new("0.00"))
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
+
+      assert summary_total(view) == "Free"
+    end
+
     test "total is the same regardless of payment method", %{conn: conn} do
       program = insert(:program_schema, price: Decimal.new("75.00"))
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")

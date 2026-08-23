@@ -3,31 +3,30 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramPricingTest do
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramPricing
 
-  describe "format_price/1" do
-    test "formats Decimal value with currency symbol" do
-      assert ProgramPricing.format_price(Decimal.new("45.00")) == "€45.00"
+  describe "price_state/1" do
+    @states [
+      {nil, :unset, "a program nobody has priced yet"},
+      {Decimal.new("0"), :free, "an integral zero"},
+      {Decimal.new("0.00"), :free, "a zero carrying scale — Decimal.equal?/2, not ==/2"},
+      {Decimal.new("-0"), :free, "negative zero still equals zero"}
+    ]
+
+    test "classifies the non-priced states" do
+      for {price, expected, why} <- @states do
+        assert ProgramPricing.price_state(price) == expected,
+               "#{inspect(price)} (#{why}) should classify as #{inspect(expected)}"
+      end
     end
 
-    test "formats integer with currency symbol and two decimal places" do
-      assert ProgramPricing.format_price(100) == "€100.00"
+    test "classifies a positive price as priced, carrying the amount through" do
+      price = Decimal.new("45.00")
+
+      assert {:priced, ^price} = ProgramPricing.price_state(price)
     end
 
-    test "formats float with currency symbol and two decimal places" do
-      assert ProgramPricing.format_price(45.50) == "€45.50"
-    end
-
-    test "returns N/A for nil price" do
-      assert ProgramPricing.format_price(nil) == "N/A"
-    end
-
-    test "formats zero Decimal correctly" do
-      assert ProgramPricing.format_price(Decimal.new("0.00")) == "€0.00"
-    end
-  end
-
-  describe "default_currency/0" do
-    test "returns euro symbol" do
-      assert ProgramPricing.default_currency() == "€"
+    test "does not round — rounding belongs to the formatter, not the classifier" do
+      assert {:priced, amount} = ProgramPricing.price_state(Decimal.new("45.5"))
+      assert Decimal.to_string(amount) == "45.5"
     end
   end
 end

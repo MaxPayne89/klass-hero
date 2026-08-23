@@ -15,7 +15,7 @@ defmodule KlassHeroWeb.ProgramCardActionsSlotTest do
     meeting_start_time: ~T[15:00:00],
     meeting_end_time: ~T[17:00:00],
     age_range: "6-8 years",
-    price: 120.0,
+    price: Decimal.new("120.00"),
     period: "per month",
     spots_left: nil,
     gradient_class: "bg-gradient-to-br from-hero-blue-400 to-hero-blue-600",

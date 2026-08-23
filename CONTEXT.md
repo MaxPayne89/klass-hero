@@ -33,6 +33,10 @@ _Avoid_: Archived (that is a **Conversation**), Completed (that is a **Session**
 What a **Program** costs a parent, always **gross** — the final amount payable, VAT included whatever the rate turns out to be. A Provider entering "100" means the parent pays €100. Net and VAT are *derived* from it, never the other way round.
 _Avoid_: Net price, Fee (reserved for the platform's success-based fee), Cost
 
+**Free Program**:
+A **Program** whose **Price** is zero. Distinct from one that has *no* price yet, which is simply incomplete — a Provider who has not filled the field in has said nothing about money, where a zero says something definite: no **Payment** exists for this Program (see **Payment**). Every parent-facing surface says "Free" rather than "€0.00", because a zero amount reads as a formatting accident. The three states are named in code as `:free`, `:unset` and `{:priced, amount}`.
+_Avoid_: No Cost ("Cost" is not our word — see **Price**), Zero-price, Gratis, Complimentary
+
 ## Scheduling
 
 **Session**:

@@ -5,9 +5,11 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
+  alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.Program
   alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.ReadModels.ProgramStaffing
+  alias KlassHero.Shared.Money
   alias KlassHero.Shared.NameUtils
 
   require Logger
@@ -45,7 +47,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       id: id,
       name: title,
       category: humanize_category(category),
-      price: format_price(price),
+      price: price_label(price),
       assigned_staff: format_staffing(staffing),
       status: :active,
       enrolled: Map.get(data, :enrolled),
@@ -79,9 +81,10 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       description: program.description,
       category: humanize_category(program.category),
       age_range: program.age_range,
-      # Keep as Decimal — program_card/format_price expects Decimal.t(), not a string.
-      price: if(program.price, do: Decimal.round(program.price, 2), else: Decimal.new(0)),
-      period: program.pricing_period,
+      # Keep the raw price — the card calls `price_label/1`, which needs to tell an
+      # unpriced program from a free one. Coercing nil to zero here would label an
+      # incomplete program "Free", which is a claim about money, not a missing value.
+      price: program.price,
       icon_name: icon_name(program.category),
       gradient_class: default_gradient_class(),
       meeting_days: program.meeting_days || [],
@@ -259,8 +262,37 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
     format_date_range(start_date, end_date)
   end
 
-  defp format_price(nil), do: "0.00"
-  defp format_price(price), do: price |> Decimal.round(2) |> Decimal.to_string()
+  @doc """
+  Renders a price as the text a person reads — the single owner of that string.
+
+  Every price surface goes through here so that "Free" is worded and translated
+  once. The domain classifies (`ProgramCatalog.price_state/1`) and `Shared.Money`
+  formats the amount; this function only chooses the words, which is why it —
+  and not the domain — is where `gettext/1` belongs: `mix lint_translations`
+  only sees call sites under `lib/klass_hero_web/`.
+
+  Takes the raw price, so a `%Program{}`, a `%ProgramListing{}` and a bare
+  enrollment total all render identically.
+
+  ## Examples
+
+      iex> ProgramPresenter.price_label(Decimal.new("45.00"))
+      "€45.00"
+
+      iex> ProgramPresenter.price_label(Decimal.new("0"))
+      "Free"
+
+      iex> ProgramPresenter.price_label(nil)
+      "N/A"
+  """
+  @spec price_label(Decimal.t() | nil) :: String.t()
+  def price_label(price) do
+    case ProgramCatalog.price_state(price) do
+      :unset -> gettext("N/A")
+      :free -> gettext("Free")
+      {:priced, amount} -> amount |> Money.eur() |> Money.format()
+    end
+  end
 
   # The table's staff cell. Always a map, so the template branches on values
   # rather than on the presence of the key. `count` is everyone active on the
@@ -309,22 +341,6 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   end
 
   def format_category_for_display(_), do: "Education"
-
-  @doc """
-  Safely converts a Decimal, nil, or unknown value to a float.
-
-  ## Examples
-
-      iex> KlassHeroWeb.Presenters.ProgramPresenter.safe_decimal_to_float(Decimal.new("19.99"))
-      19.99
-
-      iex> KlassHeroWeb.Presenters.ProgramPresenter.safe_decimal_to_float(nil)
-      0.0
-  """
-  @spec safe_decimal_to_float(Decimal.t() | nil | term()) :: float()
-  def safe_decimal_to_float(nil), do: 0.0
-  def safe_decimal_to_float(%Decimal{} = price), do: Decimal.to_float(price)
-  def safe_decimal_to_float(_other), do: 0.0
 
   @doc """
   Transforms a category code to a human-readable label.
