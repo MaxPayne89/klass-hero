@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.85.0](https://github.com/MaxPayne89/klass-hero/compare/v0.84.0...v0.85.0) (2026-08-23)
+
+
+### Features
+
+* add cover image, tagline, and social links to the provider profile ([#1488](https://github.com/MaxPayne89/klass-hero/issues/1488)) ([2fedee9](https://github.com/MaxPayne89/klass-hero/commit/2fedee9452b7d113a391f351332f7acdf4c14b9d)), closes [#1301](https://github.com/MaxPayne89/klass-hero/issues/1301)
+
+
+### Bug Fixes
+
+* attendance corrections announce themselves ([#1490](https://github.com/MaxPayne89/klass-hero/issues/1490)) ([e8b81c9](https://github.com/MaxPayne89/klass-hero/commit/e8b81c9aed14e66cd63bd679140337f6bb45fc23)), closes [#1329](https://github.com/MaxPayne89/klass-hero/issues/1329)
+
 ## [0.84.0](https://github.com/MaxPayne89/klass-hero/compare/v0.83.0...v0.84.0) (2026-08-23)
 
 
