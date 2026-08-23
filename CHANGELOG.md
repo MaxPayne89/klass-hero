@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.87.0](https://github.com/MaxPayne89/klass-hero/compare/v0.86.0...v0.87.0) (2026-08-23)
+
+
+### Features
+
+* render provider branding on the parent-facing profile card ([#1496](https://github.com/MaxPayne89/klass-hero/issues/1496)) ([9f0e8f3](https://github.com/MaxPayne89/klass-hero/commit/9f0e8f307f4c3d3aad7bd0351619b9d931c1577b)), closes [#1303](https://github.com/MaxPayne89/klass-hero/issues/1303)
+
 ## [0.86.0](https://github.com/MaxPayne89/klass-hero/compare/v0.85.0...v0.86.0) (2026-08-23)
 
 
