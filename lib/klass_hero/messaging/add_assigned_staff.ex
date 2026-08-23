@@ -21,7 +21,7 @@ defmodule KlassHero.Messaging.AddAssignedStaff do
   - `{:error, reason}` — when the participant batch insert fails.
   """
 
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Shared.Domain.Events.Event
 
   @spec execute(String.t(), String.t() | nil, String.t()) ::
@@ -39,7 +39,7 @@ defmodule KlassHero.Messaging.AddAssignedStaff do
 
   defp add(ids, conversation_id) do
     with {:ok, _} <- KlassHero.Messaging.add_participants(conversation_id, ids) do
-      event = MessagingEvents.participant_added(conversation_id, ids, :initial_staff)
+      event = Events.participant_added(conversation_id, ids, :initial_staff)
       {:ok, {ids, [event]}}
     end
   end

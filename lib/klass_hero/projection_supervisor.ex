@@ -10,8 +10,8 @@ defmodule KlassHero.ProjectionSupervisor do
 
   use Supervisor
 
-  alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
-  alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
+  alias KlassHero.Messaging.ConversationSummaries
+  alias KlassHero.Messaging.EnrolledChildren
   alias KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings
   alias KlassHero.Provider.Projections.ProviderPrograms
   alias KlassHero.Provider.Projections.ProviderSessionDetails

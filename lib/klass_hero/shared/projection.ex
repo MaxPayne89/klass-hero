@@ -14,7 +14,7 @@ defmodule KlassHero.Shared.Projection do
 
   ## Usage
 
-      defmodule MyContext.Adapters.Driven.Projections.MyProjection do
+      defmodule MyContext.Projections.MyProjection do
         use KlassHero.Shared.Projection,
           topics: ["integration:some_context:some_event"]
 

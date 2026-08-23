@@ -58,6 +58,16 @@ defmodule KlassHero.Messaging.Conversation do
   @required_fields ~w(type provider_id)a
   @optional_fields ~w(program_id subject archived_at retention_until lock_version)a
 
+  @doc """
+  Attrs for a direct conversation, carrying `:program_id` only when there is one.
+
+  A direct thread may or may not hang off a program.
+  """
+  @spec direct_attrs(String.t(), String.t() | nil) :: map()
+  def direct_attrs(provider_id, nil), do: %{type: :direct, provider_id: provider_id}
+
+  def direct_attrs(provider_id, program_id), do: %{type: :direct, provider_id: provider_id, program_id: program_id}
+
   @doc "Changeset for creating a conversation."
   def create_changeset(schema \\ %__MODULE__{}, attrs) do
     schema

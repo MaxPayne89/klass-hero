@@ -6,7 +6,7 @@ defmodule KlassHero.Messaging.ReceiveInboundEmail do
   """
 
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker
+  alias KlassHero.Messaging.Workers.FetchEmailContentWorker
 
   require Logger
 

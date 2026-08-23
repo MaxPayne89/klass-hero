@@ -10,7 +10,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
   Typically run by a background worker (Oban) on a daily schedule.
   """
 
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -79,7 +79,7 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversations do
   defp archived_events(%{count: 0}), do: []
 
   defp archived_events(%{count: count, conversation_ids: ids, archived_at: archived_at}) do
-    [MessagingEvents.conversations_archived(ids, :program_ended, count, archived_at)]
+    [Events.conversations_archived(ids, :program_ended, count, archived_at)]
   end
 
   defp default_days_after_program_end do

@@ -11,9 +11,10 @@ defmodule KlassHero.Shared.ReadTable do
         end
       end
 
-  A read table is the denormalized output of a projection GenServer under
-  `adapters/driven/projections/`. Four rules follow from that; `mix lint_read_tables`
-  enforces the first three, and a guard test enforces the fourth:
+  A read table is the denormalized output of a projection GenServer — one at the
+  context root, or under `projections/` once that kind holds three or more files.
+  Four rules follow from that; `mix lint_read_tables` enforces the first three, and
+  a guard test enforces the fourth:
 
   1. **No changeset.** The projection is the only writer, so there is no user input
      to validate at this boundary. A changeset here means something other than the

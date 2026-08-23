@@ -2,7 +2,7 @@ defmodule KlassHeroWeb.ResendWebhookControllerTest do
   use KlassHeroWeb.ConnCase, async: true
 
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
+  alias KlassHero.Messaging.ResendEmailContentAdapter
 
   @valid_payload %{
     "type" => "email.received",

@@ -8,7 +8,7 @@ defmodule KlassHero.Messaging.MarkAsRead do
   3. Publishes a messages_read event for real-time updates
   """
 
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Participant
   alias KlassHero.Shared.Outbox
 
@@ -37,7 +37,7 @@ defmodule KlassHero.Messaging.MarkAsRead do
     result =
       Outbox.transact(@context, fn ->
         with {:ok, participant} <- KlassHero.Messaging.mark_participant_read(conversation_id, user_id, read_at) do
-          {:ok, participant, [MessagingEvents.messages_read(conversation_id, user_id, read_at)]}
+          {:ok, participant, [Events.messages_read(conversation_id, user_id, read_at)]}
         end
       end)
 

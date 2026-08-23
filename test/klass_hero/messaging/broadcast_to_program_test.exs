@@ -6,9 +6,9 @@ defmodule KlassHero.Messaging.BroadcastToProgramTest do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
   alias KlassHero.Messaging.BroadcastToProgram
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationSummaries
   alias KlassHero.Messaging.Message
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.ProviderFixtures

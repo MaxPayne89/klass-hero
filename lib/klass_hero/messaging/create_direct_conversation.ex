@@ -19,9 +19,9 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.AddAssignedStaff
+  alias KlassHero.Messaging.Authorization
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Shared
+  alias KlassHero.Messaging.Events
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -51,7 +51,7 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
           {:ok, Conversation.t()}
           | {:error, :not_entitled | term()}
   def execute(%Scope{} = scope, provider_id, target_user_id, opts \\ []) do
-    with :ok <- Shared.maybe_check_entitlement(scope, opts) do
+    with :ok <- Authorization.maybe_check_entitlement(scope, opts) do
       find_or_create_conversation(scope, provider_id, target_user_id, opts)
     end
   end
@@ -71,16 +71,14 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
     program_id = Keyword.get(opts, :program_id)
 
     Outbox.transact(@context, fn ->
-      attrs =
-        %{type: :direct, provider_id: provider_id}
-        |> Shared.maybe_put_program_id(program_id)
+      attrs = Conversation.direct_attrs(provider_id, program_id)
 
       with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            :ok <- add_participants(conversation.id, scope.user.id, target_user_id),
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, program_id, scope.user.id) do
         created_event =
-          MessagingEvents.conversation_created(
+          Events.conversation_created(
             conversation.id,
             conversation.type,
             provider_id,

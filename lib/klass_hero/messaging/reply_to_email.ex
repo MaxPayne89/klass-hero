@@ -7,7 +7,7 @@ defmodule KlassHero.Messaging.ReplyToEmail do
   """
 
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker
+  alias KlassHero.Messaging.Workers.SendEmailReplyWorker
 
   require Logger
 

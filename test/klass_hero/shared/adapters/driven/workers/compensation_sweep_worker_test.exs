@@ -11,7 +11,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker
+  alias KlassHero.Messaging.Workers.SendEmailReplyWorker
   alias KlassHero.MessagingFixtures
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Events.EventSerializer
@@ -21,8 +21,8 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorkerTest d
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Tracing.TracedWorker
 
-  @registered "KlassHero.Messaging.Adapters.Driving.Workers.SendEmailReplyWorker"
-  @unregistered "KlassHero.Messaging.Adapters.Driving.Workers.MessageCleanupWorker"
+  @registered "KlassHero.Messaging.Workers.SendEmailReplyWorker"
+  @unregistered "KlassHero.Messaging.Workers.MessageCleanupWorker"
   @delivery "KlassHero.Shared.Adapters.Driven.Workers.EventDeliveryWorker"
 
   describe "execute/1" do

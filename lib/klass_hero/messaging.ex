@@ -31,10 +31,6 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
-  alias KlassHero.Messaging.Adapters.Driven.EmailSanitizer
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.ConversationQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.InboundEmailQueries
-  alias KlassHero.Messaging.Adapters.Driven.Persistence.Queries.MessageQueries
 
   alias KlassHero.Messaging.{
     AnonymizeUserData,
@@ -59,10 +55,14 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.EmailReply
+  alias KlassHero.Messaging.EmailSanitizer
   alias KlassHero.Messaging.InboundEmail
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Participant
+  alias KlassHero.Messaging.Queries.ConversationQueries
+  alias KlassHero.Messaging.Queries.InboundEmailQueries
+  alias KlassHero.Messaging.Queries.MessageQueries
   alias KlassHero.Repo
 
   require Logger

@@ -16,7 +16,7 @@ defmodule KlassHero.Messaging.StaffMessagingIntegrationTest do
   alias KlassHero.Accounts.User
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
+  alias KlassHero.Messaging.StaffAssignmentHandler
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Domain.Events.Event

@@ -11,6 +11,20 @@ defmodule KlassHero.Messaging.ConversationTest do
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Conversation
 
+  describe "direct_attrs/2" do
+    test "omits :program_id entirely when there is no program" do
+      attrs = Conversation.direct_attrs("prov-1", nil)
+
+      assert attrs == %{type: :direct, provider_id: "prov-1"}
+      refute Map.has_key?(attrs, :program_id)
+    end
+
+    test "carries :program_id when the thread hangs off a program" do
+      assert Conversation.direct_attrs("prov-1", "prog-9") ==
+               %{type: :direct, provider_id: "prov-1", program_id: "prog-9"}
+    end
+  end
+
   describe "create_changeset/2" do
     test "valid for a direct conversation" do
       changeset =

@@ -10,8 +10,8 @@ defmodule KlassHero.Messaging.GetConversation do
   5. Returns conversation with messages enriched with sender names
   """
 
+  alias KlassHero.Messaging.Authorization
   alias KlassHero.Messaging.MarkAsRead
-  alias KlassHero.Messaging.Shared
 
   require Logger
 
@@ -43,7 +43,7 @@ defmodule KlassHero.Messaging.GetConversation do
 
     with {:ok, conversation} <-
            KlassHero.Messaging.get_conversation_by_id(conversation_id, preload: [:participants]),
-         :ok <- Shared.verify_participant(conversation_id, user_id),
+         :ok <- Authorization.verify_participant(conversation_id, user_id),
          {:ok, messages, sender_names, has_more} <-
            KlassHero.Messaging.list_messages_with_senders(conversation_id, opts) do
       maybe_mark_as_read(mark_as_read?, conversation_id, user_id)

@@ -12,9 +12,9 @@ defmodule KlassHero.Messaging.StartProgramConversation do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.AddAssignedStaff
+  alias KlassHero.Messaging.Authorization
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
-  alias KlassHero.Messaging.Shared
+  alias KlassHero.Messaging.Events
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -24,7 +24,7 @@ defmodule KlassHero.Messaging.StartProgramConversation do
   @spec execute(Scope.t(), String.t(), String.t()) ::
           {:ok, Conversation.t()} | {:error, :not_found | :not_entitled | term()}
   def execute(%Scope{} = scope, provider_id, program_id) do
-    with :ok <- Shared.maybe_check_entitlement(scope, []),
+    with :ok <- Authorization.maybe_check_entitlement(scope, []),
          {:ok, owner_user_id} <- provider_owner_user_id(provider_id) do
       find_or_create(scope, provider_id, program_id, owner_user_id)
     end
@@ -58,7 +58,7 @@ defmodule KlassHero.Messaging.StartProgramConversation do
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, program_id, scope.user.id) do
         created_event =
-          MessagingEvents.conversation_created(
+          Events.conversation_created(
             conversation.id,
             conversation.type,
             provider_id,

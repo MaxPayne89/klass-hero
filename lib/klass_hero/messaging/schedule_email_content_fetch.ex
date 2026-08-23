@@ -3,7 +3,7 @@ defmodule KlassHero.Messaging.ScheduleEmailContentFetch do
   Command for scheduling a content fetch retry for an inbound email.
   """
 
-  alias KlassHero.Messaging.Adapters.Driving.Workers.FetchEmailContentWorker
+  alias KlassHero.Messaging.Workers.FetchEmailContentWorker
 
   @doc """
   Schedules a content fetch for an inbound email.

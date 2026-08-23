@@ -57,7 +57,7 @@ context is flat.
 
 See ADR 0018 for the reasoning.
 
-> **Migration in progress.** Accounts, Provider and Family are flat. The other four contexts still carry
+> **Migration in progress.** Accounts, Provider, Family and Messaging are flat. The other three contexts still carry
 > the old `adapters/{driven,driving}/…` + `domain/…` tree and are being converted
 > one PR at a time. **Both shapes are legal until that finishes** — do not flag an
 > unconverted context as a violation, and do not half-convert one as a drive-by.
@@ -118,7 +118,7 @@ not copy this into one.
   | Kind | Home | Shape | Example |
   |---|---|---|---|
   | Projection read **table** | context root | Ecto schema **is** the DTO; **no changeset** — the projection owns every write; string columns are **`text`**, never a capped `varchar` | `provider/provider_program.ex`, `messaging/enrolled_child.ex` |
-  | Query-shaped struct over **write** tables | `read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/domain/read_models/staff_membership.ex` |
+  | Query-shaped struct over **write** tables | `read_models/` | plain struct, no schema twin, no table; built by a `select:` or a `from_*/1` narrowing | `provider/read_models/staff_membership.ex` |
   | Event-maintained table with **no** projection | context root + an ops submodule | schema **keeps** its changeset, because a handler writes it directly | *none — see below* |
 
 - **A length cap on a read table is unenforceable, so it is a liability.** The
@@ -144,7 +144,7 @@ not copy this into one.
 - **Queries go in the context module or a context-root submodule** (`provider/programs.ex`, `provider/assignments.ex`) — never behind a per-table repository wrapper. A read-only module that just wraps `where`/`order_by`/`Repo.all` is indirection without a payer.
 - No mappers, and no separate DTO twinned with a projection schema. If you are writing a `to_dto/1`, the two modules should be one.
 - Build new projections on `KlassHero.Shared.Projection` (base macro); optionally `KlassHero.Shared.Projection.WithBootstrapRetry` (linear-backoff retry). Declare `:topics` in `use Projection, ...` and implement `bootstrap_impl/0` and `handle_event/2`.
-- Canonical examples: `provider/adapters/driven/projections/provider_programs.ex` for the projection GenServer, and `program_catalog/program_listing.ex` for the read table a projection maintains — copy the latter for the schema-is-the-DTO shape. Program Catalog, Messaging, and Provider all have projections.
+- Canonical examples: `provider/projections/provider_programs.ex` for the projection GenServer, and `program_catalog/program_listing.ex` for the read table a projection maintains — copy the latter for the schema-is-the-DTO shape. Program Catalog, Messaging, and Provider all have projections.
 
 ## Domain Modeling Idioms
 
@@ -162,6 +162,6 @@ Schema-as-struct itself is covered above under `## Context Layout` and `## Recom
 
 - `lib/klass_hero/provider/staff_member.ex` — schema-as-struct with inlined functional core
 - `lib/klass_hero/program_catalog/program_listing.ex` — read-table schema as the display DTO
-- `lib/klass_hero/provider/adapters/driven/projections/provider_programs.ex` — projection pattern
+- `lib/klass_hero/provider/projections/provider_programs.ex` — projection pattern
 - `lib/klass_hero/shared/` — event infrastructure, projection macro, interaction/tracing
 - `config/config.exs` — `:event_consumers` registry (DI port maps are gone)
