@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.83.0](https://github.com/MaxPayne89/klass-hero/compare/v0.82.0...v0.83.0) (2026-08-23)
+
+
+### Features
+
+* add an optional subtitle to programs ([#1481](https://github.com/MaxPayne89/klass-hero/issues/1481)) ([f55930c](https://github.com/MaxPayne89/klass-hero/commit/f55930cc28051c3d1bf4a29597fe6881bc1860ea))
+
+
+### Code Refactoring
+
+* flatten the family context layout ([#1480](https://github.com/MaxPayne89/klass-hero/issues/1480)) ([64cce2e](https://github.com/MaxPayne89/klass-hero/commit/64cce2e061d9b4af08232337012cb259b344fe40))
+* flatten the messaging context layout ([#1482](https://github.com/MaxPayne89/klass-hero/issues/1482)) ([a2c8c8d](https://github.com/MaxPayne89/klass-hero/commit/a2c8c8de2a2821989ac1657383e4dfb1eca36e86))
+
 ## [0.82.0](https://github.com/MaxPayne89/klass-hero/compare/v0.81.2...v0.82.0) (2026-08-22)
 
 
