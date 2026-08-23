@@ -6,10 +6,19 @@ defmodule KlassHero.Participation.ParticipationRecord do
   ## Status Lifecycle
 
   ```
-  :registered → :checked_in → :checked_out
-                    ↓
-               :absent (if session completed without check-in)
+  :registered ──→ :checked_in ──→ :checked_out
+       │               ▲
+       ↓               │ arrived late
+    :absent ───────────┘
   ```
+
+  A child becomes `:absent` two ways: marked by hand with a reason, or swept
+  there when the session is completed with them still `:registered`. The record
+  itself cannot tell those apart — who marked it, when, and why live on
+  `AttendanceTransition` (#1329).
+
+  `admin_correct/2` bypasses all of this on purpose; it is the only way back
+  from `:checked_out`.
   """
 
   use Ecto.Schema
@@ -100,12 +109,19 @@ defmodule KlassHero.Participation.ParticipationRecord do
     end
   end
 
-  @doc "Checks in the child. Errors unless `:registered`."
+  @doc """
+  Checks in the child. Errors once the child has already arrived.
+
+  Accepted from `:absent` as well as `:registered` (#1329): a child marked absent
+  at 09:05 who walks in at 09:20 is checked in from the roster, not corrected by
+  an admin. The count a provider sees stays right either way — `:absent` is not
+  counted as present, so the check-in still adds one.
+  """
   @spec check_in(t(), String.t(), String.t() | nil) ::
           {:ok, t()} | {:error, :invalid_status_transition}
   def check_in(record, checked_in_by, notes \\ nil)
 
-  def check_in(%__MODULE__{status: :registered} = record, checked_in_by, notes) do
+  def check_in(%__MODULE__{status: status} = record, checked_in_by, notes) when status in [:registered, :absent] do
     {:ok,
      %{
        record
@@ -140,6 +156,16 @@ defmodule KlassHero.Participation.ParticipationRecord do
   @spec mark_absent(t()) :: {:ok, t()} | {:error, :invalid_status_transition}
   def mark_absent(%__MODULE__{status: :registered} = record), do: {:ok, %{record | status: :absent}}
   def mark_absent(%__MODULE__{}), do: {:error, :invalid_status_transition}
+
+  @doc """
+  Marks the child absent, in the shape the shared attendance path expects.
+
+  The actor and reason are accepted to match `check_in/3` — `run_attendance_action/5`
+  calls every verb with `(record, actor_id, notes)` — but are not stored on the
+  record. An absence's who and why live on `AttendanceTransition` (#1329).
+  """
+  @spec mark_absent(t(), String.t(), String.t() | nil) :: {:ok, t()} | {:error, :invalid_status_transition}
+  def mark_absent(%__MODULE__{} = record, _absent_by, _reason), do: mark_absent(record)
 
   @doc "Returns true if the child is currently checked in."
   @spec checked_in?(t()) :: boolean()

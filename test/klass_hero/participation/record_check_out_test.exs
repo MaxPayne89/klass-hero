@@ -7,6 +7,7 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
 
   use KlassHero.DataCase, async: true
 
+  import KlassHero.AttendanceLogHelper
   import KlassHero.Factory
 
   alias KlassHero.AccountsFixtures
@@ -133,6 +134,34 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
       assert reloaded.status == :checked_out
       assert reloaded.check_out_at != nil
       assert reloaded.check_out_by == scope.user.id
+    end
+  end
+
+  # Same assertion as its siblings, deliberately (#1329) — see
+  # `KlassHero.AttendanceLogHelper`.
+  describe "record_check_out/3 attendance log" do
+    test "logs the transition, its actor, and the notes as the reason" do
+      session = insert(:program_session_schema, status: :in_progress)
+      scope = AccountsFixtures.admin_scope_fixture()
+
+      record =
+        insert(:participation_record_schema,
+          session_id: session.id,
+          child_id: insert(:child_schema).id,
+          status: :checked_in,
+          check_in_at: DateTime.add(DateTime.utc_now(), -3600, :second),
+          check_in_by: AccountsFixtures.unconfirmed_user_fixture().id
+        )
+
+      {:ok, checked_out} =
+        KlassHero.Participation.record_check_out(scope, record.id, notes: "Picked up by parent")
+
+      assert transition = only_transition(record.id)
+      assert transition.from_status == :checked_in
+      assert transition.to_status == :checked_out
+      assert transition.reason == "Picked up by parent"
+      assert transition.actor_id == checked_out.check_out_by
+      assert abs(DateTime.diff(transition.occurred_at, checked_out.check_out_at)) <= 1
     end
   end
 end

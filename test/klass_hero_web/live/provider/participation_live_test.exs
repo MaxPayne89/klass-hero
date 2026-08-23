@@ -857,4 +857,63 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       refute has_element?(view, "#edit-btn-#{record.id}")
     end
   end
+
+  describe "marking a child absent" do
+    setup [:create_session_with_child]
+
+    test "records the absence with its reason and shows it on the row", %{
+      conn: conn,
+      session: session,
+      record: record
+    } do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      view |> element("#mark-absent-btn-#{record.id}") |> render_click()
+
+      view
+      |> form("#absence-form-#{record.id}", %{"absence" => %{"content" => "Mum called — off sick"}})
+      |> render_submit()
+
+      assert_flash(view, :info, "Child marked absent")
+      assert KlassHero.Repo.get!(ParticipationRecord, record.id).status == :absent
+      assert has_element?(view, "#absence-reason-#{record.id}")
+      assert render(view) =~ "Mum called — off sick"
+    end
+
+    # Defect 4: an absent row used to render "Check In", which the state machine
+    # rejected every time. It now renders a working late-arrival action instead.
+    test "an absent row offers a late arrival, not a second Mark absent", %{
+      conn: conn,
+      session: session,
+      record: record,
+      scope: scope
+    } do
+      {:ok, _} = Participation.record_absence(scope, record.id, reason: "No-show")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      refute has_element?(view, "#mark-absent-btn-#{record.id}")
+      assert has_element?(view, "button[phx-click='check_in'][phx-value-id='#{record.id}']")
+
+      view
+      |> element("button[phx-click='check_in'][phx-value-id='#{record.id}']")
+      |> render_click()
+
+      assert_flash(view, :info, "Child checked in successfully")
+      assert KlassHero.Repo.get!(ParticipationRecord, record.id).status == :checked_in
+      refute has_element?(view, "#absence-reason-#{record.id}")
+    end
+
+    test "cancelling leaves the child on the roster", %{conn: conn, session: session, record: record} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      view |> element("#mark-absent-btn-#{record.id}") |> render_click()
+      assert has_element?(view, "#absence-form-#{record.id}")
+
+      view |> element("button[phx-click='cancel_absence'][phx-value-id='#{record.id}']") |> render_click()
+
+      refute has_element?(view, "#absence-form-#{record.id}")
+      assert KlassHero.Repo.get!(ParticipationRecord, record.id).status == :registered
+    end
+  end
 end

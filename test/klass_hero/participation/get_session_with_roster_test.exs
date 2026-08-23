@@ -9,6 +9,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
   import KlassHero.Factory
 
+  alias KlassHero.Participation
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
 
@@ -370,6 +371,56 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
 
   # A guardian-linked child with an active provider_data_sharing consent.
   # child_attrs (allergies:, support_needs:, emergency_contact:, …) flow to the child.
+  # The roster is the only surface that reads the transition log (#1329), so the
+  # join that finds each absent child's reason is proven here.
+  describe "absence reasons in roster" do
+    setup do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      session = insert(:program_session_schema, program_id: program.id, status: :in_progress)
+
+      record =
+        insert(:participation_record_schema,
+          session_id: session.id,
+          child_id: insert(:child_schema).id,
+          status: :registered
+        )
+
+      %{session: session, record: record, scope: KlassHero.AccountsFixtures.admin_scope_fixture()}
+    end
+
+    test "an absent child carries the reason given", ctx do
+      {:ok, _} = Participation.record_absence(ctx.scope, ctx.record.id, reason: "Mum called, sick")
+
+      assert {:ok, %{roster: roster}} = Participation.get_session_with_roster(ctx.session.id)
+      assert [%{absence_reason: "Mum called, sick"}] = roster
+    end
+
+    test "a child who never went absent carries no reason", ctx do
+      assert {:ok, %{roster: [entry]}} = Participation.get_session_with_roster(ctx.session.id)
+      assert entry.absence_reason == nil
+    end
+
+    # The reason must not outlive the absence it explains: once the child is
+    # checked in, the row is no longer absent and the roster stops citing it.
+    test "a late arrival stops showing the reason", ctx do
+      {:ok, _} = Participation.record_absence(ctx.scope, ctx.record.id, reason: "No-show")
+      {:ok, _} = Participation.record_check_in(ctx.scope, ctx.record.id)
+
+      assert {:ok, %{roster: [entry]}} = Participation.get_session_with_roster(ctx.session.id)
+      assert entry.absence_reason == nil
+    end
+
+    test "the enriched roster carries it too", ctx do
+      {:ok, _} = Participation.record_absence(ctx.scope, ctx.record.id, reason: "Family holiday")
+
+      assert {:ok, %{participation_records: [entry]}} =
+               Participation.get_session_with_roster_enriched(ctx.session.id)
+
+      assert entry.absence_reason == "Family holiday"
+    end
+  end
+
   defp consented_child(child_attrs \\ []) do
     parent = insert(:parent_profile_schema)
     {child, _parent} = insert_child_with_guardian(Keyword.put(child_attrs, :parent, parent))

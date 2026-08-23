@@ -1,6 +1,7 @@
 defmodule KlassHero.Participation.CorrectAttendanceTest do
   use KlassHero.DataCase, async: true
 
+  import KlassHero.AttendanceLogHelper
   import KlassHero.Factory
 
   alias KlassHero.Accounts.Scope
@@ -296,6 +297,57 @@ defmodule KlassHero.Participation.CorrectAttendanceTest do
       assert event.payload.previous_status == :checked_in
       assert event.payload.new_status == :absent
       assert event.payload.program_id
+    end
+  end
+
+  # Corrections are the one attendance write that does not ride
+  # `run_attendance_action/5`, so their logging is wired separately and needs
+  # its own proof (#1329).
+  describe "correct_attendance/3 attendance log" do
+    setup do
+      user = AccountsFixtures.unconfirmed_user_fixture()
+      provider = ProviderFixtures.provider_profile_fixture()
+      program = insert(:program_schema, provider_id: provider.id)
+      session = insert(:program_session_schema, program_id: program.id, status: "in_progress")
+      {child, parent} = insert_child_with_guardian()
+
+      record =
+        insert(:participation_record_schema,
+          session_id: session.id,
+          child_id: child.id,
+          parent_id: parent.id,
+          status: :checked_in,
+          check_in_at: ~U[2026-03-13 09:00:00Z],
+          check_in_by: user.id
+        )
+
+      %{record: record, scope: %Scope{user: user, provider: provider}}
+    end
+
+    test "logs the correction with its direction, actor and reason", %{record: record, scope: scope} do
+      assert {:ok, _} =
+               Participation.correct_attendance(scope, record.id, %{status: :absent, reason: "Wrong child"})
+
+      assert transition = only_transition(record.id)
+      assert transition.from_status == :checked_in
+      assert transition.to_status == :absent
+      assert transition.actor_id == scope.user.id
+      assert transition.reason == "Wrong child"
+    end
+
+    # The case that caught a bug in this design: `occurred_at` is when the
+    # correction was made, not the arrival time the correction asserts. Deriving
+    # it from `check_in_at` would date this transition to 2026 and scramble the
+    # ordering of everything after it.
+    test "dates the transition to now, not to the corrected arrival time", %{record: record, scope: scope} do
+      backdated = ~U[2026-03-13 07:30:00Z]
+
+      assert {:ok, _} =
+               Participation.correct_attendance(scope, record.id, %{check_in_at: backdated, reason: "Clock wrong"})
+
+      assert transition = only_transition(record.id)
+      refute transition.occurred_at == backdated
+      assert DateTime.diff(DateTime.utc_now(), transition.occurred_at) <= 5
     end
   end
 end

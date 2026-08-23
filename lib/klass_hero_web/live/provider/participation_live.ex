@@ -34,6 +34,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       |> assign(:participation_records, [])
       |> assign(:checkout_form_expanded, nil)
       |> assign(:checkout_forms, %{})
+      |> assign(:absence_form_expanded, nil)
+      |> assign(:absence_forms, %{})
       |> assign(:note_form_expanded, nil)
       |> assign(:note_forms, %{})
       |> assign(:revision_form_expanded, nil)
@@ -92,6 +94,26 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   @impl true
   def handle_event("confirm_checkout", %{"id" => record_id, "checkout" => params}, socket) do
     ParticipationLiveHandlers.confirm_checkout(socket, record_id, params, &load_session_data/1)
+  end
+
+  @impl true
+  def handle_event("expand_absence_form", %{"id" => record_id}, socket) do
+    {:noreply, expand_form(socket, record_id, "absence", "content", "", :absence_form_expanded, :absence_forms)}
+  end
+
+  @impl true
+  def handle_event("cancel_absence", %{"id" => record_id}, socket) do
+    {:noreply, cancel_form(socket, record_id, :absence_form_expanded, :absence_forms)}
+  end
+
+  @impl true
+  def handle_event("update_absence_reason", %{"id" => record_id, "absence" => %{"content" => reason}}, socket) do
+    {:noreply, update_form(socket, record_id, reason, "absence", "content", :absence_forms)}
+  end
+
+  @impl true
+  def handle_event("confirm_absence", %{"id" => record_id, "absence" => params}, socket) do
+    ParticipationLiveHandlers.mark_absent(socket, record_id, params, &load_session_data/1)
   end
 
   @impl true

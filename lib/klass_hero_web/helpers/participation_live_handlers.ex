@@ -63,6 +63,40 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
     end
   end
 
+  @doc "Marks the given record absent with an optional reason, clearing its form, then reloads."
+  @spec mark_absent(Socket.t(), String.t(), map(), reload_fn()) :: {:noreply, Socket.t()}
+  def mark_absent(socket, record_id, params, reload_fn) do
+    reason = Map.get(params, "content")
+
+    case ParticipationEditHelpers.find_participation_record(socket, record_id) do
+      nil ->
+        {:noreply, put_flash(socket, :error, gettext("Record not found"))}
+
+      record ->
+        case KlassHero.Participation.record_absence(socket.assigns.current_scope, record.id, reason: reason) do
+          {:ok, _record} ->
+            {:noreply,
+             socket
+             |> put_flash(:info, gettext("Child marked absent"))
+             |> assign(:absence_form_expanded, nil)
+             |> assign(:absence_forms, Map.delete(socket.assigns.absence_forms, record_id))
+             |> reload_fn.()}
+
+          {:error, :unauthorized} ->
+            {:noreply, put_flash(socket, :error, gettext("You are not assigned to this program"))}
+
+          {:error, reason} ->
+            Logger.error("[ParticipationLiveHandlers.mark_absent] Failed to mark absent",
+              record_id: record_id,
+              child_id: record.child_id,
+              reason: inspect(reason)
+            )
+
+            {:noreply, put_flash(socket, :error, gettext("Failed to mark absent: %{reason}", reason: inspect(reason)))}
+        end
+    end
+  end
+
   @doc "Records a check-out for the given record, clearing its checkout form, then reloads."
   @spec confirm_checkout(Socket.t(), String.t(), map(), reload_fn()) :: {:noreply, Socket.t()}
   def confirm_checkout(socket, record_id, params, reload_fn) do
