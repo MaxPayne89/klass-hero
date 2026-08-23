@@ -156,6 +156,30 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       assert has_element?(view, "#hero-business-name", "Starlight Coaching")
     end
 
+    test "renders the subtitle below the program title", %{conn: conn} do
+      provider = provider_profile_fixture()
+
+      program =
+        insert(:program_schema,
+          provider_id: provider.id,
+          title: "Chess Club",
+          subtitle: "For beginners, no experience needed"
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
+
+      assert has_element?(view, "#program-detail-headline-subtitle", "For beginners")
+    end
+
+    test "renders no subtitle element when the program has none", %{conn: conn} do
+      provider = provider_profile_fixture()
+      program = insert(:program_schema, provider_id: provider.id, subtitle: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
+
+      refute has_element?(view, "#program-detail-headline-subtitle")
+    end
+
     test "omits business name when provider profile is draft", %{conn: conn} do
       provider =
         provider_profile_fixture(

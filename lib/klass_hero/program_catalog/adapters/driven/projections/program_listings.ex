@@ -36,6 +36,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
 
   @shared_fields [
     :title,
+    :subtitle,
     :description,
     :category,
     :age_range,
@@ -57,6 +58,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
   # Excludes season: it is bootstrap-only.
   @update_fields [
     :title,
+    :subtitle,
     :description,
     :category,
     :age_range,
@@ -120,6 +122,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     attrs = %{
       id: event.entity_id,
       title: Map.get(payload, :title),
+      subtitle: Map.get(payload, :subtitle),
       description: Map.get(payload, :description),
       category: Map.get(payload, :category),
       age_range: Map.get(payload, :age_range),
@@ -156,6 +159,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListings d
     attrs = %{
       id: program_id,
       title: Map.get(payload, :title),
+      subtitle: Map.get(payload, :subtitle),
       description: Map.get(payload, :description),
       category: Map.get(payload, :category),
       age_range: Map.get(payload, :age_range),

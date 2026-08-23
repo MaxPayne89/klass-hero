@@ -59,6 +59,7 @@ defmodule KlassHero.ProgramCatalog.ProgramListingDeliveryTest do
         create_and_deliver(%{
           provider_id: provider.id,
           title: "Soccer Camp",
+          subtitle: "For beginners, no experience needed",
           description: "Outdoor soccer for beginners",
           category: "sports",
           price: Decimal.new("150.00"),
@@ -68,6 +69,7 @@ defmodule KlassHero.ProgramCatalog.ProgramListingDeliveryTest do
       listing = Repo.get(ProgramListing, program.id)
 
       assert listing.description == "Outdoor soccer for beginners"
+      assert listing.subtitle == "For beginners, no experience needed"
       assert Decimal.equal?(listing.price, Decimal.new("150.00"))
       assert listing.location == "Tempelhofer Feld"
       assert listing.category == "sports"

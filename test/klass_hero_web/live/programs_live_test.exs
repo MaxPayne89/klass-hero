@@ -551,6 +551,50 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
     refute has_element?(view, "[data-program-id='#{program.id}']")
   end
 
+  describe "ProgramsLive - program subtitle" do
+    test "renders the subtitle on the grid card", %{conn: conn} do
+      program = insert_program(%{subtitle: "For beginners, no experience needed"})
+
+      {:ok, view, _html} = live(conn, ~p"/programs")
+
+      assert has_element?(
+               view,
+               "#program-card-#{program.id}-subtitle",
+               "For beginners"
+             )
+    end
+
+    test "renders no subtitle element when the program has none", %{conn: conn} do
+      program = insert_program(%{subtitle: nil})
+
+      {:ok, view, _html} = live(conn, ~p"/programs")
+
+      assert has_element?(view, "[data-program-id='#{program.id}']")
+      refute has_element?(view, "#program-card-#{program.id}-subtitle")
+    end
+
+    # List view is reached by the toggle event, not a URL param — asserting on
+    # `/programs?view=list` renders the grid and passes without ever exercising
+    # the list row.
+    test "renders the subtitle on the list-view row", %{conn: conn} do
+      program = insert_program(%{subtitle: "Small groups, ages 6-9"})
+
+      {:ok, view, _html} = live(conn, ~p"/programs")
+
+      view
+      |> element("#mk-view-toggle button[data-view='list']")
+      |> render_click()
+
+      assert has_element?(view, "#mk-programs-stream[data-view='list']")
+
+      assert has_element?(
+               view,
+               "#program-list-row-#{program.id}-subtitle",
+               "Small groups"
+             )
+    end
+  end
+
   describe "ProgramsLive - bundle parity surfaces (Phase 1)" do
     test "renders all 8 bundle category pills", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/programs")

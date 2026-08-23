@@ -267,6 +267,102 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
   # the event is staged into oban_jobs.args and read back out first, which is where
   # #1311's %Date{} became "2026-03-01". These use the real event constructors and
   # cross that boundary.
+  describe "subtitle" do
+    test "program_created carries the subtitle into the listing" do
+      program_id = Ecto.UUID.generate()
+
+      Event.new(:program_created, :program_catalog, :program, program_id, %{
+        program_id: program_id,
+        provider_id: Ecto.UUID.generate(),
+        title: "Chess Club",
+        subtitle: "For beginners, no experience needed",
+        category: "education"
+      })
+      |> dispatch()
+
+      assert Repo.get(ProgramListing, program_id).subtitle ==
+               "For beginners, no experience needed"
+    end
+
+    # The guard on @update_fields. update_listing_from_event/1 upserts with
+    # `on_conflict: {:replace, @update_fields}`, and Postgres keeps the existing
+    # value for any column absent from that list — so a subtitle missing there
+    # inserts fine on create and silently no-ops on every edit. Asserting only
+    # the final value would pass even if the row never changed, so the
+    # pre-update state is pinned first (#1142).
+    test "program_updated replaces an existing subtitle" do
+      program_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      insert_listing(
+        id: program_id,
+        title: "Chess Club",
+        subtitle: "For beginners, no experience needed",
+        category: "education",
+        provider_id: provider_id
+      )
+
+      assert Repo.get(ProgramListing, program_id).subtitle ==
+               "For beginners, no experience needed"
+
+      Event.new(:program_updated, :program_catalog, :program, program_id, %{
+        program_id: program_id,
+        provider_id: provider_id,
+        title: "Chess Club",
+        subtitle: "Small groups, ages 6-9",
+        category: "education"
+      })
+      |> dispatch()
+
+      assert Repo.get(ProgramListing, program_id).subtitle == "Small groups, ages 6-9"
+    end
+
+    test "program_updated clears a subtitle the provider removed" do
+      program_id = Ecto.UUID.generate()
+      provider_id = Ecto.UUID.generate()
+
+      insert_listing(
+        id: program_id,
+        title: "Chess Club",
+        subtitle: "For beginners, no experience needed",
+        category: "education",
+        provider_id: provider_id
+      )
+
+      Event.new(:program_updated, :program_catalog, :program, program_id, %{
+        program_id: program_id,
+        provider_id: provider_id,
+        title: "Chess Club",
+        subtitle: nil,
+        category: "education"
+      })
+      |> dispatch()
+
+      assert Repo.get(ProgramListing, program_id).subtitle == nil
+    end
+
+    test "bootstrap carries the subtitle from the write table" do
+      provider = insert(:provider_profile_schema)
+
+      program =
+        insert(:program_schema,
+          provider_id: provider.id,
+          subtitle: "Outdoor sessions, rain or shine"
+        )
+
+      # Restart so the projection bootstraps from the now-populated write table.
+      stop_supervised!(ProgramListings)
+
+      bootstrap_pid =
+        start_supervised!({ProgramListings, name: :"bootstrap_subtitle_#{System.unique_integer([:positive])}"})
+
+      :sys.get_state(bootstrap_pid)
+
+      assert Repo.get(ProgramListing, program.id).subtitle ==
+               "Outdoor sessions, rain or shine"
+    end
+  end
+
   describe "events crossing the outbox boundary" do
     test "projects a program_created carrying dates, times and a price" do
       program_id = Ecto.UUID.generate()

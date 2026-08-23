@@ -27,6 +27,7 @@ defmodule KlassHero.ProgramCatalog.Program do
 
   schema "programs" do
     field :title, :string
+    field :subtitle, :string
     field :description, :string
     field :category, :string
     field :meeting_days, {:array, :string}, default: []
@@ -57,6 +58,7 @@ defmodule KlassHero.ProgramCatalog.Program do
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
           title: String.t() | nil,
+          subtitle: String.t() | nil,
           description: String.t() | nil,
           category: String.t() | nil,
           meeting_days: [String.t()],
@@ -90,6 +92,7 @@ defmodule KlassHero.ProgramCatalog.Program do
     program
     |> cast(attrs, [
       :title,
+      :subtitle,
       :description,
       :category,
       :price,
@@ -108,6 +111,7 @@ defmodule KlassHero.ProgramCatalog.Program do
     |> maybe_put_change(:origin, attrs)
     |> validate_required([:title, :description, :category, :price, :provider_id])
     |> validate_length(:title, min: 1, max: 100)
+    |> validate_length(:subtitle, max: 150)
     |> validate_length(:description, min: 1, max: 500)
     |> validate_length(:location, max: 255)
     |> validate_length(:cover_image_url, max: 500)
@@ -130,6 +134,7 @@ defmodule KlassHero.ProgramCatalog.Program do
     program
     |> cast(attrs, [
       :title,
+      :subtitle,
       :description,
       :category,
       :age_range,
@@ -148,6 +153,7 @@ defmodule KlassHero.ProgramCatalog.Program do
     ])
     |> validate_required([:title, :description, :category, :price])
     |> validate_length(:title, min: 1, max: 100)
+    |> validate_length(:subtitle, max: 150)
     |> validate_length(:description, min: 1, max: 500)
     |> validate_length(:age_range, max: 100)
     |> validate_length(:pricing_period, max: 100)

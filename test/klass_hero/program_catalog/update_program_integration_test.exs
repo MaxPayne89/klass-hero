@@ -30,6 +30,38 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       assert updated.description == "Original description"
     end
 
+    test "sets, changes and clears the subtitle", %{program: program, provider: provider} do
+      assert program.subtitle == nil
+
+      assert {:ok, with_subtitle} =
+               ProgramCatalog.update_program(provider.id, program.id, %{
+                 subtitle: "For beginners, no experience needed"
+               })
+
+      assert with_subtitle.subtitle == "For beginners, no experience needed"
+
+      assert {:ok, changed} =
+               ProgramCatalog.update_program(provider.id, program.id, %{
+                 subtitle: "Small groups, ages 6-9"
+               })
+
+      assert changed.subtitle == "Small groups, ages 6-9"
+
+      assert {:ok, cleared} =
+               ProgramCatalog.update_program(provider.id, program.id, %{subtitle: nil})
+
+      assert cleared.subtitle == nil
+    end
+
+    test "rejects a subtitle over 150 characters", %{program: program, provider: provider} do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               ProgramCatalog.update_program(provider.id, program.id, %{
+                 subtitle: String.duplicate("a", 151)
+               })
+
+      assert errors_on(changeset)[:subtitle]
+    end
+
     test "updates multiple fields", %{program: program, provider: provider} do
       assert {:ok, updated} =
                ProgramCatalog.update_program(provider.id, program.id, %{

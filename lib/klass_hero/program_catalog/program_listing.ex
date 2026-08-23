@@ -21,6 +21,7 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
 
   schema "program_listings" do
     field :title, :string
+    field :subtitle, :string
     field :description, :string
     field :category, :string
     field :age_range, :string
@@ -44,6 +45,7 @@ defmodule KlassHero.ProgramCatalog.ProgramListing do
   @type t :: %__MODULE__{
           id: Ecto.UUID.t() | nil,
           title: String.t() | nil,
+          subtitle: String.t() | nil,
           description: String.t() | nil,
           category: String.t() | nil,
           age_range: String.t() | nil,

@@ -99,6 +99,53 @@ defmodule KlassHero.ProgramCatalog.CreateProgramIntegrationTest do
     end
   end
 
+  describe "create_program/1 subtitle" do
+    setup do
+      %{provider: ProviderFixtures.provider_profile_fixture()}
+    end
+
+    test "persists an optional subtitle", %{provider: provider} do
+      assert {:ok, program} =
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Chess Club",
+                 subtitle: "For beginners, no experience needed",
+                 description: "Develop strategic thinking",
+                 category: "education",
+                 price: Decimal.new("60.00")
+               })
+
+      assert program.subtitle == "For beginners, no experience needed"
+    end
+
+    test "is optional — a program without one is valid", %{provider: provider} do
+      assert {:ok, program} =
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Chess Club",
+                 description: "Develop strategic thinking",
+                 category: "education",
+                 price: Decimal.new("60.00")
+               })
+
+      assert program.subtitle == nil
+    end
+
+    test "rejects a subtitle over 150 characters", %{provider: provider} do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               ProgramCatalog.create_program(%{
+                 provider_id: provider.id,
+                 title: "Chess Club",
+                 subtitle: String.duplicate("a", 151),
+                 description: "Develop strategic thinking",
+                 category: "education",
+                 price: Decimal.new("60.00")
+               })
+
+      assert errors_on(changeset)[:subtitle]
+    end
+  end
+
   describe "create_program/1 without program limits" do
     # Provider tiers removed (ADR-0004): no per-tier program cap remains
     test "former starter-tier provider creates programs beyond the old cap" do

@@ -650,6 +650,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
       %{
         provider_id: provider.id,
         title: params["title"],
+        subtitle: presence(params["subtitle"]),
         description: params["description"],
         category: params["category"],
         price: parse_decimal(params["price"]),
@@ -1335,6 +1336,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   defp program_to_form_params(program) do
     %{
       "title" => program.title,
+      "subtitle" => program.subtitle,
       "description" => program.description,
       "category" => program.category,
       "price" => nil_safe(program.price, &Decimal.to_string/1),

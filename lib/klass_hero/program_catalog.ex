@@ -498,6 +498,7 @@ defmodule KlassHero.ProgramCatalog do
     %{
       provider_id: program.provider_id,
       title: program.title,
+      subtitle: program.subtitle,
       description: program.description,
       category: program.category,
       age_range: program.age_range,

@@ -213,6 +213,48 @@ defmodule KlassHeroWeb.ProgramComponents do
   end
 
   @doc """
+  Renders a program's optional subtitle — the provider-written hook shown under
+  the title ("For beginners, no experience needed").
+
+  Nil renders nothing at all: no element, no reserved gap. Callers pass the value
+  straight through rather than guarding at the call site.
+
+  Two variants, because the muted colour cannot be shared: `:card` sits on white
+  and uses `--fg-muted`, while `:hero` sits on a photograph or gradient where
+  that token fails AA contrast (`DESIGN.md` don't #6), so it uses `text-white/80`.
+
+  This is the subtitle *only*, not the title. The four surfaces that show a
+  program title style it four different ways, and unifying that is a separate
+  change — what genuinely repeats, and what this owns, is the supporting line.
+
+  ## Examples
+
+      <.program_subtitle subtitle={@program.subtitle} variant={:hero} id="program-detail-headline" />
+      <.program_subtitle subtitle={Map.get(@program, :subtitle)} />
+  """
+  attr :subtitle, :string, default: nil
+  attr :variant, :atom, default: :card, values: [:card, :hero]
+  attr :id, :string, default: nil, doc: "When given, the element gets `<id>-subtitle`"
+
+  def program_subtitle(assigns) do
+    ~H"""
+    <p
+      :if={@subtitle}
+      id={@id && "#{@id}-subtitle"}
+      class={[
+        "mt-1",
+        if(@variant == :hero,
+          do: [Theme.typography(:body), "text-white/80"],
+          else: [Theme.typography(:body_small), "text-[var(--fg-muted)] line-clamp-2"]
+        )
+      ]}
+    >
+      {@subtitle}
+    </p>
+    """
+  end
+
+  @doc """
   Renders a program card with gradient header, favorite button, and program details.
 
   Supports two variants:
@@ -281,7 +323,13 @@ defmodule KlassHeroWeb.ProgramComponents do
       <div class="p-6">
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1">
-            <h3 class={[Theme.typography(:card_title), "text-hero-black mb-2"]}>{@program.title}</h3>
+            <div class="mb-2">
+              <h3 class={[Theme.typography(:card_title), "text-hero-black"]}>{@program.title}</h3>
+              <.program_subtitle
+                id={"program-card-#{@program.id}"}
+                subtitle={Map.get(@program, :subtitle)}
+              />
+            </div>
             <p class="text-hero-black-100 text-sm mb-3 line-clamp-2">{@program.description}</p>
           </div>
         </div>

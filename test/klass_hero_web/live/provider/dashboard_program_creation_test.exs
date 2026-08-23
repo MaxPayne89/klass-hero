@@ -51,6 +51,65 @@ defmodule KlassHeroWeb.Provider.DashboardProgramCreationTest do
       assert has_element?(view, "#program-form")
     end
 
+    test "creates a program with a subtitle", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view |> element("#new-program-btn") |> render_click()
+
+      view
+      |> form("#program-form", %{
+        "program_schema" => %{
+          "title" => "Chess Club",
+          "subtitle" => "For beginners, no experience needed",
+          "description" => "Develop strategic thinking through chess",
+          "category" => "education",
+          "price" => "60.00"
+        }
+      })
+      |> render_submit()
+
+      assert Repo.get_by(Program, title: "Chess Club").subtitle ==
+               "For beginners, no experience needed"
+    end
+
+    # The form is repopulated from `program_to_form_params/1` on edit. If the
+    # subtitle is missing there, an unrelated edit submits a blank one and
+    # silently wipes it — invisible to any test that only asserts the field it
+    # meant to change.
+    test "an edit that does not touch the subtitle preserves it", %{
+      conn: conn,
+      provider: provider
+    } do
+      program =
+        insert(:program_schema,
+          provider_id: provider.id,
+          title: "Chess Club",
+          subtitle: "For beginners, no experience needed"
+        )
+
+      # The provider's table reads the ProgramListing read table, so the write
+      # row alone leaves the list empty and the edit button unreachable.
+      insert(:program_listing_schema,
+        id: program.id,
+        provider_id: provider.id,
+        title: program.title
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s([phx-click="edit_program"][phx-value-id="#{program.id}"]))
+      |> render_click()
+
+      view
+      |> form("#program-form", %{"program_schema" => %{"title" => "Chess Club Advanced"}})
+      |> render_submit()
+
+      reloaded = Repo.get!(Program, program.id)
+      assert reloaded.title == "Chess Club Advanced"
+      assert reloaded.subtitle == "For beginners, no experience needed"
+    end
+
     test "creates program with valid data", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
