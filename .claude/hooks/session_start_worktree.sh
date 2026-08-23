@@ -15,6 +15,17 @@
 # start a session over.
 set -uo pipefail
 
+# Sourced before the cd below: the path is relative to this script, and the cd
+# would move out from under it.
+#
+# Unlike the PostToolUse hooks, this one always exits 0 by design — a
+# provisioning problem is never worth refusing to start a session over — so a
+# failed load degrades to a placeholder rather than changing that contract.
+# shellcheck source=.claude/hooks/lib/untrusted.sh
+if ! source "$(dirname "${BASH_SOURCE[0]}")/lib/untrusted.sh"; then
+  emit_untrusted() { echo "(worktree-status output omitted: lib/untrusted.sh failed to load)" >&2; }
+fi
+
 cd "$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 [[ -x bin/worktree-status ]] || exit 0
 
@@ -49,9 +60,11 @@ fi
 cat >&2 <<EOF
 Dev server / Tidewave was not ready for this checkout — provisioning started in the
 background (log: .claude/run/boot.log). Check with: bin/worktree-status
+EOF
 
-$STATUS
+emit_untrusted "bin/worktree-status" "$STATUS"
 
+cat >&2 <<EOF
 Until it reports READY, do not rely on Tidewave: follow the Unavailability Alert
 Protocol in .claude/rules/mcp-integration.md rather than silently falling back to bash.
 No restart is needed once it is up — .mcp.json names bin/tidewave-router, which resolves
