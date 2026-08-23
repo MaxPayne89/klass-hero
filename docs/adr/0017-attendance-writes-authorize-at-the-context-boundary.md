@@ -169,6 +169,66 @@ would take the broader persona from someone who holds both.
   still reaches the log; only the user-visible answer is flattened. Any future write that
   takes a client-supplied id and authorizes after fetching inherits this problem.
 
+## Amended by #1329: session notes joined the gate
+
+The three Session Note writes were never brought in, and one of them had no guard of any
+kind. All three now take the scope:
+
+```elixir
+Participation.submit_session_note(scope, %{participation_record_id: id, content: content})
+Participation.review_session_note(scope, %{note_id: id, decision: decision, reason: reason})
+Participation.revise_session_note(scope, %{note_id: id, content: content})
+```
+
+`submit_session_note/1` was the worst write on this surface, worse than the pre-#1353
+attendance functions this ADR was written about. Those at least *recorded* the id they were
+handed. This one accepted a `provider_id`, stamped it onto a note about any record id it was
+also handed, and checked neither against anything — no authorizer, and not even the
+DB-scoped fetch its two siblings had. Any caller could write a note about any child in any
+provider's name. Its test file asserted the hole rather than catching it: every passing test
+supplied an unrelated provider, one of them a bare `Ecto.UUID.generate()`.
+
+It now authorizes through `SessionAuthorization.authorize/2` on the record's session — the
+same question as check-in, because it is the same surface — and then derives the authoring
+provider from the granted role rather than from the caller.
+
+### Admin is authorized for the session and still refused the note
+
+`authorize/2` grants `:admin`, and `submit_session_note/2` refuses it anyway. This is the
+first place the derived role and the write come apart, and deliberately: the role answers
+*may you act on this session*, while a Session Note additionally needs *whose note is this*.
+`CONTEXT.md` defines one as the **Instructor's** routine feedback, and an admin holds no
+provider identity to author it under. Deriving `provider_id` from the role is what surfaces
+the question — the old signature could not ask it, because the caller simply supplied an
+answer.
+
+### The two ownership rules are not the same rule
+
+`review` and `revise` are not session writes and do not go through `authorize/2`:
+
+| Write | Question | Asked of |
+|---|---|---|
+| `submit` | may you act on this session, and as whom? | `SessionAuthorization` |
+| `review` | is this note about one of your children? | `Family.get_child_ids_for_parent/1` |
+| `revise` | are you its author? | the note's own `provider_id` |
+
+`review` used to ask a third thing — `WHERE session_notes.parent_id = $1` — and that column
+is written by nothing. Every note in production carried a NULL parent, so the query matched
+nothing and **no parent had ever seen a pending note, let alone approved one**. The rule now
+goes through the child, which Family owns and answers (ADR-0015), so there is no denormalised
+copy to be NULL, and none to go stale when a child's guardian changes.
+
+That is also why the fix needed no backfill: the notes were never mis-written, only
+mis-queried.
+
+### The enumeration oracle, again
+
+Both `review` and `revise` fetch before they authorize, so they inherit the problem the #1373
+section names above: `:not_found` and `:unauthorized` become distinguishable to a caller who
+supplied the id. The parent surface already flattens them — `approve_note` and `reject_note`
+render one flash for every error — so the distinction reaches the log and not the user. Any
+new note surface must keep it that way.
+
 ## Derived, not declared
 
 `is_admin` lives on the user and is deliberately absent from `registration_changeset`'s cast

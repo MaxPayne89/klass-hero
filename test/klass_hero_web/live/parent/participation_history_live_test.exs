@@ -63,12 +63,11 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
     test "does not show pending notes section when no notes", %{
       conn: conn,
       note: note,
-      parent: parent
+      scope: scope
     } do
       # Approve the note so nothing is pending
-      KlassHero.Participation.review_session_note(%{
+      KlassHero.Participation.review_session_note(scope, %{
         note_id: note.id,
-        parent_id: parent.id,
         decision: :approve
       })
 

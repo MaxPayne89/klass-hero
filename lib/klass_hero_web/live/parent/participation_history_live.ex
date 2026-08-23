@@ -36,9 +36,8 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
 
   @impl true
   def handle_event("approve_note", %{"id" => note_id}, socket) do
-    case Participation.review_session_note(%{
+    case Participation.review_session_note(socket.assigns.current_scope, %{
            note_id: note_id,
-           parent_id: socket.assigns.parent_id,
            decision: :approve
          }) do
       {:ok, _note} ->
@@ -84,9 +83,8 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLive do
     reason = Map.get(params, "reason")
     reason = if reason != "", do: reason
 
-    case Participation.review_session_note(%{
+    case Participation.review_session_note(socket.assigns.current_scope, %{
            note_id: note_id,
-           parent_id: socket.assigns.parent_id,
            decision: :reject,
            reason: reason
          }) do

@@ -107,9 +107,8 @@ defmodule KlassHeroWeb.Helpers.ParticipationLiveHandlers do
       _record ->
         content = Map.get(params, "content", "")
 
-        case KlassHero.Participation.submit_session_note(%{
+        case KlassHero.Participation.submit_session_note(socket.assigns.current_scope, %{
                participation_record_id: record_id,
-               provider_id: socket.assigns.provider_id,
                content: content
              }) do
           {:ok, _note} ->

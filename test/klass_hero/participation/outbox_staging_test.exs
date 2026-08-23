@@ -12,6 +12,8 @@ defmodule KlassHero.Participation.OutboxStagingTest do
 
   import KlassHero.Factory
 
+  alias KlassHero.Accounts.Scope
+  alias KlassHero.AccountsFixtures
   alias KlassHero.Participation
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 
@@ -23,7 +25,7 @@ defmodule KlassHero.Participation.OutboxStagingTest do
     # user_registered now that Accounts is on the outbox too.
     TestOutbox.setup()
 
-    {:ok, program: program}
+    {:ok, provider: provider, program: program}
   end
 
   defp staged_types, do: Enum.map(TestOutbox.staged(), & &1.event_type)
@@ -104,16 +106,20 @@ defmodule KlassHero.Participation.OutboxStagingTest do
 
   # Session notes have no cross-context consumer, so they were never promoted and
   # must stay unstaged — otherwise the outbox grows work with nowhere to deliver it.
-  test "submitting a session note stages nothing", %{program: program} do
+  test "submitting a session note stages nothing", %{provider: provider, program: program} do
     session = create_session(program)
     child = insert(:child_schema)
     record = insert(:participation_record_schema, session_id: session.id, child_id: child.id, status: :checked_in)
+
+    # Built before the outbox is armed: registering a user stages its own
+    # `user_registered` event, which would otherwise land in the assertion below and
+    # read as this test's own doing.
+    scope = %Scope{user: AccountsFixtures.unconfirmed_user_fixture(), provider: provider}
     TestOutbox.setup()
 
     {:ok, _note} =
-      Participation.submit_session_note(%{
+      Participation.submit_session_note(scope, %{
         participation_record_id: record.id,
-        provider_id: program.provider_id,
         content: "Had a great time"
       })
 

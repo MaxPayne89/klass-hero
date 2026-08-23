@@ -145,9 +145,8 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   def handle_event("submit_revision", %{"id" => note_id, "revision" => params}, socket) do
     content = Map.get(params, "content", "")
 
-    case Participation.revise_session_note(%{
+    case Participation.revise_session_note(socket.assigns.current_scope, %{
            note_id: note_id,
-           provider_id: socket.assigns.provider_id,
            content: content
          }) do
       {:ok, _note} ->

@@ -19,6 +19,7 @@ defmodule KlassHero.Participation do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
+  alias KlassHero.Family
   alias KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver
   alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
@@ -721,16 +722,29 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   @doc """
-  Submits a session note for a participation record.
+  Submits a session note for a participation record, on behalf of `scope`.
 
-  Required params: `participation_record_id`, `provider_id`, `content` (max 1000 chars).
+  Required params: `participation_record_id`, `content` (max 1000 chars).
+
+  Authorized against the record's session by the same rule as attendance
+  (ADR-0017). The authoring provider is derived from the role that authorized the
+  write — until #1329 this function took a `provider_id` and stamped it on the note
+  without checking it against anything, so any caller could write a note about any
+  child in any provider's name.
+
+  Returns `{:ok, note}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  `{:error, :blank_content}`, `{:error, :invalid_record_status}`, or
+  `{:error, :duplicate_note}`.
   """
-  def submit_session_note(%{participation_record_id: record_id, provider_id: provider_id, content: content}) do
+  @spec submit_session_note(Scope.t(), map()) :: {:ok, SessionNote.t()} | {:error, atom()}
+  def submit_session_note(%Scope{} = scope, %{participation_record_id: record_id, content: content}) do
     context_span entity: "session_note" do
       normalized_content = normalize_notes(content)
 
       with {:content, content} when content != nil <- {:content, normalized_content},
            {:ok, record} <- fetch_record(record_id),
+           {:ok, role} <- authorize_for_record(scope, record),
+           {:ok, provider_id} <- authoring_provider_id(scope, role),
            true <- ParticipationRecord.allows_session_note?(record),
            {:ok, note} <- build_note(record, provider_id, content),
            {:ok, persisted} <- insert_note(note) do
@@ -746,17 +760,22 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Reviews a session note (approve or reject).
+  Reviews a session note (approve or reject), on behalf of `scope`.
 
-  Required params: `note_id`, `parent_id` (ownership enforced at DB level),
-  `decision` (`:approve` or `:reject`). Optional: `reason`.
+  Required params: `note_id`, `decision` (`:approve` or `:reject`). Optional: `reason`.
+  The reviewing parent is the scope's, never the caller's to name.
+
+  Returns `{:ok, note}`, `{:error, :not_found}`, `{:error, :unauthorized}`, or
+  `{:error, :invalid_decision}`. The parent surface renders both refusals
+  identically, so neither confirms a note id it was not given.
   """
-  def review_session_note(%{note_id: note_id, parent_id: parent_id, decision: decision} = params) do
+  @spec review_session_note(Scope.t(), map()) :: {:ok, SessionNote.t()} | {:error, atom()}
+  def review_session_note(%Scope{} = scope, %{note_id: note_id, decision: decision} = params) do
     context_span entity: "session_note" do
       reason = Map.get(params, :reason)
 
-      # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to parent.
-      with {:ok, note} <- fetch_note_by_parent(note_id, parent_id),
+      with {:ok, note} <- fetch_note(note_id),
+           :ok <- authorize_note_for_parent(scope, note),
            {:ok, reviewed} <- apply_review_decision(note, decision, reason),
            {:ok, persisted} <- update_note(reviewed) do
         Notifications.notify(review_event(persisted, decision))
@@ -766,17 +785,19 @@ defmodule KlassHero.Participation do
   end
 
   @doc """
-  Revises a rejected session note with new content.
+  Revises a rejected session note with new content, on behalf of `scope`.
 
-  Required params: `note_id`, `provider_id` (ownership enforced at DB level), `content`.
+  Required params: `note_id`, `content`. The provider is the scope's; a caller
+  cannot name the author of the note it is revising.
   """
-  def revise_session_note(%{note_id: note_id, provider_id: provider_id, content: content}) do
+  @spec revise_session_note(Scope.t(), map()) :: {:ok, SessionNote.t()} | {:error, atom()}
+  def revise_session_note(%Scope{} = scope, %{note_id: note_id, content: content}) do
     context_span entity: "session_note" do
       normalized_content = normalize_notes(content)
 
-      # Scoped query enforces ownership at DB level — returns :not_found if note doesn't belong to provider.
       with {:content, content} when content != nil <- {:content, normalized_content},
-           {:ok, note} <- fetch_note_by_provider(note_id, provider_id),
+           {:ok, note} <- fetch_note(note_id),
+           :ok <- authorize_note_for_author(scope, note),
            {:ok, revised} <- SessionNote.revise(note, content),
            {:ok, persisted} <- update_note(revised) do
         Notifications.notify(ParticipationEvents.session_note_submitted(persisted))
@@ -803,9 +824,14 @@ defmodule KlassHero.Participation do
     end
   end
 
-  @doc "Lists pending session notes for a parent awaiting review."
+  @doc """
+  Lists pending session notes for a parent awaiting review.
+
+  Resolved through the parent's children rather than `session_notes.parent_id`,
+  which no write path populates — see `parent_child_ids/1`.
+  """
   def list_pending_session_notes(parent_id) when is_binary(parent_id) do
-    {:ok, list_notes_pending_by_parent(parent_id)}
+    {:ok, parent_id |> parent_child_ids() |> list_notes_pending_for_children()}
   end
 
   @doc "Gets approved session notes for a child."
@@ -854,6 +880,30 @@ defmodule KlassHero.Participation do
       SessionAuthorization.authorize(scope, session)
     end
   end
+
+  # Which provider a note is written in the name of. Derived from the role that
+  # already authorized the write, so the two can never disagree; an admin holds no
+  # provider identity and a Session Note is the Instructor's, so admin is refused
+  # here even though `authorize_for_record/2` granted the write.
+  defp authoring_provider_id(%Scope{provider: %{id: id}}, :provider), do: {:ok, id}
+  defp authoring_provider_id(%Scope{staff_member: %{provider_id: id}}, :staff), do: {:ok, id}
+  defp authoring_provider_id(%Scope{}, _role), do: {:error, :unauthorized}
+
+  # A note is the parent's to review when it is about one of their children.
+  # `session_notes.parent_id` is not consulted: no write path populates it (#1329).
+  defp authorize_note_for_parent(%Scope{parent: %{id: parent_id}}, %SessionNote{child_id: child_id}) do
+    if child_id in parent_child_ids(parent_id), do: :ok, else: {:error, :unauthorized}
+  end
+
+  defp authorize_note_for_parent(%Scope{}, %SessionNote{}), do: {:error, :unauthorized}
+
+  # Revision is the author's alone — not the employing provider's, and not another
+  # staff member's on the same session.
+  defp authorize_note_for_author(%Scope{provider: %{id: id}}, %SessionNote{provider_id: id}), do: :ok
+
+  defp authorize_note_for_author(%Scope{staff_member: %{provider_id: id}}, %SessionNote{provider_id: id}), do: :ok
+
+  defp authorize_note_for_author(%Scope{}, %SessionNote{}), do: {:error, :unauthorized}
 
   defp resolve_session_best_effort(session_id) do
     case fetch_session(session_id) do
@@ -950,7 +1000,10 @@ defmodule KlassHero.Participation do
       id: Ecto.UUID.generate(),
       participation_record_id: record.id,
       child_id: record.child_id,
-      parent_id: record.parent_id,
+      # `parent_id` is deliberately not set. `participation_records.parent_id` is
+      # NULL on every row the runtime seeds, so copying it here wrote NULL and made
+      # a dead column look alive — which is what hid #1329. Ownership is asked of
+      # Family, through the child.
       provider_id: provider_id,
       content: content
     })
@@ -1424,9 +1477,20 @@ defmodule KlassHero.Participation do
     end
   end
 
-  defp list_notes_pending_by_parent(parent_id) do
+  # Family owns the child→guardian relation, so it is asked rather than copied
+  # (ADR-0015). A parent with no children yields an empty list, which every caller
+  # below treats as "owns nothing" rather than "no filter".
+  defp parent_child_ids(parent_id) do
+    parent_id
+    |> Family.get_child_ids_for_parent()
+    |> MapSet.to_list()
+  end
+
+  defp list_notes_pending_for_children([]), do: []
+
+  defp list_notes_pending_for_children(child_ids) do
     SessionNoteQueries.base()
-    |> SessionNoteQueries.by_parent(parent_id)
+    |> SessionNoteQueries.by_children(child_ids)
     |> SessionNoteQueries.pending()
     |> SessionNoteQueries.order_by_submitted_desc()
     |> Repo.all()
@@ -1456,23 +1520,8 @@ defmodule KlassHero.Participation do
     |> Repo.all()
   end
 
-  defp fetch_note_by_parent(id, parent_id) do
-    SessionNoteQueries.base()
-    |> SessionNoteQueries.by_parent(parent_id)
-    |> where([note: n], n.id == ^id)
-    |> Repo.one()
-    |> case do
-      nil -> {:error, :not_found}
-      schema -> {:ok, schema}
-    end
-  end
-
-  defp fetch_note_by_provider(id, provider_id) do
-    SessionNoteQueries.base()
-    |> SessionNoteQueries.by_provider(provider_id)
-    |> where([note: n], n.id == ^id)
-    |> Repo.one()
-    |> case do
+  defp fetch_note(id) when is_binary(id) do
+    case Repo.get(SessionNote, id) do
       nil -> {:error, :not_found}
       schema -> {:ok, schema}
     end

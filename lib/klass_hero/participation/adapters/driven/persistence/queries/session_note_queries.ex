@@ -28,10 +28,17 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNot
     where(query, [note: n], n.child_id == ^child_id)
   end
 
-  @doc "Filters by parent ID."
-  @spec by_parent(Ecto.Query.t(), String.t()) :: Ecto.Query.t()
-  def by_parent(query, parent_id) do
-    where(query, [note: n], n.parent_id == ^parent_id)
+  @doc """
+  Filters to the notes about any of `child_ids`.
+
+  This is how a parent's own notes are found. `session_notes.parent_id` looks like
+  the obvious filter and is not: nothing on the write path ever populates it, so it
+  is NULL on every row in production (#1329). Family owns the child→guardian
+  relation, so the caller resolves the ids through its facade and passes them here.
+  """
+  @spec by_children(Ecto.Query.t(), [String.t()]) :: Ecto.Query.t()
+  def by_children(query, child_ids) when is_list(child_ids) do
+    where(query, [note: n], n.child_id in ^child_ids)
   end
 
   @doc "Filters by status."

@@ -146,7 +146,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       assert event.payload.participation_record_id == note.participation_record_id
       assert event.payload.child_id == note.child_id
       assert event.payload.provider_id == note.provider_id
-      assert event.payload.parent_id == note.parent_id
+      refute Map.has_key?(event.payload, :parent_id)
     end
   end
 
