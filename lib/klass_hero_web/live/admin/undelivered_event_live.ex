@@ -177,7 +177,7 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLive do
   end
 
   # `EventDeliveryWorker` stores a fully-qualified handler ref
-  # ("Elixir.KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler:handle_event").
+  # ("Elixir.KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler:handle_event").
   # The context and the handler name are the signal; the fixed `Adapters.Driving.Events`
   # path in between is boilerplate that pushed every other column off the table.
   defp short_consumer(ref) when is_binary(ref) do

@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Domain.Services.ReferralCodeGeneratorTest do
+defmodule KlassHero.Family.ReferralCodeGeneratorTest do
   @moduledoc """
   Tests for the ReferralCodeGenerator domain service.
 
@@ -8,7 +8,7 @@ defmodule KlassHero.Family.Domain.Services.ReferralCodeGeneratorTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Family.Domain.Services.ReferralCodeGenerator
+  alias KlassHero.Family.ReferralCodeGenerator
 
   # Every row exercises the same contract: generate/2 uppercases the
   # extracted first word, then joins it with location and year_suffix as-is.

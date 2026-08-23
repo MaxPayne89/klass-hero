@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler do
+defmodule KlassHero.Family.FamilyEventHandler do
   @moduledoc """
   Integration event handler for the Family context.
 

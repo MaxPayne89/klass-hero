@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
+defmodule KlassHero.Family.FamilyEventHandlerTest do
   @moduledoc """
   Tests for FamilyEventHandler integration event handling.
   """
@@ -10,9 +10,9 @@ defmodule KlassHero.Family.Adapters.Driving.Events.FamilyEventHandlerTest do
 
   alias KlassHero.Accounts
   alias KlassHero.AccountsFixtures
-  alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
   alias KlassHero.Family.Child
   alias KlassHero.Family.Consent
+  alias KlassHero.Family.FamilyEventHandler
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.ProcessedEventRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.ProcessedEvent
 

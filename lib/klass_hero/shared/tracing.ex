@@ -29,6 +29,15 @@ defmodule KlassHero.Shared.Tracing do
   # with it — but only once *every* context is flat. While contexts still carry
   # `Adapters.Driven.Projections.*` and friends in their module names, pruning
   # an entry here silently renames live production spans (#1259).
+  #
+  # `ACL` is deliberately absent, and stays absent (#1466). Adding it would be the
+  # same hazard in the opposite direction: it would relocate the spans of every ACL
+  # in a context that has not flattened yet, in whichever PR happened to add it.
+  # Instead each ACL span renames in the PR that flattens its own context, where the
+  # change is attributable — `Provider.ACL.X` → `Provider.X` (#1425),
+  # `Family.ACL.X` → `Family.X` (#1426). Enrollment's two are the last remaining.
+  # Only the span *name* moves; the `acl.source`/`acl.target`/`acl.operation`
+  # attributes that queries filter on are unaffected.
   @noise_segments ~w[
     Elixir KlassHero Adapters Driven Driving Persistence Repositories
     Schemas Mappers Queries Events EventHandlers Workers Projections

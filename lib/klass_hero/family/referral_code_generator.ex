@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Domain.Services.ReferralCodeGenerator do
+defmodule KlassHero.Family.ReferralCodeGenerator do
   @moduledoc """
   Domain service for generating user referral codes.
   Referral codes follow the format: {FIRST_NAME}-{LOCATION}-{YEAR_SUFFIX}

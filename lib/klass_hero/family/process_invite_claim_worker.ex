@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker do
+defmodule KlassHero.Family.ProcessInviteClaimWorker do
   @moduledoc """
   Oban worker that processes invite claims.
 

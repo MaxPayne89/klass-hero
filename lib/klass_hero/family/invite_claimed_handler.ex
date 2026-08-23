@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler do
+defmodule KlassHero.Family.InviteClaimedHandler do
   @moduledoc """
   Integration event handler for `:invite_claimed` events from the Enrollment context.
 
@@ -11,7 +11,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler do
 
   @behaviour KlassHero.Shared.ForHandlingEvents
 
-  alias KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker
+  alias KlassHero.Family.ProcessInviteClaimWorker
   alias KlassHero.Shared.Domain.Events.Event
   alias KlassHero.Shared.Tracing.Context
 

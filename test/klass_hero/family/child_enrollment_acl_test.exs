@@ -1,10 +1,10 @@
-defmodule KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACLTest do
+defmodule KlassHero.Family.ChildEnrollmentACLTest do
   use KlassHero.DataCase, async: true
 
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL
+  alias KlassHero.Family.ChildEnrollmentACL
   alias KlassHero.Repo
 
   describe "list_active_with_program_titles/1" do

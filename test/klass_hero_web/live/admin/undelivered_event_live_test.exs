@@ -92,24 +92,28 @@ defmodule KlassHeroWeb.Admin.UndeliveredEventLiveTest do
     #
     # Both fixtures are load-bearing and neither is redundant, because the contexts
     # are mid-migration to the flat layout (ADR 0018) and produce two ref shapes:
-    # Family is still nested, so it is the case that actually exercises the strip;
-    # Provider is flattened, so it proves a ref with no boilerplate passes through
+    # Messaging is still nested, so it is the case that actually exercises the strip;
+    # Family is flattened, so it proves a ref with no boilerplate passes through
     # unharmed. Deleting either one silently drops a shape from coverage — and
     # because these are string literals, no compiler will tell you.
+    #
+    # The nested fixture must name a context that is *still* nested. Point it at the
+    # next one to convert and this test keeps passing while exercising nothing: with
+    # no boilerplate left to strip, prefix removal alone satisfies the assertion.
     test "shortens nested consumer refs and leaves already-flat ones alone",
          %{conn: conn} do
       record(
         topic: "integration:accounts:user_registered",
         missed_consumers: [
-          "Elixir.KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler:handle_event",
-          "Elixir.KlassHero.Provider.ProviderEventHandler:handle_event"
+          "Elixir.KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler:handle_event",
+          "Elixir.KlassHero.Family.FamilyEventHandler:handle_event"
         ]
       )
 
       {:ok, _view, html} = live(conn, ~p"/admin/undelivered-events")
 
+      assert html =~ "Messaging.MessagingEventHandler:handle_event"
       assert html =~ "Family.FamilyEventHandler:handle_event"
-      assert html =~ "Provider.ProviderEventHandler:handle_event"
       refute html =~ "Adapters.Driving.Events"
       refute html =~ "Elixir.KlassHero"
     end

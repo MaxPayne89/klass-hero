@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL do
+defmodule KlassHero.Family.ChildEnrollmentACL do
   @moduledoc """
   ACL adapter that manages enrollment data for child deletion.
 

@@ -22,13 +22,13 @@ internals. This agent enforces that convention.
 ---
 
 > **Migration window (read before running checks 1–5).** A repo-wide flatten of the
-> `adapters/{driven,driving}/` + `domain/` tree is in progress: `accounts` has already
-> converted to a one-level layout (`adapters/driven/acl/` → `acl/`, `adapters/driving/events/`
-> → handler files named for what they consume, sitting at the context root, etc.); the
-> other six contexts (provider, family, messaging, participation, enrollment,
+> `adapters/{driven,driving}/` + `domain/` tree is in progress: `accounts`, `provider` and
+> `family` have already converted to a one-level layout (`adapters/driven/acl/` → `acl/`,
+> or the context root below three files; `adapters/driving/events/` → handler files sitting
+> at the context root, etc.); the other four contexts (messaging, participation, enrollment,
 > program_catalog) and `shared` still carry the old tree. **Both shapes are legal at once**
 > until the migration finishes — never flag an unconverted context for keeping the old
-> paths, and never flag `accounts` (or any newly-converted context) for lacking
+> paths, and never flag a converted one for lacking
 > `adapters/`/`domain/`. Checks below identify a module by what it **does** (a
 > `use`/registration/naming signature) first, then accept either shape's legal location —
 > a check written as "for each file in `adapters/driving/events/`" would pass vacuously on

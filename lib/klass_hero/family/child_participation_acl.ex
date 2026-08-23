@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACL do
+defmodule KlassHero.Family.ChildParticipationACL do
   @moduledoc """
   ACL adapter that cleans up participation data for child deletion.
 
