@@ -122,10 +122,30 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
 
       # An empty string is as absent as nil here: a cleared input reaches the
       # column as nil, but a legacy row may still hold "".
+      #
+      # The leading atom is what `kh_social_icon/1` keys on — asserted explicitly
+      # because a glyph lookup keyed on the label string instead would still pass
+      # a shape check while breaking the first time a label is edited.
       assert ProviderPresenter.to_public_view(provider).social_links == [
-               {"Instagram", "https://instagram.com/starlight"},
-               {"YouTube", "https://youtube.com/@starlight"}
+               {:instagram, "Instagram", "https://instagram.com/starlight"},
+               {:youtube, "YouTube", "https://youtube.com/@starlight"}
              ]
+    end
+
+    test "defaults trust_state to :unverified when none is passed" do
+      provider = %ProviderProfile{id: "p-e", identity_id: "i-e", business_name: "Starlight"}
+
+      # Under-claiming is the safe default: kh_trust_mark/1 renders nothing for
+      # :unverified, so an unthreaded caller shows no badge rather than a badge
+      # the provider has not earned.
+      assert ProviderPresenter.to_public_view(provider).trust_state == :unverified
+    end
+
+    test "carries the trust state it is given" do
+      provider = %ProviderProfile{id: "p-f", identity_id: "i-f", business_name: "Starlight"}
+
+      assert ProviderPresenter.to_public_view(provider, :verified).trust_state == :verified
+      assert ProviderPresenter.to_public_view(provider, :in_progress).trust_state == :in_progress
     end
 
     test "social_links is empty when no network is set" do

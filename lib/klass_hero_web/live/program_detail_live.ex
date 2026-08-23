@@ -15,6 +15,8 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
+  require Logger
+
   @impl true
   def mount(%{"id" => program_id}, _session, socket) do
     case ProgramCatalog.get_program_by_id(program_id) do
@@ -124,9 +126,28 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   defp load_provider_profile(provider_id) do
     case Provider.get_provider_profile(provider_id) do
       # Only :active providers are surfaced to parents; nil suppresses the card.
-      {:ok, %{profile_status: :active} = provider} -> ProviderPresenter.to_public_view(provider)
-      _ -> nil
+      {:ok, %{profile_status: :active} = provider} ->
+        ProviderPresenter.to_public_view(provider, trust_state(provider_id))
+
+      _ ->
+        nil
     end
+  end
+
+  # get_trust_states/1 is batch-only; a missing entry means unverified.
+  #
+  # Rescued because this call shares `safe_await`'s fallback with the profile read
+  # above: without it, a vetting-lookup failure blanks the whole provider card
+  # rather than just its badge. The badge is additive, the identity is the
+  # content, so this degrades to :unverified — which under-claims, never over-.
+  defp trust_state(provider_id) do
+    [provider_id]
+    |> Provider.get_trust_states()
+    |> Map.get(provider_id, :unverified)
+  rescue
+    error ->
+      Logger.warning("trust state lookup failed for provider #{provider_id}: #{inspect(error)}")
+      :unverified
   end
 
   defp load_participant_policy(program_id) do
@@ -427,7 +448,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         </section>
 
         <%!-- Provider Profile Card — rendered only when an active provider profile is available --%>
-        <.provider_profile_card :if={@provider_profile} provider={@provider_profile} />
+        <.provider_hero :if={@provider_profile} provider={@provider_profile} />
 
         <%!-- TODO: "What Other Parents Say" reviews section — re-enable when review data is available.
              Dependencies: <.review_card> component import (removed), @reviews assign. --%>

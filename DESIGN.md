@@ -216,6 +216,12 @@ anything bouncing that is not the hero logo
 states, mini for inline-with-text. Sizes come from `Theme.icon_size/1`.
 _Avoid_: a second icon set; icons at arbitrary sizes
 
+**Brand marks are the one exception** to "no second icon set" — that rule guards against
+mixing generic icon *libraries* with inconsistent weight and style, and Heroicons ships no
+Instagram, Facebook, TikTok, YouTube or LinkedIn glyph at all. They live as inline SVG in
+`kh_social_icon`, keyed on the network atom, and nowhere else.
+_Avoid_: a brand mark inlined at a call site instead of added to that component
+
 **Gradient icon chips** are the signature motif — a rounded chip with a gradient background
 and a white icon, used for features, provider steps, and empty states. `kh_icon_chip`.
 

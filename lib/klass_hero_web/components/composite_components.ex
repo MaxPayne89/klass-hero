@@ -455,28 +455,21 @@ defmodule KlassHeroWeb.CompositeComponents do
 
         <div class="text-left">
           <h4 class="font-semibold mb-4">{gettext("Connect")}</h4>
-          <div class="flex gap-2 mb-4">
-            <a href="#facebook" class="btn btn-circle btn-sm btn-ghost">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-              </svg>
-            </a>
-            <a href="#instagram" class="btn btn-circle btn-sm btn-ghost">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-              </svg>
+          <div :if={KlassHero.SocialLinks.all() != []} class="flex gap-2 mb-4">
+            <a
+              :for={{network, label, url} <- KlassHero.SocialLinks.all()}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={gettext("Klass Hero on %{network}", network: label)}
+              class={[
+                "inline-flex items-center justify-center w-11 h-11",
+                Theme.rounded(:full),
+                "hover:bg-base-200",
+                Theme.transition(:normal)
+              ]}
+            >
+              <.kh_social_icon network={network} />
             </a>
           </div>
           <div class="text-sm">
@@ -609,29 +602,32 @@ defmodule KlassHeroWeb.CompositeComponents do
   end
 
   @doc """
-  Renders a public, read-only provider business profile card.
+  Renders a public, read-only provider identity at two densities: `:compact` for a
+  sidebar card (program detail), `:full` for a page hero.
 
-  Used on parent-facing pages (e.g. program detail) to surface the provider's
-  business identity. Takes a plain view map so the component stays decoupled
-  from any domain struct.
+  Takes a plain view map from `ProviderPresenter.to_public_view/2`. Everything
+  except `business_name` and `initials` is optional — a provider who has filled in
+  nothing still renders, which is the common case today.
 
   ## Examples
 
-      <.provider_profile_card provider={%{
-        business_name: "Starlight Coaching",
-        description: "Empowering kids through play-based learning.",
-        logo_url: nil,
-        initials: "SC"
-      }} />
+      <.provider_hero provider={@provider_profile} />
+      <.provider_hero provider={@provider_profile} variant={:full} />
   """
   attr :provider, :map,
     required: true,
-    doc: "Public provider view: %{business_name, description, logo_url, initials}"
+    doc: """
+    Public provider view: %{business_name, initials, description, logo_url,
+    tagline, cover_image_url, social_links, trust_state}
+    """
 
-  def provider_profile_card(assigns) do
+  attr :variant, :atom, default: :compact, values: [:compact, :full]
+
+  def provider_hero(%{variant: :compact} = assigns) do
     ~H"""
     <section
       id="provider-profile-card"
+      data-variant="compact"
       class={[
         Theme.bg(:surface),
         Theme.rounded(:xl),
@@ -646,35 +642,149 @@ defmodule KlassHeroWeb.CompositeComponents do
         </h3>
       </div>
       <div class="p-6 flex items-start gap-4">
-        <img
-          :if={@provider.logo_url}
-          src={@provider.logo_url}
-          alt={@provider.business_name}
-          class={["w-16 h-16 object-cover flex-shrink-0", Theme.rounded(:full)]}
-        />
-        <div
-          :if={!@provider.logo_url}
-          class={[
-            "w-16 h-16 flex items-center justify-center text-white text-xl font-bold flex-shrink-0",
-            Theme.rounded(:full),
-            Theme.gradient(:primary)
-          ]}
-        >
-          {@provider.initials}
-        </div>
-        <div class="flex-1">
-          <h4 class={[Theme.typography(:card_title), Theme.text_color(:heading)]}>
-            {@provider.business_name}
-          </h4>
+        <.provider_avatar provider={@provider} size="w-16 h-16" text="text-xl" />
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <h4 class={[Theme.typography(:card_title), Theme.text_color(:heading)]}>
+              {@provider.business_name}
+            </h4>
+            <.kh_trust_mark state={trust_state(@provider)} variant={:compact} />
+          </div>
           <p
-            :if={@provider.description}
-            class={["text-sm leading-relaxed mt-1", Theme.text_color(:secondary)]}
+            :if={present?(@provider[:tagline])}
+            class={["text-sm mt-1", Theme.text_color(:secondary_dark)]}
+          >
+            {@provider.tagline}
+          </p>
+          <p
+            :if={present?(@provider[:description])}
+            class={["text-sm leading-relaxed mt-1", Theme.text_color(:secondary_dark)]}
           >
             {@provider.description}
           </p>
+          <.provider_social_row provider={@provider} class="mt-3" />
         </div>
       </div>
     </section>
     """
   end
+
+  def provider_hero(%{variant: :full} = assigns) do
+    ~H"""
+    <section
+      id="provider-hero"
+      data-variant="full"
+      class={[
+        Theme.rounded(:xl),
+        "relative overflow-hidden shadow-sm border",
+        Theme.border_color(:light)
+      ]}
+    >
+      <div class="absolute inset-0" aria-hidden="true">
+        <img
+          :if={present?(@provider[:cover_image_url])}
+          src={@provider.cover_image_url}
+          alt=""
+          data-band="cover"
+          class="w-full h-full object-cover"
+        />
+        <div
+          :if={!present?(@provider[:cover_image_url])}
+          data-band="gradient"
+          class={["w-full h-full", Theme.gradient(:primary)]}
+        >
+        </div>
+        <%!-- Scrim. The cover is an arbitrary upload; without this, contrast is
+              unbounded. Don't lower the opacity to show the photo better. --%>
+        <div class="absolute inset-0 bg-white/90"></div>
+      </div>
+
+      <div class="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left">
+        <.provider_avatar provider={@provider} size="w-20 h-20 sm:w-24 sm:h-24" text="text-2xl" />
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+            <h1 class={[Theme.typography(:section_title), Theme.text_color(:heading)]}>
+              {@provider.business_name}
+            </h1>
+            <.kh_trust_mark state={trust_state(@provider)} />
+          </div>
+          <p
+            :if={present?(@provider[:tagline])}
+            class={["mt-2", Theme.typography(:body), "text-[var(--fg-muted-on-light)]"]}
+          >
+            {@provider.tagline}
+          </p>
+          <.provider_social_row
+            provider={@provider}
+            class="mt-4 justify-center sm:justify-start"
+          />
+        </div>
+      </div>
+    </section>
+    """
+  end
+
+  attr :provider, :map, required: true
+  attr :size, :string, required: true
+  attr :text, :string, required: true
+
+  defp provider_avatar(assigns) do
+    ~H"""
+    <img
+      :if={present?(@provider[:logo_url])}
+      src={@provider.logo_url}
+      alt={@provider.business_name}
+      class={[@size, "object-cover flex-shrink-0", Theme.rounded(:full)]}
+    />
+    <div
+      :if={!present?(@provider[:logo_url])}
+      class={[
+        @size,
+        @text,
+        "flex items-center justify-center text-white font-bold flex-shrink-0",
+        Theme.rounded(:full),
+        Theme.gradient(:primary)
+      ]}
+    >
+      {@provider.initials}
+    </div>
+    """
+  end
+
+  attr :provider, :map, required: true
+  attr :class, :string, default: ""
+
+  defp provider_social_row(assigns) do
+    ~H"""
+    <div :if={social_links(@provider) != []} class={["flex flex-wrap items-center gap-1", @class]}>
+      <a
+        :for={{network, label, url} <- social_links(@provider)}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={
+          gettext("%{business} on %{network}", business: @provider.business_name, network: label)
+        }
+        class={[
+          "inline-flex items-center justify-center w-11 h-11",
+          Theme.rounded(:full),
+          Theme.text_color(:secondary_dark),
+          "hover:bg-hero-grey-100 hover:text-hero-blue-600",
+          Theme.transition(:normal)
+        ]}
+      >
+        <.kh_social_icon network={network} />
+      </a>
+    </div>
+    """
+  end
+
+  # Access with a default: a hand-built map from a test or preview must not crash
+  # the page the way a missing key would (#1073).
+  defp social_links(provider), do: provider[:social_links] || []
+  defp trust_state(provider), do: provider[:trust_state] || :unverified
+
+  defp present?(nil), do: false
+  defp present?(value) when is_binary(value), do: String.trim(value) != ""
+  defp present?(_), do: true
 end
