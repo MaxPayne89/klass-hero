@@ -14,8 +14,8 @@ msgstr ""
 #: lib/klass_hero_web/components/layouts/app.html.heex:44
 #: lib/klass_hero_web/components/layouts/app.html.heex:197
 #: lib/klass_hero_web/components/marketing_components.ex:205
-#: lib/klass_hero_web/components/marketing_components.ex:849
-#: lib/klass_hero_web/components/marketing_components.ex:938
+#: lib/klass_hero_web/components/marketing_components.ex:855
+#: lib/klass_hero_web/components/marketing_components.ex:944
 #, elixir-autogen, elixir-format
 msgid "About"
 msgstr "Über uns"
@@ -35,8 +35,8 @@ msgstr "Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche"
 #: lib/klass_hero_web/components/layouts/app.html.heex:52
 #: lib/klass_hero_web/components/layouts/app.html.heex:198
 #: lib/klass_hero_web/components/marketing_components.ex:206
-#: lib/klass_hero_web/components/marketing_components.ex:850
-#: lib/klass_hero_web/components/marketing_components.ex:939
+#: lib/klass_hero_web/components/marketing_components.ex:856
+#: lib/klass_hero_web/components/marketing_components.ex:945
 #, elixir-autogen, elixir-format
 msgid "Contact"
 msgstr "Kontakt"
@@ -180,7 +180,7 @@ msgstr "Nach Abschluss der Anmeldung erhalten Sie eine Rechnung per E-Mail"
 msgid "Any allergies, medical conditions, or special instructions..."
 msgstr "Allergien, medizinische Bedingungen oder besondere Hinweise..."
 
-#: lib/klass_hero_web/components/marketing_components.ex:519
+#: lib/klass_hero_web/components/marketing_components.ex:525
 #, elixir-autogen, elixir-format
 msgid "Book camps, tutors, and workshops instantly. Our integrated planner helps you manage your child's busy life."
 msgstr "Buchen Sie Camps, Nachhilfe und Workshops sofort. Unser integrierter Planer hilft Ihnen, den vollen Terminkalender Ihres Kindes zu verwalten."
@@ -195,7 +195,7 @@ msgstr "Bar / Überweisung"
 msgid "Cash/transfer payments will show as \"Pending\" until received"
 msgstr "Bar-/Überweisungszahlungen werden als \"Ausstehend\" angezeigt, bis sie eingegangen sind"
 
-#: lib/klass_hero_web/components/marketing_components.ex:527
+#: lib/klass_hero_web/components/marketing_components.ex:533
 #, elixir-autogen, elixir-format
 msgid "Community Focused"
 msgstr "Gemeinschaftsorientiert"
@@ -220,7 +220,7 @@ msgstr "Kreditkartenzahlungen werden sofort verarbeitet"
 msgid "Duration:"
 msgstr "Dauer:"
 
-#: lib/klass_hero_web/components/marketing_components.ex:517
+#: lib/klass_hero_web/components/marketing_components.ex:523
 #, elixir-autogen, elixir-format
 msgid "Easy Scheduling"
 msgstr "Einfache Terminplanung"
@@ -251,12 +251,12 @@ msgstr "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut oder kontaktiere
 msgid "Enrollment successful! You'll receive a confirmation email shortly."
 msgstr "Anmeldung erfolgreich! Sie erhalten in Kürze eine Bestätigungs-E-Mail."
 
-#: lib/klass_hero_web/components/marketing_components.ex:509
+#: lib/klass_hero_web/components/marketing_components.ex:515
 #, elixir-autogen, elixir-format
 msgid "Every provider is rigorously vetted. We prioritize child safety above all else, giving parents peace of mind."
 msgstr "Jeder Anbieter wird sorgfältig geprüft. Wir stellen die Sicherheit der Kinder an erste Stelle und geben Eltern die nötige Sicherheit."
 
-#: lib/klass_hero_web/components/marketing_components.ex:980
+#: lib/klass_hero_web/components/marketing_components.ex:986
 #: lib/klass_hero_web/live/programs_live.ex:35
 #, elixir-autogen, elixir-format
 msgid "Explore Programs"
@@ -341,7 +341,7 @@ msgstr "Programm nicht gefunden"
 msgid "Program not found. It may have been removed or is no longer available."
 msgstr "Programm nicht gefunden. Es wurde möglicherweise entfernt oder ist nicht mehr verfügbar."
 
-#: lib/klass_hero_web/components/marketing_components.ex:507
+#: lib/klass_hero_web/components/marketing_components.ex:513
 #: lib/klass_hero_web/live/about_live.ex:19
 #, elixir-autogen, elixir-format
 msgid "Safety First"
@@ -1175,8 +1175,8 @@ msgstr "Bildung"
 
 #: lib/klass_hero_web/components/composite_components.ex:425
 #: lib/klass_hero_web/components/marketing_components.ex:203
-#: lib/klass_hero_web/components/marketing_components.ex:565
-#: lib/klass_hero_web/components/marketing_components.ex:936
+#: lib/klass_hero_web/components/marketing_components.ex:571
+#: lib/klass_hero_web/components/marketing_components.ex:942
 #: lib/klass_hero_web/live/for_providers_live.ex:10
 #: lib/klass_hero_web/live/for_providers_live.ex:39
 #, elixir-autogen, elixir-format
@@ -1188,7 +1188,7 @@ msgstr "Für Anbieter"
 msgid "From sports to arts, technology to languages, we make it easy to discover enriching activities that fit your family's schedule and budget."
 msgstr "Von Sport über Kunst, Technologie bis Sprachen – wir machen es einfach, bereichernde Aktivitäten zu entdecken, die zu Zeitplan und Budget Ihrer Familie passen."
 
-#: lib/klass_hero_web/components/marketing_components.ex:617
+#: lib/klass_hero_web/components/marketing_components.ex:623
 #, elixir-autogen, elixir-format
 msgid "Get Paid & Grow"
 msgstr "Verdienen & Wachsen"
@@ -1215,12 +1215,12 @@ msgstr "Qualifikationen"
 msgid "Ready to join the movement?"
 msgstr "Bereit, Teil der Bewegung zu werden?"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1014
+#: lib/klass_hero_web/components/marketing_components.ex:1020
 #, elixir-autogen, elixir-format
 msgid "Search"
 msgstr "Suche"
 
-#: lib/klass_hero_web/components/marketing_components.ex:601
+#: lib/klass_hero_web/components/marketing_components.ex:607
 #, elixir-autogen, elixir-format
 msgid "Set up your teaching profile and list your programs in minutes. Share your expertise with families who need it."
 msgstr "Richten Sie Ihr Kursleiterprofil ein und veröffentlichen Sie Ihre Programme in wenigen Minuten. Teilen Sie Ihr Fachwissen mit Familien, die es brauchen."
@@ -1984,7 +1984,7 @@ msgstr "Genehmigt"
 msgid "Are you sure you want to approve this document?"
 msgstr "Möchten Sie dieses Dokument wirklich genehmigen?"
 
-#: lib/klass_hero_web/components/marketing_components.ex:669
+#: lib/klass_hero_web/components/marketing_components.ex:675
 #, elixir-autogen, elixir-format
 msgid "As fathers and partners of teachers in Berlin, we saw and heard firsthand how hard it is to find, book, and manage quality youth activities outside the classroom. Klass Hero is the complete platform connecting Berlin families and schools with trusted, vetted activity providers — offering safe, supervised, and enriching experiences across sports, arts, tutoring, and more. We verify every provider, structure every booking, and support every step — so parents know their child is in good hands, and providers can focus on what they do best: inspiring kids."
 msgstr "Als Väter und Partner von Lehrkräften in Berlin haben wir aus erster Hand erlebt, wie schwer es ist, hochwertige außerschulische Aktivitäten für Kinder zu finden, zu buchen und zu organisieren. Klass Hero ist die umfassende Plattform, die Berliner Familien und Schulen mit vertrauenswürdigen, geprüften Anbietern verbindet — und bietet sichere, betreute und bereichernde Erlebnisse in den Bereichen Sport, Kunst, Nachhilfe und mehr. Wir überprüfen jeden Anbieter, strukturieren jede Buchung und unterstützen bei jedem Schritt — damit Eltern wissen, dass ihr Kind in guten Händen ist, und Anbieter sich auf das konzentrieren können, was sie am besten können: Kinder zu begeistern."
@@ -2016,7 +2016,7 @@ msgstr "Programm buchen"
 msgid "Brief description of experience and specialties..."
 msgstr "Kurze Beschreibung der Erfahrung und Spezialgebiete..."
 
-#: lib/klass_hero_web/components/marketing_components.ex:666
+#: lib/klass_hero_web/components/marketing_components.ex:672
 #, elixir-autogen, elixir-format
 msgid "Built by Parents to Empower Educators."
 msgstr "Von Eltern entwickelt, um Pädagogen zu stärken."
@@ -2519,7 +2519,7 @@ msgstr "Nicht verifiziert"
 msgid "Not specified"
 msgstr "Nicht angegeben"
 
-#: lib/klass_hero_web/components/marketing_components.ex:663
+#: lib/klass_hero_web/components/marketing_components.ex:669
 #, elixir-autogen, elixir-format
 msgid "Our Story"
 msgstr "Unsere Geschichte"
@@ -2618,7 +2618,7 @@ msgstr "Programm erfolgreich aktualisiert."
 msgid "Provider profile not found."
 msgstr "Anbieterprofil nicht gefunden."
 
-#: lib/klass_hero_web/components/marketing_components.ex:676
+#: lib/klass_hero_web/components/marketing_components.ex:682
 #, elixir-autogen, elixir-format
 msgid "Read our founding story →"
 msgstr "Lesen Sie unsere Gründungsgeschichte →"
@@ -2993,12 +2993,12 @@ msgstr "z. B. Art Adventures"
 msgid "e.g., Community Center, Main St"
 msgstr "z. B. Gemeindezentrum, Hauptstraße"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1495
+#: lib/klass_hero_web/components/marketing_components.ex:1499
 #, elixir-autogen, elixir-format
 msgid "All Heroes must hold or complete a recognized child safeguarding course, ensuring up-to-date knowledge."
 msgstr "Alle Heroes müssen einen anerkannten Kinderschutzkurs absolviert haben oder absolvieren, um stets aktuelles Wissen sicherzustellen."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1463
+#: lib/klass_hero_web/components/marketing_components.ex:1467
 #, elixir-autogen, elixir-format
 msgid "All providers must be 18 years or older, ensuring legal accountability and professional responsibility."
 msgstr "Alle Anbieter müssen mindestens 18 Jahre alt sein, um rechtliche Verantwortlichkeit und professionelle Verlässlichkeit zu gewährleisten."
@@ -3008,12 +3008,12 @@ msgstr "Alle Anbieter müssen mindestens 18 Jahre alt sein, um rechtliche Verant
 msgid "And at Klass Hero, both come standard."
 msgstr "Und bei Klass Hero sind beide selbstverständlich."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1493
+#: lib/klass_hero_web/components/marketing_components.ex:1497
 #, elixir-autogen, elixir-format
 msgid "Child Safeguarding Training"
 msgstr "Kinderschutzschulung"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1501
+#: lib/klass_hero_web/components/marketing_components.ex:1505
 #: lib/klass_hero_web/components/provider_components.ex:3479
 #, elixir-autogen, elixir-format
 msgid "Community Standards Agreement"
@@ -3024,7 +3024,7 @@ msgstr "Vereinbarung zu Community-Standards"
 msgid "Create long-term trust across our community"
 msgstr "Langfristiges Vertrauen in unserer Community aufbauen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1479
+#: lib/klass_hero_web/components/marketing_components.ex:1483
 #, elixir-autogen, elixir-format
 msgid "Each provider submits an extended police background check, confirming their eligibility to work safely with minors."
 msgstr "Jeder Anbieter reicht ein erweitertes polizeiliches Führungszeugnis ein, das seine Eignung bestätigt, sicher mit Minderjährigen zu arbeiten."
@@ -3034,17 +3034,17 @@ msgstr "Jeder Anbieter reicht ein erweitertes polizeiliches Führungszeugnis ein
 msgid "Enforcing platform standards and guidelines"
 msgstr "Durchsetzung von Plattformstandards und -richtlinien"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1503
+#: lib/klass_hero_web/components/marketing_components.ex:1507
 #, elixir-autogen, elixir-format
 msgid "Every provider agrees to follow our Community Guidelines, defining expectations around professionalism."
 msgstr "Jeder Anbieter verpflichtet sich, unsere Community-Richtlinien einzuhalten, die die Erwartungen an Professionalität festlegen."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1469
+#: lib/klass_hero_web/components/marketing_components.ex:1473
 #, elixir-autogen, elixir-format
 msgid "Experience Validation"
 msgstr "Erfahrungsprüfung"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1477
+#: lib/klass_hero_web/components/marketing_components.ex:1481
 #, elixir-autogen, elixir-format
 msgid "Extended Background Checks"
 msgstr "Erweiterte Führungszeugnisprüfungen"
@@ -3054,12 +3054,12 @@ msgstr "Erweiterte Führungszeugnisprüfungen"
 msgid "From academic tutoring to sports, arts, and enrichment programs, every provider on Klass Hero is carefully reviewed to ensure they meet our high standards for child safety, professionalism, and educational quality."
 msgstr "Von akademischer Nachhilfe über Sport und Kunst bis hin zu Förderprogrammen wird jeder Anbieter auf Klass Hero sorgfältig geprüft, um sicherzustellen, dass er unseren hohen Standards für Kindersicherheit, Professionalität und pädagogische Qualität entspricht."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1523
+#: lib/klass_hero_web/components/marketing_components.ex:1527
 #, elixir-autogen, elixir-format
 msgid "How We Verify Providers"
 msgstr "Wie wir Anbieter verifizieren"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1461
+#: lib/klass_hero_web/components/marketing_components.ex:1465
 #, elixir-autogen, elixir-format
 msgid "Identity & Age Verification"
 msgstr "Identitäts- und Altersverifizierung"
@@ -3094,7 +3094,7 @@ msgstr "Programm gespeichert, aber der Upload des Titelbilds ist fehlgeschlagen.
 msgid "Protect children and families"
 msgstr "Kinder und Familien schützen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1471
+#: lib/klass_hero_web/components/marketing_components.ex:1475
 #, elixir-autogen, elixir-format
 msgid "Providers must demonstrate at least one year of experience working with children in their area of expertise."
 msgstr "Anbieter müssen mindestens ein Jahr Erfahrung in der Arbeit mit Kindern in ihrem Fachgebiet nachweisen."
@@ -3136,8 +3136,8 @@ msgstr "Dieses Kind ist bereits für dieses Programm angemeldet."
 #: lib/klass_hero_web/components/layouts/app.html.heex:60
 #: lib/klass_hero_web/components/layouts/app.html.heex:199
 #: lib/klass_hero_web/components/marketing_components.ex:204
-#: lib/klass_hero_web/components/marketing_components.ex:833
-#: lib/klass_hero_web/components/marketing_components.ex:937
+#: lib/klass_hero_web/components/marketing_components.ex:839
+#: lib/klass_hero_web/components/marketing_components.ex:943
 #: lib/klass_hero_web/live/for_providers_live.ex:136
 #: lib/klass_hero_web/live/trust_safety_live.ex:10
 #, elixir-autogen, elixir-format
@@ -3159,12 +3159,12 @@ msgstr "Vertrauen muss man sich verdienen. Sicherheit ist nicht verhandelbar."
 msgid "Uphold professional and ethical teaching practices"
 msgstr "Professionelle und ethische Lehrpraktiken einhalten"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1420
+#: lib/klass_hero_web/components/marketing_components.ex:1424
 #, elixir-autogen, elixir-format
 msgid "Vetted with Care"
 msgstr "Mit Sorgfalt geprüft"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1485
+#: lib/klass_hero_web/components/marketing_components.ex:1489
 #: lib/klass_hero_web/components/provider_components.ex:3264
 #, elixir-autogen, elixir-format
 msgid "Video Screening"
@@ -3523,7 +3523,7 @@ msgid "Private lessons and tutoring"
 msgstr "Privatunterricht und Nachhilfe"
 
 #: lib/klass_hero_web/components/layouts/admin.html.heex:45
-#: lib/klass_hero_web/components/marketing_components.ex:838
+#: lib/klass_hero_web/components/marketing_components.ex:844
 #, elixir-autogen, elixir-format
 msgid "Providers"
 msgstr "Anbieter"
@@ -4409,7 +4409,7 @@ msgstr "+1234567890"
 msgid "About the Provider"
 msgstr "Über den Anbieter"
 
-#: lib/klass_hero_web/components/marketing_components.ex:529
+#: lib/klass_hero_web/components/marketing_components.ex:535
 #, elixir-autogen, elixir-format
 msgid "Built for the Berlin international community. Integrated secure encrypted messaging to connect with local families and trusted educators nearby."
 msgstr "Entwickelt für die internationale Berliner Gemeinschaft. Integriertes sicheres verschlüsseltes Messaging, um sich mit lokalen Familien und vertrauenswürdigen Pädagogen in Ihrer Nähe zu verbinden."
@@ -4950,7 +4950,7 @@ msgstr ", Max' Bruder, kam als CFO dazu und brachte die finanzielle Sorgfalt und
 msgid ", a full-stack developer who shared a unique perspective. Both Shane and Max are partners of teachers who wanted to extend their expertise beyond the classroom — but without the time to manage the operational side on their own."
 msgstr ", ein Full-Stack-Entwickler, der eine besondere Perspektive einbrachte. Sowohl Shane als auch Max sind Partner von Lehrkräften, die ihre Expertise über den Unterricht hinaus erweitern wollten — jedoch ohne die Zeit, die operative Seite selbst zu verwalten."
 
-#: lib/klass_hero_web/components/marketing_components.ex:986
+#: lib/klass_hero_web/components/marketing_components.ex:992
 #, elixir-autogen, elixir-format
 msgid ", camps & classes for your child"
 msgstr ", Camps & Kurse für Ihr Kind"
@@ -5011,7 +5011,7 @@ msgstr "Alter & Identität"
 msgid "All instructors are background-checked and verified."
 msgstr "Alle Lehrkräfte sind hintergrundgeprüft und verifiziert."
 
-#: lib/klass_hero_web/components/marketing_components.ex:576
+#: lib/klass_hero_web/components/marketing_components.ex:582
 #, elixir-autogen, elixir-format
 msgid "Are you an educator, coach, or artist?"
 msgstr "Sind Sie Pädagog:in, Coach oder Künstler:in?"
@@ -5031,13 +5031,13 @@ msgstr "Foto anhängen"
 msgid "Back to Programs"
 msgstr "Zurück zu den Programmen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:918
-#: lib/klass_hero_web/components/marketing_components.ex:928
+#: lib/klass_hero_web/components/marketing_components.ex:924
+#: lib/klass_hero_web/components/marketing_components.ex:934
 #, elixir-autogen, elixir-format
 msgid "Become a Hero"
 msgstr "Werden Sie ein Hero"
 
-#: lib/klass_hero_web/components/marketing_components.ex:886
+#: lib/klass_hero_web/components/marketing_components.ex:892
 #, elixir-autogen, elixir-format
 msgid "Become a Hero →"
 msgstr "Werden Sie ein Hero →"
@@ -5063,7 +5063,7 @@ msgstr "Berlins Nr. 1-Netzwerk für Jugendpädagogen"
 msgid "Berlin's leading network for tutors, coaches, and camp providers — every one verified by our team."
 msgstr "Berlins führendes Netzwerk für Nachhilfelehrer, Trainer und Camp-Anbieter — jeder Einzelne von unserem Team verifiziert."
 
-#: lib/klass_hero_web/components/marketing_components.ex:822
+#: lib/klass_hero_web/components/marketing_components.ex:828
 #, elixir-autogen, elixir-format
 msgid "Berlin's network for trusted youth educators. Built by parents, for parents."
 msgstr "Berlins Netzwerk für vertrauenswürdige Jugendpädagogen. Von Eltern für Eltern entwickelt."
@@ -5083,16 +5083,16 @@ msgstr "Buchungen, Teilnehmerlisten, Zeitpläne, Anwesenheit, Elternkommunikatio
 msgid "Brings the financial rigour and strategic planning needed for the German market and long-term provider stability."
 msgstr "Bringt die finanzielle Sorgfalt und strategische Planung mit, die für den deutschen Markt und langfristige Stabilität der Anbieter nötig sind."
 
-#: lib/klass_hero_web/components/marketing_components.ex:831
-#: lib/klass_hero_web/components/marketing_components.ex:935
+#: lib/klass_hero_web/components/marketing_components.ex:837
+#: lib/klass_hero_web/components/marketing_components.ex:941
 #, elixir-autogen, elixir-format
 msgid "Browse Programs"
 msgstr "Programme durchsuchen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:896
-#: lib/klass_hero_web/components/marketing_components.ex:906
-#: lib/klass_hero_web/components/marketing_components.ex:916
-#: lib/klass_hero_web/components/marketing_components.ex:926
+#: lib/klass_hero_web/components/marketing_components.ex:902
+#: lib/klass_hero_web/components/marketing_components.ex:912
+#: lib/klass_hero_web/components/marketing_components.ex:922
+#: lib/klass_hero_web/components/marketing_components.ex:932
 #, elixir-autogen, elixir-format
 msgid "Browse Programs →"
 msgstr "Programme durchsuchen →"
@@ -5152,7 +5152,7 @@ msgstr "Schauen Sie in unsere FAQ — die meisten Fragen werden dort beantwortet
 msgid "Children"
 msgstr "Kinder"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1278
+#: lib/klass_hero_web/components/marketing_components.ex:1282
 #, elixir-autogen, elixir-format
 msgid "Clear filters"
 msgstr "Filter zurücksetzen"
@@ -5191,7 +5191,7 @@ msgstr "Kommunikation"
 msgid "Community Standards"
 msgstr "Gemeinschaftsstandards"
 
-#: lib/klass_hero_web/components/marketing_components.ex:847
+#: lib/klass_hero_web/components/marketing_components.ex:853
 #, elixir-autogen, elixir-format
 msgid "Company"
 msgstr "Unternehmen"
@@ -5261,7 +5261,7 @@ msgstr "Direktnachrichten und Rundnachrichten"
 msgid "Direct messaging, broadcast announcements, incident reports. Keep parents informed, automatically."
 msgstr "Direktnachrichten, Rundschreiben, Vorfallberichte. Halten Sie Eltern automatisch auf dem Laufenden."
 
-#: lib/klass_hero_web/components/marketing_components.ex:984
+#: lib/klass_hero_web/components/marketing_components.ex:990
 #, elixir-autogen, elixir-format
 msgid "Discover"
 msgstr "Entdecken"
@@ -5336,7 +5336,7 @@ msgstr "Jede Lehrkraft und jede pädagogische Fachkraft durchläuft vor der Gene
 msgid "Every feature included. No subscription, no setup fees."
 msgstr "Alle Funktionen inklusive. Kein Abo, keine Einrichtungsgebühren."
 
-#: lib/klass_hero_web/components/marketing_components.ex:500
+#: lib/klass_hero_web/components/marketing_components.ex:506
 #, elixir-autogen, elixir-format
 msgid "Everything parents need, nothing they don't"
 msgstr "Alles, was Eltern brauchen – nichts, was sie nicht brauchen"
@@ -5351,7 +5351,7 @@ msgstr "Alles, was Sie über Klass Hero wissen müssen."
 msgid "Extended Police Check"
 msgstr "Erweitertes Führungszeugnis"
 
-#: lib/klass_hero_web/components/marketing_components.ex:704
+#: lib/klass_hero_web/components/marketing_components.ex:710
 #: lib/klass_hero_web/live/for_providers_live.ex:213
 #, elixir-autogen, elixir-format
 msgid "FAQ"
@@ -5362,7 +5362,7 @@ msgstr "FAQ"
 msgid "Failed to approve"
 msgstr "Genehmigung fehlgeschlagen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:829
+#: lib/klass_hero_web/components/marketing_components.ex:835
 #, elixir-autogen, elixir-format
 msgid "Families"
 msgstr "Familien"
@@ -5372,7 +5372,7 @@ msgstr "Familien"
 msgid "Find Programs"
 msgstr "Programme finden"
 
-#: lib/klass_hero_web/components/marketing_components.ex:792
+#: lib/klass_hero_web/components/marketing_components.ex:798
 #, elixir-autogen, elixir-format
 msgid "Footer mobile"
 msgstr "Fußzeile (mobil)"
@@ -5402,7 +5402,7 @@ msgstr "Vom Eintrag bis zur ersten Auszahlung in weniger als einer Woche"
 msgid "Full-stack developer. Partner of a teacher who saw the gap between great educators and good infrastructure."
 msgstr "Full-Stack-Entwickler. Partner einer Lehrerin, die die Lücke zwischen großartigen Pädagogen und guter Infrastruktur erkannte."
 
-#: lib/klass_hero_web/components/marketing_components.ex:608
+#: lib/klass_hero_web/components/marketing_components.ex:614
 #, elixir-autogen, elixir-format
 msgid "Get Bookings"
 msgstr "Buchungen erhalten"
@@ -5429,7 +5429,7 @@ msgstr "Wöchentlich bezahlt werden"
 msgid "Get verified"
 msgstr "Lassen Sie sich verifizieren"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1127
+#: lib/klass_hero_web/components/marketing_components.ex:1133
 #, elixir-autogen, elixir-format
 msgid "Grid"
 msgstr "Raster"
@@ -5439,7 +5439,7 @@ msgstr "Raster"
 msgid "Hand-picked programs this week across Berlin."
 msgstr "Handverlesene Programme diese Woche in ganz Berlin."
 
-#: lib/klass_hero_web/components/marketing_components.ex:990
+#: lib/klass_hero_web/components/marketing_components.ex:996
 #, elixir-autogen, elixir-format
 msgid "Hand-picked, vetted programs across Berlin — filter by category, age, or schedule."
 msgstr "Handverlesene, geprüfte Programme in ganz Berlin — filtern Sie nach Kategorie, Alter oder Zeitplan."
@@ -5454,8 +5454,8 @@ msgstr "Haben Sie Fragen?"
 msgid "Head of Trust & Quality (joining)"
 msgstr "Leitung Vertrauen & Qualität (kommt bald dazu)"
 
-#: lib/klass_hero_web/components/marketing_components.ex:842
-#: lib/klass_hero_web/components/marketing_components.ex:940
+#: lib/klass_hero_web/components/marketing_components.ex:848
+#: lib/klass_hero_web/components/marketing_components.ex:946
 #, elixir-autogen, elixir-format
 msgid "Help Center"
 msgstr "Hilfezentrum"
@@ -5465,7 +5465,7 @@ msgstr "Hilfezentrum"
 msgid "How and when do I get paid?"
 msgstr "Wie und wann werde ich bezahlt?"
 
-#: lib/klass_hero_web/components/marketing_components.ex:832
+#: lib/klass_hero_web/components/marketing_components.ex:838
 #, elixir-autogen, elixir-format
 msgid "How it Works"
 msgstr "So funktioniert's"
@@ -5485,12 +5485,12 @@ msgstr "Wie viel kostet Klass Hero?"
 msgid "How quickly can I start accepting bookings?"
 msgstr "Wie schnell kann ich Buchungen annehmen?"
 
-#: lib/klass_hero_web/components/marketing_components.ex:568
+#: lib/klass_hero_web/components/marketing_components.ex:574
 #, elixir-autogen, elixir-format
 msgid "How to Grow Your Youth Program"
 msgstr "So bringen Sie Ihr Jugendprogramm zum Wachsen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:898
+#: lib/klass_hero_web/components/marketing_components.ex:904
 #, elixir-autogen, elixir-format
 msgid "How we vet providers"
 msgstr "Wie wir Anbieter überprüfen"
@@ -5541,7 +5541,7 @@ msgstr "Das ist der Hero-Standard: Identitäts- und Altersprüfung, Erfahrungsna
 msgid "Join Berlin's growing network of trusted educators. Free to list. No setup fees."
 msgstr "Werden Sie Teil von Berlins wachsendem Netzwerk vertrauenswürdiger Pädagogen. Kostenlos eintragen. Keine Einrichtungsgebühren."
 
-#: lib/klass_hero_web/components/marketing_components.ex:571
+#: lib/klass_hero_web/components/marketing_components.ex:577
 #, elixir-autogen, elixir-format
 msgid "Join Berlin's trusted network of educators. We handle payments, scheduling, and discovery — you focus on teaching."
 msgstr "Werden Sie Teil von Berlins vertrauenswürdigem Netzwerk von Pädagogen. Wir kümmern uns um Zahlungen, Terminplanung und Sichtbarkeit — Sie konzentrieren sich aufs Unterrichten."
@@ -5589,12 +5589,12 @@ msgstr "Letzte 8 Wochen"
 msgid "Lead Instructor"
 msgstr "Leitender Kursleiter"
 
-#: lib/klass_hero_web/components/marketing_components.ex:581
+#: lib/klass_hero_web/components/marketing_components.ex:587
 #, elixir-autogen, elixir-format
 msgid "Learn How to Become a Hero →"
 msgstr "Werde zum Hero →"
 
-#: lib/klass_hero_web/components/marketing_components.ex:888
+#: lib/klass_hero_web/components/marketing_components.ex:894
 #, elixir-autogen, elixir-format
 msgid "Learn how vetting works"
 msgstr "Erfahren Sie, wie die Überprüfung funktioniert"
@@ -5624,12 +5624,12 @@ msgstr "Verknüpfen Sie diese Einladung mit Ihrem Konto %{email}."
 msgid "Linking..."
 msgstr "Wird verknüpft..."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1143
+#: lib/klass_hero_web/components/marketing_components.ex:1149
 #, elixir-autogen, elixir-format
 msgid "List"
 msgstr "Liste"
 
-#: lib/klass_hero_web/components/marketing_components.ex:599
+#: lib/klass_hero_web/components/marketing_components.ex:605
 #, elixir-autogen, elixir-format
 msgid "List Your Program"
 msgstr "Ihr Programm eintragen"
@@ -5665,7 +5665,7 @@ msgstr "Melden Sie sich an und öffnen Sie diese Einladung erneut, um dem Team b
 msgid "Log out"
 msgstr "Abmelden"
 
-#: lib/klass_hero_web/components/marketing_components.ex:895
+#: lib/klass_hero_web/components/marketing_components.ex:901
 #, elixir-autogen, elixir-format
 msgid "Looking for programs for your child?"
 msgstr "Suchen Sie Programme für Ihr Kind?"
@@ -5735,7 +5735,7 @@ msgstr "Neue Unterhaltung"
 msgid "New program"
 msgstr "Neues Programm"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1154
+#: lib/klass_hero_web/components/marketing_components.ex:1160
 #, elixir-autogen, elixir-format
 msgid "Newest"
 msgstr "Neueste"
@@ -5813,7 +5813,7 @@ msgstr "Bieten Sie Ihre eigenen Programme auf Klass Hero an — zusätzlich zu I
 msgid "Once your listing is live and you've completed Hero verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week."
 msgstr "Sobald Ihr Eintrag live ist und Sie die Hero-Verifizierung abgeschlossen haben (in der Regel 3–5 Werktage), können Eltern sofort buchen. Die meisten Anbieter erhalten ihre erste Anfrage innerhalb der ersten Woche."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1571
+#: lib/klass_hero_web/components/marketing_components.ex:1575
 #, elixir-autogen, elixir-format
 msgid "Ongoing Quality"
 msgstr "Laufende Qualität"
@@ -5838,7 +5838,7 @@ msgstr "Posteingang öffnen"
 msgid "Open menu"
 msgstr "Menü öffnen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1399
+#: lib/klass_hero_web/components/marketing_components.ex:1403
 #, elixir-autogen, elixir-format
 msgid "Our Commitment"
 msgstr "Unser Engagement"
@@ -5873,7 +5873,7 @@ msgstr "Elternteil: %{name}"
 msgid "Parents discover you on Klass Hero. Approve manually or auto-accept — your call."
 msgstr "Eltern entdecken Sie auf Klass Hero. Genehmigen Sie manuell oder automatisch — Sie entscheiden."
 
-#: lib/klass_hero_web/components/marketing_components.ex:610
+#: lib/klass_hero_web/components/marketing_components.ex:616
 #, elixir-autogen, elixir-format
 msgid "Parents find you through Klass Hero. Approve or auto-accept bookings with secure messaging built in."
 msgstr "Eltern finden Sie über Klass Hero. Genehmigen Sie Buchungen manuell oder automatisch — inklusive sicherer Nachrichtenfunktion."
@@ -5899,17 +5899,17 @@ msgstr "Ausstehende Anmeldungen"
 msgid "Predictable income"
 msgstr "Planbares Einkommen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1156
+#: lib/klass_hero_web/components/marketing_components.ex:1162
 #, elixir-autogen, elixir-format
 msgid "Price: high to low"
 msgstr "Preis: hoch zu niedrig"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1155
+#: lib/klass_hero_web/components/marketing_components.ex:1161
 #, elixir-autogen, elixir-format
 msgid "Price: low to high"
 msgstr "Preis: niedrig zu hoch"
 
-#: lib/klass_hero_web/components/marketing_components.ex:841
+#: lib/klass_hero_web/components/marketing_components.ex:847
 #: lib/klass_hero_web/live/for_providers_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "Pricing"
@@ -5920,8 +5920,8 @@ msgstr "Preise"
 msgid "Primary"
 msgstr "Primär"
 
-#: lib/klass_hero_web/components/marketing_components.ex:804
-#: lib/klass_hero_web/components/marketing_components.ex:851
+#: lib/klass_hero_web/components/marketing_components.ex:810
+#: lib/klass_hero_web/components/marketing_components.ex:857
 #: lib/klass_hero_web/live/privacy_policy_live.ex:238
 #, elixir-autogen, elixir-format
 msgid "Privacy"
@@ -5962,7 +5962,7 @@ msgstr "Qualität & Verantwortung — jederzeit aktiv."
 msgid "Questions about programs, bookings, or becoming a Hero — we read every message."
 msgstr "Fragen zu Programmen, Buchungen oder wie Sie ein Hero werden — wir lesen jede Nachricht."
 
-#: lib/klass_hero_web/components/marketing_components.ex:707
+#: lib/klass_hero_web/components/marketing_components.ex:713
 #, elixir-autogen, elixir-format
 msgid "Questions, answered."
 msgstr "Fragen, beantwortet."
@@ -5977,8 +5977,8 @@ msgstr "Bewertung"
 msgid "Ready to be a Hero?"
 msgstr "Bereit, ein Hero zu werden?"
 
-#: lib/klass_hero_web/components/marketing_components.ex:905
-#: lib/klass_hero_web/components/marketing_components.ex:925
+#: lib/klass_hero_web/components/marketing_components.ex:911
+#: lib/klass_hero_web/components/marketing_components.ex:931
 #, elixir-autogen, elixir-format
 msgid "Ready to find your child's next adventure?"
 msgstr "Bereit, das nächste Abenteuer für Ihr Kind zu finden?"
@@ -5993,8 +5993,8 @@ msgstr "Buchungen erhalten"
 msgid "Recent messages"
 msgstr "Neueste Nachrichten"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1153
-#: lib/klass_hero_web/components/marketing_components.ex:1165
+#: lib/klass_hero_web/components/marketing_components.ex:1159
+#: lib/klass_hero_web/components/marketing_components.ex:1171
 #, elixir-autogen, elixir-format
 msgid "Recommended"
 msgstr "Empfohlen"
@@ -6044,7 +6044,7 @@ msgstr "Kinderschutzschulung"
 msgid "Safety"
 msgstr "Sicherheit"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1010
+#: lib/klass_hero_web/components/marketing_components.ex:1016
 #, elixir-autogen, elixir-format
 msgid "Search programs, providers, neighborhoods..."
 msgstr "Programme, Anbieter, Stadtteile durchsuchen..."
@@ -6064,7 +6064,7 @@ msgstr "Sichere SEPA-Auszahlungen jeden Montag. Rechnungen und Mehrwertsteuer we
 msgid "Secure payments, invoicing, and VAT handling"
 msgstr "Sichere Zahlungen, Rechnungsstellung und Umsatzsteuer-Abwicklung"
 
-#: lib/klass_hero_web/components/marketing_components.ex:619
+#: lib/klass_hero_web/components/marketing_components.ex:625
 #, elixir-autogen, elixir-format
 msgid "Secure weekly payouts. Insights into your business and opportunities to expand your impact."
 msgstr "Sichere wöchentliche Auszahlungen. Einblicke in Ihr Geschäft und Möglichkeiten, Ihre Wirkung auszubauen."
@@ -6079,7 +6079,7 @@ msgstr "Sicherheit"
 msgid "See pricing"
 msgstr "Preise ansehen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:590
+#: lib/klass_hero_web/components/marketing_components.ex:596
 #, elixir-autogen, elixir-format
 msgid "See provider plans"
 msgstr "Anbieter-Tarife ansehen"
@@ -6145,12 +6145,12 @@ msgstr "Angemeldet als"
 msgid "Six checks. No shortcuts."
 msgstr "Sechs Prüfungen. Keine Abkürzungen."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1080
+#: lib/klass_hero_web/components/marketing_components.ex:1086
 #, elixir-autogen, elixir-format
 msgid "Sort:"
 msgstr "Sortieren:"
 
-#: lib/klass_hero_web/components/marketing_components.ex:840
+#: lib/klass_hero_web/components/marketing_components.ex:846
 #, elixir-autogen, elixir-format
 msgid "Start Teaching"
 msgstr "Unterrichten beginnen"
@@ -6191,7 +6191,7 @@ msgstr "Unterstützung lokaler Programme und umweltbewusster Praktiken."
 msgid "Talk to our team →"
 msgstr "Sprechen Sie mit unserem Team →"
 
-#: lib/klass_hero_web/components/marketing_components.ex:908
+#: lib/klass_hero_web/components/marketing_components.ex:914
 #: lib/klass_hero_web/live/about_live.ex:164
 #: lib/klass_hero_web/live/for_providers_live.ex:269
 #, elixir-autogen, elixir-format
@@ -6208,7 +6208,7 @@ msgstr "Mehr unterrichten."
 msgid "Teaching Experience"
 msgstr "Unterrichtserfahrung"
 
-#: lib/klass_hero_web/components/marketing_components.ex:885
+#: lib/klass_hero_web/components/marketing_components.ex:891
 #, elixir-autogen, elixir-format
 msgid "Teaching kids is your thing? Join as a Hero."
 msgstr "Unterrichten von Kindern ist Ihr Ding? Werden Sie ein Hero."
@@ -6218,8 +6218,8 @@ msgstr "Unterrichten von Kindern ist Ihr Ding? Werden Sie ein Hero."
 msgid "Tell us a bit about what you need — we'll route you to the right person."
 msgstr "Erzählen Sie uns kurz, was Sie brauchen — wir leiten Sie an die richtige Person weiter."
 
-#: lib/klass_hero_web/components/marketing_components.ex:805
-#: lib/klass_hero_web/components/marketing_components.ex:852
+#: lib/klass_hero_web/components/marketing_components.ex:811
+#: lib/klass_hero_web/components/marketing_components.ex:858
 #: lib/klass_hero_web/live/terms_of_service_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Terms"
@@ -6305,7 +6305,7 @@ msgstr "Diese Woche anstehend"
 msgid "Vetted"
 msgstr "Geprüft"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1245
+#: lib/klass_hero_web/components/marketing_components.ex:1249
 #, elixir-autogen, elixir-format
 msgid "View"
 msgstr "Ansehen"
@@ -6315,7 +6315,7 @@ msgstr "Ansehen"
 msgid "View all"
 msgstr "Alle anzeigen"
 
-#: lib/klass_hero_web/components/marketing_components.ex:463
+#: lib/klass_hero_web/components/marketing_components.ex:469
 #, elixir-autogen, elixir-format
 msgid "View →"
 msgstr "Ansehen →"
@@ -6391,12 +6391,12 @@ msgstr "Was beschäftigt Sie?"
 msgid "What's the verification process like?"
 msgstr "Wie läuft der Verifizierungsprozess ab?"
 
-#: lib/klass_hero_web/components/marketing_components.ex:915
+#: lib/klass_hero_web/components/marketing_components.ex:921
 #, elixir-autogen, elixir-format
 msgid "While you're here — explore programs."
 msgstr "Wo Sie schon mal hier sind — entdecken Sie Programme."
 
-#: lib/klass_hero_web/components/marketing_components.ex:497
+#: lib/klass_hero_web/components/marketing_components.ex:503
 #: lib/klass_hero_web/live/for_providers_live.ex:72
 #, elixir-autogen, elixir-format
 msgid "Why Klass Hero"
@@ -6473,7 +6473,7 @@ msgstr "Konto"
 msgid "active"
 msgstr "Aktiv"
 
-#: lib/klass_hero_web/components/marketing_components.ex:985
+#: lib/klass_hero_web/components/marketing_components.ex:991
 #, elixir-autogen, elixir-format
 msgid "activities"
 msgstr "Aktivitäten"
@@ -6508,12 +6508,12 @@ msgstr "für unsere Jugend"
 msgid "help"
 msgstr "Hilfe"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1068
+#: lib/klass_hero_web/components/marketing_components.ex:1074
 #, elixir-autogen, elixir-format
 msgid "in"
 msgstr "in"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1072
+#: lib/klass_hero_web/components/marketing_components.ex:1078
 #, elixir-autogen, elixir-format
 msgid "matching"
 msgstr "Passend"
@@ -6523,7 +6523,7 @@ msgstr "Passend"
 msgid "pending"
 msgstr "Ausstehend"
 
-#: lib/klass_hero_web/components/marketing_components.ex:1066
+#: lib/klass_hero_web/components/marketing_components.ex:1072
 #, elixir-autogen, elixir-format
 msgid "program"
 msgid_plural "programs"
@@ -6839,7 +6839,7 @@ msgstr "Der letzte Schritt: Lies die Klass Hero Community-Richtlinien und stimme
 msgid "You have agreed to the Community Guidelines."
 msgstr "Du hast den Community-Richtlinien zugestimmt."
 
-#: lib/klass_hero_web/components/marketing_components.ex:1487
+#: lib/klass_hero_web/components/marketing_components.ex:1491
 #, elixir-autogen, elixir-format
 msgid "Applicants submit a short recorded video (max 2 minutes) so we can assess communication skills and alignment with our values before approving their profile."
 msgstr "Bewerber reichen ein kurzes aufgezeichnetes Video (max. 2 Minuten) ein, damit wir vor der Freigabe ihres Profils Kommunikationsfähigkeiten und die Übereinstimmung mit unseren Werten beurteilen können."

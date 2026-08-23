@@ -142,11 +142,29 @@ defmodule KlassHeroWeb.MarketingComponentsTest do
       end
     end
 
-    test "hides the price badge entirely when the program is unpriced" do
+    # Shows the unpriced state rather than hiding the badge: a program with no
+    # price is a data defect, and a silently absent price is how that stays
+    # invisible. `ProgramComponents.program_card/1` does the same.
+    test "shows N/A when the program is unpriced" do
       html = render_component(&MarketingComponents.mk_program_card/1, id: "card-1", program: card(nil))
 
+      assert html =~ "N/A"
       refute html =~ "€"
       refute html =~ "Free"
+    end
+  end
+
+  describe "mk_program_list_row/1 — price" do
+    test "renders the same labels the card does" do
+      for {price, expected} <- [{Decimal.new("45.00"), "€45.00"}, {Decimal.new("0"), "Free"}, {nil, "N/A"}] do
+        html =
+          render_component(&MarketingComponents.mk_program_list_row/1,
+            id: "row-1",
+            program: card(price)
+          )
+
+        assert html =~ expected, "#{inspect(price)} should render #{expected} in the list row"
+      end
     end
 
     defp card(price) do

@@ -413,7 +413,13 @@ defmodule KlassHeroWeb.MarketingComponents do
           </div>
         </div>
 
-        <div :if={@program.price} class="absolute top-3 left-3">
+        <%!-- Unconditional, like `ProgramComponents.program_card/1`: an unpriced
+              program shows "N/A" rather than nothing. This used to be guarded on
+              the price being truthy, which only ever passed because the caller
+              coerced a nil price to zero — so a program with no price advertised
+              itself as "€0". Hiding the row instead would keep that same class of
+              data defect invisible (#1450). --%>
+        <div class="absolute top-3 left-3">
           <.kh_pill tone={:accent} class="!font-extrabold !text-sm !px-3">
             {ProgramPresenter.price_label(@program.price)}
           </.kh_pill>
@@ -1231,10 +1237,8 @@ defmodule KlassHeroWeb.MarketingComponents do
             <.icon name="hero-clock" class="w-4 h-4" />
             {schedule_label(@program)}
           </span>
-          <span :if={@program.price}>
-            <span class="font-semibold text-hero-black">
-              {ProgramPresenter.price_label(@program.price)}
-            </span>
+          <span class="font-semibold text-hero-black">
+            {ProgramPresenter.price_label(@program.price)}
           </span>
         </div>
       </div>
