@@ -15,11 +15,11 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.AddAssignedStaff
+  alias KlassHero.Messaging.Authorization
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.SendMessage
-  alias KlassHero.Messaging.Shared
   alias KlassHero.ProgramCatalog
   alias KlassHero.Shared.Outbox
 
@@ -80,13 +80,13 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
     # the scope, and the program must belong to that provider. Both guards are
     # defence-in-depth — callers are expected to check too — but they keep the
     # facade safe on its own.
-    with {:ok, provider_id} <- Shared.resolve_acting_provider(scope, opts),
+    with {:ok, provider_id} <- Authorization.resolve_acting_provider(scope, opts),
          {:ok, _program} <- ProgramCatalog.get_program_for_provider(provider_id, program_id),
          # Vestigial today: ADR-0004 removed provider tiers, so this can only
          # reject a staff-shaped scope that omits skip_entitlement_check — a
          # shape no caller produces. Kept as the seam for the planned
          # success-fee model, not as active defence.
-         :ok <- Shared.maybe_check_entitlement(scope, opts, provider_id: provider_id),
+         :ok <- Authorization.maybe_check_entitlement(scope, opts, provider_id: provider_id),
          {:ok, parent_user_ids} <- get_enrolled_parent_user_ids(program_id),
          :ok <- verify_has_recipients(parent_user_ids),
          {:ok, conversation} <- get_or_create_broadcast_conversation(provider_id, program_id, subject),

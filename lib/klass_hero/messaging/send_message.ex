@@ -11,10 +11,10 @@ defmodule KlassHero.Messaging.SendMessage do
   use KlassHero.Shared.Tracing
 
   alias KlassHero.Messaging.Attachment
+  alias KlassHero.Messaging.Authorization
   alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
-  alias KlassHero.Messaging.Shared
   alias KlassHero.Shared.Outbox
   alias KlassHero.Shared.Storage
 
@@ -53,7 +53,7 @@ defmodule KlassHero.Messaging.SendMessage do
 
     with {:ok, trimmed_content} <- validate_content(content, attachment_files),
          :ok <- validate_attachment_files(attachment_files),
-         :ok <- Shared.verify_participant(conversation_id, sender_id),
+         :ok <- Authorization.verify_participant(conversation_id, sender_id),
          {:ok, loaded_conversation} <- load_conversation(conversation_id, conversation),
          {:ok, sender_role} <- authorize_sender(loaded_conversation, sender_id),
          {:ok, uploaded_files} <- upload_files(attachment_files, conversation_id),

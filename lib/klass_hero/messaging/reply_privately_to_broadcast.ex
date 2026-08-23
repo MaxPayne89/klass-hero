@@ -12,8 +12,9 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
   alias KlassHero.Messaging.AddAssignedStaff
+  alias KlassHero.Messaging.Authorization
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Events
-  alias KlassHero.Messaging.Shared
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -34,7 +35,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
     # pattern match on :program_broadcast + participation check ensures only
     # broadcast participants can initiate private replies.
     with {:ok, broadcast} <- fetch_broadcast(broadcast_conversation_id),
-         :ok <- Shared.verify_participant(broadcast.id, scope.user.id),
+         :ok <- Authorization.verify_participant(broadcast.id, scope.user.id),
          {:ok, provider_user_id} <- provider_owner_user_id(broadcast.provider_id),
          {:ok, direct_conversation} <-
            find_or_create_direct_conversation(
@@ -87,9 +88,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
 
   defp create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
     Outbox.transact(@context, fn ->
-      attrs =
-        %{type: :direct, provider_id: provider_id}
-        |> Shared.maybe_put_program_id(program_id)
+      attrs = Conversation.direct_attrs(provider_id, program_id)
 
       with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
            {:ok, _} <-

@@ -1,9 +1,10 @@
-defmodule KlassHero.Messaging.Shared do
+defmodule KlassHero.Messaging.Authorization do
   @moduledoc """
-  Shared utilities for Messaging use cases.
+  The authorisation gate Messaging write commands pass through.
 
-  Hosts cross-cutting helpers (participant verification, entitlement checks)
-  used by multiple commands. Staff-addition is owned by
+  Answers the three questions a command asks before it writes: which provider
+  is this scope acting as, is this user a participant of this conversation, and
+  does this scope's plan permit messaging at all. Staff-addition is owned by
   `KlassHero.Messaging.AddAssignedStaff`.
   """
 
@@ -123,9 +124,4 @@ defmodule KlassHero.Messaging.Shared do
       check_entitlement(scope, metadata)
     end
   end
-
-  @doc "Adds `:program_id` to the attrs map only when a program id is present."
-  @spec maybe_put_program_id(map(), String.t() | nil) :: map()
-  def maybe_put_program_id(attrs, nil), do: attrs
-  def maybe_put_program_id(attrs, program_id), do: Map.put(attrs, :program_id, program_id)
 end
