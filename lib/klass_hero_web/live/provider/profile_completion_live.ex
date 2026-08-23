@@ -15,6 +15,8 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   alias KlassHero.Shared.Categories
   alias KlassHero.Shared.FeatureFlags
   alias KlassHero.Shared.Storage
+  alias KlassHeroWeb.Helpers.ProviderBranding
+  alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -88,6 +90,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             address: blank_to_nil(params["address"]),
             categories: parse_categories(params["categories"])
           }
+          |> Map.merge(ProviderBranding.attrs_from_params(params))
           |> maybe_put_logo(logo_result)
           |> maybe_put_entity_type(socket.assigns.business_vetting?, params)
 
@@ -375,6 +378,34 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                   {gettext("Remove")}
                 </button>
               </div>
+            </div>
+
+            <%!-- Branding & Presence (#1302) — all optional, shown on the public profile --%>
+            <div class="pt-4 border-t border-gray-200 space-y-6">
+              <div>
+                <h3 class={[Theme.typography(:card_title), "text-gray-900"]}>
+                  {gettext("Branding & Presence")}
+                </h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  {gettext("Optional — shown on your public profile page.")}
+                </p>
+              </div>
+
+              <.input
+                field={@form[:tagline]}
+                type="text"
+                label={gettext("Tagline")}
+                placeholder={gettext("A short line that sums you up")}
+                maxlength="150"
+              />
+
+              <.input
+                :for={{field, label} <- ProviderPresenter.social_networks()}
+                field={@form[field]}
+                type="url"
+                label={label}
+                placeholder="https://"
+              />
             </div>
 
             <div class="flex justify-end pt-4 border-t border-gray-200">

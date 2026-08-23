@@ -13,6 +13,8 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Provider
+  alias KlassHeroWeb.Helpers.ProviderBranding
+  alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
   alias KlassHeroWeb.Provider.Dashboard.Uploads
   alias KlassHeroWeb.Theme
@@ -38,6 +40,11 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
         accept: ~w(.jpg .jpeg .png .webp),
         max_entries: 1,
         max_file_size: 2_000_000
+      )
+      |> allow_upload(:cover,
+        accept: ~w(.jpg .jpeg .png .webp),
+        max_entries: 1,
+        max_file_size: 5_000_000
       )
       |> allow_upload(:verification_doc,
         accept: ~w(.pdf .jpg .jpeg .png),
@@ -67,18 +74,22 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
     logo_result = Uploads.consume_single_upload(socket, :logo, "logos", provider.id)
     Logger.info("save_profile: logo upload result", provider_id: provider.id, result: logo_result)
 
-    case logo_result do
-      :upload_error ->
+    cover_result = Uploads.consume_single_upload(socket, :cover, "covers", provider.id)
+
+    case {logo_result, cover_result} do
+      {:upload_error, _} ->
         {:noreply, put_flash(socket, :error, gettext("Logo upload failed. Please try again."))}
 
-      logo_result ->
-        attrs = %{description: params["description"]}
+      {_, :upload_error} ->
+        {:noreply, put_flash(socket, :error, gettext("Cover image upload failed. Please try again."))}
 
+      {logo_result, cover_result} ->
         attrs =
-          case logo_result do
-            {:ok, url} -> Map.put(attrs, :logo_url, url)
-            :no_upload -> attrs
-          end
+          params
+          |> ProviderBranding.attrs_from_params()
+          |> Map.put(:description, params["description"])
+          |> put_uploaded(:logo_url, logo_result)
+          |> put_uploaded(:cover_image_url, cover_result)
 
         case Provider.update_provider_profile(provider.id, attrs) do
           {:ok, _updated} ->
@@ -174,6 +185,9 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
     {:ok, docs} = Provider.get_provider_verification_documents(provider_id)
     docs
   end
+
+  defp put_uploaded(attrs, _key, :no_upload), do: attrs
+  defp put_uploaded(attrs, key, {:ok, url}), do: Map.put(attrs, key, url)
 
   @impl true
   def render(assigns) do
@@ -277,6 +291,88 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
                     {gettext("JPG, PNG or WebP. Max 2MB.")}
                   </p>
                 </div>
+              </div>
+
+              <div class="pt-6 border-t border-hero-grey-200 space-y-6">
+                <div>
+                  <h3 class={[Theme.typography(:card_title), "text-hero-black-100"]}>
+                    {gettext("Branding & Presence")}
+                  </h3>
+                  <p class="text-sm text-hero-grey-500 mt-1">
+                    {gettext("Shown on your public profile page.")}
+                  </p>
+                </div>
+
+                <.input
+                  field={@form[:tagline]}
+                  type="text"
+                  label={gettext("Tagline")}
+                  placeholder={gettext("A short line that sums you up")}
+                  maxlength="150"
+                />
+
+                <div>
+                  <label class="block text-sm font-semibold text-hero-black-100 mb-2">
+                    {gettext("Cover Image")}
+                  </label>
+
+                  <div
+                    id="cover-upload"
+                    class={[
+                      "border-2 border-dashed border-hero-grey-300 p-6 text-center",
+                      Theme.rounded(:lg)
+                    ]}
+                    phx-drop-target={@uploads.cover.ref}
+                  >
+                    <div :for={entry <- @uploads.cover.entries} class="mb-4">
+                      <.live_img_preview
+                        entry={entry}
+                        class="w-full max-w-md mx-auto h-32 object-cover rounded-lg"
+                      />
+                      <p class="text-sm text-hero-grey-500 mt-1">{entry.client_name}</p>
+                      <button
+                        type="button"
+                        phx-click="cancel_upload"
+                        phx-value-ref={entry.ref}
+                        phx-value-upload="cover"
+                        class="text-xs text-red-500 hover:text-red-700 mt-1"
+                      >
+                        {gettext("Remove")}
+                      </button>
+                      <div
+                        :for={err <- upload_errors(@uploads.cover, entry)}
+                        class="text-xs text-red-500 mt-1"
+                      >
+                        {upload_error_to_string(err)}
+                      </div>
+                    </div>
+
+                    <.live_file_input upload={@uploads.cover} class="hidden" />
+                    <label
+                      for={@uploads.cover.ref}
+                      class={[
+                        "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
+                        "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
+                        Theme.rounded(:lg),
+                        Theme.transition(:normal)
+                      ]}
+                    >
+                      <.icon name="hero-photo-mini" class="w-4 h-4" />
+                      {gettext("Choose Cover Image")}
+                    </label>
+                    <p class="text-xs text-hero-grey-400 mt-2">
+                      {gettext("JPG, PNG or WebP. Max 5MB.")}
+                    </p>
+                  </div>
+                </div>
+
+                <.input
+                  :for={{field, label} <- ProviderPresenter.social_networks()}
+                  field={@form[field]}
+                  type="url"
+                  label={label}
+                  placeholder="https://"
+                />
               </div>
 
               <div class="flex justify-end">

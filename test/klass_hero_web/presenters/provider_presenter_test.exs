@@ -93,6 +93,47 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenterTest do
       assert view.logo_url == "https://cdn.example.com/starlight.png"
     end
 
+    test "carries tagline and cover image through to the view" do
+      provider = %ProviderProfile{
+        id: "p-b",
+        identity_id: "i-b",
+        business_name: "Starlight Coaching",
+        tagline: "Play-based learning",
+        cover_image_url: "https://cdn.example.com/cover.png"
+      }
+
+      view = ProviderPresenter.to_public_view(provider)
+
+      assert view.tagline == "Play-based learning"
+      assert view.cover_image_url == "https://cdn.example.com/cover.png"
+    end
+
+    test "lists only the social networks the provider filled in" do
+      provider = %ProviderProfile{
+        id: "p-c",
+        identity_id: "i-c",
+        business_name: "Starlight Coaching",
+        instagram_url: "https://instagram.com/starlight",
+        youtube_url: "https://youtube.com/@starlight",
+        facebook_url: nil,
+        tiktok_url: "",
+        linkedin_url: nil
+      }
+
+      # An empty string is as absent as nil here: a cleared input reaches the
+      # column as nil, but a legacy row may still hold "".
+      assert ProviderPresenter.to_public_view(provider).social_links == [
+               {"Instagram", "https://instagram.com/starlight"},
+               {"YouTube", "https://youtube.com/@starlight"}
+             ]
+    end
+
+    test "social_links is empty when no network is set" do
+      provider = %ProviderProfile{id: "p-d", identity_id: "i-d", business_name: "Starlight"}
+
+      assert ProviderPresenter.to_public_view(provider).social_links == []
+    end
+
     test "derives two-letter initials from a multi-word business name" do
       provider = %ProviderProfile{
         id: "p-2",
