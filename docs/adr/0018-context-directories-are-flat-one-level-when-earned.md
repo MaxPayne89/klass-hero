@@ -87,7 +87,8 @@ one level, holding files, rather than three levels holding one.
 
 ## Migration
 
-Accounts is the pilot and is flat. The remaining six contexts convert one PR at a time.
+Accounts was the pilot. It, Provider (#1425), Family (#1426) and Messaging (#1427) are
+flat; the remaining three contexts convert one PR at a time.
 
 **Both shapes are legal until that completes.** Reviewers and review agents must accept either,
 and must not flag an unconverted context — nor half-convert one as a drive-by, which produces a
@@ -98,3 +99,29 @@ The lockstep rename sites for each remaining context are `lib/klass_hero/project
 `config/config.exs`. Both `mix lint_read_tables` and `mix lint_acl_boundary` are already
 layout-agnostic — they check depth and first-path-segment respectively, never the literal
 `adapters/driven` string — so neither needs changing.
+
+### Check prod before merging a flatten
+
+A flatten renames a context's registered consumers and workers, and **module names are
+persisted data** — three columns carry them, and no compiler can see any of them. The check
+is cheap; the point is to *look*, not to always act:
+
+```bash
+bin/prod-db -c "select event_id, topic, missed_consumers from undelivered_events
+                where missed_consumers::text like '%<Context>%';"
+bin/prod-db -c "select worker, state, count(*) from oban_jobs
+                where worker like '%<Context>%' group by 1,2;"
+bin/prod-db -c "select handler_ref, count(*) from processed_events
+                where handler_ref like '%<Context>%' group by 1;"
+```
+
+| Column | What a rename does | Decide |
+|---|---|---|
+| `undelivered_events.missed_consumers` | **permanent** — `replay/1` refuses a retired ref forever | Replay first only if the consumer has no bootstrap. A projection with a full-rebuild `bootstrap_impl` has already self-healed, so accepting is usually right. |
+| `oban_jobs.worker` | a job enqueued pre-deploy cannot resolve its module | Only non-terminal rows matter; `completed` ones are inert. |
+| `processed_events.handler_ref` | the consumer loses its exactly-once gate for events in flight across the deploy, so it may re-run | Duplicate effects, not a crash. Confirm the queue is drained. |
+
+Whichever way each goes, **say so in the PR body**. The failure this guards against is not a
+row left behind — it is someone hitting the refusal months later with no idea why. Provider
+(#1425) accepted one dead-lettered row on those grounds; Messaging (#1427) found all three
+stores clear.

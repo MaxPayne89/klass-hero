@@ -22,9 +22,9 @@ convention and does NOT reintroduce the removed layering.
 ---
 
 > **Migration window (read before running checks 5–8).** A repo-wide flatten is
-> in progress: `accounts`, `provider` and `family` have been converted to the
-> new one-level layout below; the other four contexts (messaging, participation,
-> enrollment, program_catalog) and `shared` still carry the old
+> in progress: `accounts`, `provider`, `family` and `messaging` have been
+> converted to the new one-level layout below; the other three contexts
+> (participation, enrollment, program_catalog) and `shared` still carry the old
 > `adapters/{driven,driving}/` + `domain/` tree. **Both shapes are legal at
 > once** until the migration finishes — never flag an unconverted context for
 > keeping the old tree, and never flag a converted one for lacking

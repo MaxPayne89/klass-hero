@@ -96,7 +96,7 @@ An ACL whose every function forwards a call is not one of these. Fold it into it
 - `lib/klass_hero/provider/assignments.ex:835` (`ensure_program_owned/2`) — domain module,
   facade call inside an `acl_span`
 - `lib/klass_hero_web/helpers/provider_display.ex:30` — web helper, bare facade calls (#1195/#1196)
-- `lib/klass_hero/messaging/adapters/driven/persistence/queries/conversation_queries.ex:175` —
+- `lib/klass_hero/messaging/queries/conversation_queries.ex:132` —
   query builder calling `ProgramCatalog.list_ended_program_ids/1`
 
 ## Supersedes
