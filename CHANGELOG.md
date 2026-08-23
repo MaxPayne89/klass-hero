@@ -5,6 +5,18 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.84.0](https://github.com/MaxPayne89/klass-hero/compare/v0.83.0...v0.84.0) (2026-08-23)
+
+
+### Features
+
+* show "Free" instead of €0.00 for zero-price programs ([#1487](https://github.com/MaxPayne89/klass-hero/issues/1487)) ([b2b26c9](https://github.com/MaxPayne89/klass-hero/commit/b2b26c99cef150441420475f4dada1c8cb012f09))
+
+
+### Bug Fixes
+
+* session notes reach their parent and authorize at the boundary ([#1486](https://github.com/MaxPayne89/klass-hero/issues/1486)) ([7353cbe](https://github.com/MaxPayne89/klass-hero/commit/7353cbebc96697d59e9d4a5219782bef10d9cfbb)), closes [#1329](https://github.com/MaxPayne89/klass-hero/issues/1329)
+
 ## [0.83.0](https://github.com/MaxPayne89/klass-hero/compare/v0.82.0...v0.83.0) (2026-08-23)
 
 
