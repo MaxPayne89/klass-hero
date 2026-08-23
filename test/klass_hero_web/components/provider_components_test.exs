@@ -27,6 +27,24 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
       assert html =~ ~s|href="/provider/programs/prog-456/incidents"|
       assert html =~ ~s|aria-label="Incident Reports"|
     end
+
+    # The cell renders the presenter's finished string verbatim. It used to
+    # prefix it with a literal "€" while the presenter supplied only digits —
+    # two files owning one string, which showed "€€120.00" the moment the
+    # presenter started carrying the symbol, with no test to see it.
+    test "renders the price label as given, adding nothing to it" do
+      html = render_table(program_row(price: "€120.00"))
+
+      assert html =~ "€120.00"
+      refute html =~ "€€"
+    end
+
+    test "renders a free program's label rather than an amount" do
+      html = render_table(program_row(price: "Free"))
+
+      assert html =~ "Free"
+      refute html =~ "€"
+    end
   end
 
   # The three states the staff column must keep apart (#1310). Before it, the
@@ -89,7 +107,10 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
       id: "prog-1",
       name: "Judo",
       category: "Sports",
-      price: "120",
+      # Already the finished display string — `to_table_view/3` runs the price
+      # through `ProgramPresenter.price_label/1`, symbol included. The row is
+      # built by hand here, so it has to keep matching that (#1374).
+      price: "€120.00",
       assigned_staff: %{lead: nil, count: 0, others_count: 0},
       status: :active,
       enrolled: 5,

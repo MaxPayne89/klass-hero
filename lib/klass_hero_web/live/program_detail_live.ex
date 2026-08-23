@@ -329,7 +329,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <p class={[Theme.typography(:page_title), Theme.text_color(:heading)]}>
-                {ProgramCatalog.format_price(@program.price)}
+                {ProgramPresenter.price_label(@program.price)}
               </p>
               <%= if date_range = ProgramPresenter.format_date_range_brief(@program) do %>
                 <p class={["text-sm", Theme.text_color(:muted)]}>
@@ -479,7 +479,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
             registration_status={@registration_status}
             label={
               gettext("Enroll Now - %{price}",
-                price: ProgramCatalog.format_price(@program.price)
+                price: ProgramPresenter.price_label(@program.price)
               )
             }
           />
@@ -495,7 +495,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         <div class="flex items-center justify-between gap-4 max-w-4xl mx-auto">
           <div>
             <p class={["font-semibold", Theme.text_color(:heading)]}>
-              {ProgramCatalog.format_price(@program.price)}
+              {ProgramPresenter.price_label(@program.price)}
             </p>
           </div>
           <.enroll_button

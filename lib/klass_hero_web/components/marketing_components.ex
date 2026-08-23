@@ -36,6 +36,7 @@ defmodule KlassHeroWeb.MarketingComponents do
       icon: 1
     ]
 
+  alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
   alias Phoenix.HTML.FormField
   alias Phoenix.LiveView.JS
@@ -412,9 +413,15 @@ defmodule KlassHeroWeb.MarketingComponents do
           </div>
         </div>
 
-        <div :if={@program.price} class="absolute top-3 left-3">
+        <%!-- Unconditional, like `ProgramComponents.program_card/1`: an unpriced
+              program shows "N/A" rather than nothing. This used to be guarded on
+              the price being truthy, which only ever passed because the caller
+              coerced a nil price to zero — so a program with no price advertised
+              itself as "€0". Hiding the row instead would keep that same class of
+              data defect invisible (#1450). --%>
+        <div class="absolute top-3 left-3">
           <.kh_pill tone={:accent} class="!font-extrabold !text-sm !px-3">
-            €{format_price(@program.price)}
+            {ProgramPresenter.price_label(@program.price)}
           </.kh_pill>
         </div>
         <div class="absolute top-3 right-3">
@@ -452,8 +459,6 @@ defmodule KlassHeroWeb.MarketingComponents do
             <.icon name="hero-user" class="w-4 h-4" />
             {@program.age_range}
           </span>
-          <span :if={@program.age_range && @program.period}>·</span>
-          <span :if={@program.period}>{@program.period}</span>
         </div>
         <div class="mt-4 flex items-center justify-between pt-4 border-t border-[var(--border-light)]">
           <span class="text-sm text-[var(--fg-muted)] line-clamp-1">
@@ -468,10 +473,6 @@ defmodule KlassHeroWeb.MarketingComponents do
     </.kh_card>
     """
   end
-
-  defp format_price(price) when is_float(price), do: :erlang.float_to_binary(price, decimals: 0)
-  defp format_price(price) when is_integer(price), do: Integer.to_string(price)
-  defp format_price(price), do: to_string(price)
 
   defp schedule_label(%{meeting_days: [_ | _] = days}) do
     days
@@ -1236,9 +1237,8 @@ defmodule KlassHeroWeb.MarketingComponents do
             <.icon name="hero-clock" class="w-4 h-4" />
             {schedule_label(@program)}
           </span>
-          <span :if={@program.price}>
-            <span class="font-semibold text-hero-black">€{format_price(@program.price)}</span>
-            <span :if={@program.period}>{" "}{@program.period}</span>
+          <span class="font-semibold text-hero-black">
+            {ProgramPresenter.price_label(@program.price)}
           </span>
         </div>
       </div>

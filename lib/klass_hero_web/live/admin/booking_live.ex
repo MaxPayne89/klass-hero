@@ -27,6 +27,7 @@ defmodule KlassHeroWeb.Admin.BookingLive do
   alias Backpex.Fields.BelongsTo
   alias Backpex.Fields.Text
   alias Backpex.Fields.Textarea
+  alias KlassHero.Shared.Money
   alias KlassHeroWeb.Admin.Actions.CancelBookingAction
   alias KlassHeroWeb.Admin.Filters.StatusFilter
 
@@ -96,8 +97,11 @@ defmodule KlassHeroWeb.Admin.BookingLive do
         render: fn assigns ->
           ~H"""
           <span>
+            <%!-- Numeric on purpose: an admin ledger shows figures, where a
+                  parent-facing surface shows "Free". Symbol and rounding still
+                  come from Money so this column cannot drift from the rest. --%>
             <%= if @value do %>
-              &euro;{Decimal.round(@value, 2)}
+              {Money.format(Money.eur(@value))}
             <% else %>
               &mdash;
             <% end %>

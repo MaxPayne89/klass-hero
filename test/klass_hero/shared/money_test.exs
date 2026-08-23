@@ -88,4 +88,35 @@ defmodule KlassHero.Shared.MoneyTest do
       refute Money.equal?(a, b)
     end
   end
+
+  describe "eur/1" do
+    test "builds a EUR Money without the validating round-trip" do
+      money = Money.eur(Decimal.new("25.00"))
+
+      assert money.currency == :EUR
+      assert Decimal.equal?(money.amount, Decimal.new("25.00"))
+    end
+
+    test "trusts the caller — a negative amount that new/2 would reject passes through" do
+      assert Decimal.negative?(Money.eur(Decimal.new("-1.00")).amount)
+    end
+  end
+
+  describe "format/1" do
+    @formats [
+      {"25.00", "€25.00", "an amount already at scale 2"},
+      {"25", "€25.00", "an integral amount gains cents"},
+      {"45.5", "€45.50", "a short scale is padded, not truncated"},
+      {"45.567", "€45.57", "rounds to the cent"},
+      {"0", "€0.00", "zero still formats as an amount — 'Free' is a label, not a format"}
+    ]
+
+    test "renders the currency symbol and exactly two decimal places" do
+      for {amount, expected, why} <- @formats do
+        actual = amount |> Decimal.new() |> Money.eur() |> Money.format()
+
+        assert actual == expected, "#{amount} (#{why}) should format as #{expected}, got #{actual}"
+      end
+    end
+  end
 end

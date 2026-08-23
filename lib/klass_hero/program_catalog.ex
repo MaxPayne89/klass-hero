@@ -401,9 +401,18 @@ defmodule KlassHero.ProgramCatalog do
   @spec valid_program_category?(String.t()) :: boolean()
   defdelegate valid_program_category?(category), to: ProgramCategories
 
-  @doc "Formats a price for display with currency symbol (e.g. \"€45.00\")."
-  @spec format_price(Decimal.t() | number() | nil) :: String.t()
-  defdelegate format_price(price), to: ProgramPricing
+  @doc """
+  Classifies a raw price as `:unset`, `:free`, or `{:priced, amount}`.
+
+  Display text is *not* derived here — see `ProgramPricing`'s moduledoc for why
+  the words live in the web layer.
+  """
+  @spec price_state(Decimal.t() | nil) :: ProgramPricing.price_state()
+  defdelegate price_state(price), to: ProgramPricing
+
+  @doc "Whether a program is free — priced, at zero. An unpriced program is not free."
+  @spec free?(Program.t()) :: boolean()
+  defdelegate free?(program), to: Program
 
   @doc """
   Expands a program's recurring schedule into the dates it meets on.

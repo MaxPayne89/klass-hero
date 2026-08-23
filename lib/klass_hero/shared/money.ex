@@ -52,6 +52,17 @@ defmodule KlassHero.Shared.Money do
 
   def from_persistence(_), do: {:error, :invalid_persistence_data}
 
+  @doc """
+  Builds a EUR Money from an amount a changeset has already validated.
+
+  `new/2` returns `{:ok, money} | {:error, reasons}`, which a render path cannot
+  use — a template has nowhere to put an error tuple. Callers on that path hold a
+  price whose non-negativity is already guaranteed at the DB boundary, so this
+  skips revalidation. Anywhere the amount is still untrusted, use `new/2`.
+  """
+  @spec eur(Decimal.t()) :: t()
+  def eur(%Decimal{} = amount), do: %__MODULE__{amount: amount, currency: :EUR}
+
   @doc "Structural equality — same amount (via Decimal.equal?/2) and same currency atom."
   @spec equal?(t(), t()) :: boolean()
   def equal?(%__MODULE__{amount: a1, currency: c1}, %__MODULE__{amount: a2, currency: c2}) do

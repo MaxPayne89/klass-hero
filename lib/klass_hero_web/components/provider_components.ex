@@ -1503,7 +1503,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               <td class="px-4 py-4">
                 <div class="font-medium text-hero-black-100">{program.name}</div>
                 <div class="text-sm text-hero-grey-500">
-                  {program.category} • €{program.price}
+                  {program.category} • {program.price}
                 </div>
               </td>
               <td class="px-4 py-4">
