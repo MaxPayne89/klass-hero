@@ -13,9 +13,9 @@ alias KlassHero.Accounts.Scope
 alias KlassHero.Accounts.StaffInvitationHandler
 alias KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandler
 alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
-alias KlassHero.Family.Adapters.Driving.Events.FamilyEventHandler
-alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
-alias KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker
+alias KlassHero.Family.FamilyEventHandler
+alias KlassHero.Family.InviteClaimedHandler
+alias KlassHero.Family.ProcessInviteClaimWorker
 alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
 alias KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren
 alias KlassHero.Messaging.Adapters.Driving.Events.MessagingEventHandler

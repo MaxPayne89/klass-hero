@@ -24,7 +24,7 @@ defmodule KlassHero.Provider.ParticipationSessionStatsACL do
   require Logger
 
   # Two foreign contexts, one span on the `FROM` table's — the shape
-  # `family/…/acl/child_enrollment_acl.ex` already uses for its two-table join.
+  # `family/child_enrollment_acl.ex` already uses for its two-table join.
   def list_completed_session_counts do
     results =
       acl_span source: "provider", target: "participation" do

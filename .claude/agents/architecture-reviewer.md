@@ -22,13 +22,13 @@ convention and does NOT reintroduce the removed layering.
 ---
 
 > **Migration window (read before running checks 5–8).** A repo-wide flatten is
-> in progress: `accounts` has been converted to the new one-level layout below;
-> the other six contexts (provider, family, messaging, participation,
+> in progress: `accounts`, `provider` and `family` have been converted to the
+> new one-level layout below; the other four contexts (messaging, participation,
 > enrollment, program_catalog) and `shared` still carry the old
 > `adapters/{driven,driving}/` + `domain/` tree. **Both shapes are legal at
 > once** until the migration finishes — never flag an unconverted context for
-> keeping the old tree, and never flag `accounts` (or any newly-converted
-> context) for lacking `adapters/`/`domain/`. Checks below identify a kind by
+> keeping the old tree, and never flag a converted one for lacking
+> `adapters/`/`domain/`. Checks below identify a kind by
 > what it **is** (a `use`/behaviour/naming signature) first, then accept
 > either shape's legal location — a check written as "for each file in
 > `adapters/driven/projections/`" would pass vacuously on a flattened context

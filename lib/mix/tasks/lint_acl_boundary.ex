@@ -24,7 +24,7 @@ defmodule Mix.Tasks.LintAclBoundary do
   ## Granularity: one `acl_span` per reading function, not per table or per file
 
   A cross-context query frequently spans three tables and two foreign contexts.
-  `family/…/acl/child_enrollment_acl.ex` joins `enrollments` and `programs` under a
+  `family/child_enrollment_acl.ex` joins `enrollments` and `programs` under a
   single `target: "enrollment"` — the `FROM` table's context — and that is the
   established shape. Requiring a span per foreign table would flag code that follows
   the precedent.

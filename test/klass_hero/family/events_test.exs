@@ -1,9 +1,9 @@
-defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
-  @moduledoc "Tests for the FamilyEvents factory module."
+defmodule KlassHero.Family.EventsTest do
+  @moduledoc "Tests for the Events factory module."
 
   use ExUnit.Case, async: true
 
-  alias KlassHero.Family.Domain.Events.FamilyEvents
+  alias KlassHero.Family.Events
   alias KlassHero.Shared.Domain.Events.Event
 
   # Every family event factory shares one contract: build a :family event with
@@ -24,7 +24,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
       @entity_type entity_type
 
       test "builds an event with the right type and entity" do
-        event = apply(FamilyEvents, @fun, ["id-1"])
+        event = apply(Events, @fun, ["id-1"])
 
         assert %Event{} = event
         assert event.event_type == @fun
@@ -36,7 +36,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
 
       test "the id argument wins over a caller-supplied one and preserves extras" do
         payload = %{@id => "overridden", extra: "data"}
-        event = apply(FamilyEvents, @fun, ["real-id", payload])
+        event = apply(Events, @fun, ["real-id", payload])
 
         assert Map.get(event.payload, @id) == "real-id"
         assert event.payload.extra == "data"
@@ -45,7 +45,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
       test "raises for a nil or blank id" do
         for bad_id <- [nil, ""] do
           assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
-            apply(FamilyEvents, @fun, [bad_id])
+            apply(Events, @fun, [bad_id])
           end
         end
       end
@@ -57,7 +57,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
       child_id = Ecto.UUID.generate()
 
       event =
-        FamilyEvents.child_created(child_id, %{
+        Events.child_created(child_id, %{
           parent_id: Ecto.UUID.generate(),
           first_name: "Emma",
           last_name: "Johnson"
@@ -71,7 +71,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
       child_id = Ecto.UUID.generate()
 
       event =
-        FamilyEvents.child_updated(child_id, %{
+        Events.child_updated(child_id, %{
           parent_id: Ecto.UUID.generate(),
           first_name: "Emily",
           last_name: "Johnson"
@@ -91,7 +91,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEventsTest do
         program_id: Ecto.UUID.generate()
       }
 
-      event = FamilyEvents.invite_family_ready(invite_id, payload)
+      event = Events.invite_family_ready(invite_id, payload)
 
       assert event.payload.user_id == payload.user_id
       assert event.payload.child_id == payload.child_id

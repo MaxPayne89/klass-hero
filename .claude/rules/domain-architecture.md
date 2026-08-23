@@ -57,7 +57,7 @@ context is flat.
 
 See ADR 0018 for the reasoning.
 
-> **Migration in progress.** Accounts is flat. The other six contexts still carry
+> **Migration in progress.** Accounts, Provider and Family are flat. The other four contexts still carry
 > the old `adapters/{driven,driving}/…` + `domain/…` tree and are being converted
 > one PR at a time. **Both shapes are legal until that finishes** — do not flag an
 > unconverted context as a violation, and do not half-convert one as a drive-by.

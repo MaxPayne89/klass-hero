@@ -8,7 +8,7 @@ defmodule KlassHero.Family.ProcessInviteClaim do
   """
 
   alias KlassHero.Family
-  alias KlassHero.Family.Domain.Events.FamilyEvents
+  alias KlassHero.Family.Events
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -166,7 +166,7 @@ defmodule KlassHero.Family.ProcessInviteClaim do
   defp map_nut_allergy(_), do: nil
 
   defp family_ready_event(invite_id, user_id, child_id, parent_id, program_id) do
-    FamilyEvents.invite_family_ready(invite_id, %{
+    Events.invite_family_ready(invite_id, %{
       invite_id: invite_id,
       user_id: user_id,
       child_id: child_id,

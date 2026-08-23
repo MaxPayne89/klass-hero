@@ -37,7 +37,7 @@ Keep — or add — an ACL under `adapters/driven/acl/` when it does real work:
   `ProgramCatalog.get_programs_by_ids/1` result into `:program_not_found`.
 - **Cycle-breaking direct table access.** `enrollment/…/program_catalog_acl.ex` and
   `…/program_schedule_acl.ex` query `programs` directly because ProgramCatalog already depends on
-  Enrollment for capacity; `family/…/child_enrollment_acl.ex` and `…/child_participation_acl.ex`
+  Enrollment for capacity; `family/child_enrollment_acl.ex` and `family/child_participation_acl.ex`
   do the same for cross-context *writes* during child deletion. Each says so in its moduledoc —
   that justification is a requirement, not a courtesy.
 - **A query no facade expresses.** `provider/…/participation_session_stats_acl.ex` runs a

@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Domain.Events.FamilyEvents do
+defmodule KlassHero.Family.Events do
   @moduledoc """
   Factory module for creating Family events.
 
@@ -56,7 +56,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   @doc """
   Creates a `child_created` event.
 
-      iex> event = FamilyEvents.child_created("child-uuid", %{first_name: "Emma"})
+      iex> event = Events.child_created("child-uuid", %{first_name: "Emma"})
       iex> {event.event_type, event.source_context, event.entity_type}
       {:child_created, :family, :child}
   """
@@ -71,7 +71,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   @doc """
   Creates a `child_updated` event.
 
-      iex> event = FamilyEvents.child_updated("child-uuid", %{first_name: "Emily"})
+      iex> event = Events.child_updated("child-uuid", %{first_name: "Emily"})
       iex> event.event_type
       :child_updated
   """
@@ -89,7 +89,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   Part of the GDPR deletion cascade, so it must not be lost — which every staged
   event is guaranteed since ADR-0014, not something this factory opts into.
 
-      iex> event = FamilyEvents.child_data_anonymized("child-uuid")
+      iex> event = Events.child_data_anonymized("child-uuid")
       iex> event.event_type
       :child_data_anonymized
   """
@@ -109,7 +109,7 @@ defmodule KlassHero.Family.Domain.Events.FamilyEvents do
   Carries entity_type `:invite` rather than `:child`, because it marks an
   invite lifecycle transition rather than a change to a child.
 
-      iex> event = FamilyEvents.invite_family_ready("invite-uuid", %{user_id: "u1"})
+      iex> event = Events.invite_family_ready("invite-uuid", %{user_id: "u1"})
       iex> {event.event_type, event.entity_type}
       {:invite_family_ready, :invite}
   """

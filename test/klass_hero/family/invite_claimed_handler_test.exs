@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandlerTest do
+defmodule KlassHero.Family.InviteClaimedHandlerTest do
   @moduledoc """
   Tests for InviteClaimedHandler -- enqueues Oban job for invite processing.
 
@@ -11,7 +11,7 @@ defmodule KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandlerTest do
   import KlassHero.AccountsFixtures
 
   alias KlassHero.Family
-  alias KlassHero.Family.Adapters.Driving.Events.InviteClaimedHandler
+  alias KlassHero.Family.InviteClaimedHandler
   alias KlassHero.Shared.Domain.Events.Event
 
   defp build_invite_claimed_event(attrs) do

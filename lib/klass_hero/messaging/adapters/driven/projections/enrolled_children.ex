@@ -42,7 +42,7 @@ defmodule KlassHero.Messaging.Adapters.Driven.Projections.EnrolledChildren do
   `acl_span` on each, enforced by `mix lint_acl_boundary`.
 
   Both paths mirror the precedent set by
-  `Family.Adapters.Driven.ACL.ChildEnrollmentACL` and
+  `Family.ChildEnrollmentACL` and
   `Enrollment.Adapters.Driven.ACL.ProgramCatalogACL`.
   """
 

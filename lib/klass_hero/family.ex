@@ -22,14 +22,14 @@ defmodule KlassHero.Family do
 
   import Ecto.Query
 
-  alias KlassHero.Family.Adapters.Driven.ACL.ChildEnrollmentACL
-  alias KlassHero.Family.Adapters.Driven.ACL.ChildParticipationACL
   alias KlassHero.Family.Child
+  alias KlassHero.Family.ChildEnrollmentACL
   alias KlassHero.Family.ChildGuardian
+  alias KlassHero.Family.ChildParticipationACL
   alias KlassHero.Family.Consent
-  alias KlassHero.Family.Domain.Events.FamilyEvents
-  alias KlassHero.Family.Domain.Services.ReferralCodeGenerator
+  alias KlassHero.Family.Events
   alias KlassHero.Family.ParentProfile
+  alias KlassHero.Family.ReferralCodeGenerator
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
@@ -623,13 +623,13 @@ defmodule KlassHero.Family do
     Outbox.transact(@context, fn ->
       with {:ok, consent_count} <- delete_all_consents_for_child(child.id),
            {:ok, _anonymized} <- child |> Child.anonymize_changeset(anonymized_attrs) |> Repo.update() do
-        {:ok, consent_count, [FamilyEvents.child_data_anonymized(child.id)]}
+        {:ok, consent_count, [Events.child_data_anonymized(child.id)]}
       end
     end)
   end
 
   defp child_created_event(child, parent_id) do
-    FamilyEvents.child_created(child.id, %{
+    Events.child_created(child.id, %{
       child_id: child.id,
       parent_id: parent_id,
       first_name: child.first_name,
@@ -639,7 +639,7 @@ defmodule KlassHero.Family do
 
   defp child_updated_event(child) do
     # Downstream contexts (e.g. Messaging) refresh local child name lookups.
-    FamilyEvents.child_updated(child.id, %{
+    Events.child_updated(child.id, %{
       child_id: child.id,
       first_name: child.first_name,
       last_name: child.last_name

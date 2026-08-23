@@ -17,7 +17,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensat
   alias KlassHero.Shared.Adapters.Driven.Persistence.Repositories.JobCompensationRepository
   alias KlassHero.Shared.Adapters.Driven.Persistence.Schemas.JobCompensation
 
-  @worker "KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker"
+  @worker "KlassHero.Family.ProcessInviteClaimWorker"
 
   describe "compensate_once/3" do
     test "runs the compensation and records it" do

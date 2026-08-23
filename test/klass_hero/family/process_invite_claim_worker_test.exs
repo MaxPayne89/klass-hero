@@ -1,4 +1,4 @@
-defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorkerTest do
+defmodule KlassHero.Family.ProcessInviteClaimWorkerTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
@@ -7,7 +7,7 @@ defmodule KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorkerTest
   alias KlassHero.Enrollment
   alias KlassHero.Enrollment.BulkEnrollmentInvite
   alias KlassHero.Family
-  alias KlassHero.Family.Adapters.Driving.Workers.ProcessInviteClaimWorker
+  alias KlassHero.Family.ProcessInviteClaimWorker
 
   @max_attempts 3
 
