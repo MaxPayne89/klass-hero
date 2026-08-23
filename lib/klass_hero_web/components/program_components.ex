@@ -213,6 +213,59 @@ defmodule KlassHeroWeb.ProgramComponents do
   end
 
   @doc """
+  Renders a program's title with its optional subtitle underneath.
+
+  The subtitle is a provider-written hook ("For beginners, no experience
+  needed"). It is optional, and a program without one renders the title alone —
+  no empty element, no reserved gap.
+
+  Two variants, because the muted colour cannot be shared: `:card` sits on white
+  and uses `--fg-muted`, while `:hero` sits on a photograph or gradient where
+  that token fails AA contrast (`DESIGN.md` don't #6), so it uses `text-white/80`.
+
+  ## Examples
+
+      <.program_headline title={@program.title} subtitle={@program.subtitle} variant={:hero} />
+      <.program_headline title={@program.title} subtitle={Map.get(@program, :subtitle)} />
+  """
+  attr :title, :string, required: true
+  attr :subtitle, :string, default: nil
+  attr :variant, :atom, default: :card, values: [:card, :hero]
+  attr :class, :string, default: "", doc: "Extra classes for the wrapping block"
+  attr :id, :string, default: nil
+
+  def program_headline(assigns) do
+    ~H"""
+    <div class={@class}>
+      <.dynamic_tag
+        tag_name={if @variant == :hero, do: "h1", else: "h3"}
+        class={[
+          if(@variant == :hero,
+            do: Theme.typography(:page_title),
+            else: Theme.typography(:card_title)
+          )
+        ]}
+      >
+        {@title}
+      </.dynamic_tag>
+      <p
+        :if={@subtitle}
+        id={@id && "#{@id}-subtitle"}
+        class={[
+          "mt-1",
+          if(@variant == :hero,
+            do: [Theme.typography(:body), "text-white/80"],
+            else: [Theme.typography(:body_small), "text-[var(--fg-muted)] line-clamp-2"]
+          )
+        ]}
+      >
+        {@subtitle}
+      </p>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a program card with gradient header, favorite button, and program details.
 
   Supports two variants:

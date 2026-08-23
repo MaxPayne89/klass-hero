@@ -987,6 +987,15 @@ defmodule KlassHeroWeb.ProviderComponents do
           />
         </div>
 
+        <%!-- Full-width row of its own: the subtitle is a sentence, and pairing it
+              with a second field would halve it at 375px. --%>
+        <.input
+          field={@form[:subtitle]}
+          type="text"
+          label={gettext("Subtitle")}
+          placeholder={gettext("e.g., For beginners, no experience needed")}
+        />
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <.input
             field={@form[:price]}
