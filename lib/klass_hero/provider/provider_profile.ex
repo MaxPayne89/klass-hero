@@ -414,7 +414,8 @@ defmodule KlassHero.Provider.ProviderProfile do
   - `{:error, :already_active}` if profile_status is not :draft
   - `{:error, [message]}` if validation fails
   """
-  @completion_fields ~w(business_name description phone website address logo_url categories entity_type)a
+  @completion_fields ~w(business_name description phone website address logo_url categories entity_type)a ++
+                       @branding_fields
 
   @spec complete_profile(t(), map()) :: {:ok, t()} | {:error, :already_active | [String.t()]}
   def complete_profile(%__MODULE__{profile_status: :draft} = profile, attrs) when is_map(attrs) do

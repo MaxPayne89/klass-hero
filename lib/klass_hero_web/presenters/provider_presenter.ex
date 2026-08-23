@@ -36,7 +36,12 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   Used for surfaces shown to parents (e.g. the program detail page) where
   tier/verification/slot data is not relevant — only the business identity.
 
-  Returns a map with: id, business_name, description, logo_url, initials.
+  Returns a map with: id, business_name, description, logo_url, initials,
+  plus the branding fields (tagline, cover_image_url, social_links).
+
+  `social_links` is a keyword-style list of `{network, url}` for the networks
+  the provider actually filled in, so a caller can render the row by iterating
+  rather than testing six fields for nil.
   """
   @spec to_public_view(ProviderProfile.t()) :: map()
   def to_public_view(%ProviderProfile{} = provider) do
@@ -45,8 +50,38 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
       business_name: provider.business_name,
       description: provider.description,
       logo_url: provider.logo_url,
-      initials: NameUtils.initials_from_name(provider.business_name)
+      initials: NameUtils.initials_from_name(provider.business_name),
+      tagline: provider.tagline,
+      cover_image_url: provider.cover_image_url,
+      social_links: social_links(provider)
     }
+  end
+
+  # One list, used by the public view below and by the two provider-facing forms
+  # that capture these. Keeping it in a single place is what stops the form and
+  # the profile page from drifting apart on which networks exist.
+  @social_networks [
+    {:instagram_url, "Instagram"},
+    {:facebook_url, "Facebook"},
+    {:tiktok_url, "TikTok"},
+    {:youtube_url, "YouTube"},
+    {:linkedin_url, "LinkedIn"}
+  ]
+
+  @doc """
+  Supported social networks as `{schema_field, label}`.
+
+  Labels are brand names and deliberately not run through gettext — translating
+  "Instagram" would be wrong in every locale.
+  """
+  @spec social_networks() :: [{atom(), String.t()}]
+  def social_networks, do: @social_networks
+
+  defp social_links(%ProviderProfile{} = provider) do
+    for {field, label} <- @social_networks,
+        url = Map.fetch!(provider, field),
+        url not in [nil, ""],
+        do: {label, url}
   end
 
   @doc """
