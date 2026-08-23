@@ -47,6 +47,16 @@ defmodule KlassHero.Provider.ProviderProfile do
   @spec branding_fields() :: [atom()]
   def branding_fields, do: @branding_fields
 
+  @doc """
+  The social-link fields, in display order.
+
+  The entity owns *which* networks exist; the web layer owns what each is
+  called. Anything pairing a label with a network derives the field list from
+  here rather than re-listing the atoms.
+  """
+  @spec social_link_fields() :: [atom()]
+  def social_link_fields, do: @social_link_fields
+
   schema "providers" do
     field :identity_id, :binary_id
     field :entity_type, Ecto.Enum, values: @entity_types, default: :individual
@@ -476,11 +486,17 @@ defmodule KlassHero.Provider.ProviderProfile do
 
   defp validate_branding_url(errors, _label, nil), do: errors
 
+  # A blank value means "not set", never "invalid". These are optional fields, and
+  # `validate/1` re-validates the WHOLE struct on every update — so rejecting ""
+  # would mean a single blank column, however it got there (a backfill, an import,
+  # raw SQL), permanently blocks every later edit of that provider, including edits
+  # to unrelated fields. Ecto's cast already collapses "" to nil on the changeset
+  # side; this keeps the pure path idempotent in the same way.
   defp validate_branding_url(errors, label, url) when is_binary(url) do
     trimmed = String.trim(url)
 
     cond do
-      trimmed == "" -> ["#{label} cannot be empty if provided" | errors]
+      trimmed == "" -> errors
       not String.starts_with?(trimmed, "https://") -> ["#{label} must start with https://" | errors]
       String.length(trimmed) > @branding_url_max_length -> ["#{label} must be 500 characters or less" | errors]
       true -> errors

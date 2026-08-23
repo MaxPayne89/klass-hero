@@ -15,6 +15,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   alias KlassHero.Shared.Categories
   alias KlassHero.Shared.FeatureFlags
   alias KlassHero.Shared.Storage
+  alias KlassHeroWeb.Helpers.ProviderBranding
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
@@ -87,14 +88,9 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             phone: blank_to_nil(params["phone"]),
             website: blank_to_nil(params["website"]),
             address: blank_to_nil(params["address"]),
-            categories: parse_categories(params["categories"]),
-            tagline: blank_to_nil(params["tagline"]),
-            instagram_url: blank_to_nil(params["instagram_url"]),
-            facebook_url: blank_to_nil(params["facebook_url"]),
-            tiktok_url: blank_to_nil(params["tiktok_url"]),
-            youtube_url: blank_to_nil(params["youtube_url"]),
-            linkedin_url: blank_to_nil(params["linkedin_url"])
+            categories: parse_categories(params["categories"])
           }
+          |> Map.merge(ProviderBranding.attrs_from_params(params))
           |> maybe_put_logo(logo_result)
           |> maybe_put_entity_type(socket.assigns.business_vetting?, params)
 

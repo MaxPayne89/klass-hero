@@ -21,6 +21,10 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
     %{
       id: provider.id,
       name: provider.business_name,
+      # NOT ProviderProfile.tagline — this key predates that field (#1302) and
+      # still carries the description. The dashboard header and business card
+      # render it under this name. Renaming it means touching those shared
+      # components, so it is tracked separately rather than done here.
       tagline: provider.description,
       verified: provider.verified || false,
       verification_badges: build_verification_badges(provider),
@@ -57,16 +61,23 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
     }
   end
 
-  # One list, used by the public view below and by the two provider-facing forms
-  # that capture these. Keeping it in a single place is what stops the form and
-  # the profile page from drifting apart on which networks exist.
-  @social_networks [
-    {:instagram_url, "Instagram"},
-    {:facebook_url, "Facebook"},
-    {:tiktok_url, "TikTok"},
-    {:youtube_url, "YouTube"},
-    {:linkedin_url, "LinkedIn"}
-  ]
+  # The entity owns which networks exist; this module owns only their labels.
+  # Zipping the two means adding a network is a one-line change in the schema —
+  # and forgetting the label here fails the build rather than rendering a blank
+  # one. Re-listing the field atoms would have made this the third hand-kept
+  # copy of the same set.
+  @social_labels %{
+    instagram_url: "Instagram",
+    facebook_url: "Facebook",
+    tiktok_url: "TikTok",
+    youtube_url: "YouTube",
+    linkedin_url: "LinkedIn"
+  }
+
+  @social_networks Enum.map(
+                     ProviderProfile.social_link_fields(),
+                     &{&1, Map.fetch!(@social_labels, &1)}
+                   )
 
   @doc """
   Supported social networks as `{schema_field, label}`.

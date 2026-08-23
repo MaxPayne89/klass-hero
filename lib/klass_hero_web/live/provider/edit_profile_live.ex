@@ -13,7 +13,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
   import KlassHeroWeb.ProviderComponents
 
   alias KlassHero.Provider
-  alias KlassHero.Provider.ProviderProfile
+  alias KlassHeroWeb.Helpers.ProviderBranding
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
   alias KlassHeroWeb.Provider.Dashboard.Uploads
@@ -86,7 +86,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
       {logo_result, cover_result} ->
         attrs =
           params
-          |> branding_attrs()
+          |> ProviderBranding.attrs_from_params()
           |> Map.put(:description, params["description"])
           |> put_uploaded(:logo_url, logo_result)
           |> put_uploaded(:cover_image_url, cover_result)
@@ -185,30 +185,6 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
     {:ok, docs} = Provider.get_provider_verification_documents(provider_id)
     docs
   end
-
-  # Derived from the entity's own list so a new branding field reaches the form
-  # without a second place to remember. cover_image_url comes from the upload,
-  # not the params, so it is excluded here.
-  @branding_param_fields ProviderProfile.branding_fields() -- [:cover_image_url]
-
-  defp branding_attrs(params) do
-    for field <- @branding_param_fields,
-        value = params[Atom.to_string(field)],
-        into: %{},
-        do: {field, blank_to_nil(value)}
-  end
-
-  # An untouched input posts "", which must mean "leave it unset" — and a cleared
-  # one must actually clear. Without this every save of the form fails validation
-  # on the empty social inputs it submits.
-  defp blank_to_nil(value) when is_binary(value) do
-    case String.trim(value) do
-      "" -> nil
-      trimmed -> trimmed
-    end
-  end
-
-  defp blank_to_nil(value), do: value
 
   defp put_uploaded(attrs, _key, :no_upload), do: attrs
   defp put_uploaded(attrs, key, {:ok, url}), do: Map.put(attrs, key, url)

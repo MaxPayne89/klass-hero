@@ -98,6 +98,21 @@ defmodule KlassHero.Provider.Profiles.UpdateProviderProfileTest do
                Provider.update_provider_profile(provider.id, %{instagram_url: "http://example.com"})
     end
 
+    test "a blank value already in the column does not block unrelated edits", %{provider: provider} do
+      # validate/1 re-validates the whole struct on every update, so treating ""
+      # as invalid would let one blank column — however it got there — permanently
+      # block every later edit of this provider. Write "" past the form path to
+      # prove it does not.
+      Repo.update_all(
+        from(p in ProviderProfile, where: p.id == ^provider.id),
+        set: [instagram_url: "", tagline: ""]
+      )
+
+      assert {:ok, _} = Provider.update_provider_profile(provider.id, %{description: "Still editable"})
+
+      assert Repo.get!(ProviderProfile, provider.id).description == "Still editable"
+    end
+
     test "leaves branding fields nil when never set", %{provider: provider} do
       assert {:ok, _} = Provider.update_provider_profile(provider.id, %{description: "unrelated"})
 
