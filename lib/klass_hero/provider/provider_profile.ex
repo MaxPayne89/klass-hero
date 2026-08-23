@@ -34,6 +34,29 @@ defmodule KlassHero.Provider.ProviderProfile do
   @profile_statuses [:draft, :active]
   @entity_types [:individual, :business]
 
+  # Branding & presence (#1302). Every URL here follows the `website` rules —
+  # https-only, 500 chars — so they validate as one group; `tagline` is prose.
+  @social_link_fields ~w(instagram_url facebook_url tiktok_url youtube_url linkedin_url)a
+  @url_branding_fields [:cover_image_url | @social_link_fields]
+  @branding_fields [:tagline | @url_branding_fields]
+
+  @tagline_max_length 150
+  @branding_url_max_length 500
+
+  @doc "Fields a provider may set to brand their public profile (#1302)."
+  @spec branding_fields() :: [atom()]
+  def branding_fields, do: @branding_fields
+
+  @doc """
+  The social-link fields, in display order.
+
+  The entity owns *which* networks exist; the web layer owns what each is
+  called. Anything pairing a label with a network derives the field list from
+  here rather than re-listing the atoms.
+  """
+  @spec social_link_fields() :: [atom()]
+  def social_link_fields, do: @social_link_fields
+
   schema "providers" do
     field :identity_id, :binary_id
     field :entity_type, Ecto.Enum, values: @entity_types, default: :individual
@@ -53,6 +76,15 @@ defmodule KlassHero.Provider.ProviderProfile do
     field :verified_at, :utc_datetime
     field :categories, {:array, :string}, default: []
     field :profile_status, Ecto.Enum, values: @profile_statuses, default: :active
+
+    # Branding & presence, shown on the public profile page (#1302). All optional.
+    field :tagline, :string
+    field :cover_image_url, :string
+    field :instagram_url, :string
+    field :facebook_url, :string
+    field :tiktok_url, :string
+    field :youtube_url, :string
+    field :linkedin_url, :string
 
     belongs_to :verified_by, User, type: :binary_id
 
@@ -85,6 +117,7 @@ defmodule KlassHero.Provider.ProviderProfile do
       :verified_by_id,
       :categories,
       :profile_status
+      | @branding_fields
     ])
     |> validate_required([:identity_id, :business_name])
     |> validate_profile_fields()
@@ -98,13 +131,15 @@ defmodule KlassHero.Provider.ProviderProfile do
   @doc """
   Form changeset for provider profile editing via LiveView.
 
-  Only casts `:description` — logo_url is set programmatically after upload,
-  and other fields (business_name, phone, etc.) are not editable in this form.
+  Casts `:description` plus the branding fields (#1302). logo_url and
+  cover_image_url are set programmatically after upload; other fields
+  (business_name, phone, etc.) are not editable in this form.
   """
   def edit_changeset(schema, attrs) do
     schema
-    |> cast(attrs, [:description])
+    |> cast(attrs, [:description | @branding_fields])
     |> validate_length(:description, max: 1000)
+    |> validate_branding_fields()
   end
 
   @doc """
@@ -114,7 +149,8 @@ defmodule KlassHero.Provider.ProviderProfile do
   business_name, description, phone, website, address, categories.
   Logo URL is set programmatically after upload (not in this changeset).
   """
-  @completion_cast_fields ~w(business_name description phone website address categories entity_type)a
+  @completion_cast_fields ~w(business_name description phone website address categories entity_type)a ++
+                            @branding_fields
 
   def completion_changeset(schema, attrs) do
     schema
@@ -169,6 +205,31 @@ defmodule KlassHero.Provider.ProviderProfile do
     |> validate_length(:website, min: 1, max: 500)
     |> validate_website_protocol()
     |> validate_length(:address, min: 1, max: 500)
+    |> validate_branding_fields()
+  end
+
+  defp validate_branding_fields(changeset) do
+    changeset = validate_length(changeset, :tagline, max: @tagline_max_length)
+
+    Enum.reduce(@url_branding_fields, changeset, fn field, acc ->
+      acc
+      |> validate_length(field, max: @branding_url_max_length)
+      |> validate_https_url(field)
+    end)
+  end
+
+  defp validate_https_url(changeset, field) do
+    case get_change(changeset, field) do
+      url when is_binary(url) ->
+        if String.starts_with?(url, "https://") do
+          changeset
+        else
+          add_error(changeset, field, "must start with https://")
+        end
+
+      _ ->
+        changeset
+    end
   end
 
   defp validate_website_protocol(changeset) do
@@ -363,7 +424,8 @@ defmodule KlassHero.Provider.ProviderProfile do
   - `{:error, :already_active}` if profile_status is not :draft
   - `{:error, [message]}` if validation fails
   """
-  @completion_fields ~w(business_name description phone website address logo_url categories entity_type)a
+  @completion_fields ~w(business_name description phone website address logo_url categories entity_type)a ++
+                       @branding_fields
 
   @spec complete_profile(t(), map()) :: {:ok, t()} | {:error, :already_active | [String.t()]}
   def complete_profile(%__MODULE__{profile_status: :draft} = profile, attrs) when is_map(attrs) do
@@ -400,7 +462,55 @@ defmodule KlassHero.Provider.ProviderProfile do
     |> validate_profile_status(profile.profile_status)
     |> validate_entity_type(profile.entity_type)
     |> validate_business_owner_email(profile.business_owner_email)
+    |> validate_tagline(profile.tagline)
+    |> validate_branding_urls(profile)
   end
+
+  defp validate_tagline(errors, nil), do: errors
+
+  defp validate_tagline(errors, tagline) when is_binary(tagline) do
+    if String.length(tagline) > @tagline_max_length do
+      ["Tagline must be #{@tagline_max_length} characters or less" | errors]
+    else
+      errors
+    end
+  end
+
+  defp validate_tagline(errors, _), do: ["Tagline must be a string" | errors]
+
+  defp validate_branding_urls(errors, profile) do
+    Enum.reduce(@url_branding_fields, errors, fn field, acc ->
+      validate_branding_url(acc, label_for(field), Map.fetch!(profile, field))
+    end)
+  end
+
+  defp validate_branding_url(errors, _label, nil), do: errors
+
+  # A blank value means "not set", never "invalid". These are optional fields, and
+  # `validate/1` re-validates the WHOLE struct on every update — so rejecting ""
+  # would mean a single blank column, however it got there (a backfill, an import,
+  # raw SQL), permanently blocks every later edit of that provider, including edits
+  # to unrelated fields. Ecto's cast already collapses "" to nil on the changeset
+  # side; this keeps the pure path idempotent in the same way.
+  defp validate_branding_url(errors, label, url) when is_binary(url) do
+    trimmed = String.trim(url)
+
+    cond do
+      trimmed == "" -> errors
+      not String.starts_with?(trimmed, "https://") -> ["#{label} must start with https://" | errors]
+      String.length(trimmed) > @branding_url_max_length -> ["#{label} must be 500 characters or less" | errors]
+      true -> errors
+    end
+  end
+
+  defp validate_branding_url(errors, label, _), do: ["#{label} must be a string" | errors]
+
+  defp label_for(:cover_image_url), do: "Cover image URL"
+  defp label_for(:instagram_url), do: "Instagram URL"
+  defp label_for(:facebook_url), do: "Facebook URL"
+  defp label_for(:tiktok_url), do: "TikTok URL"
+  defp label_for(:youtube_url), do: "YouTube URL"
+  defp label_for(:linkedin_url), do: "LinkedIn URL"
 
   defp validate_business_owner_email(errors, nil), do: errors
 

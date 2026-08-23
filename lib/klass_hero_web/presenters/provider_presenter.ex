@@ -21,6 +21,10 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
     %{
       id: provider.id,
       name: provider.business_name,
+      # NOT ProviderProfile.tagline — this key predates that field (#1302) and
+      # still carries the description. The dashboard header and business card
+      # render it under this name. Renaming it means touching those shared
+      # components, so it is tracked separately rather than done here.
       tagline: provider.description,
       verified: provider.verified || false,
       verification_badges: build_verification_badges(provider),
@@ -36,7 +40,12 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   Used for surfaces shown to parents (e.g. the program detail page) where
   tier/verification/slot data is not relevant — only the business identity.
 
-  Returns a map with: id, business_name, description, logo_url, initials.
+  Returns a map with: id, business_name, description, logo_url, initials,
+  plus the branding fields (tagline, cover_image_url, social_links).
+
+  `social_links` is a keyword-style list of `{network, url}` for the networks
+  the provider actually filled in, so a caller can render the row by iterating
+  rather than testing six fields for nil.
   """
   @spec to_public_view(ProviderProfile.t()) :: map()
   def to_public_view(%ProviderProfile{} = provider) do
@@ -45,8 +54,45 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
       business_name: provider.business_name,
       description: provider.description,
       logo_url: provider.logo_url,
-      initials: NameUtils.initials_from_name(provider.business_name)
+      initials: NameUtils.initials_from_name(provider.business_name),
+      tagline: provider.tagline,
+      cover_image_url: provider.cover_image_url,
+      social_links: social_links(provider)
     }
+  end
+
+  # The entity owns which networks exist; this module owns only their labels.
+  # Zipping the two means adding a network is a one-line change in the schema —
+  # and forgetting the label here fails the build rather than rendering a blank
+  # one. Re-listing the field atoms would have made this the third hand-kept
+  # copy of the same set.
+  @social_labels %{
+    instagram_url: "Instagram",
+    facebook_url: "Facebook",
+    tiktok_url: "TikTok",
+    youtube_url: "YouTube",
+    linkedin_url: "LinkedIn"
+  }
+
+  @social_networks Enum.map(
+                     ProviderProfile.social_link_fields(),
+                     &{&1, Map.fetch!(@social_labels, &1)}
+                   )
+
+  @doc """
+  Supported social networks as `{schema_field, label}`.
+
+  Labels are brand names and deliberately not run through gettext — translating
+  "Instagram" would be wrong in every locale.
+  """
+  @spec social_networks() :: [{atom(), String.t()}]
+  def social_networks, do: @social_networks
+
+  defp social_links(%ProviderProfile{} = provider) do
+    for {field, label} <- @social_networks,
+        url = Map.fetch!(provider, field),
+        url not in [nil, ""],
+        do: {label, url}
   end
 
   @doc """

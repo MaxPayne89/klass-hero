@@ -56,6 +56,67 @@ defmodule KlassHeroWeb.Provider.EditProfileLiveTest do
       assert_redirect(view, ~p"/provider/dashboard")
     end
 
+    test "saves branding fields through the form to the database", %{conn: conn, provider: provider} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      view
+      |> form("#profile-form", %{
+        provider_profile_schema: %{
+          description: "A description",
+          tagline: "Play-based learning",
+          instagram_url: "https://instagram.com/example",
+          linkedin_url: "https://linkedin.com/company/example"
+        }
+      })
+      |> render_submit()
+
+      assert_redirect(view, ~p"/provider/dashboard")
+
+      # Reloaded, not the submitted params — four separate allowlists sit between
+      # this form and the column, and three of them drop silently (#1481).
+      assert {:ok, reloaded} = KlassHero.Provider.get_provider_profile(provider.id)
+      assert reloaded.tagline == "Play-based learning"
+      assert reloaded.instagram_url == "https://instagram.com/example"
+      assert reloaded.linkedin_url == "https://linkedin.com/company/example"
+    end
+
+    test "clearing a branding field blanks it rather than failing validation", %{
+      conn: conn,
+      provider: provider
+    } do
+      {:ok, _} =
+        KlassHero.Provider.update_provider_profile(provider.id, %{tagline: "Old tagline"})
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      view
+      |> form("#profile-form", %{
+        provider_profile_schema: %{description: "A description", tagline: ""}
+      })
+      |> render_submit()
+
+      assert_redirect(view, ~p"/provider/dashboard")
+
+      assert {:ok, reloaded} = KlassHero.Provider.get_provider_profile(provider.id)
+      assert is_nil(reloaded.tagline)
+    end
+
+    test "rejects a social link that is not https", %{conn: conn, provider: provider} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      view
+      |> form("#profile-form", %{
+        provider_profile_schema: %{
+          description: "A description",
+          instagram_url: "http://insecure.example.com"
+        }
+      })
+      |> render_submit()
+
+      assert {:ok, reloaded} = KlassHero.Provider.get_provider_profile(provider.id)
+      assert is_nil(reloaded.instagram_url)
+    end
+
     test "displays existing verification documents", %{conn: conn, provider: provider} do
       # Create a verification document for this provider
       KlassHero.Factory.insert(:verification_document_schema,
