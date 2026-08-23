@@ -5,8 +5,8 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
+  alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
-  alias KlassHero.Provider.Vetting
   alias KlassHero.Shared.NameUtils
   alias KlassHero.SocialLinks
 
@@ -52,7 +52,7 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   `Provider.get_trust_states/1` is a DB read. It defaults to `:unverified` so an
   unthreaded caller shows no badge rather than one the provider has not earned.
   """
-  @spec to_public_view(ProviderProfile.t(), Vetting.trust_state()) :: map()
+  @spec to_public_view(ProviderProfile.t(), Provider.trust_state()) :: map()
   def to_public_view(%ProviderProfile{} = provider, trust_state \\ :unverified) do
     %{
       id: provider.id,

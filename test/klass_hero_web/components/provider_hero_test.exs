@@ -75,6 +75,19 @@ defmodule KlassHeroWeb.ProviderHeroTest do
       assert render_hero(@filled, variant: :full) =~ "bg-white/90"
     end
 
+    test "uses the on-light token for the tagline, not the plain muted one" do
+      # Measured over a black cover behind the bg-white/90 scrim:
+      #   hero-grey-600 (:secondary)      2.92:1  fails
+      #   hero-grey-700 (:secondary_dark) 4.40:1  fails
+      #   hero-grey-800 (--fg-muted-on-light) 6.77:1  passes
+      # Only the third clears AA, so this token is not interchangeable with the
+      # ones the rest of the component uses.
+      html = render_hero(@filled, variant: :full)
+
+      assert html =~ "text-[var(--fg-muted-on-light)]"
+      refute html =~ "text-hero-grey-600"
+    end
+
     test "omits the description, which belongs to the About section" do
       refute render_hero(@filled, variant: :full) =~
                "Empowering kids through play-based learning."

@@ -145,7 +145,7 @@ msgstr ""
 msgid "%{name} (Age %{age})"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:389
+#: lib/klass_hero_web/live/program_detail_live.ex:399
 #, elixir-autogen, elixir-format
 msgid "About This Program"
 msgstr ""
@@ -165,7 +165,7 @@ msgstr ""
 msgid "Add another program"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:234
+#: lib/klass_hero_web/live/program_detail_live.ex:244
 #, elixir-autogen, elixir-format
 msgid "Ages %{range}"
 msgstr ""
@@ -225,7 +225,7 @@ msgstr ""
 msgid "Easy Scheduling"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:492
+#: lib/klass_hero_web/live/program_detail_live.ex:502
 #, elixir-autogen, elixir-format
 msgid "Enroll Now - %{price}"
 msgstr ""
@@ -282,7 +282,7 @@ msgstr ""
 msgid "Loading..."
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:429
+#: lib/klass_hero_web/live/program_detail_live.ex:439
 #, elixir-autogen, elixir-format
 msgid "Meet the Hero"
 msgid_plural "Meet the Heroes"
@@ -336,7 +336,7 @@ msgstr ""
 msgid "Program not found"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:69
+#: lib/klass_hero_web/live/program_detail_live.ex:71
 #, elixir-autogen, elixir-format
 msgid "Program not found. It may have been removed or is no longer available."
 msgstr ""
@@ -392,7 +392,7 @@ msgstr ""
 msgid "View All Programs →"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:246
+#: lib/klass_hero_web/live/program_detail_live.ex:256
 #, elixir-autogen, elixir-format
 msgid "✓ No hidden fees"
 msgstr ""
@@ -1354,8 +1354,8 @@ msgstr ""
 msgid "Assigned Staff"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:356
-#: lib/klass_hero_web/live/program_detail_live.ex:516
+#: lib/klass_hero_web/live/program_detail_live.ex:366
+#: lib/klass_hero_web/live/program_detail_live.ex:526
 #, elixir-autogen, elixir-format
 msgid "Book Now"
 msgstr ""
@@ -1442,7 +1442,7 @@ msgstr ""
 msgid "Provider Dashboard"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:369
+#: lib/klass_hero_web/live/program_detail_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "Save for Later"
 msgstr ""
@@ -2637,7 +2637,7 @@ msgstr ""
 msgid "Registration"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:183
+#: lib/klass_hero_web/live/program_detail_live.ex:193
 #, elixir-autogen, elixir-format
 msgid "Registration Closed"
 msgstr ""
@@ -2647,7 +2647,7 @@ msgstr ""
 msgid "Registration Closes"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:181
+#: lib/klass_hero_web/live/program_detail_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "Registration Not Open Yet"
 msgstr ""
@@ -2667,7 +2667,7 @@ msgstr ""
 msgid "Registration has closed for this program."
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:155
+#: lib/klass_hero_web/live/program_detail_live.ex:165
 #, elixir-autogen, elixir-format
 msgid "Registration is closed"
 msgstr ""
@@ -2677,12 +2677,12 @@ msgstr ""
 msgid "Registration is not currently open for this program."
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:85
+#: lib/klass_hero_web/live/program_detail_live.ex:87
 #, elixir-autogen, elixir-format
 msgid "Registration is not open for this program."
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:151
+#: lib/klass_hero_web/live/program_detail_live.ex:161
 #, elixir-autogen, elixir-format
 msgid "Registration opens %{date}"
 msgstr ""
@@ -2749,7 +2749,7 @@ msgstr ""
 msgid "Schedule (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:229
+#: lib/klass_hero_web/live/program_detail_live.ex:239
 #, elixir-autogen, elixir-format
 msgid "Schedule TBD"
 msgstr ""

@@ -20,3 +20,4 @@ Registry.start_link(keys: :unique, name: KlassHero.StorageRegistry)
 # unless a test sets an explicit stub/expect.
 Mimic.copy(KlassHero.Shared.Tracing.ObanEnqueue)
 Mimic.copy(KlassHero.Accounts)
+Mimic.copy(KlassHero.Provider)

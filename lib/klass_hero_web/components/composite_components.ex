@@ -652,13 +652,13 @@ defmodule KlassHeroWeb.CompositeComponents do
           </div>
           <p
             :if={present?(@provider[:tagline])}
-            class={["text-sm mt-1", Theme.text_color(:secondary)]}
+            class={["text-sm mt-1", Theme.text_color(:secondary_dark)]}
           >
             {@provider.tagline}
           </p>
           <p
             :if={present?(@provider[:description])}
-            class={["text-sm leading-relaxed mt-1", Theme.text_color(:secondary)]}
+            class={["text-sm leading-relaxed mt-1", Theme.text_color(:secondary_dark)]}
           >
             {@provider.description}
           </p>
@@ -710,7 +710,7 @@ defmodule KlassHeroWeb.CompositeComponents do
           </div>
           <p
             :if={present?(@provider[:tagline])}
-            class={["mt-2", Theme.typography(:body), Theme.text_color(:secondary)]}
+            class={["mt-2", Theme.typography(:body), "text-[var(--fg-muted-on-light)]"]}
           >
             {@provider.tagline}
           </p>
@@ -768,7 +768,7 @@ defmodule KlassHeroWeb.CompositeComponents do
         class={[
           "inline-flex items-center justify-center w-11 h-11",
           Theme.rounded(:full),
-          Theme.text_color(:secondary),
+          Theme.text_color(:secondary_dark),
           "hover:bg-hero-grey-100 hover:text-hero-blue-600",
           Theme.transition(:normal)
         ]}

@@ -485,6 +485,23 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
 
       refute has_element?(view, "#provider-profile-card")
     end
+
+    test "keeps the card when the trust-state lookup fails", %{conn: conn} do
+      # The trust read shares safe_await's fallback with the profile read, so
+      # without the rescue in trust_state/1 this blanks the whole card instead of
+      # just its badge.
+      provider = provider_profile_fixture(business_name: "Starlight Coaching")
+      program = insert(:program_schema, provider_id: provider.id)
+
+      Mimic.stub(KlassHero.Provider, :get_trust_states, fn _ids ->
+        raise DBConnection.ConnectionError, "vetting lookup exploded"
+      end)
+
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
+
+      assert has_element?(view, "#provider-profile-card h4", "Starlight Coaching")
+      refute render(view) =~ "data-trust-state"
+    end
   end
 
   describe "pricing display" do
