@@ -189,7 +189,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
           {@business_name}
         </p>
         <.program_headline
-          id="program-hero-headline"
+          id="program-detail-headline"
           title={@program.title}
           subtitle={@program.subtitle}
           variant={:hero}

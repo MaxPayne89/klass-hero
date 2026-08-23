@@ -75,6 +75,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       provider_name: provider.name,
       verification_state: provider.trust,
       title: program.title,
+      subtitle: program.subtitle,
       description: program.description,
       category: humanize_category(program.category),
       age_range: program.age_range,

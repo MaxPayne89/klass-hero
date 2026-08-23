@@ -168,7 +168,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
 
-      assert has_element?(view, "#program-hero-headline-subtitle", "For beginners")
+      assert has_element?(view, "#program-detail-headline-subtitle", "For beginners")
     end
 
     test "renders no subtitle element when the program has none", %{conn: conn} do
@@ -177,7 +177,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}")
 
-      refute has_element?(view, "#program-hero-headline-subtitle")
+      refute has_element?(view, "#program-detail-headline-subtitle")
     end
 
     test "omits business name when provider profile is draft", %{conn: conn} do

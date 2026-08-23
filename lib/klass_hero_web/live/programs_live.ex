@@ -122,6 +122,7 @@ defmodule KlassHeroWeb.ProgramsLive do
       provider_name: provider.name,
       verification_state: provider.trust,
       title: program.title,
+      subtitle: program.subtitle,
       description: program.description,
       category: ProgramPresenter.format_category_for_display(program.category),
       meeting_days: program.meeting_days || [],

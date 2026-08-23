@@ -208,6 +208,30 @@ defmodule KlassHeroWeb.HomeLiveTest do
       assert has_element?(view, "footer a", "Terms")
     end
 
+    test "renders a featured program's subtitle under its title", %{conn: conn} do
+      now = DateTime.truncate(DateTime.utc_now(), :second)
+      program_id = Ecto.UUID.generate()
+
+      %ProgramListing{}
+      |> Ecto.Changeset.change(%{
+        id: program_id,
+        title: "Chess Club",
+        subtitle: "For beginners, no experience needed",
+        description: "Develop strategic thinking through chess",
+        category: "education",
+        meeting_days: [],
+        price: Decimal.new("60.00"),
+        provider_id: Ecto.UUID.generate(),
+        inserted_at: now,
+        updated_at: now
+      })
+      |> KlassHero.Repo.insert!()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#mk-featured-grid", "For beginners, no experience needed")
+    end
+
     test "clicking featured program card navigates to program detail", %{conn: conn} do
       now = DateTime.truncate(DateTime.utc_now(), :second)
       program_id = Ecto.UUID.generate()

@@ -23,6 +23,8 @@ defmodule KlassHeroWeb.MarketingComponents do
 
   use Gettext, backend: KlassHeroWeb.Gettext
 
+  import KlassHeroWeb.ProgramComponents, only: [program_subtitle: 1]
+
   import KlassHeroWeb.UIComponents,
     only: [
       kh_logo: 1,
@@ -431,6 +433,7 @@ defmodule KlassHeroWeb.MarketingComponents do
         <h3 class="font-bold text-lg leading-snug text-hero-black line-clamp-2">
           {@program.title}
         </h3>
+        <.program_subtitle subtitle={Map.get(@program, :subtitle)} />
         <%!-- Provider gets its own line rather than joining the meta row below: at 375px
               the name plus the mark already fills the card, so sharing a line with the
               age range would wrap unpredictably (#1224). --%>
@@ -1218,6 +1221,10 @@ defmodule KlassHeroWeb.MarketingComponents do
           <.kh_pill :if={@program.age_range} tone={:outline}>{@program.age_range}</.kh_pill>
         </div>
         <h3 class="font-bold text-xl leading-snug text-hero-black">{@program.title}</h3>
+        <.program_subtitle
+          id={"program-list-row-#{@program.id}"}
+          subtitle={Map.get(@program, :subtitle)}
+        />
         <p
           :if={@program.description}
           class="mt-1 text-sm text-[var(--fg-muted)] line-clamp-2"

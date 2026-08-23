@@ -43,6 +43,7 @@ defmodule KlassHeroWeb.Flows.ProviderPublishesProgramTest do
         |> within("#program-form", fn form ->
           form
           |> fill_in("Title", with: "Chess Club")
+          |> fill_in("Subtitle", with: "For beginners, no experience needed")
           |> select("Category", option: "Education")
           |> fill_in("Price (EUR)", with: "60.00")
           |> fill_in("Location", with: "Community Center")
@@ -56,6 +57,7 @@ defmodule KlassHeroWeb.Flows.ProviderPublishesProgramTest do
       build_conn()
       |> visit(~p"/programs")
       |> assert_has("#mk-programs-stream", text: "Chess Club")
+      |> assert_has("#mk-programs-stream", text: "For beginners, no experience needed")
       |> assert_has("#mk-programs-stream", text: "Develop strategic thinking through chess")
       |> assert_has("#mk-programs-stream", text: "€60.00")
     end

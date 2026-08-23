@@ -58,6 +58,7 @@ defmodule KlassHeroWeb.HomeLive do
     %{
       id: program.id,
       title: program.title,
+      subtitle: program.subtitle,
       provider_name: provider.name,
       verification_state: provider.trust,
       description: program.description,

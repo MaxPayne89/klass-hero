@@ -213,20 +213,53 @@ defmodule KlassHeroWeb.ProgramComponents do
   end
 
   @doc """
-  Renders a program's title with its optional subtitle underneath.
+  Renders a program's optional subtitle — the provider-written hook shown under
+  the title ("For beginners, no experience needed").
 
-  The subtitle is a provider-written hook ("For beginners, no experience
-  needed"). It is optional, and a program without one renders the title alone —
-  no empty element, no reserved gap.
+  Nil renders nothing at all: no element, no reserved gap. Callers pass the value
+  straight through rather than guarding at the call site.
 
   Two variants, because the muted colour cannot be shared: `:card` sits on white
   and uses `--fg-muted`, while `:hero` sits on a photograph or gradient where
   that token fails AA contrast (`DESIGN.md` don't #6), so it uses `text-white/80`.
 
+  This is the subtitle *only*, not the title. The four surfaces that show a
+  program title style it four different ways, and unifying that is a separate
+  change — what genuinely repeats, and what this owns, is the supporting line.
+
   ## Examples
 
-      <.program_headline title={@program.title} subtitle={@program.subtitle} variant={:hero} />
-      <.program_headline title={@program.title} subtitle={Map.get(@program, :subtitle)} />
+      <.program_subtitle subtitle={@program.subtitle} variant={:hero} id="program-detail-headline" />
+      <.program_subtitle subtitle={Map.get(@program, :subtitle)} />
+  """
+  attr :subtitle, :string, default: nil
+  attr :variant, :atom, default: :card, values: [:card, :hero]
+  attr :id, :string, default: nil, doc: "When given, the element gets `<id>-subtitle`"
+
+  def program_subtitle(assigns) do
+    ~H"""
+    <p
+      :if={@subtitle}
+      id={@id && "#{@id}-subtitle"}
+      class={[
+        "mt-1",
+        if(@variant == :hero,
+          do: [Theme.typography(:body), "text-white/80"],
+          else: [Theme.typography(:body_small), "text-[var(--fg-muted)] line-clamp-2"]
+        )
+      ]}
+    >
+      {@subtitle}
+    </p>
+    """
+  end
+
+  @doc """
+  Renders a program's title with its optional subtitle underneath.
+
+  Used where the title is already styled from `Theme.typography/1` — the detail
+  hero and the catalog grid card. The marketing cards keep their own hand-rolled
+  title markup and compose `program_subtitle/1` directly instead.
   """
   attr :title, :string, required: true
   attr :subtitle, :string, default: nil
@@ -239,28 +272,16 @@ defmodule KlassHeroWeb.ProgramComponents do
     <div class={@class}>
       <.dynamic_tag
         tag_name={if @variant == :hero, do: "h1", else: "h3"}
-        class={[
+        class={
           if(@variant == :hero,
             do: Theme.typography(:page_title),
             else: Theme.typography(:card_title)
           )
-        ]}
+        }
       >
         {@title}
       </.dynamic_tag>
-      <p
-        :if={@subtitle}
-        id={@id && "#{@id}-subtitle"}
-        class={[
-          "mt-1",
-          if(@variant == :hero,
-            do: [Theme.typography(:body), "text-white/80"],
-            else: [Theme.typography(:body_small), "text-[var(--fg-muted)] line-clamp-2"]
-          )
-        ]}
-      >
-        {@subtitle}
-      </p>
+      <.program_subtitle subtitle={@subtitle} variant={@variant} id={@id} />
     </div>
     """
   end
@@ -334,7 +355,12 @@ defmodule KlassHeroWeb.ProgramComponents do
       <div class="p-6">
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1">
-            <h3 class={[Theme.typography(:card_title), "text-hero-black mb-2"]}>{@program.title}</h3>
+            <.program_headline
+              id={"program-card-#{@program.id}"}
+              title={@program.title}
+              subtitle={Map.get(@program, :subtitle)}
+              class="mb-2"
+            />
             <p class="text-hero-black-100 text-sm mb-3 line-clamp-2">{@program.description}</p>
           </div>
         </div>

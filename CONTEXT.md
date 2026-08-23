@@ -8,6 +8,15 @@ The domain glossary for Klass Hero — a platform for afterschool activities, ca
 A bookable offering a Provider lists for children to attend. Today a single `Program` entity serves all offering kinds, distinguished by a subject **Category**. It carries a recurring schedule (the days/times it meets) and a **Registration Period**.
 _Avoid_: Activity, Class, Course, Offering, Listing
 
+**Subtitle**:
+An optional one-line hook a **Provider** writes under a **Program**'s title — the
+secondary detail that makes it click for a parent ("For beginners, no experience
+needed", "Small groups, ages 6-9"). Display only: nothing reads it, filters on it,
+or decides anything from it. A Program without one shows its title alone.
+_Avoid_: Tagline, Summary, Short description (it is not a shortened **Description**,
+which stays the full prose); and never the offering's *kind* — "Camp", "Weekly
+class" — which is format information that **Category** already refuses.
+
 **Category**:
 The *subject* of a Program — what it is about. Current values: `sports`, `arts`, `music`, `education`, `life-skills`. This is one axis only and must not carry format/kind information.
 _Avoid_: Type, Kind, Tag
