@@ -343,6 +343,38 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
       assert %{checked_in_count: 0} = reload(session_id)
     end
 
+    # A correction is the one event that can move a record across the counted set in
+    # either direction, so the counter has to follow it both ways or a rebuild
+    # silently disagrees with the live value (#1329).
+    test "a correction out of the counted set decrements", %{session_id: session_id} do
+      broadcast(:child_checked_in, "rec-1", %{record_id: "rec-1", session_id: session_id, child_id: "c-1"})
+      assert %{checked_in_count: 1} = reload(session_id)
+
+      correct(session_id, :checked_in, :registered)
+
+      assert %{checked_in_count: 0} = reload(session_id)
+    end
+
+    test "a correction into the counted set increments", %{session_id: session_id} do
+      correct(session_id, :registered, :checked_in)
+
+      assert %{checked_in_count: 1} = reload(session_id)
+    end
+
+    test "a correction within the counted set leaves it alone", %{session_id: session_id} do
+      broadcast(:child_checked_in, "rec-1", %{record_id: "rec-1", session_id: session_id, child_id: "c-1"})
+
+      correct(session_id, :checked_in, :checked_out)
+
+      assert %{checked_in_count: 1} = reload(session_id)
+    end
+
+    test "a correction outside the counted set leaves it alone", %{session_id: session_id} do
+      correct(session_id, :registered, :absent)
+
+      assert %{checked_in_count: 0} = reload(session_id)
+    end
+
     test "logs a warning when child_checked_in arrives for an unknown session" do
       unknown_id = Ecto.UUID.generate()
 
@@ -627,6 +659,16 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
     event = Event.new(event_type, :participation, :session, entity_id, payload)
 
     ProviderSessionDetails.project(event)
+  end
+
+  defp correct(session_id, previous_status, new_status) do
+    broadcast(:attendance_corrected, "rec-1", %{
+      record_id: "rec-1",
+      session_id: session_id,
+      child_id: "c-1",
+      previous_status: previous_status,
+      new_status: new_status
+    })
   end
 
   defp broadcast_provider(event_type, entity_id, payload) do

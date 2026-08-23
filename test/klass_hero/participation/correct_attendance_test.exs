@@ -7,6 +7,7 @@ defmodule KlassHero.Participation.CorrectAttendanceTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Participation
   alias KlassHero.ProviderFixtures
+  alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 
   describe "correct_attendance/3" do
     setup do
@@ -237,6 +238,64 @@ defmodule KlassHero.Participation.CorrectAttendanceTest do
         check_in_by: user.id,
         check_in_notes: notes
       )
+    end
+  end
+
+  # A correction used to end at a bare `update_record/1`: no event, no broadcast.
+  # Five LiveViews subscribe to `{:attendance_changed, …}` and none of them heard
+  # one, and `ProviderSessionDetails.checked_in_count` drifted from what a rebuild
+  # would compute (#1329).
+  describe "correct_attendance/3 announces the correction" do
+    setup do
+      user = AccountsFixtures.unconfirmed_user_fixture()
+      provider = ProviderFixtures.provider_profile_fixture()
+      program = insert(:program_schema, provider_id: provider.id)
+      session = insert(:program_session_schema, program_id: program.id, status: "in_progress")
+      {child, parent} = insert_child_with_guardian()
+
+      record =
+        insert(:participation_record_schema,
+          session_id: session.id,
+          child_id: child.id,
+          parent_id: parent.id,
+          status: :checked_in,
+          check_in_at: ~U[2026-03-13 09:00:00Z],
+          check_in_by: user.id
+        )
+
+      %{record: record, provider: provider, scope: %Scope{user: user, provider: provider}}
+    end
+
+    test "reaches the child topic carrying kind :corrected", %{record: record, scope: scope} do
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.child_topic(record.child_id))
+
+      assert {:ok, _} = Participation.correct_attendance(scope, record.id, %{status: :absent})
+
+      record_id = record.id
+      assert_receive {:attendance_changed, %{record_id: ^record_id, kind: :corrected}}, 200
+    end
+
+    test "reaches the provider topic", %{record: record, provider: provider, scope: scope} do
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.provider_topic(provider.id))
+
+      assert {:ok, _} = Participation.correct_attendance(scope, record.id, %{status: :absent})
+
+      assert_receive {:attendance_changed, %{kind: :corrected}}, 200
+    end
+
+    # The delta a projection needs cannot be recovered from the corrected record
+    # alone — only the pair says whether the row entered or left the counted set.
+    test "carries both the previous and the new status", %{record: record, scope: scope} do
+      Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.child_topic(record.child_id))
+      TestOutbox.setup()
+
+      assert {:ok, _} = Participation.correct_attendance(scope, record.id, %{status: :absent})
+
+      assert [event] = TestOutbox.staged()
+      assert event.event_type == :attendance_corrected
+      assert event.payload.previous_status == :checked_in
+      assert event.payload.new_status == :absent
+      assert event.payload.program_id
     end
   end
 end
