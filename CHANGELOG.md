@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.86.0](https://github.com/MaxPayne89/klass-hero/compare/v0.85.0...v0.86.0) (2026-08-23)
+
+
+### Features
+
+* mark a child absent by hand, with a reason ([#1493](https://github.com/MaxPayne89/klass-hero/issues/1493)) ([2cf1529](https://github.com/MaxPayne89/klass-hero/commit/2cf15295ebff186762771996ae9241962df81060))
+
 ## [0.85.0](https://github.com/MaxPayne89/klass-hero/compare/v0.84.0...v0.85.0) (2026-08-23)
 
 
