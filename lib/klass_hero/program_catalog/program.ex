@@ -19,6 +19,7 @@ defmodule KlassHero.ProgramCatalog.Program do
   import Ecto.Query, only: [from: 2]
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramCategories
+  alias KlassHero.ProgramCatalog.Domain.Services.ProgramPricing
   alias KlassHero.ProgramCatalog.RegistrationPeriod
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -187,9 +188,15 @@ defmodule KlassHero.ProgramCatalog.Program do
     %{program | registration_period: build_registration_period(program)}
   end
 
-  @doc "Whether the program is free (price is 0)."
+  @doc """
+  Whether the program is free — priced, at zero.
+
+  A program with no price yet is *not* free, it is unpriced; `price_state/1`
+  keeps the two apart and this predicate collapses them on purpose, for callers
+  that only care whether money changes hands.
+  """
   @spec free?(t()) :: boolean()
-  def free?(%__MODULE__{price: price}), do: Decimal.equal?(price, Decimal.new(0))
+  def free?(%__MODULE__{price: price}), do: ProgramPricing.price_state(price) == :free
 
   @doc """
   Whether the program has closed to its staff — ended on or before `cutoff`.

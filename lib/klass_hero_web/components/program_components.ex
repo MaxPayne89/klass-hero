@@ -7,7 +7,6 @@ defmodule KlassHeroWeb.ProgramComponents do
 
   import KlassHeroWeb.UIComponents
 
-  alias KlassHero.ProgramCatalog
   alias KlassHero.Shared.NameUtils
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
@@ -420,9 +419,8 @@ defmodule KlassHeroWeb.ProgramComponents do
 
         <div class="pt-4 border-t border-hero-grey-100">
           <div class={[Theme.typography(:card_title), Theme.text_color(:primary)]}>
-            {ProgramCatalog.format_price(@program.price)}
+            {ProgramPresenter.price_label(@program.price)}
           </div>
-          <div class="text-sm text-hero-grey-500">{@program.period}</div>
         </div>
       </div>
       <%= if @actions != [] do %>
@@ -493,38 +491,6 @@ defmodule KlassHeroWeb.ProgramComponents do
       ]}>
         {@spots_left} spots left!
       </span>
-    </div>
-    """
-  end
-
-  @doc """
-  Renders a formatted price with currency and period.
-
-  ## Examples
-
-      <.price_display price={45} period="week" />
-      <.price_display price={30} period="session" />
-      <.price_display price={120} currency="USD" period="month" />
-  """
-  attr :price, :integer, required: true
-  attr :currency, :string, default: "€", doc: "Currency symbol"
-
-  attr :period, :string,
-    default: "week",
-    values: ~w(week session month hour),
-    doc: "Billing period"
-
-  attr :class, :string, default: ""
-
-  def price_display(assigns) do
-    ~H"""
-    <div class={["text-right", @class]}>
-      <div class={[Theme.typography(:section_title), Theme.text_color(:primary)]}>
-        {@currency}{@price}
-      </div>
-      <div class="text-xs text-hero-grey-400">
-        per {@period}
-      </div>
     </div>
     """
   end

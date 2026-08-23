@@ -335,7 +335,7 @@ defmodule KlassHeroWeb.BookingLive do
                   {gettext("Total Price:")}
                 </span>
                 <span class={[Theme.typography(:section_title), Theme.text_color(:primary)]}>
-                  {ProgramCatalog.format_price(@total_amount)}
+                  {ProgramPresenter.price_label(@total_amount)}
                 </span>
               </div>
               <div class="flex justify-between text-sm">
@@ -501,11 +501,11 @@ defmodule KlassHeroWeb.BookingLive do
           <.booking_summary id="payment-summary" title={gettext("Payment Summary")}>
             <:line_item
               label={gettext("Program fee:")}
-              value={ProgramCatalog.format_price(@total_amount)}
+              value={ProgramPresenter.price_label(@total_amount)}
             />
             <:total
               label={gettext("Total due today:")}
-              value={ProgramCatalog.format_price(@total_amount)}
+              value={ProgramPresenter.price_label(@total_amount)}
             />
           </.booking_summary>
 

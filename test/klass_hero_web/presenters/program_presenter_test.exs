@@ -68,10 +68,13 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result.assigned_staff.others_count == 0
     end
 
-    # {price, expected string} — integer and fractional Decimal values.
+    # {price, expected string} — the table renders the same label every other price
+    # surface does, so a provider reads "Free" on their own free program.
     @price_cases [
-      {Decimal.new("99.00"), "99.00"},
-      {Decimal.new("29.99"), "29.99"}
+      {Decimal.new("99.00"), "€99.00"},
+      {Decimal.new("29.99"), "€29.99"},
+      {Decimal.new("0"), "Free"},
+      {nil, "N/A"}
     ]
 
     for {price, expected} <- @price_cases do
@@ -285,7 +288,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result.category == "Arts"
       assert result.age_range == "6-12"
       assert Decimal.equal?(result.price, Decimal.new("15.00"))
-      assert result.period == "session"
+      refute Map.has_key?(result, :period)
       assert result.icon_name == "hero-paint-brush"
       assert result.meeting_days == ["Monday", "Wednesday"]
       assert result.meeting_start_time == ~T[15:00:00]
@@ -328,12 +331,14 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert Decimal.equal?(result.price, Decimal.new("29.99"))
     end
 
-    test "defaults nil price to zero" do
+    test "passes a nil price through rather than coercing it to zero" do
       program = build_program(%{price: nil})
 
       result = ProgramPresenter.to_card_view(program)
 
-      assert Decimal.equal?(result.price, Decimal.new(0))
+      # Coercing to zero here would make the card label an unpriced program
+      # "Free" — a claim about money, not a missing value.
+      assert result.price == nil
     end
 
     test "uses fallback icon_name when category is nil" do
@@ -342,6 +347,39 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       result = ProgramPresenter.to_card_view(program)
 
       assert result.icon_name == "hero-academic-cap"
+    end
+  end
+
+  describe "price_label/1" do
+    @labels [
+      {nil, "N/A", "unpriced — the program is incomplete, not free"},
+      {"0", "Free", "an integral zero"},
+      {"0.00", "Free", "a zero carrying scale"},
+      {"45.00", "€45.00", "a plain amount"},
+      {"45.5", "€45.50", "padded to the cent — the old formatter rendered this as €45.5"},
+      {"1234.567", "€1234.57", "rounded to the cent"}
+    ]
+
+    test "labels every price state" do
+      for {price, expected, why} <- @labels do
+        actual = ProgramPresenter.price_label(price && Decimal.new(price))
+
+        assert actual == expected, "#{inspect(price)} (#{why}) should label as #{expected}"
+      end
+    end
+
+    test "translates the free label" do
+      Gettext.put_locale(KlassHeroWeb.Gettext, "de")
+      on_exit(fn -> Gettext.put_locale(KlassHeroWeb.Gettext, "en") end)
+
+      assert ProgramPresenter.price_label(Decimal.new("0")) == "Kostenlos"
+    end
+
+    test "leaves a priced amount untranslated — a currency string is not prose" do
+      Gettext.put_locale(KlassHeroWeb.Gettext, "de")
+      on_exit(fn -> Gettext.put_locale(KlassHeroWeb.Gettext, "en") end)
+
+      assert ProgramPresenter.price_label(Decimal.new("45.00")) == "€45.00"
     end
   end
 

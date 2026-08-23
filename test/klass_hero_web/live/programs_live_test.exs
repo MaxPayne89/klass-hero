@@ -53,10 +53,12 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       free_program =
         insert_program(%{
           title: "Community Library Hour",
-          description: "Free reading and learning time at the library",
+          # Deliberately avoids the word "Free" — the card renders the
+          # description, so a description containing it would make the price
+          # assertion below pass no matter what the price label says.
+          description: "Reading and learning time at the library",
           age_range: "5-10 years",
-          price: Decimal.new("0"),
-          pricing_period: "free"
+          price: Decimal.new("0")
         })
 
       paid_program =
@@ -73,8 +75,8 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       assert_program_visible(view, free_program)
       assert_program_visible(view, paid_program)
 
-      # Price display ("Free" vs "€150.00") is covered by component unit tests;
-      # this integration test only verifies the programs render.
+      assert view |> element(program_card(free_program)) |> render() =~ "Free"
+      assert view |> element(program_card(paid_program)) |> render() =~ "€150.00"
     end
 
     test "programs load within 2 seconds performance requirement", %{conn: conn} do
@@ -544,8 +546,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
   end
 
   defp assert_program_visible(view, program) do
-    assert has_element?(view, "[data-program-id='#{program.id}']")
+    assert has_element?(view, program_card(program))
   end
+
+  defp program_card(program), do: "[data-program-id='#{program.id}']"
 
   defp refute_program_visible(view, program) do
     refute has_element?(view, "[data-program-id='#{program.id}']")
