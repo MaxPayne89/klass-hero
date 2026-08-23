@@ -22,11 +22,17 @@ defmodule KlassHero.Provider.Profiles do
   # Fields a caller may change via update_provider_profile/2 (all other keys stripped).
   @context KlassHero.Provider
 
-  @profile_update_fields ~w(description logo_url)a
+  # Both lists must carry every field a caller can change, and they are separate
+  # gates: the first strips the caller's attrs, the second strips again on the way
+  # to the changeset. Omitting a field from either makes the write a silent no-op
+  # rather than an error — the shape of #1481. `branding_fields/0` is spliced into
+  # both so the entity stays the single place the set is declared.
+  @profile_update_fields ~w(description logo_url)a ++ ProviderProfile.branding_fields()
 
   # Scalar fields re-cast when persisting a transitioned profile struct. identity_id
   # and id never change, so they stay out; Ecto only stages actual diffs.
-  @profile_persist_fields ~w(business_name business_owner_email description phone website address logo_url verified verified_at verified_by_id categories profile_status entity_type)a
+  @profile_persist_fields ~w(business_name business_owner_email description phone website address logo_url verified verified_at verified_by_id categories profile_status entity_type)a ++
+                            ProviderProfile.branding_fields()
 
   @doc """
   Creates a new provider profile.

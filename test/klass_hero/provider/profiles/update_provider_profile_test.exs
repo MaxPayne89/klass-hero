@@ -2,6 +2,7 @@ defmodule KlassHero.Provider.Profiles.UpdateProviderProfileTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Provider
+  alias KlassHero.Provider.ProviderProfile
 
   setup do
     provider = KlassHero.Factory.insert(:provider_profile_schema)
@@ -60,6 +61,49 @@ defmodule KlassHero.Provider.Profiles.UpdateProviderProfileTest do
       assert {:ok, updated} = Provider.update_provider_profile(provider.id, attrs)
       assert updated.business_name == original_name
       assert updated.description == "Only updating description"
+    end
+  end
+
+  describe "update_provider_profile/2 branding fields (#1302)" do
+    # Reloads from the DB rather than asserting the returned struct. Three
+    # independent allowlists can drop a field on the way to the table
+    # (@profile_update_fields, @profile_persist_fields, changeset/2's cast), and
+    # the latter two still return the in-memory value they never persisted — so a
+    # return-value assertion goes green on a field that was silently discarded.
+    for {field, value} <- [
+          tagline: "Play-based learning",
+          cover_image_url: "https://example.com/cover.png",
+          instagram_url: "https://instagram.com/example",
+          facebook_url: "https://facebook.com/example",
+          tiktok_url: "https://tiktok.com/@example",
+          youtube_url: "https://youtube.com/@example",
+          linkedin_url: "https://linkedin.com/company/example"
+        ] do
+      test "persists #{field} through to the database", %{provider: provider} do
+        assert {:ok, _} =
+                 Provider.update_provider_profile(provider.id, %{unquote(field) => unquote(value)})
+
+        reloaded = Repo.get!(ProviderProfile, provider.id)
+        assert Map.fetch!(reloaded, unquote(field)) == unquote(value)
+      end
+    end
+
+    test "rejects a tagline over 150 characters", %{provider: provider} do
+      assert {:error, {:validation_error, _}} =
+               Provider.update_provider_profile(provider.id, %{tagline: String.duplicate("a", 151)})
+    end
+
+    test "rejects a social link that is not https", %{provider: provider} do
+      assert {:error, {:validation_error, _}} =
+               Provider.update_provider_profile(provider.id, %{instagram_url: "http://example.com"})
+    end
+
+    test "leaves branding fields nil when never set", %{provider: provider} do
+      assert {:ok, _} = Provider.update_provider_profile(provider.id, %{description: "unrelated"})
+
+      reloaded = Repo.get!(ProviderProfile, provider.id)
+      assert is_nil(reloaded.tagline)
+      assert is_nil(reloaded.cover_image_url)
     end
   end
 end
