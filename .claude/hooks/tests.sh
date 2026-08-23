@@ -14,6 +14,13 @@
 # LiveViews it was meant to catch. 1:1 is the only unambiguous mapping.
 set -uo pipefail
 
+# A failed load has to be loud — see the note in credo.sh.
+# shellcheck source=.claude/hooks/lib/untrusted.sh
+if ! source "$(dirname "${BASH_SOURCE[0]}")/lib/untrusted.sh"; then
+  echo "tests.sh: could not load lib/untrusted.sh — refusing to print unsanitised output" >&2
+  exit 2
+fi
+
 FILE=$(cat | tr -d '\000-\037' | jq -r '.tool_input.file_path // empty')
 [[ -n "$FILE" ]] || exit 0
 
@@ -53,5 +60,5 @@ if echo "$OUT" | grep -qiE 'could not connect|connection refused|DBConnection\.C
 fi
 
 echo "Tests failed for ${REL} (${PATHS[*]}):" >&2
-echo "$OUT" >&2
+emit_untrusted "mix test ${PATHS[*]}" "$OUT"
 exit 2

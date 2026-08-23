@@ -161,6 +161,11 @@ defmodule KlassHero.MixProject do
         "lint_translations",
         "lint_read_tables",
         "lint_acl_boundary",
+        # Guards the hook output sanitiser. Shell, so it has no other runner —
+        # without this the checks rot silently, and the failure mode they catch
+        # (a widened regex that starts eating <div>, or a reordered pipeline that
+        # lets a reserved tag through) is invisible until it matters.
+        "cmd bash .claude/hooks/lib/untrusted_test.sh",
         "credo --strict",
         # Two halves on purpose: `test --warnings-as-errors` only covers test
         # files, and `test/support/*.ex` compiles solely in the test env — so
