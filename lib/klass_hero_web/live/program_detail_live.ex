@@ -124,9 +124,20 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   defp load_provider_profile(provider_id) do
     case Provider.get_provider_profile(provider_id) do
       # Only :active providers are surfaced to parents; nil suppresses the card.
-      {:ok, %{profile_status: :active} = provider} -> ProviderPresenter.to_public_view(provider)
-      _ -> nil
+      {:ok, %{profile_status: :active} = provider} ->
+        ProviderPresenter.to_public_view(provider, trust_state(provider_id))
+
+      _ ->
+        nil
     end
+  end
+
+  # get_trust_states/1 is batch-only; a missing entry means unverified.
+  defp trust_state(provider_id) do
+    provider_id
+    |> List.wrap()
+    |> Provider.get_trust_states()
+    |> Map.get(provider_id, :unverified)
   end
 
   defp load_participant_policy(program_id) do
@@ -427,7 +438,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         </section>
 
         <%!-- Provider Profile Card — rendered only when an active provider profile is available --%>
-        <.provider_profile_card :if={@provider_profile} provider={@provider_profile} />
+        <.provider_hero :if={@provider_profile} provider={@provider_profile} />
 
         <%!-- TODO: "What Other Parents Say" reviews section — re-enable when review data is available.
              Dependencies: <.review_card> component import (removed), @reviews assign. --%>

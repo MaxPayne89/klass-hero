@@ -6,7 +6,9 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   use Gettext, backend: KlassHeroWeb.Gettext
 
   alias KlassHero.Provider.ProviderProfile
+  alias KlassHero.Provider.Vetting
   alias KlassHero.Shared.NameUtils
+  alias KlassHero.SocialLinks
 
   @doc """
   Transforms a Provider domain model to business view format.
@@ -41,14 +43,17 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   tier/verification/slot data is not relevant — only the business identity.
 
   Returns a map with: id, business_name, description, logo_url, initials,
-  plus the branding fields (tagline, cover_image_url, social_links).
+  trust_state, plus the branding fields (tagline, cover_image_url, social_links).
 
-  `social_links` is a keyword-style list of `{network, url}` for the networks
-  the provider actually filled in, so a caller can render the row by iterating
-  rather than testing six fields for nil.
+  `social_links` is a list of `{network, label, url}` for the networks the provider
+  filled in; the atom is what `kh_social_icon/1` keys on.
+
+  `trust_state` is passed in, not fetched — this module is a pure transform and
+  `Provider.get_trust_states/1` is a DB read. It defaults to `:unverified` so an
+  unthreaded caller shows no badge rather than one the provider has not earned.
   """
-  @spec to_public_view(ProviderProfile.t()) :: map()
-  def to_public_view(%ProviderProfile{} = provider) do
+  @spec to_public_view(ProviderProfile.t(), Vetting.trust_state()) :: map()
+  def to_public_view(%ProviderProfile{} = provider, trust_state \\ :unverified) do
     %{
       id: provider.id,
       business_name: provider.business_name,
@@ -57,27 +62,39 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
       initials: NameUtils.initials_from_name(provider.business_name),
       tagline: provider.tagline,
       cover_image_url: provider.cover_image_url,
-      social_links: social_links(provider)
+      social_links: social_links(provider),
+      trust_state: trust_state
     }
   end
 
-  # The entity owns which networks exist; this module owns only their labels.
-  # Zipping the two means adding a network is a one-line change in the schema —
-  # and forgetting the label here fails the build rather than rendering a blank
-  # one. Re-listing the field atoms would have made this the third hand-kept
-  # copy of the same set.
-  @social_labels %{
-    instagram_url: "Instagram",
-    facebook_url: "Facebook",
-    tiktok_url: "TikTok",
-    youtube_url: "YouTube",
-    linkedin_url: "LinkedIn"
+  # The entity owns which networks exist; this maps its column to the short atom
+  # `kh_social_icon/1` keys on. Spelled out rather than derived by stripping
+  # "_url", so a renamed column fails loudly here. Labels live in SocialLinks.
+  @social_field_networks %{
+    instagram_url: :instagram,
+    facebook_url: :facebook,
+    tiktok_url: :tiktok,
+    youtube_url: :youtube,
+    linkedin_url: :linkedin
   }
 
-  @social_networks Enum.map(
-                     ProviderProfile.social_link_fields(),
-                     &{&1, Map.fetch!(@social_labels, &1)}
-                   )
+  @social_networks Enum.map(ProviderProfile.social_link_fields(), fn field ->
+                     network = Map.fetch!(@social_field_networks, field)
+                     {field, network, SocialLinks.label(network)}
+                   end)
+
+  @social_field_labels Enum.map(@social_networks, fn {field, _network, label} ->
+                         {field, label}
+                       end)
+
+  # Both sources share one `kh_social_icon/1`; a network with no glyph renders an
+  # empty `<svg>` with no error and no failing test.
+  @provider_network_atoms Enum.map(@social_networks, fn {_f, network, _l} -> network end)
+
+  if Enum.sort(@provider_network_atoms) != Enum.sort(KlassHero.SocialLinks.networks()) do
+    raise "provider social networks #{inspect(@provider_network_atoms)} have drifted from " <>
+            "KlassHero.SocialLinks.networks() #{inspect(KlassHero.SocialLinks.networks())}"
+  end
 
   @doc """
   Supported social networks as `{schema_field, label}`.
@@ -86,13 +103,13 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   "Instagram" would be wrong in every locale.
   """
   @spec social_networks() :: [{atom(), String.t()}]
-  def social_networks, do: @social_networks
+  def social_networks, do: @social_field_labels
 
   defp social_links(%ProviderProfile{} = provider) do
-    for {field, label} <- @social_networks,
+    for {field, network, label} <- @social_networks,
         url = Map.fetch!(provider, field),
         url not in [nil, ""],
-        do: {label, url}
+        do: {network, label, url}
   end
 
   @doc """

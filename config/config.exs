@@ -402,6 +402,16 @@ config :klass_hero, :scopes,
 # Configure Shared bounded context (critical event infrastructure)
 config :klass_hero, :shared, for_tracking_processed_events: ProcessedEventRepository
 
+# Klass Hero's own social accounts. All nil today — none exist yet — so the
+# footer's "Connect" block does not render. Paste a URL here and it appears;
+# no template change. See KlassHero.SocialLinks.
+config :klass_hero, :social_links,
+  instagram: nil,
+  facebook: nil,
+  tiktok: nil,
+  youtube: nil,
+  linkedin: nil
+
 # Configure Storage (defaults, overridden per environment)
 config :klass_hero, :storage,
   adapter: S3StorageAdapter,
