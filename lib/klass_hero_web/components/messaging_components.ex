@@ -293,11 +293,14 @@ defmodule KlassHeroWeb.MessagingComponents do
       </div>
       <label
         for={@uploads.attachments.ref}
-        class="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-hero-blue-600 cursor-pointer"
+        class={[
+          "inline-flex items-center gap-2 text-sm text-gray-600 hover:text-hero-blue-600 cursor-pointer",
+          "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2"
+        ]}
       >
         <.icon name="hero-paper-clip" class="w-5 h-5" />
         <span>{@label || gettext("Attach photo")}</span>
-        <.live_file_input upload={@uploads.attachments} class="hidden" />
+        <.live_file_input upload={@uploads.attachments} class="sr-only" />
       </label>
     </div>
     """
@@ -371,6 +374,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           for={@uploads.attachments.ref}
           class={[
             "w-10 h-10 flex items-center justify-center cursor-pointer transition-colors",
+            "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2",
             Theme.text_color(:muted),
             "hover:text-hero-blue-600",
             Theme.rounded(:full)
@@ -378,7 +382,7 @@ defmodule KlassHeroWeb.MessagingComponents do
         >
           <.icon name="hero-paper-clip" class="w-5 h-5" />
           <span class="sr-only">{gettext("Attach files")}</span>
-          <.live_file_input upload={@uploads.attachments} class="hidden" />
+          <.live_file_input upload={@uploads.attachments} class="sr-only" />
         </label>
         <div class="flex-1">
           <textarea

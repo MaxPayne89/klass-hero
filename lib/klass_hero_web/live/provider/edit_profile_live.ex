@@ -232,65 +232,27 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
                   {gettext("Provider Logo")}
                 </label>
 
-                <div
+                <.pv_upload_dropzone
                   id="logo-upload"
-                  class={[
-                    "border-2 border-dashed border-hero-grey-300 p-6 text-center",
-                    Theme.rounded(:lg)
-                  ]}
-                  phx-drop-target={@uploads.logo.ref}
+                  upload={@uploads.logo}
+                  name="logo"
+                  trigger={gettext("Choose Logo")}
+                  hint={gettext("JPG, PNG or WebP. Max 2MB.")}
+                  preview_class="w-16 h-16 mx-auto rounded-full object-cover"
                 >
-                  <div :if={@business.initials} class="mb-4">
-                    <div class={[
-                      "w-16 h-16 mx-auto flex items-center justify-center text-white text-xl font-bold",
-                      Theme.rounded(:full),
-                      Theme.gradient(:primary)
-                    ]}>
+                  <:placeholder>
+                    <div
+                      :if={@business.initials}
+                      class={[
+                        "w-16 h-16 mx-auto flex items-center justify-center text-white text-xl font-bold",
+                        Theme.rounded(:full),
+                        Theme.gradient(:primary)
+                      ]}
+                    >
                       {@business.initials}
                     </div>
-                  </div>
-
-                  <%!-- Upload entries preview --%>
-                  <div :for={entry <- @uploads.logo.entries} class="mb-4">
-                    <.live_img_preview
-                      entry={entry}
-                      class="w-16 h-16 mx-auto rounded-full object-cover"
-                    />
-                    <p class="text-sm text-hero-grey-500 mt-1">{entry.client_name}</p>
-                    <button
-                      type="button"
-                      phx-click="cancel_upload"
-                      phx-value-ref={entry.ref}
-                      phx-value-upload="logo"
-                      class="text-xs text-red-500 hover:text-red-700 mt-1"
-                    >
-                      {gettext("Remove")}
-                    </button>
-                    <div
-                      :for={err <- upload_errors(@uploads.logo, entry)}
-                      class="text-xs text-red-500 mt-1"
-                    >
-                      {upload_error_to_string(err)}
-                    </div>
-                  </div>
-
-                  <.live_file_input upload={@uploads.logo} class="hidden" />
-                  <label
-                    for={@uploads.logo.ref}
-                    class={[
-                      "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                      "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
-                      Theme.rounded(:lg),
-                      Theme.transition(:normal)
-                    ]}
-                  >
-                    <.icon name="hero-photo-mini" class="w-4 h-4" />
-                    {gettext("Choose Logo")}
-                  </label>
-                  <p class="text-xs text-hero-grey-400 mt-2">
-                    {gettext("JPG, PNG or WebP. Max 2MB.")}
-                  </p>
-                </div>
+                  </:placeholder>
+                </.pv_upload_dropzone>
               </div>
 
               <div class="pt-6 border-t border-hero-grey-200 space-y-6">
@@ -316,54 +278,14 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
                     {gettext("Cover Image")}
                   </label>
 
-                  <div
+                  <.pv_upload_dropzone
                     id="cover-upload"
-                    class={[
-                      "border-2 border-dashed border-hero-grey-300 p-6 text-center",
-                      Theme.rounded(:lg)
-                    ]}
-                    phx-drop-target={@uploads.cover.ref}
-                  >
-                    <div :for={entry <- @uploads.cover.entries} class="mb-4">
-                      <.live_img_preview
-                        entry={entry}
-                        class="w-full max-w-md mx-auto h-32 object-cover rounded-lg"
-                      />
-                      <p class="text-sm text-hero-grey-500 mt-1">{entry.client_name}</p>
-                      <button
-                        type="button"
-                        phx-click="cancel_upload"
-                        phx-value-ref={entry.ref}
-                        phx-value-upload="cover"
-                        class="text-xs text-red-500 hover:text-red-700 mt-1"
-                      >
-                        {gettext("Remove")}
-                      </button>
-                      <div
-                        :for={err <- upload_errors(@uploads.cover, entry)}
-                        class="text-xs text-red-500 mt-1"
-                      >
-                        {upload_error_to_string(err)}
-                      </div>
-                    </div>
-
-                    <.live_file_input upload={@uploads.cover} class="hidden" />
-                    <label
-                      for={@uploads.cover.ref}
-                      class={[
-                        "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                        "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
-                        Theme.rounded(:lg),
-                        Theme.transition(:normal)
-                      ]}
-                    >
-                      <.icon name="hero-photo-mini" class="w-4 h-4" />
-                      {gettext("Choose Cover Image")}
-                    </label>
-                    <p class="text-xs text-hero-grey-400 mt-2">
-                      {gettext("JPG, PNG or WebP. Max 5MB.")}
-                    </p>
-                  </div>
+                    upload={@uploads.cover}
+                    name="cover"
+                    trigger={gettext("Choose Cover Image")}
+                    hint={gettext("JPG, PNG or WebP. Max 5MB.")}
+                    preview_class="w-full max-w-md mx-auto h-32 object-cover rounded-lg"
+                  />
                 </div>
 
                 <.input

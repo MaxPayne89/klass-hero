@@ -116,8 +116,8 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   end
 
   @impl true
-  def handle_event("cancel_upload", %{"ref" => ref}, socket) do
-    {:noreply, cancel_upload(socket, :logo, ref)}
+  def handle_event("cancel_upload", %{"ref" => ref, "upload" => upload_name}, socket) do
+    {:noreply, cancel_upload(socket, String.to_existing_atom(upload_name), ref)}
   end
 
   defp build_pre_fill(nil, _provider), do: %{}
@@ -350,11 +350,12 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                 id="logo-upload"
                 class={[
                   "border-2 border-dashed border-gray-300 p-6 text-center",
+                  "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2",
                   Theme.rounded(:lg)
                 ]}
                 phx-drop-target={@uploads.logo.ref}
               >
-                <.live_file_input upload={@uploads.logo} class="hidden" />
+                <.live_file_input upload={@uploads.logo} class="sr-only peer" />
                 <label for={@uploads.logo.ref} class="cursor-pointer">
                   <.icon name="hero-cloud-arrow-up" class="w-8 h-8 mx-auto text-gray-400 mb-2" />
                   <p class="text-sm text-gray-500">
@@ -373,6 +374,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                   type="button"
                   phx-click="cancel_upload"
                   phx-value-ref={entry.ref}
+                  phx-value-upload="logo"
                   class="text-red-500 hover:text-red-700 text-sm"
                 >
                   {gettext("Remove")}
