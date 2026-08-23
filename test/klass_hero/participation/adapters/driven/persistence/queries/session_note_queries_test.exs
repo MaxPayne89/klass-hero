@@ -8,6 +8,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNot
 
   use KlassHero.DataCase, async: true
 
+  import KlassHero.Factory
+
   alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
   alias KlassHero.Participation.SessionNote
 
@@ -46,16 +48,48 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNot
     end
   end
 
-  describe "by_parent/2" do
-    test "adds WHERE clause for parent ID" do
-      parent_id = Ecto.UUID.generate()
+  describe "by_children/2" do
+    test "adds WHERE clause for child IDs" do
+      child_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
 
       query =
         SessionNoteQueries.base()
-        |> SessionNoteQueries.by_parent(parent_id)
+        |> SessionNoteQueries.by_children(child_ids)
 
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 1
+    end
+
+    test "filters to notes belonging to one of several children" do
+      included_child = insert(:child_schema)
+      other_included_child = insert(:child_schema)
+      excluded_child = insert(:child_schema)
+
+      included_note = insert(:session_note_schema, child_id: included_child.id)
+      other_included_note = insert(:session_note_schema, child_id: other_included_child.id)
+      _excluded_note = insert(:session_note_schema, child_id: excluded_child.id)
+
+      results =
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_children([included_child.id, other_included_child.id])
+        |> Repo.all()
+
+      assert Enum.map(results, & &1.id) |> Enum.sort() ==
+               Enum.sort([included_note.id, other_included_note.id])
+    end
+
+    test "excludes notes for children not in the list" do
+      child = insert(:child_schema)
+      unrelated_child = insert(:child_schema)
+
+      _unrelated_note = insert(:session_note_schema, child_id: unrelated_child.id)
+
+      results =
+        SessionNoteQueries.base()
+        |> SessionNoteQueries.by_children([child.id])
+        |> Repo.all()
+
+      assert results == []
     end
   end
 
@@ -213,12 +247,12 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNot
       assert length(query.order_bys) == 1
     end
 
-    test "can compose parent filter with approved shorthand" do
-      parent_id = Ecto.UUID.generate()
+    test "can compose children filter with approved shorthand" do
+      child_ids = [Ecto.UUID.generate(), Ecto.UUID.generate()]
 
       query =
         SessionNoteQueries.base()
-        |> SessionNoteQueries.by_parent(parent_id)
+        |> SessionNoteQueries.by_children(child_ids)
         |> SessionNoteQueries.approved()
 
       assert %Ecto.Query{} = query

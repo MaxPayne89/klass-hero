@@ -290,13 +290,16 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   end
 
   @spec session_note_payload(SessionNote.t()) :: session_note_payload()
+  # No `parent_id`: nothing populates `session_notes.parent_id`, so carrying it here
+  # published a permanently-nil identity that a consumer could reasonably mistake for
+  # one (#1329). The parent is reached through `child_id`, which is the topic the
+  # parent LiveView subscribes to anyway.
   defp session_note_payload(%SessionNote{} = note) do
     %{
       note_id: note.id,
       participation_record_id: note.participation_record_id,
       child_id: note.child_id,
-      provider_id: note.provider_id,
-      parent_id: note.parent_id
+      provider_id: note.provider_id
     }
   end
 end

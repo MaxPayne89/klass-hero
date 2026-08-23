@@ -255,16 +255,14 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      provider: provider,
       scope: scope
     } do
       check_in_record(%{record: record, scope: scope})
 
       # Submit a note first
       {:ok, _note} =
-        KlassHero.Participation.submit_session_note(%{
+        KlassHero.Participation.submit_session_note(scope, %{
           participation_record_id: record.id,
-          provider_id: provider.id,
           content: "Good session"
         })
 
@@ -279,23 +277,21 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       session: session,
       record: record,
       parent: parent,
-      provider: provider,
+      user: user,
       scope: scope
     } do
       check_in_record(%{record: record, scope: scope})
 
       # Submit and reject a note
       {:ok, note} =
-        KlassHero.Participation.submit_session_note(%{
+        KlassHero.Participation.submit_session_note(scope, %{
           participation_record_id: record.id,
-          provider_id: provider.id,
           content: "Some observation"
         })
 
       {:ok, _rejected} =
-        KlassHero.Participation.review_session_note(%{
+        KlassHero.Participation.review_session_note(%Scope{user: user, parent: parent}, %{
           note_id: note.id,
-          parent_id: parent.id,
           decision: :reject,
           reason: "Too vague"
         })
@@ -310,22 +306,20 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       session: session,
       record: record,
       parent: parent,
-      provider: provider,
+      user: user,
       scope: scope
     } do
       check_in_record(%{record: record, scope: scope})
 
       {:ok, note} =
-        KlassHero.Participation.submit_session_note(%{
+        KlassHero.Participation.submit_session_note(scope, %{
           participation_record_id: record.id,
-          provider_id: provider.id,
           content: "Some observation"
         })
 
       {:ok, _rejected} =
-        KlassHero.Participation.review_session_note(%{
+        KlassHero.Participation.review_session_note(%Scope{user: user, parent: parent}, %{
           note_id: note.id,
-          parent_id: parent.id,
           decision: :reject,
           reason: "Too vague, please be specific"
         })
@@ -384,23 +378,21 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       session: session,
       record: record,
       parent: parent,
-      provider: provider,
+      user: user,
       scope: scope
     } do
       check_in_record(%{record: record, scope: scope})
 
       # Submit and reject a note
       {:ok, note} =
-        KlassHero.Participation.submit_session_note(%{
+        KlassHero.Participation.submit_session_note(scope, %{
           participation_record_id: record.id,
-          provider_id: provider.id,
           content: "Initial observation"
         })
 
       {:ok, _rejected} =
-        KlassHero.Participation.review_session_note(%{
+        KlassHero.Participation.review_session_note(%Scope{user: user, parent: parent}, %{
           note_id: note.id,
-          parent_id: parent.id,
           decision: :reject,
           reason: "Needs more detail"
         })
@@ -452,16 +444,14 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       conn: conn,
       session: session,
       record: record,
-      provider: provider,
       scope: scope
     } do
       check_in_record(%{record: record, scope: scope})
 
       # Submit a note first via the API
       {:ok, _note} =
-        KlassHero.Participation.submit_session_note(%{
+        KlassHero.Participation.submit_session_note(scope, %{
           participation_record_id: record.id,
-          provider_id: provider.id,
           content: "First note"
         })
 
