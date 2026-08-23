@@ -327,6 +327,9 @@ config :klass_hero, :event_consumers, %{
   "integration:participation:child_marked_absent" => [
     {ProviderSessionDetails, :project}
   ],
+  "integration:participation:attendance_corrected" => [
+    {ProviderSessionDetails, :project}
+  ],
 
   # Messaging
   "integration:messaging:conversation_created" => [

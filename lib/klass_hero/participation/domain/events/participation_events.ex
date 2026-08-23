@@ -45,6 +45,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
     child_checked_in: :participation_record,
     child_checked_out: :participation_record,
     child_marked_absent: :participation_record,
+    attendance_corrected: :participation_record,
     session_note_submitted: :session_note,
     session_note_approved: :session_note,
     session_note_rejected: :session_note
@@ -256,6 +257,28 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
     }
 
     new_event(:child_marked_absent, record.id, payload, [])
+  end
+
+  @doc """
+  Creates an attendance_corrected event.
+
+  Carries **both** statuses. A correction can move a record in either direction
+  across the set a consumer counts, and the corrected record alone cannot say which
+  happened — only the pair can. `ProviderSessionDetails` reads exactly this to
+  decide `+1`, `-1` or nothing.
+  """
+  @spec attendance_corrected(ParticipationRecord.t(), ProgramSession.t() | nil, atom()) :: Event.t()
+  def attendance_corrected(%ParticipationRecord{} = record, session, previous_status) do
+    payload = %{
+      record_id: record.id,
+      session_id: record.session_id,
+      child_id: record.child_id,
+      program_id: session && session.program_id,
+      previous_status: previous_status,
+      new_status: record.status
+    }
+
+    new_event(:attendance_corrected, record.id, payload, [])
   end
 
   @doc "Creates a session_note_submitted event."
