@@ -299,6 +299,28 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
       assert %{checked_in_count: 1} = reload(session_id)
     end
 
+    # #1329 widened `ParticipationRecord.check_in/3` to accept `:absent`, so a
+    # child marked absent who turns up late now emits `child_checked_in` from a
+    # status that was previously terminal. The +1 is still right — `:absent` is
+    # not counted as present — but nothing asserted that until this test.
+    test "a late arrival after an absence still counts as one", %{session_id: session_id} do
+      broadcast(:child_marked_absent, "rec-1", %{
+        record_id: "rec-1",
+        session_id: session_id,
+        child_id: "c-1"
+      })
+
+      assert %{checked_in_count: 0} = reload(session_id)
+
+      broadcast(:child_checked_in, "rec-1", %{
+        record_id: "rec-1",
+        session_id: session_id,
+        child_id: "c-1"
+      })
+
+      assert %{checked_in_count: 1} = reload(session_id)
+    end
+
     test "two check-ins increment to 2", %{session_id: session_id} do
       broadcast(:child_checked_in, "rec-1", %{
         record_id: "rec-1",

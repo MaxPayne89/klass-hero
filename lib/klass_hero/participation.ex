@@ -1188,8 +1188,7 @@ defmodule KlassHero.Participation do
   defp correct_record_with_event(record, corrected, actor_id, reason) do
     Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- update_record(corrected),
-           {:ok, _transition} <-
-             Repo.insert(AttendanceTransition.between(record, persisted, actor_id, reason)) do
+           :ok <- insert_transition(AttendanceTransition.between(record, persisted, actor_id, reason)) do
         session = resolve_session_best_effort(persisted.session_id)
         {:ok, persisted, [ParticipationEvents.attendance_corrected(persisted, session, record.status)]}
       end
@@ -1199,7 +1198,7 @@ defmodule KlassHero.Participation do
   defp update_record_with_event(updated, event_fn, transition) do
     Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- update_record(updated),
-           {:ok, _transition} <- Repo.insert(transition) do
+           :ok <- insert_transition(transition) do
         # Best-effort: attendance already succeeded; a session fetch failure enriches
         # the event less, it does not fail the write.
         session = resolve_session_best_effort(persisted.session_id)
@@ -1350,6 +1349,17 @@ defmodule KlassHero.Participation do
     |> ParticipationQueries.by_date_range(start_date, end_date)
     |> ParticipationQueries.order_by_session_date_desc()
     |> Repo.all()
+  end
+
+  # `Repo.insert/1` answers with a changeset on failure, but every attendance verb's
+  # `@spec` promises `{:error, atom()}` to its callers. `between/4` fills all four
+  # required fields from two valid records, so this cannot fail on validation — a
+  # failure here is the database refusing the row, and it stays an atom either way.
+  defp insert_transition(transition) do
+    case Repo.insert(transition) do
+      {:ok, _transition} -> :ok
+      {:error, %Ecto.Changeset{}} -> {:error, :transition_log_failed}
+    end
   end
 
   # The sweep is a bulk `update_all`, so its log entries are a bulk `insert_all` —
