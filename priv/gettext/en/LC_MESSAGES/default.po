@@ -145,7 +145,7 @@ msgstr ""
 msgid "%{name} (Age %{age})"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:375
+#: lib/klass_hero_web/live/program_detail_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "About This Program"
 msgstr ""
@@ -165,7 +165,7 @@ msgstr ""
 msgid "Add another program"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:220
+#: lib/klass_hero_web/live/program_detail_live.ex:223
 #, elixir-autogen, elixir-format
 msgid "Ages %{range}"
 msgstr ""
@@ -225,7 +225,7 @@ msgstr ""
 msgid "Easy Scheduling"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:478
+#: lib/klass_hero_web/live/program_detail_live.ex:481
 #, elixir-autogen, elixir-format
 msgid "Enroll Now - %{price}"
 msgstr ""
@@ -282,7 +282,7 @@ msgstr ""
 msgid "Loading..."
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:415
+#: lib/klass_hero_web/live/program_detail_live.ex:418
 #, elixir-autogen, elixir-format
 msgid "Meet the Hero"
 msgid_plural "Meet the Heroes"
@@ -392,7 +392,7 @@ msgstr ""
 msgid "View All Programs →"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:232
+#: lib/klass_hero_web/live/program_detail_live.ex:235
 #, elixir-autogen, elixir-format
 msgid "✓ No hidden fees"
 msgstr ""
@@ -1353,8 +1353,8 @@ msgstr ""
 msgid "Assigned Staff"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:342
-#: lib/klass_hero_web/live/program_detail_live.ex:502
+#: lib/klass_hero_web/live/program_detail_live.ex:345
+#: lib/klass_hero_web/live/program_detail_live.ex:505
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Book Now"
 msgstr ""
@@ -1441,7 +1441,7 @@ msgstr ""
 msgid "Provider Dashboard"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:355
+#: lib/klass_hero_web/live/program_detail_live.ex:358
 #, elixir-autogen, elixir-format
 msgid "Save for Later"
 msgstr ""
@@ -1907,23 +1907,23 @@ msgid_plural "%{count} documents"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/components/program_components.ex:642
-#: lib/klass_hero_web/components/program_components.ex:650
+#: lib/klass_hero_web/components/program_components.ex:611
+#: lib/klass_hero_web/components/program_components.ex:619
 #, elixir-autogen, elixir-format
 msgid "%{count} month"
 msgid_plural "%{count} months"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/components/program_components.ex:638
-#: lib/klass_hero_web/components/program_components.ex:649
+#: lib/klass_hero_web/components/program_components.ex:607
+#: lib/klass_hero_web/components/program_components.ex:618
 #, elixir-autogen, elixir-format
 msgid "%{count} year"
 msgid_plural "%{count} years"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/klass_hero_web/components/program_components.ex:659
+#: lib/klass_hero_web/components/program_components.ex:628
 #, elixir-autogen, elixir-format
 msgid "%{gender} only"
 msgstr ""
@@ -1943,12 +1943,12 @@ msgstr ""
 msgid "Add your first staff member to get started!"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:624
+#: lib/klass_hero_web/components/program_components.ex:593
 #, elixir-autogen, elixir-format
 msgid "Ages %{min} to %{max}"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:628
+#: lib/klass_hero_web/components/program_components.ex:597
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Ages %{min}+"
 msgstr ""
@@ -2120,7 +2120,7 @@ msgstr ""
 msgid "Description"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:761
+#: lib/klass_hero_web/components/program_components.ex:730
 #: lib/klass_hero_web/components/provider_components.ex:1216
 #: lib/klass_hero_web/live/settings/children_live.ex:635
 #, elixir-autogen, elixir-format
@@ -2247,7 +2247,7 @@ msgstr ""
 msgid "Family Programs"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:759
+#: lib/klass_hero_web/components/program_components.ex:728
 #: lib/klass_hero_web/components/provider_components.ex:1215
 #: lib/klass_hero_web/live/settings/children_live.ex:634
 #, elixir-autogen, elixir-format
@@ -2284,17 +2284,17 @@ msgstr ""
 msgid "Gender"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:767
+#: lib/klass_hero_web/components/program_components.ex:736
 #, elixir-autogen, elixir-format
 msgid "Grade %{grade}"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:775
+#: lib/klass_hero_web/components/program_components.ex:744
 #, elixir-autogen, elixir-format
 msgid "Grade %{min}+"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:771
+#: lib/klass_hero_web/components/program_components.ex:740
 #, elixir-autogen, elixir-format
 msgid "Grades %{min} – %{max}"
 msgstr ""
@@ -2393,7 +2393,7 @@ msgstr ""
 msgid "Logo upload failed. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:760
+#: lib/klass_hero_web/components/program_components.ex:729
 #: lib/klass_hero_web/components/provider_components.ex:1214
 #: lib/klass_hero_web/live/settings/children_live.ex:633
 #, elixir-autogen, elixir-format
@@ -2512,7 +2512,7 @@ msgstr ""
 msgid "Not Verified"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:762
+#: lib/klass_hero_web/components/program_components.ex:731
 #: lib/klass_hero_web/components/provider_components.ex:1217
 #: lib/klass_hero_web/live/settings/children_live.ex:632
 #, elixir-autogen, elixir-format
@@ -2531,7 +2531,7 @@ msgstr ""
 msgid "PDF, JPG or PNG. Max 10MB."
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:588
+#: lib/klass_hero_web/components/program_components.ex:557
 #, elixir-autogen, elixir-format
 msgid "Participant Requirements"
 msgstr ""
@@ -2746,7 +2746,7 @@ msgstr ""
 msgid "Schedule (optional)"
 msgstr ""
 
-#: lib/klass_hero_web/live/program_detail_live.ex:215
+#: lib/klass_hero_web/live/program_detail_live.ex:218
 #, elixir-autogen, elixir-format
 msgid "Schedule TBD"
 msgstr ""
@@ -2894,12 +2894,12 @@ msgstr ""
 msgid "Unable to load document preview."
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:632
+#: lib/klass_hero_web/components/program_components.ex:601
 #, elixir-autogen, elixir-format
 msgid "Up to %{max}"
 msgstr ""
 
-#: lib/klass_hero_web/components/program_components.ex:779
+#: lib/klass_hero_web/components/program_components.ex:748
 #, elixir-autogen, elixir-format
 msgid "Up to Grade %{max}"
 msgstr ""

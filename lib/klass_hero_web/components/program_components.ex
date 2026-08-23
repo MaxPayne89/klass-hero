@@ -255,38 +255,6 @@ defmodule KlassHeroWeb.ProgramComponents do
   end
 
   @doc """
-  Renders a program's title with its optional subtitle underneath.
-
-  Used where the title is already styled from `Theme.typography/1` — the detail
-  hero and the catalog grid card. The marketing cards keep their own hand-rolled
-  title markup and compose `program_subtitle/1` directly instead.
-  """
-  attr :title, :string, required: true
-  attr :subtitle, :string, default: nil
-  attr :variant, :atom, default: :card, values: [:card, :hero]
-  attr :class, :string, default: "", doc: "Extra classes for the wrapping block"
-  attr :id, :string, default: nil
-
-  def program_headline(assigns) do
-    ~H"""
-    <div class={@class}>
-      <.dynamic_tag
-        tag_name={if @variant == :hero, do: "h1", else: "h3"}
-        class={
-          if(@variant == :hero,
-            do: Theme.typography(:page_title),
-            else: Theme.typography(:card_title)
-          )
-        }
-      >
-        {@title}
-      </.dynamic_tag>
-      <.program_subtitle subtitle={@subtitle} variant={@variant} id={@id} />
-    </div>
-    """
-  end
-
-  @doc """
   Renders a program card with gradient header, favorite button, and program details.
 
   Supports two variants:
@@ -355,12 +323,13 @@ defmodule KlassHeroWeb.ProgramComponents do
       <div class="p-6">
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1">
-            <.program_headline
-              id={"program-card-#{@program.id}"}
-              title={@program.title}
-              subtitle={Map.get(@program, :subtitle)}
-              class="mb-2"
-            />
+            <div class="mb-2">
+              <h3 class={[Theme.typography(:card_title), "text-hero-black"]}>{@program.title}</h3>
+              <.program_subtitle
+                id={"program-card-#{@program.id}"}
+                subtitle={Map.get(@program, :subtitle)}
+              />
+            </div>
             <p class="text-hero-black-100 text-sm mb-3 line-clamp-2">{@program.description}</p>
           </div>
         </div>

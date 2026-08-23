@@ -188,13 +188,16 @@ defmodule KlassHeroWeb.ProgramDetailLive do
         <p :if={@business_name} id="hero-business-name" class="text-sm text-white/90 mb-1">
           {@business_name}
         </p>
-        <.program_headline
-          id="program-detail-headline"
-          title={@program.title}
-          subtitle={@program.subtitle}
-          variant={:hero}
-          class="mb-3"
-        />
+        <div class="mb-3">
+          <h1 class={Theme.typography(:page_title)}>
+            {@program.title}
+          </h1>
+          <.program_subtitle
+            id="program-detail-headline"
+            subtitle={@program.subtitle}
+            variant={:hero}
+          />
+        </div>
         <div class="flex flex-wrap items-center justify-center gap-4 text-sm text-white/90 mb-4">
           <%= if schedule = ProgramPresenter.format_schedule(@program) do %>
             <span class="flex items-center">
