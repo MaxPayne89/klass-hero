@@ -1,8 +1,8 @@
 defmodule KlassHero.Messaging.ReceiveInboundEmailTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
   alias KlassHero.Messaging.ReceiveInboundEmail
+  alias KlassHero.Messaging.ResendEmailContentAdapter
   alias KlassHero.MessagingFixtures
 
   setup do

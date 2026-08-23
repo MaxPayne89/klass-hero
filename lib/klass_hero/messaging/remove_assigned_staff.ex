@@ -21,7 +21,7 @@ defmodule KlassHero.Messaging.RemoveAssignedStaff do
   - `{:error, reason}` — when a `leave` write fails.
   """
 
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Shared.Domain.Events.Event
 
   @type removal :: %{conversation_id: String.t()}
@@ -39,7 +39,7 @@ defmodule KlassHero.Messaging.RemoveAssignedStaff do
   defp remove_each([conversation_id | rest], staff_user_id, removals, events) do
     with {:ok, _participant} <- KlassHero.Messaging.leave_conversation(conversation_id, staff_user_id) do
       event =
-        MessagingEvents.participant_removed(
+        Events.participant_removed(
           conversation_id,
           [staff_user_id],
           :staff_unassignment

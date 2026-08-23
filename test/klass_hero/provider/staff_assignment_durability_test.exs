@@ -17,7 +17,7 @@ defmodule KlassHero.Provider.StaffAssignmentDurabilityTest do
   """
   use ExUnit.Case, async: true
 
-  alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
+  alias KlassHero.Messaging.StaffAssignmentHandler
   alias KlassHero.Provider.Events
   alias KlassHero.Provider.ProgramStaffAssignment
   alias KlassHero.Provider.StaffMember

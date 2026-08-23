@@ -12,7 +12,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
   alias KlassHero.Messaging.AddAssignedStaff
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Shared
   alias KlassHero.Shared.Outbox
 
@@ -105,7 +105,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
            {:ok, {_staff_ids, staff_events}} <-
              AddAssignedStaff.execute(conversation.id, program_id, provider_user_id) do
         created_event =
-          MessagingEvents.conversation_created(
+          Events.conversation_created(
             conversation.id,
             conversation.type,
             provider_id,

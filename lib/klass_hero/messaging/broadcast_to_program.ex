@@ -16,7 +16,7 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.SendMessage
   alias KlassHero.Messaging.Shared
@@ -150,7 +150,7 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
 
   defp build_broadcast_event(conversation_id, inserted) do
     user_ids = Enum.map(inserted, & &1.user_id)
-    [MessagingEvents.participant_added(conversation_id, user_ids, :broadcast_setup)]
+    [Events.participant_added(conversation_id, user_ids, :broadcast_setup)]
   end
 
   defp get_or_create_broadcast_conversation(provider_id, program_id, subject) do

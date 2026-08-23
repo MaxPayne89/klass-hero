@@ -19,8 +19,8 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Messaging.Adapters.Driven.Projections.ConversationSummaries
-  alias KlassHero.Messaging.Adapters.Driving.Events.StaffAssignmentHandler
+  alias KlassHero.Messaging.ConversationSummaries
+  alias KlassHero.Messaging.StaffAssignmentHandler
   alias KlassHero.Messaging.StartConversationWithMessage
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile

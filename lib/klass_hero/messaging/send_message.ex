@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.SendMessage do
   use KlassHero.Shared.Tracing
 
   alias KlassHero.Messaging.Attachment
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Shared
@@ -315,7 +315,7 @@ defmodule KlassHero.Messaging.SendMessage do
   end
 
   defp message_sent_event(message) do
-    MessagingEvents.message_sent(
+    Events.message_sent(
       message.conversation_id,
       message.id,
       message.sender_id,

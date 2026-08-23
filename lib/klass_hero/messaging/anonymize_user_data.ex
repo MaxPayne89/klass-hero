@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
   Accounts context. This use case handles the Messaging context's portion of that cascade.
   """
 
-  alias KlassHero.Messaging.Domain.Events.MessagingEvents
+  alias KlassHero.Messaging.Events
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -49,7 +49,7 @@ defmodule KlassHero.Messaging.AnonymizeUserData do
            {:ok, part_count} <-
              tag_step(:mark_as_left, KlassHero.Messaging.mark_all_participations_left(user_id)) do
         result = %{messages_anonymized: msg_count, participants_updated: part_count}
-        {:ok, result, [MessagingEvents.message_data_anonymized(user_id)]}
+        {:ok, result, [Events.message_data_anonymized(user_id)]}
       end
     end)
   end

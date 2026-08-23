@@ -1,6 +1,6 @@
 import Config
 
-alias KlassHero.Messaging.Adapters.Driven.ResendEmailContentAdapter
+alias KlassHero.Messaging.ResendEmailContentAdapter
 alias KlassHero.Provider.StripeIdentity
 alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 alias KlassHero.Shared.Adapters.Driven.FeatureFlags.StubFeatureFlagsAdapter
