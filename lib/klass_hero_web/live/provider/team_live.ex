@@ -619,7 +619,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
             </.kh_button>
             <.kh_button
               id="add-member-btn"
-              variant={:yellow}
+              variant={:primary}
               size={:sm}
               icon="hero-user-plus-mini"
               phx-click="add_member"

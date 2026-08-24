@@ -409,7 +409,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         <div class="relative group">
           <.kh_button
             id="new-program-btn"
-            variant={:yellow}
+            variant={:primary}
             size={:sm}
             icon="hero-plus-mini"
             phx-click="add_program"
@@ -3160,10 +3160,16 @@ defmodule KlassHeroWeb.ProviderComponents do
       </div>
 
       <div class="space-y-4" id="social-links">
+        <%!-- `type="text"`, not `type="url"`: the browser's own constraint validation
+              rejects a scheme-less value and blocks submit, so `instagram.com/handle`
+              would never reach the normalizer built to accept it. No LiveView test
+              can see that — `Phoenix.LiveViewTest` does not run browser validation.
+              `inputmode` keeps the URL keyboard on mobile without the constraint. --%>
         <.input
           :for={{field, _network, label} <- revealed_networks(@revealed)}
           field={@form[field]}
-          type="url"
+          type="text"
+          inputmode="url"
           label={label}
           placeholder={gettext("e.g. %{example}", example: "instagram.com/yourhandle")}
         />

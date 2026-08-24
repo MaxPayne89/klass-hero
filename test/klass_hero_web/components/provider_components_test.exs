@@ -273,6 +273,17 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
       end
     end
 
+    test "social inputs are not type=url, which would block a scheme-less value" do
+      # The strongest guard available here. The real failure is the browser's own
+      # constraint validation refusing to submit `instagram.com/handle` — which
+      # Phoenix.LiveViewTest does not run, so no behavioural test can see it. This
+      # pins the structure that caused it instead.
+      html = render_branding(revealed: [:instagram_url])
+
+      refute html =~ ~s(type="url")
+      assert html =~ ~s(inputmode="url")
+    end
+
     test "renders no cover upload when given no uploads" do
       # The completion form has no :cover upload configured, so reading
       # @uploads.cover there would raise.
