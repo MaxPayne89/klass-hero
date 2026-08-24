@@ -512,7 +512,7 @@ msgstr "Wird bestätigt..."
 msgid "Contact Information"
 msgstr "Kontaktdaten"
 
-#: lib/klass_hero_web/components/composite_components.ex:597
+#: lib/klass_hero_web/components/composite_components.ex:601
 #: lib/klass_hero_web/live/contact_live.ex:16
 #: lib/klass_hero_web/live/contact_live.ex:107
 #: lib/klass_hero_web/live/privacy_policy_live.ex:221
@@ -4156,7 +4156,7 @@ msgstr "Gelesen"
 msgid "Reason for rejection (optional)"
 msgstr "Grund für die Ablehnung (optional)"
 
-#: lib/klass_hero_web/live/admin/emails_live.html.heex:197
+#: lib/klass_hero_web/live/admin/emails_live.html.heex:201
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "Antworten"
@@ -4206,7 +4206,7 @@ msgstr "Überarbeitete Notiz"
 msgid "Select a program..."
 msgstr "Programm auswählen..."
 
-#: lib/klass_hero_web/live/admin/emails_live.html.heex:207
+#: lib/klass_hero_web/live/admin/emails_live.html.heex:211
 #, elixir-autogen, elixir-format
 msgid "Send Reply"
 msgstr "Antwort senden"
@@ -4297,7 +4297,7 @@ msgstr "Uhrzeit ist erforderlich"
 msgid "To"
 msgstr "An"
 
-#: lib/klass_hero_web/live/admin/emails_live.html.heex:202
+#: lib/klass_hero_web/live/admin/emails_live.html.heex:206
 #, elixir-autogen, elixir-format
 msgid "Type your reply..."
 msgstr "Ihre Antwort eingeben..."
@@ -4411,7 +4411,7 @@ msgstr "Sie sind diesem Programm nicht zugewiesen"
 msgid "+1234567890"
 msgstr "+1234567890"
 
-#: lib/klass_hero_web/components/composite_components.ex:641
+#: lib/klass_hero_web/components/composite_components.ex:645
 #: lib/klass_hero_web/live/provider_profile_live.ex:93
 #, elixir-autogen, elixir-format
 msgid "About the Provider"
@@ -8034,7 +8034,7 @@ msgstr "Grund für die Abwesenheit (optional)"
 msgid "e.g. Mum called — off sick today"
 msgstr "z. B. Mutter hat angerufen — heute krank"
 
-#: lib/klass_hero_web/components/composite_components.ex:776
+#: lib/klass_hero_web/components/composite_components.ex:780
 #, elixir-autogen, elixir-format
 msgid "%{business} on %{network}"
 msgstr "%{business} auf %{network}"

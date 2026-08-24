@@ -170,7 +170,9 @@ defmodule KlassHero.MixProject do
         # schemas, messaging LiveViews -> their shared helper, workers -> TracedWorker).
         # Driving it to 0 is not the goal; noticing the 33rd is. Lower the number whenever
         # a refactor earns it.
-        "xref graph --label compile-connected --fail-above 32",
+        # stdout is the full graph even on success, which is 60 lines of noise here; the
+        # failure message goes to stderr and survives. Re-run without the redirect to see it.
+        "cmd bash -c 'mix xref graph --label compile-connected --fail-above 32 >/dev/null'",
         "format",
         "lint_typography",
         "lint_hero_colors",
