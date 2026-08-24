@@ -1,0 +1,51 @@
+# Secret scanning config. Runs in CI (see .github/workflows/security.yml) and can be
+# run locally with `gitleaks dir . --config .gitleaks.toml --redact`.
+#
+# Allowlists are deliberately narrow. A blanket path exclusion is how a scanner stops
+# finding things, so each entry below says what it excludes and why that is safe.
+
+title = "klass-hero"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = """
+Vendored and generated trees. The default ruleset fires on documentation examples
+inside dependencies (Phoenix's endpoint.ex, plug_crypto's message_encryptor.ex,
+swoosh's resend.ex all carry illustrative keys), which are neither ours nor secret.
+"""
+paths = [
+  '''^deps/''',
+  '''^_build/''',
+  '''^node_modules/''',
+  '''^assets/node_modules/''',
+  '''^priv/static/''',
+]
+
+[[allowlists]]
+description = """
+Phoenix's dev and test secret_key_base. These are generated per-project by
+phx.gen.secret and checked in on purpose: they sign nothing that leaves a developer's
+machine or CI. Production takes its value from the SECRET_KEY_BASE environment
+variable and raises at boot when it is absent (config/runtime.exs), so these literals
+can never be the production key.
+
+Scoped to the generic-api-key rule and these two files — a real credential appearing
+in either file under any other rule still fails the scan.
+"""
+targetRules = ["generic-api-key"]
+paths = ['''^config/(dev|test)\.exs$''']
+
+[[allowlists]]
+description = """
+One historical hit, verified by hand: commit 9085d5e quoted the *test* secret_key_base
+inside a Wallaby planning doc (docs/superpowers/plans/, since deleted). Same value class
+as the config/test.exs entry above — it signs nothing outside CI and a developer's
+machine, and production has never used it.
+
+Allowlisted by commit rather than by path so that a future secret committed under
+docs/ still fails. Remove this entry if the history is ever rewritten.
+"""
+targetRules = ["generic-api-key"]
+commits = ["9085d5e0d829e31c97c970cc25579a785a648e92"]

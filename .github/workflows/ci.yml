@@ -86,6 +86,18 @@ jobs:
       - name: Check code formatting
         run: mix format --check-formatted
 
+      # `precommit` runs the mutating `deps.unlock --unused`, which fixes the lock file
+      # locally and so never fails. Nothing checked it here, meaning an orphaned lock
+      # entry only surfaced if someone happened to run precommit before pushing.
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      # Keeps a runtime dependency from silently becoming a compile-time one, which
+      # balloons recompiles across a 7-context app. Threshold is the count at the time
+      # this landed — see the note in mix.exs's precommit alias.
+      - name: No new compile-time coupling
+        run: mix xref graph --label compile-connected --fail-above 32
+
       - name: Credo
         run: mix credo --strict
 
@@ -105,6 +117,17 @@ jobs:
 
       - name: Cross-context table reads are traced
         run: mix lint_acl_boundary
+
+      - name: raw/1 calls are waived with a reason
+        run: mix lint_raw_html
+
+      - name: Agent-facing docs cite things that exist
+        run: mix lint_doc_refs
+
+      # Was precommit-only. A check that runs locally but not in CI is exactly the
+      # drift these gates exist to stop, so it runs in both now.
+      - name: Palette tokens are internally consistent
+        run: mix lint_palette
 
   # The counterpart to the skip documented on `test` below: that skip is only safe while a
   # Release PR's diff really is a version bump over content already tested on main. This job

@@ -191,8 +191,8 @@ because that means the two have drifted.
    `adapters/driven/projections/` tree alike
 2. Confirm `use KlassHero.Shared.Projection, ...` with a `:topics` list
 3. Confirm `bootstrap_impl/0` and `handle_event/2` are implemented
-4. Reference: `lib/klass_hero/provider/adapters/driven/projections/provider_programs.ex`
-   (old shape — `accounts` has no projection yet, since none of its kinds have reached 3 files)
+4. Reference: `lib/klass_hero/provider/projections/provider_programs.ex`
+   (`accounts` has no projection yet, since none of its kinds have reached 3 files)
 5. Flag hand-rolled projection GenServers that bypass the macro
 
 ## Check 7: Read-model DTO purity

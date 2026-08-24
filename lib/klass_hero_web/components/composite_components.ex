@@ -585,6 +585,10 @@ defmodule KlassHeroWeb.CompositeComponents do
         </:header>
         <:body>
           <div class={["prose prose-sm max-w-none", Theme.text_color(:secondary)]}>
+            <%!-- Sections come from terms_sections/0 and privacy_sections/0: developer-
+            authored HTML whose one dynamic value (Contact.email/0) is html_escape'd at
+            the source. No user input reaches this.
+            raw-html-lint-ignore --%>
             {raw(section.content)}
           </div>
         </:body>

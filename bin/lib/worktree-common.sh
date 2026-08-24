@@ -10,6 +10,7 @@
 # Used by: bin/setup-mcp, bin/worktree-up, bin/worktree-down, bin/worktree-status,
 # and the .claude/hooks/worktree_*.sh hooks.
 
+# shellcheck disable=SC2034  # consumed by the scripts that source this file
 MAIN_PORT=4000
 PORT_MIN=4010
 # live_debugger binds PORT + 100 (config/dev.exs), so the ceiling must stay below
@@ -18,7 +19,9 @@ PORT_MAX=4089
 
 # Where a detached dev server records itself. Gitignored; per checkout.
 RUN_DIR=".claude/run"
+# shellcheck disable=SC2034  # consumed by bin/dev and bin/worktree-status
 PID_FILE="${RUN_DIR}/dev.pid"
+# shellcheck disable=SC2034  # consumed by bin/dev and bin/worktree-status
 LOG_FILE="${RUN_DIR}/dev.log"
 # This checkout's allocated port. It lives here, not in .mcp.json, because .mcp.json
 # is now byte-identical in every checkout (it names bin/tidewave-router, which resolves
@@ -53,7 +56,8 @@ dev_database() {
   if [[ -n "${LOCAL_DEV_DATABASE:-}" ]]; then
     echo "$LOCAL_DEV_DATABASE"
   elif linked_worktree; then
-    local name="klass_hero_dev_$(checkout_slug)"
+    local name
+    name="klass_hero_dev_$(checkout_slug)"
     echo "${name:0:63}"
   else
     echo "klass_hero_dev"
@@ -73,7 +77,8 @@ test_partition() {
 }
 
 test_database() {
-  local name="klass_hero_test$(test_partition)"
+  local name
+  name="klass_hero_test$(test_partition)"
   echo "${name:0:63}"
 }
 

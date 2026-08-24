@@ -45,7 +45,8 @@ if ! linked_worktree && ! $FORCE; then
   exit 1
 fi
 
-export MIX_TEST_PARTITION="$(test_partition)"
+MIX_TEST_PARTITION="$(test_partition)"
+export MIX_TEST_PARTITION
 
 # --- server -----------------------------------------------------------------
 # Prefer the pid that actually holds the socket over the pidfile: the pidfile can

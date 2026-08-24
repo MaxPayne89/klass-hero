@@ -34,7 +34,10 @@ ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || {
   echo "worktree_create: not in a git repository" >&2
   exit 1
 }
-cd "$ROOT"
+cd "$ROOT" || {
+  echo "worktree_create: cannot cd to ${ROOT}" >&2
+  exit 1
+}
 
 DEST="${ROOT}/.claude/worktrees/${NAME}"
 BRANCH="worktree-${NAME}"

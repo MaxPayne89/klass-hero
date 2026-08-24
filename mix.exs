@@ -101,6 +101,13 @@ defmodule KlassHero.MixProject do
       # idiom and performance rewrites at the AST level. No project-wide task ships with
       # it, so the driver is priv/credence/scan.exs.
       {:credence, "~> 0.8.1", only: [:dev, :test], runtime: false},
+      # Test-quality checks (VacuousTest, WeakAssertion, UnusedLiveViewAssign, ...). The
+      # class of bug they catch is a test that runs green without proving anything, which
+      # nothing else here gates: 481 test files, and #1142/#1416/#1073/#1310 were all this.
+      {:jump_credo_checks, "~> 0.4", only: [:dev, :test], runtime: false},
+      # Selectively adopted (see .credo.exs) — only the error-handling and concurrency
+      # checks earn their place; the rest stay off until a burn justifies each.
+      {:oeditus_credo, "~> 0.4", only: [:dev, :test], runtime: false},
       # Testing infrastructure
       {:excoveralls, "~> 0.18", only: :test},
       {:ex_machina, "~> 2.8", only: :test},
@@ -148,19 +155,33 @@ defmodule KlassHero.MixProject do
         "phx.digest"
       ],
       "test.clean": ["test.teardown --remove-volumes", "test.setup --force-recreate"],
+      # Staged third-party checks that still have a backlog — reported, never gating.
+      # Deliberately outside `precommit`/CI and outside `.credo.exs`, so the per-edit
+      # credo hook stays quiet. See the header of .credo.backlog.exs for the ratchet.
+      "credo.backlog": ["credo --config-file .credo.backlog.exs --strict"],
       "test.watch": ["test.setup", "test.watch.continuous"],
       # WALLABY_E2E makes config/test.exs bind a real HTTP socket; no other test needs one.
       "test.e2e": ["cmd env WALLABY_E2E=true mix test test/e2e --include e2e"],
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",
+        # Ratchet, not an aspiration: 32 is what the tree had when this gate landed, and
+        # nearly all of it is inherent `use`-macro coupling (Backpex admin LiveViews ->
+        # schemas, messaging LiveViews -> their shared helper, workers -> TracedWorker).
+        # Driving it to 0 is not the goal; noticing the 33rd is. Lower the number whenever
+        # a refactor earns it.
+        # stdout is the full graph even on success, which is 60 lines of noise here; the
+        # failure message goes to stderr and survives. Re-run without the redirect to see it.
+        "cmd bash -c 'mix xref graph --label compile-connected --fail-above 32 >/dev/null'",
         "format",
         "lint_typography",
         "lint_hero_colors",
+        "lint_raw_html",
         "lint_palette",
         "lint_translations",
         "lint_read_tables",
         "lint_acl_boundary",
+        "lint_doc_refs",
         # Guards the hook output sanitiser. Shell, so it has no other runner —
         # without this the checks rot silently, and the failure mode they catch
         # (a widened regex that starts eating <div>, or a reordered pipeline that

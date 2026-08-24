@@ -74,6 +74,10 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
       :ok
     end
 
+    # A saga test asserts each hop of the chain, so the count is the point rather
+    # than a sign of conflated concerns; splitting it would re-run the whole saga
+    # per assertion.
+    # credo:disable-for-next-line Jump.CredoChecks.TooManyAssertions
     test "staff member creation through invitation, registration, and account linking" do
       provider = provider_profile_fixture()
       email = "new-staff-#{System.unique_integer([:positive])}@example.com"

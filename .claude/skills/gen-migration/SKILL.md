@@ -42,6 +42,8 @@ If no fields are provided, ask the user to describe the entity's fields.
 
 ## Step 2: Derive Names
 
+<!-- doc-refs-lint-ignore: Example column illustrates a not-yet-generated entity, so its paths and module deliberately do not exist. -->
+
 | Concept | Derivation | Example (context=messaging, entity=reaction) |
 |---------|-----------|-----------------------------------------------|
 | Table name | Pluralized snake_case | `reactions` |

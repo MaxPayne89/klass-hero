@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Lint every shell script in the repo, plus the GitHub Actions workflows.
+#
+# Lives as a script rather than inline YAML so the same command runs locally and in CI
+# — a check that only exists inside a workflow file cannot be run before pushing, which
+# is how local and CI drift apart.
+#
+# Requires shellcheck and actionlint. Locally: brew install shellcheck actionlint.
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Discovered by shebang rather than by extension or a hand-kept list: bin/ holds
+# bin/tidewave-router, which is node, and the hooks split across two directories. A
+# literal list would silently stop covering a script the day someone adds one.
+scripts=()
+while IFS= read -r f; do
+  [[ -f "$f" ]] || continue
+  if head -1 "$f" | grep -qE '^#!.*(bash|/sh)'; then
+    scripts+=("$f")
+  fi
+done < <(git ls-files bin .claude/hooks)
+
+if [[ ${#scripts[@]} -eq 0 ]]; then
+  echo "lint-shell: found no shell scripts — the discovery glob is probably wrong" >&2
+  exit 1
+fi
+
+echo "lint-shell: shellcheck over ${#scripts[@]} script(s)"
+
+# -x follows `source`d files, without which the shared worktree library looks full of
+# unused variables. SC2209 is excluded because `MIX_ENV=test mix ...` reads as assigning
+# the `test` builtin to a variable; every occurrence here is an env prefix.
+shellcheck -x --severity=warning --exclude=SC2209 "${scripts[@]}"
+
+echo "lint-shell: actionlint over .github/workflows"
+actionlint
+
+echo "lint-shell: clean"
