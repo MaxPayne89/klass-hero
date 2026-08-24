@@ -1874,6 +1874,7 @@ defmodule KlassHeroWeb.MarketingComponents do
   attr :title, :string, required: true
   attr :value, :string, required: true
   attr :note, :string, default: nil
+  attr :href, :string, default: nil, doc: "Makes the value actionable (tel:, mailto:, a URL)"
 
   def mk_method_row(assigns) do
     ~H"""
@@ -1881,7 +1882,14 @@ defmodule KlassHeroWeb.MarketingComponents do
       <.kh_icon_chip icon={@icon} gradient={:primary} size={:sm} />
       <div class="min-w-0">
         <div class="font-semibold text-hero-black">{@title}</div>
-        <div class="text-sm text-[var(--fg-muted)] truncate">{@value}</div>
+        <.link
+          :if={@href}
+          href={@href}
+          class="block text-sm text-[var(--fg-link)] underline truncate"
+        >
+          {@value}
+        </.link>
+        <div :if={!@href} class="text-sm text-[var(--fg-muted)] truncate">{@value}</div>
         <div :if={@note} class="text-xs text-[var(--fg-muted)] opacity-80 mt-0.5">{@note}</div>
       </div>
     </div>

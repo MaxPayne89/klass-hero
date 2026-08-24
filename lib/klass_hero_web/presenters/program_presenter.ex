@@ -68,10 +68,25 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   Returns a map matching the attrs expected by `ProgramComponents.program_card/1`.
   """
-  @spec to_card_view(Program.t(), %{name: String.t() | nil, trust: atom()}) :: map()
-  def to_card_view(program, provider \\ %{name: nil, trust: :unverified})
+  @spec to_card_view(
+          Program.t() | ProgramListing.t(),
+          %{name: String.t() | nil, trust: atom()},
+          non_neg_integer() | nil
+        ) :: map()
+  def to_card_view(program, provider \\ %{name: nil, trust: :unverified}, spots_left \\ nil)
 
-  def to_card_view(%Program{} = program, provider) do
+  def to_card_view(%Program{} = program, provider, spots_left) do
+    to_card(program, provider, spots_left)
+  end
+
+  # ProgramListing is the read-model twin every public surface lists from, and both
+  # cards read the same keys — so one builder serves both rather than a private copy
+  # per LiveView, which is how the home and catalog copies drifted apart.
+  def to_card_view(%ProgramListing{} = listing, provider, spots_left) do
+    to_card(listing, provider, spots_left)
+  end
+
+  defp to_card(program, provider, spots_left) do
     %{
       id: program.id,
       provider_name: provider.name,
@@ -85,6 +100,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       # unpriced program from a free one. Coercing nil to zero here would label an
       # incomplete program "Free", which is a claim about money, not a missing value.
       price: program.price,
+      cover_image_url: program.cover_image_url,
       icon_name: icon_name(program.category),
       gradient_class: default_gradient_class(),
       meeting_days: program.meeting_days || [],
@@ -92,7 +108,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       meeting_end_time: program.meeting_end_time,
       start_date: program.start_date,
       end_date: program.end_date,
-      spots_left: nil
+      spots_left: spots_left
     }
   end
 

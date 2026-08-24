@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
   import ExUnit.CaptureLog
 
   alias KlassHero.ProgramCatalog.Program
+  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.ReadModels.ProgramStaffing
   alias KlassHero.Shared.Categories
   alias KlassHeroWeb.Presenters.ProgramPresenter
@@ -259,6 +260,49 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
         result = ProgramPresenter.format_schedule(program)
         assert result.date_range == @expected
       end
+    end
+  end
+
+  describe "to_card_view/3 across both program shapes" do
+    test "carries the cover image from a write-model program" do
+      # Omitted until now, so the parent dashboard's family-programs cards fell
+      # back to the gradient placeholder even for programs that had a cover.
+      program = build_program(%{cover_image_url: "https://cdn.example.com/cover.png"})
+
+      assert ProgramPresenter.to_card_view(program).cover_image_url ==
+               "https://cdn.example.com/cover.png"
+    end
+
+    test "builds the same card keys from a read-model listing" do
+      listing = %ProgramListing{
+        id: "listing-1",
+        title: "Art Adventures",
+        description: "Creative art for kids",
+        category: "arts",
+        age_range: "6-12",
+        price: Decimal.new("15.00"),
+        cover_image_url: "https://cdn.example.com/cover.png",
+        meeting_days: ["Monday"],
+        start_date: ~D[2026-03-01],
+        end_date: ~D[2026-06-30]
+      }
+
+      program = build_program(%{id: "listing-1", title: "Art Adventures"})
+
+      # The point of the shared builder: the two surfaces cannot drift on which
+      # keys a card gets, only on the values behind them.
+      assert Map.keys(ProgramPresenter.to_card_view(listing)) ==
+               Map.keys(ProgramPresenter.to_card_view(program))
+
+      assert ProgramPresenter.to_card_view(listing).cover_image_url ==
+               "https://cdn.example.com/cover.png"
+    end
+
+    test "threads spots_left through, defaulting to nil" do
+      listing = %ProgramListing{id: "l", title: "T", category: "arts"}
+
+      assert ProgramPresenter.to_card_view(listing).spots_left == nil
+      assert ProgramPresenter.to_card_view(listing, %{name: nil, trust: :unverified}, 3).spots_left == 3
     end
   end
 

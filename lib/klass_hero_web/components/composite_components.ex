@@ -646,7 +646,17 @@ defmodule KlassHeroWeb.CompositeComponents do
         <div class="flex-1 min-w-0">
           <div class="flex flex-wrap items-center gap-2">
             <h4 class={[Theme.typography(:card_title), Theme.text_color(:heading)]}>
-              {@provider.business_name}
+              <%!-- Linked only when an id is present: a hand-built map from a test or
+                    preview must not crash the page (#1073). The :full variant is the
+                    profile page itself, so it never links. --%>
+              <.link
+                :if={@provider[:id]}
+                navigate={~p"/providers/#{@provider.id}"}
+                class="hover:text-[var(--fg-link)] hover:underline"
+              >
+                {@provider.business_name}
+              </.link>
+              <span :if={!@provider[:id]}>{@provider.business_name}</span>
             </h4>
             <.kh_trust_mark state={trust_state(@provider)} variant={:compact} />
           </div>

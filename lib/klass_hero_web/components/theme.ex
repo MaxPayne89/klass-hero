@@ -409,7 +409,10 @@ defmodule KlassHeroWeb.Theme do
   def typography(:card_title), do: "font-sans text-lg font-semibold"
   def typography(:body), do: "font-sans text-base"
   def typography(:body_small), do: "font-sans text-sm"
-  def typography(:caption), do: "font-sans text-xs text-gray-500"
+  # Type only, no colour. This used to carry `text-gray-500`, which is both a raw
+  # Tailwind grey and ~4.02:1 on white — failing AA at this size. A colour inside a
+  # typography helper also hides from a palette sweep, which is how it survived one.
+  def typography(:caption), do: "font-sans text-xs"
 
   @doc """
   Returns the border radius class for the specified size.

@@ -4,16 +4,17 @@ defmodule KlassHeroWeb.HomeLive do
   import KlassHeroWeb.MarketingComponents
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ProgramPresenter
-  alias KlassHeroWeb.Theme
 
   @impl true
   def mount(_params, _session, socket) do
     featured = ProgramCatalog.list_featured_programs()
     providers = ProviderDisplay.for_programs(featured)
-    featured_maps = Enum.map(featured, &listing_to_card_map(&1, ProviderDisplay.fetch(providers, &1)))
+
+    featured_maps =
+      Enum.map(featured, &ProgramPresenter.to_card_view(&1, ProviderDisplay.fetch(providers, &1)))
+
     trending_tags = ProgramCatalog.trending_searches()
 
     socket =
@@ -52,28 +53,6 @@ defmodule KlassHeroWeb.HomeLive do
   @impl true
   def handle_event("view_program", %{"program-id" => program_id}, socket) do
     {:noreply, push_navigate(socket, to: ~p"/programs/#{program_id}")}
-  end
-
-  defp listing_to_card_map(%ProgramListing{} = program, provider) do
-    %{
-      id: program.id,
-      title: program.title,
-      subtitle: program.subtitle,
-      provider_name: provider.name,
-      verification_state: provider.trust,
-      description: program.description,
-      category: ProgramPresenter.format_category_for_display(program.category),
-      age_range: program.age_range,
-      price: program.price,
-      cover_image_url: program.cover_image_url,
-      meeting_days: program.meeting_days || [],
-      meeting_start_time: program.meeting_start_time,
-      meeting_end_time: program.meeting_end_time,
-      start_date: program.start_date,
-      end_date: program.end_date,
-      gradient_class: Theme.gradient(:primary),
-      icon_name: ProgramPresenter.icon_name(program.category)
-    }
   end
 
   @impl true
