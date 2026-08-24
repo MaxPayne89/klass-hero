@@ -295,7 +295,7 @@ defmodule KlassHeroWeb.MessagingComponents do
         for={@uploads.attachments.ref}
         class={[
           "inline-flex items-center gap-2 text-sm text-gray-600 hover:text-hero-blue-600 cursor-pointer",
-          "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2"
+          "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--focus-ring)] has-[:focus-visible]:ring-offset-2"
         ]}
       >
         <.icon name="hero-paper-clip" class="w-5 h-5" />
@@ -374,7 +374,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           for={@uploads.attachments.ref}
           class={[
             "w-10 h-10 flex items-center justify-center cursor-pointer transition-colors",
-            "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2",
+            "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--focus-ring)] has-[:focus-visible]:ring-offset-2",
             Theme.text_color(:muted),
             "hover:text-hero-blue-600",
             Theme.rounded(:full)
@@ -391,7 +391,7 @@ defmodule KlassHeroWeb.MessagingComponents do
             aria-label={gettext("Message")}
             rows="1"
             class={[
-              "w-full px-4 py-2 border resize-none focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent",
+              "w-full px-4 py-2 border resize-none focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent",
               Theme.border_color(:medium),
               Theme.rounded(:full)
             ]}

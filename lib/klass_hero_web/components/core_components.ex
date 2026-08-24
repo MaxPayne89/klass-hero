@@ -207,7 +207,7 @@ defmodule KlassHeroWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-2 border-hero-grey-300 text-hero-blue-600 focus:ring-2 focus:ring-hero-blue-500/20 focus:ring-offset-0 shadow-sm transition-all duration-200"
+          class="rounded border-2 border-hero-grey-300 text-hero-blue-600 focus:ring-2 focus:ring-[var(--focus-ring)]/20 focus:ring-offset-0 shadow-sm transition-all duration-200"
           {@rest}
         />
         {@label}
@@ -224,7 +224,7 @@ defmodule KlassHeroWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-lg border-2 border-hero-grey-300 bg-white/90 backdrop-blur-sm shadow-sm focus:border-hero-blue-500 focus:ring-2 focus:ring-hero-blue-500/20 focus:shadow-md sm:text-sm transition-all duration-200"
+        class="mt-2 block w-full rounded-lg border-2 border-hero-grey-300 bg-white/90 backdrop-blur-sm shadow-sm focus:border-hero-blue-500 focus:ring-2 focus:ring-[var(--focus-ring)]/20 focus:shadow-md sm:text-sm transition-all duration-200"
         multiple={@multiple}
         {@rest}
       >
@@ -253,7 +253,7 @@ defmodule KlassHeroWeb.CoreComponents do
           @errors != [] && "border-rose-500 focus:border-rose-600",
           "shadow-sm focus:shadow-md",
           "transition-all duration-200",
-          "focus:ring-2 focus:ring-hero-blue-500/20 focus:ring-offset-0"
+          "focus:ring-2 focus:ring-[var(--focus-ring)]/20 focus:ring-offset-0"
         ]}
         {@rest}
       >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -289,7 +289,7 @@ defmodule KlassHeroWeb.CoreComponents do
             @errors != [] && "border-rose-500 focus:border-rose-600",
             "shadow-sm focus:shadow-md",
             "transition-all duration-200",
-            "focus:ring-2 focus:ring-hero-blue-500/20 focus:ring-offset-0"
+            "focus:ring-2 focus:ring-[var(--focus-ring)]/20 focus:ring-offset-0"
           ]}
           {@rest}
         />

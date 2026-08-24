@@ -675,7 +675,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
                     value="true"
                     checked={@consent_checked}
                     phx-click="toggle_consent"
-                    class="mt-1 rounded border-2 border-hero-grey-300 text-hero-blue-600 focus:ring-2 focus:ring-hero-blue-500/20"
+                    class="mt-1 rounded border-2 border-hero-grey-300 text-hero-blue-600 focus:ring-2 focus:ring-[var(--focus-ring)]/20"
                   />
                   <div>
                     <span class="text-sm font-medium text-hero-black">

@@ -335,7 +335,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
               phx-drop-target={@uploads.photo.ref}
               class={[
                 "flex flex-col items-center justify-center border-2 border-dashed border-hero-grey-300 rounded-lg p-6 cursor-pointer hover:border-hero-blue-500",
-                "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2"
+                "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--focus-ring)] has-[:focus-visible]:ring-offset-2"
               ]}
             >
               <.live_file_input upload={@uploads.photo} class="sr-only" />

@@ -741,7 +741,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[tags][]"
                 value={cat}
                 checked={cat in ((@form[:tags] && @form[:tags].value) || [])}
-                class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {cat}
             </label>
@@ -773,7 +773,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value=""
                 checked={empty_rate_type?(@form[:rate_type])}
-                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {gettext("None")}
             </label>
@@ -783,7 +783,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value="hourly"
                 checked={rate_type_is?(@form[:rate_type], "hourly")}
-                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {gettext("Hourly")}
             </label>
@@ -793,7 +793,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value="per_session"
                 checked={rate_type_is?(@form[:rate_type], "per_session")}
-                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {gettext("Per Session")}
             </label>
@@ -1133,7 +1133,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                       nil
                     ]
                   }
-                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
                 />
                 {gettext("Registration")}
               </label>
@@ -1146,7 +1146,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     Phoenix.HTML.Form.input_value(@participant_policy_form, :eligibility_at) ==
                       "program_start"
                   }
-                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
                 />
                 {gettext("Program Start")}
               </label>
@@ -1198,7 +1198,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                               ) ||
                                 [])
                   }
-                  class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                  class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
                 />
                 {label}
               </label>
@@ -1373,7 +1373,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 placeholder={gettext("Search by name...")}
                 class={[
                   "pl-10 pr-4 py-2 w-full sm:w-64 border border-hero-grey-300 bg-white",
-                  "text-sm placeholder-hero-grey-400 focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500",
+                  "text-sm placeholder-hero-grey-400 focus:border-hero-blue-500 focus:ring-1 focus:ring-[var(--focus-ring)]",
                   Theme.rounded(:lg)
                 ]}
                 phx-debounce="300"
@@ -1388,7 +1388,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_filter"
                 class={[
                   "pl-10 pr-8 py-2 w-full sm:w-40 border border-hero-grey-300 bg-white",
-                  "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500 appearance-none",
+                  "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-[var(--focus-ring)] appearance-none",
                   Theme.rounded(:lg)
                 ]}
               >
@@ -2560,7 +2560,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <label
               for={@uploads.csv_file.ref}
               class={[
-                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white cursor-pointer",
                 Theme.rounded(:lg),
                 Theme.gradient(:primary)
@@ -3105,7 +3105,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <label
         for={@upload.ref}
         class={[
-          "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)]",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)]",
           "peer-focus-visible:ring-offset-2",
           "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
           "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
@@ -3204,7 +3204,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               phx-change="select_doc_type"
               class={[
                 "w-full sm:w-64 px-3 py-2 border border-hero-grey-300 bg-white",
-                "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500",
+                "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-[var(--focus-ring)]",
                 Theme.rounded(:lg)
               ]}
             >
@@ -3223,7 +3223,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <label
               for={@uploads.verification_doc.ref}
               class={[
-                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
                 "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),
@@ -3303,7 +3303,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <label
               for={@uploads.verification_video.ref}
               class={[
-                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
                 "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),

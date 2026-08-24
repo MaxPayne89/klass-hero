@@ -108,7 +108,7 @@ defmodule KlassHeroWeb.UIComponents do
       "flex items-center justify-center bg-hero-blue-500",
       avatar_size_classes(@size),
       Theme.rounded(:full),
-      @ring && "ring ring-hero-blue-500 ring-offset-2",
+      @ring && "ring ring-[var(--focus-ring)] ring-offset-2",
       @class
     ]}>
       <span class={avatar_emoji_classes(@size)}>👤</span>
@@ -174,7 +174,7 @@ defmodule KlassHeroWeb.UIComponents do
             to: "##{@id}-trigger"
           )
         }
-        class="w-10 h-10 rounded-full bg-gradient-to-br from-hero-blue-400 to-hero-yellow-500 flex items-center justify-center font-bold text-black hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2"
+        class="w-10 h-10 rounded-full bg-gradient-to-br from-hero-blue-400 to-hero-yellow-500 flex items-center justify-center font-bold text-black hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
       >
         {kh_user_menu_initial(@user)}
       </button>
@@ -1174,7 +1174,7 @@ defmodule KlassHeroWeb.UIComponents do
         name={@name}
         value={format_date_value(@value)}
         class={[
-          "px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent",
+          "px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent",
           Theme.rounded(:lg),
           Theme.transition(:normal)
         ]}
@@ -1498,7 +1498,7 @@ defmodule KlassHeroWeb.UIComponents do
           # typography-lint-ignore: KhButton owns its own display-font CTA styling (size scales separately)
           "inline-flex items-center justify-center gap-2 font-display font-bold tracking-tight transition-all cursor-pointer",
           "active:scale-[0.98]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]",
           "disabled:cursor-not-allowed disabled:bg-hero-grey-200 disabled:text-hero-grey-400 disabled:shadow-none disabled:translate-y-0",
           "disabled:hover:bg-hero-grey-200 disabled:hover:shadow-none disabled:hover:translate-y-0 disabled:active:scale-100",
           kh_button_size_classes(@size),

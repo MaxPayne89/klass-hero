@@ -252,7 +252,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
                     phx-click="start_session"
                     phx-value-session_id={session.id}
                     class={[
-                      "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                      "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                       Theme.rounded(:lg),
                       Theme.transition(:normal)
                     ]}
@@ -263,7 +263,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
                   <.link
                     navigate={~p"/staff/participation/#{session.id}"}
                     class={[
-                      "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2 text-center",
+                      "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2 text-center",
                       Theme.rounded(:lg),
                       Theme.transition(:normal)
                     ]}

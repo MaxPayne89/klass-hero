@@ -39,7 +39,7 @@ defmodule KlassHeroWeb.ProgramComponents do
         placeholder={@placeholder}
         value={@value}
         class={[
-          "w-full px-4 py-3 pl-11 border border-hero-grey-300 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent",
+          "w-full px-4 py-3 pl-11 border border-hero-grey-300 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent",
           Theme.transition(:normal),
           Theme.rounded(:lg)
         ]}

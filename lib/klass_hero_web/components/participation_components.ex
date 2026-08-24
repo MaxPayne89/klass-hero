@@ -220,7 +220,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                   name="participation[checked_in][]"
                   value={record.id}
                   checked={record.status == :checked_in}
-                  class="mt-1 w-4 h-4 text-hero-blue-600 rounded border-hero-grey-300 focus:ring-hero-blue-500"
+                  class="mt-1 w-4 h-4 text-hero-blue-600 rounded border-hero-grey-300 focus:ring-[var(--focus-ring)]"
                 />
                 <div class="flex-1">
                   <div class="font-medium text-hero-black">
@@ -254,7 +254,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
           <button
             type="submit"
             class={[
-              "flex-1 px-4 py-3 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+              "flex-1 px-4 py-3 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -432,7 +432,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                       type="submit"
                       class={[
                         "flex-1 px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700",
-                        "focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                        "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                         Theme.rounded(:md),
                         Theme.transition(:normal)
                       ]}
@@ -445,7 +445,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                       phx-value-id={record.id}
                       class={[
                         "px-4 py-2 bg-white text-hero-black-100 font-medium border border-hero-grey-300",
-                        "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                        "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                         Theme.rounded(:md),
                         Theme.transition(:normal)
                       ]}
@@ -657,7 +657,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               type="submit"
               class={[
                 "flex-1 px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700",
-                "focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}
@@ -670,7 +670,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               phx-value-id={@record.id}
               class={[
                 "px-4 py-2 bg-white text-hero-black-100 font-medium border border-hero-grey-300",
-                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}
@@ -748,7 +748,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               type="submit"
               class={[
                 "flex-1 px-3 py-1.5 bg-hero-blue-600 text-white text-sm font-medium hover:bg-hero-blue-700",
-                "focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}
@@ -761,7 +761,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               phx-value-id={@entity_id}
               class={[
                 "px-3 py-1.5 bg-white text-hero-black-100 text-sm font-medium border border-hero-grey-300",
-                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}

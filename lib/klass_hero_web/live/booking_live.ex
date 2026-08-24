@@ -366,7 +366,7 @@ defmodule KlassHeroWeb.BookingLive do
               name="child_id"
               phx-change="select_child"
               class={[
-                "w-full px-4 py-3 border border-hero-grey-300 focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent",
+                "w-full px-4 py-3 border border-hero-grey-300 focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent",
                 Theme.rounded(:lg)
               ]}
             >
@@ -408,7 +408,7 @@ defmodule KlassHeroWeb.BookingLive do
               maxlength="500"
               placeholder={gettext("Any allergies, medical conditions, or special instructions...")}
               class={[
-                "w-full px-4 py-3 border border-hero-grey-300 focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent resize-none",
+                "w-full px-4 py-3 border border-hero-grey-300 focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent resize-none",
                 Theme.rounded(:lg)
               ]}
             >{@special_requirements}</textarea>
