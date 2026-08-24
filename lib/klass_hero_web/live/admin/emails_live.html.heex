@@ -158,6 +158,10 @@
           {gettext("Load images")}
         </button>
         <div id="email-body" class="prose max-w-none">
+          <%!-- Run through Messaging.sanitize_email_html/2 (see emails_live.ex) before
+          it is assigned; escaping it here would defeat the point of previewing an
+          inbound email.
+          raw-html-lint-ignore --%>
           {raw(@sanitized_html)}
         </div>
     <% end %>

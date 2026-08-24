@@ -41,7 +41,9 @@
       # If you create your own checks, you must specify the source files for
       # them here, so they can be loaded by Credo before running the analysis.
       #
-      requires: [],
+      # Project-local checks. They live in priv/ rather than lib/ so they stay out of the
+      # release build — Credo loads them from source at run time via this list.
+      requires: ["./priv/credo_checks/case_on_boolean.ex"],
       #
       # Strict by default so a bare `mix credo` gives the same verdict as CI and
       # `mix precommit`, which both run `--strict`. A weaker default here is how
@@ -185,6 +187,7 @@
           #     test/klass_hero/shared/read_table_column_types_test.exs, which reads
           #     information_schema and so catches what a source-level check cannot.
           #   - Jump...UseObanProWorker: we run OSS Oban, not Oban Pro.
+          {KlassHero.CredoChecks.CaseOnBoolean, []},
           {Jump.CredoChecks.AssertElementSelectorCanNeverFail, []},
           {Jump.CredoChecks.AvoidFunctionLevelElse, []},
           {Jump.CredoChecks.AvoidLoggerConfigureInTest, []},

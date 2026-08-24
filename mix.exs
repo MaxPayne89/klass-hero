@@ -168,6 +168,7 @@ defmodule KlassHero.MixProject do
         "format",
         "lint_typography",
         "lint_hero_colors",
+      "lint_raw_html",
         "lint_palette",
         "lint_translations",
         "lint_read_tables",
