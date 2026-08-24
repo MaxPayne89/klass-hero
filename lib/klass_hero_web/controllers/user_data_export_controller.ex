@@ -22,10 +22,10 @@ defmodule KlassHeroWeb.UserDataExportController do
       {:ok, json_data} ->
         filename = "klass_hero_data_export_#{Date.utc_today()}.json"
 
-        conn
-        |> put_resp_content_type("application/json")
-        |> put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
-        |> send_resp(200, json_data)
+        send_download(conn, {:binary, json_data},
+          filename: filename,
+          content_type: "application/json"
+        )
 
       {:error, reason} ->
         Logger.error("[UserDataExport] JSON encoding failed",

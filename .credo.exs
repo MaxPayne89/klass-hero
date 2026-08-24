@@ -164,7 +164,48 @@
           {Credo.Check.Warning.UnusedRegexOperation, []},
           {Credo.Check.Warning.UnusedStringOperation, []},
           {Credo.Check.Warning.UnusedTupleOperation, []},
-          {Credo.Check.Warning.WrongTestFilename, []}
+          {Credo.Check.Warning.WrongTestFilename, []},
+
+          #
+          # Third-party check packs (jump_credo_checks, oeditus_credo)
+          #
+          # Only the checks that are already clean on this tree are gated here. The ones
+          # with a real backlog live in `.credo.backlog.exs` and run via `mix credo.backlog`
+          # — kept out of this file on purpose, because a check that fires 155 times would
+          # also fire through the per-edit `.claude/hooks/credo.sh` and train everyone to
+          # ignore credo output. Move a check up here as its backlog reaches zero.
+          #
+          # Deliberately NOT adopted, so nobody re-litigates it:
+          #   - OeditusCredo...MissingErrorHandling: 2795 hits, ~no information content.
+          #   - OeditusCredo...MissingHandleAsync / SyncOverAsync: assume `handle_event/3`
+          #     is a LiveView callback; they misfire on projection GenServers.
+          #   - Jump...PreferTextColumns / PreferChangeOverUpDownMigrations: migrations are
+          #     immutable history (173 hits) and aren't in `files.included`. The failure
+          #     mode that actually burned us (#1376) is guarded by
+          #     test/klass_hero/shared/read_table_column_types_test.exs, which reads
+          #     information_schema and so catches what a source-level check cannot.
+          #   - Jump...UseObanProWorker: we run OSS Oban, not Oban Pro.
+          {Jump.CredoChecks.AssertElementSelectorCanNeverFail, []},
+          {Jump.CredoChecks.AvoidFunctionLevelElse, []},
+          {Jump.CredoChecks.AvoidLoggerConfigureInTest, []},
+          # The wrappers are named so the check sees through the indirection in
+          # messaging_live_helper.ex, not just bare Phoenix.PubSub.subscribe/2 calls.
+          {Jump.CredoChecks.LiveViewPubSubRequiresConnected,
+           custom_pubsub_functions: [
+             {:subscribe_to_conversation, 1},
+             {:subscribe_to_user_updates, 1}
+           ]},
+          {Jump.CredoChecks.NoManualContentDisposition, []},
+          {Jump.CredoChecks.SafeBinaryToTerm, []},
+          {Jump.CredoChecks.TestHasNoAssertions, []},
+          {Jump.CredoChecks.TooManyAssertions, []},
+          {Jump.CredoChecks.UndeclaredExternalResource, []},
+          {OeditusCredo.Check.Warning.BlockingInPlug, []},
+          {OeditusCredo.Check.Warning.SilentErrorCase, []},
+          {OeditusCredo.Check.Warning.SwallowingException, []},
+          # Unsupervised Task.async is a leak in a supervised app but the ordinary way to
+          # drive concurrency from a test, where the test process is the supervisor.
+          {OeditusCredo.Check.Warning.UnmanagedTask, files: %{excluded: ["test/"]}}
 
           # `PhoenixTest.Credo.NoOpenBrowser` would catch a debugging `open_browser/1`
           # left in a flow test, but it cannot be enabled here: `mix credo` runs in

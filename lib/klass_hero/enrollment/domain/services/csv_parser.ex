@@ -190,6 +190,10 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParser do
           {:halt, :done}
 
         {:cont, cont} ->
+          # Not a swallow: the rescue converts NimbleCSV.ParseError into a
+          # {:parse_halt, message} element that the caller surfaces to the user.
+          # Logging would duplicate that, and re-raising would abort a partial import.
+          # credo:disable-for-next-line OeditusCredo.Check.Warning.SwallowingException
           try do
             case cont.({:cont, nil}) do
               {:suspended, item, next_cont} -> {[item], {:cont, next_cont}}
