@@ -396,7 +396,7 @@ defmodule KlassHeroWeb.UserLive.Settings do
       navigate={@navigate}
       class="flex items-center gap-3 px-4 py-2.5 hover:bg-hero-cream-100 transition-colors"
     >
-      <.icon name={@icon} class="w-4 h-4 text-[var(--brand-primary-dark)]" />
+      <.icon name={@icon} class="w-4 h-4 text-[var(--fg-link)]" />
       <span class="text-sm font-semibold text-hero-black">{@title}</span>
     </.link>
     """

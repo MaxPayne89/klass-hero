@@ -391,7 +391,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
                   <h3 class={["font-semibold", Theme.text_color(:heading)]}>
                     {child.name}
                   </h3>
-                  <p class="text-sm text-hero-grey-500">
+                  <p class="text-sm text-[var(--fg-muted)]">
                     {gettext("%{age} years old", age: child.age)}
                     <%= if child.date_of_birth do %>
                       <span class="mx-1">&bull;</span>
@@ -405,7 +405,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
                 <.link
                   patch={~p"/settings/children/#{child.id}/edit"}
                   class={[
-                    "p-2 text-hero-grey-400 hover:text-hero-blue-600",
+                    "p-2 text-[var(--fg-muted)] hover:text-hero-blue-600",
                     Theme.rounded(:lg),
                     "hover:bg-hero-grey-50",
                     Theme.transition(:normal)
@@ -419,7 +419,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
                   phx-click="request_delete_child"
                   phx-value-id={child.id}
                   class={[
-                    "p-2 text-hero-grey-400 hover:text-red-600",
+                    "p-2 text-[var(--fg-muted)] hover:text-red-600",
                     Theme.rounded(:lg),
                     "hover:bg-red-50",
                     Theme.transition(:normal)
@@ -681,7 +681,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLive do
                     <span class="text-sm font-medium text-hero-black">
                       {gettext("Provider data sharing consent")}
                     </span>
-                    <p class="text-xs text-hero-grey-500 mt-1">
+                    <p class="text-xs text-[var(--fg-muted)] mt-1">
                       {gettext(
                         "Allow activity providers to access this child's profile information for program participation."
                       )}

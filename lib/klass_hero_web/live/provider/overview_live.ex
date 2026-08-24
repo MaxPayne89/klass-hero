@@ -300,12 +300,12 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
               <h3 class="font-bold text-lg">{gettext("Your top programs")}</h3>
               <.link
                 navigate={~p"/provider/dashboard/programs"}
-                class="text-sm font-bold text-[var(--brand-primary-dark)]"
+                class="text-sm font-bold text-[var(--fg-link)]"
               >
                 {gettext("Manage")} →
               </.link>
             </div>
-            <div :if={@top_programs == []} class="text-sm text-hero-grey-600">
+            <div :if={@top_programs == []} class="text-sm text-[var(--fg-muted)]">
               {gettext("No programs yet — add your first one from the Programs tab.")}
             </div>
             <div class="space-y-1">
@@ -318,7 +318,10 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
           <.kh_card id="outstanding-invites-card" class="p-5">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-bold text-lg">{gettext("Invitations awaiting a reply")}</h3>
-              <span id="outstanding-invites-count" class="text-xs text-hero-grey-600 font-semibold">
+              <span
+                id="outstanding-invites-count"
+                class="text-xs text-[var(--fg-muted)] font-semibold"
+              >
                 {length(@outstanding_invites)} {gettext("waiting")}
               </span>
             </div>
@@ -327,7 +330,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
             <div
               :if={@outstanding_invites == []}
               id="outstanding-invites-card-empty"
-              class="text-sm text-hero-grey-600"
+              class="text-sm text-[var(--fg-muted)]"
             >
               {gettext("Every invitation you sent has been answered.")}
             </div>
@@ -351,11 +354,11 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
           <.kh_card id="pending-enrollments-card" class="p-5">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-bold text-lg">{gettext("Pending enrollments")}</h3>
-              <span class="text-xs text-hero-grey-600 font-semibold">
+              <span class="text-xs text-[var(--fg-muted)] font-semibold">
                 {length(@pending_enrollments)} {gettext("pending")}
               </span>
             </div>
-            <div :if={@pending_enrollments == []} class="text-sm text-hero-grey-600">
+            <div :if={@pending_enrollments == []} class="text-sm text-[var(--fg-muted)]">
               {gettext("No pending enrollments right now.")}
             </div>
             <div class="space-y-3">
@@ -399,7 +402,7 @@ defmodule KlassHeroWeb.Provider.OverviewLive do
                 phx-click="close_invites"
                 aria-label={gettext("Close")}
                 class={[
-                  "p-2 text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100",
+                  "p-2 text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100",
                   Theme.rounded(:lg),
                   Theme.transition(:normal)
                 ]}

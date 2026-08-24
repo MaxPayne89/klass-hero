@@ -93,7 +93,7 @@ defmodule KlassHeroWeb.ParentComponents do
           </div>
           <div class="flex-1 min-w-0">
             <div class="text-sm font-bold truncate">{@user.name || @user.email}</div>
-            <div class="text-xs text-hero-grey-600 truncate">{@user.email}</div>
+            <div class="text-xs text-[var(--fg-muted)] truncate">{@user.email}</div>
           </div>
           <.icon name="hero-cog-6-tooth" class="w-4 h-4 text-hero-grey-600" />
         </a>
@@ -139,7 +139,7 @@ defmodule KlassHeroWeb.ParentComponents do
     </a>
     <span
       :if={!@href}
-      class="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 font-semibold text-sm text-hero-grey-500 cursor-not-allowed"
+      class="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 font-semibold text-sm text-[var(--fg-muted)] cursor-not-allowed"
       title={gettext("Coming soon")}
     >
       <.icon name={@icon} class="w-5 h-5 opacity-60" /> {@label}
@@ -161,8 +161,8 @@ defmodule KlassHeroWeb.ParentComponents do
       aria-current={@active? && "page"}
       class={[
         "relative flex-1 flex flex-col items-center justify-center gap-1 no-underline transition-colors",
-        @active? && "text-[var(--brand-primary-dark)]",
-        !@active? && "text-hero-grey-600 hover:text-hero-black-100"
+        @active? && "text-[var(--fg-link)]",
+        !@active? && "text-[var(--fg-muted)] hover:text-hero-black-100"
       ]}
     >
       <span
@@ -207,7 +207,7 @@ defmodule KlassHeroWeb.ParentComponents do
     ~H"""
     <div class="hidden lg:flex px-8 pt-8 pb-6 bg-white border-b border-hero-grey-200 items-center justify-between">
       <div>
-        <div :if={@subtitle} class="text-[13px] text-hero-grey-600 font-semibold">
+        <div :if={@subtitle} class="text-[13px] text-[var(--fg-muted)] font-semibold">
           {@subtitle}
         </div>
         <h1 class={topbar_title_classes()}>{@title}</h1>
@@ -238,7 +238,7 @@ defmodule KlassHeroWeb.ParentComponents do
         <h1 class={topbar_mobile_title_classes()}>{@title}</h1>
         <div
           :if={@subtitle}
-          class="text-[11px] text-hero-grey-600 font-semibold leading-none mt-1 truncate"
+          class="text-[11px] text-[var(--fg-muted)] font-semibold leading-none mt-1 truncate"
         >
           {@subtitle}
         </div>
@@ -293,7 +293,7 @@ defmodule KlassHeroWeb.ParentComponents do
         </div>
         <div class="text-left">
           <div class="text-sm font-bold leading-none">{k.name}</div>
-          <div class="text-[10px] text-hero-grey-600 leading-tight mt-0.5">
+          <div class="text-[10px] text-[var(--fg-muted)] leading-tight mt-0.5">
             {k[:age]} · {k[:programs] || 0} {gettext("active")}
           </div>
         </div>
@@ -302,7 +302,7 @@ defmodule KlassHeroWeb.ParentComponents do
         type="button"
         phx-click={@on_add}
         aria-label={gettext("Add a child")}
-        class="w-11 h-11 rounded-full border-2 border-dashed border-hero-grey-300 flex items-center justify-center text-hero-grey-600 hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary-dark)] shrink-0"
+        class="w-11 h-11 rounded-full border-2 border-dashed border-hero-grey-300 flex items-center justify-center text-[var(--fg-muted)] hover:border-[var(--brand-primary)] hover:text-[var(--fg-link)] shrink-0"
       >
         <.icon name="hero-plus" class="w-5 h-5" />
       </button>
@@ -325,7 +325,7 @@ defmodule KlassHeroWeb.ParentComponents do
     ~H"""
     <.kh_card class={"p-5 #{if @disabled, do: "opacity-60", else: ""}"}>
       <div class="flex items-center justify-between">
-        <span class="text-[13px] text-hero-grey-600 font-semibold">{@title}</span>
+        <span class="text-[13px] text-[var(--fg-muted)] font-semibold">{@title}</span>
         <.kh_icon_chip icon={@icon} gradient={@tone} size={:sm} />
       </div>
       <div class="mt-3 flex items-baseline gap-2">
@@ -356,7 +356,7 @@ defmodule KlassHeroWeb.ParentComponents do
     ~H"""
     <div class="flex items-center gap-4 p-4 rounded-xl hover:bg-hero-cream-100 transition-all">
       <div class="w-14 text-center shrink-0">
-        <div class="text-[10px] font-bold text-[var(--brand-primary-dark)] uppercase">
+        <div class="text-[10px] font-bold text-[var(--fg-link)] uppercase">
           {@session.month}
         </div>
         <%!-- typography-lint-ignore: PaUpcomingItem day digit uses display font for emphasis --%>
@@ -367,7 +367,7 @@ defmodule KlassHeroWeb.ParentComponents do
       <div class="w-px h-10 bg-hero-grey-200"></div>
       <div class="flex-1 min-w-0">
         <div class="font-bold truncate">{@session.title}</div>
-        <div class="text-xs text-hero-grey-600 mt-0.5 flex items-center gap-2 flex-wrap">
+        <div class="text-xs text-[var(--fg-muted)] mt-0.5 flex items-center gap-2 flex-wrap">
           <span :if={@session[:time]} class="flex items-center gap-1">
             <.icon name="hero-clock" class="w-3 h-3" />{@session.time}
           </span>
@@ -421,10 +421,10 @@ defmodule KlassHeroWeb.ParentComponents do
       <div class="relative">
         <.kh_pill tone={:dark} class="mb-2">{gettext("This week")}</.kh_pill>
         <h3 class={weekly_goal_title_classes()}>{gettext("Weekly adventure goal")}</h3>
-        <p :if={@goal} class="text-sm text-hero-grey-600 mt-1">
+        <p :if={@goal} class="text-sm text-[var(--fg-muted)] mt-1">
           {gettext("%{done} of %{goal} sessions attended", done: @done, goal: @goal)}
         </p>
-        <p :if={!@goal} class="text-sm text-hero-grey-600 mt-1">
+        <p :if={!@goal} class="text-sm text-[var(--fg-muted)] mt-1">
           {gettext("Coming soon — track your family's weekly attendance.")}
         </p>
         <div class="mt-4 h-3 rounded-full bg-hero-grey-100 overflow-hidden">
@@ -435,7 +435,7 @@ defmodule KlassHeroWeb.ParentComponents do
           </div>
         </div>
         <div :if={@goal} class="mt-3 flex items-center justify-between">
-          <span class="text-xs text-hero-grey-600">{@pct}% {gettext("complete")}</span>
+          <span class="text-xs text-[var(--fg-muted)]">{@pct}% {gettext("complete")}</span>
           <span class={display_callout_classes()}>
             {max(0, @goal - @done)} {gettext("to go")} →
           </span>
@@ -462,11 +462,11 @@ defmodule KlassHeroWeb.ParentComponents do
     <.kh_card class="p-5">
       <div class="flex items-center justify-between mb-4">
         <h3 class="font-bold text-lg">{gettext("Recent messages")}</h3>
-        <.link navigate={@on_open_navigate} class="text-sm font-bold text-[var(--brand-primary-dark)]">
+        <.link navigate={@on_open_navigate} class="text-sm font-bold text-[var(--fg-link)]">
           {gettext("Open inbox")} →
         </.link>
       </div>
-      <div :if={@messages == []} class="text-sm text-hero-grey-600">
+      <div :if={@messages == []} class="text-sm text-[var(--fg-muted)]">
         {gettext("No messages yet.")}
       </div>
       <div class="space-y-1">
@@ -483,11 +483,11 @@ defmodule KlassHeroWeb.ParentComponents do
           <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between gap-3">
               <span class="font-bold text-sm truncate">{m.from}</span>
-              <span :if={m[:time]} class="text-[11px] text-hero-grey-600 shrink-0">
+              <span :if={m[:time]} class="text-[11px] text-[var(--fg-muted)] shrink-0">
                 {m.time}
               </span>
             </div>
-            <p class="text-xs text-hero-grey-600 truncate">{m[:preview]}</p>
+            <p class="text-xs text-[var(--fg-muted)] truncate">{m[:preview]}</p>
           </div>
           <span
             :if={m[:unread?]}
@@ -548,16 +548,19 @@ defmodule KlassHeroWeb.ParentComponents do
       <div class="p-4">
         <div
           :if={@program[:category]}
-          class="text-[11px] text-hero-grey-600 font-semibold uppercase tracking-wide"
+          class="text-[11px] text-[var(--fg-muted)] font-semibold uppercase tracking-wide"
         >
           {@program.category}
         </div>
         <h4 class="font-bold text-base mt-0.5 leading-tight">{@program.title}</h4>
-        <div :if={@program[:next]} class="mt-2 text-xs text-hero-grey-600 flex items-center gap-1.5">
+        <div
+          :if={@program[:next]}
+          class="mt-2 text-xs text-[var(--fg-muted)] flex items-center gap-1.5"
+        >
           <.icon name="hero-calendar" class="w-3.5 h-3.5" /> {gettext("Next")} · {@program.next}
         </div>
         <div class="mt-3 pt-3 border-t border-hero-grey-200 flex items-center justify-between">
-          <span :if={@program[:provider]} class="text-xs text-hero-grey-600">
+          <span :if={@program[:provider]} class="text-xs text-[var(--fg-muted)]">
             {@program.provider}
           </span>
           <span class={card_open_link_classes()}>{gettext("Open")} →</span>
@@ -593,5 +596,5 @@ defmodule KlassHeroWeb.ParentComponents do
   defp display_callout_classes, do: "font-display font-bold text-sm"
 
   # typography-lint-ignore: PaFamilyProgramCard "Open" CTA matches bundle
-  defp card_open_link_classes, do: "text-xs font-bold font-display text-[var(--brand-primary-dark)]"
+  defp card_open_link_classes, do: "text-xs font-bold font-display text-[var(--fg-link)]"
 end

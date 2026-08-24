@@ -48,7 +48,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
             <.kh_card class="p-7 lg:p-9">
               <%= case @mode do %>
                 <% :loading -> %>
-                  <div id="staff-invite-loading" class="space-y-3 text-center text-hero-grey-600">
+                  <div id="staff-invite-loading" class="space-y-3 text-center text-[var(--fg-muted)]">
                     <p>{gettext("Loading your invitation…")}</p>
                   </div>
                 <% :register -> %>
@@ -88,7 +88,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
                     <p class="text-hero-black-100">
                       {gettext("You already have an account for %{email}.", email: @invite_email)}
                     </p>
-                    <p class="text-hero-grey-600 text-sm">
+                    <p class="text-[var(--fg-muted)] text-sm">
                       {gettext("Log in, then reopen this invitation to join the team.")}
                     </p>
                     <.link navigate={~p"/users/log-in"}>
@@ -118,7 +118,7 @@ defmodule KlassHeroWeb.UserLive.StaffInvitation do
                     <p class="text-hero-black-100">
                       {gettext("This invitation is for %{invite}.", invite: @invite_email)}
                     </p>
-                    <p class="text-hero-grey-600 text-sm">
+                    <p class="text-[var(--fg-muted)] text-sm">
                       {gettext(
                         "You're logged in as %{current}. Log into the matching account to accept.",
                         current: @current_scope.user.email

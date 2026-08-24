@@ -218,7 +218,7 @@ defmodule KlassHeroWeb.ContactLive do
                   href={~p"/" <> "#mk-faq"}
                   class={
                     [
-                      "inline-block mt-3 text-[var(--brand-primary-dark)]",
+                      "inline-block mt-3 text-[var(--fg-link)]",
                       # typography-lint-ignore: marketing accent link uses display font for visual emphasis
                       "font-display font-bold"
                     ]

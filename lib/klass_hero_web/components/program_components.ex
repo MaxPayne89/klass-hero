@@ -47,7 +47,7 @@ defmodule KlassHeroWeb.ProgramComponents do
       />
       <.icon
         name="hero-magnifying-glass"
-        class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-hero-grey-400"
+        class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--fg-muted)]"
       />
     </div>
     """
@@ -186,7 +186,7 @@ defmodule KlassHeroWeb.ProgramComponents do
           Theme.rounded(:md),
           if(@active_view == :grid,
             do: "bg-white text-hero-blue-600 shadow-sm",
-            else: "text-hero-grey-500 hover:text-hero-grey-700"
+            else: "text-[var(--fg-muted)] hover:text-hero-grey-700"
           )
         ]}
       >
@@ -201,7 +201,7 @@ defmodule KlassHeroWeb.ProgramComponents do
           Theme.rounded(:md),
           if(@active_view == :list,
             do: "bg-white text-hero-blue-600 shadow-sm",
-            else: "text-hero-grey-500"
+            else: "text-[var(--fg-muted)]"
           )
         ]}
       >
@@ -353,7 +353,7 @@ defmodule KlassHeroWeb.ProgramComponents do
             </div>
             <div
               :if={Map.get(@program, :provider_location)}
-              class="text-xs text-hero-grey-500 truncate"
+              class="text-xs text-[var(--fg-muted)] truncate"
             >
               {@program.provider_location}
             </div>
@@ -372,7 +372,7 @@ defmodule KlassHeroWeb.ProgramComponents do
           <span class="text-sm font-medium text-hero-black">{@program.rating}</span>
           <span
             :if={Map.get(@program, :review_count)}
-            class="text-sm text-hero-grey-500"
+            class="text-sm text-[var(--fg-muted)]"
           >
             ({@program.review_count} reviews)
           </span>
@@ -404,7 +404,7 @@ defmodule KlassHeroWeb.ProgramComponents do
             </svg>
             {ProgramPresenter.format_date_range_brief(@program)}
           </div>
-          <div :if={@program.age_range} class="flex items-center text-sm text-hero-grey-500">
+          <div :if={@program.age_range} class="flex items-center text-sm text-[var(--fg-muted)]">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
@@ -679,7 +679,7 @@ defmodule KlassHeroWeb.ProgramComponents do
           <span
             :for={qual <- @qualifications}
             class={[
-              "px-2 py-0.5 text-xs font-medium border border-hero-grey-300 text-hero-grey-600",
+              "px-2 py-0.5 text-xs font-medium border border-hero-grey-300 text-[var(--fg-muted)]",
               Theme.rounded(:md)
             ]}
           >

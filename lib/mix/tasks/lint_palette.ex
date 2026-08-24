@@ -63,6 +63,7 @@ defmodule Mix.Tasks.LintPalette do
   @fg_on_bg %{
     "fg-primary" => ["bg-surface", "bg-base", "bg-muted"],
     "fg-body" => ["bg-surface", "bg-base", "bg-muted"],
+    "fg-link" => ["bg-surface", "bg-base", "bg-muted"],
     "fg-muted" => ["bg-surface"],
     "fg-muted-on-light" => ["bg-base", "bg-muted"],
     "fg-inverse" => ["bg-inverse"]
@@ -89,6 +90,14 @@ defmodule Mix.Tasks.LintPalette do
   # and the lint reports success. `--focus-ring` did exactly that until `focus`
   # was added. Adding a token with a new prefix means adding it here too.
   @semantic ~r/^\s*--((?:fg|bg|focus)-[a-z0-9-]+):\s*(?:var\(--color-([a-z0-9-]+)\)|(#[0-9a-fA-F]{6}))\s*;/
+  # Every `var(--x)` a template references must be declared in app.css. Tailwind
+  # emits `var(--x)` verbatim for an arbitrary value, so an undeclared name is not
+  # an error anywhere — the property just resolves to nothing. `bg-[var(--hero-
+  # yellow-500)]` (the token is `--color-hero-yellow-500`) rendered a transparent
+  # pill with `text-black` on it, invisible on a dark section, in 16 places.
+  @var_reference ~r/var\(\s*(--[a-z0-9-]+)\s*\)/
+  @template_globs ["lib/klass_hero_web/**/*.ex", "lib/klass_hero_web/**/*.heex"]
+
   @standalone_comment ~r/^\s*\/\*[^*]*#([0-9a-fA-F]{6})[^*]*\*\/\s*$/
   @comment_hex ~r/#([0-9a-fA-F]{6})/
 
@@ -118,7 +127,34 @@ defmodule Mix.Tasks.LintPalette do
       semantic_contrast_violations(css, decls) ++
       nontext_contrast_violations(css, decls) ++
       comment_violations(decls) ++
-      header_violations(css, decls)
+      header_violations(css, decls) ++
+      dead_variable_violations(css)
+  end
+
+  @doc """
+  Violations where a template references a CSS variable the stylesheet never
+  declares.
+
+  Tailwind passes an arbitrary value through untouched, so an undeclared name
+  fails silently: the declaration is dropped and the element renders with no
+  value for that property at all. Nothing else in the toolchain sees it —
+  `lint_hero_colors` checks `hero-*` utility classes, not `var()` references.
+  """
+  def dead_variable_violations(css) do
+    declared =
+      ~r/^\s*(--[a-z0-9-]+)\s*:/m
+      |> Regex.scan(css)
+      |> MapSet.new(fn [_, name] -> name end)
+
+    for glob <- @template_globs,
+        path <- Path.wildcard(glob),
+        {line, num} <- Enum.with_index(File.stream!(path), 1),
+        [_, name] <- Regex.scan(@var_reference, line),
+        not MapSet.member?(declared, name),
+        uniq: true do
+      "#{path}:#{num}: var(#{name}) is not declared in #{@theme_file} — " <>
+        "it resolves to nothing and the property is silently dropped"
+    end
   end
 
   @doc """

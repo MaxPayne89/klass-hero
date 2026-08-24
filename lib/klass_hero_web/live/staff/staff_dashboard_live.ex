@@ -209,7 +209,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
         <p
           :if={@self_view.rate_label}
           id="staff-rate-label"
-          class="text-sm text-hero-grey-600 mt-1"
+          class="text-sm text-[var(--fg-muted)] mt-1"
         >
           {gettext("Your pay rate")}: {@self_view.rate_label}
         </p>
@@ -263,7 +263,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
         </h2>
         <%= if @upgrade_confirm? do %>
           <div id="become-provider-confirm" class="mt-1">
-            <p class="text-sm text-hero-grey-600">
+            <p class="text-sm text-[var(--fg-muted)]">
               {gettext(
                 "You'll get your own provider profile to fill in, and your account will open on your provider dashboard from now on. You stay on %{business}'s team.",
                 business: @provider.business_name
@@ -292,7 +292,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
             </div>
           </div>
         <% else %>
-          <p class="text-sm text-hero-grey-600 mt-1">
+          <p class="text-sm text-[var(--fg-muted)] mt-1">
             {gettext("Offer your own programs on Klass Hero — alongside your work for %{business}.",
               business: @provider.business_name
             )}
@@ -415,7 +415,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                   aria-label={gettext("Send Broadcast")}
                   class={[
                     "p-2 rounded-lg transition-colors",
-                    "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
+                    "text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100"
                   ]}
                 >
                   <.icon name="hero-megaphone-mini" class="w-5 h-5" />
@@ -443,7 +443,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
 
           <div class="p-4">
             <%= if @roster_entries == [] do %>
-              <p class="text-center text-hero-grey-500 py-4">
+              <p class="text-center text-[var(--fg-muted)] py-4">
                 {gettext("No enrollments yet.")}
               </p>
             <% else %>
@@ -456,7 +456,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                       </span>
                     </div>
                     <div class="flex items-center gap-2">
-                      <span class="text-sm text-hero-grey-500">
+                      <span class="text-sm text-[var(--fg-muted)]">
                         {Map.get(entry, :status, "")}
                       </span>
                       <%= if @can_message? and entry.status == :confirmed and entry.parent_user_id do %>
@@ -469,7 +469,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLive do
                           aria-label={gettext("Send Message")}
                           class={[
                             "p-2 inline-flex rounded-lg transition-colors",
-                            "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
+                            "text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100"
                           ]}
                         >
                           <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />

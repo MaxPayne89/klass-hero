@@ -21,7 +21,7 @@ defmodule KlassHeroWeb.UserLive.Login do
           {gettext("Sign in to continue. Don't have an account?")}
           <.link
             navigate={~p"/users/register"}
-            class="font-bold text-[var(--brand-primary-dark)] hover:underline"
+            class="font-bold text-[var(--fg-link)] hover:underline"
           >
             {gettext("Register")}
           </.link>

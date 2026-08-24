@@ -269,7 +269,7 @@ defmodule KlassHeroWeb.CoreComponents do
       <div class="relative">
         <div
           :if={@icon}
-          class="absolute left-3.5 top-1/2 -translate-y-1/2 text-hero-grey-600 pointer-events-none"
+          class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--fg-muted)] pointer-events-none"
         >
           <.icon name={@icon} class="w-4 h-4" />
         </div>

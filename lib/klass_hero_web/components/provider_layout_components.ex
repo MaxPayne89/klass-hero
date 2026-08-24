@@ -217,7 +217,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
               <.icon name="hero-shield-check" class="w-3 h-3" /> {gettext("Verified")}
             </.kh_pill>
           </div>
-          <div :if={@provider[:tagline]} class="text-sm text-hero-grey-600 mt-0.5">
+          <div :if={@provider[:tagline]} class="text-sm text-[var(--fg-muted)] mt-0.5">
             {@provider.tagline}
           </div>
         </div>
@@ -407,8 +407,8 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
         </span>
       </div>
       <div class={pv_stat_value_classes()}>{@value}</div>
-      <div class="mt-1 text-[13px] text-hero-grey-600 font-semibold">{@title}</div>
-      <div :if={@caption} class="text-xs text-hero-grey-600 mt-1">{@caption}</div>
+      <div class="mt-1 text-[13px] text-[var(--fg-muted)] font-semibold">{@title}</div>
+      <div :if={@caption} class="text-xs text-[var(--fg-muted)] mt-1">{@caption}</div>
     </.kh_card>
     """
   end
@@ -427,7 +427,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
       <div class="flex items-center justify-between mb-5">
         <div>
           <h3 class="font-bold text-lg">{gettext("Earnings trend")}</h3>
-          <div class="text-sm text-hero-grey-600">{gettext("Last 8 weeks")}</div>
+          <div class="text-sm text-[var(--fg-muted)]">{gettext("Last 8 weeks")}</div>
         </div>
         <div class="flex gap-2">
           <.kh_pill tone={:dark}>{gettext("Week")}</.kh_pill>
@@ -435,7 +435,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
           <.kh_pill tone={:outline}>{gettext("Year")}</.kh_pill>
         </div>
       </div>
-      <div :if={@data == []} class="py-12 text-center text-sm text-hero-grey-600">
+      <div :if={@data == []} class="py-12 text-center text-sm text-[var(--fg-muted)]">
         {gettext("Earnings tracking is coming soon.")}
       </div>
       <div :if={@data != []} class="flex items-end gap-2 h-40 px-1">
@@ -462,7 +462,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
           €{@datum.v}
         </div>
       </div>
-      <div class="text-[10px] text-hero-grey-600 font-semibold">{@datum.w}</div>
+      <div class="text-[10px] text-[var(--fg-muted)] font-semibold">{@datum.w}</div>
     </div>
     """
   end
@@ -539,7 +539,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
       <div class="flex items-center justify-between mb-4">
         <div>
           <h3 class="font-bold text-lg">{gettext("Today's check-ins")}</h3>
-          <div :if={@session[:subtitle]} class="text-sm text-hero-grey-600">
+          <div :if={@session[:subtitle]} class="text-sm text-[var(--fg-muted)]">
             {@session.subtitle}
           </div>
         </div>
@@ -551,7 +551,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
           {gettext("Mark all present")}
         </button>
       </div>
-      <div :if={@kids == []} class="text-sm text-hero-grey-600">
+      <div :if={@kids == []} class="text-sm text-[var(--fg-muted)]">
         {gettext("No registered children for this session.")}
       </div>
       <div class="space-y-1">
@@ -580,7 +580,7 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
                 "w-7 h-7 rounded-full flex items-center justify-center transition-all",
                 k[:present?] && "bg-emerald-500 text-white",
                 !k[:present?] &&
-                  "bg-hero-grey-100 text-hero-grey-600 hover:bg-[var(--brand-primary)] hover:text-black"
+                  "bg-hero-grey-100 text-[var(--fg-muted)] hover:bg-[var(--brand-primary)] hover:text-black"
               ]}
             >
               <.icon name="hero-check-circle" class="w-4 h-4" />
@@ -607,8 +607,8 @@ defmodule KlassHeroWeb.ProviderLayoutComponents do
     >
       <div class="min-w-0">
         <div class="font-semibold truncate">{@entry.child_name}</div>
-        <div class="text-xs text-hero-grey-600 truncate">{@entry.program_title}</div>
-        <div class="text-xs text-hero-grey-500">
+        <div class="text-xs text-[var(--fg-muted)] truncate">{@entry.program_title}</div>
+        <div class="text-xs text-[var(--fg-muted)]">
           {gettext("Enrolled")} {Calendar.strftime(@entry.enrolled_at, "%b %d")}
         </div>
       </div>

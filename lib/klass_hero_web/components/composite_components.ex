@@ -49,11 +49,11 @@ defmodule KlassHeroWeb.CompositeComponents do
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1">
             <h4 class={[Theme.typography(:card_title), "text-hero-black"]}>{@name}</h4>
-            <p class="text-sm text-hero-grey-500">{@age} years old • {@school}</p>
+            <p class="text-sm text-[var(--fg-muted)]">{@age} years old • {@school}</p>
           </div>
           <div class="text-right">
             <div class="text-sm font-medium text-hero-black">{@sessions}</div>
-            <div class="text-xs text-hero-grey-400">{gettext("Sessions")}</div>
+            <div class="text-xs text-[var(--fg-muted)]">{gettext("Sessions")}</div>
           </div>
         </div>
         <.progress_bar label={gettext("Progress")} percentage={@progress} class="mb-3" />
@@ -255,7 +255,7 @@ defmodule KlassHeroWeb.CompositeComponents do
       />
       <div>
         <div class={[Theme.typography(:card_title), "text-hero-black"]}>{@title}</div>
-        <div class="text-sm text-hero-grey-500">{@description}</div>
+        <div class="text-sm text-[var(--fg-muted)]">{@description}</div>
       </div>
     </label>
     """
@@ -326,7 +326,7 @@ defmodule KlassHeroWeb.CompositeComponents do
             <div data-testid="post-author" class={[Theme.typography(:card_title), "text-hero-black"]}>
               {@author}
             </div>
-            <div class="text-sm text-hero-grey-400">{@timestamp}</div>
+            <div class="text-sm text-[var(--fg-muted)]">{@timestamp}</div>
           </div>
         </div>
 
@@ -349,14 +349,14 @@ defmodule KlassHeroWeb.CompositeComponents do
               class={[
                 "flex items-center gap-2",
                 Theme.transition(:normal),
-                if(@user_liked, do: "text-red-500", else: "text-hero-grey-400 hover:text-red-500")
+                if(@user_liked, do: "text-red-500", else: "text-[var(--fg-muted)] hover:text-red-500")
               ]}
             >
               <span class="text-xl">{if @user_liked, do: "❤️", else: "🤍"}</span>
               <span data-testid="like-count" class="text-sm font-medium">{@likes}</span>
             </button>
             <button class={[
-              "flex items-center gap-2 text-hero-grey-400 hover:text-hero-blue-600",
+              "flex items-center gap-2 text-[var(--fg-muted)] hover:text-hero-blue-600",
               Theme.transition(:normal)
             ]}>
               <span class="text-xl">💬</span>

@@ -600,7 +600,7 @@ defmodule KlassHeroWeb.Provider.TeamLive do
             <h2 class="text-xl font-semibold text-hero-black-100">
               {gettext("Team & Provider Profiles")}
             </h2>
-            <p class="text-sm text-hero-grey-500">
+            <p class="text-sm text-[var(--fg-muted)]">
               {gettext(
                 "Create profiles for your staff. These will be visible to parents when assigned to programs."
               )}
