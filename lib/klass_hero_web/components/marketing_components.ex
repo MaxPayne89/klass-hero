@@ -81,8 +81,8 @@ defmodule KlassHeroWeb.MarketingComponents do
             class={[
               "text-[15px] font-semibold transition-colors",
               if(@active == key,
-                do: "text-[var(--brand-primary-dark)]",
-                else: "text-[var(--fg-body)] hover:text-[var(--brand-primary-dark)]"
+                do: "text-[var(--fg-link)]",
+                else: "text-[var(--fg-body)] hover:text-[var(--fg-link)]"
               )
             ]}
           >
@@ -122,7 +122,7 @@ defmodule KlassHeroWeb.MarketingComponents do
             aria-label={gettext("Open menu")}
             aria-expanded="false"
             aria-controls="mk-mobile-sheet"
-            class="lg:hidden flex items-center justify-center w-11 h-11 rounded-xl border border-[var(--border-light)] bg-white text-[var(--fg-primary)] hover:bg-[var(--hero-grey-100)] transition-colors"
+            class="lg:hidden flex items-center justify-center w-11 h-11 rounded-xl border border-[var(--border-light)] bg-white text-[var(--fg-primary)] hover:bg-[var(--color-hero-grey-100)] transition-colors"
           >
             <.icon name="hero-bars-3" class="w-6 h-6" />
           </button>
@@ -151,8 +151,8 @@ defmodule KlassHeroWeb.MarketingComponents do
             class={[
               "px-6 py-4 text-[17px] font-semibold border-b border-[var(--border-light)] last:border-b-0 transition-colors",
               if(@active == key,
-                do: "text-[var(--brand-primary-dark)] bg-[var(--hero-pink-50)]",
-                else: "text-[var(--fg-body)] hover:bg-[var(--hero-grey-100)]"
+                do: "text-[var(--fg-link)] bg-[var(--color-hero-pink-50)]",
+                else: "text-[var(--fg-body)] hover:bg-[var(--color-hero-grey-100)]"
               )
             ]}
           >
@@ -173,7 +173,7 @@ defmodule KlassHeroWeb.MarketingComponents do
             </.link>
           </div>
         <% else %>
-          <div class="px-6 py-5 border-t border-[var(--border-light)] bg-[var(--hero-cream-100)] flex flex-col gap-3">
+          <div class="px-6 py-5 border-t border-[var(--border-light)] bg-[var(--color-hero-cream-100)] flex flex-col gap-3">
             <.link href={~p"/users/log-in"}>
               <.kh_button variant={:ghost} size={:md} class="!w-full">
                 {gettext("Sign in")}
@@ -233,7 +233,7 @@ defmodule KlassHeroWeb.MarketingComponents do
 
       <div class="relative max-w-7xl mx-auto px-6 text-center">
         <div class="inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full bg-white shadow-sm border border-[var(--border-light)]">
-          <.icon name="hero-sparkles" class="w-4 h-4 text-[var(--brand-primary-dark)]" />
+          <.icon name="hero-sparkles" class="w-4 h-4 text-[var(--fg-link)]" />
           <span class="text-sm font-semibold">
             {gettext("Berlin's #1 network for youth educators")}
           </span>
@@ -340,7 +340,7 @@ defmodule KlassHeroWeb.MarketingComponents do
             navigate={~p"/programs"}
             class={
               [
-                "flex items-center gap-2 hover:gap-3 transition-all text-[var(--brand-primary-dark)]",
+                "flex items-center gap-2 hover:gap-3 transition-all text-[var(--fg-link)]",
                 # typography-lint-ignore: marketing accent link uses display font for visual emphasis
                 "font-display font-bold"
               ]
@@ -465,7 +465,7 @@ defmodule KlassHeroWeb.MarketingComponents do
             {@program.description}
           </span>
           <%!-- typography-lint-ignore: program-card "View →" callout in display font matches View All link --%>
-          <span class="text-sm font-display font-bold text-[var(--brand-primary-dark)] shrink-0 ml-3">
+          <span class="text-sm font-display font-bold text-[var(--fg-link)] shrink-0 ml-3">
             {gettext("View →")}
           </span>
         </div>
@@ -1100,9 +1100,9 @@ defmodule KlassHeroWeb.MarketingComponents do
               }
               data-sort={key}
               class={[
-                "w-full text-left px-4 py-2.5 text-sm font-semibold cursor-pointer hover:bg-[var(--hero-cream-100)]",
+                "w-full text-left px-4 py-2.5 text-sm font-semibold cursor-pointer hover:bg-[var(--color-hero-cream-100)]",
                 if(@sort == key,
-                  do: "bg-[var(--hero-cream-100)] text-[var(--brand-primary-dark)]",
+                  do: "bg-[var(--color-hero-cream-100)] text-[var(--fg-link)]",
                   else: "text-[var(--fg-body)]"
                 )
               ]}
@@ -1114,7 +1114,7 @@ defmodule KlassHeroWeb.MarketingComponents do
 
         <div
           id="mk-view-toggle"
-          class="flex items-center bg-[var(--hero-cream-100)] rounded-lg p-1"
+          class="flex items-center bg-[var(--color-hero-cream-100)] rounded-lg p-1"
         >
           <button
             type="button"
@@ -1245,7 +1245,7 @@ defmodule KlassHeroWeb.MarketingComponents do
 
       <div class="flex items-center justify-end md:justify-center">
         <%!-- typography-lint-ignore: marketing accent link uses display font for visual emphasis --%>
-        <span class="font-display font-bold text-[var(--brand-primary-dark)] flex items-center gap-1">
+        <span class="font-display font-bold text-[var(--fg-link)] flex items-center gap-1">
           {gettext("View")}
           <.icon name="hero-arrow-right" class="w-4 h-4" />
         </span>
@@ -1268,7 +1268,7 @@ defmodule KlassHeroWeb.MarketingComponents do
   def mk_empty_state(assigns) do
     ~H"""
     <div id="mk-empty" data-testid="empty-state" class="text-center py-20">
-      <div class="w-20 h-20 mx-auto rounded-full bg-[var(--hero-cream-100)] flex items-center justify-center mb-5">
+      <div class="w-20 h-20 mx-auto rounded-full bg-[var(--color-hero-cream-100)] flex items-center justify-center mb-5">
         <.icon name={@icon} class="w-9 h-9 text-[var(--fg-muted)]" />
       </div>
       <%!-- typography-lint-ignore: marketing empty-state title uses display font --%>
@@ -1371,7 +1371,7 @@ defmodule KlassHeroWeb.MarketingComponents do
           <p class="font-display font-bold text-2xl tracking-tight text-hero-black">
             {@tagline}
           </p>
-          <p :if={@sub_tagline} class="text-xl text-[var(--brand-primary-dark)] font-bold mt-2">
+          <p :if={@sub_tagline} class="text-xl text-[var(--fg-link)] font-bold mt-2">
             {@sub_tagline}
           </p>
         </div>
@@ -1413,7 +1413,7 @@ defmodule KlassHeroWeb.MarketingComponents do
             >
               <.icon
                 name="hero-check-circle"
-                class="w-5 h-5 text-[var(--brand-primary-dark)] flex-shrink-0"
+                class="w-5 h-5 text-[var(--fg-link)] flex-shrink-0"
               />
               <span class="font-bold text-hero-black">{commitment}</span>
             </div>
@@ -1755,7 +1755,7 @@ defmodule KlassHeroWeb.MarketingComponents do
         {@founder.initials}
       </div>
       <h4 class="mt-3 font-bold text-hero-black">{@founder.name}</h4>
-      <div class="text-xs text-[var(--brand-primary-dark)] font-semibold uppercase tracking-wider mt-0.5">
+      <div class="text-xs text-[var(--fg-link)] font-semibold uppercase tracking-wider mt-0.5">
         {@founder.role}
       </div>
       <p class="mt-3 text-sm text-[var(--fg-muted)] leading-relaxed">{@founder.bio}</p>
@@ -1793,7 +1793,7 @@ defmodule KlassHeroWeb.MarketingComponents do
     <label class="block">
       <span class={[
         "text-sm font-semibold text-hero-black",
-        @required && "after:content-['*'] after:ml-0.5 after:text-[var(--brand-primary-dark)]"
+        @required && "after:content-['*'] after:ml-0.5 after:text-[var(--fg-link)]"
       ]}>
         {@label}
       </span>
@@ -1836,7 +1836,10 @@ defmodule KlassHeroWeb.MarketingComponents do
               placeholder={@placeholder}
               autocomplete={@autocomplete}
               readonly={@readonly}
-              class={[mk_input_classes(), @readonly && "bg-[var(--hero-grey-100)] cursor-not-allowed"]}
+              class={[
+                mk_input_classes(),
+                @readonly && "bg-[var(--color-hero-grey-100)] cursor-not-allowed"
+              ]}
             />
         <% end %>
       </div>

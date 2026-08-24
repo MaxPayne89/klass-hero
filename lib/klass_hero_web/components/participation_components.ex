@@ -195,7 +195,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
           <h3 class="text-lg font-semibold text-hero-black mb-2">
             {gettext("Participation Check-In")}
           </h3>
-          <p class="text-sm text-hero-grey-600">
+          <p class="text-sm text-[var(--fg-muted)]">
             {format_session_datetime(@session)}
           </p>
         </div>
@@ -220,7 +220,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                   name="participation[checked_in][]"
                   value={record.id}
                   checked={record.status == :checked_in}
-                  class="mt-1 w-4 h-4 text-hero-blue-600 rounded border-hero-grey-300 focus:ring-hero-blue-500"
+                  class="mt-1 w-4 h-4 text-hero-blue-600 rounded border-hero-grey-300 focus:ring-[var(--focus-ring)]"
                 />
                 <div class="flex-1">
                   <div class="font-medium text-hero-black">
@@ -229,7 +229,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                   <%!-- Consent-gated safety info --%>
                   <.safety_info_badges record={record} />
                   <%= if record.status == :checked_in && record.check_in_at do %>
-                    <div class="text-xs text-hero-grey-500 mt-1">
+                    <div class="text-xs text-[var(--fg-muted)] mt-1">
                       {gettext("Checked in at %{time}", time: format_time(record.check_in_at))}
                     </div>
                   <% end %>
@@ -254,7 +254,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
           <button
             type="submit"
             class={[
-              "flex-1 px-4 py-3 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+              "flex-1 px-4 py-3 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}
@@ -331,7 +331,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
           <h3 class="text-lg font-semibold text-hero-black">
             {gettext("Session Roster")}
           </h3>
-          <div class="text-sm text-hero-grey-600">
+          <div class="text-sm text-[var(--fg-muted)]">
             {gettext("%{checked_in} / %{total} checked in",
               checked_in: ParticipationCollection.count_checked_in(@participation_records),
               total: length(@participation_records)
@@ -354,7 +354,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               <%!-- Consent-gated safety info --%>
               <.safety_info_badges record={record} id={"safety-info-#{record.id}"} />
 
-              <div class="space-y-1 text-sm text-hero-grey-600">
+              <div class="space-y-1 text-sm text-[var(--fg-muted)]">
                 <%= if record.check_in_at do %>
                   <div class="flex items-center gap-2">
                     <.icon name="hero-arrow-right-circle" class="w-4 h-4 text-green-600" />
@@ -372,13 +372,13 @@ defmodule KlassHeroWeb.ParticipationComponents do
               <%= if Map.get(record, :check_in_notes) || Map.get(record, :check_out_notes) do %>
                 <div class="mt-2 space-y-1">
                   <%= if Map.get(record, :check_in_notes) do %>
-                    <div class="text-sm text-hero-grey-600 italic">
+                    <div class="text-sm text-[var(--fg-muted)] italic">
                       <span class="font-medium text-hero-black-100">{gettext("Check-in:")}</span>
                       "{record.check_in_notes}"
                     </div>
                   <% end %>
                   <%= if Map.get(record, :check_out_notes) do %>
-                    <div class="text-sm text-hero-grey-600 italic">
+                    <div class="text-sm text-[var(--fg-muted)] italic">
                       <span class="font-medium text-hero-black-100">{gettext("Check-out:")}</span>
                       "{record.check_out_notes}"
                     </div>
@@ -392,7 +392,10 @@ defmodule KlassHeroWeb.ParticipationComponents do
                 (#1329).
               --%>
               <%= if Map.get(record, :absence_reason) do %>
-                <div id={"absence-reason-#{record.id}"} class="mt-2 text-sm text-hero-grey-600 italic">
+                <div
+                  id={"absence-reason-#{record.id}"}
+                  class="mt-2 text-sm text-[var(--fg-muted)] italic"
+                >
                   <span class="font-medium text-hero-black-100">{gettext("Absent:")}</span>
                   "{record.absence_reason}"
                 </div>
@@ -432,7 +435,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                       type="submit"
                       class={[
                         "flex-1 px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700",
-                        "focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                        "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                         Theme.rounded(:md),
                         Theme.transition(:normal)
                       ]}
@@ -445,7 +448,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                       phx-value-id={record.id}
                       class={[
                         "px-4 py-2 bg-white text-hero-black-100 font-medium border border-hero-grey-300",
-                        "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                        "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                         Theme.rounded(:md),
                         Theme.transition(:normal)
                       ]}
@@ -465,7 +468,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
         </div>
 
         <%= if @participation_records == [] do %>
-          <div class="p-8 text-center text-hero-grey-500">
+          <div class="p-8 text-center text-[var(--fg-muted)]">
             <.icon name="hero-user-group" class="w-12 h-12 mx-auto mb-2 text-hero-grey-400" />
             <p>{gettext("No children enrolled in this session")}</p>
           </div>
@@ -647,7 +650,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               type="datetime-local"
               label={gettext("Record departure time (optional)")}
             />
-            <p class="text-xs text-hero-grey-500 -mt-2">
+            <p class="text-xs text-[var(--fg-muted)] -mt-2">
               {gettext("Leave blank to keep this child marked as present.")}
             </p>
           <% end %>
@@ -657,7 +660,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               type="submit"
               class={[
                 "flex-1 px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700",
-                "focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}
@@ -670,7 +673,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               phx-value-id={@record.id}
               class={[
                 "px-4 py-2 bg-white text-hero-black-100 font-medium border border-hero-grey-300",
-                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}
@@ -700,7 +703,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
       <div class="mt-2 space-y-1" id={"approved-notes-#{@record_id}"}>
         <div
           :for={note <- @notes}
-          class="text-sm text-hero-grey-600 italic bg-green-50 px-2 py-1 rounded"
+          class="text-sm text-[var(--fg-muted)] italic bg-green-50 px-2 py-1 rounded"
         >
           <span class="font-medium text-green-700">{gettext("Note:")}</span> "{note.content}"
         </div>
@@ -748,7 +751,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               type="submit"
               class={[
                 "flex-1 px-3 py-1.5 bg-hero-blue-600 text-white text-sm font-medium hover:bg-hero-blue-700",
-                "focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}
@@ -761,7 +764,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
               phx-value-id={@entity_id}
               class={[
                 "px-3 py-1.5 bg-white text-hero-black-100 text-sm font-medium border border-hero-grey-300",
-                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                 Theme.rounded(:md),
                 Theme.transition(:normal)
               ]}

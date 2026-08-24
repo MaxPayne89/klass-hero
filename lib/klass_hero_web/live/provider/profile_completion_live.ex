@@ -350,7 +350,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                 id="logo-upload"
                 class={[
                   "border-2 border-dashed border-gray-300 p-6 text-center",
-                  "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2",
+                  "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--focus-ring)] has-[:focus-visible]:ring-offset-2",
                   Theme.rounded(:lg)
                 ]}
                 phx-drop-target={@uploads.logo.ref}

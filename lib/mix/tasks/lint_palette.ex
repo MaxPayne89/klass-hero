@@ -49,7 +49,55 @@ defmodule Mix.Tasks.LintPalette do
     "accent" => "hero-yellow-500"
   }
 
+  # Which semantic foreground is allowed on which semantic background. Explicit,
+  # like @mirrors, because nothing in the names encodes it — and because the
+  # restriction is the point: `--fg-muted` is for white only, which is why it may
+  # sit at a shade that would fail over pink.
+  #
+  # This table is the executable form of the prose at the `--fg-muted-on-light`
+  # declaration. That comment stated the AA reasoning correctly while the value
+  # under it failed, because nothing ran it.
+  #
+  # `--fg-subtle` is deliberately absent: it is an icon and border tint, not text,
+  # so no contrast floor applies. Anything using it for real copy is misusing it.
+  @fg_on_bg %{
+    "fg-primary" => ["bg-surface", "bg-base", "bg-muted"],
+    "fg-body" => ["bg-surface", "bg-base", "bg-muted"],
+    "fg-link" => ["bg-surface", "bg-base", "bg-muted"],
+    "fg-muted" => ["bg-surface"],
+    "fg-muted-on-light" => ["bg-base", "bg-muted"],
+    "fg-inverse" => ["bg-inverse"]
+  }
+
+  # Non-text UI indicators. WCAG 2.1 SC 1.4.11 sets 3:1, not 4.5 — a focus ring
+  # is not text. Separate table rather than a looser floor on @fg_on_bg, because
+  # mixing the two thresholds is how a text token quietly inherits 3:1.
+  @nontext_min_contrast 3.0
+
+  @nontext_on_bg %{
+    "focus-ring" => ["bg-surface", "bg-base", "bg-muted"]
+  }
+
   @declaration ~r/^\s*--color-([a-z0-9-]+):\s*oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)\s*\)\s*;(.*)$/
+
+  # The semantic layer aliases the palette rather than restating it:
+  #   --fg-muted: var(--color-hero-grey-700);
+  # so it needs its own pattern plus a resolution step. A literal #rrggbb is
+  # allowed too — `--bg-surface` is plain white.
+  #
+  # The prefix list is load-bearing: a token whose name is not matched here is
+  # never parsed, so every rule referring to it silently iterates over nothing
+  # and the lint reports success. `--focus-ring` did exactly that until `focus`
+  # was added. Adding a token with a new prefix means adding it here too.
+  @semantic ~r/^\s*--((?:fg|bg|focus)-[a-z0-9-]+):\s*(?:var\(--color-([a-z0-9-]+)\)|(#[0-9a-fA-F]{6}))\s*;/
+  # Every `var(--x)` a template references must be declared in app.css. Tailwind
+  # emits `var(--x)` verbatim for an arbitrary value, so an undeclared name is not
+  # an error anywhere — the property just resolves to nothing. `bg-[var(--hero-
+  # yellow-500)]` (the token is `--color-hero-yellow-500`) rendered a transparent
+  # pill with `text-black` on it, invisible on a dark section, in 16 places.
+  @var_reference ~r/var\(\s*(--[a-z0-9-]+)\s*\)/
+  @template_globs ["lib/klass_hero_web/**/*.ex", "lib/klass_hero_web/**/*.heex"]
+
   @standalone_comment ~r/^\s*\/\*[^*]*#([0-9a-fA-F]{6})[^*]*\*\/\s*$/
   @comment_hex ~r/#([0-9a-fA-F]{6})/
 
@@ -76,8 +124,120 @@ defmodule Mix.Tasks.LintPalette do
 
     mirror_violations(decls) ++
       contrast_violations(decls) ++
+      semantic_contrast_violations(css, decls) ++
+      nontext_contrast_violations(css, decls) ++
       comment_violations(decls) ++
-      header_violations(css, decls)
+      header_violations(css, decls) ++
+      dead_variable_violations(css)
+  end
+
+  @doc """
+  Violations where a template references a CSS variable the stylesheet never
+  declares.
+
+  Tailwind passes an arbitrary value through untouched, so an undeclared name
+  fails silently: the declaration is dropped and the element renders with no
+  value for that property at all. Nothing else in the toolchain sees it —
+  `lint_hero_colors` checks `hero-*` utility classes, not `var()` references.
+  """
+  def dead_variable_violations(css) do
+    declared =
+      ~r/^\s*(--[a-z0-9-]+)\s*:/m
+      |> Regex.scan(css)
+      |> MapSet.new(fn [_, name] -> name end)
+
+    for glob <- @template_globs,
+        path <- Path.wildcard(glob),
+        {line, num} <- Enum.with_index(File.stream!(path), 1),
+        [_, name] <- Regex.scan(@var_reference, line),
+        not MapSet.member?(declared, name),
+        uniq: true do
+      "#{path}:#{num}: var(#{name}) is not declared in #{@theme_file} — " <>
+        "it resolves to nothing and the property is silently dropped"
+    end
+  end
+
+  @doc """
+  Parses the semantic `--fg-*` / `--bg-*` layer, resolving each alias to the
+  `--color-*` token it points at.
+
+  Returns `%{name => %{oklch: {l, c, h}, line: pos_integer}}`. Declarations
+  pointing at an unknown token are dropped rather than guessed at — a missing
+  token is `lint_hero_colors`' job, not this one's.
+  """
+  def parse_semantic(css, decls) do
+    css
+    |> String.split("\n")
+    |> Stream.with_index(1)
+    |> Enum.reduce(%{}, fn {line, num}, acc ->
+      # `Regex.run` drops TRAILING unmatched groups, so the `var()` branch returns
+      # two captures and the hex branch returns three. Normalising the shape here
+      # is what makes both branches reachable — matching on `[name, token, ""]`
+      # alone silently parsed only the hex declarations.
+      case Regex.run(@semantic, line, capture: :all_but_first) do
+        [name, token] -> put_alias(acc, name, token, decls, num)
+        [name, token, ""] -> put_alias(acc, name, token, decls, num)
+        [name, "", hex] -> Map.put(acc, name, %{oklch: nil, rgb: hex_to_rgb(hex), line: num})
+        _ -> acc
+      end
+    end)
+  end
+
+  defp put_alias(acc, name, token, decls, num) do
+    case Map.get(decls, token) do
+      %{oklch: oklch} -> Map.put(acc, name, %{oklch: oklch, line: num})
+      nil -> acc
+    end
+  end
+
+  @doc """
+  Violations where a semantic foreground fails AA on a background `@fg_on_bg`
+  says it is used over.
+
+  This is the check that would have caught `--fg-muted` sitting at grey-600
+  (3.64:1 on white) while its own neighbouring comment explained the AA maths.
+  """
+  def semantic_contrast_violations(css, decls) do
+    semantic = parse_semantic(css, decls)
+
+    for {fg_name, bg_names} <- Enum.sort(@fg_on_bg),
+        %{line: line} = fg <- [Map.get(semantic, fg_name)],
+        bg_name <- bg_names,
+        bg = Map.get(semantic, bg_name),
+        ratio = contrast_ratio(semantic_rgb(fg), semantic_rgb(bg)),
+        ratio < @min_contrast do
+      "#{@theme_file}:#{line}: --#{fg_name} on --#{bg_name} is " <>
+        "#{fmt_ratio(ratio)}:1, below the #{@min_contrast}:1 WCAG AA floor"
+    end
+  end
+
+  @doc """
+  Violations where a non-text indicator falls below the 3:1 floor.
+
+  Would have caught the focus ring sitting at `--brand-primary` (hero-blue-500,
+  1.85:1 on white) — visible, but below the standard, and invisible to a
+  text-contrast check because nobody was asking about non-text.
+  """
+  def nontext_contrast_violations(css, decls) do
+    semantic = parse_semantic(css, decls)
+
+    for {fg_name, bg_names} <- Enum.sort(@nontext_on_bg),
+        %{line: line} = fg <- [Map.get(semantic, fg_name)],
+        bg_name <- bg_names,
+        bg = Map.get(semantic, bg_name),
+        ratio = contrast_ratio(semantic_rgb(fg), semantic_rgb(bg)),
+        ratio < @nontext_min_contrast do
+      "#{@theme_file}:#{line}: --#{fg_name} on --#{bg_name} is " <>
+        "#{fmt_ratio(ratio)}:1, below the #{@nontext_min_contrast}:1 WCAG non-text floor"
+    end
+  end
+
+  defp semantic_rgb(%{oklch: nil, rgb: rgb}), do: rgb
+  defp semantic_rgb(%{oklch: oklch}), do: oklch_to_rgb(oklch)
+
+  defp hex_to_rgb("#" <> hex) do
+    {r, g, b} = {String.slice(hex, 0, 2), String.slice(hex, 2, 2), String.slice(hex, 4, 2)}
+    {String.to_integer(r, 16), String.to_integer(g, 16), String.to_integer(b, 16)}
   end
 
   @doc """

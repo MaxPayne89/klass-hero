@@ -2,14 +2,14 @@
   <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
     <div>
       <h2 class={["mb-1", Theme.typography(:section_title)]}>{gettext("My Sessions")}</h2>
-      <p class="text-sm text-hero-grey-600">
+      <p class="text-sm text-[var(--fg-muted)]">
         {gettext("Manage your scheduled sessions and attendance")}
       </p>
     </div>
     <.link
       patch={~p"/provider/sessions/new"}
       class={[
-        "px-4 py-2 text-sm font-medium text-white bg-hero-blue-600 hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+        "px-4 py-2 text-sm font-medium text-white bg-hero-blue-600 hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
         Theme.rounded(:lg),
         Theme.transition(:normal)
       ]}
@@ -46,7 +46,7 @@
                 phx-click="start_session"
                 phx-value-session_id={session.id}
                 class={[
-                  "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+                  "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
                   Theme.rounded(:lg),
                   Theme.transition(:normal)
                 ]}
@@ -57,7 +57,7 @@
               <.link
                 navigate={~p"/provider/participation/#{session.id}"}
                 class={[
-                  "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2 text-center",
+                  "px-4 py-2 bg-hero-blue-600 text-white font-medium hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2 text-center",
                   Theme.rounded(:lg),
                   Theme.transition(:normal)
                 ]}
@@ -98,7 +98,7 @@
             phx-value-id={session.id}
             class={[
               "px-4 py-2 bg-white text-hero-black-100 font-medium border border-hero-grey-300",
-              "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:ring-offset-2",
+              "hover:bg-hero-grey-50 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
               Theme.rounded(:lg),
               Theme.transition(:normal)
             ]}

@@ -353,17 +353,17 @@ defmodule KlassHeroWeb.DashboardLive do
           <h3 class="font-bold text-lg">{gettext("Upcoming sessions")}</h3>
           <.link
             navigate={~p"/participation"}
-            class="text-sm font-bold text-[var(--brand-primary-dark)]"
+            class="text-sm font-bold text-[var(--fg-link)]"
           >
             {gettext("View all")} →
           </.link>
         </div>
-        <div :if={@loading?} class="text-sm text-hero-grey-500">
+        <div :if={@loading?} class="text-sm text-[var(--fg-muted)]">
           {gettext("Loading…")}
         </div>
         <div
           :if={@upcoming_sessions == [] and not @loading?}
-          class="text-sm text-hero-grey-600"
+          class="text-sm text-[var(--fg-muted)]"
         >
           {gettext("No upcoming sessions in the next few weeks.")}
         </div>
@@ -387,14 +387,14 @@ defmodule KlassHeroWeb.DashboardLive do
           <% @loading? -> %>
             <div
               id="family-programs-loading"
-              class="text-center py-12 bg-white rounded-2xl shadow-sm text-hero-grey-500"
+              class="text-center py-12 bg-white rounded-2xl shadow-sm text-[var(--fg-muted)]"
             >
               {gettext("Loading your programs…")}
             </div>
           <% @family_programs_empty? -> %>
             <div id="family-programs-empty" class="text-center py-12 bg-white rounded-2xl shadow-sm">
               <.icon name="hero-book-open" class="w-12 h-12 text-hero-grey-300 mx-auto mb-4" />
-              <p class="text-hero-grey-500 mb-4">
+              <p class="text-[var(--fg-muted)] mb-4">
                 {gettext("No programs booked yet")}
               </p>
               <.link

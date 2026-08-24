@@ -257,7 +257,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
         <div class="mb-6">
           <.link
             navigate={~p"/provider/dashboard"}
-            class="flex items-center gap-1 text-hero-grey-500 hover:text-hero-grey-700 transition-colors"
+            class="flex items-center gap-1 text-[var(--fg-muted)] hover:text-hero-grey-700 transition-colors"
           >
             <.icon name="hero-arrow-left-mini" class="w-5 h-5" />
             {gettext("Back to Dashboard")}
@@ -269,7 +269,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
         </h1>
         <p class={[
           Theme.typography(:body_small),
-          "mt-2 text-hero-grey-600"
+          "mt-2 text-[var(--fg-muted)]"
         ]}>
           {gettext(
             "Submit a report about an incident during a program or session. All fields are confidential."
@@ -335,7 +335,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
               phx-drop-target={@uploads.photo.ref}
               class={[
                 "flex flex-col items-center justify-center border-2 border-dashed border-hero-grey-300 rounded-lg p-6 cursor-pointer hover:border-hero-blue-500",
-                "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--brand-primary)] has-[:focus-visible]:ring-offset-2"
+                "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--focus-ring)] has-[:focus-visible]:ring-offset-2"
               ]}
             >
               <.live_file_input upload={@uploads.photo} class="sr-only" />
@@ -354,7 +354,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
           <div class="flex justify-end gap-3 pt-4">
             <.link
               navigate={~p"/provider/dashboard"}
-              class="text-hero-grey-600 hover:text-hero-black-100"
+              class="text-[var(--fg-muted)] hover:text-hero-black-100"
             >
               {gettext("Cancel")}
             </.link>

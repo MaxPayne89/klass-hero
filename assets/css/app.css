@@ -173,16 +173,28 @@
   /* Foregrounds */
   --fg-primary:    var(--color-hero-black);
   --fg-body:       var(--color-hero-black-100);
-  --fg-muted:      var(--color-hero-grey-600);
-  /* Muted text on warm-tinted light surfaces (hero-pink-50 / base_fade gradients):
-     grey-600 only reaches ~3.1:1 over the pink zone (fails WCAG AA). grey-800 clears
-     4.5:1 across the whole gradient. Use on pink/gradient surfaces; plain --fg-muted
-     stays for muted text on white. */
+  --fg-muted:      var(--color-hero-grey-700);
+  /* Muted text on warm surfaces (hero-pink-50 shell, hero-cream-100, base_fade).
+     Measured against those backgrounds: grey-600 2.94:1, grey-700 4.44:1 — both
+     below AA — and grey-800 6.83:1. --fg-muted above stays for white surfaces
+     only, where grey-700 reaches 5.49:1. Enforced by `mix lint_palette`; the
+     pairing table there is what makes this paragraph executable. */
   --fg-muted-on-light: var(--color-hero-grey-800);
+  /* Icon and border tint, NOT text: 2.49:1 on white. Deliberately absent from
+     lint_palette's pairing table for that reason — real copy uses --fg-muted. */
   --fg-subtle:     var(--color-hero-grey-500);
   --fg-inverse:    #ffffff;
-  --fg-link:       var(--color-hero-blue-600);
-  --fg-link-hover: var(--color-hero-blue-700);
+  /* Link text. Deliberately darker than --brand-primary: hero-blue-600 is 2.66:1
+     and hero-blue-700 is 3.99:1, both below AA as foreground. blue-800 is 6.10:1
+     on white and 4.93:1 on the warm shells. The brand cyan stays the CTA *fill*,
+     which carries white text and is unaffected. */
+  --fg-link:       var(--color-hero-blue-800);
+
+  /* Focus indicator. Non-text, so the floor is 3:1 (WCAG 2.1 SC 1.4.11), not 4.5.
+     --brand-primary (hero-blue-500) is 1.85:1 on white and fails it; blue-700 is
+     3.99:1. Kept separate from --brand-primary precisely so the CTA fill and the
+     focus ring can differ — the fill carries white text and is fine as-is. */
+  --focus-ring:    var(--color-hero-blue-700);
 
   /* Borders */
   --border-light:  var(--color-hero-grey-200);

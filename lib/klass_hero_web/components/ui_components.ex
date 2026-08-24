@@ -108,7 +108,7 @@ defmodule KlassHeroWeb.UIComponents do
       "flex items-center justify-center bg-hero-blue-500",
       avatar_size_classes(@size),
       Theme.rounded(:full),
-      @ring && "ring ring-hero-blue-500 ring-offset-2",
+      @ring && "ring ring-[var(--focus-ring)] ring-offset-2",
       @class
     ]}>
       <span class={avatar_emoji_classes(@size)}>👤</span>
@@ -174,7 +174,7 @@ defmodule KlassHeroWeb.UIComponents do
             to: "##{@id}-trigger"
           )
         }
-        class="w-10 h-10 rounded-full bg-gradient-to-br from-hero-blue-400 to-hero-yellow-500 flex items-center justify-center font-bold text-black hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-2"
+        class="w-10 h-10 rounded-full bg-gradient-to-br from-hero-blue-400 to-hero-yellow-500 flex items-center justify-center font-bold text-black hover:shadow-md transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
       >
         {kh_user_menu_initial(@user)}
       </button>
@@ -198,7 +198,7 @@ defmodule KlassHeroWeb.UIComponents do
         class="hidden absolute right-0 top-full mt-2 w-64 bg-white rounded-xl border border-hero-grey-200 shadow-xl z-40 overflow-hidden"
       >
         <div class="px-4 py-3 border-b border-hero-grey-200 bg-hero-cream-100">
-          <div class="text-xs text-hero-grey-600 font-semibold">{gettext("Signed in as")}</div>
+          <div class="text-xs text-[var(--fg-muted)] font-semibold">{gettext("Signed in as")}</div>
           <div class="text-sm font-bold truncate">{@user.email}</div>
         </div>
         <.kh_menu_item href={~p"/users/settings"} icon="hero-cog-6-tooth">
@@ -269,7 +269,7 @@ defmodule KlassHeroWeb.UIComponents do
     ~H"""
     <div :if={@is_admin} class="border-t border-hero-grey-200">
       <div class="px-4 py-2 bg-hero-cream-100">
-        <div class="text-xs text-hero-grey-600 font-semibold uppercase tracking-wider">
+        <div class="text-xs text-[var(--fg-muted)] font-semibold uppercase tracking-wider">
           {gettext("Admin")}
         </div>
       </div>
@@ -302,7 +302,7 @@ defmodule KlassHeroWeb.UIComponents do
     ~H"""
     <div :if={length(@personas) > 1} class="border-t border-hero-grey-200">
       <div class="px-4 py-2 bg-hero-cream-100">
-        <div class="text-xs text-hero-grey-600 font-semibold uppercase tracking-wider">
+        <div class="text-xs text-[var(--fg-muted)] font-semibold uppercase tracking-wider">
           {gettext("Viewing as %{persona}", persona: Persona.label(@active_persona))}
         </div>
       </div>
@@ -434,7 +434,7 @@ defmodule KlassHeroWeb.UIComponents do
       <.back_button size={:lg} color="text-blue-600" />  # Large button with custom color
   """
   attr :size, :atom, default: :md, values: [:sm, :md, :lg], doc: "Button and icon size"
-  attr :color, :string, default: "text-hero-grey-600", doc: "Icon color class"
+  attr :color, :string, default: "text-[var(--fg-muted)]", doc: "Icon color class"
 
   attr :use_browser_back, :boolean,
     default: true,
@@ -1174,7 +1174,7 @@ defmodule KlassHeroWeb.UIComponents do
         name={@name}
         value={format_date_value(@value)}
         class={[
-          "px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent",
+          "px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent",
           Theme.rounded(:lg),
           Theme.transition(:normal)
         ]}
@@ -1498,7 +1498,7 @@ defmodule KlassHeroWeb.UIComponents do
           # typography-lint-ignore: KhButton owns its own display-font CTA styling (size scales separately)
           "inline-flex items-center justify-center gap-2 font-display font-bold tracking-tight transition-all cursor-pointer",
           "active:scale-[0.98]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--brand-primary)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]",
           "disabled:cursor-not-allowed disabled:bg-hero-grey-200 disabled:text-hero-grey-400 disabled:shadow-none disabled:translate-y-0",
           "disabled:hover:bg-hero-grey-200 disabled:hover:shadow-none disabled:hover:translate-y-0 disabled:active:scale-100",
           kh_button_size_classes(@size),
@@ -1572,11 +1572,11 @@ defmodule KlassHeroWeb.UIComponents do
   defp kh_card_variant_classes(:glass),
     do: "bg-white/80 backdrop-blur-sm border border-white/50 shadow-[0_8px_32px_rgba(31,38,135,0.25)]"
 
-  defp kh_card_variant_classes(:muted), do: "bg-[var(--hero-cream-100)] border border-[var(--border-light)]"
+  defp kh_card_variant_classes(:muted), do: "bg-[var(--color-hero-cream-100)] border border-[var(--border-light)]"
 
   defp kh_card_variant_classes(:dark), do: "bg-black text-white"
 
-  defp kh_card_variant_classes(:soft), do: "bg-[var(--hero-pink-50)] border border-[var(--border-light)]"
+  defp kh_card_variant_classes(:soft), do: "bg-[var(--color-hero-pink-50)] border border-[var(--border-light)]"
 
   @doc """
   Renders a Klass Hero pill / inline status badge.
@@ -1698,7 +1698,7 @@ defmodule KlassHeroWeb.UIComponents do
   def kh_trust_mark(assigns), do: ~H""
 
   defp kh_pill_tone_classes(:primary), do: "bg-[var(--brand-primary)] text-black"
-  defp kh_pill_tone_classes(:accent), do: "bg-[var(--hero-yellow-500)] text-black"
+  defp kh_pill_tone_classes(:accent), do: "bg-[var(--color-hero-yellow-500)] text-black"
 
   defp kh_pill_tone_classes(:outline), do: "bg-white text-[var(--fg-primary)] border border-[var(--border-medium)]"
 
@@ -1707,7 +1707,7 @@ defmodule KlassHeroWeb.UIComponents do
   defp kh_pill_tone_classes(:error), do: "bg-[var(--error-bg)] text-[var(--error)]"
   defp kh_pill_tone_classes(:info), do: "bg-[var(--info-bg)] text-[var(--info)]"
   defp kh_pill_tone_classes(:dark), do: "bg-black text-white"
-  defp kh_pill_tone_classes(:cream), do: "bg-[var(--hero-cream-100)] text-[var(--fg-body)]"
+  defp kh_pill_tone_classes(:cream), do: "bg-[var(--color-hero-cream-100)] text-[var(--fg-body)]"
   defp kh_pill_tone_classes(:none), do: ""
 
   @doc """
@@ -1775,8 +1775,8 @@ defmodule KlassHeroWeb.UIComponents do
   defp kh_icon_chip_gradient(:art), do: "var(--grad-art)"
   defp kh_icon_chip_gradient(:safety), do: "var(--grad-safety)"
   defp kh_icon_chip_gradient(:dark), do: "linear-gradient(135deg,#1A1A1A 0%,#000 100%)"
-  defp kh_icon_chip_gradient(:yellow), do: "var(--hero-yellow-500)"
-  defp kh_icon_chip_gradient(:pink), do: "var(--hero-pink-50)"
+  defp kh_icon_chip_gradient(:yellow), do: "var(--color-hero-yellow-500)"
+  defp kh_icon_chip_gradient(:pink), do: "var(--color-hero-pink-50)"
   defp kh_icon_chip_gradient(:mixed), do: "var(--grad-hero)"
 
   defp kh_icon_chip_text_color(g) when g in [:cool, :safety, :dark], do: "text-white"
@@ -1828,7 +1828,7 @@ defmodule KlassHeroWeb.UIComponents do
       class={[
         "rounded-xl",
         if(@density == :compact, do: "p-2.5", else: "p-3"),
-        @hover && "hover:bg-[var(--hero-cream-100)] transition-colors",
+        @hover && "hover:bg-[var(--color-hero-cream-100)] transition-colors",
         @rest[:"phx-click"] && "cursor-pointer",
         @class
       ]}

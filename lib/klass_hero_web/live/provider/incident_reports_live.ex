@@ -63,7 +63,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
       <div class="mb-6">
         <.link
           navigate={~p"/provider/dashboard/programs"}
-          class="flex items-center gap-1 text-hero-grey-500 hover:text-hero-grey-700 transition-colors"
+          class="flex items-center gap-1 text-[var(--fg-muted)] hover:text-hero-grey-700 transition-colors"
         >
           <.icon name="hero-arrow-left-mini" class="w-5 h-5" />
           {gettext("Back to Programs")}
@@ -95,7 +95,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
                   {row.severity_label}
                 </.status_pill>
               </div>
-              <p class={[Theme.typography(:body_small), "text-hero-grey-600 mt-1"]}>
+              <p class={[Theme.typography(:body_small), "text-[var(--fg-muted)] mt-1"]}>
                 {row.occurred_at_display} · {gettext("Submitted by")} {row.reporter_display_name}
               </p>
             </div>
@@ -115,7 +115,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
             <h3 class="text-lg font-medium text-hero-black-100 mb-1">
               {gettext("No incident reports yet")}
             </h3>
-            <p class="text-hero-grey-600">
+            <p class="text-[var(--fg-muted)]">
               {gettext("Reports filed for this program will appear here.")}
             </p>
           </div>

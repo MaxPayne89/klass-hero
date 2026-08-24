@@ -66,7 +66,7 @@ defmodule KlassHeroWeb.TrustSafetyLiveTest do
       # Trust nav item is highlighted as active
       assert has_element?(
                view,
-               "header.sticky nav a.text-\\[var\\(--brand-primary-dark\\)\\]",
+               "header.sticky nav a.text-\\[var\\(--fg-link\\)\\]",
                "Trust & Safety"
              )
 

@@ -78,7 +78,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
           <.kh_card :for={b <- @benefits} class="p-7 hover:shadow-lg hover:-translate-y-1">
             <.kh_icon_chip icon={b.icon} gradient={:primary} />
             <h3 class={["mt-5", Theme.typography(:card_title), "text-xl"]}>{b.title}</h3>
-            <p class="mt-2 text-hero-grey-600 leading-relaxed">{b.desc}</p>
+            <p class="mt-2 text-[var(--fg-muted)] leading-relaxed">{b.desc}</p>
           </.kh_card>
         </div>
       </div>
@@ -137,7 +137,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
           <h2 class={[Theme.typography(:page_title)]}>
             {gettext("The bar to teach on Klass Hero")}
           </h2>
-          <p class="text-hero-grey-600 text-lg mt-3">
+          <p class="text-[var(--fg-muted)] text-lg mt-3">
             {gettext("Every Hero clears the same checks. Here's what that means.")}
           </p>
         </div>
@@ -149,7 +149,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
           >
             <.kh_icon_chip icon={s.icon} gradient={:primary} />
             <h3 class={["mt-5", Theme.typography(:card_title), "text-xl"]}>{s.title}</h3>
-            <p class="mt-2 text-hero-grey-600 leading-relaxed">{s.desc}</p>
+            <p class="mt-2 text-[var(--fg-muted)] leading-relaxed">{s.desc}</p>
           </.kh_card>
         </div>
       </div>
@@ -168,7 +168,7 @@ defmodule KlassHeroWeb.ForProvidersLive do
           <h2 class={[Theme.typography(:page_title)]}>
             {gettext("Free to join")}
           </h2>
-          <p class="text-hero-grey-600 text-lg mt-3">
+          <p class="text-[var(--fg-muted)] text-lg mt-3">
             {gettext("Every feature included. No subscription, no setup fees.")}
           </p>
         </div>
@@ -225,13 +225,13 @@ defmodule KlassHeroWeb.ForProvidersLive do
           />
         </div>
 
-        <p class="text-center text-sm text-hero-grey-600 mt-8">
+        <p class="text-center text-sm text-[var(--fg-muted)] mt-8">
           {gettext("Still curious?")}
           <.link
             navigate={~p"/contact"}
             class={
               [
-                "text-[var(--brand-primary-dark)] hover:underline",
+                "text-[var(--fg-link)] hover:underline",
                 # typography-lint-ignore: marketing accent link uses display font for visual emphasis
                 "font-display font-bold"
               ]

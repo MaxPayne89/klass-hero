@@ -171,7 +171,7 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
                 name="subject"
                 id="subject"
                 value={Phoenix.HTML.Form.input_value(@form, :subject)}
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent"
                 placeholder={gettext("e.g., Important Update")}
               />
             </div>
@@ -184,7 +184,7 @@ defmodule KlassHeroWeb.Provider.BroadcastLive do
                 name="content"
                 id="content"
                 rows="6"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-hero-blue-500 focus:border-transparent resize-none"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent resize-none"
                 placeholder={gettext("Write your message to all enrolled parents...")}
               >{Phoenix.HTML.Form.input_value(@form, :content)}</textarea>
             </div>

@@ -90,7 +90,9 @@
                     <.user_avatar size="md" />
                     <div>
                       <div class="font-semibold text-hero-black">{@current_scope.user.name}</div>
-                      <div class="text-xs text-hero-grey-500">{@current_scope.user.email}</div>
+                      <div class="text-xs text-[var(--fg-muted)]">
+                        {@current_scope.user.email}
+                      </div>
                     </div>
                   </div>
                 </li>
@@ -116,7 +118,7 @@
                 <%= if @current_scope.user.is_admin do %>
                   <div class="divider my-0"></div>
                   <li class="menu-title px-4 py-1">
-                    <span class="text-xs font-semibold text-hero-grey-500 uppercase tracking-wider">
+                    <span class="text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
                       {gettext("Admin")}
                     </span>
                   </li>
@@ -221,7 +223,7 @@
             <li><.link navigate={~p"/users/settings"}>{gettext("Settings")}</.link></li>
             <%= if @current_scope.user.is_admin do %>
               <li class="menu-title mt-4">
-                <span class="text-xs font-semibold text-hero-grey-500 uppercase tracking-wider">
+                <span class="text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
                   {gettext("Admin")}
                 </span>
               </li>

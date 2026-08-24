@@ -48,7 +48,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   defp doc_status_style(:pending), do: {"bg-yellow-100", "text-yellow-800", gettext("Pending")}
   defp doc_status_style(:approved), do: {"bg-green-100", "text-green-800", gettext("Approved")}
   defp doc_status_style(:rejected), do: {"bg-red-100", "text-red-800", gettext("Rejected")}
-  defp doc_status_style(_), do: {"bg-hero-grey-100", "text-hero-grey-600", gettext("Unknown")}
+  defp doc_status_style(_), do: {"bg-hero-grey-100", "text-[var(--fg-muted)]", gettext("Unknown")}
 
   @doc """
   Read-only pill for a Stripe Identity verification's `(status, outcome)`. Admins never
@@ -141,7 +141,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         if(@active,
           do: "border-hero-blue-500 text-hero-blue-600",
           else:
-            "border-transparent text-hero-grey-500 hover:text-hero-grey-700 hover:border-hero-grey-300"
+            "border-transparent text-[var(--fg-muted)] hover:text-hero-grey-700 hover:border-hero-grey-300"
         )
       ]}
     >
@@ -181,7 +181,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <.icon name={@icon} class={"w-5 h-5 #{@icon_color}"} />
         </div>
         <div>
-          <p class="text-sm text-hero-grey-500">{@label}</p>
+          <p class="text-sm text-[var(--fg-muted)]">{@label}</p>
           <p class="text-2xl font-bold text-hero-black-100">{@value}</p>
         </div>
       </div>
@@ -206,7 +206,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <h2 class="text-xl font-semibold text-hero-black-100 mb-1">
             {gettext("Provider Profile")}
           </h2>
-          <p class="text-sm text-hero-grey-500">
+          <p class="text-sm text-[var(--fg-muted)]">
             {gettext(
               "This is your main provider identity. Verification is required to list programs."
             )}
@@ -247,7 +247,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
         <div>
           <h3 class="text-xl font-semibold text-hero-black-100">{@business.name}</h3>
-          <p class="text-hero-grey-500 mb-2">{@business.tagline}</p>
+          <p class="text-[var(--fg-muted)] mb-2">{@business.tagline}</p>
           <div class="flex flex-wrap gap-2">
             <.verification_status_badge status={@business.verification_status} />
             <.verification_badge
@@ -494,8 +494,10 @@ defmodule KlassHeroWeb.ProviderComponents do
             label={@member.invitation_status_label}
           />
         </div>
-        <p :if={@member.email} class="text-sm text-hero-grey-500 mb-2">{@member.email}</p>
-        <p :if={@member.bio} class="text-sm text-hero-grey-600 mb-3 line-clamp-2">{@member.bio}</p>
+        <p :if={@member.email} class="text-sm text-[var(--fg-muted)] mb-2">{@member.email}</p>
+        <p :if={@member.bio} class="text-sm text-[var(--fg-muted)] mb-3 line-clamp-2">
+          {@member.bio}
+        </p>
 
         <div :if={@member.tags != []} class="flex flex-wrap gap-1.5 mb-3">
           <span
@@ -513,7 +515,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <span
             :for={qual <- @member.qualifications}
             class={[
-              "px-2 py-1 text-xs font-medium border border-hero-grey-300 text-hero-grey-600",
+              "px-2 py-1 text-xs font-medium border border-hero-grey-300 text-[var(--fg-muted)]",
               Theme.rounded(:md)
             ]}
           >
@@ -595,7 +597,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             )
           }
           class={[
-            "mt-2 text-xs text-hero-grey-500 underline hover:text-red-600",
+            "mt-2 text-xs text-[var(--fg-muted)] underline hover:text-red-600",
             Theme.transition(:normal)
           ]}
         >
@@ -623,7 +625,7 @@ defmodule KlassHeroWeb.ProviderComponents do
     ]}>
       <div class="min-w-0">
         <p class="font-medium text-hero-black-100 truncate">{@member.full_name}</p>
-        <p :if={@member.role} class="text-xs text-hero-grey-500 truncate">{@member.role}</p>
+        <p :if={@member.role} class="text-xs text-[var(--fg-muted)] truncate">{@member.role}</p>
       </div>
       <button
         type="button"
@@ -677,7 +679,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           type="button"
           phx-click="close_staff_form"
           class={[
-            "p-2 text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100",
+            "p-2 text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100",
             Theme.rounded(:lg)
           ]}
         >
@@ -741,7 +743,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[tags][]"
                 value={cat}
                 checked={cat in ((@form[:tags] && @form[:tags].value) || [])}
-                class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {cat}
             </label>
@@ -757,7 +759,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           placeholder={gettext("First Aid, UEFA B License, Child Care Cert")}
           value={qualifications_to_string(@form[:qualifications] && @form[:qualifications].value)}
         />
-        <p class="text-xs text-hero-grey-400 -mt-2">
+        <p class="text-xs text-[var(--fg-muted)] -mt-2">
           {gettext("Separate multiple qualifications with commas")}
         </p>
 
@@ -773,7 +775,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value=""
                 checked={empty_rate_type?(@form[:rate_type])}
-                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {gettext("None")}
             </label>
@@ -783,7 +785,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value="hourly"
                 checked={rate_type_is?(@form[:rate_type], "hourly")}
-                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {gettext("Hourly")}
             </label>
@@ -793,7 +795,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 name="staff_member_schema[rate_type]"
                 value="per_session"
                 checked={rate_type_is?(@form[:rate_type], "per_session")}
-                class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
               />
               {gettext("Per Session")}
             </label>
@@ -986,7 +988,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <p class="text-sm font-semibold text-hero-black-100">{gettext("Schedule (optional)")}</p>
 
           <fieldset id="meeting-days-fieldset">
-            <legend class="text-sm text-hero-grey-600 mb-2">{gettext("Meeting Days")}</legend>
+            <legend class="text-sm text-[var(--fg-muted)] mb-2">{gettext("Meeting Days")}</legend>
             <div class="flex flex-wrap gap-2">
               <label
                 :for={day <- ~w(Monday Tuesday Wednesday Thursday Friday Saturday Sunday)}
@@ -1043,7 +1045,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <p class="text-sm font-semibold text-hero-black-100">
             {gettext("Registration Period (optional)")}
           </p>
-          <p class="text-xs text-hero-grey-500">
+          <p class="text-xs text-[var(--fg-muted)]">
             {gettext("Leave blank for open registration at any time.")}
           </p>
           <div class="grid grid-cols-2 gap-4">
@@ -1064,7 +1066,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <p class="text-sm font-semibold text-hero-black-100">
             {gettext("Enrollment Capacity (optional)")}
           </p>
-          <p class="text-xs text-hero-grey-500">
+          <p class="text-xs text-[var(--fg-muted)]">
             {gettext("Set minimum and maximum enrollment for this program.")}
           </p>
           <div class="grid grid-cols-2 gap-4">
@@ -1112,13 +1114,13 @@ defmodule KlassHeroWeb.ProviderComponents do
             <p class="text-sm font-semibold text-hero-black-100">
               {gettext("Participant Restrictions (optional)")}
             </p>
-            <p class="text-xs text-hero-grey-500">
+            <p class="text-xs text-[var(--fg-muted)]">
               {gettext("Define age, gender, or grade restrictions for eligible participants.")}
             </p>
           </div>
 
           <fieldset id="eligibility-at-fieldset">
-            <legend class="text-sm text-hero-grey-600 mb-2">
+            <legend class="text-sm text-[var(--fg-muted)] mb-2">
               {gettext("Check eligibility at")}
             </legend>
             <div class="flex gap-4">
@@ -1133,7 +1135,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                       nil
                     ]
                   }
-                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
                 />
                 {gettext("Registration")}
               </label>
@@ -1146,7 +1148,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     Phoenix.HTML.Form.input_value(@participant_policy_form, :eligibility_at) ==
                       "program_start"
                   }
-                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                  class="border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
                 />
                 {gettext("Program Start")}
               </label>
@@ -1169,10 +1171,10 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
 
           <fieldset id="allowed-genders-fieldset">
-            <legend class="text-sm text-hero-grey-600 mb-2">
+            <legend class="text-sm text-[var(--fg-muted)] mb-2">
               {gettext("Allowed Genders")}
             </legend>
-            <p class="text-xs text-hero-grey-400 mb-2">
+            <p class="text-xs text-[var(--fg-muted)] mb-2">
               {gettext("Leave unchecked to allow all genders.")}
             </p>
             <div class="flex flex-wrap gap-3">
@@ -1198,7 +1200,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                               ) ||
                                 [])
                   }
-                  class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-hero-blue-500"
+                  class="rounded border-hero-grey-300 text-hero-blue-600 focus:ring-[var(--focus-ring)]"
                 />
                 {label}
               </label>
@@ -1317,7 +1319,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       class={[
         "w-full h-full min-h-[200px] border-2 border-dashed border-hero-grey-300",
         "flex flex-col items-center justify-center gap-2",
-        "text-hero-grey-400 hover:border-hero-blue-500 hover:text-hero-blue-600 active:scale-[0.98]",
+        "text-[var(--fg-muted)] hover:border-hero-blue-500 hover:text-hero-blue-600 active:scale-[0.98]",
         Theme.rounded(:xl),
         Theme.transition(:normal),
         @class
@@ -1364,7 +1366,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <form phx-change="search_programs" id="programs-search-form" class="relative">
               <.icon
                 name="hero-magnifying-glass-mini"
-                class="w-5 h-5 text-hero-grey-400 absolute left-3 top-1/2 -translate-y-1/2"
+                class="w-5 h-5 text-[var(--fg-muted)] absolute left-3 top-1/2 -translate-y-1/2"
               />
               <input
                 type="text"
@@ -1373,7 +1375,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 placeholder={gettext("Search by name...")}
                 class={[
                   "pl-10 pr-4 py-2 w-full sm:w-64 border border-hero-grey-300 bg-white",
-                  "text-sm placeholder-hero-grey-400 focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500",
+                  "text-sm placeholder-hero-grey-400 focus:border-hero-blue-500 focus:ring-1 focus:ring-[var(--focus-ring)]",
                   Theme.rounded(:lg)
                 ]}
                 phx-debounce="300"
@@ -1382,13 +1384,13 @@ defmodule KlassHeroWeb.ProviderComponents do
             <form phx-change="filter_by_staff" id="programs-staff-filter-form" class="relative">
               <.icon
                 name="hero-funnel-mini"
-                class="w-5 h-5 text-hero-grey-400 absolute left-3 top-1/2 -translate-y-1/2"
+                class="w-5 h-5 text-[var(--fg-muted)] absolute left-3 top-1/2 -translate-y-1/2"
               />
               <select
                 name="staff_filter"
                 class={[
                   "pl-10 pr-8 py-2 w-full sm:w-40 border border-hero-grey-300 bg-white",
-                  "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500 appearance-none",
+                  "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-[var(--focus-ring)] appearance-none",
                   Theme.rounded(:lg)
                 ]}
               >
@@ -1409,19 +1411,19 @@ defmodule KlassHeroWeb.ProviderComponents do
         <table class="w-full">
           <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-hero-grey-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
                 {gettext("Program Name")}
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-hero-grey-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
                 {gettext("Assigned Staff")}
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-hero-grey-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
                 {gettext("Status")}
               </th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-hero-grey-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
                 {gettext("Enrollment")}
               </th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-hero-grey-500 uppercase tracking-wider">
+              <th class="px-4 py-3 text-right text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
                 {gettext("Actions")}
               </th>
             </tr>
@@ -1430,7 +1432,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <tr :for={{dom_id, program} <- @programs} id={dom_id} class="hover:bg-hero-grey-50">
               <td class="px-4 py-4">
                 <div class="font-medium text-hero-black-100">{program.name}</div>
-                <div class="text-sm text-hero-grey-500">
+                <div class="text-sm text-[var(--fg-muted)]">
                   {program.category} • {program.price}
                 </div>
               </td>
@@ -1452,7 +1454,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   <span class="text-sm text-hero-black-100">{program.assigned_staff.lead.name}</span>
                   <span
                     :if={program.assigned_staff.others_count > 0}
-                    class="text-sm text-hero-grey-500 whitespace-nowrap"
+                    class="text-sm text-[var(--fg-muted)] whitespace-nowrap"
                   >
                     +{program.assigned_staff.others_count}
                   </span>
@@ -1460,7 +1462,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <span
                   :if={!program.assigned_staff.lead and program.assigned_staff.count > 0}
                   id={"program-staff-leaderless-#{program.id}"}
-                  class="text-sm text-hero-grey-500"
+                  class="text-sm text-[var(--fg-muted)]"
                 >
                   {ngettext(
                     "%{count} staff member · no lead",
@@ -1471,7 +1473,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <span
                   :if={program.assigned_staff.count == 0}
                   id={"program-staff-empty-#{program.id}"}
-                  class="text-sm text-hero-grey-400 italic"
+                  class="text-sm text-[var(--fg-muted)] italic"
                 >
                   {gettext("Unassigned")}
                 </span>
@@ -1490,7 +1492,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     >
                     </div>
                   </div>
-                  <span class="text-sm text-hero-grey-600">
+                  <span class="text-sm text-[var(--fg-muted)]">
                     {format_enrollment_count(program.enrolled)}/{format_enrollment_count(
                       program.capacity
                     )}
@@ -1684,7 +1686,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     "p-2",
                     Theme.rounded(:lg),
                     Theme.transition(:normal),
-                    "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
+                    "text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100"
                   ]}
                 >
                   <.icon name="hero-megaphone-mini" class="w-5 h-5" />
@@ -1720,7 +1722,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 "px-4 py-3 text-sm font-medium border-b-2 -mb-px",
                 if(@active_tab == "enrolled",
                   do: "border-hero-blue-500 text-hero-blue-600",
-                  else: "border-transparent text-hero-grey-500 hover:text-hero-black-100"
+                  else: "border-transparent text-[var(--fg-muted)] hover:text-hero-black-100"
                 )
               ]}
             >
@@ -1737,7 +1739,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 "px-4 py-3 text-sm font-medium border-b-2 -mb-px",
                 if(@active_tab == "invites",
                   do: "border-hero-blue-500 text-hero-blue-600",
-                  else: "border-transparent text-hero-grey-500 hover:text-hero-black-100"
+                  else: "border-transparent text-[var(--fg-muted)] hover:text-hero-black-100"
                 )
               ]}
             >
@@ -1810,7 +1812,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <%= if @modal.sessions == [] do %>
             <div class="text-center py-12">
               <.icon name="hero-calendar-days" class="w-12 h-12 text-hero-grey-300 mx-auto" />
-              <p class="mt-4 text-hero-grey-500">{gettext("No sessions scheduled yet.")}</p>
+              <p class="mt-4 text-[var(--fg-muted)]">{gettext("No sessions scheduled yet.")}</p>
             </div>
           <% else %>
             <table class="w-full text-sm">
@@ -1826,7 +1828,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 <tr :for={s <- @modal.sessions} class="border-t">
                   <td class="px-4 py-3">
                     {Calendar.strftime(s.session_date, "%a, %d %b")}
-                    <span class="text-hero-grey-500">
+                    <span class="text-[var(--fg-muted)]">
                       · {Calendar.strftime(s.start_time, "%H:%M")}–{Calendar.strftime(
                         s.end_time,
                         "%H:%M"
@@ -1892,7 +1894,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-6">
-          <p :if={@modal.waivers == []} id="waivers-empty" class="text-sm text-hero-grey-500">
+          <p :if={@modal.waivers == []} id="waivers-empty" class="text-sm text-[var(--fg-muted)]">
             {gettext("No waivers yet. Parents enrol without signing anything.")}
           </p>
 
@@ -1909,7 +1911,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   <p class="truncate font-medium text-hero-black-100">{entry.waiver.title}</p>
                   <.waiver_requirement required={entry.waiver.required} />
                 </div>
-                <p class="text-sm text-hero-grey-500">
+                <p class="text-sm text-[var(--fg-muted)]">
                   {gettext("Version %{number}", number: entry.version.version)}
                 </p>
               </div>
@@ -1969,7 +1971,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               label={gettext("Parents must sign this before enrolling")}
             />
 
-            <p :if={@modal.editing_id} class="text-xs text-hero-grey-500">
+            <p :if={@modal.editing_id} class="text-xs text-[var(--fg-muted)]">
               {gettext(
                 "Publishing keeps every earlier version on record; signatures already given stay bound to the wording they were shown."
               )}
@@ -2053,7 +2055,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     {gettext("Lead")}
                   </span>
                 </p>
-                <p :if={member.role} class="truncate text-sm text-hero-grey-500">{member.role}</p>
+                <p :if={member.role} class="truncate text-sm text-[var(--fg-muted)]">{member.role}</p>
               </div>
 
               <div class="flex shrink-0 items-center gap-1">
@@ -2089,7 +2091,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <p
             :if={@modal.members == []}
             id="staffing-empty"
-            class="py-6 text-center text-hero-grey-500"
+            class="py-6 text-center text-[var(--fg-muted)]"
           >
             {gettext("Nobody is on this program yet.")}
           </p>
@@ -2131,7 +2133,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               </button>
             </form>
 
-            <p class="mt-2 text-xs text-hero-grey-400">
+            <p class="mt-2 text-xs text-[var(--fg-muted)]">
               {gettext("Staff you add can read and reply to this program's parent conversations.")}
             </p>
           </div>
@@ -2177,7 +2179,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <h2 id="session-staffing-modal-title" class={Theme.typography(:section_title)}>
               {gettext("Staffing — %{date}", date: @modal.session_label)}
             </h2>
-            <p class="mt-1 truncate text-sm text-hero-grey-500">{@modal.program_title}</p>
+            <p class="mt-1 truncate text-sm text-[var(--fg-muted)]">{@modal.program_title}</p>
           </div>
           <.action_button
             id="session-staffing-close"
@@ -2197,7 +2199,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               Theme.rounded(:lg),
               if(@modal.overridden?,
                 do: "bg-hero-yellow-100 text-hero-grey-900",
-                else: "bg-hero-grey-50 text-hero-grey-600"
+                else: "bg-hero-grey-50 text-[var(--fg-muted)]"
               )
             ]}
           >
@@ -2239,7 +2241,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                     {gettext("Lead")}
                   </span>
                 </p>
-                <p :if={member.role} class="truncate text-sm text-hero-grey-500">{member.role}</p>
+                <p :if={member.role} class="truncate text-sm text-[var(--fg-muted)]">{member.role}</p>
               </div>
 
               <%!-- Offered whether or not the session already has its own roster: the
@@ -2271,7 +2273,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <p
             :if={@modal.members == []}
             id="session-staffing-empty"
-            class="py-6 text-center text-hero-grey-500"
+            class="py-6 text-center text-[var(--fg-muted)]"
           >
             {gettext("Nobody is working this session yet.")}
           </p>
@@ -2317,7 +2319,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <p
               :if={@modal.assignable_options == []}
               id="session-staffing-nobody-addable"
-              class="mt-2 text-sm text-hero-grey-500"
+              class="mt-2 text-sm text-[var(--fg-muted)]"
             >
               {gettext("Everyone on your team is already working this session.")}
             </p>
@@ -2387,25 +2389,25 @@ defmodule KlassHeroWeb.ProviderComponents do
     ~H"""
     <div :if={@entries == []} id="roster-empty" class="text-center py-8">
       <.icon name="hero-user-group" class="w-12 h-12 mx-auto text-hero-grey-300 mb-3" />
-      <p class="text-hero-grey-500">{gettext("No enrollments yet.")}</p>
+      <p class="text-[var(--fg-muted)]">{gettext("No enrollments yet.")}</p>
     </div>
 
     <table :if={@entries != []} id="roster-table" class="w-full">
       <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
         <tr>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
             {gettext("Child Name")}
           </th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
             {gettext("Status")}
           </th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
             {gettext("Waivers")}
           </th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
             {gettext("Enrolled")}
           </th>
-          <th class="px-3 py-2 text-right text-xs font-semibold text-hero-grey-500 uppercase">
+          <th class="px-3 py-2 text-right text-xs font-semibold text-[var(--fg-muted)] uppercase">
             <span class="sr-only">{gettext("Actions")}</span>
           </th>
         </tr>
@@ -2425,7 +2427,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   scanning for who still owes them a form should not see a green tick that
                   means "there was never anything to sign". --%>
             <span id={"waiver-status-#{entry.enrollment_id}"} data-status={entry.waiver_status}>
-              <span :if={entry.waiver_status == :not_required} class="text-sm text-hero-grey-400">
+              <span :if={entry.waiver_status == :not_required} class="text-sm text-[var(--fg-muted)]">
                 —
               </span>
               <.status_pill
@@ -2436,7 +2438,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               </.status_pill>
             </span>
           </td>
-          <td class="px-3 py-3 text-sm text-hero-grey-500">
+          <td class="px-3 py-3 text-sm text-[var(--fg-muted)]">
             {format_enrollment_date(entry.enrolled_at)}
           </td>
           <td class="px-3 py-3 text-right">
@@ -2452,7 +2454,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                   "p-2 inline-flex",
                   Theme.rounded(:lg),
                   Theme.transition(:normal),
-                  "text-hero-grey-400 hover:text-hero-black-100 hover:bg-hero-grey-100"
+                  "text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100"
                 ]}
               >
                 <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />
@@ -2520,7 +2522,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             Theme.transition(:normal),
             if(@invite_mode == "single",
               do: "border-hero-blue-500 bg-hero-blue-500/5 text-hero-blue-600",
-              else: "border-hero-grey-300 text-hero-grey-600 hover:bg-hero-grey-50"
+              else: "border-hero-grey-300 text-[var(--fg-muted)] hover:bg-hero-grey-50"
             )
           ]}
         >
@@ -2538,7 +2540,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             Theme.transition(:normal),
             if(@invite_mode == "csv",
               do: "border-hero-blue-500 bg-hero-blue-500/5 text-hero-blue-600",
-              else: "border-hero-grey-300 text-hero-grey-600 hover:bg-hero-grey-50"
+              else: "border-hero-grey-300 text-[var(--fg-muted)] hover:bg-hero-grey-50"
             )
           ]}
         >
@@ -2560,7 +2562,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <label
               for={@uploads.csv_file.ref}
               class={[
-                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white cursor-pointer",
                 Theme.rounded(:lg),
                 Theme.gradient(:primary)
@@ -2586,7 +2588,7 @@ defmodule KlassHeroWeb.ProviderComponents do
                 type="button"
                 phx-click="cancel_csv_upload"
                 phx-value-ref={entry.ref}
-                class="text-sm text-hero-grey-500 hover:text-hero-black-100"
+                class="text-sm text-[var(--fg-muted)] hover:text-hero-black-100"
               >
                 {gettext("Cancel")}
               </button>
@@ -2601,7 +2603,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             href="/downloads/enrollment-import-template.csv"
             download="enrollment-import-template.csv"
             class={[
-              "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-hero-grey-600",
+              "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--fg-muted)]",
               "border border-hero-grey-300 hover:bg-hero-grey-50",
               Theme.rounded(:lg)
             ]}
@@ -2658,31 +2660,31 @@ defmodule KlassHeroWeb.ProviderComponents do
     ~H"""
     <div :if={@invites == []} id={"#{@id}-empty"} class="text-center py-8">
       <.icon name="hero-envelope" class="w-12 h-12 mx-auto text-hero-grey-300 mb-3" />
-      <p class="text-hero-grey-500">{@empty_message}</p>
+      <p class="text-[var(--fg-muted)]">{@empty_message}</p>
     </div>
 
     <div :if={@invites != []} class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
       <table id={"#{@id}-table"} class="w-full min-w-[500px]">
         <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
           <tr>
-            <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+            <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
               {gettext("Child Name")}
             </th>
             <%!-- Hidden below `sm`: a fifth column pushes Actions off a 375px viewport,
                   so on mobile the program rides under the child's name instead. --%>
             <th
               :if={@show_program?}
-              class="hidden sm:table-cell px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase"
+              class="hidden sm:table-cell px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase"
             >
               {gettext("Program")}
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+            <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
               {gettext("Guardian Email")}
             </th>
-            <th class="px-3 py-2 text-left text-xs font-semibold text-hero-grey-500 uppercase">
+            <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
               {gettext("Status")}
             </th>
-            <th class="px-3 py-2 text-right text-xs font-semibold text-hero-grey-500 uppercase">
+            <th class="px-3 py-2 text-right text-xs font-semibold text-[var(--fg-muted)] uppercase">
               {gettext("Actions")}
             </th>
           </tr>
@@ -2693,15 +2695,18 @@ defmodule KlassHeroWeb.ProviderComponents do
               {invite.child_first_name} {invite.child_last_name}
               <span
                 :if={@show_program?}
-                class="block sm:hidden text-xs font-normal text-hero-grey-500"
+                class="block sm:hidden text-xs font-normal text-[var(--fg-muted)]"
               >
                 {invite.program_title || gettext("Unknown program")}
               </span>
             </td>
-            <td :if={@show_program?} class="hidden sm:table-cell px-3 py-3 text-sm text-hero-grey-500">
+            <td
+              :if={@show_program?}
+              class="hidden sm:table-cell px-3 py-3 text-sm text-[var(--fg-muted)]"
+            >
               {invite.program_title || gettext("Unknown program")}
             </td>
-            <td class="px-3 py-3 text-sm text-hero-grey-500">
+            <td class="px-3 py-3 text-sm text-[var(--fg-muted)]">
               {invite.guardian_email}
             </td>
             <td class="px-3 py-3">
@@ -2713,7 +2718,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               <p
                 :if={invite.status == :failed && failure_message(invite)}
                 id={"invite-error-#{invite.id}"}
-                class="mt-1 text-xs text-hero-grey-500 break-words"
+                class="mt-1 text-xs text-[var(--fg-muted)] break-words"
               >
                 {failure_message(invite)}
               </p>
@@ -3086,7 +3091,7 @@ defmodule KlassHeroWeb.ProviderComponents do
 
       <div :for={entry <- @upload.entries} class="mb-4">
         <.live_img_preview entry={entry} class={@preview_class} />
-        <p class="text-sm text-hero-grey-500 mt-1">{entry.client_name}</p>
+        <p class="text-sm text-[var(--fg-muted)] mt-1">{entry.client_name}</p>
         <button
           type="button"
           phx-click="cancel_upload"
@@ -3105,7 +3110,7 @@ defmodule KlassHeroWeb.ProviderComponents do
       <label
         for={@upload.ref}
         class={[
-          "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)]",
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)]",
           "peer-focus-visible:ring-offset-2",
           "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
           "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
@@ -3116,7 +3121,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         <.icon name={@icon} class="w-4 h-4" />
         {@trigger}
       </label>
-      <p class="text-xs text-hero-grey-400 mt-2">{@hint}</p>
+      <p class="text-xs text-[var(--fg-muted)] mt-2">{@hint}</p>
     </div>
     """
   end
@@ -3152,12 +3157,12 @@ defmodule KlassHeroWeb.ProviderComponents do
       <h2 class="text-lg font-semibold text-hero-black-100 mb-4">
         {gettext("Verification Documents")}
       </h2>
-      <p class="text-sm text-hero-grey-500 mb-6">
+      <p class="text-sm text-[var(--fg-muted)] mb-6">
         {gettext("Upload documents to be verified. Documents are reviewed by our team.")}
       </p>
 
       <div id="verification-docs" phx-update="stream" class="space-y-3 mb-6">
-        <div id="vdoc-empty" class="hidden only:block text-sm text-hero-grey-400 italic py-4">
+        <div id="vdoc-empty" class="hidden only:block text-sm text-[var(--fg-muted)] italic py-4">
           {gettext("No documents uploaded yet.")}
         </div>
         <div
@@ -3174,7 +3179,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               <p class="text-sm font-medium text-hero-black-100">
                 {ProviderPresenter.document_type_label(doc.document_type)}
               </p>
-              <p class="text-xs text-hero-grey-500">{doc.original_filename}</p>
+              <p class="text-xs text-[var(--fg-muted)]">{doc.original_filename}</p>
             </div>
           </div>
           <.doc_status_badge status={doc.status} />
@@ -3204,7 +3209,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               phx-change="select_doc_type"
               class={[
                 "w-full sm:w-64 px-3 py-2 border border-hero-grey-300 bg-white",
-                "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-hero-blue-500",
+                "text-sm focus:border-hero-blue-500 focus:ring-1 focus:ring-[var(--focus-ring)]",
                 Theme.rounded(:lg)
               ]}
             >
@@ -3223,7 +3228,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <label
               for={@uploads.verification_doc.ref}
               class={[
-                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
                 "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),
@@ -3233,7 +3238,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               <.icon name="hero-document-plus-mini" class="w-4 h-4" />
               {gettext("Select File")}
             </label>
-            <p class="text-xs text-hero-grey-400 mt-2">
+            <p class="text-xs text-[var(--fg-muted)] mt-2">
               {gettext("PDF, JPG or PNG. Max 10MB.")}
             </p>
             <div
@@ -3286,7 +3291,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         <h3 class="text-sm font-semibold text-hero-black-100 mb-1">
           {gettext("Video Screening")}
         </h3>
-        <p class="text-sm text-hero-grey-500 mb-3">
+        <p class="text-sm text-[var(--fg-muted)] mb-3">
           {gettext(
             "Record a short video introducing yourself. Our team reviews it to assess communication skills and alignment with our values."
           )}
@@ -3303,7 +3308,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <label
               for={@uploads.verification_video.ref}
               class={[
-                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--focus-ring)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
                 "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),
@@ -3313,7 +3318,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               <.icon name="hero-video-camera-mini" class="w-4 h-4" />
               {gettext("Select Video")}
             </label>
-            <p class="text-xs text-hero-grey-400 mt-2">
+            <p class="text-xs text-[var(--fg-muted)] mt-2">
               {gettext("MP4, MOV or WEBM. Max 100MB.")}
             </p>
             <div

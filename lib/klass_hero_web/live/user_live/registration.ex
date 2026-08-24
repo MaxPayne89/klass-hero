@@ -18,7 +18,7 @@ defmodule KlassHeroWeb.UserLive.Registration do
         {gettext("Already registered?")}
         <.link
           navigate={~p"/users/log-in"}
-          class="font-bold text-[var(--brand-primary-dark)] hover:underline"
+          class="font-bold text-[var(--fg-link)] hover:underline"
         >
           {gettext("Log in")}
         </.link>
@@ -64,7 +64,7 @@ defmodule KlassHeroWeb.UserLive.Registration do
                     name="user[intended_roles][]"
                     value="parent"
                     checked={:parent in (@form[:intended_roles].value || [])}
-                    class="mt-1 rounded border-2 border-[var(--border-medium)] text-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                    class="mt-1 rounded border-2 border-[var(--border-medium)] text-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--focus-ring)]"
                   />
                   <div>
                     <span class="font-semibold text-hero-black">
@@ -81,7 +81,7 @@ defmodule KlassHeroWeb.UserLive.Registration do
                     name="user[intended_roles][]"
                     value="provider"
                     checked={:provider in (@form[:intended_roles].value || [])}
-                    class="mt-1 rounded border-2 border-[var(--border-medium)] text-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+                    class="mt-1 rounded border-2 border-[var(--border-medium)] text-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--focus-ring)]"
                   />
                   <div>
                     <span class="font-semibold text-hero-black">

@@ -198,7 +198,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
           <div class="flex items-center gap-4 mb-6">
             <.link
               navigate={~p"/provider/dashboard"}
-              class="flex items-center gap-1 text-hero-grey-500 hover:text-hero-black-100 transition-colors"
+              class="flex items-center gap-1 text-[var(--fg-muted)] hover:text-hero-black-100 transition-colors"
             >
               <.icon name="hero-arrow-left-mini" class="w-5 h-5" />
               {gettext("Back to Dashboard")}
@@ -260,7 +260,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
                   <h3 class={[Theme.typography(:card_title), "text-hero-black-100"]}>
                     {gettext("Branding & Presence")}
                   </h3>
-                  <p class="text-sm text-hero-grey-500 mt-1">
+                  <p class="text-sm text-[var(--fg-muted)] mt-1">
                     {gettext("Shown on your public profile page.")}
                   </p>
                 </div>
