@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.88.0](https://github.com/MaxPayne89/klass-hero/compare/v0.87.1...v0.88.0) (2026-08-24)
+
+
+### Features
+
+* add the public provider profile page ([#1504](https://github.com/MaxPayne89/klass-hero/issues/1504)) ([bf799f4](https://github.com/MaxPayne89/klass-hero/commit/bf799f42e404ace630e7f2d453d4aeedf81e03b3))
+* share one branding section between both provider forms, with a live preview ([#1506](https://github.com/MaxPayne89/klass-hero/issues/1506)) ([0eeba35](https://github.com/MaxPayne89/klass-hero/commit/0eeba35203483d07bb99a2374084c7537701f968))
+
+
+### Bug Fixes
+
+* correct WCAG contrast across the muted text layer ([#1500](https://github.com/MaxPayne89/klass-hero/issues/1500)) ([cd1c5f5](https://github.com/MaxPayne89/klass-hero/commit/cd1c5f55fd8d9054ba1ade6c6a8f83d9edce5d2e)), closes [#1303](https://github.com/MaxPayne89/klass-hero/issues/1303)
+
 ## [0.87.1](https://github.com/MaxPayne89/klass-hero/compare/v0.87.0...v0.87.1) (2026-08-24)
 
 
