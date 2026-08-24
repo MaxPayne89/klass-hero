@@ -24,9 +24,13 @@ mix test --failed            # Re-run failed tests
 mix test.e2e                 # Run end-to-end tests (Wallaby)
 
 # Quality
-mix precommit                # Full pre-commit: compile --warnings-as-errors, deps.unlock --unused, format, lint_typography, lint_translations, credo --strict, test --include slow
+mix precommit                # Full pre-commit: compile --warnings-as-errors, deps.unlock --unused, xref compile-coupling, format, the lint_* tasks, credo --strict, test --include slow
 mix credo --strict           # Elixir linting (runs in CI; .credo.exs sets strict: true, so bare `mix credo` is equivalent)
 mix lint_typography          # Check font/typography usage in templates
+mix lint_raw_html            # Every raw/1 call in the web layer needs a written waiver
+mix lint_doc_refs            # Paths/modules cited in CLAUDE.md, .claude/rules, .claude/agents still exist
+mix credo.backlog            # Staged third-party checks — reported, never gating (see .credo.backlog.exs)
+bin/lint-shell               # shellcheck over bin/ + .claude/hooks, actionlint over workflows
 
 # Database
 mix ecto.migrate             # Run migrations
@@ -194,6 +198,12 @@ These checks run automatically on every PR — don't manually recheck what CI ca
 | `mix lint_translations` | Stale `.pot` templates, empty/fuzzy German `msgstr` |
 | `mix lint_read_tables` | Projection read-table convention: a context-root schema that is neither an entity nor a declared read table, a read table carrying a changeset, or a read table outside the context root |
 | `mix lint_acl_boundary` | A function reading another context's table (`in "<table>"`) without an `acl_span` — ADR 0015 permits the direct read but requires the hop stay visible in traces |
+| `mix lint_raw_html` | A `raw/1` call in the web layer with no waiver comment saying why the input is safe. Sobelow's `XSS.Raw` reports but does not fail (`.sobelow-conf` sets `exit: :high`), and Credo cannot parse a standalone `.html.heex` at all |
+| `mix lint_doc_refs` | A path or `KlassHero.*` module cited in `CLAUDE.md`, `.claude/rules/` or `.claude/agents/` that no longer exists. `docs/adr/` is exempt — an ADR cites what it replaced on purpose |
+| `mix deps.unlock --check-unused` | An orphaned `mix.lock` entry. `precommit` runs the mutating form, which never fails |
+| `mix xref graph --label compile-connected` | A runtime dependency becoming a compile-time one. Gated at the count when it landed (32), so it catches growth rather than demanding a cleanup |
+| `bin/lint-shell` | shellcheck over every shell script and actionlint over the workflows. Not in `precommit`, which would then require two brew installs |
+| gitleaks | Secrets, over full history rather than the diff. Allowlists live in `.gitleaks.toml`, each with its reason |
 | `mix test` | Functional regressions (full suite with PostgreSQL) |
 | Sobelow | Common Phoenix security vulnerabilities |
 | `mix deps.audit` | Known dependency vulnerabilities (community advisory DB) |

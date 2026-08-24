@@ -54,6 +54,30 @@ GitHub enforces both: `required_linear_history` on `main` rejects merge commits,
 
 Inside a feature branch, commit as often as you like — those commits vanish into a single squash on merge.
 
+## Second Occurrence Escalates
+
+A review comment fixes one PR. A rule fixes every PR after it.
+
+So when a review — human or a review skill — flags the **same class** of problem for the
+second time, the fix does not stop at the diff. It goes into `.claude/rules/`, or becomes
+a `lint_*` task when it is mechanically checkable. Most of the `lint_*` tasks exist for
+exactly this reason: `lint_hero_colors` was written after ~110 utility classes rendered
+silently unstyled, not before.
+
+This is the half of drift-prevention no linter can carry. `mix lint_doc_refs` catches a
+rule that cites something deleted; nothing can catch a rule that is well-formed and simply
+no longer true. That stays a judgement call, and the trigger for making it is noticing you
+have explained the same thing twice.
+
+Two failure modes worth naming, both already recorded:
+
+- A rule duplicated into `.claude/agents/*.md` drifts from the one in `.claude/rules/`, and
+  the stale copy emits **false** review findings (#1255). Prefer pointing at the rule over
+  restating it.
+- A check that is too noisy to obey teaches everyone to skim past its whole category. If a
+  new check would land with a large backlog, stage it (see `.credo.backlog.exs`) rather
+  than gating it and normalising the noise.
+
 ## Important Notes
 
 - No references to Claude Code in commits, issues, or PRs
