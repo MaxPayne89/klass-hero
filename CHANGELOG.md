@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.87.1](https://github.com/MaxPayne89/klass-hero/compare/v0.87.0...v0.87.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* make file uploads reachable by keyboard ([#1498](https://github.com/MaxPayne89/klass-hero/issues/1498)) ([0e95e6d](https://github.com/MaxPayne89/klass-hero/commit/0e95e6da00d87bf833ff42740c743099d40e2ec1)), closes [#1303](https://github.com/MaxPayne89/klass-hero/issues/1303)
+
 ## [0.87.0](https://github.com/MaxPayne89/klass-hero/compare/v0.86.0...v0.87.0) (2026-08-23)
 
 
