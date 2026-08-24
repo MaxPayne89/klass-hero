@@ -3,6 +3,7 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
 
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.SessionDetail
 
   describe "programs_table/1" do
@@ -247,6 +248,47 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
 
       refute html =~ "resend_invite"
       refute html =~ "delete_invite"
+    end
+  end
+
+  describe "pv_branding_section/1" do
+    test "renders an input per revealed network and a picker button for the rest" do
+      html = render_branding(revealed: [:instagram_url])
+
+      assert html =~ ~s(name="provider_profile_schema[instagram_url]")
+      refute html =~ ~s(name="provider_profile_schema[facebook_url]")
+
+      refute html =~ ~s(id="add-instagram_url")
+      assert html =~ ~s(id="add-facebook_url")
+    end
+
+    test "drops the picker entirely once every network is revealed" do
+      # Not reachable from the LiveView tests without five clicks, and an empty
+      # button row would still render its wrapper and its gap.
+      html = render_branding(revealed: ProviderProfile.social_link_fields())
+
+      for field <- ProviderProfile.social_link_fields() do
+        assert html =~ ~s(name="provider_profile_schema[#{field}]")
+        refute html =~ ~s(id="add-#{field}")
+      end
+    end
+
+    test "renders no cover upload when given no uploads" do
+      # The completion form has no :cover upload configured, so reading
+      # @uploads.cover there would raise.
+      html = render_branding(revealed: [])
+
+      refute html =~ ~s(id="cover-upload")
+      assert html =~ ~s(name="provider_profile_schema[tagline]")
+    end
+
+    defp render_branding(opts) do
+      assigns = %{
+        form: Phoenix.Component.to_form(%{}, as: :provider_profile_schema),
+        revealed: Keyword.fetch!(opts, :revealed)
+      }
+
+      render_component(&KlassHeroWeb.ProviderComponents.pv_branding_section/1, assigns)
     end
   end
 end

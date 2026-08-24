@@ -542,20 +542,16 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             {gettext("Edit")}
           </button>
-          <button
+          <.kh_button
             :if={@member.can_resend?}
-            type="button"
+            variant={:primary}
+            size={:sm}
             id={"resend-invitation-#{@member.id}"}
             phx-click="resend_invitation"
             phx-value-id={@member.id}
-            class={[
-              "px-3 py-2 bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-black-100 text-xs font-medium",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
           >
             {gettext("Resend")}
-          </button>
+          </.kh_button>
           <%!-- Ending employment is routine and reversible, so it reads as an
                 ordinary action rather than a red destructive one. --%>
           <button
@@ -831,23 +827,13 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div class="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            id="save-staff-btn"
-            class={[
-              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
-              "text-hero-black-100 font-semibold active:scale-[0.98]",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
-          >
-            <.icon name="hero-check-mini" class="w-5 h-5" />
+          <.kh_button variant={:primary} type="submit" id="save-staff-btn" icon="hero-check-mini">
             <%= if @editing do %>
               {gettext("Save Changes")}
             <% else %>
               {gettext("Add Member")}
             <% end %>
-          </button>
+          </.kh_button>
           <button
             type="button"
             phx-click="close_staff_form"
@@ -1274,19 +1260,9 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             {gettext("Cancel")}
           </button>
-          <button
-            type="submit"
-            id="save-program-btn"
-            class={[
-              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
-              "text-hero-black-100 font-semibold",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
-          >
-            <.icon name="hero-check-mini" class="w-5 h-5" />
+          <.kh_button variant={:primary} type="submit" id="save-program-btn" icon="hero-check-mini">
             {gettext("Save Program")}
-          </button>
+          </.kh_button>
         </div>
       </.form>
     </div>
@@ -2117,21 +2093,15 @@ defmodule KlassHeroWeb.ProviderComponents do
                   {label}
                 </option>
               </select>
-              <button
+              <.kh_button
+                variant={:primary}
                 type="submit"
                 id="staffing-add-btn"
+                icon="hero-plus-mini"
                 disabled={@modal.assignable_options == []}
-                class={[
-                  "flex items-center justify-center gap-2 px-4 py-2 font-semibold",
-                  "bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-black-100",
-                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400",
-                  Theme.rounded(:lg),
-                  Theme.transition(:normal)
-                ]}
               >
-                <.icon name="hero-plus-mini" class="w-5 h-5" />
                 {gettext("Add")}
-              </button>
+              </.kh_button>
             </form>
 
             <p class="mt-2 text-xs text-[var(--fg-muted)]">
@@ -2299,22 +2269,16 @@ defmodule KlassHeroWeb.ProviderComponents do
                   disabled={@modal.assignable_options == []}
                 />
               </div>
-              <button
+              <.kh_button
+                variant={:primary}
                 type="submit"
                 id="session-staffing-add-btn"
+                icon="hero-plus-mini"
+                class="w-full sm:w-auto"
                 disabled={@modal.assignable_options == []}
-                class={[
-                  "flex min-h-11 w-full items-center justify-center gap-2 px-4 py-2 font-semibold sm:w-auto",
-                  "bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-grey-900",
-                  "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hero-yellow-700",
-                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400 disabled:active:scale-100",
-                  Theme.rounded(:md),
-                  Theme.transition(:fast)
-                ]}
               >
-                <.icon name="hero-plus-mini" class="w-5 h-5" />
                 {gettext("Add")}
-              </button>
+              </.kh_button>
             </.form>
 
             <p

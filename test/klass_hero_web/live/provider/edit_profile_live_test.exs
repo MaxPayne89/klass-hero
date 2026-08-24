@@ -14,6 +14,99 @@ defmodule KlassHeroWeb.Provider.EditProfileLiveTest do
       assert has_element?(view, "#save-profile-btn")
     end
 
+    test "renders the public profile preview", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      assert has_element?(view, "#provider-hero[data-variant='full']")
+    end
+
+    test "the preview follows what is typed, not what is saved", %{conn: conn, provider: provider} do
+      # The assertion that separates a preview from a static render of the saved
+      # row: both would pass a bare "the hero is present" check.
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      refute render(view) =~ "Move. Play. Grow."
+
+      html =
+        view
+        |> form("#profile-form", %{
+          provider_profile_schema: %{description: "A description", tagline: "Move. Play. Grow."}
+        })
+        |> render_change()
+
+      assert html =~ "Move. Play. Grow."
+
+      assert {:ok, reloaded} = KlassHero.Provider.get_provider_profile(provider.id)
+      assert is_nil(reloaded.tagline), "phx-change must not persist"
+    end
+
+    test "adds a social row on demand and keeps it through a re-render", %{conn: conn} do
+      # A JS toggle would pass the first assertion and fail the second: the
+      # phx-change patch wipes the inline display:none it writes.
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      refute has_element?(view, "#provider_profile_schema_instagram_url")
+      assert has_element?(view, "#add-instagram_url")
+
+      view |> element("#add-instagram_url") |> render_click()
+
+      assert has_element?(view, "#provider_profile_schema_instagram_url")
+      refute has_element?(view, "#add-instagram_url")
+
+      view
+      |> form("#profile-form", %{provider_profile_schema: %{description: "Still typing"}})
+      |> render_change()
+
+      assert has_element?(view, "#provider_profile_schema_instagram_url")
+    end
+
+    test "a network already filled in starts revealed", %{conn: conn, provider: provider} do
+      {:ok, _} =
+        KlassHero.Provider.update_provider_profile(provider.id, %{
+          instagram_url: "https://instagram.com/starlight"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      assert has_element?(view, "#provider_profile_schema_instagram_url")
+      refute has_element?(view, "#add-instagram_url")
+    end
+
+    test "an unrevealed network is left untouched by a save", %{conn: conn, provider: provider} do
+      {:ok, _} =
+        KlassHero.Provider.update_provider_profile(provider.id, %{
+          facebook_url: "https://facebook.com/starlight"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      view
+      |> form("#profile-form", %{provider_profile_schema: %{description: "Unrelated edit"}})
+      |> render_submit()
+
+      assert {:ok, reloaded} = KlassHero.Provider.get_provider_profile(provider.id)
+      assert reloaded.instagram_url == nil
+      assert reloaded.facebook_url == "https://facebook.com/starlight"
+    end
+
+    test "saves a scheme-less social link as https", %{conn: conn, provider: provider} do
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      view |> element("#add-instagram_url") |> render_click()
+
+      view
+      |> form("#profile-form", %{
+        provider_profile_schema: %{
+          description: "A description",
+          instagram_url: "instagram.com/starlight"
+        }
+      })
+      |> render_submit()
+
+      assert {:ok, reloaded} = KlassHero.Provider.get_provider_profile(provider.id)
+      assert reloaded.instagram_url == "https://instagram.com/starlight"
+    end
+
     test "renders back to dashboard link", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
 
