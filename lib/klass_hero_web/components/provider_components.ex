@@ -18,6 +18,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   alias KlassHero.Shared.ChangesetErrors
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
+  alias Phoenix.HTML.Form
 
   @doc """
   Renders a colored status badge for a verification document status.
@@ -408,7 +409,7 @@ defmodule KlassHeroWeb.ProviderComponents do
         <div class="relative group">
           <.kh_button
             id="new-program-btn"
-            variant={:yellow}
+            variant={:primary}
             size={:sm}
             icon="hero-plus-mini"
             phx-click="add_program"
@@ -541,20 +542,16 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             {gettext("Edit")}
           </button>
-          <button
+          <.kh_button
             :if={@member.can_resend?}
-            type="button"
+            variant={:primary}
+            size={:sm}
             id={"resend-invitation-#{@member.id}"}
             phx-click="resend_invitation"
             phx-value-id={@member.id}
-            class={[
-              "px-3 py-2 bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-black-100 text-xs font-medium",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
           >
             {gettext("Resend")}
-          </button>
+          </.kh_button>
           <%!-- Ending employment is routine and reversible, so it reads as an
                 ordinary action rather than a red destructive one. --%>
           <button
@@ -830,23 +827,13 @@ defmodule KlassHeroWeb.ProviderComponents do
         </div>
 
         <div class="flex items-center gap-3 pt-2">
-          <button
-            type="submit"
-            id="save-staff-btn"
-            class={[
-              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
-              "text-hero-black-100 font-semibold active:scale-[0.98]",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
-          >
-            <.icon name="hero-check-mini" class="w-5 h-5" />
+          <.kh_button variant={:primary} type="submit" id="save-staff-btn" icon="hero-check-mini">
             <%= if @editing do %>
               {gettext("Save Changes")}
             <% else %>
               {gettext("Add Member")}
             <% end %>
-          </button>
+          </.kh_button>
           <button
             type="button"
             phx-click="close_staff_form"
@@ -1273,19 +1260,9 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             {gettext("Cancel")}
           </button>
-          <button
-            type="submit"
-            id="save-program-btn"
-            class={[
-              "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
-              "text-hero-black-100 font-semibold",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
-          >
-            <.icon name="hero-check-mini" class="w-5 h-5" />
+          <.kh_button variant={:primary} type="submit" id="save-program-btn" icon="hero-check-mini">
             {gettext("Save Program")}
-          </button>
+          </.kh_button>
         </div>
       </.form>
     </div>
@@ -2116,21 +2093,15 @@ defmodule KlassHeroWeb.ProviderComponents do
                   {label}
                 </option>
               </select>
-              <button
+              <.kh_button
+                variant={:primary}
                 type="submit"
                 id="staffing-add-btn"
+                icon="hero-plus-mini"
                 disabled={@modal.assignable_options == []}
-                class={[
-                  "flex items-center justify-center gap-2 px-4 py-2 font-semibold",
-                  "bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-black-100",
-                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400",
-                  Theme.rounded(:lg),
-                  Theme.transition(:normal)
-                ]}
               >
-                <.icon name="hero-plus-mini" class="w-5 h-5" />
                 {gettext("Add")}
-              </button>
+              </.kh_button>
             </form>
 
             <p class="mt-2 text-xs text-[var(--fg-muted)]">
@@ -2298,22 +2269,16 @@ defmodule KlassHeroWeb.ProviderComponents do
                   disabled={@modal.assignable_options == []}
                 />
               </div>
-              <button
+              <.kh_button
+                variant={:primary}
                 type="submit"
                 id="session-staffing-add-btn"
+                icon="hero-plus-mini"
+                class="w-full sm:w-auto"
                 disabled={@modal.assignable_options == []}
-                class={[
-                  "flex min-h-11 w-full items-center justify-center gap-2 px-4 py-2 font-semibold sm:w-auto",
-                  "bg-hero-yellow-500 hover:bg-hero-yellow-600 text-hero-grey-900",
-                  "active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hero-yellow-700",
-                  "disabled:bg-hero-grey-100 disabled:text-hero-grey-400 disabled:active:scale-100",
-                  Theme.rounded(:md),
-                  Theme.transition(:fast)
-                ]}
               >
-                <.icon name="hero-plus-mini" class="w-5 h-5" />
                 {gettext("Add")}
-              </button>
+              </.kh_button>
             </.form>
 
             <p
@@ -3124,6 +3089,115 @@ defmodule KlassHeroWeb.ProviderComponents do
       <p class="text-xs text-[var(--fg-muted)] mt-2">{@hint}</p>
     </div>
     """
+  end
+
+  @doc """
+  The "Branding & Presence" block both provider forms collect.
+
+  One definition because the two forms have drifted twice already — the field
+  list stayed in sync (both derive it from `ProviderProfile`) while the markup
+  did not, leaving one form on the shared dropzone and the other on a
+  hand-rolled copy of it.
+
+  Social links are added on demand: a row renders only for a network in
+  `@revealed`, and the rest sit behind one picker. Five always-visible URL
+  inputs cost ~330px of mobile scroll for fields most providers leave blank.
+
+  `@revealed` is caller state rather than a JS toggle because this form fires
+  `phx-change` on every keystroke, and a LiveView patch wipes the inline
+  `display:none` a `JS.toggle` writes — a revealed row would vanish mid-typing.
+
+  An unrevealed field is not rendered at all, so it submits nothing and
+  `ProviderBranding.attrs_from_params/1` leaves it out of the update entirely:
+  hiding a network never clears it.
+
+  ## Examples
+
+      <.pv_branding_section form={@form} revealed={@revealed_socials} uploads={@uploads} />
+  """
+  attr :form, Form, required: true
+  attr :revealed, :list, required: true, doc: "Social field atoms whose row is shown"
+
+  attr :uploads, :any,
+    default: nil,
+    doc: "The `@uploads` struct; omit to render no cover upload (profile completion)"
+
+  def pv_branding_section(assigns) do
+    assigns = assign(assigns, :pending, pending_networks(assigns.revealed))
+
+    ~H"""
+    <div class="pt-6 border-t border-hero-grey-200 space-y-6">
+      <div>
+        <h3 class={[Theme.typography(:card_title), "text-hero-black-100"]}>
+          {gettext("Branding & Presence")}
+        </h3>
+        <p class="text-sm text-[var(--fg-muted)] mt-1">
+          {gettext("Shown on your public profile page.")}
+        </p>
+      </div>
+
+      <.input
+        field={@form[:tagline]}
+        type="text"
+        label={gettext("Tagline")}
+        placeholder={gettext("A short line that sums you up")}
+        maxlength="150"
+      />
+
+      <div :if={@uploads}>
+        <label class="block text-sm font-semibold text-hero-black-100 mb-2">
+          {gettext("Cover Image")}
+        </label>
+
+        <.pv_upload_dropzone
+          id="cover-upload"
+          upload={@uploads.cover}
+          name="cover"
+          trigger={gettext("Choose Cover Image")}
+          hint={gettext("JPG, PNG or WebP. Max 5MB.")}
+          preview_class="w-full max-w-md mx-auto h-32 object-cover rounded-lg"
+        />
+      </div>
+
+      <div class="space-y-4" id="social-links">
+        <%!-- `type="text"`, not `type="url"`: the browser's own constraint validation
+              rejects a scheme-less value and blocks submit, so `instagram.com/handle`
+              would never reach the normalizer built to accept it. No LiveView test
+              can see that — `Phoenix.LiveViewTest` does not run browser validation.
+              `inputmode` keeps the URL keyboard on mobile without the constraint. --%>
+        <.input
+          :for={{field, _network, label} <- revealed_networks(@revealed)}
+          field={@form[field]}
+          type="text"
+          inputmode="url"
+          label={label}
+          placeholder={gettext("e.g. %{example}", example: "instagram.com/yourhandle")}
+        />
+
+        <div :if={@pending != []} class="flex flex-wrap gap-2">
+          <.kh_button
+            :for={{field, network, label} <- @pending}
+            variant={:ghost}
+            type="button"
+            id={"add-#{field}"}
+            phx-click="add_social_link"
+            phx-value-network={field}
+          >
+            <.kh_social_icon network={network} class="w-4 h-4" />
+            {gettext("Add %{network}", network: label)}
+          </.kh_button>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  defp revealed_networks(revealed) do
+    Enum.filter(ProviderPresenter.social_networks(), fn {field, _n, _l} -> field in revealed end)
+  end
+
+  defp pending_networks(revealed) do
+    Enum.reject(ProviderPresenter.social_networks(), fn {field, _n, _l} -> field in revealed end)
   end
 
   @doc """

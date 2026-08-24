@@ -113,6 +113,18 @@ defmodule KlassHero.Provider.Profiles.UpdateProviderProfileTest do
       assert Repo.get!(ProviderProfile, provider.id).description == "Still editable"
     end
 
+    test "persists a scheme-less social link as https", %{provider: provider} do
+      # This path discards the pure core's struct and persists the changeset's,
+      # so it is the changeset that has to rewrite. Its sibling in
+      # complete_provider_profile_test.exs covers the opposite arrangement —
+      # normalizing only one of the two looks like a whole fix.
+      assert {:ok, _} =
+               Provider.update_provider_profile(provider.id, %{instagram_url: "instagram.com/starlight"})
+
+      assert Repo.get!(ProviderProfile, provider.id).instagram_url ==
+               "https://instagram.com/starlight"
+    end
+
     test "leaves branding fields nil when never set", %{provider: provider} do
       assert {:ok, _} = Provider.update_provider_profile(provider.id, %{description: "unrelated"})
 

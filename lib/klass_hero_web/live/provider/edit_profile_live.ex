@@ -26,6 +26,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
     provider = socket.assigns.current_scope.provider
     changeset = Provider.change_provider_profile(provider)
     docs = fetch_verification_docs(provider.id)
+    trust_state = trust_state(provider.id)
 
     socket =
       socket
@@ -33,6 +34,10 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
       |> assign(page_title: gettext("Edit Profile"))
       |> assign(active_nav: :home)
       |> assign(form: to_form(changeset, as: :provider_profile_schema))
+      |> assign(revealed_socials: ProviderBranding.filled_networks(provider))
+      |> assign(trust_state: trust_state)
+      |> assign(preview: preview_view(changeset, trust_state))
+      |> assign(preview_open?: false)
       |> assign(doc_type: "business_registration")
       |> assign(document_types: Provider.valid_document_types())
       |> stream(:verification_docs, docs, dom_id: &"vdoc-#{&1.id}")
@@ -61,9 +66,19 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
     changeset = Provider.change_provider_profile(provider, params)
 
     {:noreply,
-     assign(socket,
-       form: to_form(Map.put(changeset, :action, :validate), as: :provider_profile_schema)
-     )}
+     socket
+     |> assign(form: to_form(Map.put(changeset, :action, :validate), as: :provider_profile_schema))
+     |> assign(preview: preview_view(changeset, socket.assigns.trust_state))}
+  end
+
+  @impl true
+  def handle_event("toggle_preview", _params, socket) do
+    {:noreply, update(socket, :preview_open?, &(!&1))}
+  end
+
+  @impl true
+  def handle_event("add_social_link", %{"network" => network}, socket) do
+    {:noreply, update(socket, :revealed_socials, &ProviderBranding.reveal(&1, network))}
   end
 
   @impl true
@@ -181,6 +196,24 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
     {:noreply, cancel_upload(socket, String.to_existing_atom(upload_name), ref)}
   end
 
+  # The preview renders the same component the public page does, fed by the same
+  # presenter — `to_public_view/2` takes a struct, so applying the in-flight
+  # changeset is enough and costs no query. A preview that re-implements the hero
+  # is a preview that lies.
+  defp preview_view(changeset, trust_state) do
+    changeset
+    |> Ecto.Changeset.apply_changes()
+    |> ProviderPresenter.to_public_view(trust_state)
+  end
+
+  # get_trust_states/1 is batch-only; a missing entry means unverified. The badge
+  # is not editable here, so this is read once at mount.
+  defp trust_state(provider_id) do
+    [provider_id]
+    |> Provider.get_trust_states()
+    |> Map.get(provider_id, :unverified)
+  end
+
   defp fetch_verification_docs(provider_id) do
     {:ok, docs} = Provider.get_provider_verification_documents(provider_id)
     docs
@@ -207,112 +240,111 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
 
           <h1 class="text-2xl font-bold text-hero-black-100">{gettext("Edit Profile")}</h1>
 
-          <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
-            <h2 class="text-lg font-semibold text-hero-black-100 mb-4">
-              {gettext("Provider Information")}
-            </h2>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
+              <h2 class="text-lg font-semibold text-hero-black-100 mb-4">
+                {gettext("Provider Information")}
+              </h2>
 
-            <.form
-              for={@form}
-              id="profile-form"
-              phx-change="validate_profile"
-              phx-submit="save_profile"
-              class="space-y-6"
-            >
-              <.input
-                field={@form[:description]}
-                type="textarea"
-                label={gettext("Provider Description")}
-                placeholder={gettext("Tell parents about your organization...")}
-                rows="4"
-              />
-
-              <div>
-                <label class="block text-sm font-semibold text-hero-black-100 mb-2">
-                  {gettext("Provider Logo")}
-                </label>
-
-                <.pv_upload_dropzone
-                  id="logo-upload"
-                  upload={@uploads.logo}
-                  name="logo"
-                  trigger={gettext("Choose Logo")}
-                  hint={gettext("JPG, PNG or WebP. Max 2MB.")}
-                  preview_class="w-16 h-16 mx-auto rounded-full object-cover"
-                >
-                  <:placeholder>
-                    <div
-                      :if={@business.initials}
-                      class={[
-                        "w-16 h-16 mx-auto flex items-center justify-center text-white text-xl font-bold",
-                        Theme.rounded(:full),
-                        Theme.gradient(:primary)
-                      ]}
-                    >
-                      {@business.initials}
-                    </div>
-                  </:placeholder>
-                </.pv_upload_dropzone>
-              </div>
-
-              <div class="pt-6 border-t border-hero-grey-200 space-y-6">
-                <div>
-                  <h3 class={[Theme.typography(:card_title), "text-hero-black-100"]}>
-                    {gettext("Branding & Presence")}
-                  </h3>
-                  <p class="text-sm text-[var(--fg-muted)] mt-1">
-                    {gettext("Shown on your public profile page.")}
-                  </p>
-                </div>
-
+              <.form
+                for={@form}
+                id="profile-form"
+                phx-change="validate_profile"
+                phx-submit="save_profile"
+                class="space-y-6"
+              >
                 <.input
-                  field={@form[:tagline]}
-                  type="text"
-                  label={gettext("Tagline")}
-                  placeholder={gettext("A short line that sums you up")}
-                  maxlength="150"
+                  field={@form[:description]}
+                  type="textarea"
+                  label={gettext("Provider Description")}
+                  placeholder={gettext("Tell parents about your organization...")}
+                  rows="4"
                 />
 
                 <div>
                   <label class="block text-sm font-semibold text-hero-black-100 mb-2">
-                    {gettext("Cover Image")}
+                    {gettext("Provider Logo")}
                   </label>
 
                   <.pv_upload_dropzone
-                    id="cover-upload"
-                    upload={@uploads.cover}
-                    name="cover"
-                    trigger={gettext("Choose Cover Image")}
-                    hint={gettext("JPG, PNG or WebP. Max 5MB.")}
-                    preview_class="w-full max-w-md mx-auto h-32 object-cover rounded-lg"
-                  />
+                    id="logo-upload"
+                    upload={@uploads.logo}
+                    name="logo"
+                    trigger={gettext("Choose Logo")}
+                    hint={gettext("JPG, PNG or WebP. Max 2MB.")}
+                    preview_class="w-16 h-16 mx-auto rounded-full object-cover"
+                  >
+                    <:placeholder>
+                      <div
+                        :if={@business.initials}
+                        class={[
+                          "w-16 h-16 mx-auto flex items-center justify-center text-white text-xl font-bold",
+                          Theme.rounded(:full),
+                          Theme.gradient(:primary)
+                        ]}
+                      >
+                        {@business.initials}
+                      </div>
+                    </:placeholder>
+                  </.pv_upload_dropzone>
                 </div>
 
-                <.input
-                  :for={{field, label} <- ProviderPresenter.social_networks()}
-                  field={@form[field]}
-                  type="url"
-                  label={label}
-                  placeholder="https://"
+                <.pv_branding_section
+                  form={@form}
+                  revealed={@revealed_socials}
+                  uploads={@uploads}
                 />
-              </div>
 
-              <div class="flex justify-end">
-                <button
-                  type="submit"
-                  id="save-profile-btn"
-                  class={[
-                    "flex items-center gap-2 px-6 py-2.5 bg-hero-yellow-500 hover:bg-hero-yellow-600",
-                    "text-hero-black-100 font-semibold",
-                    Theme.rounded(:lg),
-                    Theme.transition(:normal)
-                  ]}
-                >
-                  <.icon name="hero-check-mini" class="w-5 h-5" />
-                  {gettext("Save Changes")}
-                </button>
+                <div class="flex justify-end">
+                  <.kh_button
+                    variant={:primary}
+                    type="submit"
+                    id="save-profile-btn"
+                    icon="hero-check-mini"
+                  >
+                    {gettext("Save Changes")}
+                  </.kh_button>
+                </div>
+              </.form>
+            </div>
+
+            <div class="lg:sticky lg:top-6">
+              <%!-- A server assign, not a JS toggle: this form fires phx-change on
+                    every keystroke and the resulting patch wipes an inline
+                    display:none, so a JS-collapsed panel would reopen as you type. --%>
+              <.kh_button
+                variant={:ghost}
+                type="button"
+                id="toggle-preview"
+                icon="hero-eye-mini"
+                class="lg:hidden w-full"
+                phx-click="toggle_preview"
+                aria-expanded={to_string(@preview_open?)}
+                aria-controls="profile-preview"
+              >
+                {if @preview_open?, do: gettext("Hide preview"), else: gettext("Show preview")}
+              </.kh_button>
+
+              <div
+                id="profile-preview"
+                class={[
+                  "mt-4 lg:mt-0 overflow-hidden bg-white shadow-sm border border-hero-grey-200",
+                  Theme.rounded(:xl),
+                  !@preview_open? && "hidden lg:block"
+                ]}
+              >
+                <div class="px-6 pt-6">
+                  <h2 class="text-lg font-semibold text-hero-black-100">
+                    {gettext("Public profile preview")}
+                  </h2>
+                  <p class="text-sm text-[var(--fg-muted)] mt-1">
+                    {gettext("A newly chosen cover or logo appears here after you save.")}
+                  </p>
+                </div>
+
+                <.provider_hero provider={@preview} variant={:full} />
               </div>
-            </.form>
+            </div>
           </div>
 
           <.verification_documents_panel

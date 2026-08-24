@@ -10,13 +10,14 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
   """
   use KlassHeroWeb, :live_view
 
+  import KlassHeroWeb.ProviderComponents
+
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Categories
   alias KlassHero.Shared.FeatureFlags
   alias KlassHero.Shared.Storage
   alias KlassHeroWeb.Helpers.ProviderBranding
-  alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -45,6 +46,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
           |> assign(provider: provider)
           |> assign(business_vetting?: business_vetting_enabled?())
           |> assign(form: to_form(changeset, as: :provider_profile_schema))
+          |> assign(revealed_socials: ProviderBranding.filled_networks(provider))
           |> assign(categories: Categories.categories())
           |> allow_upload(:logo,
             accept: ~w(.jpg .jpeg .png .webp),
@@ -109,10 +111,18 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
              |> put_flash(:error, gettext("Please fix the errors below."))
              |> assign(form: to_form(Map.put(changeset, :action, :validate), as: :provider_profile_schema))}
 
+          {:error, %Ecto.Changeset{} = changeset} ->
+            {:noreply, assign(socket, form: to_form(changeset, as: :provider_profile_schema))}
+
           {:error, _reason} ->
             {:noreply, put_flash(socket, :error, gettext("Something went wrong. Please try again."))}
         end
     end
+  end
+
+  @impl true
+  def handle_event("add_social_link", %{"network" => network}, socket) do
+    {:noreply, update(socket, :revealed_socials, &ProviderBranding.reveal(&1, network))}
   end
 
   @impl true
@@ -217,7 +227,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
         <div class="mb-6">
           <.link
             navigate={~p"/provider/dashboard"}
-            class="flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors"
+            class="flex items-center gap-1 text-[var(--fg-muted)] hover:text-hero-black-100 transition-colors"
           >
             <.icon name="hero-arrow-left-mini" class="w-5 h-5" />
             {gettext("Back to Dashboard")}
@@ -227,13 +237,13 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
         <h1 class={["text-2xl font-bold mb-2", Theme.typography(:page_title)]}>
           {gettext("Complete Your Provider Profile")}
         </h1>
-        <p class="text-gray-500 mb-8">
+        <p class="text-[var(--fg-muted)] mb-8">
           {gettext(
             "Fill in your business details. Your profile will be reviewed by Klass Hero before going live."
           )}
         </p>
 
-        <div class={["bg-white p-6 shadow-sm border border-gray-200", Theme.rounded(:xl)]}>
+        <div class={["bg-white p-6 shadow-sm border border-hero-grey-200", Theme.rounded(:xl)]}>
           <.form
             for={@form}
             id="profile-completion-form"
@@ -242,7 +252,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             class="space-y-6"
           >
             <div :if={@business_vetting?}>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <label class="block text-sm font-semibold text-hero-black-100 mb-2">
                 {gettext("What are you registering as?")}
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -256,7 +266,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                     ]
                   }
                   class={[
-                    "flex items-start gap-3 p-3 border cursor-pointer hover:bg-gray-50 transition-colors",
+                    "flex items-start gap-3 p-3 border cursor-pointer hover:bg-hero-grey-50 transition-colors",
                     Theme.rounded(:lg)
                   ]}
                 >
@@ -265,11 +275,11 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                     name="provider_profile_schema[entity_type]"
                     value={value}
                     checked={to_string(@form[:entity_type].value) == value}
-                    class="mt-1 border-gray-300 text-brand focus:ring-brand"
+                    class="mt-1 border-hero-grey-300 text-[var(--brand-primary)] focus:ring-[var(--focus-ring)]"
                   />
                   <span class="flex flex-col">
-                    <span class="text-sm font-medium text-gray-900">{title}</span>
-                    <span class="text-xs text-gray-500">{hint}</span>
+                    <span class="text-sm font-medium text-hero-black">{title}</span>
+                    <span class="text-xs text-[var(--fg-muted)]">{hint}</span>
                   </span>
                 </label>
               </div>
@@ -316,7 +326,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
             />
 
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <label class="block text-sm font-semibold text-hero-black-100 mb-2">
                 {gettext("Categories")}
               </label>
               <div class="flex flex-wrap gap-2">
@@ -325,7 +335,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                   class={[
                     "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border cursor-pointer",
                     Theme.rounded(:lg),
-                    "hover:bg-gray-50 transition-colors"
+                    "hover:bg-hero-grey-50 transition-colors"
                   ]}
                 >
                   <input
@@ -333,7 +343,7 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
                     name="provider_profile_schema[categories][]"
                     value={category}
                     checked={category in (@form[:categories].value || [])}
-                    class="rounded border-gray-300 text-brand focus:ring-brand"
+                    class="rounded border-hero-grey-300 text-[var(--brand-primary)] focus:ring-[var(--focus-ring)]"
                   />
                   <span class="capitalize">{category}</span>
                 </label>
@@ -341,79 +351,27 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
               <input type="hidden" name="provider_profile_schema[categories][]" value="" />
             </div>
 
-            <%!-- Logo Upload --%>
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">
+              <label class="block text-sm font-semibold text-hero-black-100 mb-2">
                 {gettext("Provider Logo")}
               </label>
-              <div
+
+              <.pv_upload_dropzone
                 id="logo-upload"
-                class={[
-                  "border-2 border-dashed border-gray-300 p-6 text-center",
-                  "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[var(--focus-ring)] has-[:focus-visible]:ring-offset-2",
-                  Theme.rounded(:lg)
-                ]}
-                phx-drop-target={@uploads.logo.ref}
-              >
-                <.live_file_input upload={@uploads.logo} class="sr-only peer" />
-                <label for={@uploads.logo.ref} class="cursor-pointer">
-                  <.icon name="hero-cloud-arrow-up" class="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                  <p class="text-sm text-gray-500">
-                    {gettext("Drag and drop or click to upload")}
-                  </p>
-                  <p class="text-xs text-gray-400 mt-1">
-                    {gettext("JPG, PNG or WebP. Max 2MB.")}
-                  </p>
-                </label>
-              </div>
-
-              <div :for={entry <- @uploads.logo.entries} class="mt-3 flex items-center gap-3">
-                <.live_img_preview entry={entry} class="w-12 h-12 rounded object-cover" />
-                <span class="text-sm text-gray-600">{entry.client_name}</span>
-                <button
-                  type="button"
-                  phx-click="cancel_upload"
-                  phx-value-ref={entry.ref}
-                  phx-value-upload="logo"
-                  class="text-red-500 hover:text-red-700 text-sm"
-                >
-                  {gettext("Remove")}
-                </button>
-              </div>
-            </div>
-
-            <%!-- Branding & Presence (#1302) — all optional, shown on the public profile --%>
-            <div class="pt-4 border-t border-gray-200 space-y-6">
-              <div>
-                <h3 class={[Theme.typography(:card_title), "text-gray-900"]}>
-                  {gettext("Branding & Presence")}
-                </h3>
-                <p class="text-sm text-gray-500 mt-1">
-                  {gettext("Optional — shown on your public profile page.")}
-                </p>
-              </div>
-
-              <.input
-                field={@form[:tagline]}
-                type="text"
-                label={gettext("Tagline")}
-                placeholder={gettext("A short line that sums you up")}
-                maxlength="150"
-              />
-
-              <.input
-                :for={{field, label} <- ProviderPresenter.social_networks()}
-                field={@form[field]}
-                type="url"
-                label={label}
-                placeholder="https://"
+                upload={@uploads.logo}
+                name="logo"
+                trigger={gettext("Choose Logo")}
+                hint={gettext("JPG, PNG or WebP. Max 2MB.")}
+                preview_class="w-16 h-16 mx-auto rounded-full object-cover"
               />
             </div>
 
-            <div class="flex justify-end pt-4 border-t border-gray-200">
-              <.button type="submit" phx-disable-with={gettext("Saving...")}>
+            <.pv_branding_section form={@form} revealed={@revealed_socials} />
+
+            <div class="flex justify-end pt-4 border-t border-hero-grey-200">
+              <.kh_button variant={:primary} type="submit" phx-disable-with={gettext("Saving...")}>
                 {gettext("Complete Profile")}
-              </.button>
+              </.kh_button>
             </div>
           </.form>
         </div>

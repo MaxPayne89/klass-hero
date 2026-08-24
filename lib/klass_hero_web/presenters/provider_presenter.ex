@@ -89,10 +89,6 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
                      {field, network, SocialLinks.label(network)}
                    end)
 
-  @social_field_labels Enum.map(@social_networks, fn {field, _network, label} ->
-                         {field, label}
-                       end)
-
   # Both sources share one `kh_social_icon/1`; a network with no glyph renders an
   # empty `<svg>` with no error and no failing test.
   @provider_network_atoms Enum.map(@social_networks, fn {_f, network, _l} -> network end)
@@ -103,13 +99,17 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   end
 
   @doc """
-  Supported social networks as `{schema_field, label}`.
+  Supported social networks as `{schema_field, network, label}`.
+
+  Carries the network atom as well as the label because `kh_social_icon/1` keys
+  on the atom — a `{field, label}` pair forces every caller wanting a glyph to
+  re-derive it.
 
   Labels are brand names and deliberately not run through gettext — translating
   "Instagram" would be wrong in every locale.
   """
-  @spec social_networks() :: [{atom(), String.t()}]
-  def social_networks, do: @social_field_labels
+  @spec social_networks() :: [{atom(), atom(), String.t()}]
+  def social_networks, do: @social_networks
 
   defp social_links(%ProviderProfile{} = provider) do
     for {field, network, label} <- @social_networks,

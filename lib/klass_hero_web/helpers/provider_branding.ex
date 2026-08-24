@@ -33,6 +33,41 @@ defmodule KlassHeroWeb.Helpers.ProviderBranding do
         do: {field, blank_to_nil(params[Atom.to_string(field)])}
   end
 
+  @doc """
+  The social-link fields this provider has already filled in.
+
+  Seeds which rows the branding form shows on first render. A field with no
+  value is offered by the picker instead, so the form starts at the length of
+  what the provider actually has.
+  """
+  @spec filled_networks(map()) :: [atom()]
+  def filled_networks(provider) do
+    # `Enum.filter`, not a `for` with an assignment: a bare `value = ...` clause
+    # in a comprehension filters on truthiness as well as binding, so a nil
+    # column would drop out for a reason the code does not state (#1408).
+    Enum.filter(ProviderProfile.social_link_fields(), fn field ->
+      case Map.get(provider, field) do
+        value when is_binary(value) -> String.trim(value) != ""
+        _ -> false
+      end
+    end)
+  end
+
+  @doc """
+  Adds a network to the revealed list, given the picker's raw param.
+
+  Resolves the string against `social_link_fields/0` rather than calling
+  `String.to_existing_atom/1` on it: the param comes from the client, and an
+  unknown value should be ignored, not raise.
+  """
+  @spec reveal([atom()], String.t()) :: [atom()]
+  def reveal(revealed, network) when is_binary(network) do
+    case Enum.find(ProviderProfile.social_link_fields(), &(Atom.to_string(&1) == network)) do
+      nil -> revealed
+      field -> Enum.uniq(revealed ++ [field])
+    end
+  end
+
   defp blank_to_nil(value) when is_binary(value) do
     case String.trim(value) do
       "" -> nil

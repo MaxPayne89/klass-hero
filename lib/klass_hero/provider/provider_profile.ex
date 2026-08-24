@@ -40,6 +40,13 @@ defmodule KlassHero.Provider.ProviderProfile do
   @url_branding_fields [:cover_image_url | @social_link_fields]
   @branding_fields [:tagline | @url_branding_fields]
 
+  # The URL fields a *person* types. `cover_image_url` is deliberately absent: it
+  # is set from a storage upload, so scheme-prepending it cannot repair a typo —
+  # it can only launder an adapter URL past the https check that would have caught
+  # it (the test stub returns `stub://…`, which became `https://stub://…`, valid
+  # by inspection and wrong).
+  @typed_url_fields [:website | @social_link_fields]
+
   @tagline_max_length 150
   @branding_url_max_length 500
 
@@ -56,6 +63,29 @@ defmodule KlassHero.Provider.ProviderProfile do
   """
   @spec social_link_fields() :: [atom()]
   def social_link_fields, do: @social_link_fields
+
+  @doc """
+  Prepends `https://` to a URL typed without a scheme.
+
+  An explicit `http://` is passed through unchanged so it still reaches — and
+  fails — the https validator. That is a deliberate insecure choice, not the
+  missing-scheme typo this exists to absorb.
+  """
+  @spec normalize_url(String.t() | nil) :: String.t() | nil
+  def normalize_url(nil), do: nil
+
+  def normalize_url(url) when is_binary(url) do
+    case String.trim(url) do
+      "" -> nil
+      trimmed -> ensure_scheme(trimmed)
+    end
+  end
+
+  def normalize_url(url), do: url
+
+  defp ensure_scheme("https://" <> _ = url), do: url
+  defp ensure_scheme("http://" <> _ = url), do: url
+  defp ensure_scheme(url), do: "https://" <> url
 
   schema "providers" do
     field :identity_id, :binary_id
@@ -211,6 +241,11 @@ defmodule KlassHero.Provider.ProviderProfile do
   defp validate_branding_fields(changeset) do
     changeset = validate_length(changeset, :tagline, max: @tagline_max_length)
 
+    changeset =
+      Enum.reduce(@social_link_fields, changeset, fn field, acc ->
+        update_change(acc, field, &normalize_url/1)
+      end)
+
     Enum.reduce(@url_branding_fields, changeset, fn field, acc ->
       acc
       |> validate_length(field, max: @branding_url_max_length)
@@ -233,6 +268,8 @@ defmodule KlassHero.Provider.ProviderProfile do
   end
 
   defp validate_website_protocol(changeset) do
+    changeset = update_change(changeset, :website, &normalize_url/1)
+
     case get_change(changeset, :website) do
       website when is_binary(website) ->
         if String.starts_with?(website, "https://") do
@@ -360,12 +397,23 @@ defmodule KlassHero.Provider.ProviderProfile do
   """
   @spec new(map()) :: {:ok, t()} | {:error, [String.t()]}
   def new(attrs) do
-    profile = struct!(__MODULE__, apply_defaults(attrs))
+    profile = __MODULE__ |> struct!(apply_defaults(attrs)) |> normalize_urls()
 
     case validate(profile) do
       [] -> {:ok, profile}
       errors -> {:error, errors}
     end
+  end
+
+  # The changesets normalize per-field via `update_change`; the pure core builds a
+  # whole struct, so it normalizes the same fields on the struct instead. Both
+  # builders below do this identically — what differs is the caller:
+  # `update_provider_profile/2` discards `new/1`'s struct and persists the
+  # changeset's, while `complete_provider_profile/2` persists this one.
+  defp normalize_urls(%__MODULE__{} = profile) do
+    Enum.reduce(@typed_url_fields, profile, fn field, acc ->
+      Map.update!(acc, field, &normalize_url/1)
+    end)
   end
 
   defp apply_defaults(attrs) do
@@ -434,6 +482,7 @@ defmodule KlassHero.Provider.ProviderProfile do
     updated =
       profile
       |> struct(Map.take(attrs, @completion_fields))
+      |> normalize_urls()
       |> Map.put(:profile_status, :active)
       |> Map.put(:updated_at, now)
 

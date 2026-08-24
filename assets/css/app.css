@@ -186,8 +186,11 @@
   --fg-inverse:    #ffffff;
   /* Link text. Deliberately darker than --brand-primary: hero-blue-600 is 2.66:1
      and hero-blue-700 is 3.99:1, both below AA as foreground. blue-800 is 6.10:1
-     on white and 4.93:1 on the warm shells. The brand cyan stays the CTA *fill*,
-     which carries white text and is unaffected. */
+     on white and 4.93:1 on the warm shells.
+     This used to add "the brand cyan stays the CTA *fill*, which carries white
+     text and is unaffected". Contrast is symmetric, so white-on-blue-600 is the
+     same 2.66:1 — see #1459, which still owns fixing Theme.button_variant/1.
+     `kh_button`'s primary is black on hero-blue-500 (~11.45:1) and is fine. */
   --fg-link:       var(--color-hero-blue-800);
 
   /* Focus indicator. Non-text, so the floor is 3:1 (WCAG 2.1 SC 1.4.11), not 4.5.
