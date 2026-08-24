@@ -817,46 +817,14 @@ defmodule KlassHeroWeb.ProviderComponents do
           <label class="block text-sm font-semibold text-hero-black-100 mb-2">
             {gettext("Headshot Photo")}
           </label>
-          <div
+          <.pv_upload_dropzone
             id="headshot-upload"
-            class={[
-              "border-2 border-dashed border-hero-grey-300 p-4 text-center",
-              Theme.rounded(:lg)
-            ]}
-            phx-drop-target={@uploads.headshot.ref}
-          >
-            <div :for={entry <- @uploads.headshot.entries} class="mb-3">
-              <.live_img_preview
-                entry={entry}
-                class="w-16 h-16 mx-auto rounded-full object-cover"
-              />
-              <button
-                type="button"
-                phx-click="cancel_upload"
-                phx-value-ref={entry.ref}
-                phx-value-upload="headshot"
-                class="text-xs text-red-500 hover:text-red-700 mt-1"
-              >
-                {gettext("Remove")}
-              </button>
-            </div>
-
-            <.live_file_input upload={@uploads.headshot} class="hidden" />
-            <label
-              for={@uploads.headshot.ref}
-              class={[
-                "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
-                Theme.rounded(:lg)
-              ]}
-            >
-              <.icon name="hero-photo-mini" class="w-4 h-4" />
-              {gettext("Choose Photo")}
-            </label>
-            <p class="text-xs text-hero-grey-400 mt-2">
-              {gettext("JPG, PNG or WebP. Max 1MB.")}
-            </p>
-          </div>
+            upload={@uploads.headshot}
+            name="headshot"
+            trigger={gettext("Choose Photo")}
+            hint={gettext("JPG, PNG or WebP. Max 1MB.")}
+            preview_class="w-16 h-16 mx-auto rounded-full object-cover"
+          />
         </div>
 
         <div class="flex items-center gap-3 pt-2">
@@ -1270,54 +1238,14 @@ defmodule KlassHeroWeb.ProviderComponents do
           <label class="block text-sm font-semibold text-hero-black-100 mb-2">
             {gettext("Cover Image")}
           </label>
-          <div
+          <.pv_upload_dropzone
             id="program-cover-upload"
-            class={[
-              "border-2 border-dashed border-hero-grey-300 p-4 text-center",
-              Theme.rounded(:lg)
-            ]}
-            phx-drop-target={@uploads.program_cover.ref}
-          >
-            <div :for={entry <- @uploads.program_cover.entries} class="mb-3">
-              <.live_img_preview
-                entry={entry}
-                class="w-full max-w-xs mx-auto rounded-lg object-cover"
-              />
-              <p class="text-sm text-hero-grey-500 mt-1">{entry.client_name}</p>
-              <button
-                type="button"
-                phx-click="cancel_upload"
-                phx-value-ref={entry.ref}
-                phx-value-upload="program_cover"
-                class="text-xs text-red-500 hover:text-red-700 mt-1"
-              >
-                {gettext("Remove")}
-              </button>
-              <div
-                :for={err <- upload_errors(@uploads.program_cover, entry)}
-                class="text-xs text-red-500 mt-1"
-              >
-                {upload_error_to_string(err)}
-              </div>
-            </div>
-
-            <.live_file_input upload={@uploads.program_cover} class="hidden" />
-            <label
-              for={@uploads.program_cover.ref}
-              class={[
-                "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
-                "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
-                Theme.rounded(:lg),
-                Theme.transition(:normal)
-              ]}
-            >
-              <.icon name="hero-photo-mini" class="w-4 h-4" />
-              {gettext("Choose Image")}
-            </label>
-            <p class="text-xs text-hero-grey-400 mt-2">
-              {gettext("JPG, PNG or WebP. Max 2MB.")}
-            </p>
-          </div>
+            upload={@uploads.program_cover}
+            name="program_cover"
+            trigger={gettext("Choose Image")}
+            hint={gettext("JPG, PNG or WebP. Max 2MB.")}
+            preview_class="w-full max-w-xs mx-auto rounded-lg object-cover"
+          />
         </div>
 
         <%!-- Lead only. Everyone else on the program is managed from the
@@ -2628,9 +2556,11 @@ defmodule KlassHeroWeb.ProviderComponents do
             phx-submit="import_csv"
             class="inline"
           >
+            <.live_file_input upload={@uploads.csv_file} class="sr-only peer" />
             <label
               for={@uploads.csv_file.ref}
               class={[
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white cursor-pointer",
                 Theme.rounded(:lg),
                 Theme.gradient(:primary)
@@ -2639,7 +2569,6 @@ defmodule KlassHeroWeb.ProviderComponents do
               <.icon name="hero-arrow-up-tray-mini" class="w-4 h-4" />
               {gettext("Upload CSV")}
             </label>
-            <.live_file_input upload={@uploads.csv_file} class="hidden" />
 
             <div :for={entry <- @uploads.csv_file.entries} class="mt-3 flex items-center gap-3">
               <span class="text-sm text-hero-black-100">{entry.client_name}</span>
@@ -3106,11 +3035,104 @@ defmodule KlassHeroWeb.ProviderComponents do
   end
 
   @doc """
+  A single-file image dropzone: dashed drop target, preview, remove, hint.
+
+  Covers the four provider image uploads that share this shape — logo, cover,
+  headshot, program cover. The other upload sites in the app are deliberately
+  not built on this: the verification/CSV ones want no dropzone chrome at all,
+  and messaging attachments are multi-entry with progress, which is a different
+  interaction (add-more, not replace).
+
+  The file input is `sr-only`, never `hidden`. `display: none` drops it out of the
+  tab order and the `<label>` is not focusable either, which left every one of
+  these uploads unreachable by keyboard. `peer-focus-visible` on the trigger is
+  what makes that focus visible once the input can receive it.
+
+  ## Examples
+
+      <.pv_upload_dropzone
+        upload={@uploads.logo}
+        name="logo"
+        trigger={gettext("Choose Logo")}
+        hint={gettext("JPG, PNG or WebP. Max 2MB.")}
+        preview_class="w-16 h-16 mx-auto rounded-full object-cover"
+      >
+        <:placeholder>...</:placeholder>
+      </.pv_upload_dropzone>
+  """
+  attr :upload, :map, required: true, doc: "The `@uploads.<name>` struct"
+  attr :name, :string, required: true, doc: "Upload name, sent as phx-value-upload"
+  attr :trigger, :string, required: true, doc: "Visible label on the choose button"
+  attr :hint, :string, required: true
+  attr :preview_class, :string, required: true, doc: "Sizing for live_img_preview"
+  attr :icon, :string, default: "hero-photo-mini"
+  attr :id, :string, default: nil
+
+  slot :placeholder, doc: "Shown when nothing is selected — e.g. an initials avatar"
+
+  def pv_upload_dropzone(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class={[
+        "border-2 border-dashed border-hero-grey-300 p-6 text-center",
+        Theme.rounded(:lg)
+      ]}
+      phx-drop-target={@upload.ref}
+    >
+      <div :if={@placeholder != [] and @upload.entries == []} class="mb-4">
+        {render_slot(@placeholder)}
+      </div>
+
+      <div :for={entry <- @upload.entries} class="mb-4">
+        <.live_img_preview entry={entry} class={@preview_class} />
+        <p class="text-sm text-hero-grey-500 mt-1">{entry.client_name}</p>
+        <button
+          type="button"
+          phx-click="cancel_upload"
+          phx-value-ref={entry.ref}
+          phx-value-upload={@name}
+          class="text-xs text-red-500 hover:text-red-700 mt-1"
+        >
+          {gettext("Remove")}
+        </button>
+        <div :for={err <- upload_errors(@upload, entry)} class="text-xs text-red-500 mt-1">
+          {upload_error_to_string(err)}
+        </div>
+      </div>
+
+      <.live_file_input upload={@upload} class="sr-only peer" />
+      <label
+        for={@upload.ref}
+        class={[
+          "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)]",
+          "peer-focus-visible:ring-offset-2",
+          "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
+          "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
+          Theme.rounded(:lg),
+          Theme.transition(:normal)
+        ]}
+      >
+        <.icon name={@icon} class="w-4 h-4" />
+        {@trigger}
+      </label>
+      <p class="text-xs text-hero-grey-400 mt-2">{@hint}</p>
+    </div>
+    """
+  end
+
+  @doc """
   Converts a Phoenix upload error atom to a human-readable string.
+
+  Deliberately generic: this is shared by uploads with 2MB, 5MB, 10MB and 100MB
+  limits, so it cannot name one. `MessagingComponents` keeps its own copy that
+  interpolates the attachment limits it alone knows — that is a better message
+  for one upload, not a duplicate of this one.
   """
   def upload_error_to_string(:too_large), do: gettext("File is too large.")
   def upload_error_to_string(:too_many_files), do: gettext("Too many files.")
   def upload_error_to_string(:not_accepted), do: gettext("File type not accepted.")
+  def upload_error_to_string(:external_client_failure), do: gettext("Upload failed.")
   def upload_error_to_string(_), do: gettext("Upload error.")
 
   @doc """
@@ -3197,10 +3219,11 @@ defmodule KlassHeroWeb.ProviderComponents do
           </div>
 
           <div>
-            <.live_file_input upload={@uploads.verification_doc} class="hidden" />
+            <.live_file_input upload={@uploads.verification_doc} class="sr-only peer" />
             <label
               for={@uploads.verification_doc.ref}
               class={[
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
                 "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),
@@ -3276,10 +3299,11 @@ defmodule KlassHeroWeb.ProviderComponents do
           class="space-y-4"
         >
           <div>
-            <.live_file_input upload={@uploads.verification_video} class="hidden" />
+            <.live_file_input upload={@uploads.verification_video} class="sr-only peer" />
             <label
               for={@uploads.verification_video.ref}
               class={[
+                "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--brand-primary)] peer-focus-visible:ring-offset-2",
                 "inline-flex items-center gap-2 px-4 py-2 border border-hero-grey-300",
                 "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium cursor-pointer",
                 Theme.rounded(:lg),

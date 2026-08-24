@@ -220,6 +220,32 @@ defmodule KlassHeroWeb.Provider.EditProfileLiveTest do
       # Outcome: redirects to dashboard on success
       assert_redirect(view, ~p"/provider/dashboard")
     end
+
+    test "every file input on the page stays reachable by keyboard", %{conn: conn} do
+      {:ok, _view, html} = live(conn, ~p"/provider/dashboard/edit")
+
+      # `hidden` is `display: none`, which drops the input out of the tab order
+      # while the <label> is not focusable either — that combination left every
+      # upload on this page unopenable without a mouse.
+      #
+      # Asserted per-element rather than over the whole page: a substring check
+      # passes as soon as ONE input is correct, which is how the first version of
+      # this test survived reverting the component to `hidden`.
+      tags = Regex.scan(~r/<input[^>]*type="file"[^>]*>/, html) |> List.flatten()
+
+      assert length(tags) == 3
+
+      for tag <- tags do
+        classes =
+          case Regex.run(~r/class="([^"]*)"/, tag) do
+            [_, c] -> String.split(c)
+            nil -> []
+          end
+
+        refute "hidden" in classes, "a file input is display:none: #{tag}"
+        assert "sr-only" in classes, "a file input is not keyboard-reachable: #{tag}"
+      end
+    end
   end
 
   describe "navigation" do
