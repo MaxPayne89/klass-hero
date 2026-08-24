@@ -168,11 +168,12 @@ defmodule KlassHero.MixProject do
         "format",
         "lint_typography",
         "lint_hero_colors",
-      "lint_raw_html",
+        "lint_raw_html",
         "lint_palette",
         "lint_translations",
         "lint_read_tables",
         "lint_acl_boundary",
+        "lint_doc_refs",
         # Guards the hook output sanitiser. Shell, so it has no other runner —
         # without this the checks rot silently, and the failure mode they catch
         # (a widened regex that starts eating <div>, or a reordered pipeline that
