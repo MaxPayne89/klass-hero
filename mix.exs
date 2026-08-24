@@ -165,6 +165,12 @@ defmodule KlassHero.MixProject do
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",
+        # Ratchet, not an aspiration: 32 is what the tree had when this gate landed, and
+        # nearly all of it is inherent `use`-macro coupling (Backpex admin LiveViews ->
+        # schemas, messaging LiveViews -> their shared helper, workers -> TracedWorker).
+        # Driving it to 0 is not the goal; noticing the 33rd is. Lower the number whenever
+        # a refactor earns it.
+        "xref graph --label compile-connected --fail-above 32",
         "format",
         "lint_typography",
         "lint_hero_colors",

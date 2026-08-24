@@ -1,0 +1,59 @@
+name: Shell & Workflows
+
+# The shell in this repo is load-bearing and was entirely unlinted: bin/worktree-* provisions
+# every checkout, and .claude/hooks/*.sh enforce format/credo/tests on every edit. A hook that
+# breaks quietly stops enforcing everything downstream of it, which is the worst failure shape
+# available — nothing goes red, the guardrails just stop.
+#
+# Runs the same `bin/lint-shell` a developer runs, so this cannot drift from local.
+
+on:
+  pull_request:
+    branches: ['**']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Pinned with a checksum rather than taken from a third-party action: this installs a
+  # binary that reads every workflow file, so supply-chain surface is worth minimising.
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+
+jobs:
+  lint:
+    name: Lint shell and workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      # actions/checkout@v7.0.1
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # Present on the GitHub-hosted Ubuntu images, but installed explicitly when absent so
+      # a runner image change degrades into a slower job rather than a silently skipped check.
+      - name: Ensure shellcheck
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y shellcheck
+          fi
+          shellcheck --version
+
+      - name: Install actionlint
+        run: |
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum -c -
+          tar -xzf "$archive" actionlint
+          sudo mv actionlint /usr/local/bin/
+          actionlint --version
+
+      - name: Lint
+        run: bin/lint-shell

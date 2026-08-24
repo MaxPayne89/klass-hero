@@ -54,14 +54,14 @@ fail() {
 }
 
 root=$(repo_root)
-slug=$(checkout_slug)
 dev_db=$(dev_database)
 test_db=$(test_database)
 
 # Explicit rather than relying on config/test.exs deriving the same value. The two
 # agree by construction (both read this slug), and being explicit means the script
 # behaves identically on a checkout that predates that config change.
-export MIX_TEST_PARTITION="$(test_partition)"
+MIX_TEST_PARTITION="$(test_partition)"
+export MIX_TEST_PARTITION
 
 # --- 1. warm the build ------------------------------------------------------
 # A fresh worktree materialises only *tracked* files, so deps/ and _build/ start
