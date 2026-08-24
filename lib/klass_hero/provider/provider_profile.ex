@@ -40,6 +40,13 @@ defmodule KlassHero.Provider.ProviderProfile do
   @url_branding_fields [:cover_image_url | @social_link_fields]
   @branding_fields [:tagline | @url_branding_fields]
 
+  # The URL fields a *person* types. `cover_image_url` is deliberately absent: it
+  # is set from a storage upload, so scheme-prepending it cannot repair a typo —
+  # it can only launder an adapter URL past the https check that would have caught
+  # it (the test stub returns `stub://…`, which became `https://stub://…`, valid
+  # by inspection and wrong).
+  @typed_url_fields [:website | @social_link_fields]
+
   @tagline_max_length 150
   @branding_url_max_length 500
 
@@ -234,9 +241,13 @@ defmodule KlassHero.Provider.ProviderProfile do
   defp validate_branding_fields(changeset) do
     changeset = validate_length(changeset, :tagline, max: @tagline_max_length)
 
+    changeset =
+      Enum.reduce(@social_link_fields, changeset, fn field, acc ->
+        update_change(acc, field, &normalize_url/1)
+      end)
+
     Enum.reduce(@url_branding_fields, changeset, fn field, acc ->
       acc
-      |> update_change(field, &normalize_url/1)
       |> validate_length(field, max: @branding_url_max_length)
       |> validate_https_url(field)
     end)
@@ -400,7 +411,7 @@ defmodule KlassHero.Provider.ProviderProfile do
   # `update_provider_profile/2` discards `new/1`'s struct and persists the
   # changeset's, while `complete_provider_profile/2` persists this one.
   defp normalize_urls(%__MODULE__{} = profile) do
-    Enum.reduce([:website | @url_branding_fields], profile, fn field, acc ->
+    Enum.reduce(@typed_url_fields, profile, fn field, acc ->
       Map.update!(acc, field, &normalize_url/1)
     end)
   end

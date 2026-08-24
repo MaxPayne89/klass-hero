@@ -3175,23 +3175,17 @@ defmodule KlassHeroWeb.ProviderComponents do
         />
 
         <div :if={@pending != []} class="flex flex-wrap gap-2">
-          <button
+          <.kh_button
             :for={{field, network, label} <- @pending}
+            variant={:ghost}
             type="button"
             id={"add-#{field}"}
             phx-click="add_social_link"
             phx-value-network={field}
-            class={[
-              "inline-flex items-center gap-2 min-h-11 px-4 border border-hero-grey-300",
-              "bg-white hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]",
-              Theme.rounded(:lg),
-              Theme.transition(:normal)
-            ]}
           >
             <.kh_social_icon network={network} class="w-4 h-4" />
             {gettext("Add %{network}", network: label)}
-          </button>
+          </.kh_button>
         </div>
       </div>
     </div>

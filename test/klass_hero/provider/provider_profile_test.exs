@@ -407,6 +407,23 @@ defmodule KlassHero.Provider.ProviderProfileTest do
       assert Enum.any?(errors, &(&1 =~ "must start with https://"))
     end
 
+    test "leaves cover_image_url alone — it is uploaded, not typed" do
+      # The storage stub returns `stub://public/...`. Scheme-prepending that
+      # cannot repair a typo the user never made; it only produces
+      # `https://stub://...`, which then passes the https check by inspection.
+      # A normalizer on a system-set field launders bad data past its own gate.
+      stub_url = "stub://public/covers/providers/abc/cover.png"
+
+      assert {:error, errors} =
+               ProviderProfile.new(%{
+                 identity_id: Ecto.UUID.generate(),
+                 business_name: "Starlight",
+                 cover_image_url: stub_url
+               })
+
+      assert Enum.any?(errors, &(&1 =~ "Cover image URL must start with https://"))
+    end
+
     test "complete_profile/2 normalizes into the struct it returns" do
       # This path persists the struct the pure core returns, where the update
       # path discards it and persists the changeset's instead. Normalizing one

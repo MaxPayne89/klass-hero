@@ -312,22 +312,18 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
               <%!-- A server assign, not a JS toggle: this form fires phx-change on
                     every keystroke and the resulting patch wipes an inline
                     display:none, so a JS-collapsed panel would reopen as you type. --%>
-              <button
+              <.kh_button
+                variant={:ghost}
                 type="button"
                 id="toggle-preview"
+                icon="hero-eye-mini"
+                class="lg:hidden w-full"
                 phx-click="toggle_preview"
                 aria-expanded={to_string(@preview_open?)}
                 aria-controls="profile-preview"
-                class={[
-                  "lg:hidden w-full inline-flex items-center justify-center gap-2 min-h-11 px-4",
-                  "border border-hero-grey-300 bg-white hover:bg-hero-grey-50 text-hero-black-100",
-                  "text-sm font-medium",
-                  Theme.rounded(:lg)
-                ]}
               >
-                <.icon name="hero-eye-mini" class="w-4 h-4" />
                 {if @preview_open?, do: gettext("Hide preview"), else: gettext("Show preview")}
-              </button>
+              </.kh_button>
 
               <div
                 id="profile-preview"
