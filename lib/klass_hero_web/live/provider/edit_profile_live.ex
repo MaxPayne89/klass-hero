@@ -14,7 +14,6 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
 
   alias KlassHero.Provider
   alias KlassHeroWeb.Helpers.ProviderBranding
-  alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Provider.Dashboard.Chrome
   alias KlassHeroWeb.Provider.Dashboard.Uploads
   alias KlassHeroWeb.Theme
@@ -33,6 +32,7 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
       |> assign(page_title: gettext("Edit Profile"))
       |> assign(active_nav: :home)
       |> assign(form: to_form(changeset, as: :provider_profile_schema))
+      |> assign(revealed_socials: ProviderBranding.filled_networks(provider))
       |> assign(doc_type: "business_registration")
       |> assign(document_types: Provider.valid_document_types())
       |> stream(:verification_docs, docs, dom_id: &"vdoc-#{&1.id}")
@@ -64,6 +64,11 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
      assign(socket,
        form: to_form(Map.put(changeset, :action, :validate), as: :provider_profile_schema)
      )}
+  end
+
+  @impl true
+  def handle_event("add_social_link", %{"network" => network}, socket) do
+    {:noreply, update(socket, :revealed_socials, &ProviderBranding.reveal(&1, network))}
   end
 
   @impl true
@@ -255,47 +260,11 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
                 </.pv_upload_dropzone>
               </div>
 
-              <div class="pt-6 border-t border-hero-grey-200 space-y-6">
-                <div>
-                  <h3 class={[Theme.typography(:card_title), "text-hero-black-100"]}>
-                    {gettext("Branding & Presence")}
-                  </h3>
-                  <p class="text-sm text-[var(--fg-muted)] mt-1">
-                    {gettext("Shown on your public profile page.")}
-                  </p>
-                </div>
-
-                <.input
-                  field={@form[:tagline]}
-                  type="text"
-                  label={gettext("Tagline")}
-                  placeholder={gettext("A short line that sums you up")}
-                  maxlength="150"
-                />
-
-                <div>
-                  <label class="block text-sm font-semibold text-hero-black-100 mb-2">
-                    {gettext("Cover Image")}
-                  </label>
-
-                  <.pv_upload_dropzone
-                    id="cover-upload"
-                    upload={@uploads.cover}
-                    name="cover"
-                    trigger={gettext("Choose Cover Image")}
-                    hint={gettext("JPG, PNG or WebP. Max 5MB.")}
-                    preview_class="w-full max-w-md mx-auto h-32 object-cover rounded-lg"
-                  />
-                </div>
-
-                <.input
-                  :for={{field, label} <- ProviderPresenter.social_networks()}
-                  field={@form[field]}
-                  type="url"
-                  label={label}
-                  placeholder="https://"
-                />
-              </div>
+              <.pv_branding_section
+                form={@form}
+                revealed={@revealed_socials}
+                uploads={@uploads}
+              />
 
               <div class="flex justify-end">
                 <button

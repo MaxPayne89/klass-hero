@@ -59,6 +59,11 @@ defmodule KlassHeroWeb.Provider.EditProfileLiveTest do
     test "saves branding fields through the form to the database", %{conn: conn, provider: provider} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
 
+      # Social rows are added on demand, so an unrevealed network has no input to
+      # submit into. This provider has none filled in, hence both clicks.
+      view |> element("#add-instagram_url") |> render_click()
+      view |> element("#add-linkedin_url") |> render_click()
+
       view
       |> form("#profile-form", %{
         provider_profile_schema: %{
@@ -103,6 +108,8 @@ defmodule KlassHeroWeb.Provider.EditProfileLiveTest do
 
     test "rejects a social link that is not https", %{conn: conn, provider: provider} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/edit")
+
+      view |> element("#add-instagram_url") |> render_click()
 
       view
       |> form("#profile-form", %{
