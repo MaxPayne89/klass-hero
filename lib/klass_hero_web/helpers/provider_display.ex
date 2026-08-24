@@ -13,6 +13,9 @@ defmodule KlassHeroWeb.Helpers.ProviderDisplay do
   """
 
   alias KlassHero.Provider
+  alias KlassHeroWeb.Presenters.ProviderPresenter
+
+  require Logger
 
   @unknown %{name: nil, trust: :unverified}
 
@@ -45,6 +48,35 @@ defmodule KlassHeroWeb.Helpers.ProviderDisplay do
           trust: Provider.trust_state()
         }
   def fetch(providers, program), do: Map.get(providers, program.provider_id, @unknown)
+
+  @doc """
+  Builds the public hero view for one provider, or `nil` when there is none to show.
+
+  Both `provider_hero/1` variants take this map. `Provider.get_public_profile/1`
+  owns which profiles are public; this adds the trust state and the presenter.
+
+  The trust read is rescued so a vetting-lookup failure costs the badge rather
+  than the whole card — the badge is additive, the identity is the content, and
+  degrading to `:unverified` under-claims rather than over-claims.
+  """
+  @spec public_view(term()) :: map() | nil
+  def public_view(provider_id) do
+    case Provider.get_public_profile(provider_id) do
+      {:ok, profile} -> ProviderPresenter.to_public_view(profile, trust_state(provider_id))
+      {:error, :not_found} -> nil
+    end
+  end
+
+  # get_trust_states/1 is batch-only; a missing entry means unverified.
+  defp trust_state(provider_id) do
+    [provider_id]
+    |> Provider.get_trust_states()
+    |> Map.get(provider_id, :unverified)
+  rescue
+    error ->
+      Logger.warning("trust state lookup failed for provider #{provider_id}: #{inspect(error)}")
+      :unverified
+  end
 
   @doc "The fallback used when a provider cannot be resolved."
   @spec unknown() :: %{name: nil, trust: :unverified}

@@ -14,16 +14,36 @@ defmodule KlassHeroWeb.E2E.ContrastAudit do
   resolve the cascade, the `oklch()` values, and every semi-transparent layer
   between the text and an opaque background. Only a browser does that.
 
-  ## The compositing rule this exists to get right
+  ## The compositing rules this exists to get right
 
-  The first version of this walked up to the nearest non-transparent background
-  and used it directly. That reported `text-white/90` on a `bg-white/5` chip
-  inside a **black** sidebar as 1.00:1 — white on white — because a 5%-alpha
-  white composited over an assumed white base is white. The real ratio is 15.7:1.
+  A contrast test that invents dramatic failures is worse than no test: it teaches
+  everyone to ignore it. Each rule below was added because the version without it
+  either fabricated a failure or missed a real one.
 
-  So the whole ancestor stack is composited bottom-up onto an opaque base. A
-  contrast test that invents dramatic failures is worse than no test: it teaches
-  everyone to ignore it.
+  1. **Composite the whole stack, bottom-up.** The first version took the nearest
+     non-transparent background and used it directly, reporting `text-white/90` on
+     a `bg-white/5` chip inside a **black** sidebar as 1.00:1 — a 5%-alpha white
+     over an assumed white base is white. The real ratio is 15.7:1.
+
+  2. **Include positioned overlay siblings, not just ancestors.** A cover band and
+     its scrim are siblings of the text (`<div class="absolute inset-0">` beside
+     `<div class="relative">`), so an ancestor-only walk never sees them and reports
+     hero text as sitting on the page background. That made the one surface a scrim
+     exists to bound the one surface this could not measure.
+
+  3. **Apply each element's `opacity`.** It is a separate property from
+     `backgroundColor`, so a 20%-opacity blurred decorative blob was composited as a
+     solid fill — turning `text-white/70` on black into a fictional 1.47:1. Alpha is
+     carried per layer and applied via canvas `globalAlpha`, because canvas is also
+     what parses the colour: computed values come back as `oklch()` verbatim here,
+     and hand-parsing them fabricates ratios.
+
+  4. **Worst-case real images to black, but not gradients.** An `<img>` or a
+     `url()` background is an arbitrary upload, so the question is whether the text
+     survives *any* cover. A gradient is palette colours the declared-token lint
+     already governs; calling it black fails every dark text on a light gradient.
+     A gradient therefore contributes nothing and the layer beneath it is measured —
+     the same behaviour this harness shipped with.
 
   ## Thresholds
 
@@ -36,26 +56,80 @@ defmodule KlassHeroWeb.E2E.ContrastAudit do
   cv.width = cv.height = 1;
   const ctx = cv.getContext('2d', { willReadFrequently: true });
 
+  // Layers are {color, alpha}. Alpha is the element's `opacity`, which is a separate
+  // property from backgroundColor — a 20%-opacity decorative blob composited as a
+  // solid fill invents dramatic failures. globalAlpha does the blend because canvas
+  // is also what parses the colour: computed values come back as oklch() verbatim,
+  // and hand-parsing them is how you fabricate ratios.
   const paint = (layers) => {
     ctx.clearRect(0, 0, 1, 1);
+    ctx.globalAlpha = 1;
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, 1, 1);
-    for (const c of layers) { ctx.fillStyle = c; ctx.fillRect(0, 0, 1, 1); }
+    for (const l of layers) {
+      if (l.alpha < 0.01) continue;
+      ctx.globalAlpha = l.alpha;
+      ctx.fillStyle = l.color;
+      ctx.fillRect(0, 0, 1, 1);
+    }
+    ctx.globalAlpha = 1;
     const d = ctx.getImageData(0, 0, 1, 1).data;
     return [d[0], d[1], d[2]];
   };
 
-  const backgroundStack = (el) => {
-    const layers = [];
-    let n = el;
-    while (n && n !== document.documentElement) {
-      const c = getComputedStyle(n).backgroundColor;
-      if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') layers.push(c);
-      n = n.parentElement;
+  const opaqueish = (c) => c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent';
+
+  const covers = (layer, el) => {
+    const l = layer.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    return l.left <= x && l.right >= x && l.top <= y && l.bottom >= y;
+  };
+
+  // An <img> or a CSS background-image is an arbitrary upload. Worst-case it to
+  // black: the question a scrim exists to answer is whether the text survives ANY
+  // cover, not whether this particular photo happens to be light.
+  const pushPaint = (node, layers) => {
+    const cs = getComputedStyle(node);
+    if (cs.visibility === 'hidden' || cs.display === 'none') return;
+    const alpha = parseFloat(cs.opacity);
+    // Only a real image is worst-cased. url() and <img> are arbitrary uploads, so
+    // black is the bound a scrim has to survive. A gradient is palette colours the
+    // declared-token lint already governs — calling it black would fail every dark
+    // text on a light gradient, which is a fabricated failure, not a found one.
+    if (node.tagName === 'IMG' || cs.backgroundImage.includes('url(')) {
+      layers.push({ color: '#000000', alpha: alpha });
     }
-    const root = getComputedStyle(document.body).backgroundColor;
-    if (root && root !== 'rgba(0, 0, 0, 0)') layers.push(root);
-    return layers.reverse();
+    if (opaqueish(cs.backgroundColor)) layers.push({ color: cs.backgroundColor, alpha: alpha });
+  };
+
+  const paintSubtree = (root, layers) => {
+    for (const n of [root, ...root.querySelectorAll('*')]) pushPaint(n, layers);
+  };
+
+  const backgroundStack = (el) => {
+    const ancestors = [];
+    for (let n = el; n && n !== document.documentElement; n = n.parentElement) ancestors.push(n);
+    ancestors.reverse();
+
+    const layers = [];
+    for (const node of ancestors) {
+      pushPaint(node, layers);
+
+      // Overlay siblings. A cover band and its scrim are positioned siblings of the
+      // text, not ancestors, so an ancestor-only walk reports the text as sitting on
+      // the page background — the exact surface a scrim exists to bound.
+      for (const child of node.children) {
+        if (child === el || child.contains(el)) continue;
+        const ccs = getComputedStyle(child);
+        if (ccs.position !== 'absolute' && ccs.position !== 'fixed') continue;
+        if (ccs.visibility === 'hidden' || ccs.display === 'none') continue;
+        if (!covers(child, el)) continue;
+        paintSubtree(child, layers);
+      }
+    }
+    return layers;
   };
 
   const lum = ([r, g, b]) => {
@@ -82,7 +156,7 @@ defmodule KlassHeroWeb.E2E.ContrastAudit do
 
     const bgLayers = backgroundStack(el);
     const bg = paint(bgLayers);
-    const fg = paint(bgLayers.concat([cs.color]));
+    const fg = paint(bgLayers.concat([{ color: cs.color, alpha: parseFloat(cs.opacity) }]));
 
     const size = parseFloat(cs.fontSize);
     const bold = parseInt(cs.fontWeight, 10) >= 700;

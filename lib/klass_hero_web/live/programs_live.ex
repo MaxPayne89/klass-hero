@@ -9,7 +9,6 @@ defmodule KlassHeroWeb.ProgramsLive do
   alias KlassHero.Shared.ErrorIds
   alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ProgramPresenter
-  alias KlassHeroWeb.Theme
 
   require Logger
 
@@ -115,26 +114,8 @@ defmodule KlassHeroWeb.ProgramsLive do
   defp program_to_map(%ProgramListing{} = program, capacities, providers) do
     remaining = Map.get(capacities, program.id)
     spots_left = if remaining != :unlimited, do: remaining
-    provider = ProviderDisplay.fetch(providers, program)
 
-    %{
-      id: program.id,
-      provider_name: provider.name,
-      verification_state: provider.trust,
-      title: program.title,
-      subtitle: program.subtitle,
-      description: program.description,
-      category: ProgramPresenter.format_category_for_display(program.category),
-      meeting_days: program.meeting_days || [],
-      meeting_start_time: program.meeting_start_time,
-      meeting_end_time: program.meeting_end_time,
-      age_range: program.age_range,
-      price: program.price,
-      spots_left: spots_left,
-      cover_image_url: program.cover_image_url,
-      gradient_class: Theme.gradient(:primary),
-      icon_name: ProgramPresenter.icon_name(program.category)
-    }
+    ProgramPresenter.to_card_view(program, ProviderDisplay.fetch(providers, program), spots_left)
   end
 
   @impl true

@@ -8,14 +8,12 @@ defmodule KlassHeroWeb.ProgramDetailLive do
   alias KlassHero.Enrollment
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
+  alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.HeroCardsPresenter
   alias KlassHeroWeb.Presenters.ParticipantPolicyPresenter
   alias KlassHeroWeb.Presenters.ProgramPresenter
-  alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
-
-  require Logger
 
   @impl true
   def mount(%{"id" => program_id}, _session, socket) do
@@ -37,7 +35,7 @@ defmodule KlassHeroWeb.ProgramDetailLive do
 
         provider_task =
           Task.Supervisor.async_nolink(KlassHero.TaskSupervisor, fn ->
-            load_provider_profile(program.provider_id)
+            ProviderDisplay.public_view(program.provider_id)
           end)
 
         team =
@@ -119,35 +117,6 @@ defmodule KlassHeroWeb.ProgramDetailLive do
       end
 
     %{staff: staff, lead_id: lead_id}
-  end
-
-  defp load_provider_profile(nil), do: nil
-
-  defp load_provider_profile(provider_id) do
-    case Provider.get_provider_profile(provider_id) do
-      # Only :active providers are surfaced to parents; nil suppresses the card.
-      {:ok, %{profile_status: :active} = provider} ->
-        ProviderPresenter.to_public_view(provider, trust_state(provider_id))
-
-      _ ->
-        nil
-    end
-  end
-
-  # get_trust_states/1 is batch-only; a missing entry means unverified.
-  #
-  # Rescued because this call shares `safe_await`'s fallback with the profile read
-  # above: without it, a vetting-lookup failure blanks the whole provider card
-  # rather than just its badge. The badge is additive, the identity is the
-  # content, so this degrades to :unverified — which under-claims, never over-.
-  defp trust_state(provider_id) do
-    [provider_id]
-    |> Provider.get_trust_states()
-    |> Map.get(provider_id, :unverified)
-  rescue
-    error ->
-      Logger.warning("trust state lookup failed for provider #{provider_id}: #{inspect(error)}")
-      :unverified
   end
 
   defp load_participant_policy(program_id) do

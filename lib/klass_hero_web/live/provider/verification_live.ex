@@ -680,7 +680,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
           label={gettext("Country of registration")}
           options={country_options()}
         />
-        <p class={["mt-1 mb-3", Theme.typography(:caption)]}>
+        <p class={["mt-1 mb-3", Theme.typography(:caption), Theme.text_color(:muted)]}>
           {registration_guidance(@form[:registration_country].value)}
         </p>
         <.input
@@ -695,7 +695,9 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
         />
 
         <.live_file_input upload={@uploads.business_registration_doc} class="mt-2 block" />
-        <p class={["mt-1", Theme.typography(:caption)]}>{gettext("PDF, JPG or PNG. Max 10MB.")}</p>
+        <p class={["mt-1", Theme.typography(:caption), Theme.text_color(:muted)]}>
+          {gettext("PDF, JPG or PNG. Max 10MB.")}
+        </p>
 
         <.button id="business-registration-submit" class="mt-3">{gettext("Submit for review")}</.button>
       </.form>
@@ -767,7 +769,9 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
         <% end %>
 
         <.live_file_input upload={@uploads.insurance_doc} class="mt-2 block" />
-        <p class={["mt-1", Theme.typography(:caption)]}>{gettext("PDF, JPG or PNG. Max 10MB.")}</p>
+        <p class={["mt-1", Theme.typography(:caption), Theme.text_color(:muted)]}>
+          {gettext("PDF, JPG or PNG. Max 10MB.")}
+        </p>
 
         <.button id="insurance-submit" class="mt-3">{gettext("Submit for review")}</.button>
       </.form>
@@ -792,7 +796,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
             <.button id="identity-verify-start" phx-click="start_identity_verification">
               {gettext("Verify identity")}
             </.button>
-            <p class={["mt-3", Theme.typography(:caption)]}>
+            <p class={["mt-3", Theme.typography(:caption), Theme.text_color(:muted)]}>
               {gettext("Takes about 2 minutes. Once verified, your provider account can be approved.")}
             </p>
           </div>

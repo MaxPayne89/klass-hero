@@ -67,6 +67,9 @@ defmodule KlassHero.Provider do
   @doc "Returns the provider profile by ID."
   defdelegate get_provider_profile(provider_id), to: Profiles
 
+  @doc "Returns a provider profile safe to show publicly: active only, malformed ids rejected."
+  defdelegate get_public_profile(provider_id), to: Profiles
+
   @doc "Gets the user (identity) ID that owns a provider profile ID (used by cross-context consumers)."
   defdelegate get_identity_id_for_provider(provider_id), to: Profiles
 

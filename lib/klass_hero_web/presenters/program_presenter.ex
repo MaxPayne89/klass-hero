@@ -68,10 +68,25 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   Returns a map matching the attrs expected by `ProgramComponents.program_card/1`.
   """
-  @spec to_card_view(Program.t(), %{name: String.t() | nil, trust: atom()}) :: map()
-  def to_card_view(program, provider \\ %{name: nil, trust: :unverified})
+  @spec to_card_view(
+          Program.t() | ProgramListing.t(),
+          %{name: String.t() | nil, trust: atom()},
+          non_neg_integer() | nil
+        ) :: map()
+  def to_card_view(program, provider \\ %{name: nil, trust: :unverified}, spots_left \\ nil)
 
-  def to_card_view(%Program{} = program, provider) do
+  def to_card_view(%Program{} = program, provider, spots_left) do
+    to_card(program, provider, spots_left)
+  end
+
+  # ProgramListing is the read-model twin every public surface lists from, and both
+  # cards read the same keys — so one builder serves both rather than a private copy
+  # per LiveView, which is how the home and catalog copies drifted apart.
+  def to_card_view(%ProgramListing{} = listing, provider, spots_left) do
+    to_card(listing, provider, spots_left)
+  end
+
+  defp to_card(program, provider, spots_left) do
     %{
       id: program.id,
       provider_name: provider.name,
@@ -85,6 +100,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       # unpriced program from a free one. Coercing nil to zero here would label an
       # incomplete program "Free", which is a claim about money, not a missing value.
       price: program.price,
+      cover_image_url: program.cover_image_url,
       icon_name: icon_name(program.category),
       gradient_class: default_gradient_class(),
       meeting_days: program.meeting_days || [],
@@ -92,7 +108,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
       meeting_end_time: program.meeting_end_time,
       start_date: program.start_date,
       end_date: program.end_date,
-      spots_left: nil
+      spots_left: spots_left
     }
   end
 
@@ -323,33 +339,24 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   end
 
   @doc """
-  Formats a category slug for display by splitting on hyphens and capitalizing each word.
-
-  ## Examples
-
-      iex> KlassHeroWeb.Presenters.ProgramPresenter.format_category_for_display("life-skills")
-      "Life Skills"
-
-      iex> KlassHeroWeb.Presenters.ProgramPresenter.format_category_for_display(nil)
-      "Education"
-  """
-  @spec format_category_for_display(String.t() | nil) :: String.t()
-  def format_category_for_display(category) when is_binary(category) do
-    category
-    |> String.split("-")
-    |> Enum.map_join(" ", &String.capitalize/1)
-  end
-
-  def format_category_for_display(_), do: "Education"
-
-  @doc """
   Transforms a category code to a human-readable label.
   """
+  # Every category in `Shared.Categories` has a clause, so the fallback is only
+  # reached by an unknown value. It splits on "-" because `String.capitalize/1`
+  # alone renders "life-skills" as "Life-skills" — which is what cards showed
+  # after the two per-LiveView builders were folded into `to_card/3`, since the
+  # deleted copies used a second, hyphen-aware formatter that this one replaced.
   @spec humanize_category(String.t() | nil) :: String.t()
-  def humanize_category(nil), do: "General"
+  def humanize_category(nil), do: gettext("General")
   def humanize_category("arts"), do: gettext("Arts")
   def humanize_category("education"), do: gettext("Education")
   def humanize_category("sports"), do: gettext("Sports")
   def humanize_category("music"), do: gettext("Music")
-  def humanize_category(category), do: String.capitalize(category)
+  def humanize_category("life-skills"), do: gettext("Life Skills")
+  def humanize_category("camps"), do: gettext("Camps")
+  def humanize_category("workshops"), do: gettext("Workshops")
+
+  def humanize_category(category) do
+    category |> String.split("-") |> Enum.map_join(" ", &String.capitalize/1)
+  end
 end

@@ -1874,6 +1874,7 @@ defmodule KlassHeroWeb.MarketingComponents do
   attr :title, :string, required: true
   attr :value, :string, required: true
   attr :note, :string, default: nil
+  attr :href, :string, default: nil, doc: "Makes the value actionable (tel:, mailto:, a URL)"
 
   def mk_method_row(assigns) do
     ~H"""
@@ -1881,7 +1882,17 @@ defmodule KlassHeroWeb.MarketingComponents do
       <.kh_icon_chip icon={@icon} gradient={:primary} size={:sm} />
       <div class="min-w-0">
         <div class="font-semibold text-hero-black">{@title}</div>
-        <div class="text-sm text-[var(--fg-muted)] truncate">{@value}</div>
+        <%!-- min-h-11 (44px) rather than the text's natural ~20px: this is the
+              control a mobile visitor taps to call or open the site, and the row's
+              own p-4 sits outside the anchor so it does not count toward the target. --%>
+        <.link
+          :if={@href}
+          href={@href}
+          class="flex items-center min-h-11 text-sm text-[var(--fg-link)] underline truncate"
+        >
+          {@value}
+        </.link>
+        <div :if={!@href} class="text-sm text-[var(--fg-muted)] truncate">{@value}</div>
         <div :if={@note} class="text-xs text-[var(--fg-muted)] opacity-80 mt-0.5">{@note}</div>
       </div>
     </div>

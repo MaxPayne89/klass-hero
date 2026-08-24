@@ -154,6 +154,32 @@ defmodule KlassHero.Provider.Profiles do
   end
 
   @doc """
+  Returns a provider profile that is safe to show to a stranger.
+
+  Two rules the caller must not have to remember, because a public route makes
+  the id user-typed:
+
+  - A `:draft` profile reads as missing, so the id cannot be probed for
+    existence.
+  - A malformed id is rejected before it reaches the query. `Repo.get/2` on a
+    `binary_id` raises `Ecto.Query.CastError` for a non-UUID, which would be a
+    500 on `/providers/<anything>`. `dump/1` validates the format; `cast/1`
+    wrongly accepts any 16-byte binary.
+  """
+  @spec get_public_profile(term()) :: {:ok, ProviderProfile.t()} | {:error, :not_found}
+  def get_public_profile(provider_id) when is_binary(provider_id) do
+    with {:ok, _binary} <- Ecto.UUID.dump(provider_id),
+         %ProviderProfile{profile_status: :active} = profile <-
+           Repo.get(ProviderProfile, provider_id) do
+      {:ok, profile}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  def get_public_profile(_provider_id), do: {:error, :not_found}
+
+  @doc """
   Resolves business names for a batch of provider IDs.
 
   Returns a map of `provider_id => business_name`. Unknown IDs are omitted.

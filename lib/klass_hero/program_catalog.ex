@@ -349,6 +349,24 @@ defmodule KlassHero.ProgramCatalog do
   end
 
   @doc """
+  Lists a provider's programs that have not ended, ordered by title.
+
+  The public counterpart to `list_programs_for_provider/1`, which deliberately
+  includes expired programs because the provider's own dashboard needs them.
+  Programs carry no published/draft flag — expiry is the only public axis — so
+  the two differ by this filter alone and are kept apart rather than merged
+  behind a boolean, which would make the wrong choice the quiet default.
+  """
+  @spec list_current_programs_for_provider(String.t()) :: [ProgramListing.t()]
+  def list_current_programs_for_provider(provider_id) when is_binary(provider_id) do
+    ProgramListing
+    |> where([l], l.provider_id == ^provider_id)
+    |> where([l], is_nil(l.end_date) or l.end_date >= ^Date.utc_today())
+    |> order_by([l], asc: l.title)
+    |> Repo.all()
+  end
+
+  @doc """
   Lists programs with cursor-based pagination.
 
   - `limit` - maximum programs to return

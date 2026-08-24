@@ -5,7 +5,10 @@ defmodule KlassHeroWeb.ProviderHeroTest do
 
   alias KlassHeroWeb.CompositeComponents
 
+  @provider_id "11111111-2222-3333-4444-555555555555"
+
   @filled %{
+    id: @provider_id,
     business_name: "Starlight Coaching",
     initials: "SC",
     description: "Empowering kids through play-based learning.",
@@ -41,6 +44,18 @@ defmodule KlassHeroWeb.ProviderHeroTest do
 
     test "keeps the id the program detail page and its tests target" do
       assert render_hero(@filled) =~ ~s(id="provider-profile-card")
+    end
+
+    test "links the business name to the provider's public page" do
+      assert render_hero(@filled) =~ ~s(href="/providers/#{@provider_id}")
+    end
+
+    test "renders the name as plain text when the map carries no id" do
+      # A hand-built map from a preview or a test must not crash the page (#1073).
+      html = render_hero(@bare)
+
+      assert html =~ "Starlight Coaching"
+      refute html =~ "/providers/"
     end
 
     test "renders the logo when present, initials when not" do
@@ -91,6 +106,10 @@ defmodule KlassHeroWeb.ProviderHeroTest do
     test "omits the description, which belongs to the About section" do
       refute render_hero(@filled, variant: :full) =~
                "Empowering kids through play-based learning."
+    end
+
+    test "does not link the name — this variant is the page it would link to" do
+      refute render_hero(@filled, variant: :full) =~ "/providers/"
     end
   end
 

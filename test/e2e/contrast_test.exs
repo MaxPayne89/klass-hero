@@ -42,6 +42,28 @@ defmodule KlassHeroWeb.E2E.ContrastTest do
       |> visit("/programs")
       |> assert_no_contrast_failures("/programs")
     end
+
+    test "the provider profile clears AA over a dark cover", %{session: session} do
+      # A solid black cover behind the hero's bg-white/90 scrim: the worst case the
+      # scrim exists to bound, and unreachable through the declared-token lint
+      # because the cover is an arbitrary upload rather than a palette colour.
+      # Inserted through the factory, which skips the https-only URL validation.
+      provider =
+        insert(:provider_profile_schema,
+          business_name: "Starlight Coaching",
+          tagline: "Move. Play. Grow.",
+          description: "Empowering kids through play-based learning.",
+          cover_image_url:
+            "data:image/png;base64," <>
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC"
+        )
+
+      insert(:program_listing_schema, provider_id: provider.id, title: "Youth Fitness")
+
+      session
+      |> visit("/providers/#{provider.id}")
+      |> assert_no_contrast_failures("/providers/:id")
+    end
   end
 
   describe "authenticated surfaces" do
