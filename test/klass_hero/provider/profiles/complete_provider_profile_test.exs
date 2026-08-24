@@ -51,6 +51,22 @@ defmodule KlassHero.Provider.Profiles.CompleteProviderProfileTest do
                Provider.complete_provider_profile(domain.id, %{description: "test"})
     end
 
+    test "persists a scheme-less website and social link as https", %{provider: provider} do
+      # The mirror of update_provider_profile_test.exs's normalization case: this
+      # path persists the struct the pure core returns, so the rewrite has to
+      # happen there rather than in the changeset.
+      attrs = %{
+        business_name: "Starlight",
+        description: "Sports for kids",
+        website: "starlight.de",
+        instagram_url: "instagram.com/starlight"
+      }
+
+      assert {:ok, completed} = Provider.complete_provider_profile(provider.id, attrs)
+      assert completed.website == "https://starlight.de"
+      assert completed.instagram_url == "https://instagram.com/starlight"
+    end
+
     test "returns validation error for invalid attrs", %{provider: provider} do
       attrs = %{business_name: "", description: "Valid"}
 

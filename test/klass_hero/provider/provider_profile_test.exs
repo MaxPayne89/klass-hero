@@ -328,4 +328,106 @@ defmodule KlassHero.Provider.ProviderProfileTest do
       assert %ProviderProfile{}.profile_status == :active
     end
   end
+
+  describe "normalize_url/1" do
+    @normalize_cases [
+      {"instagram.com/handle", "https://instagram.com/handle"},
+      {"www.starlight.de", "https://www.starlight.de"},
+      {"  facebook.com/x  ", "https://facebook.com/x"},
+      {"https://tiktok.com/@x", "https://tiktok.com/@x"},
+      # Left alone on purpose: an explicit http:// is a deliberate insecure
+      # choice, so it must still reach — and fail — the https validator.
+      {"http://insecure.example.com", "http://insecure.example.com"},
+      {"", nil},
+      {"   ", nil},
+      {nil, nil}
+    ]
+
+    for {input, expected} <- @normalize_cases do
+      test "normalizes #{inspect(input)} to #{inspect(expected)}" do
+        assert ProviderProfile.normalize_url(unquote(input)) == unquote(expected)
+      end
+    end
+  end
+
+  describe "scheme-less URLs through the changesets" do
+    test "edit_changeset/2 prepends https:// to every branding URL" do
+      changeset =
+        ProviderProfile.edit_changeset(%ProviderProfile{}, %{
+          instagram_url: "instagram.com/starlight",
+          facebook_url: "facebook.com/starlight"
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :instagram_url) == "https://instagram.com/starlight"
+      assert Ecto.Changeset.get_change(changeset, :facebook_url) == "https://facebook.com/starlight"
+    end
+
+    test "completion_changeset/2 prepends https:// to the website too" do
+      changeset =
+        ProviderProfile.completion_changeset(%ProviderProfile{}, %{
+          business_name: "Starlight",
+          description: "Sports",
+          website: "starlight.de"
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :website) == "https://starlight.de"
+    end
+
+    test "an explicit http:// is still rejected, not upgraded" do
+      changeset =
+        ProviderProfile.edit_changeset(%ProviderProfile{}, %{
+          instagram_url: "http://instagram.com/starlight"
+        })
+
+      refute changeset.valid?
+      assert "must start with https://" in errors_on(changeset).instagram_url
+    end
+  end
+
+  describe "scheme-less URLs through the pure core" do
+    test "new/1 accepts a scheme-less social link" do
+      assert {:ok, _} =
+               ProviderProfile.new(%{
+                 identity_id: Ecto.UUID.generate(),
+                 business_name: "Starlight",
+                 instagram_url: "instagram.com/starlight"
+               })
+    end
+
+    test "new/1 still rejects an explicit http://" do
+      assert {:error, errors} =
+               ProviderProfile.new(%{
+                 identity_id: Ecto.UUID.generate(),
+                 business_name: "Starlight",
+                 instagram_url: "http://instagram.com/starlight"
+               })
+
+      assert Enum.any?(errors, &(&1 =~ "must start with https://"))
+    end
+
+    test "complete_profile/2 normalizes into the struct it returns" do
+      # This path persists the struct the pure core returns, where the update
+      # path discards it and persists the changeset's instead. Normalizing one
+      # and not the other is a half-fix that looks whole.
+      draft = %ProviderProfile{
+        id: Ecto.UUID.generate(),
+        identity_id: Ecto.UUID.generate(),
+        business_name: "Starlight",
+        profile_status: :draft
+      }
+
+      assert {:ok, completed} =
+               ProviderProfile.complete_profile(draft, %{
+                 business_name: "Starlight",
+                 description: "Sports for kids",
+                 website: "starlight.de",
+                 instagram_url: "instagram.com/starlight"
+               })
+
+      assert completed.website == "https://starlight.de"
+      assert completed.instagram_url == "https://instagram.com/starlight"
+    end
+  end
 end
