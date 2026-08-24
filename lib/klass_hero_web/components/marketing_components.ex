@@ -1882,10 +1882,13 @@ defmodule KlassHeroWeb.MarketingComponents do
       <.kh_icon_chip icon={@icon} gradient={:primary} size={:sm} />
       <div class="min-w-0">
         <div class="font-semibold text-hero-black">{@title}</div>
+        <%!-- min-h-11 (44px) rather than the text's natural ~20px: this is the
+              control a mobile visitor taps to call or open the site, and the row's
+              own p-4 sits outside the anchor so it does not count toward the target. --%>
         <.link
           :if={@href}
           href={@href}
-          class="block text-sm text-[var(--fg-link)] underline truncate"
+          class="flex items-center min-h-11 text-sm text-[var(--fg-link)] underline truncate"
         >
           {@value}
         </.link>

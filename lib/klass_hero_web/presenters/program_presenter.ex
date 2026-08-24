@@ -339,33 +339,24 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   end
 
   @doc """
-  Formats a category slug for display by splitting on hyphens and capitalizing each word.
-
-  ## Examples
-
-      iex> KlassHeroWeb.Presenters.ProgramPresenter.format_category_for_display("life-skills")
-      "Life Skills"
-
-      iex> KlassHeroWeb.Presenters.ProgramPresenter.format_category_for_display(nil)
-      "Education"
-  """
-  @spec format_category_for_display(String.t() | nil) :: String.t()
-  def format_category_for_display(category) when is_binary(category) do
-    category
-    |> String.split("-")
-    |> Enum.map_join(" ", &String.capitalize/1)
-  end
-
-  def format_category_for_display(_), do: "Education"
-
-  @doc """
   Transforms a category code to a human-readable label.
   """
+  # Every category in `Shared.Categories` has a clause, so the fallback is only
+  # reached by an unknown value. It splits on "-" because `String.capitalize/1`
+  # alone renders "life-skills" as "Life-skills" — which is what cards showed
+  # after the two per-LiveView builders were folded into `to_card/3`, since the
+  # deleted copies used a second, hyphen-aware formatter that this one replaced.
   @spec humanize_category(String.t() | nil) :: String.t()
-  def humanize_category(nil), do: "General"
+  def humanize_category(nil), do: gettext("General")
   def humanize_category("arts"), do: gettext("Arts")
   def humanize_category("education"), do: gettext("Education")
   def humanize_category("sports"), do: gettext("Sports")
   def humanize_category("music"), do: gettext("Music")
-  def humanize_category(category), do: String.capitalize(category)
+  def humanize_category("life-skills"), do: gettext("Life Skills")
+  def humanize_category("camps"), do: gettext("Camps")
+  def humanize_category("workshops"), do: gettext("Workshops")
+
+  def humanize_category(category) do
+    category |> String.split("-") |> Enum.map_join(" ", &String.capitalize/1)
+  end
 end

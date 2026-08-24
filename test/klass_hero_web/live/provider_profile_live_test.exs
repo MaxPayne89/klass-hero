@@ -82,6 +82,18 @@ defmodule KlassHeroWeb.ProviderProfileLiveTest do
       refute has_element?(view, "#provider-about")
       assert has_element?(view, "#provider-hero")
     end
+
+    test "the hero band still separates from Programs when About is absent", %{conn: conn} do
+      # Most providers have filled none of this in, so About is usually missing.
+      # Asserting only that the section is gone says nothing about what is left:
+      # if the hero inherited the layout's white, hero and Programs would render
+      # as one flush white block on the page's most common state.
+      provider = active_provider(description: nil, address: nil, phone: nil, website: nil)
+
+      {:ok, _view, html} = live(conn, ~p"/providers/#{provider.id}")
+
+      assert html =~ KlassHeroWeb.Theme.gradient(:base_fade)
+    end
   end
 
   describe "programs" do

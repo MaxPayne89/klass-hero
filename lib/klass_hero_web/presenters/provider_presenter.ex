@@ -43,7 +43,10 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
   tier/verification/slot data is not relevant — only the business identity.
 
   Returns a map with: id, business_name, description, logo_url, initials,
-  trust_state, plus the branding fields (tagline, cover_image_url, social_links).
+  trust_state, the branding fields (tagline, cover_image_url, social_links), and
+  the public contact facts (address, phone, website). The hero variants read a
+  subset; the profile page's About section reads the rest, so one read serves
+  both rather than the page querying the same row twice.
 
   `social_links` is a list of `{network, label, url}` for the networks the provider
   filled in; the atom is what `kh_social_icon/1` keys on.
@@ -63,7 +66,10 @@ defmodule KlassHeroWeb.Presenters.ProviderPresenter do
       tagline: provider.tagline,
       cover_image_url: provider.cover_image_url,
       social_links: social_links(provider),
-      trust_state: trust_state
+      trust_state: trust_state,
+      address: provider.address,
+      phone: provider.phone,
+      website: provider.website
     }
   end
 

@@ -13,7 +13,6 @@ defmodule KlassHeroWeb.ProviderProfileLive do
   import KlassHeroWeb.MarketingComponents
 
   alias KlassHero.ProgramCatalog
-  alias KlassHero.Provider
   alias KlassHeroWeb.Helpers.ProviderDisplay
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Theme
@@ -36,8 +35,6 @@ defmodule KlassHeroWeb.ProviderProfileLive do
   end
 
   defp mount_profile(socket, provider_id, provider) do
-    contact = contact_facts(provider_id)
-
     programs =
       provider_id
       |> ProgramCatalog.list_current_programs_for_provider()
@@ -48,25 +45,15 @@ defmodule KlassHeroWeb.ProviderProfileLive do
     socket
     |> assign(:page_title, provider.business_name)
     |> assign(:provider, provider)
-    |> assign(:contact, contact)
     |> assign(:programs_empty?, programs == [])
     |> stream(:programs, programs)
-  end
-
-  # Read a second time rather than widening the public view: the hero takes a
-  # deliberately slim map, and these fields belong to About, not to identity.
-  defp contact_facts(provider_id) do
-    case Provider.get_public_profile(provider_id) do
-      {:ok, profile} -> Map.take(profile, [:description, :address, :phone, :website])
-      {:error, :not_found} -> %{}
-    end
   end
 
   defp present?(value) when is_binary(value), do: String.trim(value) != ""
   defp present?(_), do: false
 
-  defp any_contact?(contact) do
-    Enum.any?([:description, :address, :phone, :website], &present?(Map.get(contact, &1)))
+  defp any_contact?(provider) do
+    Enum.any?([:description, :address, :phone, :website], &present?(provider[&1]))
   end
 
   @impl true
@@ -74,91 +61,105 @@ defmodule KlassHeroWeb.ProviderProfileLive do
     {:noreply, push_navigate(socket, to: ~p"/programs/#{program_id}")}
   end
 
+  attr :id, :string, default: nil
+  attr :background, :string, required: true
+  slot :inner_block, required: true
+
+  defp profile_section(assigns) do
+    ~H"""
+    <section id={@id} class={["py-12 lg:py-16", @background]}>
+      <div class="max-w-5xl mx-auto px-6">
+        {render_slot(@inner_block)}
+      </div>
+    </section>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <%!-- The hero carries the marketing surface's warm pink base, and it also keeps
+          the bands alternating when About is absent — which is the common case, since
+          most providers have filled none of this in. Alternation that depends on
+          optional content collapses into two flush white sections exactly then. --%>
+    <.profile_section background={Theme.gradient(:base_fade)}>
       <.provider_hero provider={@provider} variant={:full} />
-    </div>
+    </.profile_section>
 
-    <section :if={any_contact?(@contact)} id="provider-about" class="py-12 lg:py-16 bg-hero-cream-100">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6">
-        <h2 class={[Theme.typography(:section_title), Theme.text_color(:heading), "mb-6"]}>
-          <%!-- Not the bare "About", whose German is "Über uns" — this section is
-                about someone else, and the reader is a parent. --%>
-          {gettext("About the Provider")}
-        </h2>
+    <.profile_section :if={any_contact?(@provider)} id="provider-about" background="bg-hero-cream-100">
+      <h2 class={[Theme.typography(:section_title), Theme.text_color(:heading), "mb-6"]}>
+        <%!-- Not the bare "About", whose German is "Über uns" — this section is
+              about someone else, and the reader is a parent. --%>
+        {gettext("About the Provider")}
+      </h2>
 
-        <p
-          :if={present?(@contact[:description])}
-          class={[Theme.typography(:body), "text-[var(--fg-muted-on-light)] max-w-3xl mb-8"]}
-        >
-          {@contact.description}
-        </p>
+      <p
+        :if={present?(@provider[:description])}
+        class={[Theme.typography(:body), "text-[var(--fg-muted-on-light)] max-w-3xl mb-8"]}
+      >
+        {@provider.description}
+      </p>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <.mk_method_row
-            :if={present?(@contact[:address])}
-            icon="hero-map-pin"
-            title={gettext("Address")}
-            value={@contact.address}
-          />
-          <.mk_method_row
-            :if={present?(@contact[:phone])}
-            icon="hero-phone"
-            title={gettext("Phone")}
-            value={@contact.phone}
-            href={"tel:#{@contact[:phone]}"}
-          />
-          <.mk_method_row
-            :if={present?(@contact[:website])}
-            icon="hero-globe-alt"
-            title={gettext("Website")}
-            value={@contact.website}
-            href={@contact[:website]}
-          />
-        </div>
-      </div>
-    </section>
-
-    <section id="provider-programs" class="py-12 lg:py-16 bg-white">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6">
-        <h2 class={[Theme.typography(:section_title), Theme.text_color(:heading), "mb-6"]}>
-          {gettext("Programs")}
-        </h2>
-
-        <.mk_empty_state
-          :if={@programs_empty?}
-          icon="hero-calendar"
-          title={gettext("No programs running right now")}
-          description={gettext("This provider has no open programs at the moment. Check back soon.")}
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <.mk_method_row
+          :if={present?(@provider[:address])}
+          icon="hero-map-pin"
+          title={gettext("Address")}
+          value={@provider.address}
         />
-
-        <div
-          :if={!@programs_empty?}
-          id="provider-programs-grid"
-          phx-update="stream"
-          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
-          <.mk_program_card
-            :for={{dom_id, program} <- @streams.programs}
-            id={dom_id}
-            program={program}
-          />
-        </div>
+        <.mk_method_row
+          :if={present?(@provider[:phone])}
+          icon="hero-phone"
+          title={gettext("Phone")}
+          value={@provider.phone}
+          href={"tel:#{@provider[:phone]}"}
+        />
+        <.mk_method_row
+          :if={present?(@provider[:website])}
+          icon="hero-globe-alt"
+          title={gettext("Website")}
+          value={@provider.website}
+          href={@provider[:website]}
+        />
       </div>
-    </section>
+    </.profile_section>
 
-    <section class="py-12 lg:py-16 bg-hero-cream-100">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center">
-        <h2 class={[Theme.typography(:section_title), Theme.text_color(:heading), "mb-3"]}>
-          {gettext("Have questions?")}
-        </h2>
-        <p class={[Theme.typography(:body), "text-[var(--fg-muted-on-light)] mb-6"]}>
-          {gettext("Message %{provider} directly about their programs.",
-            provider: @provider.business_name
-          )}
-        </p>
+    <.profile_section id="provider-programs" background="bg-white">
+      <h2 class={[Theme.typography(:section_title), Theme.text_color(:heading), "mb-6"]}>
+        {gettext("Programs")}
+      </h2>
+
+      <.mk_empty_state
+        :if={@programs_empty?}
+        icon="hero-calendar"
+        title={gettext("No programs running right now")}
+        description={gettext("This provider has no open programs at the moment. Check back soon.")}
+      />
+
+      <div
+        :if={!@programs_empty?}
+        id="provider-programs-grid"
+        phx-update="stream"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
+        <.mk_program_card
+          :for={{dom_id, program} <- @streams.programs}
+          id={dom_id}
+          program={program}
+        />
+      </div>
+    </.profile_section>
+
+    <.mk_cta_section
+      id="provider-cta"
+      title={gettext("Have questions?")}
+      lede={
+        gettext("Message %{provider} directly about their programs.",
+          provider: @provider.business_name
+        )
+      }
+    >
+      <:cta>
         <%!-- A link, not a gated button. Messaging.build_compose_target/3 owns who may
               write to whom ("the gate lives here rather than in the callers"), and an
               anonymous visitor is bounced to log in by the target live_session. A
@@ -167,8 +168,8 @@ defmodule KlassHeroWeb.ProviderProfileLive do
         <.link id="provider-message-cta" navigate={~p"/messages/new?provider_id=#{@provider.id}"}>
           <.kh_button variant={:primary}>{gettext("Message this provider")}</.kh_button>
         </.link>
-      </div>
-    </section>
+      </:cta>
+    </.mk_cta_section>
     """
   end
 end
