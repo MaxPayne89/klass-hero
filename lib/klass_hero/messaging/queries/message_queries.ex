@@ -108,9 +108,8 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
   notification for something the reader cannot open.
   """
   def newest_inserted_at_by_conversation(conversation_ids) do
-    base()
-    |> where([message: m], m.conversation_id in ^conversation_ids)
-    |> group_by([message: m], m.conversation_id)
+    conversation_ids
+    |> grouped_by_conversation()
     |> select([message: m], {m.conversation_id, max(m.inserted_at)})
   end
 
@@ -119,19 +118,13 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
 
   A subquery join rather than a `:messages` preload, which would load N×M rows.
 
-  Counts soft-deleted messages, so `not_deleted/1` is deliberately absent here as it
-  is in `newest_inserted_at_by_conversation/1`. An inbox preview anchored on the
-  newest *visible* message would disagree with the unread badge rendered beside it,
-  which counts deleted ones.
-
   Returns a query. Callers execute and shape it — `ConversationSummaries` and
   `ListStaffConversations` both key the rows by `conversation_id`.
   """
   def latest_per_conversation(conversation_ids) do
     latest_times =
-      base()
-      |> where([message: m], m.conversation_id in ^conversation_ids)
-      |> group_by([message: m], m.conversation_id)
+      conversation_ids
+      |> grouped_by_conversation()
       |> select([message: m], %{conversation_id: m.conversation_id, max_at: max(m.inserted_at)})
 
     base()
@@ -145,6 +138,16 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
       sender_id: m.sender_id,
       inserted_at: m.inserted_at
     })
+  end
+
+  # The grouping both "newest per conversation" reads share. It carries the one
+  # decision that must not drift between them: no `not_deleted/1`. A preview or a
+  # cursor anchored on the newest *visible* message would disagree with the unread
+  # badge rendered beside it, which counts soft-deleted ones.
+  defp grouped_by_conversation(conversation_ids) do
+    base()
+    |> where([message: m], m.conversation_id in ^conversation_ids)
+    |> group_by([message: m], m.conversation_id)
   end
 
   @doc """

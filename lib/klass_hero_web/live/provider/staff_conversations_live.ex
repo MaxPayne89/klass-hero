@@ -27,9 +27,11 @@ defmodule KlassHeroWeb.Provider.StaffConversationsLive do
 
   use KlassHeroWeb, :live_view
 
-  # Only the two presentational pieces. Importing the whole module would put
+  # Only the presentational pieces. Importing the whole module would put
   # `message_input/1` and `conversation_show/1` in scope on a read-only screen.
-  import KlassHeroWeb.MessagingComponents, only: [conversation_card: 1, message_bubble: 1]
+  import KlassHeroWeb.MessagingComponents,
+    only: [conversation_card: 1, message_bubble: 1, provider_comms_shell: 1]
+
   import KlassHeroWeb.ProviderComponents, only: [provider_message_tabs: 1]
 
   alias KlassHero.Messaging
@@ -45,7 +47,6 @@ defmodule KlassHeroWeb.Provider.StaffConversationsLive do
      |> assign(:page_title, gettext("Staff conversations"))
      |> assign(:has_more, false)
      |> assign(:cursor, nil)
-     |> assign(:conversations_empty?, true)
      # A StaffConversation has no `:id` — it is a query-shaped row, not a table row —
      # so the DOM id has to come from the conversation it describes.
      |> stream_configure(:conversations, dom_id: &"staff-conversations-#{&1.conversation_id}")
@@ -91,7 +92,6 @@ defmodule KlassHeroWeb.Provider.StaffConversationsLive do
       {:ok, conversations, has_more} ->
         socket
         |> stream(:conversations, conversations, reset: reset?)
-        |> assign(:conversations_empty?, reset? and conversations == [])
         |> assign(:has_more, has_more)
         |> assign(:cursor, cursor_from(conversations))
 

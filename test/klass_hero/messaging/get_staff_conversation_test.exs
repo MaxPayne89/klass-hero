@@ -47,9 +47,12 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
     conversation
   end
 
+  setup do
+    business()
+  end
+
   describe "execute/3 authorization" do
-    test "refuses a staff scope of the very provider that owns the thread" do
-      ctx = business()
+    test "refuses a staff scope of the very provider that owns the thread", ctx do
       conversation = staff_thread(ctx)
 
       assert {:error, :unauthorized} =
@@ -59,8 +62,7 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
                )
     end
 
-    test "refuses a scope with no provider profile" do
-      ctx = business()
+    test "refuses a scope with no provider profile", ctx do
       conversation = staff_thread(ctx)
 
       assert {:error, :unauthorized} =
@@ -73,8 +75,7 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
     # Owner authorization proves the scope owns *a* provider, never that it owns *this*
     # conversation — unlike `is_admin`, which grants blanket visibility. Both answers
     # must be identical, or a UUID becomes an oracle for another business's threads.
-    test "a different provider's owner cannot tell a real thread from a missing one" do
-      ctx = business()
+    test "a different provider's owner cannot tell a real thread from a missing one", ctx do
       conversation = staff_thread(ctx)
 
       stranger = business()
@@ -87,8 +88,7 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
   end
 
   describe "execute/3 reading" do
-    test "returns the thread with its messages and sender names" do
-      ctx = business()
+    test "returns the thread with its messages and sender names", ctx do
       conversation = staff_thread(ctx)
 
       assert {:ok, result} = GetStaffConversation.execute(ctx.scope, conversation.id)
@@ -101,8 +101,7 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
   end
 
   describe "execute/3 is strictly read-only" do
-    test "seats no participant for the owner" do
-      ctx = business()
+    test "seats no participant for the owner", ctx do
       conversation = staff_thread(ctx)
 
       assert {:ok, _} = GetStaffConversation.execute(ctx.scope, conversation.id)
@@ -115,13 +114,28 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
              ) == 2
     end
 
-    test "moves nobody's read receipt" do
-      ctx = business()
+    test "moves nobody's read receipt", ctx do
       conversation = staff_thread(ctx)
+
+      # Stamped first, on purpose. Left at their initial `nil` the assertion would
+      # still catch a mark-as-read — a DateTime is not nil — but nothing else: code
+      # that *cleared* an existing receipt would compare `[nil, nil] == [nil, nil]`
+      # and pass. A non-nil value pins the state in both directions.
+      read_at = ~U[2026-01-01 09:00:00Z]
+
+      {1, _} =
+        Repo.update_all(
+          from(p in Participant,
+            where: p.conversation_id == ^conversation.id and p.user_id == ^ctx.parent.id
+          ),
+          set: [last_read_at: read_at]
+        )
 
       before =
         Repo.all(from(p in Participant, where: p.conversation_id == ^conversation.id))
         |> Enum.map(& &1.last_read_at)
+
+      assert read_at in before
 
       assert {:ok, _} = GetStaffConversation.execute(ctx.scope, conversation.id)
 
@@ -137,8 +151,7 @@ defmodule KlassHero.Messaging.GetStaffConversationTest do
   # admin branch". Read-only here is structural: there is no owner clause in
   # SendMessage to bypass, and this test is what keeps it that way.
   describe "the write path gained no owner branch" do
-    test "an owner who is not a participant still cannot send a message" do
-      ctx = business()
+    test "an owner who is not a participant still cannot send a message", ctx do
       conversation = staff_thread(ctx)
 
       assert {:error, :not_participant} =

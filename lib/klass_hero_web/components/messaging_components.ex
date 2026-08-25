@@ -500,6 +500,44 @@ defmodule KlassHeroWeb.MessagingComponents do
   defp empty_state_message(_parent), do: gettext("Your conversations with providers will appear here")
 
   @doc """
+  The provider Comms page frame: full-height page, centred surface column, and the
+  sticky header bar that sits above whatever the surface lists.
+
+  Every chrome-shaped thing the provider's own inbox and their read-only view of the
+  threads their staff conduct render *identically* lives here (#746). Those two are
+  tabs of one surface, so a layout class that drifts between them shows up to the user
+  as a jump on tab switch — and a duplicated class is exactly what drifts.
+
+  The `:header` slot is whatever belongs inside the sticky bar: a title plus the tab
+  strip on an index, a back link plus a thread title on a thread.
+
+  ## Examples
+
+      <.provider_comms_shell>
+        <:header>
+          <h1>{gettext("Messages")}</h1>
+          <.provider_message_tabs current_tab={:inbox} />
+        </:header>
+        <.conversation_list ... />
+      </.provider_comms_shell>
+  """
+  slot :header, required: true
+  slot :inner_block, required: true
+
+  def provider_comms_shell(assigns) do
+    ~H"""
+    <div class="min-h-screen bg-gray-50">
+      <div class="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
+        <header class="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
+          {render_slot(@header)}
+        </header>
+        {render_slot(@inner_block)}
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
   Renders the conversation index page.
 
   Uses multi-clause dispatch on `variant` for parent vs provider chrome.
@@ -544,20 +582,20 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   def conversation_index(%{variant: :provider} = assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-50">
-      <div class="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
-        <header class="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
-          <h1 class="text-xl font-semibold text-gray-900">{gettext("Messages")}</h1>
-          {render_slot(@tabs)}
-        </header>
-        <.conversation_list
-          streams={@streams}
-          conversations_empty?={@conversations_empty?}
-          navigate_base={@navigate_base}
-          user_type={:provider}
-        />
-      </div>
-    </div>
+    <.provider_comms_shell>
+      <:header>
+        <h1 class={["text-xl font-semibold", Theme.text_color(:heading)]}>
+          {gettext("Messages")}
+        </h1>
+        {render_slot(@tabs)}
+      </:header>
+      <.conversation_list
+        streams={@streams}
+        conversations_empty?={@conversations_empty?}
+        navigate_base={@navigate_base}
+        user_type={:provider}
+      />
+    </.provider_comms_shell>
     """
   end
 

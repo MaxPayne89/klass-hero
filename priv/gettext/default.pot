@@ -1486,11 +1486,11 @@ msgstr ""
 msgid "Unassigned"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:794
+#: lib/klass_hero_web/components/messaging_components.ex:832
 #: lib/klass_hero_web/components/provider_components.ex:52
 #: lib/klass_hero_web/components/provider_components.ex:1589
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:110
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:82
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:79
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:455
 #: lib/klass_hero_web/presenters/provider_presenter.ex:172
 #, elixir-autogen, elixir-format
@@ -1507,7 +1507,7 @@ msgstr ""
 msgid "%{age} years old"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:815
+#: lib/klass_hero_web/components/messaging_components.ex:853
 #, elixir-autogen, elixir-format
 msgid "%{n}m ago"
 msgstr ""
@@ -1601,7 +1601,7 @@ msgstr ""
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:80
 #: lib/klass_hero_web/live/dashboard_live.ex:175
 #: lib/klass_hero_web/live/messaging_live_helper.ex:413
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:72
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:73
 #: lib/klass_hero_web/live/provider/staff_conversations_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "Conversation"
@@ -1709,14 +1709,14 @@ msgstr ""
 
 #: lib/klass_hero_web/components/layouts/admin.html.heex:90
 #: lib/klass_hero_web/components/layouts/app.html.heex:214
-#: lib/klass_hero_web/components/messaging_components.ex:527
-#: lib/klass_hero_web/components/messaging_components.ex:550
+#: lib/klass_hero_web/components/messaging_components.ex:565
+#: lib/klass_hero_web/components/messaging_components.ex:588
 #: lib/klass_hero_web/live/admin/messages_live.ex:37
 #: lib/klass_hero_web/live/admin/messages_live.ex:56
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:5
 #: lib/klass_hero_web/live/messages_live/index.ex:19
 #: lib/klass_hero_web/live/messaging_live_helper.ex:365
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:6
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:5
 #, elixir-autogen, elixir-format
 msgid "Messages"
 msgstr ""
@@ -1733,7 +1733,7 @@ msgid "No conversations yet"
 msgstr ""
 
 #: lib/klass_hero_web/components/messaging_components.ex:458
-#: lib/klass_hero_web/components/messaging_components.ex:837
+#: lib/klass_hero_web/components/messaging_components.ex:875
 #, elixir-autogen, elixir-format
 msgid "No messages yet"
 msgstr ""
@@ -1765,7 +1765,7 @@ msgstr ""
 msgid "Note resubmitted for review"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:814
+#: lib/klass_hero_web/components/messaging_components.ex:852
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr ""
@@ -1805,7 +1805,7 @@ msgstr ""
 msgid "Please set up your parent profile to manage children."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:787
+#: lib/klass_hero_web/components/messaging_components.ex:825
 #: lib/klass_hero_web/live/messaging_live_helper.ex:409
 #, elixir-autogen, elixir-format
 msgid "Program Broadcast"
@@ -2104,7 +2104,7 @@ msgstr ""
 msgid "Confirmed"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:889
+#: lib/klass_hero_web/components/messaging_components.ex:927
 #, elixir-autogen, elixir-format
 msgid "Contact Provider"
 msgstr ""
@@ -3752,7 +3752,7 @@ msgstr ""
 msgid "Back to emails"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:754
+#: lib/klass_hero_web/components/messaging_components.ex:792
 #, elixir-autogen, elixir-format
 msgid "Broadcast messages are one-way"
 msgstr ""
@@ -4158,7 +4158,7 @@ msgstr ""
 msgid "Reply"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:765
+#: lib/klass_hero_web/components/messaging_components.ex:803
 #, elixir-autogen, elixir-format
 msgid "Reply privately"
 msgstr ""
@@ -4439,7 +4439,7 @@ msgstr ""
 msgid "Failed to upload files. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:841
+#: lib/klass_hero_web/components/messaging_components.ex:879
 #, elixir-autogen, elixir-format
 msgid "File is too large (max %{mb} MB)"
 msgstr ""
@@ -4449,7 +4449,7 @@ msgstr ""
 msgid "File is too large (max %{mb} MB)."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:844
+#: lib/klass_hero_web/components/messaging_components.ex:882
 #, elixir-autogen, elixir-format
 msgid "File type not accepted (images only)"
 msgstr ""
@@ -4469,8 +4469,8 @@ msgstr ""
 msgid "Only images are accepted (JPG, PNG, GIF, WebP)."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:826
-#: lib/klass_hero_web/components/messaging_components.ex:830
+#: lib/klass_hero_web/components/messaging_components.ex:864
+#: lib/klass_hero_web/components/messaging_components.ex:868
 #, elixir-autogen, elixir-format
 msgid "Photo"
 msgstr ""
@@ -4510,7 +4510,7 @@ msgstr ""
 msgid "Tell parents about your organization and what makes you unique..."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:848
+#: lib/klass_hero_web/components/messaging_components.ex:886
 #, elixir-autogen, elixir-format
 msgid "Too many files (max %{max})"
 msgstr ""
@@ -4520,12 +4520,12 @@ msgstr ""
 msgid "Too many files (max %{max})."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:852
+#: lib/klass_hero_web/components/messaging_components.ex:890
 #, elixir-autogen, elixir-format
 msgid "Upload error"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:851
+#: lib/klass_hero_web/components/messaging_components.ex:889
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
 msgstr ""
@@ -8080,7 +8080,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/klass_hero_web/live/admin/messages_live.ex:75
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:77
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:78
 #, elixir-autogen, elixir-format
 msgid "Conversation not found."
 msgstr ""
@@ -8091,7 +8091,7 @@ msgid "Direct"
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:70
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:46
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:41
 #, elixir-autogen, elixir-format
 msgid "Load more"
 msgstr ""
@@ -8102,7 +8102,7 @@ msgid "No conversations found."
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:102
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:74
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:71
 #, elixir-autogen, elixir-format
 msgid "No messages in this conversation."
 msgstr ""
@@ -8132,17 +8132,17 @@ msgstr ""
 msgid "← Back to messages"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:733
+#: lib/klass_hero_web/components/messaging_components.ex:771
 #, elixir-autogen, elixir-format
 msgid "Messages here may be reviewed by the activity provider and by Klass Hero staff, to keep children safe."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:56
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:53
 #, elixir-autogen, elixir-format
 msgid "Back to staff conversations"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:15
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:14
 #, elixir-autogen, elixir-format
 msgid "Conversations your staff have with parents. Read-only — opening a thread here does not mark anything as read."
 msgstr ""
@@ -8152,19 +8152,19 @@ msgstr ""
 msgid "My conversations"
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:34
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:29
 #, elixir-autogen, elixir-format
 msgid "No staff conversations yet. Threads your team starts will appear here."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:65
+#: lib/klass_hero_web/live/provider/staff_conversations_live.html.heex:62
 #, elixir-autogen, elixir-format
 msgid "Read-only. You are viewing this as the business owner, not as a participant — nothing is marked as read."
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:185
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:45
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:62
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:47
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:63
 #, elixir-autogen, elixir-format
 msgid "Staff conversations"
 msgstr ""
