@@ -98,6 +98,22 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
   end
 
   @doc """
+  Newest `inserted_at` per conversation, as `{conversation_id, inserted_at}` rows.
+
+  Counts soft-deleted messages on purpose, so `not_deleted/1` is absent here where
+  every other read applies it. Callers use this as a read cursor, and
+  `ConversationSummaries` counts unread without a `deleted_at` filter — anchoring on
+  the newest *visible* message would badge a soft-deleted newer one as unread, a
+  notification for something the reader cannot open.
+  """
+  def newest_inserted_at_by_conversation(conversation_ids) do
+    base()
+    |> where([message: m], m.conversation_id in ^conversation_ids)
+    |> group_by([message: m], m.conversation_id)
+    |> select([message: m], {m.conversation_id, max(m.inserted_at)})
+  end
+
+  @doc """
   Apply pagination with limit.
   """
   def paginate(query, opts) do

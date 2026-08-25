@@ -957,7 +957,16 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Ids of active program conversations the user is NOT a participant of."
+  @doc """
+  Ids of active program conversations the user is NOT a participant of.
+
+  **Staff only.** "Program conversation" means every type scoped to the program, and a
+  `:direct` parent↔provider conversation carries a `program_id` too
+  (`StartProgramConversation`). Back-filling a *parent* from this list would seat a
+  newly enrolled family in every other family's private thread. Staff legitimately
+  belong in both kinds, which is what makes the width correct for them and only them;
+  parents get `list_active_broadcast_ids_without_participant/2`.
+  """
   @spec list_active_program_conversation_ids_without_participant(String.t(), String.t()) :: [String.t()]
   def list_active_program_conversation_ids_without_participant(program_id, user_id) do
     ConversationQueries.base()
@@ -968,7 +977,31 @@ defmodule KlassHero.Messaging do
     |> Repo.all()
   end
 
-  @doc "Ids of active program conversations the user IS a participant of."
+  @doc """
+  Ids of the program's active *broadcast* conversations the user is NOT a participant of.
+
+  The parent-safe counterpart to
+  `list_active_program_conversation_ids_without_participant/2`, which must not be
+  reused here — see its doc for the privacy trap the `:program_broadcast` filter
+  closes. The two cannot be folded together.
+  """
+  @spec list_active_broadcast_ids_without_participant(String.t(), String.t()) :: [String.t()]
+  def list_active_broadcast_ids_without_participant(program_id, user_id) do
+    ConversationQueries.base()
+    |> ConversationQueries.by_program(program_id)
+    |> ConversationQueries.by_type(:program_broadcast)
+    |> ConversationQueries.active_only()
+    |> ConversationQueries.where_user_is_not_participant(user_id)
+    |> ConversationQueries.select_ids()
+    |> Repo.all()
+  end
+
+  @doc """
+  Ids of active program conversations the user IS a participant of.
+
+  Every type, `:direct` included — see
+  `list_active_program_conversation_ids_without_participant/2` for why that matters.
+  """
   @spec list_active_program_conversation_ids_with_participant(String.t(), String.t()) :: [String.t()]
   def list_active_program_conversation_ids_with_participant(program_id, user_id) do
     ConversationQueries.base()
@@ -1362,12 +1395,26 @@ defmodule KlassHero.Messaging do
 
   # === Persistence — participants ===
 
-  @doc "Adds a participant to a conversation. Defaults `joined_at` to now."
+  @doc """
+  Adds a participant to a conversation. Defaults `joined_at` to now.
+
+  Seats them with their read cursor at whatever the conversation already contained —
+  the same rule as the two batch functions, see `seating_cursors/1`. Today's callers
+  all seat into a conversation their own transaction just created, so the cursor is
+  `nil` for them either way; it is applied here so that a caller adding someone to a
+  *populated* conversation cannot silently reintroduce #381. An explicit
+  `:last_read_at` in `attrs` still wins.
+  """
   @spec add_participant(map()) ::
           {:ok, Participant.t()} | {:error, :already_participant | Ecto.Changeset.t()}
   def add_participant(attrs) do
     context_span entity: "participant" do
-      attrs = Map.put_new(attrs, :joined_at, DateTime.utc_now())
+      cursor = Map.get(seating_cursors([attrs.conversation_id]), attrs.conversation_id)
+
+      attrs =
+        attrs
+        |> Map.put_new(:joined_at, DateTime.utc_now())
+        |> Map.put_new(:last_read_at, cursor)
 
       %Participant{}
       |> Participant.create_changeset(attrs)
@@ -1387,38 +1434,6 @@ defmodule KlassHero.Messaging do
             {"has already been taken", _} -> {:error, :already_participant}
             _ -> result
           end
-      end
-    end
-  end
-
-  @doc "Adds a participant, or returns the existing one on conflict (transaction-safe)."
-  @spec add_or_get_participant(map()) :: {:ok, Participant.t()} | {:error, :not_found}
-  def add_or_get_participant(attrs) do
-    context_span entity: "participant" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-      entry =
-        attrs
-        |> Map.take([:conversation_id, :user_id, :last_read_at])
-        |> Map.merge(%{
-          id: Ecto.UUID.generate(),
-          joined_at: now,
-          inserted_at: now,
-          updated_at: now
-        })
-
-      case Repo.insert_all(Participant, [entry],
-             returning: true,
-             on_conflict: :nothing,
-             conflict_target: [:conversation_id, :user_id]
-           ) do
-        {1, [participant]} ->
-          {:ok, participant}
-
-        # on_conflict: :nothing skipped the insert; fetch existing row to avoid
-        # poisoning the caller's transaction with a unique-constraint failure.
-        {0, _} ->
-          get_participant(attrs.conversation_id, attrs.user_id)
       end
     end
   end
@@ -1526,11 +1541,18 @@ defmodule KlassHero.Messaging do
       {:error, :database_query_error}
   end
 
-  @doc "Adds a batch of users as participants of a conversation (skips existing)."
+  @doc """
+  Adds a batch of users as participants of a conversation (skips existing).
+
+  Seats them with their read cursor at whatever the conversation already contained,
+  so anything said before they arrived is history rather than a notification. See
+  `seating_cursors/1`.
+  """
   @spec add_participants(String.t(), [String.t()]) :: {:ok, [Participant.t()]}
   def add_participants(conversation_id, user_ids) do
     context_span entity: "participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
+      cursor = Map.get(seating_cursors([conversation_id]), conversation_id)
 
       entries =
         Enum.map(user_ids, fn user_id ->
@@ -1538,6 +1560,7 @@ defmodule KlassHero.Messaging do
             id: Ecto.UUID.generate(),
             conversation_id: conversation_id,
             user_id: user_id,
+            last_read_at: cursor,
             joined_at: now,
             inserted_at: now,
             updated_at: now
@@ -1560,13 +1583,18 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Adds a user to a batch of conversations, re-activating any they had left."
+  @doc """
+  Adds a user to a batch of conversations, re-activating any they had left.
+
+  Each conversation gets its own read cursor — see `seating_cursors/1`.
+  """
   @spec add_user_to_conversations(String.t(), [String.t()]) :: {:ok, non_neg_integer()}
   def add_user_to_conversations(_user_id, []), do: {:ok, 0}
 
   def add_user_to_conversations(user_id, conversation_ids) do
     context_span entity: "participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
+      cursors = seating_cursors(conversation_ids)
 
       entries =
         Enum.map(conversation_ids, fn conversation_id ->
@@ -1574,6 +1602,7 @@ defmodule KlassHero.Messaging do
             id: Ecto.UUID.generate(),
             conversation_id: conversation_id,
             user_id: user_id,
+            last_read_at: Map.get(cursors, conversation_id),
             joined_at: now,
             inserted_at: now,
             updated_at: now
@@ -1582,15 +1611,11 @@ defmodule KlassHero.Messaging do
 
       {count, _} =
         Repo.insert_all(Participant, entries,
-          # Re-activation: clear left_at, bump updated_at; preserve original joined_at (audit trail).
-          on_conflict:
-            from(p in Participant,
-              update: [set: [left_at: nil, updated_at: fragment("EXCLUDED.updated_at")]]
-            ),
+          on_conflict: participant_reactivation(),
           conflict_target: [:conversation_id, :user_id]
         )
 
-      Logger.debug("Added staff user to conversations in batch",
+      Logger.debug("Added user to conversations in batch",
         user_id: user_id,
         conversation_count: length(conversation_ids),
         added_count: count
@@ -1598,6 +1623,42 @@ defmodule KlassHero.Messaging do
 
       {:ok, count}
     end
+  end
+
+  # `joined_at` is absent from the `set:` list deliberately: the original stays as the
+  # audit trail of when this person first entered the conversation.
+  #
+  # The cursor is re-stamped because rejoining is joining: someone re-added to a
+  # conversation was not entitled to it while they were away, so what happened in the
+  # meantime is history, not a backlog. Only a soft-left row reaches this branch —
+  # `where_user_is_not_participant/2` filters out active participants — so a replayed
+  # event cannot use it to wipe a live participant's read state.
+  defp participant_reactivation do
+    from(p in Participant,
+      update: [
+        set: [
+          left_at: nil,
+          last_read_at: fragment("EXCLUDED.last_read_at"),
+          updated_at: fragment("EXCLUDED.updated_at")
+        ]
+      ]
+    )
+  end
+
+  # The read cursor someone gets when they are seated into a conversation: the newest
+  # message already in it, or nil when it is empty.
+  #
+  # Never `DateTime.utc_now/0`. `messages.inserted_at` is `:utc_datetime`, so a message
+  # written in the same second would fall on the wrong side of the `>` comparison every
+  # unread counter makes and be silently marked read.
+  #
+  # Soft-deleted messages count towards the anchor even though they are invisible — see
+  # `MessageQueries.newest_inserted_at_by_conversation/1` for why.
+  defp seating_cursors(conversation_ids) do
+    conversation_ids
+    |> MessageQueries.newest_inserted_at_by_conversation()
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc "Fetches a participant by conversation and user."
