@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.89.0](https://github.com/MaxPayne89/klass-hero/compare/v0.88.0...v0.89.0) (2026-08-24)
+
+
+### Features
+
+* close AI-drift guardrail gaps across lint, CI and secrets ([#1505](https://github.com/MaxPayne89/klass-hero/issues/1505)) ([5bcf22d](https://github.com/MaxPayne89/klass-hero/commit/5bcf22da972b25e9e947f6dcc8f5ac369bb6bda6))
+
 ## [0.88.0](https://github.com/MaxPayne89/klass-hero/compare/v0.87.1...v0.88.0) (2026-08-24)
 
 
