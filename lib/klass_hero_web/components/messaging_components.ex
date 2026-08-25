@@ -649,6 +649,7 @@ defmodule KlassHeroWeb.MessagingComponents do
       class="flex-1 overflow-y-auto p-4 space-y-3"
       phx-hook="ScrollToBottom"
     >
+      <.monitoring_notice />
       <div id="messages" phx-update="stream" class="space-y-3">
         <.message_bubble
           :for={{dom_id, message} <- @streams.messages}
@@ -670,6 +671,43 @@ defmodule KlassHeroWeb.MessagingComponents do
       <% true -> %>
         <.message_input form={@form} uploads={@uploads} />
     <% end %>
+    """
+  end
+
+  @doc """
+  Renders the standing monitoring notice shown at the top of every conversation.
+
+  A banner rather than a `:system` message (#745 allows either). Three reasons: it
+  needs no write on any of the four conversation-creation paths, all of which run
+  inside a transaction; it covers conversations that already exist, where a
+  create-time message would have needed a backfill; and being rendered rather than
+  stored, it is undeletable by construction.
+
+  Every conversation is anchored to a provider — `provider_id` is required on the
+  schema — so there is no non-provider conversation to exclude yet. When
+  provider-less direct messages exist, gate this on `conversation.provider_id`.
+
+  > The wording is PROVISIONAL and must not ship before legal review (#745).
+  """
+  def monitoring_notice(assigns) do
+    ~H"""
+    <div
+      id="monitoring-notice"
+      data-role="monitoring-notice"
+      class={[
+        "flex items-start gap-2 p-3 mb-3",
+        Theme.bg(:light),
+        Theme.rounded(:lg),
+        Theme.text_color(:muted)
+      ]}
+    >
+      <.icon name="hero-information-circle" class="w-4 h-4 shrink-0 mt-0.5" />
+      <p class={Theme.typography(:caption)}>
+        {gettext(
+          "Messages here may be reviewed by the activity provider and by Klass Hero staff, to keep children safe."
+        )}
+      </p>
+    </div>
     """
   end
 

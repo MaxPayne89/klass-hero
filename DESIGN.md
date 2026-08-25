@@ -279,7 +279,9 @@ destination is added once.
 **Provider app** — **black sidebar with a yellow active accent**, an intentional inversion
 of the parent surface's white-with-blue. Business-minded density.
 
-**Admin** — Backpex. Functional, not branded; do not spend design effort here.
+**Admin** — mostly Backpex, plus a few hand-rolled LiveViews (Emails, Sessions,
+Messages, Verifications) that borrow the Backpex shell. Functional, not branded; do
+not spend design effort here either way.
 
 ---
 

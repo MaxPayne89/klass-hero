@@ -165,8 +165,12 @@ An authentication identity in the Accounts context — email, password, `intende
 _Avoid_: Account, Login, Member
 
 **Admin**:
-A platform operator (not a **Parent** or **Provider**) who reviews **Verification Documents** and **Incident Reports** and approves pending **Enrollments**. The reviewer behind `reviewed_by_id`.
+A platform operator (not a **Parent** or **Provider**) who reviews **Verification Documents** and **Incident Reports**, approves pending **Enrollments**, and may read any **Conversation** under **Monitoring**. The reviewer behind `reviewed_by_id`.
 _Avoid_: Moderator, Superuser, Staff (Staff belongs to a Provider)
+
+**Monitoring**:
+An **Admin**'s read-only access to any **Conversation**, for safety, abuse prevention and compliance. Deliberately *not* moderation: monitoring reads, and has no power to write, delete or intervene in a thread. An Admin monitoring a Conversation does not become a **Participant** — no membership is created, and no read receipt moves — so monitoring is invisible to participant counts and unread badges. Disclosed to participants by a **System Message** in every provider-context Conversation.
+_Avoid_: Moderation (that implies intervention), Surveillance, Oversight, Audit (that names the trail, not the act)
 
 **Parent**:
 The account-holding persona who manages **Children**, books **Programs**, and pays. A Parent is a **Guardian** who holds a **User** account.
@@ -206,7 +210,7 @@ A file attached to a **Message** — a photo or document with a filename, conten
 _Avoid_: Upload, File, Media, Document (that's a **Verification Document**, unrelated)
 
 **Participant** (Messaging):
-A **User**'s membership in a **Direct Conversation** — tracks join/leave and read receipts. Applies to Direct Conversations only; a **Broadcast** has a derived audience, not Participants. This is the *only* meaning of "Participant" in the system; it is **not** a child attending a Session.
+A **User**'s membership in a **Direct Conversation** — tracks join/leave and read receipts. Applies to Direct Conversations only; a **Broadcast** has a derived audience, not Participants. This is the *only* meaning of "Participant" in the system; it is **not** a child attending a Session. An **Admin** reading a Conversation under **Monitoring** is not a Participant either: reading it seats nobody and moves no read receipt.
 _Avoid_: using "Participant" for a child on a **Roster** (that's a **Participation Record**), or for a **Broadcast** recipient
 
 **Archival**:
