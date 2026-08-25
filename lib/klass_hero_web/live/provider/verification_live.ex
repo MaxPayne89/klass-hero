@@ -204,10 +204,12 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   # File.read!/try-catch/postpone plumbing shared by every upload handler; callers keep their own
   # result `case` (stream/flash/form-echo differ per command). `log_meta` is merged into the
   # failure log for context. Returns the raw `safe_consume_uploaded_entries` result.
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   defp consume_single_upload(socket, upload_key, log_meta, submit_fun) do
     Uploads.safe_consume_uploaded_entries(socket, upload_key, fn %{path: path}, entry ->
       try do
-        # sobelow_skip ["Traversal.FileModule"]
         file_binary = File.read!(path)
 
         case submit_fun.(file_binary, entry) do

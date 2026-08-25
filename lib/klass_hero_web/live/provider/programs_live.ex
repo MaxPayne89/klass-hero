@@ -488,12 +488,14 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   end
 
   @impl true
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   def handle_event("import_csv", _params, socket) do
     provider_id = socket.assigns.current_scope.provider.id
     program_id = socket.assigns.roster_program_id
 
     # Wrap File.read/1 result so consume_uploaded_entries doesn't unwrap the inner {:ok, binary}.
-    # sobelow_skip ["Traversal.FileModule"]
     case safe_consume_uploaded_entries(socket, :csv_file, fn %{path: path}, _entry ->
            {:ok, File.read(path)}
          end) do

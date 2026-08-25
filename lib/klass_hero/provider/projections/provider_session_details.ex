@@ -283,6 +283,9 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
   # * Status arrives as text; String.to_existing_atom/1 converts (safe: fixed four enum values).
   # * Upsert preserves session_id and inserted_at; everything else is derivable from write tables.
   # * Raises on DB failure so WithBootstrapRetry can schedule a retry.
+  # sobelow_skip ["SQL.Query"]
+  # The query is a static heredoc with no interpolation; Repo.query/1 is passed a
+  # variable only because the SQL is bound above it.
   defp bootstrap_session_details do
     # LATERAL subquery picks exactly one active staff assignment (earliest-assigned wins, matching
     # resolve_program_context/1). Without LIMIT 1 a program with N staff would produce N rows per
@@ -511,6 +514,8 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
   # purpose, so a departed staff member stays the earliest-assigned row forever —
   # filtering on the join alone would still pick their assignment and merely lose
   # their name.
+  # sobelow_skip ["SQL.Query"]
+  # Parameterised: the only value reaches Postgres as $1, never through the string.
   defp resolve_program_context(program_id) do
     sql = """
     SELECT p.title,

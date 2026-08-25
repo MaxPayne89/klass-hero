@@ -129,13 +129,15 @@ defmodule KlassHeroWeb.Provider.EditProfileLive do
   end
 
   @impl true
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   def handle_event("upload_verification_doc", _params, socket) do
     provider = socket.assigns.current_scope.provider
     doc_type = socket.assigns.doc_type
 
     case Uploads.safe_consume_uploaded_entries(socket, :verification_doc, fn %{path: path}, entry ->
            try do
-             # sobelow_skip ["Traversal.FileModule"]
              file_binary = File.read!(path)
 
              case Provider.submit_verification_document(%{
