@@ -32,9 +32,7 @@
           {Jump.CredoChecks.WeakAssertion, []},
           # 50 — an assign written but never read in that module's .ex or .heex. #1073 was
           # this bug reaching production as a page crash.
-          {Jump.CredoChecks.UnusedLiveViewAssign, []},
-          # 34 — tests introspecting socket assigns instead of asserting rendered behaviour.
-          {Jump.CredoChecks.AvoidSocketAssignsInTest, []}
+          {Jump.CredoChecks.UnusedLiveViewAssign, []}
         ]
       }
     }

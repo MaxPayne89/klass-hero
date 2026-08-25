@@ -9,6 +9,8 @@ defmodule KlassHeroWeb.Admin.Actions.ReplayEventActionTest do
 
   use KlassHero.DataCase, async: false
 
+  # These exercise functions that *return* a socket, so its assigns are the return value
+  # under test — there is no rendered page to assert against instead.
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry
@@ -17,6 +19,8 @@ defmodule KlassHeroWeb.Admin.Actions.ReplayEventActionTest do
   alias KlassHero.Shared.EventDispatcher
   alias KlassHeroWeb.Admin.Actions.ReplayEventAction
   alias Phoenix.LiveView.Socket
+
+  @moduletag :plug_test
 
   @topic "integration:accounts:user_registered"
 

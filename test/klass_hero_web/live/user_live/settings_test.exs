@@ -96,6 +96,8 @@ defmodule KlassHeroWeb.UserLive.SettingsTest do
       %{conn: log_in_user(conn, user), user: user}
     end
 
+    # Asserts the flash on the conn returned by follow_trigger_action, not on a socket.
+    @tag :plug_test
     test "updates the user password", %{conn: conn, user: user} do
       new_password = valid_user_password()
 

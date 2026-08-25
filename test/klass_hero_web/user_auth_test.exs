@@ -1,6 +1,8 @@
 defmodule KlassHeroWeb.UserAuthTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  # These exercise functions that *return* a socket or conn, so their assigns are the
+  # return value under test — there is no rendered page to assert against instead.
   import KlassHero.AccountsFixtures
   import KlassHero.ProviderFixtures
 
@@ -11,6 +13,8 @@ defmodule KlassHeroWeb.UserAuthTest do
   alias KlassHeroWeb.UserAuth
   alias Phoenix.LiveView
   alias Phoenix.Socket.Broadcast
+
+  @moduletag :plug_test
 
   @remember_me_cookie "_klass_hero_web_user_remember_me"
   @remember_me_cookie_max_age 60 * 60 * 24 * 14
