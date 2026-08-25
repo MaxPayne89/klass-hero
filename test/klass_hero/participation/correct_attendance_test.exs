@@ -273,7 +273,7 @@ defmodule KlassHero.Participation.CorrectAttendanceTest do
       assert {:ok, _} = Participation.correct_attendance(scope, record.id, %{status: :absent})
 
       record_id = record.id
-      assert_receive {:attendance_changed, %{record_id: ^record_id, kind: :corrected}}, 200
+      assert_receive {:attendance_changed, %{record_id: ^record_id, kind: :corrected}}
     end
 
     test "reaches the provider topic", %{record: record, provider: provider, scope: scope} do
@@ -281,7 +281,7 @@ defmodule KlassHero.Participation.CorrectAttendanceTest do
 
       assert {:ok, _} = Participation.correct_attendance(scope, record.id, %{status: :absent})
 
-      assert_receive {:attendance_changed, %{kind: :corrected}}, 200
+      assert_receive {:attendance_changed, %{kind: :corrected}}
     end
 
     # The delta a projection needs cannot be recovered from the corrected record

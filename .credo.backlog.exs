@@ -46,10 +46,7 @@
           # 13 — modules with iex> examples and no corresponding doctest call.
           {Jump.CredoChecks.DoctestIExExamples, []},
           # 10 — alias/import/require inside a function body.
-          {Jump.CredoChecks.TopLevelAliasImportRequire, []},
-          # 7 — explicit assert_receive timeouts, which pass locally and flake on CI.
-          # See memory `main-suite-flake-baseline`: this repo already has a flake budget.
-          {Jump.CredoChecks.AssertReceiveTimeout, min_assert_receive_timeout: 1_000, max_refute_receive_timeout: 100}
+          {Jump.CredoChecks.TopLevelAliasImportRequire, []}
         ]
       }
     }

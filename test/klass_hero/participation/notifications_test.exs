@@ -40,7 +40,7 @@ defmodule KlassHero.Participation.NotificationsTest do
         assert :ok = Notifications.notify(event(type, %{session_id: session_id, program_id: program_id}))
 
         assert_receive {:session_changed, ^session_id},
-                       100,
+                       1000,
                        "#{type} should announce its session on the provider topic"
       end
     end
@@ -74,7 +74,7 @@ defmodule KlassHero.Participation.NotificationsTest do
         for _topic <- [:provider, :child] do
           assert_receive {:attendance_changed,
                           %{record_id: ^record_id, session_id: ^session_id, child_id: ^child_id, kind: ^kind}},
-                         100,
+                         1000,
                          "#{type} should announce kind #{kind} on both topics"
         end
       end
@@ -92,7 +92,7 @@ defmodule KlassHero.Participation.NotificationsTest do
         assert :ok = Notifications.notify(event(type, %{provider_id: provider_id, child_id: child_id}))
 
         for _topic <- [:provider, :child] do
-          assert_receive :session_notes_changed, 100, "#{type} should notify both topics"
+          assert_receive :session_notes_changed, 1000, "#{type} should notify both topics"
         end
       end
     end

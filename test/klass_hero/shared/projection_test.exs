@@ -279,7 +279,7 @@ defmodule KlassHero.Shared.ProjectionTest do
         # First attempt fails inside handle_continue. Retry mixin reschedules
         # at base_delay_ms * 1 = 5ms; second attempt fails and reschedules at 10ms;
         # third attempt fails — reraises and crashes the GenServer.
-        assert_receive {:EXIT, ^pid, _reason}, 200
+        assert_receive {:EXIT, ^pid, _reason}
       end)
 
       # 3 attempts total: initial + 2 retries.
