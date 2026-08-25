@@ -10,6 +10,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.Index do
   use KlassHeroWeb.MessagingLiveHelper, :index
 
   import KlassHeroWeb.MessagingComponents
+  import KlassHeroWeb.ProviderComponents, only: [provider_message_tabs: 1]
 
   @impl true
   def mount(_params, _session, socket) do
@@ -27,7 +28,11 @@ defmodule KlassHeroWeb.Provider.MessagesLive.Index do
       streams={@streams}
       conversations_empty?={@conversations_empty?}
       navigate_base={@navigate_base}
-    />
+    >
+      <:tabs>
+        <.provider_message_tabs current_tab={:inbox} />
+      </:tabs>
+    </.conversation_index>
     """
   end
 end

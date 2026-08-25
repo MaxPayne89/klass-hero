@@ -9,7 +9,6 @@ defmodule KlassHeroWeb.MessagingComponents do
   import KlassHeroWeb.UIComponents, only: [icon: 1]
 
   alias KlassHero.Messaging.Attachment
-  alias KlassHero.Messaging.ConversationSummary
   alias KlassHeroWeb.MessagingLiveHelper
   alias KlassHeroWeb.Theme
   alias Phoenix.LiveView.JS
@@ -25,10 +24,16 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   ## Attributes
   - id: DOM id for the card
-  - summary: A `KlassHero.Messaging.ConversationSummary` read-table row. The schema
-    is the DTO, so the card reads its flat fields directly
+  - summary: A `KlassHero.Messaging.ConversationSummary` read-table row, or a
+    `KlassHero.Messaging.StaffConversation` read row. This component matches on field
+    *names*, never on a struct name, so any row carrying them renders — that is
+    deliberate, and it is what keeps the participant inbox and the owner's staff-
+    conversations list from drifting apart visually (#746)
   - user_type: `:parent` or `:provider` — parents do not see the enrolled child names
   - navigate: Target URL for the `<.link navigate=...>` wrapper
+
+  A row carrying a non-empty `staff_member_names` also renders a "via …" attribution
+  line; a row without that field simply omits it.
 
   ## Examples
 
@@ -51,6 +56,7 @@ defmodule KlassHeroWeb.MessagingComponents do
       |> assign(:display_name, derive_display_name(assigns.summary))
       |> assign(:unread_count, assigns.summary.unread_count)
       |> assign(:child_names, visible_child_names(assigns.summary, assigns.user_type))
+      |> assign(:staff_names, Map.get(assigns.summary, :staff_member_names, []))
 
     ~H"""
     <.link
@@ -88,6 +94,13 @@ defmodule KlassHeroWeb.MessagingComponents do
           </div>
           <p :if={@child_names != []} class={["text-xs mt-0.5", Theme.text_color(:muted)]}>
             {gettext("for")} {Enum.join(@child_names, ", ")}
+          </p>
+          <p
+            :if={@staff_names != []}
+            data-role="staff-attribution"
+            class={["text-xs mt-0.5", Theme.text_color(:muted)]}
+          >
+            {gettext("via")} {Enum.join(@staff_names, ", ")}
           </p>
 
           <div class="flex items-center justify-between gap-2 mt-1">
@@ -496,6 +509,14 @@ defmodule KlassHeroWeb.MessagingComponents do
   attr :conversations_empty?, :boolean, required: true
   attr :navigate_base, :string, required: true
 
+  slot :tabs,
+    doc: """
+    Optional strip rendered under the header, above the list. The provider surfaces
+    use it to switch between their own inbox and the threads their staff conduct
+    (#746); the routes live in the caller so this shared component stays
+    persona-agnostic.
+    """
+
   def conversation_index(%{variant: :parent} = assigns) do
     ~H"""
     <div class={["min-h-screen", Theme.bg(:muted)]}>
@@ -527,6 +548,7 @@ defmodule KlassHeroWeb.MessagingComponents do
       <div class="max-w-2xl mx-auto bg-white min-h-screen shadow-sm">
         <header class="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
           <h1 class="text-xl font-semibold text-gray-900">{gettext("Messages")}</h1>
+          {render_slot(@tabs)}
         </header>
         <.conversation_list
           streams={@streams}
@@ -773,13 +795,14 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   # A row with no message at all still carries whatever latest_message_at the
   # projection last wrote, so the timestamp is gated on the message, not the column.
-  defp latest_message_timestamp(summary) do
-    if ConversationSummary.has_latest_message?(summary) do
-      format_timestamp(summary.latest_message_at)
-    else
-      ""
-    end
-  end
+  #
+  # Matched on field names rather than through `ConversationSummary.has_latest_message?/1`,
+  # which matches its own struct by name and so would raise on any other row shape.
+  # This is the single change that lets the card render a `StaffConversation` too (#746);
+  # the schema keeps its own copy for its own callers.
+  defp latest_message_timestamp(%{latest_message_content: nil, has_attachments: false}), do: ""
+
+  defp latest_message_timestamp(summary), do: format_timestamp(summary.latest_message_at)
 
   defp format_timestamp(nil), do: ""
 

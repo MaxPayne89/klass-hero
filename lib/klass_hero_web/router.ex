@@ -142,6 +142,10 @@ defmodule KlassHeroWeb.Router do
 
         live "/messages", MessagesLive.Index, :index
         live "/messages/new", MessagesLive.Show, :new
+        # Both must precede "/messages/:id" — declaration order decides the match, and
+        # "staff" would otherwise be captured as an :id. Same reason "/messages/new" sits above.
+        live "/messages/staff", StaffConversationsLive, :index
+        live "/messages/staff/:id", StaffConversationsLive, :show
         live "/messages/:id", MessagesLive.Show, :show
         live "/programs/:program_id/broadcast", BroadcastLive, :new
       end

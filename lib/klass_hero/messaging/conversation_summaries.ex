@@ -48,12 +48,12 @@ defmodule KlassHero.Messaging.ConversationSummaries do
   import Ecto.Query
 
   alias KlassHero.Accounts
-  alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
+  alias KlassHero.Messaging.Queries.MessageQueries
   alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event
@@ -683,26 +683,11 @@ defmodule KlassHero.Messaging.ConversationSummaries do
 
   defp resolve_other_name(_type, _user_id, _participant_ids, _user_names), do: nil
 
-  # Subquery avoids loading N×M rows via :messages preload.
+  # The SQL lives in MessageQueries so this projection and ListStaffConversations
+  # cannot drift on what "latest message" means (#746).
   defp fetch_latest_messages(conversation_ids) when conversation_ids != [] do
-    latest_times =
-      from(m in Message,
-        where: m.conversation_id in ^conversation_ids,
-        group_by: m.conversation_id,
-        select: %{conversation_id: m.conversation_id, max_at: max(m.inserted_at)}
-      )
-
-    from(m in Message,
-      join: lt in subquery(latest_times),
-      on: m.conversation_id == lt.conversation_id and m.inserted_at == lt.max_at,
-      select: %{
-        id: m.id,
-        conversation_id: m.conversation_id,
-        content: m.content,
-        sender_id: m.sender_id,
-        inserted_at: m.inserted_at
-      }
-    )
+    conversation_ids
+    |> MessageQueries.latest_per_conversation()
     |> Repo.all()
     |> Map.new(&{&1.conversation_id, &1})
   end
@@ -710,13 +695,10 @@ defmodule KlassHero.Messaging.ConversationSummaries do
   defp fetch_latest_messages(_), do: %{}
 
   defp fetch_attachment_message_ids(latest_messages) when map_size(latest_messages) > 0 do
-    message_ids = latest_messages |> Map.values() |> Enum.map(& &1.id)
-
-    from(a in Attachment,
-      where: a.message_id in ^message_ids,
-      distinct: a.message_id,
-      select: a.message_id
-    )
+    latest_messages
+    |> Map.values()
+    |> Enum.map(& &1.id)
+    |> MessageQueries.message_ids_with_attachments()
     |> Repo.all()
     |> MapSet.new()
   end

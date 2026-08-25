@@ -40,7 +40,9 @@ defmodule KlassHero.Messaging do
     GetConversationContext,
     GetInboundEmail,
     GetMonitoredConversation,
+    GetStaffConversation,
     GetTotalUnreadCount,
+    ListStaffConversations,
     MarkAsRead,
     MonitorConversations,
     ReceiveInboundEmail,
@@ -65,6 +67,7 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Queries.ConversationQueries
   alias KlassHero.Messaging.Queries.InboundEmailQueries
   alias KlassHero.Messaging.Queries.MessageQueries
+  alias KlassHero.Messaging.StaffConversation
   alias KlassHero.Repo
 
   require Logger
@@ -564,6 +567,40 @@ defmodule KlassHero.Messaging do
           {:ok, map()} | {:error, :unauthorized | :not_found}
   defdelegate get_monitored_conversation(scope, conversation_id, opts \\ []),
     to: GetMonitoredConversation,
+    as: :execute
+
+  @doc """
+  Lists conversations the calling provider owns but is not a participant of.
+
+  The threads their staff conduct with parents (#746). Owner-only: fails closed
+  unless `scope.provider` is set, and never accepts a staff scope, so one staff
+  member cannot read another's threads with parents. Threads the owner *is* in are
+  excluded — those already appear in their own inbox via `list_conversations/2`.
+
+  Rows come back as `KlassHero.Messaging.StaffConversation`, field-shaped to render
+  through the same inbox card as the participant list.
+
+  ## Options
+  `:type`, `:limit`, `:before`. See `KlassHero.Messaging.ListStaffConversations`.
+  """
+  @spec list_staff_conversations(Scope.t(), keyword()) ::
+          {:ok, [StaffConversation.t()], boolean()} | {:error, :unauthorized}
+  defdelegate list_staff_conversations(scope, opts \\ []),
+    to: ListStaffConversations,
+    as: :execute
+
+  @doc """
+  Reads one staff-conducted thread for the provider owner whose business owns it.
+
+  Owner-only (#746). A conversation belonging to another provider returns
+  `:not_found`, indistinguishable from one that never existed, so a pasted id
+  discloses nothing. Deliberately has no `:mark_as_read` option, for the same reason
+  `get_monitored_conversation/3` has none.
+  """
+  @spec get_staff_conversation(Scope.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, :unauthorized | :not_found}
+  defdelegate get_staff_conversation(scope, conversation_id, opts \\ []),
+    to: GetStaffConversation,
     as: :execute
 
   @doc """

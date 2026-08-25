@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.MessagingComponentsTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Messaging.StaffConversation
   alias KlassHeroWeb.MessagingComponents
 
   defp render_card(summary_attrs, opts \\ []) do
@@ -111,6 +112,86 @@ defmodule KlassHeroWeb.MessagingComponentsTest do
       assert LazyHTML.attribute(button, "phx-value-program-id") == ["prog-42"]
       assert LazyHTML.attribute(button, "phx-value-provider-id") == ["prov-7"]
       assert LazyHTML.text(button) =~ "Contact Provider"
+    end
+  end
+
+  # The card is duck-typed on purpose (#746): it matches field names, never a struct
+  # name, so the owner's staff-conversations list renders through the very same card
+  # as the participant inbox and the two cannot drift apart. These tests are what stop
+  # someone reintroducing a struct-name match and silently breaking that.
+  describe "conversation_card/1 renders a StaffConversation" do
+    defp staff_row(attrs) do
+      struct!(
+        %StaffConversation{
+          conversation_id: "conv-1",
+          conversation_type: :direct,
+          provider_id: "prov-1",
+          inserted_at: DateTime.utc_now()
+        },
+        attrs
+      )
+    end
+
+    defp render_staff_card(attrs \\ []) do
+      render_component(&MessagingComponents.conversation_card/1, %{
+        id: "conv-test",
+        summary: staff_row(attrs),
+        user_type: :provider,
+        navigate: "/provider/messages/staff/conv-1"
+      })
+    end
+
+    test "reads the same display and preview fields it reads off a summary" do
+      html =
+        render_staff_card(
+          other_participant_name: "Pat Parent",
+          latest_message_content: "Is pickup still at four?"
+        )
+
+      assert html =~ "Pat Parent"
+      assert html =~ "Is pickup still at four?"
+    end
+
+    test "falls back to the no-messages preview when the thread is empty" do
+      assert render_staff_card() =~ "No messages yet"
+    end
+
+    test "shows the staff attribution only when the row carries names" do
+      with_names = render_staff_card(staff_member_names: ["Sam Staff"])
+      assert with_names =~ "Sam Staff"
+
+      assert with_names
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(~s([data-role="staff-attribution"]))
+             |> Enum.count() == 1
+
+      assert render_staff_card()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(~s([data-role="staff-attribution"]))
+             |> Enum.empty?()
+    end
+
+    # A ConversationSummary has no such field at all — the card must omit the line
+    # rather than raise, which is exactly what makes the shared-card reuse safe.
+    test "omits the attribution for a summary row that has no such field" do
+      assert render_card([], user_type: :provider)
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(~s([data-role="staff-attribution"]))
+             |> Enum.empty?()
+    end
+
+    test "hides the unread badge, which a non-participant can never have" do
+      # Paired with a positive case on purpose: asserting only the absence would pass
+      # just as happily against a mistyped selector.
+      assert render_card([unread_count: 3], user_type: :provider)
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(~s([data-role="unread-count"]))
+             |> Enum.count() == 1
+
+      assert render_staff_card()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(~s([data-role="unread-count"]))
+             |> Enum.empty?()
     end
   end
 end

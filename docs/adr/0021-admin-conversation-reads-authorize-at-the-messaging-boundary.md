@@ -127,9 +127,98 @@ create a processing activity disclosed nowhere.
 
 ## Consequences
 
-- Messaging now has two read gates. `verify_participant/2` guards everything
-  participant-scoped; `authorize_admin/1` guards monitoring, and nothing else may
-  use it without an ADR amendment.
+- Messaging now has **three** read gates (amended — see below). `verify_participant/2`
+  guards everything participant-scoped; `authorize_admin/1` guards platform
+  monitoring; `authorize_provider_owner/1` guards a provider owner reading their own
+  business's threads. Nothing else may use any of them without a further amendment.
 - `/admin/messages` is the first admin surface whose authorization lives in a
   context. The others are unchanged; this is not a call to migrate them.
 - The enumeration oracle in `GetConversation.execute/3` remains open; filed as #1515.
+
+## Amended: provider owners (#746)
+
+**Date:** 2026-08-25
+
+A provider owner may read conversations their business owns but that they are not a
+participant of — chiefly the threads their staff conduct with parents. Granted inside
+`KlassHero.Messaging` by a second named gate:
+
+```elixir
+Messaging.list_staff_conversations(scope, opts)
+Messaging.get_staff_conversation(scope, conversation_id, opts)
+```
+
+This amendment exists because the section above reserved `authorize_admin/1` to
+monitoring and required an ADR amendment before any further non-participant read. The
+original is not superseded; only the two-gate count above changes.
+
+### Owner-only, and pointedly not staff
+
+```elixir
+def authorize_provider_owner(%Scope{provider: %{id: id}}), do: {:ok, id}
+def authorize_provider_owner(%Scope{} = scope), do: {:error, :unauthorized}
+```
+
+One clause, for the reason `authorize_admin/1` is one clause: nobody is *narrowly*
+entitled to read a whole business's correspondence, so there is nothing to fall
+through from.
+
+The tempting reuse was `Authorization.resolve_acting_provider/2`, which already binds
+a scope to a provider. It is the wrong function here. That one accepts a staff scope
+on purpose — a staff member carries no `scope.provider`, so the write path has to
+resolve their employer from a caller-supplied hint. Honouring that hint on this read
+would let one staff member read their colleagues' private threads with parents, which
+is the opposite of what this gate is for. The provider can only come from
+`scope.provider`.
+
+### Why this gate returns an id where the admin gate returns `:ok`
+
+`is_admin` grants blanket visibility: past that gate, every conversation is fair game,
+which is why `GetMonitoredConversation` can fetch by id alone. Provider ownership
+grants nothing of the sort — it proves the scope owns *a* provider, never that it owns
+*this* conversation. So the gate hands back the provider id, and it is the read
+predicate:
+
+```elixir
+ConversationQueries.base() |> by_id(id) |> by_provider(provider_id) |> Repo.one()
+```
+
+Both predicates ride in one query, so "belongs to another business" and "does not
+exist" collapse into the same `{:error, :not_found}` at no extra cost. Without that
+second predicate a pasted UUID would read a competitor's threads.
+
+### The predicate is `provider_id`, not a staff join
+
+#746 proposed listing conversations whose *participants* are active staff members.
+Rejected: `Messaging.get_provider_staff_user_ids/1` already documents that
+ever-employed staff lists "must never gate access", and its active-only sibling is the
+"may act now" gate. Keying an oversight view on *current* employment would hide the
+threads an owner remains accountable for the moment a staffer is deactivated.
+
+Every conversation already carries `provider_id` as a required field, bound to the
+acting scope at write time. The ownership fact is stored, not derived.
+
+Threads the owner already participates in are excluded via
+`where_user_is_not_participant/2` — those render in their own inbox, and listing them
+twice across two tabs helps nobody.
+
+### Read-only, and marking nothing
+
+`GetStaffConversation` has no `:mark_as_read` option, for the reason recorded above:
+`last_read_at` feeds three independent unread counters, and an owner must not move a
+parent's or a staff member's. `SendMessage` and `MarkAsRead` gained no owner branch,
+and a test in `get_staff_conversation_test.exs` pins that a non-participant owner
+still gets `{:error, :not_participant}` from `send_message/4`.
+
+The access trail is the same shape as monitoring's: an OpenTelemetry span carrying
+`messaging.staff_conversations.owner_id` and `…conversation_id`, plus a `Logger.info`
+on each thread read. Still no durable table.
+
+### Disclosure, inverted
+
+Monitoring shipped its disclosure with the capability. Here the disclosure shipped
+*first*: the notice added in #1516 already reads "may be reviewed by the activity
+provider and by Klass Hero staff", which was true of Klass Hero staff and not yet true
+of the provider. This change makes the shipped sentence honest, and adds the matching
+clause to the privacy policy's **Program Providers** section, which previously covered
+only children's names, safety information and session notes.

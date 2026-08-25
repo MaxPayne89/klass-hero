@@ -153,6 +153,42 @@ defmodule KlassHeroWeb.ProviderComponents do
   end
 
   @doc """
+  Renders the two tabs of the provider Comms surface (#746).
+
+  `current_tab` is `:inbox` for the provider's own conversations, or `:staff` for
+  the read-only view of the threads their staff conduct with parents.
+
+  Lives here rather than in `MessagingComponents` so the shared conversation
+  components stay persona-agnostic and carry no provider routes.
+
+  ## Examples
+
+      <.provider_message_tabs current_tab={:inbox} />
+  """
+  attr :current_tab, :atom, required: true, values: [:inbox, :staff]
+
+  def provider_message_tabs(assigns) do
+    ~H"""
+    <nav data-role="provider-message-tabs" class="flex gap-1 overflow-x-auto -mb-3 mt-2">
+      <.nav_tab
+        navigate={~p"/provider/messages"}
+        active={@current_tab == :inbox}
+        icon="hero-inbox-mini"
+      >
+        {gettext("My conversations")}
+      </.nav_tab>
+      <.nav_tab
+        navigate={~p"/provider/messages/staff"}
+        active={@current_tab == :staff}
+        icon="hero-user-group-mini"
+      >
+        {gettext("Staff conversations")}
+      </.nav_tab>
+    </nav>
+    """
+  end
+
+  @doc """
   Renders a stat card for the provider dashboard.
 
   ## Examples

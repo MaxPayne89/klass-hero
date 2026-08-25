@@ -6,10 +6,13 @@ defmodule KlassHero.Messaging.Authorization do
   this scope acting as, is this user a participant of this conversation, and does
   this scope's plan permit messaging at all.
 
-  Plus the one read gate that is not participant-based — `authorize_admin/1`, for
-  platform monitoring. Every other read in this context is gated on a participant
-  row; that one is gated on `is_admin` alone, and is deliberately the only such
-  exception. Staff-addition is owned by `KlassHero.Messaging.AddAssignedStaff`.
+  Plus the two read gates that are not participant-based: `authorize_admin/1`, for
+  platform monitoring, and `authorize_provider_owner/1`, for a business owner reading
+  the threads their own staff conduct. Every other read in this context is gated on a
+  participant row; those two are gated on `is_admin` and on provider ownership, and
+  are deliberately the only such exceptions — see ADR-0021, which requires an
+  amendment before a third is added. Staff-addition is owned by
+  `KlassHero.Messaging.AddAssignedStaff`.
   """
 
   use KlassHero.Shared.Tracing
@@ -111,6 +114,33 @@ defmodule KlassHero.Messaging.Authorization do
     Logger.warning("Non-admin scope attempted an admin conversation read",
       user_id: scope.user.id
     )
+
+    {:error, :unauthorized}
+  end
+
+  @doc """
+  Authorises a provider owner to read conversations they are not a participant of.
+
+  The owner counterpart to `authorize_admin/1`, and one clause for the same reason:
+  nobody is *narrowly* authorised to read a whole business's correspondence, so there
+  is nothing to fall through from.
+
+  Deliberately accepts no `:provider_id` hint, unlike `resolve_acting_provider/2`.
+  That hint exists so a staff scope — which carries no `scope.provider` — can act *as*
+  its employer on the write path. Honouring it here would let one staff member read
+  their coworkers' private threads with parents, the opposite of what this gate is
+  for, so the provider can only come from `scope.provider`.
+
+  Returns the provider id rather than `:ok` because, unlike `is_admin`, this grants no
+  blanket visibility. The id *is* the read predicate, and a caller holding it must
+  still confirm the conversation carries it — see
+  `KlassHero.Messaging.GetStaffConversation`.
+  """
+  @spec authorize_provider_owner(Scope.t()) :: {:ok, String.t()} | {:error, :unauthorized}
+  def authorize_provider_owner(%Scope{provider: %{id: id}}), do: {:ok, id}
+
+  def authorize_provider_owner(%Scope{} = scope) do
+    Logger.warning("Non-owner scope attempted a staff-conversation read", user_id: scope.user.id)
 
     {:error, :unauthorized}
   end

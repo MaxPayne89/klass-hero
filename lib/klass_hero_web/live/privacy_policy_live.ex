@@ -97,6 +97,7 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
         <p class="mb-4">We take your privacy seriously and limit data sharing to what's necessary:</p>
         <h4 class="font-semibold text-gray-900 mb-2">Program Providers:</h4>
         <p class="mb-4">Providers see enrolled children's names for program management. Optional safety information (support needs, allergies) is visible to providers only when a parent explicitly consents to share it. Session notes written by providers about a child require parent approval before being displayed.</p>
+        <p class="mb-4">The owner of a provider business can read the messages you exchange with that provider's staff, for child safety and because they are responsible for their team's conduct. Access is read-only — an owner cannot post, edit or delete messages in a conversation they are not part of, and doing so does not mark anything as read on your side. Every access is logged. Conversations with a provider display a notice telling you this.</p>
         <h4 class="font-semibold text-gray-900 mb-2">Payment Processors:</h4>
         <p class="mb-4">For credit card payments, we work with third-party payment processors who handle transaction processing securely. They only receive the information necessary to process payments.</p>
         <h4 class="font-semibold text-gray-900 mb-2">Platform Administrators:</h4>

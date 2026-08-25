@@ -5,6 +5,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
 
   import Ecto.Query
 
+  alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.Message
 
   @doc """
@@ -111,6 +112,50 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
     |> where([message: m], m.conversation_id in ^conversation_ids)
     |> group_by([message: m], m.conversation_id)
     |> select([message: m], {m.conversation_id, max(m.inserted_at)})
+  end
+
+  @doc """
+  The newest message row per conversation — one row each, for a batch of ids.
+
+  A subquery join rather than a `:messages` preload, which would load N×M rows.
+
+  Counts soft-deleted messages, so `not_deleted/1` is deliberately absent here as it
+  is in `newest_inserted_at_by_conversation/1`. An inbox preview anchored on the
+  newest *visible* message would disagree with the unread badge rendered beside it,
+  which counts deleted ones.
+
+  Returns a query. Callers execute and shape it — `ConversationSummaries` and
+  `ListStaffConversations` both key the rows by `conversation_id`.
+  """
+  def latest_per_conversation(conversation_ids) do
+    latest_times =
+      base()
+      |> where([message: m], m.conversation_id in ^conversation_ids)
+      |> group_by([message: m], m.conversation_id)
+      |> select([message: m], %{conversation_id: m.conversation_id, max_at: max(m.inserted_at)})
+
+    base()
+    |> join(:inner, [message: m], lt in subquery(latest_times),
+      on: m.conversation_id == lt.conversation_id and m.inserted_at == lt.max_at
+    )
+    |> select([message: m], %{
+      id: m.id,
+      conversation_id: m.conversation_id,
+      content: m.content,
+      sender_id: m.sender_id,
+      inserted_at: m.inserted_at
+    })
+  end
+
+  @doc """
+  Of the given message ids, those carrying at least one attachment.
+  """
+  def message_ids_with_attachments(message_ids) do
+    from(a in Attachment,
+      where: a.message_id in ^message_ids,
+      distinct: a.message_id,
+      select: a.message_id
+    )
   end
 
   @doc """
