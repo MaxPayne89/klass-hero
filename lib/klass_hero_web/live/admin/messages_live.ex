@@ -100,7 +100,6 @@ defmodule KlassHeroWeb.Admin.MessagesLive do
         |> stream(:conversations, conversations, reset: reset?)
         |> assign(:has_more, has_more)
         |> assign(:cursor, cursor_from(conversations))
-        |> assign(:conversations_empty?, reset? and conversations == [])
 
       {:error, :unauthorized} ->
         socket
