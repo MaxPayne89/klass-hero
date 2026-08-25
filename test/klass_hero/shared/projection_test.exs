@@ -1,6 +1,8 @@
 defmodule KlassHero.Shared.ProjectionTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   # TestProjection lives inside this file deliberately: the macro must be
   # exercised against a synthetic module backed by an Agent, not a real schema.
   alias KlassHero.Shared.Domain.Events.Event
@@ -149,8 +151,6 @@ defmodule KlassHero.Shared.ProjectionTest do
   end
 
   describe "catch-all handle_info/2" do
-    import ExUnit.CaptureLog
-
     test "logs a warning and continues" do
       {:ok, pid} = TestProjection.start_link(name: unique_name(), skip_bootstrap: true)
 
@@ -237,8 +237,6 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
 
     test "retries after a transient bootstrap failure and eventually succeeds" do
-      import ExUnit.CaptureLog
-
       log =
         capture_log(fn ->
           {:ok, pid} = FlakyProjection.start_link(name: unique_name())
@@ -267,8 +265,6 @@ defmodule KlassHero.Shared.ProjectionTest do
     end
 
     test "reraises after max_attempts consecutive failures" do
-      import ExUnit.CaptureLog
-
       start_agent!(AlwaysFailAgent, fn -> 0 end)
 
       Process.flag(:trap_exit, true)

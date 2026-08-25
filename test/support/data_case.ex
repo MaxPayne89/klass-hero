@@ -16,6 +16,8 @@ defmodule KlassHero.DataCase do
 
   use ExUnit.CaseTemplate
 
+  import ExUnit.Assertions
+
   alias Ecto.Adapters.SQL.Sandbox
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
 
@@ -94,8 +96,6 @@ defmodule KlassHero.DataCase do
       :ok
     else
       if System.monotonic_time(:millisecond) > deadline do
-        import ExUnit.Assertions
-
         flunk("Expected condition was not met within timeout")
       else
         Process.sleep(interval)

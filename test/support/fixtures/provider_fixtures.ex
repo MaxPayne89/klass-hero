@@ -3,6 +3,8 @@ defmodule KlassHero.ProviderFixtures do
   Test helpers for creating entities in the Provider bounded context.
   """
 
+  import Ecto.Query, only: [from: 2]
+
   alias KlassHero.Provider.IdentityVerification
   alias KlassHero.Provider.IncidentReport
   alias KlassHero.Provider.ProgramStaffAssignment
@@ -175,8 +177,6 @@ defmodule KlassHero.ProviderFixtures do
   defp apply_timestamp_overrides(schema, overrides) when map_size(overrides) == 0, do: schema
 
   defp apply_timestamp_overrides(schema, overrides) do
-    import Ecto.Query, only: [from: 2]
-
     {1, _} =
       Repo.update_all(
         from(s in StaffMember, where: s.id == ^schema.id),

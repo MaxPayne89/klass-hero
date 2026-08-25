@@ -205,6 +205,7 @@
            ]},
           {Jump.CredoChecks.NoManualContentDisposition, []},
           {Jump.CredoChecks.SafeBinaryToTerm, []},
+          {Jump.CredoChecks.TopLevelAliasImportRequire, []},
           {Jump.CredoChecks.TestHasNoAssertions, []},
           {Jump.CredoChecks.TooManyAssertions, []},
           {Jump.CredoChecks.UndeclaredExternalResource, []},

@@ -22,6 +22,8 @@ defmodule KlassHero.Family do
 
   import Ecto.Query
 
+  require Logger
+
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildEnrollmentACL
   alias KlassHero.Family.ChildGuardian
@@ -298,8 +300,6 @@ defmodule KlassHero.Family do
             }}}
 
         {:error, reason} ->
-          require Logger
-
           Logger.error("[Family] anonymize_children_data failed", child_id: child.id, reason: inspect(reason))
           {:halt, {:error, reason}}
       end

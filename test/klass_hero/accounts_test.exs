@@ -2,6 +2,7 @@ defmodule KlassHero.AccountsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
+  import KlassHero.EventTestHelper
 
   alias KlassHero.Accounts
   alias KlassHero.Accounts.{User, UserToken}
@@ -425,8 +426,6 @@ defmodule KlassHero.AccountsTest do
   end
 
   describe "anonymize_user/1" do
-    import KlassHero.EventTestHelper
-
     setup do
       setup_test_integration_events()
       %{user: user_fixture()}
@@ -479,8 +478,6 @@ defmodule KlassHero.AccountsTest do
   end
 
   describe "delete_account/2" do
-    import KlassHero.EventTestHelper
-
     setup do
       setup_test_integration_events()
       user = user_fixture() |> set_password()

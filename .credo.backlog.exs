@@ -44,9 +44,7 @@
           # reconnect or deploy, so the user silently loses what they typed.
           {Jump.CredoChecks.LiveViewFormCanBeRehydrated, []},
           # 13 — modules with iex> examples and no corresponding doctest call.
-          {Jump.CredoChecks.DoctestIExExamples, []},
-          # 10 — alias/import/require inside a function body.
-          {Jump.CredoChecks.TopLevelAliasImportRequire, []}
+          {Jump.CredoChecks.DoctestIExExamples, []}
         ]
       }
     }
