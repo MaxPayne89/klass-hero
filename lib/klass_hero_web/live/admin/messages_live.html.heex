@@ -1,0 +1,116 @@
+<div class="p-4 sm:p-6">
+  <%= if @live_action == :index do %>
+    <div class="mb-6">
+      <h1 class={[Theme.typography(:page_title), Theme.text_color(:heading)]}>
+        {gettext("Messages")}
+      </h1>
+      <p class={[Theme.typography(:body_small), Theme.text_color(:muted), "mt-1"]}>
+        {gettext("Read-only view of conversations across all providers.")}
+      </p>
+    </div>
+
+    <div class="mb-4 max-w-sm">
+      <.live_component
+        module={SearchableSelect}
+        id="provider-filter"
+        label={gettext("Provider")}
+        placeholder={gettext("All providers")}
+        field_name="provider_id"
+        options={@providers}
+        selected={@selected_provider}
+      />
+    </div>
+
+    <div id="conversations-table" phx-update="stream">
+      <div
+        id="conversations-empty-state"
+        class="hidden only:block p-8 text-center text-sm opacity-50"
+      >
+        {gettext("No conversations found.")}
+      </div>
+
+      <.link
+        :for={{dom_id, conversation} <- @streams.conversations}
+        id={dom_id}
+        data-role="conversation-row"
+        navigate={~p"/admin/messages/#{conversation.id}"}
+        class="block p-4 rounded-lg border border-base-300 hover:bg-base-200 transition mb-1"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class={[Theme.typography(:card_title), Theme.text_color(:heading), "truncate"]}>
+              {provider_label(@providers, conversation.provider_id)}
+            </p>
+            <p class={[Theme.typography(:body_small), Theme.text_color(:muted), "truncate"]}>
+              {conversation.subject || gettext("No subject")}
+            </p>
+          </div>
+
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <span class="badge badge-sm">{conversation_label(conversation)}</span>
+            <span class={[Theme.typography(:caption), Theme.text_color(:muted)]}>
+              {ngettext(
+                "%{count} participant",
+                "%{count} participants",
+                participant_count(conversation)
+              )}
+            </span>
+          </div>
+        </div>
+      </.link>
+    </div>
+
+    <div :if={@has_more} class="flex justify-center mt-6">
+      <button
+        type="button"
+        phx-click="load_more"
+        data-role="load-more"
+        class="btn btn-sm btn-outline"
+      >
+        {gettext("Load more")}
+      </button>
+    </div>
+  <% else %>
+    <div class="mb-6">
+      <.link navigate={~p"/admin/messages"} class="text-sm hover:underline">
+        {gettext("← Back to messages")}
+      </.link>
+
+      <h1 class={[Theme.typography(:page_title), Theme.text_color(:heading), "mt-2"]}>
+        {@provider_name || gettext("Conversation")}
+      </h1>
+
+      <p class={[Theme.typography(:body_small), Theme.text_color(:muted), "mt-1"]}>
+        {@conversation.subject || conversation_label(@conversation)}
+      </p>
+
+      <p
+        data-role="monitoring-note"
+        class={[Theme.typography(:caption), Theme.text_color(:muted), "mt-2"]}
+      >
+        {gettext("Read-only. Viewing this thread does not mark anything as read.")}
+      </p>
+    </div>
+
+    <div
+      id="conversation-thread"
+      data-role="conversation-thread"
+      phx-update="stream"
+      class="space-y-3"
+    >
+      <div id="messages-empty-state" class="hidden only:block p-8 text-center text-sm opacity-50">
+        {gettext("No messages in this conversation.")}
+      </div>
+
+      <.message_bubble
+        :for={{dom_id, message} <- @streams.messages}
+        id={dom_id}
+        message={message}
+        is_own={false}
+        sender_name={Map.get(@sender_names, message.sender_id, gettext("Unknown"))}
+        provider_name={@provider_name}
+        is_provider_side={message.sender_role in [:provider, :staff]}
+      />
+    </div>
+  <% end %>
+</div>

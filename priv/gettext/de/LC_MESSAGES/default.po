@@ -1489,6 +1489,7 @@ msgstr "Nicht zugewiesen"
 #: lib/klass_hero_web/components/messaging_components.ex:729
 #: lib/klass_hero_web/components/provider_components.ex:52
 #: lib/klass_hero_web/components/provider_components.ex:1553
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:110
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:455
 #: lib/klass_hero_web/presenters/provider_presenter.ex:172
 #, elixir-autogen, elixir-format
@@ -1542,6 +1543,7 @@ msgid "Back to Settings"
 msgstr "Zurück zu Einstellungen"
 
 #: lib/klass_hero_web/components/messaging_components.ex:153
+#: lib/klass_hero_web/live/admin/messages_live.ex:148
 #, elixir-autogen, elixir-format
 msgid "Broadcast"
 msgstr "Rundnachricht"
@@ -1593,6 +1595,8 @@ msgstr "Kind erfolgreich entfernt."
 msgid "Child updated successfully."
 msgstr "Kind erfolgreich aktualisiert."
 
+#: lib/klass_hero_web/live/admin/messages_live.ex:70
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:80
 #: lib/klass_hero_web/live/dashboard_live.ex:178
 #: lib/klass_hero_web/live/messaging_live_helper.ex:413
 #, elixir-autogen, elixir-format
@@ -1699,9 +1703,13 @@ msgstr "Verwalten Sie die Profile Ihrer Kinder"
 msgid "Message content is required"
 msgstr "Nachrichteninhalt ist erforderlich"
 
+#: lib/klass_hero_web/components/layouts/admin.html.heex:90
 #: lib/klass_hero_web/components/layouts/app.html.heex:214
 #: lib/klass_hero_web/components/messaging_components.ex:506
 #: lib/klass_hero_web/components/messaging_components.ex:529
+#: lib/klass_hero_web/live/admin/messages_live.ex:37
+#: lib/klass_hero_web/live/admin/messages_live.ex:56
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:5
 #: lib/klass_hero_web/live/messages_live/index.ex:19
 #: lib/klass_hero_web/live/messaging_live_helper.ex:365
 #, elixir-autogen, elixir-format
@@ -2964,6 +2972,7 @@ msgstr "Verifiziert"
 msgid "We are Klass Hero — parents, brothers, and partners of educators — building the infrastructure that helps every child learn and thrive."
 msgstr "Wir sind Klass Hero — Eltern, Brüder und Partner von Pädagogen — und bauen die Infrastruktur auf, die jedem Kind hilft, zu lernen und zu wachsen."
 
+#: lib/klass_hero_web/live/admin/messages_live.ex:107
 #: lib/klass_hero_web/user_auth.ex:298
 #, elixir-autogen, elixir-format
 msgid "You don't have access to that page."
@@ -3699,6 +3708,7 @@ msgstr "Admin"
 msgid "All programs"
 msgstr "Alle Programme"
 
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:17
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:13
 #, elixir-autogen, elixir-format
 msgid "All providers"
@@ -4134,6 +4144,7 @@ msgid "Program is required"
 msgstr "Programm ist erforderlich"
 
 #: lib/klass_hero_web/components/provider_layout_components.ex:76
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:16
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:12
 #: lib/klass_hero_web/persona.ex:123
 #, elixir-autogen, elixir-format
@@ -8108,3 +8119,60 @@ msgstr "Vorschau anzeigen"
 #, elixir-autogen, elixir-format
 msgid "e.g. %{example}"
 msgstr "z. B. %{example}"
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:52
+#, elixir-autogen, elixir-format
+msgid "%{count} participant"
+msgid_plural "%{count} participants"
+msgstr[0] "%{count} Teilnehmer"
+msgstr[1] "%{count} Teilnehmer"
+
+#: lib/klass_hero_web/live/admin/messages_live.ex:75
+#, elixir-autogen, elixir-format
+msgid "Conversation not found."
+msgstr "Unterhaltung nicht gefunden."
+
+#: lib/klass_hero_web/live/admin/messages_live.ex:149
+#, elixir-autogen, elixir-format
+msgid "Direct"
+msgstr "Direktnachricht"
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:70
+#, elixir-autogen, elixir-format
+msgid "Load more"
+msgstr "Mehr laden"
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:29
+#, elixir-autogen, elixir-format
+msgid "No conversations found."
+msgstr "Keine Unterhaltungen gefunden."
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:102
+#, elixir-autogen, elixir-format
+msgid "No messages in this conversation."
+msgstr "Keine Nachrichten in dieser Unterhaltung."
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:45
+#, elixir-autogen, elixir-format
+msgid "No subject"
+msgstr "Kein Betreff"
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:8
+#, elixir-autogen, elixir-format
+msgid "Read-only view of conversations across all providers."
+msgstr "Schreibgeschützte Ansicht aller Unterhaltungen über alle Anbieter hinweg."
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:91
+#, elixir-autogen, elixir-format
+msgid "Read-only. Viewing this thread does not mark anything as read."
+msgstr "Schreibgeschützt. Das Ansehen dieser Unterhaltung markiert nichts als gelesen."
+
+#: lib/klass_hero_web/live/admin/messages_live.ex:127
+#, elixir-autogen, elixir-format
+msgid "Unknown provider"
+msgstr "Unbekannter Anbieter"
+
+#: lib/klass_hero_web/live/admin/messages_live.html.heex:76
+#, elixir-autogen, elixir-format
+msgid "← Back to messages"
+msgstr "← Zurück zu den Nachrichten"
