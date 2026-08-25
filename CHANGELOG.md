@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.90.0](https://github.com/MaxPayne89/klass-hero/compare/v0.89.0...v0.90.0) (2026-08-25)
+
+
+### Features
+
+* admin can monitor all conversations, and participants are told ([#1516](https://github.com/MaxPayne89/klass-hero/issues/1516)) ([0a16ba6](https://github.com/MaxPayne89/klass-hero/commit/0a16ba6abecb5bcb70b5bc6200f69de4a19da197)), closes [#745](https://github.com/MaxPayne89/klass-hero/issues/745)
+* seat late joiners in program broadcasts with read state starting at arrival ([#1512](https://github.com/MaxPayne89/klass-hero/issues/1512)) ([247f2a9](https://github.com/MaxPayne89/klass-hero/commit/247f2a9ce9766ac5ac1555da830a310c6423fb51))
+
 ## [0.89.0](https://github.com/MaxPayne89/klass-hero/compare/v0.88.0...v0.89.0) (2026-08-24)
 
 
