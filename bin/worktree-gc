@@ -27,7 +27,14 @@ source bin/lib/worktree-common.sh
 PRUNE=false
 [[ "${1:-}" == "--prune" ]] && PRUNE=true
 
-main_root=$(repo_root)
+# NOT repo_root(): that is `git rev-parse --show-toplevel`, which inside a linked
+# worktree returns *that worktree*. Running this script from a worktree therefore
+# skipped the worktree it was run from and offered the MAIN CHECKOUT for removal —
+# main is on `main`, so `git cherry` finds nothing and it classifies as "merged —
+# removable". `--prune` then tried to remove it and drop klass_hero_dev; only
+# worktree-down's main-checkout refusal and Postgres declining to drop an in-use
+# database stopped it. `git worktree list` always names the main worktree first.
+main_root=$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')
 git fetch origin --quiet 2>/dev/null || true
 
 candidates=()

@@ -99,6 +99,8 @@ defmodule KlassHeroWeb.PrivacyPolicyLive do
         <p class="mb-4">Providers see enrolled children's names for program management. Optional safety information (support needs, allergies) is visible to providers only when a parent explicitly consents to share it. Session notes written by providers about a child require parent approval before being displayed.</p>
         <h4 class="font-semibold text-gray-900 mb-2">Payment Processors:</h4>
         <p class="mb-4">For credit card payments, we work with third-party payment processors who handle transaction processing securely. They only receive the information necessary to process payments.</p>
+        <h4 class="font-semibold text-gray-900 mb-2">Platform Administrators:</h4>
+        <p class="mb-4">Our staff can read messages exchanged on the platform, for child safety, abuse prevention and to meet our legal obligations. Access is read-only — administrators cannot post, edit or delete messages in your conversations — and every access is logged. Conversations with a provider display a notice telling you this. We look at message content only when there is a safeguarding, abuse or legal reason to.</p>
         <h4 class="font-semibold text-gray-900 mb-2">What We Don't Do:</h4>
         <ul class="list-disc pl-6 space-y-1">
           <li><strong>We never sell your personal data</strong> to third parties</li>

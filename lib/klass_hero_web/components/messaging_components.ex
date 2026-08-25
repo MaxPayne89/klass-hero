@@ -644,6 +644,7 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   defp message_area(assigns) do
     ~H"""
+    <.monitoring_notice />
     <div
       id="messages-container"
       class="flex-1 overflow-y-auto p-4 space-y-3"
@@ -670,6 +671,48 @@ defmodule KlassHeroWeb.MessagingComponents do
       <% true -> %>
         <.message_input form={@form} uploads={@uploads} />
     <% end %>
+    """
+  end
+
+  @doc """
+  Renders the standing monitoring notice shown at the top of every conversation.
+
+  A banner rather than a `:system` message (#745 allows either). Three reasons: it
+  needs no write on any of the four conversation-creation paths, all of which run
+  inside a transaction; it covers conversations that already exist, where a
+  create-time message would have needed a backfill; and being rendered rather than
+  stored, it is undeletable by construction.
+
+  Rendered *above* `#messages-container`, not inside it. Inside, it scrolls away with
+  the thread and the `ScrollToBottom` hook lands the reader past it, so on any
+  conversation longer than a screen the notice would never be seen — which for a
+  disclosure is the same as not having one.
+
+  Every conversation is anchored to a provider — `provider_id` is required on the
+  schema — so there is no non-provider conversation to exclude yet. When
+  provider-less direct messages exist, gate this on `conversation.provider_id`.
+
+  > The wording is PROVISIONAL and must not ship before legal review (#745).
+  """
+  def monitoring_notice(assigns) do
+    ~H"""
+    <div
+      id="monitoring-notice"
+      data-role="monitoring-notice"
+      class={[
+        "flex items-start gap-2 px-4 py-2.5 border-b",
+        Theme.bg(:light),
+        Theme.border_color(:light),
+        Theme.text_color(:muted)
+      ]}
+    >
+      <.icon name="hero-information-circle" class="w-4 h-4 shrink-0 mt-0.5" />
+      <p class={Theme.typography(:caption)}>
+        {gettext(
+          "Messages here may be reviewed by the activity provider and by Klass Hero staff, to keep children safe."
+        )}
+      </p>
+    </div>
     """
   end
 

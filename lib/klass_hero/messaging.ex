@@ -39,8 +39,10 @@ defmodule KlassHero.Messaging do
     GetConversation,
     GetConversationContext,
     GetInboundEmail,
+    GetMonitoredConversation,
     GetTotalUnreadCount,
     MarkAsRead,
+    MonitorConversations,
     ReceiveInboundEmail,
     ReplyPrivatelyToBroadcast,
     ReplyToEmail,
@@ -532,6 +534,36 @@ defmodule KlassHero.Messaging do
           | {:error, :not_found | :not_participant}
   defdelegate get_conversation(conversation_id, user_id, opts \\ []),
     to: GetConversation,
+    as: :execute
+
+  @doc """
+  Lists every conversation on the platform, for a platform admin.
+
+  Read-only monitoring (#744). Fails closed for a non-admin scope. Unlike
+  `list_conversations/2` this does not read the per-user `conversation_summaries`
+  projection — an admin has no row there.
+
+  ## Options
+  `:provider_id`, `:type`, `:limit`, `:before`. See
+  `KlassHero.Messaging.MonitorConversations`.
+  """
+  @spec monitor_conversations(Scope.t(), keyword()) ::
+          {:ok, [Conversation.t()], boolean()} | {:error, :unauthorized}
+  defdelegate monitor_conversations(scope, opts \\ []),
+    to: MonitorConversations,
+    as: :execute
+
+  @doc """
+  Reads one conversation's thread for a platform admin who is not a participant.
+
+  Read-only monitoring (#744). Fails closed for a non-admin scope. Deliberately has
+  no `:mark_as_read` option: `last_read_at` feeds three separate unread counters, and
+  an admin viewing a thread must not disturb any of them.
+  """
+  @spec get_monitored_conversation(Scope.t(), String.t(), keyword()) ::
+          {:ok, map()} | {:error, :unauthorized | :not_found}
+  defdelegate get_monitored_conversation(scope, conversation_id, opts \\ []),
+    to: GetMonitoredConversation,
     as: :execute
 
   @doc """

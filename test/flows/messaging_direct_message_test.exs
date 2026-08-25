@@ -83,4 +83,23 @@ defmodule KlassHeroWeb.Flows.MessagingDirectMessageTest do
     |> visit(~p"/provider/messages/#{conversation.id}")
     |> assert_has("[data-role=message]", text: "Thanks! What time should we arrive?")
   end
+
+  # #745 — the disclosure half of admin monitoring (#744). Both sides must see it:
+  # the notice is what makes platform-staff read access something participants were
+  # told about rather than something done to them.
+  test "both sides see the monitoring notice", %{
+    provider_user: provider_user,
+    parent_user: parent_user,
+    conversation: conversation
+  } do
+    build_conn()
+    |> log_in_user(parent_user)
+    |> visit(~p"/messages/#{conversation.id}")
+    |> assert_has("[data-role=monitoring-notice]", text: "Klass Hero staff")
+
+    build_conn()
+    |> log_in_user(provider_user)
+    |> visit(~p"/provider/messages/#{conversation.id}")
+    |> assert_has("[data-role=monitoring-notice]", text: "Klass Hero staff")
+  end
 end
