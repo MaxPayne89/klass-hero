@@ -1545,7 +1545,6 @@ msgstr ""
 
 #: lib/klass_hero_web/components/messaging_components.ex:166
 #: lib/klass_hero_web/live/admin/messages_live.ex:147
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:113
 #, elixir-autogen, elixir-format
 msgid "Broadcast"
 msgstr ""
@@ -1601,8 +1600,7 @@ msgstr ""
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:80
 #: lib/klass_hero_web/live/dashboard_live.ex:175
 #: lib/klass_hero_web/live/messaging_live_helper.ex:413
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:73
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:114
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:79
 #, elixir-autogen, elixir-format
 msgid "Conversation"
 msgstr ""
@@ -2978,7 +2976,7 @@ msgid "We are Klass Hero — parents, brothers, and partners of educators — bu
 msgstr ""
 
 #: lib/klass_hero_web/live/admin/messages_live.ex:106
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:100
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:106
 #: lib/klass_hero_web/user_auth.ex:298
 #, elixir-autogen, elixir-format, fuzzy
 msgid "You don't have access to that page."
@@ -8080,7 +8078,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/klass_hero_web/live/admin/messages_live.ex:75
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:78
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:84
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Conversation not found."
 msgstr ""
@@ -8163,8 +8161,8 @@ msgid "Read-only. You are viewing this as the business owner, not as a participa
 msgstr ""
 
 #: lib/klass_hero_web/components/provider_components.ex:185
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:47
-#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:63
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:53
+#: lib/klass_hero_web/live/provider/staff_conversations_live.ex:69
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Staff conversations"
 msgstr ""

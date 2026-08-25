@@ -4,12 +4,17 @@ defmodule KlassHeroWeb.Provider.StaffConversationsLive do
   threads their staff conduct with parents (#746).
 
   Oversight, not participation: this surface lists and reads, and offers no action
-  that writes. Like `KlassHeroWeb.Admin.MessagesLive`, it never uses
+  that writes. Like `KlassHeroWeb.Admin.MessagesLive`, it never `use`s
   `KlassHeroWeb.MessagingLiveHelper` — that macro injects `send_message`, `validate`
   and `cancel-upload` handlers into whatever module uses it, and its
   `mount_conversation_show/3` marks a thread read on every connected mount. Adopting
   it here would wire both a write path and a read-receipt into a screen that must
   have neither, whatever the markup does.
+
+  It does `import` one function from that module. `get_conversation_title/3` is a
+  plain `def` outside the `__using__` macro, so calling it pulls in none of the
+  above — and titles have no reason to read differently here than on every other
+  message surface.
 
   The thread is composed from `message_bubble/1`, which is purely presentational,
   rather than from `conversation_show/1`, which requires a form and always renders a
@@ -32,6 +37,7 @@ defmodule KlassHeroWeb.Provider.StaffConversationsLive do
   import KlassHeroWeb.MessagingComponents,
     only: [conversation_card: 1, message_bubble: 1, provider_comms_shell: 1]
 
+  import KlassHeroWeb.MessagingLiveHelper, only: [get_conversation_title: 3]
   import KlassHeroWeb.ProviderComponents, only: [provider_message_tabs: 1]
 
   alias KlassHero.Messaging
@@ -109,7 +115,10 @@ defmodule KlassHeroWeb.Provider.StaffConversationsLive do
   defp cursor_from([]), do: nil
   defp cursor_from(conversations), do: List.last(conversations).inserted_at
 
-  defp thread_title(%{subject: subject}) when is_binary(subject) and subject != "", do: subject
-  defp thread_title(%{type: :program_broadcast}), do: gettext("Broadcast")
-  defp thread_title(_conversation), do: gettext("Conversation")
+  # No enrolled child names and no other-party name: both are participant-relative,
+  # and the owner has no participant row here, so `get_conversation_context/2` — which
+  # reads `conversation_summaries`, keyed (conversation_id, user_id) — has nothing for
+  # them. A direct thread therefore titles generically. Deriving the parent's name from
+  # the owner's viewpoint needs Provider's staff list, as the index already does — #1523.
+  defp thread_title(conversation), do: get_conversation_title(conversation, [], nil)
 end
