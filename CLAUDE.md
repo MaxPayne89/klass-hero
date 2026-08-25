@@ -29,7 +29,6 @@ mix credo --strict           # Elixir linting (runs in CI; .credo.exs sets stric
 mix lint_typography          # Check font/typography usage in templates
 mix lint_raw_html            # Every raw/1 call in the web layer needs a written waiver
 mix lint_doc_refs            # Paths/modules cited in CLAUDE.md, .claude/rules, .claude/agents still exist
-mix credo.backlog            # Staged third-party checks — reported, never gating (see .credo.backlog.exs)
 bin/lint-shell               # shellcheck over bin/ + .claude/hooks, actionlint over workflows
 
 # Database
