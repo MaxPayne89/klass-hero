@@ -213,6 +213,10 @@
           {Jump.CredoChecks.TestHasNoAssertions, []},
           {Jump.CredoChecks.TooManyAssertions, []},
           {Jump.CredoChecks.UndeclaredExternalResource, []},
+          # Blind spot worth knowing: the check reads call sites, so a test whose subject
+          # is a struct default, a config entry, or an export list looks vacuous. Those
+          # few carry a written credo:disable-for-next-line.
+          {Jump.CredoChecks.VacuousTest, []},
           {OeditusCredo.Check.Warning.BlockingInPlug, []},
           {OeditusCredo.Check.Warning.SilentErrorCase, []},
           {OeditusCredo.Check.Warning.SwallowingException, []},

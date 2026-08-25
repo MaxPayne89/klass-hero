@@ -85,6 +85,9 @@ defmodule KlassHero.Shared.ErrorStoreRepoTest do
     # over a fixed list. An upgrade adding one function to that list would raise
     # UndefinedFunctionError at report time — i.e. error reporting would break precisely
     # when something is already broken. This test fails at upgrade time instead.
+    # The subject is the shim's export list, which can only be interrogated with
+    # function_exported?/3 — the app module is an argument here, never a callee.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "the shim exports every function the dependency dispatches" do
       source = File.read!("deps/error_tracker/lib/error_tracker/repo.ex")
 

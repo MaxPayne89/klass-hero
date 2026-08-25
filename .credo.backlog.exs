@@ -34,10 +34,7 @@
           # this bug reaching production as a page crash.
           {Jump.CredoChecks.UnusedLiveViewAssign, []},
           # 34 — tests introspecting socket assigns instead of asserting rendered behaviour.
-          {Jump.CredoChecks.AvoidSocketAssignsInTest, []},
-          # 24 — tests that never call application code. The check the article's author
-          # wrote specifically to catch LLM-generated tests.
-          {Jump.CredoChecks.VacuousTest, []}
+          {Jump.CredoChecks.AvoidSocketAssignsInTest, []}
         ]
       }
     }

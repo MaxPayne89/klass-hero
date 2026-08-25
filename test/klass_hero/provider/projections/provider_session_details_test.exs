@@ -22,10 +22,6 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
     :ok
   end
 
-  test "starts and responds to a ping call" do
-    assert Process.whereis(@test_server_name) |> is_pid()
-  end
-
   describe "session_created" do
     test "inserts a row with defaults, resolving program_title and provider_id" do
       # programs FK on provider_id requires a real provider row.

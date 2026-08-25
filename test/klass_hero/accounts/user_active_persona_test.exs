@@ -68,6 +68,9 @@ defmodule KlassHero.Accounts.UserActivePersonaTest do
       assert Changeset.get_field(changeset, :active_persona) == nil
     end
 
+    # The subject is a schema default, which is application code the check cannot see:
+    # a struct literal is not a function call.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "the schema default is no preference" do
       assert %User{}.active_persona == nil
     end

@@ -26,7 +26,7 @@ defmodule KlassHero.Family.EventsTest do
       @entity_type entity_type
 
       test "builds an event with the right type and entity" do
-        event = apply(Events, @fun, ["id-1"])
+        event = Events.unquote(fun)("id-1")
 
         assert %Event{} = event
         assert event.event_type == @fun
@@ -38,7 +38,7 @@ defmodule KlassHero.Family.EventsTest do
 
       test "the id argument wins over a caller-supplied one and preserves extras" do
         payload = %{@id => "overridden", extra: "data"}
-        event = apply(Events, @fun, ["real-id", payload])
+        event = Events.unquote(fun)("real-id", payload)
 
         assert Map.get(event.payload, @id) == "real-id"
         assert event.payload.extra == "data"
@@ -47,7 +47,7 @@ defmodule KlassHero.Family.EventsTest do
       test "raises for a nil or blank id" do
         for bad_id <- [nil, ""] do
           assert_raise ArgumentError, ~r/requires a non-empty #{@id} string/, fn ->
-            apply(Events, @fun, [bad_id])
+            Events.unquote(fun)(bad_id)
           end
         end
       end
