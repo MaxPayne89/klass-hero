@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.91.0](https://github.com/MaxPayne89/klass-hero/compare/v0.90.0...v0.91.0) (2026-08-25)
+
+
+### Features
+
+* provider owners can read the threads their staff conduct ([#1520](https://github.com/MaxPayne89/klass-hero/issues/1520)) ([84fd6fa](https://github.com/MaxPayne89/klass-hero/commit/84fd6fa97d1cf02667f3a41b9307bd304084fbd7))
+
 ## [0.90.0](https://github.com/MaxPayne89/klass-hero/compare/v0.89.0...v0.90.0) (2026-08-25)
 
 
