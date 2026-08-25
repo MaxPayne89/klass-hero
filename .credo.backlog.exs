@@ -37,9 +37,7 @@
           {Jump.CredoChecks.AvoidSocketAssignsInTest, []},
           # 24 — tests that never call application code. The check the article's author
           # wrote specifically to catch LLM-generated tests.
-          {Jump.CredoChecks.VacuousTest, []},
-          # 19 — `assert a == :x or b == :y`, which passes on either branch.
-          {Jump.CredoChecks.ConditionalAssertion, []}
+          {Jump.CredoChecks.VacuousTest, []}
         ]
       }
     }

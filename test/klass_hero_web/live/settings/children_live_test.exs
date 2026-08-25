@@ -134,7 +134,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
         )
         |> render_submit()
 
-      assert html =~ "can&#39;t be blank" or html =~ "can't be blank"
+      assert html =~ "can&#39;t be blank"
     end
   end
 
@@ -440,7 +440,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
         |> form("#child-form", child: %{first_name: "", last_name: ""})
         |> render_change()
 
-      assert html =~ "can&#39;t be blank" or html =~ "can't be blank"
+      assert html =~ "can&#39;t be blank"
     end
   end
 

@@ -76,7 +76,7 @@ defmodule KlassHeroWeb.PrivacyPolicyLiveTest do
     test "clarifies no third-party tracking", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/privacy")
 
-      assert html =~ "essential" or html =~ "session cookies"
+      assert html =~ "session cookies"
       assert html =~ "never sell"
     end
 

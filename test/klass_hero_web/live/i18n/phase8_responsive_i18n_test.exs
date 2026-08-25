@@ -115,7 +115,7 @@ defmodule KlassHeroWeb.I18n.Phase8ResponsiveI18nTest do
       # the catalog stream lives in #mk-programs-stream, or #mk-empty when no
       # programs match).
       html = render(view)
-      assert html =~ "id=\"mk-programs-stream\"" or html =~ "id=\"mk-empty\""
+      assert html =~ "id=\"mk-empty\""
     end
   end
 
@@ -153,8 +153,8 @@ defmodule KlassHeroWeb.I18n.Phase8ResponsiveI18nTest do
       {:ok, _view, html} = setup_locale_for_navigation(conn, "en") |> live(~p"/")
 
       # Language switcher should have EN and DE options
-      assert html =~ "🇬🇧" || html =~ "EN"
-      assert html =~ "🇩🇪" || html =~ "DE"
+      assert html =~ "🇬🇧"
+      assert html =~ "🇩🇪"
     end
   end
 
@@ -168,7 +168,7 @@ defmodule KlassHeroWeb.I18n.Phase8ResponsiveI18nTest do
 
       html = render(view)
       # Check for German form labels
-      assert html =~ get_translation("Email", "de") || html =~ "E-Mail"
+      assert html =~ get_translation("Email", "de")
     end
 
     test "registration form displays in English", %{conn: conn} do
@@ -250,7 +250,7 @@ defmodule KlassHeroWeb.I18n.Phase8ResponsiveI18nTest do
 
       # Settings should show current locale preference
       html = render(view)
-      assert html =~ "DE" || html =~ "🇩🇪"
+      assert html =~ "🇩🇪"
     end
   end
 
@@ -274,7 +274,7 @@ defmodule KlassHeroWeb.I18n.Phase8ResponsiveI18nTest do
 
       # Verify the community page structure is rendered
       # The page should have posts stream container
-      assert html =~ "id=\"posts\"" || html =~ "phx-update=\"stream\""
+      assert html =~ "phx-update=\"stream\""
     end
   end
 end

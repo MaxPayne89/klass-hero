@@ -48,7 +48,7 @@ defmodule KlassHeroWeb.ContactLiveTest do
       })
 
       html = render(view)
-      assert html =~ "can&#39;t be blank" or html =~ "can't be blank"
+      assert html =~ "can&#39;t be blank"
     end
 
     test "validates name length constraints", %{conn: conn} do
@@ -158,7 +158,7 @@ defmodule KlassHeroWeb.ContactLiveTest do
       html = render(view)
       assert html =~ "Message sent successfully!"
 
-      assert html =~ "We&#39;ve got it" or html =~ "We've got it"
+      assert html =~ "We&#39;ve got it"
     end
 
     test "resets form after successful submission", %{conn: conn} do
@@ -191,7 +191,8 @@ defmodule KlassHeroWeb.ContactLiveTest do
       })
 
       html = render(view)
-      assert html =~ "should be at least 2 character" or html =~ "should be at least 10 character"
+      assert html =~ "should be at least 2 character"
+      assert html =~ "should be at least 10 character"
       refute html =~ "Message sent successfully!"
     end
 
