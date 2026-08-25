@@ -1,11 +1,15 @@
 defmodule KlassHero.Messaging.Authorization do
   @moduledoc """
-  The authorisation gate Messaging write commands pass through.
+  The authorisation gate Messaging commands and reads pass through.
 
-  Answers the three questions a command asks before it writes: which provider
-  is this scope acting as, is this user a participant of this conversation, and
-  does this scope's plan permit messaging at all. Staff-addition is owned by
-  `KlassHero.Messaging.AddAssignedStaff`.
+  Answers the three questions a command asks before it writes: which provider is
+  this scope acting as, is this user a participant of this conversation, and does
+  this scope's plan permit messaging at all.
+
+  Plus the one read gate that is not participant-based — `authorize_admin/1`, for
+  platform monitoring. Every other read in this context is gated on a participant
+  row; that one is gated on `is_admin` alone, and is deliberately the only such
+  exception. Staff-addition is owned by `KlassHero.Messaging.AddAssignedStaff`.
   """
 
   use KlassHero.Shared.Tracing
@@ -83,6 +87,32 @@ defmodule KlassHero.Messaging.Authorization do
 
       {:error, :not_participant}
     end
+  end
+
+  @doc """
+  Authorises a platform admin to read conversations they are not a participant of.
+
+  One clause, not an ordered fall-through like `Participation.SessionAuthorization`:
+  admin is not a fallback from some narrower rule here, it *is* the rule. Nobody is
+  narrowly authorised to read every conversation on the platform.
+
+  Callers must ask this **before** they look at a conversation id, so that a
+  non-admin's refusal cannot depend on whether the conversation exists (ADR-0017's
+  enumeration oracle). Past this gate an admin sees everything, so a later
+  `:not_found` discloses nothing they were not already entitled to know.
+
+  `is_admin` is derived, never declared: it lives on the user row and is absent from
+  `registration_changeset`'s cast list, so no request can grant it to itself.
+  """
+  @spec authorize_admin(Scope.t()) :: :ok | {:error, :unauthorized}
+  def authorize_admin(%Scope{user: %{is_admin: true}}), do: :ok
+
+  def authorize_admin(%Scope{} = scope) do
+    Logger.warning("Non-admin scope attempted an admin conversation read",
+      user_id: scope.user.id
+    )
+
+    {:error, :unauthorized}
   end
 
   @doc """

@@ -138,6 +138,34 @@ defmodule KlassHero.Messaging.Queries.ConversationQueries do
   end
 
   @doc """
+  Order newest first, by creation time.
+  """
+  def order_by_newest(query) do
+    order_by(query, [conversation: c], desc: c.inserted_at, desc: c.id)
+  end
+
+  @doc """
+  Apply seek pagination, newest-first.
+
+  Fetches `limit + 1` rows so the caller can detect a next page without a second
+  `COUNT` — the same trick `MessageQueries.paginate/2` and `list_inbound_emails/1`
+  use. `:before` is an exclusive `inserted_at` cursor.
+  """
+  def paginate(query, opts) do
+    limit = Keyword.get(opts, :limit, 25)
+
+    query
+    |> before(Keyword.get(opts, :before))
+    |> limit(^(limit + 1))
+  end
+
+  defp before(query, nil), do: query
+
+  defp before(query, timestamp) do
+    where(query, [conversation: c], c.inserted_at < ^timestamp)
+  end
+
+  @doc """
   Select only conversation IDs for bulk operations.
   """
   def select_ids(query) do
