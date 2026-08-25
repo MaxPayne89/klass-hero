@@ -46,7 +46,6 @@ defmodule KlassHeroWeb.BookingLive do
           payment_method: "card",
           total_amount: total_amount,
           waivers: Enrollment.list_program_waivers(program.id),
-          signed_waiver_version_ids: [],
           # Connect info exists only on the connected mount, so capture it here and read it
           # from assigns at submit — it is unreachable from a handle_event.
           audit: AuditInfo.from_socket(socket)

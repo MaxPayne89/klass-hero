@@ -29,10 +29,7 @@
           # 155 — `assert is_list(x)` / `refute is_nil(x)` where a pattern match would say
           # what the value should actually be. The largest backlog and the highest value:
           # this is the exact shape of #1416 and #1142.
-          {Jump.CredoChecks.WeakAssertion, []},
-          # 50 — an assign written but never read in that module's .ex or .heex. #1073 was
-          # this bug reaching production as a page crash.
-          {Jump.CredoChecks.UnusedLiveViewAssign, []}
+          {Jump.CredoChecks.WeakAssertion, []}
         ]
       }
     }

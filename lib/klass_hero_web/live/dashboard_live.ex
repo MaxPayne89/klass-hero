@@ -28,10 +28,8 @@ defmodule KlassHeroWeb.DashboardLive do
         page_title: Greeting.title(DateTime.utc_now(), user: user),
         page_subtitle: gettext("Your week with the kids"),
         active_nav: :home,
-        user: user,
         loading?: true,
         waivers_outstanding: [],
-        children_count: 0,
         kid_picker_items: [],
         active_program_count: 0,
         upcoming_count: 0,
@@ -65,7 +63,6 @@ defmodule KlassHeroWeb.DashboardLive do
       socket
       |> assign(
         loading?: false,
-        children_count: length(children),
         kid_picker_items: build_kid_picker_items(children, active),
         active_program_count: length(active),
         upcoming_count: length(data.upcoming_sessions),
