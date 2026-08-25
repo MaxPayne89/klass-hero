@@ -93,7 +93,7 @@ defmodule KlassHero.Provider.ProviderProfileCompletionTest do
       attrs = %{business_name: "", description: "Valid description"}
 
       assert {:error, errors} = ProviderProfile.complete_profile(draft, attrs)
-      assert is_list(errors)
+      assert Enum.any?(errors, &String.contains?(&1, "Business name"))
     end
 
     test "returns :already_active for an active profile" do

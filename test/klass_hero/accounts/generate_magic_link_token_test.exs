@@ -9,7 +9,7 @@ defmodule KlassHero.Accounts.GenerateMagicLinkTokenTest do
     test "returns an encoded token string" do
       user = user_fixture()
       token = Accounts.generate_magic_link_token(user)
-      assert is_binary(token)
+      assert {:ok, _} = Base.url_decode64(token, padding: false)
       assert byte_size(token) > 0
     end
 

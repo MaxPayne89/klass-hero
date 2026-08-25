@@ -57,7 +57,6 @@ defmodule KlassHero.Shared.Tracing.ContextTest do
     test "roundtrips trace context across processes" do
       context = Helpers.inject_in_span()
 
-      assert is_map(context)
       assert Map.has_key?(context, "traceparent")
 
       parent_span = assert_span("parent.operation")
@@ -77,7 +76,7 @@ defmodule KlassHero.Shared.Tracing.ContextTest do
     test "roundtrips trace context through job args" do
       enriched_args = Helpers.inject_into_args_and_attach_in_child_span()
 
-      assert is_map(enriched_args["trace_context"])
+      assert Map.has_key?(enriched_args["trace_context"], "traceparent")
       assert enriched_args["invite_id"] == "abc123"
 
       worker_span = assert_span("worker.operation")

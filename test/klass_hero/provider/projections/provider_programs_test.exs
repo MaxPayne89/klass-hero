@@ -115,7 +115,7 @@ defmodule KlassHero.Provider.Projections.ProviderProgramsTest do
       assert :ok = ProviderPrograms.rebuild(name)
 
       row = Repo.get(ProviderProgram, program.id)
-      assert row != nil
+      assert %ProviderProgram{} = row
       assert row.program_id == program.id
       assert row.provider_id == provider.id
       assert row.name == "Rebuild Target Program"

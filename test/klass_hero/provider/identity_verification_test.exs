@@ -93,7 +93,7 @@ defmodule KlassHero.Provider.IdentityVerificationTest do
       assert iv.status == :processing
       assert iv.outcome == nil
       assert iv.failure_reason == nil
-      assert is_binary(iv.id)
+      assert {:ok, _} = Ecto.UUID.dump(iv.id)
     end
   end
 

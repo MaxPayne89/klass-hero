@@ -116,7 +116,7 @@ defmodule KlassHero.Participation.ListSessionsTest do
     test "returns today's sessions by default" do
       # When no filter is specified, it defaults to today's date
       sessions = KlassHero.Participation.list_sessions(%{})
-      assert is_list(sessions)
+      assert sessions == []
     end
   end
 

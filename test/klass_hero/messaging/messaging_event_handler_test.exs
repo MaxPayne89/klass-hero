@@ -62,7 +62,7 @@ defmodule KlassHero.Messaging.MessagingEventHandlerTest do
           )
         )
 
-      refute is_nil(reloaded_participant.left_at)
+      assert %DateTime{} = reloaded_participant.left_at
     end
 
     test "publishes message_data_anonymized integration event" do

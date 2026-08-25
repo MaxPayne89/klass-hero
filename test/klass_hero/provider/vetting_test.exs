@@ -51,7 +51,7 @@ defmodule KlassHero.Provider.VettingTest do
     test "the document steps require admin review" do
       for %StepDefinition{completed_via: {:document, type}, admin_review: admin_review} <-
             Vetting.track(:individual) do
-        assert is_binary(type)
+        assert type != ""
         assert admin_review == true
       end
     end

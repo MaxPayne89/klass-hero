@@ -40,7 +40,7 @@ defmodule KlassHero.Messaging.SendMessageTest do
       {:ok, _message} = SendMessage.execute(conversation.id, user.id, "Hello!")
 
       {:ok, participant} = KlassHero.Messaging.get_participant(conversation.id, user.id)
-      assert participant.last_read_at != nil
+      assert %DateTime{} = participant.last_read_at
       assert DateTime.compare(participant.last_read_at, before) in [:gt, :eq]
     end
 

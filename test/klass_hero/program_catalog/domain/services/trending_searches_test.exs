@@ -9,7 +9,6 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.TrendingSearchesTest do
     test "returns all trending search terms" do
       result = TrendingSearches.list()
 
-      assert is_list(result)
       assert length(result) == 5
       assert "Swimming" in result
       assert "Math Tutor" in result

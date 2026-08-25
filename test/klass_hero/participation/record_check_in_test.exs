@@ -37,7 +37,7 @@ defmodule KlassHero.Participation.RecordCheckInTest do
       assert record.status == :checked_in
       assert record.check_in_notes == "Child arrived happy"
       assert record.check_in_by == scope.user.id
-      assert record.check_in_at != nil
+      assert %DateTime{} = record.check_in_at
     end
 
     test "checks in with nil notes when not provided" do
@@ -128,7 +128,7 @@ defmodule KlassHero.Participation.RecordCheckInTest do
         )
 
       assert reloaded.status == :checked_in
-      assert reloaded.check_in_at != nil
+      assert %DateTime{} = reloaded.check_in_at
       assert reloaded.check_in_by == scope.user.id
     end
   end

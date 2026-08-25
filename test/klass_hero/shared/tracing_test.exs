@@ -219,7 +219,7 @@ defmodule KlassHero.Shared.TracingTest do
 
       assert attrs["exception.type"] == "ArgumentError"
       assert attrs["exception.message"] == "test error"
-      assert is_binary(attrs["exception.stacktrace"])
+      assert attrs["exception.stacktrace"] =~ "tracing_test.exs"
       assert span_status_code(span) == :error
     end
   end

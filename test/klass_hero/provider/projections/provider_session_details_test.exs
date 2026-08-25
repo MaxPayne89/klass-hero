@@ -39,7 +39,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
 
       row = Repo.get(SessionDetail, session_id)
 
-      assert row != nil
+      assert %SessionDetail{} = row
       assert row.program_id == program.id
       assert row.program_title == "Judo"
       assert row.provider_id == provider.id
@@ -88,7 +88,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
 
       row = Repo.get(SessionDetail, session_id)
 
-      assert row != nil
+      assert %SessionDetail{} = row
       assert row.current_assigned_staff_id == staff.id
       assert row.current_assigned_staff_name == "Ada Lovelace"
     end
@@ -164,7 +164,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
 
       row = Repo.get(SessionDetail, session_id)
 
-      assert row != nil
+      assert %SessionDetail{} = row
       assert row.status == :in_progress
       assert row.checked_in_count == 5
       assert row.total_count == 10

@@ -47,7 +47,7 @@ defmodule KlassHero.Shared.Tracing.EctoSpanBridgeTest do
       attrs = span_attributes(span)
 
       # Parameterised SQL keeps placeholders ($1), never inlined values.
-      assert is_binary(attrs["db.statement"])
+      assert attrs["db.statement"] =~ "$1"
       assert attrs["db.statement"] =~ "$1"
       # PII default-deny: param VALUES never leave the process.
       refute Map.has_key?(attrs, "db.params")

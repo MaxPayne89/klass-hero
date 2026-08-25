@@ -41,7 +41,7 @@ defmodule KlassHero.Messaging.ReceiveInboundEmailTest do
         })
 
       assert {:ok, email} = ReceiveInboundEmail.execute(attrs)
-      assert email.id != nil
+      assert {:ok, _} = Ecto.UUID.dump(email.id)
     end
 
     test "returns duplicate for already-stored email" do

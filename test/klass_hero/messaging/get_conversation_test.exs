@@ -30,8 +30,8 @@ defmodule KlassHero.Messaging.GetConversationTest do
       assert result.conversation.id == conversation.id
       assert length(result.messages) == 1
       assert hd(result.messages).content == "Hello!"
-      assert is_boolean(result.has_more)
-      assert is_map(result.sender_names)
+      refute result.has_more
+      assert Map.has_key?(result.sender_names, user.id)
     end
 
     test "includes sender_names mapping" do
@@ -100,7 +100,7 @@ defmodule KlassHero.Messaging.GetConversationTest do
       {:ok, _result} = GetConversation.execute(conversation.id, user.id, mark_as_read: true)
 
       {:ok, participant} = KlassHero.Messaging.get_participant(conversation.id, user.id)
-      assert participant.last_read_at != nil
+      assert %DateTime{} = participant.last_read_at
       assert DateTime.compare(participant.last_read_at, before) in [:gt, :eq]
     end
 

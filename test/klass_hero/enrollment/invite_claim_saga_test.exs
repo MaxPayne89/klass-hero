@@ -79,14 +79,14 @@ defmodule KlassHero.Enrollment.InviteClaimSagaTest do
         # holds before anything has been delivered.
         registered = Repo.get!(BulkEnrollmentInvite, ctx.invite.id)
         assert registered.status == :registered
-        assert registered.registered_at != nil
+        assert %DateTime{} = registered.registered_at
 
         run_saga()
 
         final = Repo.get!(BulkEnrollmentInvite, ctx.invite.id)
         assert final.status == :enrolled
-        assert final.enrolled_at != nil
-        assert final.enrollment_id != nil
+        assert %DateTime{} = final.enrolled_at
+        assert {:ok, _enrollment} = Enrollment.get_enrollment(final.enrollment_id)
 
         assert {:ok, parent} = Family.get_parent_by_identity(user.id)
         assert Enum.any?(Family.get_children(parent.id), &(&1.first_name == "Emma"))

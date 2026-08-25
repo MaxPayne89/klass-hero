@@ -359,10 +359,8 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
       assert {:ok, %{column_keys: keys, remainder: rest}} =
                CsvParser.validate_headers(csv)
 
-      assert is_list(keys)
       assert :child_first_name in keys
       assert :program_name in keys
-      assert is_binary(rest)
       assert String.starts_with?(rest, "Alice,Smith")
     end
 
@@ -534,7 +532,7 @@ defmodule KlassHero.Enrollment.Domain.Services.CsvParserTest do
                {:parse_halt, msg}
              ] = results
 
-      assert is_binary(msg)
+      assert msg =~ "expected escape character"
     end
   end
 

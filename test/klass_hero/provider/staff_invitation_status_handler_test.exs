@@ -27,7 +27,7 @@ defmodule KlassHero.Provider.StaffInvitationStatusHandlerTest do
 
       assert {:ok, updated} = Provider.get_staff_member(staff.id)
       assert updated.invitation_status == :sent
-      assert updated.invitation_sent_at != nil
+      assert %DateTime{} = updated.invitation_sent_at
     end
 
     test "is idempotent when staff already in :sent status" do

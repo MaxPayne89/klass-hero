@@ -74,8 +74,8 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Events.InviteFamilyReadyHandlerT
 
       updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :enrolled
-      assert updated.enrolled_at != nil
-      assert updated.enrollment_id != nil
+      assert %DateTime{} = updated.enrolled_at
+      assert {:ok, _enrollment} = KlassHero.Enrollment.get_enrollment(updated.enrollment_id)
     end
 
     test "is idempotent when invite already enrolled", %{invite: invite} do

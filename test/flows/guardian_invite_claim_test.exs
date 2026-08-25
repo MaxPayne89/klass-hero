@@ -33,7 +33,7 @@ defmodule KlassHeroWeb.Flows.GuardianInviteClaimTest do
       |> assert_path(~p"/dashboard")
 
       user = Accounts.get_user_by_email(email)
-      assert user != nil
+      assert user.email == email
       assert :parent in user.intended_roles
 
       assert Repo.get_by!(BulkEnrollmentInvite, guardian_email: email).status == :registered

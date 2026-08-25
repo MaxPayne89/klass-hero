@@ -292,7 +292,7 @@ defmodule KlassHero.AccountsTest do
       token = Accounts.generate_user_session_token(user)
       assert user_token = Repo.get_by(UserToken, token: token)
       assert user_token.context == "session"
-      assert user_token.authenticated_at != nil
+      assert %DateTime{} = user_token.authenticated_at
 
       # Creating the same token for another user should fail
       assert_raise Ecto.ConstraintError, fn ->
@@ -323,8 +323,8 @@ defmodule KlassHero.AccountsTest do
     test "returns user by token", %{user: user, token: token} do
       assert {session_user, token_inserted_at} = Accounts.get_user_by_session_token(token)
       assert session_user.id == user.id
-      assert session_user.authenticated_at != nil
-      assert token_inserted_at != nil
+      assert %DateTime{} = session_user.authenticated_at
+      assert %DateTime{} = token_inserted_at
     end
 
     test "does not return user for invalid token" do
@@ -527,9 +527,8 @@ defmodule KlassHero.AccountsTest do
       user = user_fixture()
       data = Accounts.export_user_data(user)
 
-      assert is_binary(data.exported_at)
       assert {:ok, _, _} = DateTime.from_iso8601(data.exported_at)
-      assert is_binary(data.user.created_at)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(data.user.created_at)
       assert {:ok, _, _} = DateTime.from_iso8601(data.user.created_at)
     end
 

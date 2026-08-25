@@ -363,7 +363,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       assert result.meeting_end_time == ~T[16:30:00]
       assert result.start_date == ~D[2026-03-01]
       assert result.end_date == ~D[2026-06-30]
-      assert is_binary(result.gradient_class)
+      assert result.gradient_class =~ "bg-gradient"
       assert is_nil(result.spots_left)
     end
 

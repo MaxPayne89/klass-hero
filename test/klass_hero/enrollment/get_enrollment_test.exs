@@ -54,10 +54,10 @@ defmodule KlassHero.Enrollment.GetEnrollmentTest do
 
       {:ok, enrollment} = KlassHero.Enrollment.get_enrollment(enrollment_schema.id)
 
-      assert is_binary(enrollment.id)
-      assert is_binary(enrollment.program_id)
-      assert is_binary(enrollment.child_id)
-      assert is_binary(enrollment.parent_id)
+      assert enrollment.id == enrollment_schema.id
+      assert enrollment.program_id == enrollment_schema.program_id
+      assert enrollment.child_id == enrollment_schema.child_id
+      assert enrollment.parent_id == enrollment_schema.parent_id
     end
   end
 end

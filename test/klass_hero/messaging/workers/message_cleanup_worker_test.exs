@@ -39,7 +39,7 @@ defmodule KlassHero.Messaging.Workers.MessageCleanupWorkerTest do
 
       # Verify conversation is now archived
       {:ok, archived} = KlassHero.Messaging.get_conversation_by_id(conversation.id)
-      assert archived.archived_at != nil
+      assert %DateTime{} = archived.archived_at
     end
 
     test "returns :ok when no conversations to archive" do

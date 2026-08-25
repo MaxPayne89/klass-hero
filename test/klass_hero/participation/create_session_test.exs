@@ -78,7 +78,7 @@ defmodule KlassHero.Participation.CreateSessionTest do
                  max_capacity: 20
                })
 
-      assert reason != nil
+      assert reason == :invalid_time_range
     end
 
     test "allows sessions with different dates for same program" do

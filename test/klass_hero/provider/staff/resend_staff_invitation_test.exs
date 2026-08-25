@@ -29,7 +29,9 @@ defmodule KlassHero.Provider.Staff.ResendStaffInvitationTest do
 
       assert updated.invitation_status == :pending
       assert updated.invitation_token_hash != old_token
-      assert is_binary(raw_token)
+
+      assert updated.invitation_token_hash ==
+               :crypto.hash(:sha256, Base.url_decode64!(raw_token, padding: false))
     end
 
     test "resends invitation for :expired staff member" do
@@ -119,7 +121,7 @@ defmodule KlassHero.Provider.Staff.ResendStaffInvitationTest do
           invitation_token_hash: :crypto.hash(:sha256, "old-token")
         })
 
-      {:ok, _updated, _raw_token} = Provider.resend_staff_invitation(provider.id, staff.id)
+      {:ok, updated, _raw_token} = Provider.resend_staff_invitation(provider.id, staff.id)
 
       event = assert_integration_event_published(:staff_member_invited)
       assert event.entity_id == staff.id
@@ -127,7 +129,9 @@ defmodule KlassHero.Provider.Staff.ResendStaffInvitationTest do
       assert event.payload.provider_id == provider.id
       assert event.payload.email == "staff@example.com"
       assert event.payload.business_name == provider.business_name
-      assert is_binary(event.payload.raw_token)
+
+      assert updated.invitation_token_hash ==
+               :crypto.hash(:sha256, Base.url_decode64!(event.payload.raw_token, padding: false))
     end
 
     test "new raw_token hashes to the stored token_hash" do

@@ -222,6 +222,10 @@
           {Jump.CredoChecks.TestHasNoAssertions, []},
           {Jump.CredoChecks.TooManyAssertions, []},
           {Jump.CredoChecks.UndeclaredExternalResource, []},
+          # The largest backlog when this was adopted, and the highest value: it is the
+          # shape of #1416 and #1142. Prefer a pattern match or an equality on the value
+          # over asserting its type.
+          {Jump.CredoChecks.WeakAssertion, []},
           # Blind spot worth knowing: the check reads call sites, so a test whose subject
           # is a struct default, a config entry, or an export list looks vacuous. Those
           # few carry a written credo:disable-for-next-line.

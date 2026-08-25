@@ -5,6 +5,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
 
   alias KlassHero.Enrollment.Enrollment
   alias KlassHero.Family
+  alias KlassHero.Family.Child
 
   describe "page access" do
     setup :register_and_log_in_user
@@ -384,7 +385,7 @@ defmodule KlassHeroWeb.Settings.ChildrenLiveTest do
       # Find the newly created child
       children = Family.get_children(parent.id)
       new_child = Enum.find(children, &(&1.first_name == "Consent"))
-      assert new_child
+      assert %Child{} = new_child
       assert Family.child_has_active_consent?(new_child.id, "provider_data_sharing")
     end
 

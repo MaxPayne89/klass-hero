@@ -357,7 +357,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       {:cont, updated_socket} = UserAuth.on_mount(:require_parent, %{}, session, socket)
 
       assert updated_socket.assigns.current_scope.user.id == user.id
-      assert updated_socket.assigns.current_scope.parent != nil
+      assert updated_socket.assigns.current_scope.parent.identity_id == user.id
       assert Scope.parent?(updated_socket.assigns.current_scope)
     end
 
@@ -404,7 +404,7 @@ defmodule KlassHeroWeb.UserAuthTest do
       {:cont, updated_socket} = UserAuth.on_mount(:require_provider, %{}, session, socket)
 
       assert updated_socket.assigns.current_scope.user.id == user.id
-      assert updated_socket.assigns.current_scope.provider != nil
+      assert updated_socket.assigns.current_scope.provider.identity_id == user.id
       assert Scope.provider?(updated_socket.assigns.current_scope)
     end
 

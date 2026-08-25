@@ -31,7 +31,7 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
       assert {:ok, verified} = Provider.verify_provider(params.provider_id, params.admin_id)
 
       assert verified.verified == true
-      assert verified.verified_at != nil
+      assert %DateTime{} = verified.verified_at
     end
 
     test "sets verified_at timestamp", %{provider: provider, admin: admin} do
@@ -82,7 +82,7 @@ defmodule KlassHero.Provider.Profiles.ProviderVerificationTest do
 
       # verified_at may be updated or stay the same depending on implementation
       # The key is that the operation succeeds
-      assert verified2.verified_at != nil
+      assert %DateTime{} = verified2.verified_at
     end
   end
 

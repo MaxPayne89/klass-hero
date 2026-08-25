@@ -92,8 +92,9 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
                })
 
       assert staff.invitation_status == :pending
-      assert staff.invitation_token_hash != nil
-      assert is_binary(raw_token)
+
+      assert staff.invitation_token_hash ==
+               :crypto.hash(:sha256, Base.url_decode64!(raw_token, padding: false))
 
       # Reset integration events so StaffInvitationHandler can emit cleanly
       clear_integration_events()
@@ -119,7 +120,7 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
 
       assert {:ok, staff_after_sent} = Provider.get_staff_member(staff.id)
       assert staff_after_sent.invitation_status == :sent
-      assert staff_after_sent.invitation_sent_at != nil
+      assert %DateTime{} = staff_after_sent.invitation_sent_at
 
       # Step 4: New user registers via staff registration path
       # Flush any emails from the fixture setup above
@@ -255,7 +256,10 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
                Provider.resend_staff_invitation(provider.id, staff.id)
 
       assert staff_resent.invitation_status == :pending
-      assert is_binary(new_raw_token)
+
+      assert staff_resent.invitation_token_hash ==
+               :crypto.hash(:sha256, Base.url_decode64!(new_raw_token, padding: false))
+
       # New token should differ from original
       assert staff_resent.invitation_token_hash != staff.invitation_token_hash
 
@@ -285,7 +289,7 @@ defmodule KlassHero.Integration.StaffInvitationSagaTest do
 
       assert {:ok, staff_recovered} = Provider.get_staff_member(staff.id)
       assert staff_recovered.invitation_status == :sent
-      assert staff_recovered.invitation_sent_at != nil
+      assert %DateTime{} = staff_recovered.invitation_sent_at
     end
   end
 end

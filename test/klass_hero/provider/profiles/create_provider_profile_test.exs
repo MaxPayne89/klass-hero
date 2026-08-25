@@ -44,7 +44,7 @@ defmodule KlassHero.Provider.Profiles.CreateProviderProfileTest do
       refute Map.has_key?(attrs, :id)
 
       assert {:ok, profile} = Provider.create_provider_profile(attrs)
-      assert is_binary(profile.id)
+      assert {:ok, _} = Ecto.UUID.dump(profile.id)
       assert {:ok, _} = Ecto.UUID.cast(profile.id)
     end
 
@@ -53,7 +53,6 @@ defmodule KlassHero.Provider.Profiles.CreateProviderProfileTest do
       attrs = %{identity_id: user.id, business_name: ""}
 
       assert {:error, {:validation_error, errors}} = Provider.create_provider_profile(attrs)
-      assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "Business name"))
     end
 

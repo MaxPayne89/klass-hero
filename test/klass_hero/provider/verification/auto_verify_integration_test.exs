@@ -44,7 +44,7 @@ defmodule KlassHero.Provider.Verification.AutoVerifyIntegrationTest do
       approve_document_step(provider.id, admin.id, last)
 
       assert {:ok, %{verified: true, verified_at: verified_at}} = Provider.get_provider_profile(provider.id)
-      assert verified_at != nil
+      assert %DateTime{} = verified_at
     end
   end
 

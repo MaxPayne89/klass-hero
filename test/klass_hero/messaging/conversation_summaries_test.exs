@@ -62,7 +62,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert summary_1 != nil
+      assert %ConversationSummary{} = summary_1
       assert summary_1.conversation_type == :direct
       assert summary_1.provider_id == provider.id
       assert summary_1.other_participant_name == "Bob Jones"
@@ -80,7 +80,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert summary_2 != nil
+      assert %ConversationSummary{} = summary_2
       assert summary_2.other_participant_name == "Alice Smith"
       # user_2 has last_read_at = nil, but both messages were sent by user_2
       # themselves — own messages never count as unread
@@ -120,7 +120,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert summary != nil
+      assert %ConversationSummary{} = summary
 
       assert Map.has_key?(summary.system_notes, token),
              "Expected system_notes to contain key #{token}, got: #{inspect(summary.system_notes)}"
@@ -280,7 +280,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert summary_1 != nil
+      assert %ConversationSummary{} = summary_1
       assert summary_1.conversation_type == :direct
       assert summary_1.provider_id == provider_id
       assert summary_1.other_participant_name == "Bob Jones"
@@ -295,7 +295,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert summary_2 != nil
+      assert %ConversationSummary{} = summary_2
       assert summary_2.other_participant_name == "Alice Smith"
       assert summary_2.participant_count == 2
     end
@@ -327,7 +327,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert summary != nil
+      assert %ConversationSummary{} = summary
       assert summary.conversation_type == :program_broadcast
       assert summary.program_name == nil
     end
@@ -1034,7 +1034,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert staff_summary != nil
+      assert %ConversationSummary{} = staff_summary
       # Staff sees the first non-staff participant, which is parent
       assert staff_summary.other_participant_name == "Parent User"
     end
@@ -1202,7 +1202,7 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert summary != nil
+      assert %ConversationSummary{} = summary
       assert summary.conversation_type == :program_broadcast
       assert summary.other_participant_name == nil
     end
@@ -1238,8 +1238,8 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
           )
         )
 
-      assert staff_summary != nil
-      assert staff_summary.archived_at != nil
+      assert %ConversationSummary{} = staff_summary
+      assert %DateTime{} = staff_summary.archived_at
 
       # Non-removed users keep their row intact
       user_1_summary =

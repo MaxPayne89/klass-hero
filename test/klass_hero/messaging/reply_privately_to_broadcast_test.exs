@@ -58,7 +58,7 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
       assert {:ok, direct_conversation_id} =
                ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
 
-      assert is_binary(direct_conversation_id)
+      assert {:ok, _conversation} = KlassHero.Messaging.get_conversation_by_id(direct_conversation_id)
       refute direct_conversation_id == ctx.broadcast.id
 
       # Verify system note was inserted
