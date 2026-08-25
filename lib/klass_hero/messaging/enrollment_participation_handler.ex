@@ -21,8 +21,7 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandler do
 
   Nothing to do here: `add_user_to_conversations/2` seats everyone with their cursor
   at whatever the conversation already held, so the history stays readable while the
-  unread badge starts at zero. Joining late should not arrive as twenty
-  notifications — and that rule belongs to seating, not to this one caller.
+  unread badge starts at zero.
 
   ## A nil parent_user_id is skipped, not dropped
 

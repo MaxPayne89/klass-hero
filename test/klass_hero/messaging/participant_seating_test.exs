@@ -1,12 +1,12 @@
-defmodule KlassHero.Messaging.AddUserToConversationsTest do
+defmodule KlassHero.Messaging.ParticipantSeatingTest do
   @moduledoc """
   Guards the seating rule shared by every path that adds someone to a conversation:
   they arrive with their read cursor at whatever the conversation already held.
 
-  Both callers depend on it — `StaffAssignmentHandler` for a mid-programme
-  assignment, `EnrollmentParticipationHandler` for a late enrolment — so neither
-  passes a cursor of its own. That is deliberate: a rule each caller has to remember
-  is a rule the next caller forgets.
+  No caller passes a cursor of its own — not `StaffAssignmentHandler` for a
+  mid-programme assignment, not `EnrollmentParticipationHandler` for a late enrolment,
+  not the conversation-creation flows behind `add_participant/1`. That is deliberate:
+  a rule each caller has to remember is a rule the next caller forgets.
   """
 
   use KlassHero.DataCase, async: true
@@ -99,6 +99,37 @@ defmodule KlassHero.Messaging.AddUserToConversationsTest do
     assert cursor == message.inserted_at
 
     assert {:ok, %{last_read_at: nil}} = Messaging.get_participant(silent.id, user.id)
+  end
+
+  # The singular path matters as much as the batch ones. Its three callers today all seat
+  # into a conversation they just created, so the cursor is nil for them either way —
+  # which is exactly why the rule needs pinning here: nothing else would notice if the
+  # next caller reached for the shorter name and seated someone into a populated thread.
+  test "add_participant/1 seats by the same rule", ctx do
+    newest = insert(:message_schema, conversation_id: ctx.conversation.id, sender_id: ctx.speaker.user_id)
+
+    assert {:ok, participant} =
+             Messaging.add_participant(%{
+               conversation_id: ctx.conversation.id,
+               user_id: ctx.user.id
+             })
+
+    assert participant.last_read_at == newest.inserted_at
+    refute anything_after?(ctx.conversation.id, participant.last_read_at)
+  end
+
+  test "add_participant/1 honours an explicit last_read_at", ctx do
+    insert(:message_schema, conversation_id: ctx.conversation.id, sender_id: ctx.speaker.user_id)
+    explicit = ~U[2026-01-01 00:00:00Z]
+
+    assert {:ok, participant} =
+             Messaging.add_participant(%{
+               conversation_id: ctx.conversation.id,
+               user_id: ctx.user.id,
+               last_read_at: explicit
+             })
+
+    assert participant.last_read_at == explicit
   end
 
   # Rejoining is joining: someone re-added was not entitled to the conversation while
