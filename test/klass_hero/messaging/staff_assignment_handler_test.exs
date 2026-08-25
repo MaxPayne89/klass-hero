@@ -87,6 +87,38 @@ defmodule KlassHero.Messaging.StaffAssignmentHandlerTest do
              end)
     end
 
+    # Same rule as the parent back-fill (#381): arriving mid-programme should not
+    # arrive as a wall of notifications. History stays readable; the badge starts
+    # at the moment of assignment.
+    test "stamps the read cursor at assignment so prior messages are not unread" do
+      provider = insert(:provider_profile_schema)
+      program = insert(:program_schema, provider_id: provider.id)
+      parent_user = KlassHero.AccountsFixtures.user_fixture()
+      staff_user = KlassHero.AccountsFixtures.user_fixture()
+
+      conversation =
+        insert(:conversation_schema,
+          provider_id: provider.id,
+          type: "direct",
+          program_id: program.id
+        )
+
+      insert(:participant_schema, conversation_id: conversation.id, user_id: parent_user.id)
+      older = insert(:message_schema, conversation_id: conversation.id, sender_id: parent_user.id)
+
+      event = build_assignment_event(provider.id, program.id, staff_user.id)
+      assert :ok = StaffAssignmentHandler.handle_event(event)
+
+      {:ok, participant} = KlassHero.Messaging.get_participant(conversation.id, staff_user.id)
+
+      assert participant.last_read_at == older.inserted_at
+
+      assert KlassHero.Messaging.count_unread_messages(
+               conversation.id,
+               participant.last_read_at
+             ) == 0
+    end
+
     test "emits no :participant_added when staff is already in every program conversation" do
       provider = insert(:provider_profile_schema)
       program = insert(:program_schema, provider_id: provider.id)

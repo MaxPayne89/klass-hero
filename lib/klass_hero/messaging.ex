@@ -1547,11 +1547,18 @@ defmodule KlassHero.Messaging do
       {:error, :database_query_error}
   end
 
-  @doc "Adds a batch of users as participants of a conversation (skips existing)."
+  @doc """
+  Adds a batch of users as participants of a conversation (skips existing).
+
+  Seats them with their read cursor at whatever the conversation already contained,
+  so anything said before they arrived is history rather than a notification. See
+  `seating_cursors/1`.
+  """
   @spec add_participants(String.t(), [String.t()]) :: {:ok, [Participant.t()]}
   def add_participants(conversation_id, user_ids) do
     context_span entity: "participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
+      cursor = Map.get(seating_cursors([conversation_id]), conversation_id)
 
       entries =
         Enum.map(user_ids, fn user_id ->
@@ -1559,6 +1566,7 @@ defmodule KlassHero.Messaging do
             id: Ecto.UUID.generate(),
             conversation_id: conversation_id,
             user_id: user_id,
+            last_read_at: cursor,
             joined_at: now,
             inserted_at: now,
             updated_at: now
@@ -1584,23 +1592,15 @@ defmodule KlassHero.Messaging do
   @doc """
   Adds a user to a batch of conversations, re-activating any they had left.
 
-  ## Options
-
-  - `:last_read_at` — stamps the participant's read cursor at join instead of leaving it
-    `nil`. A `nil` cursor means "everything is unread", so a late joiner would otherwise
-    land on a thread badged with its entire back-catalogue. Pass the timestamp of the
-    newest message that already existed, never `DateTime.utc_now/0`: `messages.inserted_at`
-    is `:utc_datetime`, so a same-second message would fall on the wrong side of the
-    `>` comparison every unread counter makes and be silently marked read.
+  Each conversation gets its own read cursor — see `seating_cursors/1`.
   """
-  @spec add_user_to_conversations(String.t(), [String.t()], keyword()) :: {:ok, non_neg_integer()}
-  def add_user_to_conversations(user_id, conversation_ids, opts \\ [])
+  @spec add_user_to_conversations(String.t(), [String.t()]) :: {:ok, non_neg_integer()}
+  def add_user_to_conversations(_user_id, []), do: {:ok, 0}
 
-  def add_user_to_conversations(_user_id, [], _opts), do: {:ok, 0}
-
-  def add_user_to_conversations(user_id, conversation_ids, opts) do
+  def add_user_to_conversations(user_id, conversation_ids) do
     context_span entity: "participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
+      cursors = seating_cursors(conversation_ids)
 
       entries =
         Enum.map(conversation_ids, fn conversation_id ->
@@ -1608,7 +1608,7 @@ defmodule KlassHero.Messaging do
             id: Ecto.UUID.generate(),
             conversation_id: conversation_id,
             user_id: user_id,
-            last_read_at: Keyword.get(opts, :last_read_at),
+            last_read_at: Map.get(cursors, conversation_id),
             joined_at: now,
             inserted_at: now,
             updated_at: now
@@ -1617,7 +1617,7 @@ defmodule KlassHero.Messaging do
 
       {count, _} =
         Repo.insert_all(Participant, entries,
-          on_conflict: participant_reactivation(opts),
+          on_conflict: participant_reactivation(),
           conflict_target: [:conversation_id, :user_id]
         )
 
@@ -1633,27 +1633,42 @@ defmodule KlassHero.Messaging do
 
   # Re-activation: clear left_at, bump updated_at; preserve original joined_at (audit trail).
   #
-  # `last_read_at` is only re-stamped when the caller supplied one. Adding it
-  # unconditionally would push a NULL over the staff path's existing cursor on every
-  # re-assignment, resetting a staff member's whole thread to unread. Only a soft-left
-  # row can reach this branch — `where_user_is_not_participant/2` filters out active
-  # participants — so re-stamping means "rejoining is joining", not "replay wipes reads".
-  defp participant_reactivation(opts) do
-    if Keyword.has_key?(opts, :last_read_at) do
-      from(p in Participant,
-        update: [
-          set: [
-            left_at: nil,
-            last_read_at: fragment("EXCLUDED.last_read_at"),
-            updated_at: fragment("EXCLUDED.updated_at")
-          ]
+  # The cursor is re-stamped because rejoining is joining: someone re-added to a
+  # conversation was not entitled to it while they were away, so what happened in the
+  # meantime is history, not a backlog. Only a soft-left row reaches this branch —
+  # `where_user_is_not_participant/2` filters out active participants — so a replayed
+  # event cannot use it to wipe a live participant's read state.
+  defp participant_reactivation do
+    from(p in Participant,
+      update: [
+        set: [
+          left_at: nil,
+          last_read_at: fragment("EXCLUDED.last_read_at"),
+          updated_at: fragment("EXCLUDED.updated_at")
         ]
-      )
-    else
-      from(p in Participant,
-        update: [set: [left_at: nil, updated_at: fragment("EXCLUDED.updated_at")]]
-      )
-    end
+      ]
+    )
+  end
+
+  # The read cursor someone gets when they are seated into a conversation: the newest
+  # message already in it, or nil when it is empty.
+  #
+  # Never `DateTime.utc_now/0`. `messages.inserted_at` is `:utc_datetime`, so a message
+  # written in the same second would fall on the wrong side of the `>` comparison every
+  # unread counter makes and be silently marked read.
+  #
+  # Deleted messages count towards the anchor even though they are invisible:
+  # `ConversationSummaries` computes its unread count without a `deleted_at` filter, so
+  # anchoring on the newest *visible* message would leave a soft-deleted newer one
+  # badged as unread — a notification for something the reader cannot open.
+  defp seating_cursors(conversation_ids) do
+    from(m in Message,
+      where: m.conversation_id in ^conversation_ids,
+      group_by: m.conversation_id,
+      select: {m.conversation_id, max(m.inserted_at)}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc "Fetches a participant by conversation and user."

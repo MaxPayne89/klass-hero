@@ -19,16 +19,10 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandler do
 
   ## Read state at join
 
-  The participant is stamped with the timestamp of the newest message that already
-  existed, so the history stays readable while the unread badge starts at zero —
-  joining late should not arrive as twenty notifications. All three unread
-  implementations key off `last_read_at`, so this one field settles all of them
-  without touching any of them.
-
-  When the broadcast has no messages yet the stamp is `nil`, which is both correct
-  and reachable: `BroadcastToProgram` creates the conversation, adds participants and
-  sends the message in three separately-committing steps, so an enrollment can land
-  inside that window.
+  Nothing to do here: `add_user_to_conversations/2` seats everyone with their cursor
+  at whatever the conversation already held, so the history stays readable while the
+  unread badge starts at zero. Joining late should not arrive as twenty
+  notifications — and that rule belongs to seating, not to this one caller.
 
   ## A nil parent_user_id is skipped, not dropped
 
@@ -99,32 +93,13 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandler do
   end
 
   defp backfill_participants(parent_user_id, ids) do
-    with {:ok, _count} <-
-           Messaging.add_user_to_conversations(parent_user_id, ids, last_read_at: read_cursor_at_join(ids)) do
+    with {:ok, _count} <- Messaging.add_user_to_conversations(parent_user_id, ids) do
       events =
         Enum.map(ids, fn conversation_id ->
           Events.participant_added(conversation_id, [parent_user_id], :later_enrollment)
         end)
 
       {:ok, :ok, events}
-    end
-  end
-
-  # A program has at most one active broadcast, so one cursor covers the batch.
-  defp read_cursor_at_join(ids) do
-    ids
-    |> Enum.map(&latest_message_at/1)
-    |> Enum.reject(&is_nil/1)
-    |> case do
-      [] -> nil
-      timestamps -> Enum.max(timestamps, DateTime)
-    end
-  end
-
-  defp latest_message_at(conversation_id) do
-    case Messaging.get_latest_message(conversation_id) do
-      {:ok, message} -> message.inserted_at
-      {:error, :not_found} -> nil
     end
   end
 end

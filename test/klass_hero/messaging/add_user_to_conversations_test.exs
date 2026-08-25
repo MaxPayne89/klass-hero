@@ -1,12 +1,12 @@
 defmodule KlassHero.Messaging.AddUserToConversationsTest do
   @moduledoc """
-  Guards the two branches of `add_user_to_conversations`' upsert.
+  Guards the seating rule shared by every path that adds someone to a conversation:
+  they arrive with their read cursor at whatever the conversation already held.
 
-  The `:last_read_at` option was added for #381's parent back-fill, but the
-  function is shared with `StaffAssignmentHandler`. Re-stamping the cursor
-  unconditionally would push a NULL over a returning staff member's read state and
-  reset their whole thread to unread — a regression with no user-visible symptom
-  until someone opens a conversation they had already read.
+  Both callers depend on it — `StaffAssignmentHandler` for a mid-programme
+  assignment, `EnrollmentParticipationHandler` for a late enrolment — so neither
+  passes a cursor of its own. That is deliberate: a rule each caller has to remember
+  is a rule the next caller forgets.
   """
 
   use KlassHero.DataCase, async: true
@@ -18,53 +18,92 @@ defmodule KlassHero.Messaging.AddUserToConversationsTest do
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
 
-  @cursor ~U[2026-01-01 00:00:00Z]
-
   setup do
     conversation = insert(:conversation_schema)
+    speaker = insert(:participant_schema, conversation_id: conversation.id)
     user = KlassHero.AccountsFixtures.user_fixture()
-    participant = insert(:participant_schema, conversation_id: conversation.id, user_id: user.id)
 
-    depart(participant, @cursor)
-
-    %{conversation: conversation, user: user, participant: participant}
+    %{conversation: conversation, speaker: speaker, user: user}
   end
 
-  test "the staff path re-activates without touching the read cursor", ctx do
+  test "a fresh join is stamped at the newest existing message", ctx do
+    insert(:message_schema, conversation_id: ctx.conversation.id, sender_id: ctx.speaker.user_id)
+    newest = insert(:message_schema, conversation_id: ctx.conversation.id, sender_id: ctx.speaker.user_id)
+
     assert {:ok, _} = Messaging.add_user_to_conversations(ctx.user.id, [ctx.conversation.id])
 
-    assert %{last_read_at: @cursor, left_at: nil} = reload(ctx.participant)
+    assert {:ok, %{last_read_at: cursor}} =
+             Messaging.get_participant(ctx.conversation.id, ctx.user.id)
+
+    assert cursor == newest.inserted_at
+    assert Messaging.count_unread_messages(ctx.conversation.id, cursor) == 0
   end
 
-  test "the parent path re-activates and re-stamps the read cursor", ctx do
-    rejoined_at = ~U[2026-06-01 00:00:00Z]
+  test "an empty conversation leaves the cursor nil, so what comes next is unread", ctx do
+    assert {:ok, _} = Messaging.add_user_to_conversations(ctx.user.id, [ctx.conversation.id])
 
-    assert {:ok, _} =
-             Messaging.add_user_to_conversations(ctx.user.id, [ctx.conversation.id], last_read_at: rejoined_at)
-
-    assert %{last_read_at: ^rejoined_at, left_at: nil} = reload(ctx.participant)
+    assert {:ok, %{last_read_at: nil}} =
+             Messaging.get_participant(ctx.conversation.id, ctx.user.id)
   end
 
-  test "an explicit nil cursor on a fresh join means everything is unread", ctx do
-    other = insert(:conversation_schema)
+  # A soft-deleted message is invisible but still counts towards the anchor:
+  # ConversationSummaries counts unread without a deleted_at filter, so anchoring on
+  # the newest *visible* message would badge a message the reader cannot open.
+  test "a soft-deleted newest message still anchors the cursor", ctx do
+    insert(:message_schema, conversation_id: ctx.conversation.id, sender_id: ctx.speaker.user_id)
 
-    assert {:ok, _} =
-             Messaging.add_user_to_conversations(ctx.user.id, [other.id], last_read_at: nil)
+    deleted =
+      insert(:message_schema,
+        conversation_id: ctx.conversation.id,
+        sender_id: ctx.speaker.user_id,
+        deleted_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      )
 
-    assert {:ok, %{last_read_at: nil}} = Messaging.get_participant(other.id, ctx.user.id)
+    assert {:ok, _} = Messaging.add_user_to_conversations(ctx.user.id, [ctx.conversation.id])
+
+    assert {:ok, %{last_read_at: cursor}} =
+             Messaging.get_participant(ctx.conversation.id, ctx.user.id)
+
+    assert cursor == deleted.inserted_at
   end
 
-  defp depart(participant, at) do
+  # Distinguished by presence, not by clock: `messages.inserted_at` is second-precision,
+  # so two messages written in one test would share a timestamp and prove nothing.
+  test "each conversation in a batch gets its own cursor" do
+    spoken = insert(:conversation_schema)
+    speaker = insert(:participant_schema, conversation_id: spoken.id)
+    silent = insert(:conversation_schema)
+    user = KlassHero.AccountsFixtures.user_fixture()
+
+    message = insert(:message_schema, conversation_id: spoken.id, sender_id: speaker.user_id)
+
+    assert {:ok, _} = Messaging.add_user_to_conversations(user.id, [spoken.id, silent.id])
+
+    assert {:ok, %{last_read_at: cursor}} = Messaging.get_participant(spoken.id, user.id)
+    assert cursor == message.inserted_at
+
+    assert {:ok, %{last_read_at: nil}} = Messaging.get_participant(silent.id, user.id)
+  end
+
+  # Rejoining is joining: someone re-added was not entitled to the conversation while
+  # away, so what happened in the meantime is history, not a backlog.
+  test "re-activating a departed participant re-stamps the cursor", ctx do
+    departed_at = ~U[2026-01-01 00:00:00Z]
+
+    participant =
+      insert(:participant_schema, conversation_id: ctx.conversation.id, user_id: ctx.user.id)
+
     Repo.update_all(from(p in Participant, where: p.id == ^participant.id),
-      set: [last_read_at: at, left_at: at]
+      set: [last_read_at: departed_at, left_at: departed_at]
     )
-  end
 
-  defp reload(participant) do
-    Repo.one(
-      from p in Participant,
-        where: p.id == ^participant.id,
-        select: %{last_read_at: p.last_read_at, left_at: p.left_at}
-    )
+    missed = insert(:message_schema, conversation_id: ctx.conversation.id, sender_id: ctx.speaker.user_id)
+
+    assert {:ok, _} = Messaging.add_user_to_conversations(ctx.user.id, [ctx.conversation.id])
+
+    assert {:ok, %{last_read_at: cursor, left_at: nil}} =
+             Messaging.get_participant(ctx.conversation.id, ctx.user.id)
+
+    assert cursor == missed.inserted_at
   end
 end
