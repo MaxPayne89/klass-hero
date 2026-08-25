@@ -75,8 +75,11 @@ Two failure modes worth naming, both already recorded:
   the stale copy emits **false** review findings (#1255). Prefer pointing at the rule over
   restating it.
 - A check that is too noisy to obey teaches everyone to skim past its whole category. If a
-  new check would land with a large backlog, stage it (see `.credo.backlog.exs`) rather
-  than gating it and normalising the noise.
+  new check would land with a large backlog, stage it in a separate credo config run by
+  its own mix alias — reported, never gating — rather than gating it and normalising the
+  noise. Staging is a ratchet, not a resting place: it earns its keep only if the backlog
+  is driven to zero and the check is then moved into `.credo.exs`, and the staging config
+  deleted. #1505 staged nine checks this way and they were all adopted.
 
 ## Important Notes
 

@@ -280,7 +280,7 @@ defmodule KlassHero.ProviderTest do
                Provider.verify_provider(provider.id, admin.id)
 
       assert verified.verified == true
-      assert verified.verified_at != nil
+      assert %DateTime{} = verified.verified_at
     end
   end
 

@@ -487,6 +487,9 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
   Consumes pending `:attachments` uploads, reads each file into memory, and returns
   a list of `%{binary, filename, content_type, size}` maps. Failed reads are logged and dropped.
   """
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   def consume_attachment_uploads(socket) do
     results =
       consume_uploaded_entries(socket, :attachments, fn %{path: path}, entry ->

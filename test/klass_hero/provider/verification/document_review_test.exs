@@ -44,7 +44,7 @@ defmodule KlassHero.Provider.Verification.DocumentReviewTest do
       assert {:ok, approved} = KlassHero.Provider.approve_verification_document(doc.id, admin.id)
       assert approved.status == :approved
       assert approved.reviewed_by_id == admin.id
-      assert approved.reviewed_at != nil
+      assert %DateTime{} = approved.reviewed_at
     end
 
     test "persists approved document to database", %{admin: admin, document: doc} do
@@ -109,7 +109,7 @@ defmodule KlassHero.Provider.Verification.DocumentReviewTest do
       assert rejected.status == :rejected
       assert rejected.rejection_reason == "Document is expired"
       assert rejected.reviewed_by_id == admin.id
-      assert rejected.reviewed_at != nil
+      assert %DateTime{} = rejected.reviewed_at
     end
 
     test "persists rejected document to database", %{admin: admin, document: doc} do

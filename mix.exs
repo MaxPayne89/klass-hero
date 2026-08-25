@@ -155,10 +155,6 @@ defmodule KlassHero.MixProject do
         "phx.digest"
       ],
       "test.clean": ["test.teardown --remove-volumes", "test.setup --force-recreate"],
-      # Staged third-party checks that still have a backlog — reported, never gating.
-      # Deliberately outside `precommit`/CI and outside `.credo.exs`, so the per-edit
-      # credo hook stays quiet. See the header of .credo.backlog.exs for the ratchet.
-      "credo.backlog": ["credo --config-file .credo.backlog.exs --strict"],
       "test.watch": ["test.setup", "test.watch.continuous"],
       # WALLABY_E2E makes config/test.exs bind a real HTTP socket; no other test needs one.
       "test.e2e": ["cmd env WALLABY_E2E=true mix test test/e2e --include e2e"],

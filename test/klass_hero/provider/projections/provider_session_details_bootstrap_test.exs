@@ -34,7 +34,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsBootstrapTest do
 
     row = Repo.get(SessionDetail, session_schema.id)
 
-    assert row != nil
+    assert %SessionDetail{} = row
     assert row.program_title == "Judo"
     assert row.provider_id == provider.id
     assert row.status == :scheduled
@@ -85,7 +85,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsBootstrapTest do
 
     row = Repo.get(SessionDetail, session_schema.id)
 
-    assert row != nil
+    assert %SessionDetail{} = row
     assert row.current_assigned_staff_id == staff.id
     assert row.current_assigned_staff_name == "Ada Lovelace"
   end

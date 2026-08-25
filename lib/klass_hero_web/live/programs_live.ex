@@ -42,7 +42,6 @@ defmodule KlassHeroWeb.ProgramsLive do
       |> assign(programs_count: 0)
       |> assign(programs_empty?: true)
       |> assign(filters: filter_options())
-      |> assign(database_error: false)
       |> assign(page_size: 20)
       |> assign(next_cursor: nil)
       |> assign(has_more: false)
@@ -106,7 +105,6 @@ defmodule KlassHeroWeb.ProgramsLive do
       |> assign(loaded_programs: programs)
       |> assign(programs_count: length(programs))
       |> assign(:programs_empty?, Enum.empty?(programs))
-      |> assign(database_error: false)
 
     {:noreply, socket}
   end

@@ -16,7 +16,7 @@ defmodule KlassHero.Enrollment.CancelEnrollmentByAdminTest do
       assert %Enrollment{} = enrollment
       assert enrollment.status == :cancelled
       assert enrollment.cancellation_reason == "Duplicate booking"
-      assert enrollment.cancelled_at != nil
+      assert %DateTime{} = enrollment.cancelled_at
     end
 
     test "cancels a confirmed enrollment" do

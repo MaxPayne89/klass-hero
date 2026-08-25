@@ -2,6 +2,7 @@ defmodule KlassHero.AccountsTest do
   use KlassHero.DataCase, async: true
 
   import KlassHero.AccountsFixtures
+  import KlassHero.EventTestHelper
 
   alias KlassHero.Accounts
   alias KlassHero.Accounts.{User, UserToken}
@@ -291,7 +292,7 @@ defmodule KlassHero.AccountsTest do
       token = Accounts.generate_user_session_token(user)
       assert user_token = Repo.get_by(UserToken, token: token)
       assert user_token.context == "session"
-      assert user_token.authenticated_at != nil
+      assert %DateTime{} = user_token.authenticated_at
 
       # Creating the same token for another user should fail
       assert_raise Ecto.ConstraintError, fn ->
@@ -322,8 +323,8 @@ defmodule KlassHero.AccountsTest do
     test "returns user by token", %{user: user, token: token} do
       assert {session_user, token_inserted_at} = Accounts.get_user_by_session_token(token)
       assert session_user.id == user.id
-      assert session_user.authenticated_at != nil
-      assert token_inserted_at != nil
+      assert %DateTime{} = session_user.authenticated_at
+      assert %DateTime{} = token_inserted_at
     end
 
     test "does not return user for invalid token" do
@@ -419,14 +420,15 @@ defmodule KlassHero.AccountsTest do
   end
 
   describe "inspect/2 for the User module" do
+    # Exercises the @derive Inspect redaction on User, which is only reachable
+    # through Kernel.inspect/1 — so no application call appears in the body.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "does not include password" do
       refute inspect(%User{password: "123456"}) =~ "password: \"123456\""
     end
   end
 
   describe "anonymize_user/1" do
-    import KlassHero.EventTestHelper
-
     setup do
       setup_test_integration_events()
       %{user: user_fixture()}
@@ -479,8 +481,6 @@ defmodule KlassHero.AccountsTest do
   end
 
   describe "delete_account/2" do
-    import KlassHero.EventTestHelper
-
     setup do
       setup_test_integration_events()
       user = user_fixture() |> set_password()
@@ -527,9 +527,8 @@ defmodule KlassHero.AccountsTest do
       user = user_fixture()
       data = Accounts.export_user_data(user)
 
-      assert is_binary(data.exported_at)
       assert {:ok, _, _} = DateTime.from_iso8601(data.exported_at)
-      assert is_binary(data.user.created_at)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(data.user.created_at)
       assert {:ok, _, _} = DateTime.from_iso8601(data.user.created_at)
     end
 

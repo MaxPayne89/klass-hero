@@ -135,7 +135,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
       # by_conversation and not_deleted each add 1 where
       assert length(query.wheres) == 2
       assert length(query.order_bys) == 1
-      assert query.limit != nil
+      assert query.limit.expr == 1
     end
   end
 
@@ -148,7 +148,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
       assert %Ecto.Query{} = query
       # by_conversation + not_deleted
       assert length(query.wheres) == 2
-      assert query.select != nil
+      assert {:count, _, _} = query.select.expr
     end
 
     test "counts messages after last_read_at when timestamp is given" do
@@ -160,7 +160,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
       assert %Ecto.Query{} = query
       # by_conversation + not_deleted + after_timestamp
       assert length(query.wheres) == 3
-      assert query.select != nil
+      assert {:count, _, _} = query.select.expr
     end
   end
 
@@ -171,7 +171,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
         |> MessageQueries.paginate([])
 
       assert %Ecto.Query{} = query
-      assert query.limit != nil
+      assert query.limit.params == [{51, :integer}]
       assert Enum.empty?(query.wheres)
     end
 
@@ -183,7 +183,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
         |> MessageQueries.paginate(before: timestamp)
 
       assert %Ecto.Query{} = query
-      assert query.limit != nil
+      assert query.limit.params == [{51, :integer}]
       assert length(query.wheres) == 1
     end
 
@@ -195,7 +195,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
         |> MessageQueries.paginate(after: timestamp)
 
       assert %Ecto.Query{} = query
-      assert query.limit != nil
+      assert query.limit.params == [{51, :integer}]
       assert length(query.wheres) == 1
     end
   end
@@ -250,7 +250,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 2
       assert length(query.order_bys) == 1
-      assert query.limit != nil
+      assert query.limit.params == [{26, :integer}]
     end
   end
 end

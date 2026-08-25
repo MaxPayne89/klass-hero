@@ -160,7 +160,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
         |> ParticipationQueries.limit_results(10)
 
       assert %Ecto.Query{} = query
-      assert query.limit != nil
+      assert query.limit.params == [{10, :integer}]
     end
 
     test "works with different limit values" do
@@ -172,8 +172,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
         ParticipationQueries.base()
         |> ParticipationQueries.limit_results(100)
 
-      assert query1.limit != nil
-      assert query2.limit != nil
+      assert query1.limit.params == [{1, :integer}]
+      assert query2.limit.params == [{100, :integer}]
     end
   end
 
@@ -184,7 +184,17 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
         |> ParticipationQueries.select_summary()
 
       assert %Ecto.Query{} = query
-      assert query.select != nil
+      # "only summary fields" is the claim, so name them.
+      assert {:%{}, _, fields} = query.select.expr
+
+      assert Enum.map(fields, &elem(&1, 0)) == [
+               :id,
+               :session_id,
+               :child_id,
+               :status,
+               :check_in_at,
+               :check_out_at
+             ]
     end
   end
 
@@ -202,7 +212,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
       assert %Ecto.Query{} = query
       assert length(query.wheres) == 2
       assert length(query.order_bys) == 1
-      assert query.limit != nil
+      assert query.limit.params == [{20, :integer}]
     end
 
     test "can compose child filter with date range ordering" do
@@ -222,7 +232,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
       assert length(query.wheres) == 2
       assert length(query.joins) == 1
       assert length(query.order_bys) == 1
-      assert query.limit != nil
+      assert query.limit.params == [{50, :integer}]
     end
 
     test "can compose with multiple children filter" do

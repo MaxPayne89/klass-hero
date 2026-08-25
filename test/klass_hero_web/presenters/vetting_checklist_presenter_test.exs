@@ -31,7 +31,7 @@ defmodule KlassHeroWeb.Presenters.VettingChecklistPresenterTest do
         assert is_binary(title) and title != ""
         assert is_binary(description) and description != ""
         assert String.starts_with?(icon, "hero-")
-        assert is_atom(gradient)
+        assert KlassHeroWeb.Theme.gradient(gradient) =~ "bg-gradient"
       end
     end
   end

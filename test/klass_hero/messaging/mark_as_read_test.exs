@@ -20,7 +20,7 @@ defmodule KlassHero.Messaging.MarkAsReadTest do
 
       assert {:ok, participant} = MarkAsRead.execute(conversation.id, user.id)
       assert %Participant{} = participant
-      assert participant.last_read_at != nil
+      assert %DateTime{} = participant.last_read_at
     end
 
     test "uses provided timestamp" do

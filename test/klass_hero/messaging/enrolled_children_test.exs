@@ -112,7 +112,7 @@ defmodule KlassHero.Messaging.EnrolledChildrenTest do
           )
         )
 
-      assert row != nil
+      assert %EnrolledChild{} = row
       assert row.child_id == child.id
       assert row.child_first_name == "Emma"
     end
@@ -198,7 +198,7 @@ defmodule KlassHero.Messaging.EnrolledChildrenTest do
           )
         )
 
-      assert row != nil
+      assert %EnrolledChild{} = row
       assert row.child_first_name == nil
     end
   end

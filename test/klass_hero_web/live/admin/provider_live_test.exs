@@ -66,7 +66,7 @@ defmodule KlassHeroWeb.Admin.ProviderLiveTest do
         )
 
       assert schema.verified == true
-      assert schema.verified_at != nil
+      assert %DateTime{} = schema.verified_at
       assert schema.verified_by_id == user.id
     end
 

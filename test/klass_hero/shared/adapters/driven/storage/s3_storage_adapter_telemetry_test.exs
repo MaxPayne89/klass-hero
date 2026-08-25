@@ -47,7 +47,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Storage.S3StorageAdapterTelemetryTest
   describe "interaction telemetry" do
     test "signed_url/4 emits a :stop event with :s3 kind and :ok status" do
       assert {:ok, url} = S3StorageAdapter.signed_url(:private, "some/key.jpg", 3600, [])
-      assert is_binary(url)
+      assert url =~ "some/key.jpg"
 
       assert_receive {:telemetry, [:klass_hero, :interaction, :stop], %{duration_us: _},
                       %{

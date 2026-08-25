@@ -29,6 +29,7 @@ defmodule KlassHeroWeb.UserLive.Confirmation do
             :if={!@user.confirmed_at}
             for={@form}
             id="confirmation_form"
+            phx-auto-recover="ignore"
             phx-mounted={JS.focus_first()}
             phx-submit="submit"
             action={~p"/users/log-in?_action=confirmed"}
@@ -62,6 +63,7 @@ defmodule KlassHeroWeb.UserLive.Confirmation do
             :if={@user.confirmed_at}
             for={@form}
             id="login_form"
+            phx-auto-recover="ignore"
             phx-submit="submit"
             phx-mounted={JS.focus_first()}
             action={~p"/users/log-in"}

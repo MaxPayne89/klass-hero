@@ -9,6 +9,10 @@ defmodule KlassHero.TestEnvConfigTest do
 
   use ExUnit.Case, async: true
 
+  # credo:disable-for-this-file Jump.CredoChecks.VacuousTest
+  # Every test here asserts configuration rather than behaviour — that is the point of
+  # the file. Both guards exist because a config drift broke the suite once already.
+
   describe "test endpoint binding" do
     # Only the Wallaby e2e suite drives a real browser against a real socket; every other
     # test reaches the endpoint through Plug/LiveView test helpers. Binding unconditionally

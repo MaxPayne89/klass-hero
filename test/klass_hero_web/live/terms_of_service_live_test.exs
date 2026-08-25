@@ -60,7 +60,7 @@ defmodule KlassHeroWeb.TermsOfServiceLiveTest do
       {:ok, _view, html} = live(conn, ~p"/terms")
 
       assert html =~ "Credit Card"
-      assert html =~ "Direct Bank Transfer" or html =~ "direct transfer"
+      assert html =~ "Direct Bank Transfer"
       assert html =~ "Cash"
     end
 
@@ -125,7 +125,7 @@ defmodule KlassHeroWeb.TermsOfServiceLiveTest do
     test "mentions agreement acknowledgment", %{conn: conn} do
       {:ok, _view, html} = live(conn, ~p"/terms")
 
-      assert html =~ "By using Klass Hero" or html =~ "agree to be bound"
+      assert html =~ "By using Klass Hero"
     end
   end
 end

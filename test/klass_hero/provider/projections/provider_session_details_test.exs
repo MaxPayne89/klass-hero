@@ -22,10 +22,6 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
     :ok
   end
 
-  test "starts and responds to a ping call" do
-    assert Process.whereis(@test_server_name) |> is_pid()
-  end
-
   describe "session_created" do
     test "inserts a row with defaults, resolving program_title and provider_id" do
       # programs FK on provider_id requires a real provider row.
@@ -43,7 +39,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
 
       row = Repo.get(SessionDetail, session_id)
 
-      assert row != nil
+      assert %SessionDetail{} = row
       assert row.program_id == program.id
       assert row.program_title == "Judo"
       assert row.provider_id == provider.id
@@ -92,7 +88,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
 
       row = Repo.get(SessionDetail, session_id)
 
-      assert row != nil
+      assert %SessionDetail{} = row
       assert row.current_assigned_staff_id == staff.id
       assert row.current_assigned_staff_name == "Ada Lovelace"
     end
@@ -168,7 +164,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
 
       row = Repo.get(SessionDetail, session_id)
 
-      assert row != nil
+      assert %SessionDetail{} = row
       assert row.status == :in_progress
       assert row.checked_in_count == 5
       assert row.total_count == 10

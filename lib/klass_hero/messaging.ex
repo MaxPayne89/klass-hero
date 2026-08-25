@@ -86,8 +86,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.create_direct_conversation(scope, provider_id, parent_user_id)
-      {:ok, %Conversation{type: :direct, ...}}
+      Messaging.create_direct_conversation(scope, provider_id, parent_user_id)
+      #=> {:ok, %Conversation{type: :direct, ...}}
 
   """
   @spec create_direct_conversation(Scope.t(), String.t(), String.t(), keyword()) ::
@@ -257,8 +257,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.send_message(conversation_id, sender_id, "Hello!")
-      {:ok, %Message{content: "Hello!", ...}}
+      Messaging.send_message(conversation_id, sender_id, "Hello!")
+      #=> {:ok, %Message{content: "Hello!", ...}}
 
   """
   @spec send_message(String.t(), String.t(), String.t(), keyword()) ::
@@ -283,8 +283,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.mark_as_read(conversation_id, user_id)
-      {:ok, %Participant{last_read_at: ~U[...], ...}}
+      Messaging.mark_as_read(conversation_id, user_id)
+      #=> {:ok, %Participant{last_read_at: ~U[...], ...}}
 
   """
   @spec mark_as_read(String.t(), String.t(), DateTime.t() | nil) ::
@@ -315,8 +315,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.broadcast_to_program(scope, program_id, "Important update!")
-      {:ok, %Conversation{type: :program_broadcast}, %Message{}, 15}
+      Messaging.broadcast_to_program(scope, program_id, "Important update!")
+      #=> {:ok, %Conversation{type: :program_broadcast}, %Message{}, 15}
 
   """
   @spec broadcast_to_program(Scope.t(), String.t(), String.t(), keyword()) ::
@@ -344,8 +344,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.reply_privately_to_broadcast(scope, broadcast_id)
-      {:ok, "direct-conversation-uuid"}
+      Messaging.reply_privately_to_broadcast(scope, broadcast_id)
+      #=> {:ok, "direct-conversation-uuid"}
 
   """
   @spec reply_privately_to_broadcast(Scope.t(), String.t()) ::
@@ -370,8 +370,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.anonymize_data_for_user(user_id)
-      {:ok, %{messages_anonymized: 5, participants_updated: 2}}
+      Messaging.anonymize_data_for_user(user_id)
+      #=> {:ok, %{messages_anonymized: 5, participants_updated: 2}}
 
   """
   @spec anonymize_data_for_user(String.t()) :: {:ok, map()} | {:error, term()}
@@ -393,8 +393,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.receive_inbound_email(%{resend_id: "...", from_address: "sender@example.com", ...})
-      {:ok, %InboundEmail{}}
+      Messaging.receive_inbound_email(%{resend_id: "...", from_address: "sender@example.com", ...})
+      #=> {:ok, %InboundEmail{}}
 
   """
   @spec receive_inbound_email(map()) :: {:ok, struct()} | {:ok, :duplicate} | {:error, term()}
@@ -480,8 +480,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.subscribe_to_conversation(conversation_id)
-      :ok
+      Messaging.subscribe_to_conversation(conversation_id)
+      #=> :ok
 
   """
   @spec subscribe_to_conversation(String.t()) :: :ok | {:error, term()}
@@ -494,8 +494,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.subscribe_to_user_messages(user_id)
-      :ok
+      Messaging.subscribe_to_user_messages(user_id)
+      #=> :ok
 
   """
   @spec subscribe_to_user_messages(String.t()) :: :ok | {:error, term()}
@@ -525,8 +525,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.get_conversation(conversation_id, user_id)
-      {:ok, %{conversation: %Conversation{}, messages: [...], has_more: false, sender_names: %{}}}
+      Messaging.get_conversation(conversation_id, user_id)
+      #=> {:ok, %{conversation: %Conversation{}, messages: [...], has_more: false, sender_names: %{}}}
 
   """
   @spec get_conversation(String.t(), String.t(), keyword()) ::
@@ -579,8 +579,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.get_total_unread_count(user_id)
-      5
+      Messaging.get_total_unread_count(user_id)
+      #=> 5
 
   """
   @spec get_total_unread_count(String.t()) :: non_neg_integer()
@@ -684,8 +684,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.count_inbound_emails_by_status(:unread)
-      3
+      Messaging.count_inbound_emails_by_status(:unread)
+      #=> 3
 
   """
   @spec count_inbound_emails_by_status(atom()) :: non_neg_integer()
@@ -1069,8 +1069,8 @@ defmodule KlassHero.Messaging do
 
   ## Examples
 
-      iex> Messaging.list_conversations(user_id)
-      {:ok, [%ConversationSummary{conversation_id: "…", unread_count: 2}], false}
+      Messaging.list_conversations(user_id)
+      #=> {:ok, [%ConversationSummary{conversation_id: "…", unread_count: 2}], false}
 
   """
   @spec list_conversations(String.t(), keyword()) ::

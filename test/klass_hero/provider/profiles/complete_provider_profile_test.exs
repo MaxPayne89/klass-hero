@@ -73,7 +73,7 @@ defmodule KlassHero.Provider.Profiles.CompleteProviderProfileTest do
       assert {:error, {:validation_error, errors}} =
                Provider.complete_provider_profile(provider.id, attrs)
 
-      assert is_list(errors)
+      assert Enum.any?(errors, &String.contains?(&1, "Business name"))
     end
   end
 end

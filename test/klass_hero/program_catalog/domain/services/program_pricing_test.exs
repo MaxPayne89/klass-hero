@@ -3,6 +3,8 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramPricingTest do
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramPricing
 
+  doctest ProgramPricing
+
   describe "price_state/1" do
     @states [
       {nil, :unset, "a program nobody has priced yet"},

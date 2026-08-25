@@ -15,7 +15,6 @@ defmodule KlassHero.Accounts.ScopeStaffTest do
       scope = Scope.for_user(user) |> Scope.resolve_roles()
 
       assert :staff in scope.roles
-      assert scope.staff_member != nil
       assert scope.staff_member.provider_id == provider.id
     end
 

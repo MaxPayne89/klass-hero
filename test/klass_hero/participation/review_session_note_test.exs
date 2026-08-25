@@ -23,7 +23,7 @@ defmodule KlassHero.Participation.ReviewSessionNoteTest do
                })
 
       assert note.status == :approved
-      assert note.reviewed_at != nil
+      assert %DateTime{} = note.reviewed_at
     end
 
     test "returns error for non-existent note" do
@@ -98,7 +98,7 @@ defmodule KlassHero.Participation.ReviewSessionNoteTest do
 
       assert note.status == :rejected
       assert note.rejection_reason == "Not accurate"
-      assert note.reviewed_at != nil
+      assert %DateTime{} = note.reviewed_at
     end
 
     test "rejects a pending session note without reason" do

@@ -12,6 +12,9 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramFilterTest do
   import KlassHero.Factory
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramFilter
+  alias KlassHero.ProgramCatalog.Program
+
+  doctest ProgramFilter
 
   defp programs_with_titles(titles), do: Enum.map(titles, &build(:program, title: &1))
   defp result_titles(programs), do: Enum.map(programs, & &1.title)

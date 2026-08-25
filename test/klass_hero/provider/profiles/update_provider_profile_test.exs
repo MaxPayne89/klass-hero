@@ -51,7 +51,7 @@ defmodule KlassHero.Provider.Profiles.UpdateProviderProfileTest do
       assert {:error, {:validation_error, errors}} =
                Provider.update_provider_profile(provider.id, attrs)
 
-      assert is_list(errors)
+      assert "Description must be 1000 characters or less" in errors
     end
 
     test "preserves existing fields when updating only description", %{provider: provider} do

@@ -189,8 +189,17 @@
           #   - Jump...UseObanProWorker: we run OSS Oban, not Oban Pro.
           {KlassHero.CredoChecks.CaseOnBoolean, []},
           {Jump.CredoChecks.AssertElementSelectorCanNeverFail, []},
+          # An explicit assert_receive timeout passes locally and flakes on a loaded CI
+          # runner; refute_receive always blocks for its full timeout, so it needs a
+          # small one. Hence the asymmetric bounds.
+          {Jump.CredoChecks.AssertReceiveTimeout, min_assert_receive_timeout: 1_000, max_refute_receive_timeout: 100},
           {Jump.CredoChecks.AvoidFunctionLevelElse, []},
           {Jump.CredoChecks.AvoidLoggerConfigureInTest, []},
+          # Opt out with @moduletag/@tag :plug_test where the socket or conn IS the return
+          # value under test (auth on_mount, Backpex actions) rather than page state.
+          {Jump.CredoChecks.AvoidSocketAssignsInTest, []},
+          {Jump.CredoChecks.ConditionalAssertion, []},
+          {Jump.CredoChecks.DoctestIExExamples, []},
           # The wrappers are named so the check sees through the indirection in
           # messaging_live_helper.ex, not just bare Phoenix.PubSub.subscribe/2 calls.
           {Jump.CredoChecks.LiveViewPubSubRequiresConnected,
@@ -199,10 +208,28 @@
              {:subscribe_to_user_updates, 1}
            ]},
           {Jump.CredoChecks.NoManualContentDisposition, []},
+          # phx-change is what lets LiveView replay a form after a reconnect. A form
+          # holding nothing worth restoring opts out with phx-auto-recover="ignore".
+          {Jump.CredoChecks.LiveViewFormCanBeRehydrated, []},
           {Jump.CredoChecks.SafeBinaryToTerm, []},
+          # ignored_assigns is not a waiver list: each of these IS read, just outside the
+          # module. :active_nav and :page_subtitle by the marketing/parent/provider layouts
+          # via assigns[...], :fluid? and :live_resource by Backpex.HTML.Layout. Deleting
+          # them because the check cannot see the reader would break nav on ~30 pages.
+          {Jump.CredoChecks.UnusedLiveViewAssign,
+           ignored_assigns: [:active_nav, :page_subtitle, :fluid?, :live_resource]},
+          {Jump.CredoChecks.TopLevelAliasImportRequire, []},
           {Jump.CredoChecks.TestHasNoAssertions, []},
           {Jump.CredoChecks.TooManyAssertions, []},
           {Jump.CredoChecks.UndeclaredExternalResource, []},
+          # The largest backlog when this was adopted, and the highest value: it is the
+          # shape of #1416 and #1142. Prefer a pattern match or an equality on the value
+          # over asserting its type.
+          {Jump.CredoChecks.WeakAssertion, []},
+          # Blind spot worth knowing: the check reads call sites, so a test whose subject
+          # is a struct default, a config entry, or an export list looks vacuous. Those
+          # few carry a written credo:disable-for-next-line.
+          {Jump.CredoChecks.VacuousTest, []},
           {OeditusCredo.Check.Warning.BlockingInPlug, []},
           {OeditusCredo.Check.Warning.SilentErrorCase, []},
           {OeditusCredo.Check.Warning.SwallowingException, []},

@@ -157,7 +157,7 @@ defmodule KlassHero.Shared.InteractionTest do
 
     test "does not emit a stop event when the block raises" do
       catch_error(Fixture.boom())
-      refute_receive {:telemetry, [:klass_hero, :interaction, :stop], _, _}
+      refute_receive {:telemetry, [:klass_hero, :interaction, :stop], _, _}, 100
     end
   end
 

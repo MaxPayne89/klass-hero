@@ -457,8 +457,6 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
   end
 
   describe "pay rate flow" do
-    alias KlassHero.Provider
-
     test "form submission with an hourly rate persists the rate", %{conn: conn, provider: provider} do
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
 

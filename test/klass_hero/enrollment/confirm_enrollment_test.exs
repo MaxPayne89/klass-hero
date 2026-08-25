@@ -15,7 +15,7 @@ defmodule KlassHero.Enrollment.ConfirmEnrollmentTest do
                KlassHero.Enrollment.confirm_enrollment(%{enrollment_id: schema.id, provider_id: provider.id})
 
       assert %Enrollment{status: :confirmed} = enrollment
-      assert enrollment.confirmed_at != nil
+      assert %DateTime{} = enrollment.confirmed_at
     end
 
     test "returns :unauthorized when program belongs to a different provider" do

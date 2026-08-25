@@ -36,7 +36,9 @@ defmodule KlassHero.Shared.CompensatingWorkerRegistryTest do
     # compensates nothing.
     test "renders names the way Oban persists them" do
       for name <- CompensatingWorkerRegistry.worker_names() do
-        assert is_binary(name)
+        # Oban stores the inspect/1 form; a bare to_string(Module) would prefix "Elixir."
+        # and never match a persisted job row.
+        refute String.starts_with?(name, "Elixir.")
 
         refute String.starts_with?(name, "Elixir."),
                "#{name} carries the Elixir. prefix that oban_jobs.worker does not store"

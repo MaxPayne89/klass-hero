@@ -44,7 +44,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       updated = Repo.get!(BulkEnrollmentInvite, invite.id)
       assert updated.status == :invite_sent
-      assert updated.invite_sent_at != nil
+      assert %DateTime{} = updated.invite_sent_at
     end
 
     test "skips already-sent invite", %{invite: invite, program: program} do
@@ -134,7 +134,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorkerTes
 
       delivered = reload(invite)
       assert delivered.status == :invite_sent
-      assert delivered.invite_sent_at != nil
+      assert %DateTime{} = delivered.invite_sent_at
       assert_email_sent(fn email -> email.to == [{"Hans", "parent@example.com"}] end)
     end
 

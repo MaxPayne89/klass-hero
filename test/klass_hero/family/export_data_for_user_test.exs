@@ -48,10 +48,12 @@ defmodule KlassHero.Family.ExportDataForUserTest do
       assert exported_child.allergies == "Peanuts"
       assert exported_child.emergency_contact == "+49123456"
       assert exported_child.support_needs == "Wheelchair access"
-      assert is_binary(exported_child.date_of_birth)
-      assert is_binary(exported_child.id)
-      assert is_binary(exported_child.created_at)
-      assert is_binary(exported_child.updated_at)
+      assert exported_child.id == child.id
+      # The export contract is ISO8601 text, so parseability is the property that matters
+      # to a consumer — "is a string" would hold for any serialisation bug.
+      assert {:ok, %Date{}} = Date.from_iso8601(exported_child.date_of_birth)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(exported_child.created_at)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(exported_child.updated_at)
 
       assert length(exported_child.consents) == 2
       consent_types = Enum.map(exported_child.consents, & &1.consent_type)
@@ -59,10 +61,10 @@ defmodule KlassHero.Family.ExportDataForUserTest do
       assert "photo_marketing" in consent_types
 
       first_consent = Enum.at(exported_child.consents, 0)
-      assert is_binary(first_consent.id)
-      assert is_binary(first_consent.granted_at)
-      assert is_binary(first_consent.created_at)
-      assert is_binary(first_consent.updated_at)
+      assert first_consent.id in Enum.map(exported_child.consents, & &1.id)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(first_consent.granted_at)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(first_consent.created_at)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(first_consent.updated_at)
       assert is_nil(first_consent.withdrawn_at)
     end
 
@@ -96,7 +98,7 @@ defmodule KlassHero.Family.ExportDataForUserTest do
       withdrawn =
         Enum.find(exported_child.consents, &(&1.consent_type == "photo_marketing"))
 
-      assert is_binary(withdrawn.withdrawn_at)
+      assert {:ok, %DateTime{}, 0} = DateTime.from_iso8601(withdrawn.withdrawn_at)
 
       active =
         Enum.find(exported_child.consents, &(&1.id == active_consent.id))

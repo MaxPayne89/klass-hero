@@ -42,7 +42,7 @@ defmodule KlassHero.Provider.Verification.GetVerificationDocumentPreviewTest do
       StubStorageAdapter.upload(:private, doc.file_url, "file-content", [])
 
       assert {:ok, result} = KlassHero.Provider.get_verification_document_preview(doc.id)
-      assert result.signed_url != nil
+      assert result.signed_url =~ doc.file_url
       assert result.document.id == to_string(doc.id)
       assert result.provider_business_name == provider.business_name
     end

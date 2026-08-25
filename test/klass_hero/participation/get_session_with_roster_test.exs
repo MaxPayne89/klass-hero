@@ -33,7 +33,6 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
       assert {:ok, result} = KlassHero.Participation.get_session_with_roster(session_schema.id)
       assert %ProgramSession{} = result.session
       assert result.session.id == session_schema.id
-      assert is_list(result.roster)
       assert length(result.roster) == 2
 
       assert Enum.all?(result.roster, fn entry -> match?(%ParticipationRecord{}, entry.record) end)
@@ -68,7 +67,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
       assert entry.record.child_id == child.id
       assert entry.record.status == :checked_in
       assert entry.record.check_in_notes == "Arrived on time"
-      assert is_binary(entry.child_name)
+      assert entry.child_name == "#{child.first_name} #{child.last_name}"
     end
 
     test "only returns roster for specified session" do
@@ -105,9 +104,7 @@ defmodule KlassHero.Participation.GetSessionWithRosterTest do
       )
 
       assert {:ok, session} = KlassHero.Participation.get_session_with_roster_enriched(session_schema.id)
-      assert is_map(session)
       assert session.id == session_schema.id
-      assert is_list(session.participation_records)
       assert length(session.participation_records) == 1
     end
 

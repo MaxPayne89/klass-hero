@@ -11,6 +11,8 @@ defmodule KlassHero.Participation.Domain.Services.ParticipationCollectionTest do
   alias KlassHero.Participation.Domain.Services.ParticipationCollection
   alias KlassHero.Participation.ParticipationRecord
 
+  doctest ParticipationCollection
+
   defp record(status) do
     %ParticipationRecord{
       id: Ecto.UUID.generate(),

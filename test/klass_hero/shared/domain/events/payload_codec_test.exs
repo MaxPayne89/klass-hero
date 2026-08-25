@@ -112,10 +112,12 @@ defmodule KlassHero.Shared.Domain.Events.PayloadCodecTest do
       check all(value <- encodable_leaf()) do
         {encoded, _tag} = PayloadCodec.encode(value)
 
-        assert is_binary(encoded) or is_number(encoded) or is_boolean(encoded) or is_nil(encoded)
+        assert json_scalar?(encoded)
       end
     end
   end
+
+  defp json_scalar?(value), do: is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value)
 
   # Atoms must survive String.to_existing_atom/1, so the generator draws from ones
   # this module has already created.

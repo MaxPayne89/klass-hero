@@ -32,8 +32,8 @@ defmodule KlassHero.Enrollment.ListParentEnrollmentsTest do
       [enrollment] = KlassHero.Enrollment.list_parent_enrollments(enrollment_schema.parent_id)
 
       assert %Enrollment{} = enrollment
-      assert is_atom(enrollment.status)
-      assert is_binary(enrollment.id)
+      assert enrollment.status == enrollment_schema.status
+      assert enrollment.id == enrollment_schema.id
     end
 
     test "returns enrollments ordered by enrolled_at descending" do

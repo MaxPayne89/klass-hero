@@ -107,7 +107,7 @@ defmodule KlassHero.Provider.VettingPersistenceTest do
         end)
 
       assert {:ok, saved} = Vetting.save_case(approved)
-      assert is_list(saved.steps)
+      assert length(saved.steps) == length(approved.steps)
       assert VettingCase.verified?(saved)
     end
   end

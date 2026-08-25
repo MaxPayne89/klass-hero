@@ -3,6 +3,8 @@ defmodule KlassHeroWeb.Helpers.DateTimeHelpersTest do
 
   alias KlassHeroWeb.Helpers.DateTimeHelpers
 
+  doctest DateTimeHelpers
+
   describe "parse_datetime_local/1" do
     test "parses a valid HTML datetime-local value as UTC" do
       assert %DateTime{} = dt = DateTimeHelpers.parse_datetime_local("2026-04-22T14:30")

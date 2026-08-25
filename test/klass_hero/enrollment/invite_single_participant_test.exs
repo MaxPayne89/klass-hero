@@ -34,7 +34,6 @@ defmodule KlassHero.Enrollment.InviteSingleParticipantTest do
       assert {:ok, %{invite_id: invite_id}} =
                InviteSingleParticipant.execute(provider.id, valid_attrs(program))
 
-      assert is_binary(invite_id)
       invite = Repo.get!(BulkEnrollmentInvite, invite_id)
       assert invite.program_id == program.id
       assert invite.provider_id == provider.id
@@ -43,7 +42,7 @@ defmodule KlassHero.Enrollment.InviteSingleParticipantTest do
       # same as the CSV pipeline — the invite advances past "pending" the moment the
       # event dispatches. Matches what import_enrollment_csv_test asserts.
       assert invite.status == :invite_sent
-      assert is_binary(invite.invite_token)
+      assert {:ok, _invite} = KlassHero.Enrollment.get_invite_by_token(invite.invite_token)
     end
 
     test "persists optional fields when provided", %{provider: provider, program: program} do
@@ -169,7 +168,7 @@ defmodule KlassHero.Enrollment.InviteSingleParticipantTest do
 
       invite = Repo.get!(BulkEnrollmentInvite, id)
       assert invite.status == :invite_sent
-      assert is_binary(invite.invite_token)
+      assert {:ok, _invite} = KlassHero.Enrollment.get_invite_by_token(invite.invite_token)
     end
   end
 end

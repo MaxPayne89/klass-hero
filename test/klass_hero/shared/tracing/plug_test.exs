@@ -116,7 +116,7 @@ defmodule KlassHero.Shared.Tracing.PlugTest do
       # When no error status is set, span(:status) returns :undefined (OTel default).
       # Only a span explicitly set to :error is a failure — :undefined and :ok are fine.
       raw_status = span(http_span, :status)
-      assert raw_status == :undefined or span_status_code(http_span) != :error
+      assert raw_status == :undefined
     end
   end
 end

@@ -3,11 +3,12 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.TrendingSearchesTest do
 
   alias KlassHero.ProgramCatalog.Domain.Services.TrendingSearches
 
+  doctest TrendingSearches
+
   describe "list/0" do
     test "returns all trending search terms" do
       result = TrendingSearches.list()
 
-      assert is_list(result)
       assert length(result) == 5
       assert "Swimming" in result
       assert "Math Tutor" in result

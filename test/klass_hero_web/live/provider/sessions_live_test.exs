@@ -877,6 +877,7 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   # compared to each other rather than each to a literal. Same source
   # `assert_flash/3` uses — the socket, not the rendered HTML.
   defp flash_error(view) do
+    # credo:disable-for-next-line Jump.CredoChecks.AvoidSocketAssignsInTest
     Phoenix.Flash.get(:sys.get_state(view.pid).socket.assigns.flash, :error)
   end
 end

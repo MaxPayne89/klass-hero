@@ -44,7 +44,7 @@ defmodule KlassHero.Enrollment.ResendInviteTest do
       assert reset.status == :pending
 
       persisted = Repo.get!(BulkEnrollmentInvite, invite.id)
-      assert is_binary(persisted.invite_token)
+      assert {:ok, _invite} = KlassHero.Enrollment.get_invite_by_token(persisted.invite_token)
       refute persisted.invite_token == "original-token"
     end
 

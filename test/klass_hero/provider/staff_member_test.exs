@@ -104,7 +104,6 @@ defmodule KlassHero.Provider.StaffMemberTest do
   describe "generate_invitation_token/0" do
     test "returns a raw token and its sha256 hash" do
       assert {raw, hash} = StaffMember.generate_invitation_token()
-      assert is_binary(raw)
       assert byte_size(hash) == 32
       {:ok, raw_bytes} = Base.url_decode64(raw, padding: false)
       assert :crypto.hash(:sha256, raw_bytes) == hash

@@ -116,7 +116,7 @@ defmodule KlassHero.Messaging.Queries.InboundEmailQueriesTest do
         |> InboundEmailQueries.paginate([])
 
       assert %Ecto.Query{} = query
-      assert query.limit != nil
+      assert query.limit.params == [{51, :integer}]
       assert Enum.empty?(query.wheres)
     end
 
@@ -128,7 +128,7 @@ defmodule KlassHero.Messaging.Queries.InboundEmailQueriesTest do
         |> InboundEmailQueries.paginate(before: timestamp)
 
       assert %Ecto.Query{} = query
-      assert query.limit != nil
+      assert query.limit.params == [{51, :integer}]
       assert length(query.wheres) == 1
     end
   end
@@ -140,7 +140,7 @@ defmodule KlassHero.Messaging.Queries.InboundEmailQueriesTest do
       assert %Ecto.Query{} = query
       assert query.from.source == {"inbound_emails", InboundEmail}
       assert length(query.wheres) == 1
-      assert query.select != nil
+      assert {:count, _, _} = query.select.expr
     end
 
     test "accepts string status" do
@@ -165,7 +165,7 @@ defmodule KlassHero.Messaging.Queries.InboundEmailQueriesTest do
       # by_status + before (from paginate)
       assert length(query.wheres) == 2
       assert length(query.order_bys) == 1
-      assert query.limit != nil
+      assert query.limit.params == [{51, :integer}]
     end
 
     test "nil status filter skips WHERE clause in composition" do

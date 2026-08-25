@@ -169,7 +169,7 @@ defmodule KlassHero.Messaging.InboundEmailTest do
       assert {:ok, read} = Messaging.mark_inbound_email_read(email, user.id)
       assert read.status == :read
       assert read.read_by_id == user.id
-      assert read.read_at != nil
+      assert %DateTime{} = read.read_at
 
       # Second mark by another reader is a no-op — original reader/timestamp preserved.
       other = AccountsFixtures.user_fixture()

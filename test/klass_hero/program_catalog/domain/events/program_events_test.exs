@@ -20,7 +20,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
       @fun fun
 
       test "builds a valid event with default payload" do
-        event = apply(ProgramEvents, @fun, ["program-1"])
+        event = ProgramEvents.unquote(fun)("program-1")
 
         assert %Event{} = event
         assert event.event_type == @fun
@@ -33,7 +33,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
       test "base_payload program_id wins over caller-supplied and preserves extras" do
         conflicting_payload = %{program_id: "should-be-overridden", extra: "data"}
 
-        event = apply(ProgramEvents, @fun, ["real-id", conflicting_payload])
+        event = ProgramEvents.unquote(fun)("real-id", conflicting_payload)
 
         assert event.payload.program_id == "real-id"
         assert event.payload.extra == "data"
@@ -42,7 +42,7 @@ defmodule KlassHero.ProgramCatalog.Domain.Events.ProgramEventsTest do
       test "raises for a nil or empty program_id" do
         for bad_id <- [nil, ""] do
           assert_raise ArgumentError, ~r/requires a non-empty program_id string/, fn ->
-            apply(ProgramEvents, @fun, [bad_id])
+            ProgramEvents.unquote(fun)(bad_id)
           end
         end
       end

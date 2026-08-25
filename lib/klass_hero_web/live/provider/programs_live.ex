@@ -308,6 +308,15 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   end
 
   @impl true
+  # Recovery after a reconnect works by replaying the form through phx-change, so this
+  # has to write the params back into the assign — a no-op clause would satisfy the
+  # markup and still drop what the provider typed.
+  def handle_event("validate_waiver", %{"waiver" => params}, socket) do
+    modal = socket.assigns.waivers_modal
+    {:noreply, assign(socket, :waivers_modal, %{modal | form: to_form(params, as: :waiver)})}
+  end
+
+  @impl true
   def handle_event("save_waiver", %{"waiver" => params}, socket) do
     %{program_id: program_id, program_name: program_name, editing_id: editing_id} = socket.assigns.waivers_modal
     provider_id = socket.assigns.current_scope.provider.id
@@ -479,12 +488,14 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   end
 
   @impl true
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   def handle_event("import_csv", _params, socket) do
     provider_id = socket.assigns.current_scope.provider.id
     program_id = socket.assigns.roster_program_id
 
     # Wrap File.read/1 result so consume_uploaded_entries doesn't unwrap the inner {:ok, binary}.
-    # sobelow_skip ["Traversal.FileModule"]
     case safe_consume_uploaded_entries(socket, :csv_file, fn %{path: path}, _entry ->
            {:ok, File.read(path)}
          end) do

@@ -4,6 +4,8 @@ defmodule KlassHero.Shared.StorageTest do
   alias KlassHero.Shared.Adapters.Driven.Storage.StubStorageAdapter
   alias KlassHero.Shared.Storage
 
+  doctest Storage
+
   # Trigger: each test needs an isolated Agent instance for the stub adapter
   # Why: async tests would conflict if sharing a single global Agent
   # Outcome: each test gets its own Agent PID via a unique name

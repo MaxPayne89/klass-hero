@@ -23,10 +23,12 @@ defmodule KlassHeroWeb.Provider.Dashboard.Uploads do
     * `:no_upload` — no file was staged
     * `:upload_error` — the channel died or the upload raised
   """
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   def consume_single_upload(socket, upload_name, storage_prefix, provider_id) do
     case safe_consume_uploaded_entries(socket, upload_name, fn %{path: path}, entry ->
            try do
-             # sobelow_skip ["Traversal.FileModule"]
              file_binary = File.read!(path)
              safe_name = String.replace(entry.client_name, ~r/[^a-zA-Z0-9._-]/, "_")
              storage_path = "#{storage_prefix}/providers/#{provider_id}/#{safe_name}"

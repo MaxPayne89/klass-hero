@@ -246,7 +246,7 @@ defmodule KlassHero.Shared.Tracing.TracedWorkerTest do
 
       # On success, status is either :unset or :ok — never :error
       raw_status = span(worker_span, :status)
-      assert raw_status == :undefined or span_status_code(worker_span) != :error
+      assert raw_status == :undefined
     end
   end
 

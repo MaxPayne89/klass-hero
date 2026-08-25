@@ -8,6 +8,7 @@ defmodule KlassHeroWeb.DashboardLiveTest do
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.Child
   alias KlassHero.Messaging.Conversation
+  alias KlassHeroWeb.Helpers.Greeting
 
   describe "DashboardLive (Phase 2.1 — Pa* component layout)" do
     setup :register_and_log_in_user
@@ -44,8 +45,9 @@ defmodule KlassHeroWeb.DashboardLiveTest do
 
       first_name = user.name |> String.split() |> List.first()
       assert html =~ first_name
-      # One of the three buckets must always render.
-      assert html =~ "Good morning" or html =~ "Good afternoon" or html =~ "Good evening"
+      # Derived from the same bucketing the page uses, so this asserts the greeting
+      # actually matches the current time rather than passing on any of the three.
+      assert html =~ Greeting.text(Greeting.bucket(DateTime.utc_now()))
     end
 
     test "renders the KPI grid with live counts (no Coming-soon placeholder on Messages)", %{

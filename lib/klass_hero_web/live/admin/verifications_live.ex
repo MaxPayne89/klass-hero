@@ -124,6 +124,11 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
   end
 
   @impl true
+  def handle_event("validate_rejection", %{"rejection" => params}, socket) do
+    {:noreply, assign(socket, :reject_form, to_form(params, as: :rejection))}
+  end
+
+  @impl true
   def handle_event("toggle_reject_form", _params, socket) do
     {:noreply, assign(socket, :show_reject_form, !socket.assigns.show_reject_form)}
   end
@@ -449,7 +454,13 @@ defmodule KlassHeroWeb.Admin.VerificationsLive do
 
           <%!-- Rejection form (toggled by Reject button) --%>
           <%= if @show_reject_form do %>
-            <.form for={@reject_form} id="reject-form" phx-submit="reject" class="mt-4">
+            <.form
+              for={@reject_form}
+              id="reject-form"
+              phx-change="validate_rejection"
+              phx-submit="reject"
+              class="mt-4"
+            >
               <.input
                 field={@reject_form[:reason]}
                 type="textarea"

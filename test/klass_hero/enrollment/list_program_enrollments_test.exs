@@ -23,7 +23,7 @@ defmodule KlassHero.Enrollment.ListProgramEnrollmentsTest do
       assert entry.child_name == "Emma Smith"
       assert entry.status == :pending
       assert entry.enrolled_at == ~U[2025-06-15 10:00:00Z]
-      assert is_binary(entry.enrollment_id)
+      assert {:ok, _} = Ecto.UUID.dump(entry.enrollment_id)
       assert entry.child_id == to_string(child.id)
     end
 

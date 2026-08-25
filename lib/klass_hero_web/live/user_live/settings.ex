@@ -350,6 +350,7 @@ defmodule KlassHeroWeb.UserLive.Settings do
                 <.form
                   for={@delete_form}
                   id="delete_account_form"
+                  phx-auto-recover="ignore"
                   phx-submit="delete_account"
                   class="max-w-md space-y-4"
                 >

@@ -123,7 +123,7 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
 
       summary = hd(conversations)
       assert summary.latest_message_content == "Hello parent!"
-      assert summary.other_participant_name != nil
+      assert summary.other_participant_name == "Test Provider"
     end
   end
 
@@ -243,8 +243,6 @@ defmodule KlassHero.Messaging.MessagingIntegrationTest do
   end
 
   defp update_summary_unread_count(conversation_id, user_id, new_count) do
-    import Ecto.Query
-
     from(s in ConversationSummary,
       where: s.conversation_id == ^conversation_id and s.user_id == ^user_id
     )

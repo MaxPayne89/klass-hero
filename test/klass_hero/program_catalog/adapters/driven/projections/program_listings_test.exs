@@ -53,7 +53,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       :sys.get_state(bootstrap_pid)
 
       listing_1 = Repo.get(ProgramListing, program_1.id)
-      assert listing_1 != nil
+      assert %ProgramListing{} = listing_1
       assert listing_1.title == "Soccer Camp"
       assert listing_1.category == "sports"
       assert listing_1.provider_id == provider.id
@@ -63,7 +63,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert listing_1.pricing_period == "per session"
 
       listing_2 = Repo.get(ProgramListing, program_2.id)
-      assert listing_2 != nil
+      assert %ProgramListing{} = listing_2
       assert listing_2.title == "Art Class"
       assert listing_2.category == "education"
     end
@@ -89,7 +89,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       assert :ok = ProgramListings.rebuild(@test_server_name)
 
       listing = Repo.get(ProgramListing, program.id)
-      assert listing != nil
+      assert %ProgramListing{} = listing
       assert listing.title == "Rebuild Test Program"
       assert listing.category == "sports"
       assert listing.provider_id == provider.id
@@ -123,7 +123,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       dispatch(event)
 
       listing = Repo.get(ProgramListing, program_id)
-      assert listing != nil
+      assert %ProgramListing{} = listing
       assert listing.title == "New Soccer Camp"
       assert listing.category == "sports"
       assert listing.provider_id == provider_id
@@ -254,7 +254,7 @@ defmodule KlassHero.ProgramCatalog.Adapters.Driven.Projections.ProgramListingsTe
       dispatch(event)
 
       listing = Repo.get(ProgramListing, program_id)
-      assert listing != nil
+      assert %ProgramListing{} = listing
       assert listing.title == "Fresh Program"
       assert listing.description == "Created via update event"
       assert listing.category == "education"

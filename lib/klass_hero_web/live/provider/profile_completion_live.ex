@@ -184,10 +184,12 @@ defmodule KlassHeroWeb.Provider.ProfileCompletionLive do
 
   defp maybe_put_entity_type(attrs, _business_vetting?, _params), do: attrs
 
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   defp upload_logo(socket, provider_id) do
     case safe_consume_uploaded_entries(socket, fn %{path: path}, entry ->
            try do
-             # sobelow_skip ["Traversal.FileModule"]
              file_binary = File.read!(path)
              safe_name = String.replace(entry.client_name, ~r/[^a-zA-Z0-9._-]/, "_")
              storage_path = "logos/providers/#{provider_id}/#{safe_name}"

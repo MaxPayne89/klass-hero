@@ -1,10 +1,14 @@
 defmodule KlassHeroWeb.UserAuthAdminTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  # These exercise functions that *return* a socket or conn, so their assigns are the
+  # return value under test — there is no rendered page to assert against instead.
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHeroWeb.UserAuth
   alias Phoenix.LiveView
+
+  @moduletag :plug_test
 
   # Helper to create a socket with the required assigns for on_mount hooks.
   # Phoenix LiveView's put_flash requires the :__changed__ and :flash assigns.

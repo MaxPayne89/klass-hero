@@ -35,6 +35,8 @@ defmodule KlassHero.Family do
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.Outbox
 
+  require Logger
+
   @context __MODULE__
 
   @doc """
@@ -298,8 +300,6 @@ defmodule KlassHero.Family do
             }}}
 
         {:error, reason} ->
-          require Logger
-
           Logger.error("[Family] anonymize_children_data failed", child_id: child.id, reason: inspect(reason))
           {:halt, {:error, reason}}
       end

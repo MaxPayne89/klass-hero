@@ -195,7 +195,7 @@ defmodule KlassHero.Messaging.Queries.ConversationQueriesTest do
         |> ConversationQueries.select_ids()
 
       assert %Ecto.Query{} = query
-      assert query.select != nil
+      assert {{:., _, [{:&, _, [0]}, :id]}, _, _} = query.select.expr
     end
   end
 

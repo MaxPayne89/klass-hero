@@ -59,7 +59,7 @@ defmodule KlassHeroWeb.PersonaSwitcherTest do
     test "each entry is a POST" do
       html = render_switcher([:parent, :provider], :parent)
 
-      assert html =~ ~s|data-method="post"| or html =~ ~s|method="post"|
+      assert html =~ ~s|data-method="post"|
     end
   end
 end

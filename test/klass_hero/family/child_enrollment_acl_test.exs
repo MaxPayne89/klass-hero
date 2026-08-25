@@ -95,7 +95,8 @@ defmodule KlassHero.Family.ChildEnrollmentACLTest do
       for enrollment <- cancelled do
         assert enrollment.status == "cancelled"
         assert enrollment.cancellation_reason == "child_deleted"
-        assert enrollment.cancelled_at != nil
+        # The ACL reads the row directly, so this side of the boundary is naive, not UTC.
+        assert %NaiveDateTime{} = enrollment.cancelled_at
       end
     end
 

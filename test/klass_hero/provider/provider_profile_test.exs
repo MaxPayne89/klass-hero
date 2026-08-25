@@ -324,6 +324,8 @@ defmodule KlassHero.Provider.ProviderProfileTest do
       assert "is invalid" in errors_on(changeset).profile_status
     end
 
+    # Same as above: the assertion is on a schema default, not on a call.
+    # credo:disable-for-next-line Jump.CredoChecks.VacuousTest
     test "defaults to :active on a bare struct" do
       assert %ProviderProfile{}.profile_status == :active
     end

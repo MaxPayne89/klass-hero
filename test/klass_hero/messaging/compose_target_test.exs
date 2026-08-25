@@ -24,7 +24,7 @@ defmodule KlassHero.Messaging.ComposeTargetTest do
       assert target.provider_id == provider.id
       assert target.target_user_id == parent_user_id
       assert target.program_id == program.id
-      assert is_binary(target.target_name)
+      assert target.target_name == KlassHero.Accounts.get_user!(parent_user_id).name
     end
 
     test "refuses a parent with no confirmed enrollment on the program" do

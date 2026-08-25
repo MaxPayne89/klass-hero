@@ -65,8 +65,10 @@ defmodule KlassHero.Messaging.GetMonitoredConversationTest do
       assert id == conversation.id
       assert [message] = result.messages
       assert message.content == "Private message about my child"
-      assert is_map(result.sender_names)
-      assert is_boolean(result.has_more)
+      # The monitoring view has to resolve the sender, or the admin sees an unattributed
+      # message; and one message is never a partial page.
+      assert Map.has_key?(result.sender_names, message.sender_id)
+      refute result.has_more
     end
   end
 

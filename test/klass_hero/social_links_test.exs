@@ -55,7 +55,7 @@ defmodule KlassHero.SocialLinksTest do
   describe "networks/0 and label/1" do
     test "every declared network has a brand label" do
       for network <- SocialLinks.networks() do
-        assert is_binary(SocialLinks.label(network))
+        assert SocialLinks.label(network) != ""
       end
     end
 

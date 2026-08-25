@@ -42,9 +42,7 @@ defmodule KlassHeroWeb.Provider.IncidentReportsLive do
          |> assign(
            page_title: gettext("Incident Reports"),
            active_nav: :programs,
-           provider: provider,
-           program: program,
-           program_id: program_id
+           program: program
          )
          |> stream(:incident_reports, rows)}
 

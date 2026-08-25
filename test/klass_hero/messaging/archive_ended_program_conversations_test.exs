@@ -34,8 +34,8 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversationsTest do
 
       # Verify conversation is now archived
       {:ok, archived} = KlassHero.Messaging.get_conversation_by_id(conversation.id)
-      assert archived.archived_at != nil
-      assert archived.retention_until != nil
+      assert %DateTime{} = archived.archived_at
+      assert %DateTime{} = archived.retention_until
     end
 
     test "does nothing when no programs have ended (future end_date)" do

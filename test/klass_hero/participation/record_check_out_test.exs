@@ -37,7 +37,7 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
       assert record.status == :checked_out
       assert record.check_out_notes == "Picked up by parent"
       assert record.check_out_by == scope.user.id
-      assert record.check_out_at != nil
+      assert %DateTime{} = record.check_out_at
     end
 
     test "checks out with nil notes when not provided" do
@@ -132,7 +132,7 @@ defmodule KlassHero.Participation.RecordCheckOutTest do
         )
 
       assert reloaded.status == :checked_out
-      assert reloaded.check_out_at != nil
+      assert %DateTime{} = reloaded.check_out_at
       assert reloaded.check_out_by == scope.user.id
     end
   end

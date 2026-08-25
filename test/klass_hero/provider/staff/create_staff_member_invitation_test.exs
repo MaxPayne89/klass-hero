@@ -18,7 +18,7 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberInvitationTest do
     test "staff member with email gets invitation_status :pending and token hash", %{
       provider: provider
     } do
-      {:ok, staff, _raw_token} =
+      {:ok, staff, raw_token} =
         Provider.create_staff_member(%{
           provider_id: provider.id,
           first_name: "Jane",
@@ -27,7 +27,9 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberInvitationTest do
         })
 
       assert staff.invitation_status == :pending
-      assert staff.invitation_token_hash != nil
+
+      assert staff.invitation_token_hash ==
+               :crypto.hash(:sha256, Base.url_decode64!(raw_token, padding: false))
     end
 
     test "staff member without email has nil invitation_status and no token", %{
@@ -53,8 +55,8 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberInvitationTest do
           email: "jane@example.com"
         })
 
-      assert is_binary(raw_token)
-      assert byte_size(raw_token) > 0
+      assert staff.invitation_token_hash ==
+               :crypto.hash(:sha256, Base.url_decode64!(raw_token, padding: false))
 
       # Verify the token hashes to the stored hash
       assert :crypto.hash(:sha256, Base.url_decode64!(raw_token, padding: false)) ==
@@ -82,7 +84,9 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberInvitationTest do
       assert event.payload.first_name == "Jane"
       assert event.payload.last_name == "Doe"
       assert event.payload.business_name == provider.business_name
-      assert is_binary(event.payload.raw_token)
+
+      assert staff.invitation_token_hash ==
+               :crypto.hash(:sha256, Base.url_decode64!(event.payload.raw_token, padding: false))
     end
 
     test "whitespace-only email is rejected by domain validation", %{

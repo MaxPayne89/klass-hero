@@ -1,6 +1,8 @@
 defmodule KlassHeroWeb.Admin.Actions.CancelBookingActionTest do
   use KlassHero.DataCase, async: true
 
+  # These exercise functions that *return* a socket or conn, so their assigns are the
+  # return value under test — there is no rendered page to assert against instead.
   import Ecto.Changeset
   import KlassHero.Factory
 
@@ -8,6 +10,8 @@ defmodule KlassHeroWeb.Admin.Actions.CancelBookingActionTest do
   alias KlassHero.AccountsFixtures
   alias KlassHeroWeb.Admin.Actions.CancelBookingAction
   alias Phoenix.LiveView.Socket
+
+  @moduletag :plug_test
 
   describe "changeset/3" do
     setup do

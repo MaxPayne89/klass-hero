@@ -26,7 +26,7 @@ defmodule KlassHero.Family.ChildrenTest do
       attrs = Map.merge(@valid_attrs, %{emergency_contact: "555-1234", allergies: "Peanuts"})
 
       assert {:ok, %Child{} = child} = Family.create_child(attrs)
-      assert is_binary(child.id)
+      assert {:ok, _} = Ecto.UUID.dump(child.id)
       assert child.first_name == "Emma"
       assert child.allergies == "Peanuts"
       assert %DateTime{} = child.inserted_at

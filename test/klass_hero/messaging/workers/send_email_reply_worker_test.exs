@@ -22,7 +22,7 @@ defmodule KlassHero.Messaging.Workers.SendEmailReplyWorkerTest do
 
       {:ok, updated} = Messaging.get_email_reply_by_id(reply.id)
       assert updated.status == :sent
-      assert updated.sent_at != nil
+      assert %DateTime{} = updated.sent_at
     end
 
     # Until StubMailerAdapter existed there was no way to fail a delivery, so this test

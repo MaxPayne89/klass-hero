@@ -148,10 +148,12 @@ defmodule KlassHeroWeb.Provider.IncidentReportLive do
     end
   end
 
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   defp safe_consume_photo(socket) do
     {:ok,
      consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
-       # sobelow_skip ["Traversal.FileModule"]
        {:ok,
         %{
           binary: File.read!(path),

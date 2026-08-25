@@ -21,7 +21,7 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberTest do
       assert staff.active == true
       assert staff.tags == []
       assert staff.qualifications == []
-      assert is_binary(staff.id)
+      assert {:ok, _} = Ecto.UUID.dump(staff.id)
     end
 
     test "creates a staff member with all optional fields", %{provider_id: provider_id} do
@@ -69,7 +69,6 @@ defmodule KlassHero.Provider.Staff.CreateStaffMemberTest do
       attrs = %{provider_id: provider_id, first_name: "", last_name: "Smith"}
 
       assert {:error, {:validation_error, errors}} = Provider.create_staff_member(attrs)
-      assert is_list(errors)
       assert Enum.any?(errors, &String.contains?(&1, "First name"))
     end
 

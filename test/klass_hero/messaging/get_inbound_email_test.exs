@@ -30,7 +30,7 @@ defmodule KlassHero.Messaging.GetInboundEmailTest do
 
       assert updated.status == :read
       assert updated.read_by_id == user.id
-      assert updated.read_at != nil
+      assert %DateTime{} = updated.read_at
     end
 
     test "does not mark as read when mark_read is false" do

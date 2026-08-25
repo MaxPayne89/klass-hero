@@ -143,6 +143,11 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   @impl true
   def handle_event("validate_upload", _params, socket), do: {:noreply, socket}
 
+  @impl true
+  def handle_event("validate_responsible_person", %{"responsible_person" => params}, socket) do
+    {:noreply, assign(socket, :responsible_person_form, to_form(params, as: :responsible_person))}
+  end
+
   def handle_event("select_doc_type", %{"doc_type" => doc_type}, socket) do
     {:noreply, assign(socket, doc_type: doc_type)}
   end
@@ -199,10 +204,12 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   # File.read!/try-catch/postpone plumbing shared by every upload handler; callers keep their own
   # result `case` (stream/flash/form-echo differ per command). `log_meta` is merged into the
   # failure log for context. Returns the raw `safe_consume_uploaded_entries` result.
+  # sobelow_skip ["Traversal.FileModule"]
+  # The path comes from consume_uploaded_entries — a LiveView-generated temp file, not
+  # from the client. The uploader controls the filename, never this path.
   defp consume_single_upload(socket, upload_key, log_meta, submit_fun) do
     Uploads.safe_consume_uploaded_entries(socket, upload_key, fn %{path: path}, entry ->
       try do
-        # sobelow_skip ["Traversal.FileModule"]
         file_binary = File.read!(path)
 
         case submit_fun.(file_binary, entry) do
@@ -498,6 +505,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       <.form
         for={@form}
         id="responsible-person-form"
+        phx-change="validate_responsible_person"
         phx-submit="start_responsible_person_verification"
       >
         <.input field={@form[:name]} type="text" label={gettext("Responsible person's full name")} />

@@ -86,7 +86,8 @@ defmodule KlassHero.Participation.ListProviderSessionsTest do
       provider = insert(:provider_profile_schema)
 
       assert {:ok, sessions} = KlassHero.Participation.list_provider_sessions(provider.id)
-      assert is_list(sessions)
+      # Nothing was inserted for this provider, so "defaults to today" means an empty day.
+      assert sessions == []
     end
   end
 end
