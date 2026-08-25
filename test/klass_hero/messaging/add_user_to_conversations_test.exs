@@ -15,6 +15,7 @@ defmodule KlassHero.Messaging.AddUserToConversationsTest do
   import KlassHero.Factory
 
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Repo
 
@@ -36,7 +37,7 @@ defmodule KlassHero.Messaging.AddUserToConversationsTest do
              Messaging.get_participant(ctx.conversation.id, ctx.user.id)
 
     assert cursor == newest.inserted_at
-    assert Messaging.count_unread_messages(ctx.conversation.id, cursor) == 0
+    refute anything_after?(ctx.conversation.id, cursor)
   end
 
   test "an empty conversation leaves the cursor nil, so what comes next is unread", ctx do
@@ -65,6 +66,21 @@ defmodule KlassHero.Messaging.AddUserToConversationsTest do
              Messaging.get_participant(ctx.conversation.id, ctx.user.id)
 
     assert cursor == deleted.inserted_at
+    refute anything_after?(ctx.conversation.id, cursor)
+  end
+
+  # Counter-agnostic on purpose. The badge users see comes from
+  # `ConversationSummaries.unread_count`, which counts deleted messages;
+  # `Messaging.count_unread_messages/2` does not. Asserting through either would
+  # prove the invariant only for the counter that happens to agree with it —
+  # "nothing in this conversation postdates the cursor" is what makes both read
+  # zero. The live badge itself is covered end-to-end in
+  # `test/flows/messaging_broadcast_test.exs`.
+  defp anything_after?(conversation_id, cursor) do
+    Repo.exists?(
+      from m in Message,
+        where: m.conversation_id == ^conversation_id and m.inserted_at > ^cursor
+    )
   end
 
   # Distinguished by presence, not by clock: `messages.inserted_at` is second-precision,

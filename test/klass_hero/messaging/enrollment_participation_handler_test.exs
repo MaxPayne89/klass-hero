@@ -106,8 +106,9 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandlerTest do
 
       {:ok, participant} = Messaging.get_participant(conversation.id, parent_user.id)
 
+      # The cursor is the contract; that it zeroes the badge is covered end-to-end
+      # in test/flows/messaging_broadcast_test.exs, against the counter the UI reads.
       assert participant.last_read_at == older.inserted_at
-      assert Messaging.count_unread_messages(conversation.id, participant.last_read_at) == 0
     end
 
     # BroadcastToProgram creates the conversation, adds participants and sends the

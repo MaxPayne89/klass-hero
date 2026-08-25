@@ -111,12 +111,9 @@ defmodule KlassHero.Messaging.StaffAssignmentHandlerTest do
 
       {:ok, participant} = KlassHero.Messaging.get_participant(conversation.id, staff_user.id)
 
+      # The cursor is the contract; that it zeroes the badge is covered end-to-end
+      # in test/flows/messaging_broadcast_test.exs, against the counter the UI reads.
       assert participant.last_read_at == older.inserted_at
-
-      assert KlassHero.Messaging.count_unread_messages(
-               conversation.id,
-               participant.last_read_at
-             ) == 0
     end
 
     test "emits no :participant_added when staff is already in every program conversation" do
