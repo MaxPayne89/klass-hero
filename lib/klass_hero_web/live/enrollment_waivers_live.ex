@@ -112,7 +112,13 @@ defmodule KlassHeroWeb.EnrollmentWaiversLive do
         {gettext("There is nothing to sign for this enrollment.")}
       </p>
 
-      <form :if={@waivers != []} id="sign-waivers-form" phx-submit="sign_waivers" class="space-y-6">
+      <form
+        :if={@waivers != []}
+        id="sign-waivers-form"
+        phx-submit="sign_waivers"
+        phx-auto-recover="ignore"
+        class="space-y-6"
+      >
         <div
           :for={entry <- @waivers}
           id={"waiver-#{entry.waiver.id}"}

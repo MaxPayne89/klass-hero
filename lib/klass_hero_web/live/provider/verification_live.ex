@@ -143,6 +143,11 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
   @impl true
   def handle_event("validate_upload", _params, socket), do: {:noreply, socket}
 
+  @impl true
+  def handle_event("validate_responsible_person", %{"responsible_person" => params}, socket) do
+    {:noreply, assign(socket, :responsible_person_form, to_form(params, as: :responsible_person))}
+  end
+
   def handle_event("select_doc_type", %{"doc_type" => doc_type}, socket) do
     {:noreply, assign(socket, doc_type: doc_type)}
   end
@@ -498,6 +503,7 @@ defmodule KlassHeroWeb.Provider.VerificationLive do
       <.form
         for={@form}
         id="responsible-person-form"
+        phx-change="validate_responsible_person"
         phx-submit="start_responsible_person_verification"
       >
         <.input field={@form[:name]} type="text" label={gettext("Responsible person's full name")} />

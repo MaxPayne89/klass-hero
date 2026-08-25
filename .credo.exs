@@ -204,6 +204,9 @@
              {:subscribe_to_user_updates, 1}
            ]},
           {Jump.CredoChecks.NoManualContentDisposition, []},
+          # phx-change is what lets LiveView replay a form after a reconnect. A form
+          # holding nothing worth restoring opts out with phx-auto-recover="ignore".
+          {Jump.CredoChecks.LiveViewFormCanBeRehydrated, []},
           {Jump.CredoChecks.SafeBinaryToTerm, []},
           {Jump.CredoChecks.TopLevelAliasImportRequire, []},
           {Jump.CredoChecks.TestHasNoAssertions, []},

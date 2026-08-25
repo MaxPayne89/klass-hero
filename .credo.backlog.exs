@@ -39,10 +39,7 @@
           # wrote specifically to catch LLM-generated tests.
           {Jump.CredoChecks.VacuousTest, []},
           # 19 — `assert a == :x or b == :y`, which passes on either branch.
-          {Jump.CredoChecks.ConditionalAssertion, []},
-          # 16 — a phx-submit form with no id/phx-change cannot be rehydrated after a
-          # reconnect or deploy, so the user silently loses what they typed.
-          {Jump.CredoChecks.LiveViewFormCanBeRehydrated, []}
+          {Jump.CredoChecks.ConditionalAssertion, []}
         ]
       }
     }

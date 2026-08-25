@@ -308,6 +308,15 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   end
 
   @impl true
+  # Recovery after a reconnect works by replaying the form through phx-change, so this
+  # has to write the params back into the assign — a no-op clause would satisfy the
+  # markup and still drop what the provider typed.
+  def handle_event("validate_waiver", %{"waiver" => params}, socket) do
+    modal = socket.assigns.waivers_modal
+    {:noreply, assign(socket, :waivers_modal, %{modal | form: to_form(params, as: :waiver)})}
+  end
+
+  @impl true
   def handle_event("save_waiver", %{"waiver" => params}, socket) do
     %{program_id: program_id, program_name: program_name, editing_id: editing_id} = socket.assigns.waivers_modal
     provider_id = socket.assigns.current_scope.provider.id

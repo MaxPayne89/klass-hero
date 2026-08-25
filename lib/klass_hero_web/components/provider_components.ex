@@ -1920,7 +1920,13 @@ defmodule KlassHeroWeb.ProviderComponents do
             </li>
           </ul>
 
-          <.form for={@modal.form} id="waiver-form" phx-submit="save_waiver" class="space-y-4">
+          <.form
+            for={@modal.form}
+            id="waiver-form"
+            phx-change="validate_waiver"
+            phx-submit="save_waiver"
+            class="space-y-4"
+          >
             <h3 class={[Theme.typography(:card_title), "text-hero-black-100"]}>
               {if @modal.editing_id,
                 do: gettext("Publish a new version"),
@@ -2076,6 +2082,7 @@ defmodule KlassHeroWeb.ProviderComponents do
           <div class="mt-4 border-t border-hero-grey-200 pt-4">
             <form
               phx-submit="assign_staff_member"
+              phx-auto-recover="ignore"
               id="staffing-add-form"
               class="flex flex-col gap-2 sm:flex-row"
             >
@@ -2253,6 +2260,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             <.form
               for={@modal.add_form}
               phx-submit="assign_session_staff"
+              phx-auto-recover="ignore"
               id="session-staffing-add-form"
               class="flex flex-col items-end gap-2 sm:flex-row"
             >
@@ -3538,7 +3546,13 @@ defmodule KlassHeroWeb.ProviderComponents do
           {gettext("Signing as %{name} on behalf of the business.", name: @signer_name)}
         </p>
 
-        <.form for={@form} id={@form_id} phx-submit={@submit_event} class="mt-4 space-y-4">
+        <.form
+          for={@form}
+          id={@form_id}
+          phx-submit={@submit_event}
+          phx-auto-recover="ignore"
+          class="mt-4 space-y-4"
+        >
           <.input field={@form[:agree]} type="checkbox" label={@checkbox_label} />
           <button
             type="submit"

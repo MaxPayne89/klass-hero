@@ -255,7 +255,9 @@ defmodule KlassHeroWeb.MarketingComponents do
         </p>
 
         <div class="mt-10 max-w-2xl mx-auto">
-          <form id="home-search-form" phx-submit="search">
+          <%!-- A search box is transient: the query is submitted immediately and carries
+               nothing worth restoring after a reconnect. --%>
+          <form id="home-search-form" phx-submit="search" phx-auto-recover="ignore">
             <div class="flex items-center gap-2 p-2 bg-white rounded-full shadow-lg border border-[var(--border-light)]">
               <div class="flex-1 relative">
                 <div class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]">

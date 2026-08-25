@@ -134,6 +134,49 @@ defmodule KlassHeroWeb.BookingLiveTest do
   describe "BookingLive enrollment validation" do
     setup :register_and_log_in_user
 
+    test "keeps typed special requirements on the server so a reconnect can recover them",
+         %{conn: conn, user: user} do
+      parent = insert(:parent_schema, identity_id: user.id)
+      {child, _parent} = insert_child_with_guardian(parent: parent, first_name: "Emma")
+      program = insert(:program_schema)
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
+
+      # The browser sends these as two events: the select changes, then the parent types.
+      view
+      |> form("#booking-form", %{"child_id" => child.id, "special_requirements" => ""})
+      |> render_change()
+
+      html =
+        view
+        |> form("#booking-form", %{
+          "child_id" => child.id,
+          "special_requirements" => "Peanut allergy"
+        })
+        |> render_change()
+
+      # Rendered from the assign, not echoed from the request: without a form-level
+      # phx-change the server never sees this text and a reconnect wipes it.
+      assert html =~ "Peanut allergy"
+    end
+
+    test "selecting a different child prefills requirements rather than keeping stale text",
+         %{conn: conn, user: user} do
+      parent = insert(:parent_schema, identity_id: user.id)
+      {child, _parent} = insert_child_with_guardian(parent: parent, first_name: "Emma")
+      program = insert(:program_schema)
+      {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")
+
+      html =
+        view
+        |> form("#booking-form", %{
+          "child_id" => child.id,
+          "special_requirements" => "typed before choosing a child"
+        })
+        |> render_change()
+
+      refute html =~ "typed before choosing a child"
+    end
+
     test "complete_enrollment with missing child_id shows error", %{conn: conn} do
       program = insert(:program_schema)
       {:ok, view, _html} = live(conn, ~p"/programs/#{program.id}/booking")

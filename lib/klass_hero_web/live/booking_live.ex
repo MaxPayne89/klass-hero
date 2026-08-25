@@ -92,23 +92,17 @@ defmodule KlassHeroWeb.BookingLive do
   end
 
   @impl true
-  def handle_event("select_child", %{"child_id" => child_id}, socket) do
-    child = Map.get(socket.assigns.children_by_id, child_id)
-    special_requirements = build_special_requirements(child)
+  def handle_event("booking_form_changed", params, socket) do
+    child_id = params["child_id"]
 
-    eligibility =
-      case Enrollment.check_participant_eligibility(socket.assigns.program.id, child_id) do
-        {:ok, :eligible} -> :eligible
-        {:error, :ineligible, reasons} -> {:ineligible, reasons}
-        _ -> :eligible
+    socket =
+      if child_id not in [nil, ""] and child_id != socket.assigns.selected_child_id do
+        select_child(socket, child_id)
+      else
+        assign(socket, :special_requirements, params["special_requirements"] || "")
       end
 
-    {:noreply,
-     assign(socket,
-       selected_child_id: child_id,
-       special_requirements: special_requirements,
-       eligibility_status: eligibility
-     )}
+    {:noreply, socket}
   end
 
   @impl true
@@ -282,6 +276,25 @@ defmodule KlassHeroWeb.BookingLive do
     Enrollment.create_enrollment(enrollment_params)
   end
 
+  # Prefilling special requirements from the child is only correct when the child
+  # actually changed — doing it on every form change would discard what the parent typed.
+  defp select_child(socket, child_id) do
+    child = Map.get(socket.assigns.children_by_id, child_id)
+
+    eligibility =
+      case Enrollment.check_participant_eligibility(socket.assigns.program.id, child_id) do
+        {:ok, :eligible} -> :eligible
+        {:error, :ineligible, reasons} -> {:ineligible, reasons}
+        _ -> :eligible
+      end
+
+    assign(socket,
+      selected_child_id: child_id,
+      special_requirements: build_special_requirements(child),
+      eligibility_status: eligibility
+    )
+  end
+
   defp build_special_requirements(nil), do: ""
 
   defp build_special_requirements(child) do
@@ -353,7 +366,12 @@ defmodule KlassHeroWeb.BookingLive do
           </div>
         </div>
 
-        <form id="booking-form" phx-submit="complete_enrollment" class="space-y-6">
+        <form
+          id="booking-form"
+          phx-change="booking_form_changed"
+          phx-submit="complete_enrollment"
+          class="space-y-6"
+        >
           <div class={[Theme.bg(:surface), Theme.rounded(:xl), "p-6 shadow-lg"]}>
             <label
               for="booking-child-select"
@@ -364,7 +382,6 @@ defmodule KlassHeroWeb.BookingLive do
             <select
               id="booking-child-select"
               name="child_id"
-              phx-change="select_child"
               class={[
                 "w-full px-4 py-3 border border-hero-grey-300 focus:ring-2 focus:ring-[var(--focus-ring)] focus:border-transparent",
                 Theme.rounded(:lg)

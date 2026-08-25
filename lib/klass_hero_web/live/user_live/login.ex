@@ -52,6 +52,7 @@ defmodule KlassHeroWeb.UserLive.Login do
               id="login_form_magic"
               action={~p"/users/log-in"}
               phx-submit="submit_magic"
+              phx-auto-recover="ignore"
               class="space-y-4"
             >
               <.mk_input
@@ -80,6 +81,7 @@ defmodule KlassHeroWeb.UserLive.Login do
               id="login_form_password"
               action={~p"/users/log-in"}
               phx-submit="submit_password"
+              phx-auto-recover="ignore"
               phx-trigger-action={@trigger_submit}
               class="space-y-4"
             >
