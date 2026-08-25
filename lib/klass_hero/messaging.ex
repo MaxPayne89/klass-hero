@@ -968,6 +968,27 @@ defmodule KlassHero.Messaging do
     |> Repo.all()
   end
 
+  @doc """
+  Ids of the program's active *broadcast* conversations the user is NOT a participant of.
+
+  Deliberately narrower than `list_active_program_conversation_ids_without_participant/2`,
+  which must not be reused for parents: a `:direct` parent↔provider conversation also
+  carries a `program_id` (`StartProgramConversation`), so the program-wide list would
+  back-fill a newly enrolled family into every *other* family's private thread. Staff
+  belong in both kinds, which is why their path can use the wider query and this one
+  cannot be folded into it.
+  """
+  @spec list_active_broadcast_ids_without_participant(String.t(), String.t()) :: [String.t()]
+  def list_active_broadcast_ids_without_participant(program_id, user_id) do
+    ConversationQueries.base()
+    |> ConversationQueries.by_program(program_id)
+    |> ConversationQueries.by_type(:program_broadcast)
+    |> ConversationQueries.active_only()
+    |> ConversationQueries.where_user_is_not_participant(user_id)
+    |> ConversationQueries.select_ids()
+    |> Repo.all()
+  end
+
   @doc "Ids of active program conversations the user IS a participant of."
   @spec list_active_program_conversation_ids_with_participant(String.t(), String.t()) :: [String.t()]
   def list_active_program_conversation_ids_with_participant(program_id, user_id) do
@@ -1560,11 +1581,24 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Adds a user to a batch of conversations, re-activating any they had left."
-  @spec add_user_to_conversations(String.t(), [String.t()]) :: {:ok, non_neg_integer()}
-  def add_user_to_conversations(_user_id, []), do: {:ok, 0}
+  @doc """
+  Adds a user to a batch of conversations, re-activating any they had left.
 
-  def add_user_to_conversations(user_id, conversation_ids) do
+  ## Options
+
+  - `:last_read_at` — stamps the participant's read cursor at join instead of leaving it
+    `nil`. A `nil` cursor means "everything is unread", so a late joiner would otherwise
+    land on a thread badged with its entire back-catalogue. Pass the timestamp of the
+    newest message that already existed, never `DateTime.utc_now/0`: `messages.inserted_at`
+    is `:utc_datetime`, so a same-second message would fall on the wrong side of the
+    `>` comparison every unread counter makes and be silently marked read.
+  """
+  @spec add_user_to_conversations(String.t(), [String.t()], keyword()) :: {:ok, non_neg_integer()}
+  def add_user_to_conversations(user_id, conversation_ids, opts \\ [])
+
+  def add_user_to_conversations(_user_id, [], _opts), do: {:ok, 0}
+
+  def add_user_to_conversations(user_id, conversation_ids, opts) do
     context_span entity: "participant" do
       now = DateTime.utc_now() |> DateTime.truncate(:second)
 
@@ -1574,6 +1608,7 @@ defmodule KlassHero.Messaging do
             id: Ecto.UUID.generate(),
             conversation_id: conversation_id,
             user_id: user_id,
+            last_read_at: Keyword.get(opts, :last_read_at),
             joined_at: now,
             inserted_at: now,
             updated_at: now
@@ -1582,21 +1617,42 @@ defmodule KlassHero.Messaging do
 
       {count, _} =
         Repo.insert_all(Participant, entries,
-          # Re-activation: clear left_at, bump updated_at; preserve original joined_at (audit trail).
-          on_conflict:
-            from(p in Participant,
-              update: [set: [left_at: nil, updated_at: fragment("EXCLUDED.updated_at")]]
-            ),
+          on_conflict: participant_reactivation(opts),
           conflict_target: [:conversation_id, :user_id]
         )
 
-      Logger.debug("Added staff user to conversations in batch",
+      Logger.debug("Added user to conversations in batch",
         user_id: user_id,
         conversation_count: length(conversation_ids),
         added_count: count
       )
 
       {:ok, count}
+    end
+  end
+
+  # Re-activation: clear left_at, bump updated_at; preserve original joined_at (audit trail).
+  #
+  # `last_read_at` is only re-stamped when the caller supplied one. Adding it
+  # unconditionally would push a NULL over the staff path's existing cursor on every
+  # re-assignment, resetting a staff member's whole thread to unread. Only a soft-left
+  # row can reach this branch — `where_user_is_not_participant/2` filters out active
+  # participants — so re-stamping means "rejoining is joining", not "replay wipes reads".
+  defp participant_reactivation(opts) do
+    if Keyword.has_key?(opts, :last_read_at) do
+      from(p in Participant,
+        update: [
+          set: [
+            left_at: nil,
+            last_read_at: fragment("EXCLUDED.last_read_at"),
+            updated_at: fragment("EXCLUDED.updated_at")
+          ]
+        ]
+      )
+    else
+      from(p in Participant,
+        update: [set: [left_at: nil, updated_at: fragment("EXCLUDED.updated_at")]]
+      )
     end
   end
 
