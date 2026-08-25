@@ -644,12 +644,12 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   defp message_area(assigns) do
     ~H"""
+    <.monitoring_notice />
     <div
       id="messages-container"
       class="flex-1 overflow-y-auto p-4 space-y-3"
       phx-hook="ScrollToBottom"
     >
-      <.monitoring_notice />
       <div id="messages" phx-update="stream" class="space-y-3">
         <.message_bubble
           :for={{dom_id, message} <- @streams.messages}
@@ -683,6 +683,11 @@ defmodule KlassHeroWeb.MessagingComponents do
   create-time message would have needed a backfill; and being rendered rather than
   stored, it is undeletable by construction.
 
+  Rendered *above* `#messages-container`, not inside it. Inside, it scrolls away with
+  the thread and the `ScrollToBottom` hook lands the reader past it, so on any
+  conversation longer than a screen the notice would never be seen — which for a
+  disclosure is the same as not having one.
+
   Every conversation is anchored to a provider — `provider_id` is required on the
   schema — so there is no non-provider conversation to exclude yet. When
   provider-less direct messages exist, gate this on `conversation.provider_id`.
@@ -695,9 +700,9 @@ defmodule KlassHeroWeb.MessagingComponents do
       id="monitoring-notice"
       data-role="monitoring-notice"
       class={[
-        "flex items-start gap-2 p-3 mb-3",
+        "flex items-start gap-2 px-4 py-2.5 border-b",
         Theme.bg(:light),
-        Theme.rounded(:lg),
+        Theme.border_color(:light),
         Theme.text_color(:muted)
       ]}
     >

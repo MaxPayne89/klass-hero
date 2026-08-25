@@ -132,5 +132,4 @@ create a processing activity disclosed nowhere.
   use it without an ADR amendment.
 - `/admin/messages` is the first admin surface whose authorization lives in a
   context. The others are unchanged; this is not a call to migrate them.
-- The enumeration oracle in `GetConversation.execute/3` remains open and wants its
-  own issue.
+- The enumeration oracle in `GetConversation.execute/3` remains open; filed as #1515.
