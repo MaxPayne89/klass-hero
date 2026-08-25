@@ -9,6 +9,8 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramCategoriesTest do
 
   alias KlassHero.ProgramCatalog.Domain.Services.ProgramCategories
 
+  doctest ProgramCategories
+
   @all_categories ["sports", "arts", "music", "education", "life-skills", "camps", "workshops"]
 
   describe "valid_categories/0" do

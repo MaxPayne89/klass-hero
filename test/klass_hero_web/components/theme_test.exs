@@ -3,6 +3,8 @@ defmodule KlassHeroWeb.ThemeTest do
 
   alias KlassHeroWeb.Theme
 
+  doctest KlassHeroWeb.Theme
+
   describe "status_badge/1" do
     @cases [
       {:available, "bg-green-100 text-green-800"},

@@ -3,6 +3,8 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.TrendingSearchesTest do
 
   alias KlassHero.ProgramCatalog.Domain.Services.TrendingSearches
 
+  doctest TrendingSearches
+
   describe "list/0" do
     test "returns all trending search terms" do
       result = TrendingSearches.list()

@@ -22,8 +22,6 @@ defmodule KlassHero.Family do
 
   import Ecto.Query
 
-  require Logger
-
   alias KlassHero.Family.Child
   alias KlassHero.Family.ChildEnrollmentACL
   alias KlassHero.Family.ChildGuardian
@@ -36,6 +34,8 @@ defmodule KlassHero.Family do
   alias KlassHero.Shared.Adapters.Driven.Persistence.EctoErrorHelpers
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.Outbox
+
+  require Logger
 
   @context __MODULE__
 

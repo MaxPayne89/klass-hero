@@ -6,6 +6,8 @@ defmodule KlassHero.Family.EventsTest do
   alias KlassHero.Family.Events
   alias KlassHero.Shared.Domain.Events.Event
 
+  doctest Events
+
   # Every family event factory shares one contract: build a :family event with
   # stable identity fields, let the id argument win over any caller-supplied
   # one (while preserving extras), and raise on a blank id. The table drives

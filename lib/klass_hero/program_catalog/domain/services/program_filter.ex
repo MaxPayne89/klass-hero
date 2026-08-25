@@ -52,7 +52,6 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramFilter do
       ...> ]
       iex> ProgramFilter.execute(programs, "soc")
       [%Program{id: "1", title: "After School Soccer"}]
-
       iex> ProgramFilter.execute(programs, "")
       [%Program{id: "1", title: "After School Soccer"}, %Program{id: "2", title: "Summer Dance Camp"}]
   """

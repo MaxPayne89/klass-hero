@@ -9,6 +9,8 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
   alias KlassHero.Shared.Categories
   alias KlassHeroWeb.Presenters.ProgramPresenter
 
+  doctest ProgramPresenter
+
   describe "to_table_view/3" do
     test "no staffing (3rd arg omitted) renders as nobody on the program" do
       program = build_program(%{})

@@ -192,10 +192,10 @@
           # An explicit assert_receive timeout passes locally and flakes on a loaded CI
           # runner; refute_receive always blocks for its full timeout, so it needs a
           # small one. Hence the asymmetric bounds.
-          {Jump.CredoChecks.AssertReceiveTimeout,
-           min_assert_receive_timeout: 1_000, max_refute_receive_timeout: 100},
+          {Jump.CredoChecks.AssertReceiveTimeout, min_assert_receive_timeout: 1_000, max_refute_receive_timeout: 100},
           {Jump.CredoChecks.AvoidFunctionLevelElse, []},
           {Jump.CredoChecks.AvoidLoggerConfigureInTest, []},
+          {Jump.CredoChecks.DoctestIExExamples, []},
           # The wrappers are named so the check sees through the indirection in
           # messaging_live_helper.ex, not just bare Phoenix.PubSub.subscribe/2 calls.
           {Jump.CredoChecks.LiveViewPubSubRequiresConnected,

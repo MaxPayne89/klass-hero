@@ -42,9 +42,7 @@
           {Jump.CredoChecks.ConditionalAssertion, []},
           # 16 — a phx-submit form with no id/phx-change cannot be rehydrated after a
           # reconnect or deploy, so the user silently loses what they typed.
-          {Jump.CredoChecks.LiveViewFormCanBeRehydrated, []},
-          # 13 — modules with iex> examples and no corresponding doctest call.
-          {Jump.CredoChecks.DoctestIExExamples, []}
+          {Jump.CredoChecks.LiveViewFormCanBeRehydrated, []}
         ]
       }
     }
