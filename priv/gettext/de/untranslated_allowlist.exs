@@ -8,7 +8,11 @@
 %{
   "default" => [
     # Brand name — never translated in any market.
-    "Klass Hero"
+    "Klass Hero",
+    # Attribution connector ("via Sam Staff"). Idiomatic in German as-is, and
+    # `message_bubble/1` already renders a hardcoded "via" in the same attribution
+    # role — translating only this one would make the two disagree on screen.
+    "via"
   ],
   "enrollment" => [],
   "errors" => []

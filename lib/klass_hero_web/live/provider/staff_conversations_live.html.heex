@@ -1,0 +1,85 @@
+<%= if @live_action == :index do %>
+  <.provider_comms_shell>
+    <:header>
+      <h1 class={["text-xl font-semibold", Theme.text_color(:heading)]}>
+        {gettext("Messages")}
+      </h1>
+      <.provider_message_tabs current_tab={:staff} />
+    </:header>
+
+    <p
+      data-role="oversight-note"
+      class={[Theme.typography(:caption), Theme.text_color(:muted), "px-4 pt-3"]}
+    >
+      {gettext(
+        "Conversations your staff have with parents. Read-only — opening a thread here does not mark anything as read."
+      )}
+    </p>
+
+    <div id="staff-conversations" phx-update="stream" class="divide-y divide-hero-grey-200">
+      <.conversation_card
+        :for={{dom_id, row} <- @streams.conversations}
+        id={dom_id}
+        summary={row}
+        user_type={:provider}
+        navigate={~p"/provider/messages/staff/#{row.conversation_id}"}
+      />
+      <div id="staff-conversations-empty-state" class="hidden only:block p-8 text-center">
+        <p class={[Theme.typography(:body_small), Theme.text_color(:muted)]}>
+          {gettext("No staff conversations yet. Threads your team starts will appear here.")}
+        </p>
+      </div>
+    </div>
+
+    <div :if={@has_more} class="flex justify-center py-6">
+      <button
+        type="button"
+        phx-click="load_more"
+        data-role="load-more"
+        class="btn btn-sm btn-outline"
+      >
+        {gettext("Load more")}
+      </button>
+    </div>
+  </.provider_comms_shell>
+<% else %>
+  <.provider_comms_shell>
+    <:header>
+      <.link
+        navigate={~p"/provider/messages/staff"}
+        data-role="back-to-staff-conversations"
+        class={["text-sm hover:underline", Theme.text_color(:muted)]}
+      >
+        {gettext("Back to staff conversations")}
+      </.link>
+      <h1 class={["text-xl font-semibold mt-1", Theme.text_color(:heading)]}>
+        {thread_title(@conversation)}
+      </h1>
+      <p
+        data-role="read-only-note"
+        class={[Theme.typography(:caption), Theme.text_color(:muted), "mt-1"]}
+      >
+        {gettext(
+          "Read-only. You are viewing this as the business owner, not as a participant — nothing is marked as read."
+        )}
+      </p>
+    </:header>
+
+    <div id="conversation-thread" phx-update="stream" class="p-4 space-y-3">
+      <div id="messages-empty-state" class="hidden only:block p-8 text-center">
+        <p class={[Theme.typography(:body_small), Theme.text_color(:muted)]}>
+          {gettext("No messages in this conversation.")}
+        </p>
+      </div>
+      <.message_bubble
+        :for={{dom_id, message} <- @streams.messages}
+        id={dom_id}
+        message={message}
+        is_own={false}
+        sender_name={Map.get(@sender_names, message.sender_id, gettext("Unknown"))}
+        provider_name={@current_scope.provider.business_name}
+        is_provider_side={message.sender_role in [:provider, :staff]}
+      />
+    </div>
+  </.provider_comms_shell>
+<% end %>
