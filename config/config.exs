@@ -18,6 +18,7 @@ alias KlassHero.Family.InviteClaimedHandler
 alias KlassHero.Family.ProcessInviteClaimWorker
 alias KlassHero.Messaging.ConversationSummaries
 alias KlassHero.Messaging.EnrolledChildren
+alias KlassHero.Messaging.EnrollmentParticipationHandler
 alias KlassHero.Messaging.MessagingEventHandler
 alias KlassHero.Messaging.StaffAssignmentHandler
 alias KlassHero.Messaging.Workers.FetchEmailContentWorker
@@ -245,7 +246,8 @@ config :klass_hero, :event_consumers, %{
   # Enrollment
   "integration:enrollment:enrollment_created" => [
     {ParticipationEventHandler, :handle_event},
-    {EnrolledChildren, :project}
+    {EnrolledChildren, :project},
+    {EnrollmentParticipationHandler, :handle_event}
   ],
   "integration:enrollment:enrollment_cancelled" => [
     {EnrolledChildren, :project}
