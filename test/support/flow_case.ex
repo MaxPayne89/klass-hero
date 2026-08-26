@@ -20,6 +20,21 @@ defmodule KlassHeroWeb.FlowCase do
   be caught at compile time here — `ExUnit.CaseTemplate` applies the caller's opts
   before this template's `using` block runs, so a nested `use ConnCase, async: false`
   is inert — so the `setup` below raises on it instead.
+
+  ## Email delivery is pinned to the test process
+
+  Swoosh's test adapter delivers by sending `{:email, _}` to `self()` and to every
+  pid in `$callers`. A flow test runs the real outbox, and `Oban, testing: :inline`
+  executes a job *at insert, in the calling process* — so a LiveView event that
+  ends in an email runs that whole chain inside the LiveView process, and the
+  `{:email, _}` message lands in **its** mailbox. A LiveView whose `handle_info/2`
+  does not expect that message then crashes, which leaves `with_real_outbox/1`'s
+  global swap unrestored and takes several hundred unrelated tests down behind it.
+
+  `:shared_test_process` is Swoosh's own escape hatch for exactly this — its docs
+  name "feature, browser, and E2E tests where the email is delivered from
+  request-handling or LiveView processes". Safe as a global because flow tests are
+  already `async: false`.
   """
 
   use ExUnit.CaseTemplate
@@ -45,6 +60,9 @@ defmodule KlassHeroWeb.FlowCase do
       events concurrently.
       """
     end
+
+    Application.put_env(:swoosh, :shared_test_process, self())
+    on_exit(fn -> Application.delete_env(:swoosh, :shared_test_process) end)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
