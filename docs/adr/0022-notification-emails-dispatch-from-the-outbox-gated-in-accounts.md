@@ -120,6 +120,36 @@ notifier is about to be written.
 
 ## Alternatives considered
 
+**Enqueuing the job directly from `SendMessage`, with no consumer.** This is the
+codebase's existing idiom for an email that follows a write:
+`Provider.SubmitIncidentReport` enqueues `NotifyIncidentReportedWorker` inside
+its own `Repo.transaction` ("Row insert and email-job insert commit together via
+ACID"), and `Enrollment.EnqueueInviteEmails` bulk-inserts inside one too. It was
+raised in review as the obvious alternative, and it is the first thing a reader
+should expect. It was rejected for a reason specific to this producer.
+
+Those two producers stage **no event at all** — `SubmitIncidentReport` does not
+touch the outbox, and `integration:provider:incident_reported` has no entry in
+`:event_consumers`, so `Outbox.stage/2` would drop it. A direct enqueue was
+their only option.
+
+`message_sent` is not in that position. It is already staged and already
+delivered, because `ConversationSummaries` consumes it — so the
+`EventDeliveryWorker` hop runs on every message send whether or not this feature
+exists. Registering a second consumer therefore adds **N** jobs (the emails).
+Enqueuing a separate resolver job instead would add **N + 1**, because the
+delivery job still runs for the projection. The direct route is the extra
+indirection here, not the saving.
+
+Two honest costs of the route taken. This is the first same-context,
+non-projection consumer in the codebase, so it widens what `ForHandlingEvents`
+is used for. And two consumers on one topic raised the ordering question that
+`NewMessageEmailHandler`'s moduledoc has to answer — resolved by reading the
+write side, which is independently the more robust choice, but the question only
+arose because both consumers sit on the same event.
+
+
+
 **Preference on `Family.ParentProfile`**, as #1071 originally specified. Its
 `notification_preferences` map is dead scaffolding — nullable `jsonb`, no
 default, no key schema, cast wholesale — and `KlassHero.Family` has no update
