@@ -30,6 +30,29 @@ defmodule KlassHero.Release.BackfillDirectConversationPrincipals do
   Lives outside the migration so the transform is unit-testable (the #966 pattern).
   Idempotent: it only considers rows whose principals are still NULL.
 
+  ## Why this reads Provider's and Family's tables directly
+
+  ADR-0015 says a context reaching for another's data calls its root facade under
+  an `acl_span`. This joins `providers` and `parents` in raw SQL instead, and that
+  is deliberate:
+
+    * It runs inside a migration's `up/0`, against whatever schema exists at that
+      point in history. A facade compiled against *today's* schema is the wrong
+      shape to point at a mid-migration database, which is the coupling
+      `KlassHero.Release.DedupActiveStaffMemberships` already avoids the same way.
+    * It is a one-shot historical backfill over a bounded set — production was
+      verified clean first (26 of 26 rows resolvable, 0 archived, 0 duplicate
+      pairs) — not a runtime read path anything queries again.
+    * A facade round-trip per row would turn one statement into N.
+
+  Note that `mix lint_acl_boundary` cannot see this hop: it matches Ecto's
+  schemaless `in "table"` binding, not a table name inside a SQL heredoc. So the
+  exemption is load-bearing rather than merely tolerated, and this comment is the
+  only thing recording it.
+
+  Do not copy this into a context module. It is scoped to `lib/klass_hero/release/`
+  migration scripts — see `.claude/rules/domain-architecture.md`.
+
   ## Unresolved rows raise
 
   A row that does not resolve to exactly one parent participant is not guessed at.

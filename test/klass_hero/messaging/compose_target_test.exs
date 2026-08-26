@@ -56,6 +56,20 @@ defmodule KlassHero.Messaging.ComposeTargetTest do
       assert {:error, :not_found} =
                Messaging.build_compose_target(parent_scope(), Ecto.UUID.generate(), [])
     end
+
+    # The old parent clause ignored `target_user_id` outright, so a parent could only
+    # ever reach the owner. The one rule honours it for everybody, which widens what
+    # a parent may *ask* for — no caller does (`MessagesLive.Show` passes only
+    # provider_id/program_id), and the table refuses the pairs it would produce.
+    # Pinned here because nothing else exercises the branch.
+    test "a parent naming a target of their own is refused, not obeyed" do
+      provider = insert(:provider_profile_schema)
+      staff_user = AccountsFixtures.user_fixture()
+      insert(:staff_member_schema, provider_id: provider.id, user_id: staff_user.id, active: true)
+
+      assert {:error, :unauthorized} =
+               Messaging.build_compose_target(parent_scope(), provider.id, target_user_id: staff_user.id)
+    end
   end
 
   # The directions #747 adds, plus the two that already worked, exercised through
@@ -101,6 +115,27 @@ defmodule KlassHero.Messaging.ComposeTargetTest do
                )
 
       assert target.target_user_id == ctx.teammate.user.id
+    end
+
+    # A thread is between two people, and one person is not two. Without this the
+    # {:staff, :staff} rule authorises a staff member targeting their own id — the
+    # pair collapses to {id, id}, the ordering check rejects it in Postgres, and the
+    # user gets a 500 from a URL they can edit by hand.
+    test "nobody may open a thread with themselves", ctx do
+      assert {:error, :unauthorized} =
+               Messaging.build_compose_target(ctx.colleague.scope, ctx.provider.id,
+                 target_user_id: ctx.colleague.user.id
+               )
+
+      assert {:error, :unauthorized} =
+               Messaging.build_compose_target(ctx.owner_scope, ctx.provider.id, target_user_id: ctx.owner_scope.user.id)
+    end
+
+    # The owner is the default target, so a staff member composing with no target
+    # named must not silently become a thread with themselves either.
+    test "an owner naming no target does not open a thread with themselves", ctx do
+      assert {:error, :unauthorized} =
+               Messaging.build_compose_target(ctx.owner_scope, ctx.provider.id, [])
     end
 
     test "a stranger may not write to a staff member", ctx do

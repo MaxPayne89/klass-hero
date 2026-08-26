@@ -1000,7 +1000,7 @@ defmodule KlassHero.Messaging do
 
   **Staff only.** "Program conversation" means every type scoped to the program, and a
   `:direct` parent↔provider conversation carries a `program_id` too
-  (`StartProgramConversation`). Back-filling a *parent* from this list would seat a
+  (`CreateDirectConversation`, when given one). Back-filling a *parent* from this list would seat a
   newly enrolled family in every other family's private thread. Staff legitimately
   belong in both kinds, which is what makes the width correct for them and only them;
   parents get `list_active_broadcast_ids_without_participant/2`.

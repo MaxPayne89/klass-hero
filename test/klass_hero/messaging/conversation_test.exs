@@ -44,6 +44,26 @@ defmodule KlassHero.Messaging.ConversationTest do
     end
   end
 
+  # The gate refuses a self-target first; this is the layer behind it. A pair built
+  # by hand must come back as a rejected changeset, not a raw Postgrex.Error.
+  describe "the ordering check reaches the changeset" do
+    test "an unordered pair is an error, not a raise" do
+      provider = insert(:provider_profile_schema)
+      user = KlassHero.AccountsFixtures.user_fixture()
+
+      changeset =
+        Conversation.create_changeset(%{
+          type: :direct,
+          provider_id: provider.id,
+          principal_a_id: user.id,
+          principal_b_id: user.id
+        })
+
+      assert {:error, changeset} = Repo.insert(changeset)
+      assert "A conversation needs two different people" in errors_on(changeset).principal_a_id
+    end
+  end
+
   describe "principal_pair/2" do
     test "returns the same tuple for either argument order" do
       assert Conversation.principal_pair("b", "a") == {"a", "b"}

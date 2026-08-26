@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.StartConversationWithMessage do
   the very row this exists to avoid.
 
   Creation and send commit separately. A send that fails after creation leaves an
-  empty conversation, which `find_direct_conversation/2` makes the user's retry
+  empty conversation, which `find_direct_conversation/3` makes the user’s retry
   reuse and fill; `Messaging.list_conversations/2` hides it in the meantime.
   """
 

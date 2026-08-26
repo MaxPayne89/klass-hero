@@ -110,6 +110,15 @@ defmodule KlassHero.Messaging.Conversation do
       name: :conversations_active_direct_per_pair,
       message: "A direct conversation between these two already exists"
     )
+    # Defence in depth behind `Authorization.authorize_compose/4`'s self-target
+    # refusal. Without the mapping, an unordered pair reaching the database raises
+    # a bare Postgrex.Error out of Repo.insert — a 500 rather than a rejected
+    # changeset — so any future caller that builds a pair by hand fails loudly but
+    # controllably.
+    |> check_constraint(:principal_a_id,
+      name: :conversations_principals_ordered,
+      message: "A conversation needs two different people"
+    )
     |> foreign_key_constraint(:provider_id)
     |> foreign_key_constraint(:program_id)
     |> optimistic_lock(:lock_version)

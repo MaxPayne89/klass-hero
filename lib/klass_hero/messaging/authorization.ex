@@ -140,6 +140,16 @@ defmodule KlassHero.Messaging.Authorization do
   """
   @spec authorize_compose(Scope.t(), String.t(), String.t(), String.t() | nil) ::
           :ok | {:error, :unauthorized}
+  # A thread is between two people, and one person is not two. This has to be a
+  # clause rather than a missing table row: the relation pairs a self-target
+  # produces — {:staff, :staff}, {:owner, :owner} — cannot distinguish "me and my
+  # colleague" from "me and me". Left to the table, `{:staff, :staff}` authorises
+  # it, `principal_pair/2` collapses to `{id, id}`, and the ordering check rejects
+  # it in Postgres as a 500 from a URL anyone can edit by hand.
+  def authorize_compose(%Scope{user: %{id: user_id}} = scope, _provider_id, user_id, _program_id) do
+    refuse(scope)
+  end
+
   def authorize_compose(%Scope{} = scope, provider_id, target_user_id, program_id) do
     initiator = provider_relation(provider_id, scope.user.id)
     target = provider_relation(provider_id, target_user_id)
