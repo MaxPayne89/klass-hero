@@ -7,7 +7,7 @@ defmodule KlassHero.Provider.NotifyIncidentReportedWorker do
   `NotifyIncidentReported` use case.
   """
 
-  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
+  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 5
 
   alias KlassHero.Provider.NotifyIncidentReported
 

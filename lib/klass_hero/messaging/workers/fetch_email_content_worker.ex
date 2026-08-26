@@ -6,7 +6,7 @@ defmodule KlassHero.Messaging.Workers.FetchEmailContentWorker do
   body_html, body_text, headers, and sets content_status to fetched/failed.
   """
 
-  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
+  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 5
 
   alias KlassHero.Messaging
   alias KlassHero.Messaging.ResendEmailContentAdapter

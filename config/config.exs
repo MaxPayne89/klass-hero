@@ -20,6 +20,7 @@ alias KlassHero.Messaging.ConversationSummaries
 alias KlassHero.Messaging.EnrolledChildren
 alias KlassHero.Messaging.EnrollmentParticipationHandler
 alias KlassHero.Messaging.MessagingEventHandler
+alias KlassHero.Messaging.NewMessageEmailHandler
 alias KlassHero.Messaging.StaffAssignmentHandler
 alias KlassHero.Messaging.Workers.FetchEmailContentWorker
 alias KlassHero.Messaging.Workers.MessageCleanupWorker
@@ -149,10 +150,23 @@ config :klass_hero, Oban,
        {"*/5 * * * *", CompensationSweepWorker}
      ]}
   ],
-  # email: 1 — serialized to stay under Resend's 2 req/sec rate limit (per-node;
-  #   add a rate limiter if scaling to multiple Oban nodes)
+  # email: 5 — raised from 1 when new-message notifications landed (#1071). One
+  #   program broadcast is a single message to every enrolled family, so it can
+  #   enqueue hundreds of jobs at once, and at concurrency 1 that queue is also
+  #   what staff invites and email replies wait in.
+  #
+  #   Concurrency is not the upstream ceiling: this was 1 to stay under Resend's
+  #   documented 2 req/sec default, and raising it does not raise that. What
+  #   absorbs the difference is `RateLimitedEmailWorker`'s 429-aware backoff plus
+  #   max_attempts: 5 on every worker here — three attempts left only two
+  #   retries, which a sustained burst can exhaust on rate limits alone, losing
+  #   a real email rather than merely delaying it.
+  #
+  #   UNVERIFIED: whether this account's actual Resend limit is above 2 req/sec.
+  #   If it is not, 5 trades queue latency for 429 churn rather than winning
+  #   throughput. Confirm and rewrite this comment with the real number.
   # events: 5 — every event goes here; since ADR-0014 there is no other kind.
-  queues: [default: 10, messaging: 5, cleanup: 2, email: 1, family: 1, events: 5]
+  queues: [default: 10, messaging: 5, cleanup: 2, email: 5, family: 1, events: 5]
 
 # Base URL for constructing links in emails and event handlers
 # (avoids boundary violations from referencing KlassHeroWeb.Endpoint in domain code)
@@ -338,8 +352,12 @@ config :klass_hero, :event_consumers, %{
     {ConversationSummaries, :project},
     {EnrolledChildren, :project}
   ],
+  # Order is not load-bearing here: NewMessageEmailHandler deliberately reads
+  # conversation_participants rather than the unread_count ConversationSummaries
+  # maintains, so it cannot observe whether that projection has run yet.
   "integration:messaging:message_sent" => [
-    {ConversationSummaries, :project}
+    {ConversationSummaries, :project},
+    {NewMessageEmailHandler, :handle_event}
   ],
   "integration:messaging:messages_read" => [
     {ConversationSummaries, :project}
