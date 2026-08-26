@@ -18,6 +18,7 @@ defmodule KlassHero.Messaging.Authorization do
   use KlassHero.Shared.Tracing
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Messaging.Conversation
 
   require Logger
 
@@ -98,6 +99,44 @@ defmodule KlassHero.Messaging.Authorization do
       active_staff_for_provider?(provider_id, user_id) -> :staff
       true -> :outsider
     end
+  end
+
+  @doc """
+  Is this thread between two of the provider's own people?
+
+  True when *both* principals are the owner or active staff of the conversation's
+  provider — the shapes `@compose_rules` calls `:internal`. Derived on read rather
+  than stored: the roster changes under a thread that has already been created, and
+  a cached flag would be a copy with no source to re-derive from, which is the drift
+  shape #1309/#1312/#1320 were all instances of.
+
+  Principals are nullable (a broadcast has none, and the NOT NULL is deferred to
+  #1528), so a missing principal answers `false` here rather than reaching
+  `provider_relation/2` with a nil user id.
+  """
+  @spec internal_conversation?(Conversation.t()) :: boolean()
+  def internal_conversation?(%Conversation{} = conversation) do
+    internal_pair?(
+      conversation.provider_id,
+      conversation.principal_a_id,
+      conversation.principal_b_id
+    )
+  end
+
+  @doc """
+  The same question for two users, before a thread between them exists.
+
+  The compose screen shows the disclosure too, and there is no conversation row to
+  read yet — so it asks about the pair it is about to write. Sharing this with
+  `internal_conversation?/1` is what stops the notice changing wording the instant
+  the first message turns a compose screen into a thread.
+  """
+  @spec internal_pair?(String.t(), String.t() | nil, String.t() | nil) :: boolean()
+  def internal_pair?(_provider_id, a, b) when is_nil(a) or is_nil(b), do: false
+
+  def internal_pair?(provider_id, user_a_id, user_b_id) do
+    provider_relation(provider_id, user_a_id) != :outsider and
+      provider_relation(provider_id, user_b_id) != :outsider
   end
 
   defp provider_owner?(provider_id, user_id) do

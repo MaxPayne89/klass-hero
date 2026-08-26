@@ -47,6 +47,7 @@ defmodule KlassHeroWeb.MessagesLive.Show do
       messages_empty?={@messages_empty?}
       page_title={@page_title}
       broadcast?={@broadcast?}
+      internal?={@internal?}
       back_path={@back_path}
       form={@form}
       current_user_id={@current_scope.user.id}

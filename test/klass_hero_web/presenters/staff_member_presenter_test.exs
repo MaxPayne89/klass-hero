@@ -76,6 +76,19 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
       assert view.full_name == "Mike Johnson"
     end
 
+    # `user_id` is an internal Accounts identifier and `can_message?` is an
+    # owner-only affordance. Both belong to the admin view. Pinned here because
+    # nothing else does: no assertion in this file pins the key set, so when they
+    # were first added to the base view (#747) the whole suite stayed green.
+    test "carries neither :user_id nor the owner-only :can_message? affordance" do
+      staff = staff_fixture(%{user_id: Ecto.UUID.generate()})
+
+      view = StaffMemberPresenter.to_card_view(staff)
+
+      refute Map.has_key?(view, :user_id)
+      refute Map.has_key?(view, :can_message?)
+    end
+
     # Security invariant: no matter the staff member's fields or pay-rate state,
     # the parent-facing card must never carry compensation data.
     property "never leaks :pay_rate or :rate_label for any staff member" do
@@ -186,6 +199,25 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenterTest do
 
       assert is_nil(view.pay_rate)
       assert is_nil(view.rate_label)
+    end
+
+    # The Team tab's Message action reads both. `can_message?` tracks whether the
+    # member has claimed their invite — an invited-but-unclaimed member has no
+    # account to write to.
+    test "carries :user_id and :can_message? for a member who has claimed their invite" do
+      user_id = Ecto.UUID.generate()
+
+      view = StaffMemberPresenter.to_admin_view(staff_fixture(%{user_id: user_id}))
+
+      assert view.user_id == user_id
+      assert view.can_message?
+    end
+
+    test "reports can_message? false for a member who has not claimed their invite" do
+      view = StaffMemberPresenter.to_admin_view(staff_fixture(%{user_id: nil}))
+
+      assert is_nil(view.user_id)
+      refute view.can_message?
     end
   end
 

@@ -626,6 +626,7 @@ defmodule KlassHeroWeb.MessagingComponents do
   attr :messages_empty?, :boolean, required: true
   attr :page_title, :string, required: true
   attr :broadcast?, :boolean, default: false
+  attr :internal?, :boolean, default: false
   attr :back_path, :string, required: true
   attr :form, :map, required: true
   attr :current_user_id, :string, required: true
@@ -661,6 +662,7 @@ defmodule KlassHeroWeb.MessagingComponents do
             current_user_id={@current_user_id}
             sender_names={@sender_names}
             broadcast?={@broadcast?}
+            internal?={@internal?}
             provider_user_ids={@provider_user_ids}
             provider_name={@provider_name}
             uploads={@uploads}
@@ -692,6 +694,7 @@ defmodule KlassHeroWeb.MessagingComponents do
           current_user_id={@current_user_id}
           sender_names={@sender_names}
           broadcast?={@broadcast?}
+          internal?={@internal?}
           provider_user_ids={@provider_user_ids}
           provider_name={@provider_name}
           uploads={@uploads}
@@ -704,7 +707,7 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   defp message_area(assigns) do
     ~H"""
-    <.monitoring_notice />
+    <.monitoring_notice internal?={@internal?} />
     <div
       id="messages-container"
       class="flex-1 overflow-y-auto p-4 space-y-3"
@@ -752,8 +755,25 @@ defmodule KlassHeroWeb.MessagingComponents do
   schema — so there is no non-provider conversation to exclude yet. When
   provider-less direct messages exist, gate this on `conversation.provider_id`.
 
-  > The wording is PROVISIONAL and must not ship before legal review (#745).
+  Two wordings, because one sentence cannot cover both shapes. The default names
+  the activity provider as a possible reader — added by #1516/#746, when owners
+  gained read access to the threads their staff conduct with parents (ADR-0021).
+  #747 then created threads where the provider is a *principal* rather than a
+  third-party overseer, and there the sentence tells an owner that they may review
+  their own message, and invokes child safeguarding over a thread holding neither
+  child nor parent. `internal?` picks the narrower sentence, which still discloses
+  the platform-staff read access that remains true (#744).
+
+  The notice is never simply hidden: what makes admin monitoring something
+  participants were told about, rather than done to them, is that *every* thread
+  carries a disclosure.
+
+  > BOTH wordings are PROVISIONAL and must not ship before legal review (#745).
   """
+  attr :internal?, :boolean,
+    default: false,
+    doc: "true when both principals are the provider's own people — see Messaging.internal_conversation?/1"
+
   def monitoring_notice(assigns) do
     ~H"""
     <div
@@ -768,9 +788,13 @@ defmodule KlassHeroWeb.MessagingComponents do
     >
       <.icon name="hero-information-circle" class="w-4 h-4 shrink-0 mt-0.5" />
       <p class={Theme.typography(:caption)}>
-        {gettext(
-          "Messages here may be reviewed by the activity provider and by Klass Hero staff, to keep children safe."
-        )}
+        <%= if @internal? do %>
+          {gettext("Messages here may be reviewed by Klass Hero staff.")}
+        <% else %>
+          {gettext(
+            "Messages here may be reviewed by the activity provider and by Klass Hero staff, to keep children safe."
+          )}
+        <% end %>
       </p>
     </div>
     """

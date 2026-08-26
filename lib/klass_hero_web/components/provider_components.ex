@@ -564,13 +564,19 @@ defmodule KlassHeroWeb.ProviderComponents do
           <span class="font-semibold">{gettext("Pay rate")}:</span> {@rate_label}
         </p>
 
-        <div class="flex items-center gap-2">
+        <%!-- flex-wrap, not the default nowrap: three actions do not fit this card's
+              ~256px row, and a nowrap flex row does not overflow — it compresses the
+              siblings until their labels wrap mid-button, which is what happened to
+              "Remove from team" (h58 against h38). Wrapping the ROW keeps every button
+              one line tall. Not solved by shortening a label: the German string is
+              longer than the English one, so the fix has to be locale-invariant. --%>
+        <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
             phx-click="edit_member"
             phx-value-id={@member.id}
             class={[
-              "flex-1 px-4 py-2 border border-hero-grey-300 bg-white",
+              "flex-1 px-4 py-2 border border-hero-grey-300 bg-white whitespace-nowrap",
               "hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
               Theme.rounded(:lg),
               Theme.transition(:normal)
@@ -581,10 +587,15 @@ defmodule KlassHeroWeb.ProviderComponents do
           <%!-- Absent, not disabled, for a member who has not claimed their invite:
                 there is no account to write to yet, and "Resend" already answers
                 what to do about that. --%>
+          <%!-- :ghost, not :secondary — :secondary is --brand-accent, which made this
+                the loudest thing on the card. Messaging a colleague is a peer of Edit,
+                not the headline action. On a white card :ghost's transparent background
+                reads the same as its neighbours' bg-white. --%>
           <.kh_button
             :if={@member.can_message?}
-            variant={:secondary}
+            variant={:ghost}
             size={:sm}
+            class="whitespace-nowrap"
             id={"message-member-#{@member.id}"}
             phx-click="message_member"
             phx-value-user-id={@member.user_id}
@@ -595,6 +606,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             :if={@member.can_resend?}
             variant={:primary}
             size={:sm}
+            class="whitespace-nowrap"
             id={"resend-invitation-#{@member.id}"}
             phx-click="resend_invitation"
             phx-value-id={@member.id}
@@ -615,7 +627,7 @@ defmodule KlassHeroWeb.ProviderComponents do
               )
             }
             class={[
-              "px-3 py-2 border border-hero-grey-300 bg-white",
+              "px-3 py-2 border border-hero-grey-300 bg-white whitespace-nowrap",
               "hover:bg-hero-grey-50 text-hero-black-100 text-sm font-medium",
               Theme.rounded(:lg),
               Theme.transition(:normal)

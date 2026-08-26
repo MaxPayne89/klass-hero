@@ -2,12 +2,26 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenter do
   @moduledoc """
   Transforms StaffMember domain models to view-ready formats.
 
-  Three view variants exist to enforce a visibility boundary around pay rates:
+  Four view variants exist, ordered by how much they may disclose. `to_card_view/1`
+  is the **base** — the other two build on it — so anything added there lands in all
+  three, which is safe only because it is the most restricted of them:
 
-    * `to_card_view/1` — parent/public-facing (program detail pages). MUST NOT include
-      pay_rate. Any addition here leaks confidential compensation data.
-    * `to_admin_view/1` — business-owner-facing (Team tab). Includes pay_rate.
-    * `to_self_view/1` — staff-member-facing (their own dashboard). Includes pay_rate.
+    * `to_card_view/1` — the least-privileged shape. MUST NOT include pay_rate, nor
+      an internal identifier like `user_id`, nor an affordance only an owner may act
+      on. Today its one caller is `ProgramStaffingPresenter`, behind
+      `live_session :require_provider` — but it is the base every other variant
+      inherits, so it is held to the public standard regardless of today's callers.
+    * `to_admin_view/1` — business-owner-facing (Team tab). Adds pay_rate, plus
+      `user_id`/`can_message?` for the Message action and `can_delete?`.
+    * `to_self_view/1` — staff-member-facing (their own dashboard). Adds pay_rate.
+    * `to_hero_card/1` — the genuinely public one, rendered on the unauthenticated
+      program detail page. A separate shape that shares no code with the above.
+
+  The base-is-public arrangement inverts on you the moment a field is added for a
+  *privileged* surface: the natural place to type it is the base, and the base is the
+  most exposed. `user_id` went in that way once (#747) and no test caught it, because
+  the tests below pinned `:pay_rate` specifically rather than the key set. They now
+  pin `user_id`/`can_message?` too.
   """
 
   use Gettext, backend: KlassHeroWeb.Gettext
@@ -32,9 +46,7 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenter do
       active: staff.active,
       invitation_status: staff.invitation_status,
       invitation_status_label: invitation_status_label(staff.invitation_status),
-      can_resend?: staff.invitation_status in [:failed, :expired],
-      user_id: staff.user_id,
-      can_message?: not is_nil(staff.user_id)
+      can_resend?: staff.invitation_status in [:failed, :expired]
     }
   end
 
@@ -80,6 +92,7 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenter do
   def to_admin_view(%StaffMember{} = staff, erasable_ids \\ MapSet.new()) do
     staff
     |> with_pay_rate()
+    |> Map.merge(%{user_id: staff.user_id, can_message?: not is_nil(staff.user_id)})
     |> Map.put(:can_delete?, MapSet.member?(erasable_ids, staff.id))
   end
 
