@@ -266,7 +266,6 @@ defmodule KlassHero.Factory do
       display_name: sequence(:parent_display_name, &"Test Parent #{&1}"),
       phone: "+1234567890",
       location: "New York, NY",
-      notification_preferences: %{email: true, sms: false},
       inserted_at: ~U[2025-01-01 12:00:00Z],
       updated_at: ~U[2025-01-01 12:00:00Z]
     }
@@ -293,8 +292,7 @@ defmodule KlassHero.Factory do
       identity_id: user.id,
       display_name: sequence(:parent_schema_display_name, &"Test Parent #{&1}"),
       phone: "+1234567890",
-      location: "New York, NY",
-      notification_preferences: %{email: true, sms: false}
+      location: "New York, NY"
     }
   end
 

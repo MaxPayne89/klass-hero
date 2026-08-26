@@ -26,8 +26,7 @@ defmodule KlassHero.Family.ParentProfileTest do
         valid_attrs(%{
           display_name: "John Doe",
           phone: "+1234567890",
-          location: "Berlin",
-          notification_preferences: %{email: true}
+          location: "Berlin"
         })
 
       assert ParentProfile.changeset(%ParentProfile{}, attrs).valid?
@@ -48,17 +47,6 @@ defmodule KlassHero.Family.ParentProfileTest do
 
       refute changeset.valid?
       assert %{display_name: [_]} = errors_on(changeset)
-    end
-  end
-
-  describe "has_notification_preferences?/1" do
-    test "true when preferences are present" do
-      assert ParentProfile.has_notification_preferences?(%ParentProfile{notification_preferences: %{email: true}})
-    end
-
-    test "false when nil or empty" do
-      refute ParentProfile.has_notification_preferences?(%ParentProfile{notification_preferences: nil})
-      refute ParentProfile.has_notification_preferences?(%ParentProfile{notification_preferences: %{}})
     end
   end
 end

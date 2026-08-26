@@ -195,7 +195,7 @@ A thread between specific **Users** — typically a **Parent** and the **Provide
 _Avoid_: DM, Private message
 
 **Broadcast** (`program_broadcast`):
-A Provider's one-to-many announcement thread scoped to a single **Program**. At most one active Broadcast exists per Program. Its audience is *derived*, not hand-added: the **Parents**/guardians of the children **Enrolled** in that Program, plus the Program's assigned **Staff Members**. Recipients are not **Participants**.
+A Provider's one-to-many announcement thread scoped to a single **Program**. At most one active Broadcast exists per Program. Its audience is *derived*, not hand-picked: the **Parents**/guardians of the children **Enrolled** in that Program, plus the Program's assigned **Staff Members**. Derived, but then **seated**: each of them becomes a **Participant**, so a Broadcast carries read receipts like any other Conversation, and a late enrollee is seated when they enrol.
 _Avoid_: Announcement, Bulletin, Newsletter, Channel
 
 **Message**:
@@ -210,8 +210,8 @@ A file attached to a **Message** — a photo or document with a filename, conten
 _Avoid_: Upload, File, Media, Document (that's a **Verification Document**, unrelated)
 
 **Participant** (Messaging):
-A **User**'s membership in a **Direct Conversation** — tracks join/leave and read receipts. Applies to Direct Conversations only; a **Broadcast** has a derived audience, not Participants. This is the *only* meaning of "Participant" in the system; it is **not** a child attending a Session. An **Admin** reading a Conversation under **Monitoring** is not a Participant either: reading it seats nobody and moves no read receipt.
-_Avoid_: using "Participant" for a child on a **Roster** (that's a **Participation Record**), or for a **Broadcast** recipient
+A **User**'s membership in a **Conversation** — tracks join/leave and read receipts. Applies to both kinds: a **Direct Conversation**'s membership is chosen, a **Broadcast**'s is derived from enrolment and assignment, but both are seated as Participants and both carry read receipts. This is the *only* meaning of "Participant" in the system; it is **not** a child attending a Session. An **Admin** reading a Conversation under **Monitoring** is not a Participant: reading it seats nobody and moves no read receipt.
+_Avoid_: using "Participant" for a child on a **Roster** (that's a **Participation Record**)
 
 **Archival**:
 The automatic retirement of a **Conversation** once its **Program** has ended (after a grace window). Archiving starts the **Retention Period**; it deletes nothing yet. A **Direct Conversation** with no Program is never archived — it lives indefinitely.

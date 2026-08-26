@@ -21,7 +21,6 @@ defmodule KlassHero.Family.ParentProfile do
     field :display_name, :string
     field :phone, :string
     field :location, :string
-    field :notification_preferences, :map
 
     timestamps()
   end
@@ -39,8 +38,7 @@ defmodule KlassHero.Family.ParentProfile do
       :identity_id,
       :display_name,
       :phone,
-      :location,
-      :notification_preferences
+      :location
     ])
     |> validate_required([:identity_id])
     |> validate_length(:display_name, min: 1, max: 100)
@@ -52,19 +50,12 @@ defmodule KlassHero.Family.ParentProfile do
     )
   end
 
-  @doc "Whether the profile has any notification preferences configured."
-  def has_notification_preferences?(%__MODULE__{notification_preferences: prefs})
-      when is_map(prefs) and map_size(prefs) > 0, do: true
-
-  def has_notification_preferences?(%__MODULE__{}), do: false
-
   @type t :: %__MODULE__{
           id: binary() | nil,
           identity_id: binary() | nil,
           display_name: String.t() | nil,
           phone: String.t() | nil,
           location: String.t() | nil,
-          notification_preferences: map() | nil,
           inserted_at: DateTime.t() | nil,
           updated_at: DateTime.t() | nil
         }
