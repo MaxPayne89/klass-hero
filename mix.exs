@@ -161,18 +161,9 @@ defmodule KlassHero.MixProject do
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",
-        # Ratchet, not an aspiration: 32 is what the tree had when this gate landed, and
-        # nearly all of it is inherent `use`-macro coupling (Backpex admin LiveViews ->
-        # schemas, messaging LiveViews -> their shared helper, workers -> TracedWorker).
-        # Driving it to 0 is not the goal; noticing the 33rd is. Lower the number whenever
-        # a refactor earns it.
-        # 34 since #1071: NewMessageEmailWorker -> RateLimitedEmailWorker/TracedWorker and
-        # NewMessageEmailNotifier -> Shared.Interaction. Both are the inherent kind above,
-        # identical to the four email workers already counted — no runtime dependency was
-        # converted into a compile-time one. The gate did its job: it made someone check.
-        # stdout is the full graph even on success, which is 60 lines of noise here; the
-        # failure message goes to stderr and survives. Re-run without the redirect to see it.
-        "cmd bash -c 'mix xref graph --label compile-connected --fail-above 34 >/dev/null'",
+        # The ceiling lives in the task, not here — it was written in both places
+        # once, and they drifted the first time it moved (#1529).
+        "lint_compile_coupling",
         "format",
         "lint_typography",
         "lint_hero_colors",
