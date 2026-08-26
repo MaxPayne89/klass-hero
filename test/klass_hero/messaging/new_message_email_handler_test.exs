@@ -8,6 +8,7 @@ defmodule KlassHero.Messaging.NewMessageEmailHandlerTest do
   passing against a fixture that no producer emits.
   """
   use KlassHero.DataCase, async: true
+  use Oban.Testing, repo: KlassHero.Repo
 
   import KlassHero.Factory
 
@@ -58,9 +59,8 @@ defmodule KlassHero.Messaging.NewMessageEmailHandlerTest do
   end
 
   defp enqueued_recipient_ids do
-    Oban.Job
-    |> KlassHero.Repo.all()
-    |> Enum.filter(&(&1.worker == Oban.Worker.to_string(NewMessageEmailWorker)))
+    [worker: NewMessageEmailWorker]
+    |> all_enqueued()
     |> Enum.map(& &1.args["recipient_user_id"])
     |> Enum.sort()
   end
@@ -169,10 +169,7 @@ defmodule KlassHero.Messaging.NewMessageEmailHandlerTest do
       message = message(conversation, sender, content: "a private medical detail")
       assert :ok = message |> event() |> handle()
 
-      [job] =
-        Oban.Job
-        |> KlassHero.Repo.all()
-        |> Enum.filter(&(&1.worker == Oban.Worker.to_string(NewMessageEmailWorker)))
+      [job] = all_enqueued(worker: NewMessageEmailWorker)
 
       assert job.args["conversation_id"] == conversation.id
       assert job.args["recipient_user_id"] == recipient.id

@@ -20,7 +20,6 @@ defmodule KlassHero.Accounts.EmailNotificationGateTest do
 
       assert user.disabled_email_notifications == []
       assert Accounts.email_notification_enabled?(user, @kind)
-      assert Accounts.email_notification_enabled?(user.id, @kind)
     end
 
     test "is off once the user opts out" do
@@ -28,17 +27,6 @@ defmodule KlassHero.Accounts.EmailNotificationGateTest do
       {:ok, user} = Accounts.update_user_email_notification_preference(user, @kind, false)
 
       refute Accounts.email_notification_enabled?(user, @kind)
-      refute Accounts.email_notification_enabled?(user.id, @kind)
-    end
-
-    # Fail closed: a gate that answers "yes" for an id it cannot find would have
-    # a worker email a deleted account.
-    test "is off for a user that does not exist" do
-      refute Accounts.email_notification_enabled?(Ecto.UUID.generate(), @kind)
-    end
-
-    test "is off for a malformed id rather than raising" do
-      refute Accounts.email_notification_enabled?("not-a-uuid", @kind)
     end
   end
 
@@ -62,6 +50,24 @@ defmodule KlassHero.Accounts.EmailNotificationGateTest do
       {:ok, twice} = Accounts.update_user_email_notification_preference(once, @kind, false)
 
       assert twice.disabled_email_notifications == [@kind]
+    end
+
+    # The column holds every kind at once, so a list computed from a struct that
+    # predates someone else's write silently re-enables whatever changed since.
+    # One kind cannot show that directly — both branches produce the same list —
+    # so this probes the reload itself, through a field the caller staled.
+    test "computes the next list from the stored row, not the caller's struct" do
+      user = user_fixture()
+      {:ok, _} = Accounts.update_user_email_notification_preference(user, @kind, false)
+
+      stale = %{user | name: "only in this struct"}
+
+      {:ok, updated} = Accounts.update_user_email_notification_preference(stale, @kind, false)
+
+      assert updated.disabled_email_notifications == [@kind]
+
+      refute updated.name == "only in this struct",
+             "the write was computed from the caller's struct rather than the stored row"
     end
 
     test "opting in when already enabled is a no-op" do

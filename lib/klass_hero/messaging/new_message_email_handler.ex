@@ -68,6 +68,11 @@ defmodule KlassHero.Messaging.NewMessageEmailHandler do
   # Active participants with nothing else outstanding in this conversation.
   # Someone already sitting on unread mail has been told; a second email says
   # nothing new and is what turns a busy thread into a mute.
+  #
+  # The `is_nil(last_read_at) or inserted_at > last_read_at` half is the same
+  # "has this participant caught up" rule as `ConversationQueries.total_unread_count/1`
+  # and `MessageQueries.count_unread/2` — three expressions of one rule, which is
+  # why a change to any of them has to visit the others. See #1531.
   defp caught_up_user_ids(conversation_id, message_id) do
     from(p in Participant,
       where: p.conversation_id == ^conversation_id and is_nil(p.left_at),

@@ -13,7 +13,6 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
-  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -367,25 +366,19 @@ defmodule KlassHero.Accounts do
   end
 
   @doc """
-  Whether `user_or_id` currently wants `kind` emailed to them.
+  Whether `user` currently wants `kind` emailed to them.
 
-  The gate every producing context asks before sending. Answers `false` for a
-  user that cannot be found: a notification worker holding an id whose account
-  has since gone should skip, not send and not raise.
+  The gate every producing context asks before sending. Callers speak in
+  "enabled?"; that the column stores the *disabled* kinds is this context's
+  business alone.
 
-  Callers speak in "enabled?"; that the column stores the *disabled* kinds is
-  this context's business alone.
+  Takes a loaded user because that is what every caller has. Working from an id
+  is `notifiable_recipients/2`'s job — it answers for a list of them in one
+  query, and an id matching no user is simply absent from the result.
   """
-  @spec email_notification_enabled?(User.t() | String.t(), atom()) :: boolean()
+  @spec email_notification_enabled?(User.t(), atom()) :: boolean()
   def email_notification_enabled?(%User{disabled_email_notifications: disabled}, kind) do
     kind not in (disabled || [])
-  end
-
-  def email_notification_enabled?(user_id, kind) when is_binary(user_id) do
-    case RepositoryHelpers.get_schema_by_uuid(User, user_id) do
-      {:ok, user} -> email_notification_enabled?(user, kind)
-      {:error, :not_found} -> false
-    end
   end
 
   @doc """
@@ -416,11 +409,19 @@ defmodule KlassHero.Accounts do
   Owns the disabled-list inversion so no caller sees it, and is idempotent in
   both directions — opting out twice stores one entry, opting in when already
   enabled writes nothing.
+
+  The other kinds are read back from the row rather than taken from the passed
+  struct, which is the whole reason this reloads. One column holds every kind,
+  so a list computed from a stale struct silently re-enables whatever changed
+  since it was loaded — and the settings page holds a user in `@current_scope`
+  that nothing refreshes in place. Harmless while one kind exists; a lost update
+  the moment there are two.
   """
   @spec update_user_email_notification_preference(User.t(), atom(), boolean()) ::
           {:ok, User.t()} | {:error, Ecto.Changeset.t()}
   def update_user_email_notification_preference(%User{} = user, kind, enabled?) do
     context_span entity: "user" do
+      user = Repo.reload!(user)
       current = user.disabled_email_notifications || []
       next = if enabled?, do: List.delete(current, kind), else: Enum.uniq([kind | current])
 

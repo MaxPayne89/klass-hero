@@ -62,12 +62,14 @@ defmodule KlassHero.Messaging.NewMessageEmailNotifier do
     """
   end
 
+  # The button repeats Enrollment's invite-email values on purpose — the two
+  # should look alike. A shared `EmailHtml.button/2` waits for a third caller.
   defp html_body(url) do
     EmailHtml.wrap(~s|
       <p style="font-size: 16px;">You have a new message waiting for you on Klass Hero.</p>
       <p style="margin: 30px 0;">
         <a href="#{EmailHtml.esc(url)}"
-           style="background: #4F46E5; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+           style="background-color: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
           Read your message
         </a>
       </p>

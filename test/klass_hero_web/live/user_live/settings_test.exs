@@ -377,13 +377,13 @@ defmodule KlassHeroWeb.UserLive.SettingsTest do
     test "the rendered state follows the change without a reload", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/users/settings")
 
-      html =
-        lv
-        |> form("#notification_preferences_form", notifications: %{new_message_email: "false"})
-        |> render_change()
+      assert has_element?(lv, "#notifications_new_message_email[checked]")
 
-      refute html =~
-               ~s(id="notifications_new_message_email" name="notifications[new_message_email]" value="true" checked)
+      lv
+      |> form("#notification_preferences_form", notifications: %{new_message_email: "false"})
+      |> render_change()
+
+      refute has_element?(lv, "#notifications_new_message_email[checked]")
     end
 
     test "switching it back on clears the opt-out", %{conn: conn, user: user} do
