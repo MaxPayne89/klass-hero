@@ -8,18 +8,23 @@ defmodule KlassHero.Messaging.CanMessageParentTest do
   alias KlassHero.Messaging
   alias KlassHero.Provider.ProviderProfile
 
+  # The owner's scope carries the owner's own user. `Scope.resolve_roles/1` loads
+  # the provider *by* `user.id`, so identity_id and user.id always agree in
+  # production — and the gate re-reads the relation from the database rather than
+  # trusting the struct, so a scope where they disagree is correctly refused.
   setup do
-    provider = insert(:provider_profile_schema)
+    owner = AccountsFixtures.user_fixture()
+    provider = insert(:provider_profile_schema, identity_id: owner.id)
     program = insert(:program_schema, provider_id: provider.id)
 
     scope = %Scope{
-      user: AccountsFixtures.user_fixture(),
+      user: owner,
       roles: [:provider],
       parent: nil,
       provider: %ProviderProfile{id: provider.id, identity_id: provider.identity_id}
     }
 
-    %{provider: provider, program: program, scope: scope}
+    %{provider: provider, program: program, scope: scope, owner: owner}
   end
 
   describe "can_message_parent?/4" do
@@ -51,9 +56,14 @@ defmodule KlassHero.Messaging.CanMessageParentTest do
 
     test "true for a staff member of that provider, whose scope carries no provider", ctx do
       parent_user_id = confirmed_parent_on(ctx.program)
+      staff_user = AccountsFixtures.user_fixture()
+
+      # A real employment row, not just a scope that claims one: the gate reads
+      # the relation from the database, so `staff_member` alone proves nothing.
+      insert(:staff_member_schema, provider_id: ctx.provider.id, user_id: staff_user.id, active: true)
 
       staff_scope = %Scope{
-        user: AccountsFixtures.user_fixture(),
+        user: staff_user,
         roles: [:staff],
         parent: nil,
         provider: nil,
@@ -61,6 +71,23 @@ defmodule KlassHero.Messaging.CanMessageParentTest do
       }
 
       assert Messaging.can_message_parent?(staff_scope, ctx.provider.id, ctx.program.id, parent_user_id)
+    end
+
+    test "false for a staff member whose employment has ended", ctx do
+      parent_user_id = confirmed_parent_on(ctx.program)
+      staff_user = AccountsFixtures.user_fixture()
+
+      insert(:staff_member_schema, provider_id: ctx.provider.id, user_id: staff_user.id, active: false)
+
+      staff_scope = %Scope{
+        user: staff_user,
+        roles: [:staff],
+        parent: nil,
+        provider: nil,
+        staff_member: %{provider_id: ctx.provider.id}
+      }
+
+      refute Messaging.can_message_parent?(staff_scope, ctx.provider.id, ctx.program.id, parent_user_id)
     end
 
     test "false when a nil program_id reaches it", ctx do

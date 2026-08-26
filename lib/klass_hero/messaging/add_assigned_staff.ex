@@ -24,14 +24,18 @@ defmodule KlassHero.Messaging.AddAssignedStaff do
   alias KlassHero.Messaging.Events
   alias KlassHero.Shared.Domain.Events.Event
 
-  @spec execute(String.t(), String.t() | nil, String.t()) ::
+  @spec execute(String.t(), String.t() | nil, [String.t()]) ::
           {:ok, {[String.t()], [Event.t()]}} | {:error, term()}
-  def execute(_conversation_id, nil, _excluded_user_id), do: {:ok, {[], []}}
+  def execute(_conversation_id, nil, _excluded_user_ids), do: {:ok, {[], []}}
 
-  def execute(conversation_id, program_id, excluded_user_id) do
+  # Both principals are excluded, not just the initiator. The three former
+  # creation paths disagreed here — one excluded the initiator, another the
+  # provider — which only ever went unnoticed because `add_participants/2`
+  # inserts with `on_conflict: :nothing`.
+  def execute(conversation_id, program_id, excluded_user_ids) when is_list(excluded_user_ids) do
     program_id
     |> KlassHero.Messaging.get_conversation_staff_user_ids()
-    |> Enum.reject(&(&1 == excluded_user_id))
+    |> Enum.reject(&(&1 in excluded_user_ids))
     |> add(conversation_id)
   end
 

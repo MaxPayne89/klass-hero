@@ -224,6 +224,15 @@ defmodule KlassHeroWeb.Provider.TeamLive do
   end
 
   @impl true
+  # The compose screen re-runs the gate on mount, so this only has to get the
+  # provider right. `user_id` comes from the card and is untrusted; a hand-typed
+  # one fails there rather than here, which is where the rule lives (#747).
+  def handle_event("message_member", %{"user-id" => user_id}, socket) do
+    provider_id = socket.assigns.current_scope.provider.id
+
+    {:noreply, push_navigate(socket, to: ~p"/provider/messages/new?provider_id=#{provider_id}&user_id=#{user_id}")}
+  end
+
   def handle_event("resend_invitation", %{"id" => staff_member_id}, socket) do
     provider_id = socket.assigns.current_scope.provider.id
 

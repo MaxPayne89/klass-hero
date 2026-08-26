@@ -196,6 +196,69 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
     }
   end
 
+  # The identity property the principal pair exists for. Membership cannot express
+  # it: a staff member seated in a parent thread is a participant of it, so a
+  # "both parties are participants" key would hand the owner that parent's private
+  # thread when they meant to message their colleague (#747), or raise
+  # Ecto.MultipleResultsError once the staff member sits in two of them.
+  describe "a provider-side thread is not a parent thread" do
+    setup do
+      owner = AccountsFixtures.user_fixture()
+      provider = insert(:provider_profile_schema, identity_id: owner.id)
+      program = insert(:program_schema, provider_id: provider.id)
+      staff_user = AccountsFixtures.user_fixture()
+
+      ProviderFixtures.assign_active_staff(%{
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_user_id: staff_user.id
+      })
+
+      owner_scope = build_scope_with_provider(provider)
+      owner_scope = %{owner_scope | user: owner}
+
+      %{
+        owner: owner,
+        owner_scope: owner_scope,
+        provider: provider,
+        program: program,
+        staff_user: staff_user
+      }
+    end
+
+    test "messaging a staff member does not resolve to a parent's thread", ctx do
+      parent_user = AccountsFixtures.user_fixture()
+
+      {:ok, parent_thread} =
+        CreateDirectConversation.execute(ctx.owner_scope, ctx.provider.id, parent_user.id, program_id: ctx.program.id)
+
+      # The staff member really is seated in the parent's thread — that is what
+      # made the old membership-based lookup ambiguous.
+      assert KlassHero.Messaging.participant?(parent_thread.id, ctx.staff_user.id)
+
+      {:ok, staff_thread} =
+        CreateDirectConversation.execute(ctx.owner_scope, ctx.provider.id, ctx.staff_user.id)
+
+      assert staff_thread.id != parent_thread.id
+      refute KlassHero.Messaging.participant?(staff_thread.id, parent_user.id)
+      assert staff_thread.program_id == nil
+    end
+
+    test "survives the staff member sitting in several parent threads", ctx do
+      for _ <- 1..2 do
+        parent_user = AccountsFixtures.user_fixture()
+
+        {:ok, _} =
+          CreateDirectConversation.execute(ctx.owner_scope, ctx.provider.id, parent_user.id, program_id: ctx.program.id)
+      end
+
+      assert {:ok, staff_thread} =
+               CreateDirectConversation.execute(ctx.owner_scope, ctx.provider.id, ctx.staff_user.id)
+
+      assert staff_thread.type == :direct
+    end
+  end
+
   defp build_scope_with_parent do
     user = AccountsFixtures.user_fixture()
 

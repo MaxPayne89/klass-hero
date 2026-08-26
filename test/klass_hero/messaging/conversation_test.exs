@@ -11,17 +11,63 @@ defmodule KlassHero.Messaging.ConversationTest do
   alias KlassHero.Messaging
   alias KlassHero.Messaging.Conversation
 
-  describe "direct_attrs/2" do
+  describe "direct_attrs/4" do
     test "omits :program_id entirely when there is no program" do
-      attrs = Conversation.direct_attrs("prov-1", nil)
+      attrs = Conversation.direct_attrs("prov-1", nil, "user-a", "user-b")
 
-      assert attrs == %{type: :direct, provider_id: "prov-1"}
+      assert attrs == %{
+               type: :direct,
+               provider_id: "prov-1",
+               principal_a_id: "user-a",
+               principal_b_id: "user-b"
+             }
+
       refute Map.has_key?(attrs, :program_id)
     end
 
     test "carries :program_id when the thread hangs off a program" do
-      assert Conversation.direct_attrs("prov-1", "prog-9") ==
-               %{type: :direct, provider_id: "prov-1", program_id: "prog-9"}
+      assert Conversation.direct_attrs("prov-1", "prog-9", "user-a", "user-b") ==
+               %{
+                 type: :direct,
+                 provider_id: "prov-1",
+                 program_id: "prog-9",
+                 principal_a_id: "user-a",
+                 principal_b_id: "user-b"
+               }
+    end
+
+    # Whichever way round the caller names them, the same two people key the same
+    # thread — that is the whole point of storing the pair ordered.
+    test "orders the principals regardless of argument order" do
+      assert Conversation.direct_attrs("prov-1", nil, "user-b", "user-a") ==
+               Conversation.direct_attrs("prov-1", nil, "user-a", "user-b")
+    end
+  end
+
+  # The gate refuses a self-target first; this is the layer behind it. A pair built
+  # by hand must come back as a rejected changeset, not a raw Postgrex.Error.
+  describe "the ordering check reaches the changeset" do
+    test "an unordered pair is an error, not a raise" do
+      provider = insert(:provider_profile_schema)
+      user = KlassHero.AccountsFixtures.user_fixture()
+
+      changeset =
+        Conversation.create_changeset(%{
+          type: :direct,
+          provider_id: provider.id,
+          principal_a_id: user.id,
+          principal_b_id: user.id
+        })
+
+      assert {:error, changeset} = Repo.insert(changeset)
+      assert "A conversation needs two different people" in errors_on(changeset).principal_a_id
+    end
+  end
+
+  describe "principal_pair/2" do
+    test "returns the same tuple for either argument order" do
+      assert Conversation.principal_pair("b", "a") == {"a", "b"}
+      assert Conversation.principal_pair("a", "b") == {"a", "b"}
     end
   end
 

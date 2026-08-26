@@ -578,6 +578,19 @@ defmodule KlassHeroWeb.ProviderComponents do
           >
             {gettext("Edit")}
           </button>
+          <%!-- Absent, not disabled, for a member who has not claimed their invite:
+                there is no account to write to yet, and "Resend" already answers
+                what to do about that. --%>
+          <.kh_button
+            :if={@member.can_message?}
+            variant={:secondary}
+            size={:sm}
+            id={"message-member-#{@member.id}"}
+            phx-click="message_member"
+            phx-value-user-id={@member.user_id}
+          >
+            {gettext("Message")}
+          </.kh_button>
           <.kh_button
             :if={@member.can_resend?}
             variant={:primary}

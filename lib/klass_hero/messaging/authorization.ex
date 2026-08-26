@@ -73,6 +73,117 @@ defmodule KlassHero.Messaging.Authorization do
     end
   end
 
+  @typedoc """
+  How a user stands to a provider.
+
+  `:outsider` rather than `:parent` on purpose — not being staff is no evidence of
+  being a parent. Parenthood of *this* provider's programmes is a separate fact,
+  established by the enrolment check below.
+  """
+  @type relation :: :owner | :staff | :outsider
+
+  @doc """
+  Resolves how `user_id` stands to `provider_id`.
+
+  The one primitive both the compose gate and message attribution are built from.
+  `SendMessage` derives a sender's role from this, so permission and attribution
+  cannot disagree — they used to be separate computations over different staff
+  sets, which is how an unassigned staff member came to send a message that
+  rendered as if a parent had sent it (#1348).
+  """
+  @spec provider_relation(String.t(), String.t()) :: relation()
+  def provider_relation(provider_id, user_id) do
+    cond do
+      provider_owner?(provider_id, user_id) -> :owner
+      active_staff_for_provider?(provider_id, user_id) -> :staff
+      true -> :outsider
+    end
+  end
+
+  defp provider_owner?(provider_id, user_id) do
+    owner =
+      acl_span source: "messaging", target: "provider" do
+        KlassHero.Provider.get_identity_id_for_provider(provider_id)
+      end
+
+    match?({:ok, ^user_id}, owner)
+  end
+
+  # Who may open a thread with whom, as a table over {initiator, target}.
+  #
+  # Reading down the rows is the whole permission model, and a pair that is not
+  # listed is refused — so a new direction is added here, deliberately, rather
+  # than falling out of some scope shape that happens to reach a clause.
+  #
+  # The provider-side pairs need no extra fact: computing both relations against
+  # this provider has already proved the employment.
+  @compose_rules %{
+    # a parent writes to the business
+    {:outsider, :owner} => :entitled,
+    # the business writes to a parent
+    {:owner, :outsider} => :enrolled,
+    # an instructor writes to a parent
+    {:staff, :outsider} => :enrolled,
+    # the business writes to its team
+    {:owner, :staff} => :internal,
+    # a team member writes to the business
+    {:staff, :owner} => :internal,
+    # two team members
+    {:staff, :staff} => :internal
+  }
+
+  @doc """
+  Authorises `scope` opening a thread with `target_user_id` at `provider_id`.
+
+  `program_id` is consumed only by the `:enrolled` rule, which is why a
+  provider-staff thread needs none.
+  """
+  @spec authorize_compose(Scope.t(), String.t(), String.t(), String.t() | nil) ::
+          :ok | {:error, :unauthorized}
+  # A thread is between two people, and one person is not two. This has to be a
+  # clause rather than a missing table row: the relation pairs a self-target
+  # produces — {:staff, :staff}, {:owner, :owner} — cannot distinguish "me and my
+  # colleague" from "me and me". Left to the table, `{:staff, :staff}` authorises
+  # it, `principal_pair/2` collapses to `{id, id}`, and the ordering check rejects
+  # it in Postgres as a 500 from a URL anyone can edit by hand.
+  def authorize_compose(%Scope{user: %{id: user_id}} = scope, _provider_id, user_id, _program_id) do
+    refuse(scope)
+  end
+
+  def authorize_compose(%Scope{} = scope, provider_id, target_user_id, program_id) do
+    initiator = provider_relation(provider_id, scope.user.id)
+    target = provider_relation(provider_id, target_user_id)
+
+    @compose_rules
+    |> Map.get({initiator, target})
+    |> check_compose_rule(scope, target_user_id, program_id)
+  end
+
+  defp check_compose_rule(:internal, _scope, _target_user_id, _program_id), do: :ok
+
+  defp check_compose_rule(:entitled, scope, _target_user_id, _program_id) do
+    if KlassHero.Messaging.can_initiate_messaging?(scope), do: :ok, else: refuse(scope)
+  end
+
+  defp check_compose_rule(:enrolled, scope, target_user_id, program_id) do
+    if is_binary(program_id) and enrolled?(program_id, target_user_id),
+      do: :ok,
+      else: refuse(scope)
+  end
+
+  defp check_compose_rule(nil, scope, _target_user_id, _program_id), do: refuse(scope)
+
+  defp enrolled?(program_id, parent_user_id) do
+    acl_span source: "messaging", target: "enrollment" do
+      KlassHero.Enrollment.confirmed_enrollment?(program_id, parent_user_id)
+    end
+  end
+
+  defp refuse(scope) do
+    Logger.debug("Compose refused", user_id: scope.user.id)
+    {:error, :unauthorized}
+  end
+
   @doc """
   Verifies that a user is a participant in a conversation.
 

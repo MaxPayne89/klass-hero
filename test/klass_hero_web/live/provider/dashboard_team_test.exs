@@ -23,6 +23,61 @@ defmodule KlassHeroWeb.Provider.DashboardTeamTest do
     end
   end
 
+  # Exercised through the real LiveView rather than by handing the component props:
+  # a presenter key the card does not read, or a card key the presenter does not
+  # set, leaves both green and breaks the page on real data (#1073).
+  describe "messaging a team member (#747)" do
+    test "offers a Message action for a member who has claimed their invite", %{
+      conn: conn,
+      provider: provider
+    } do
+      staff_user = KlassHero.AccountsFixtures.user_fixture()
+
+      staff =
+        ProviderFixtures.staff_member_fixture(
+          provider_id: provider.id,
+          user_id: staff_user.id,
+          invitation_status: :accepted
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      assert has_element?(view, "#message-member-#{staff.id}")
+    end
+
+    # Absent rather than disabled — there is no account to write to yet, and
+    # "Resend" already answers what to do about it.
+    test "offers none for a member who has not", %{conn: conn, provider: provider} do
+      staff = ProviderFixtures.staff_member_fixture(provider_id: provider.id, user_id: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      refute has_element?(view, "#message-member-#{staff.id}")
+    end
+
+    test "the action lands on compose, aimed at that member", %{conn: conn, provider: provider} do
+      staff_user = KlassHero.AccountsFixtures.user_fixture()
+
+      staff =
+        ProviderFixtures.staff_member_fixture(
+          provider_id: provider.id,
+          user_id: staff_user.id,
+          invitation_status: :accepted
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/team")
+
+      view
+      |> element("#message-member-#{staff.id}")
+      |> render_click()
+
+      assert_redirect(
+        view,
+        ~p"/provider/messages/new?provider_id=#{provider.id}&user_id=#{staff_user.id}"
+      )
+    end
+  end
+
   describe "member cards" do
     test "displays staff member card when members exist", %{conn: conn, provider: provider} do
       ProviderFixtures.staff_member_fixture(

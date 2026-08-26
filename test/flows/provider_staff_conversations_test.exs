@@ -101,17 +101,16 @@ defmodule KlassHeroWeb.Flows.ProviderStaffConversationsTest do
       |> assert_has("[data-role=conversation-card]", text: "Pat Parent")
     end
 
-    # A *different* parent on purpose. `find_direct_conversation/2` keys on provider +
-    # parent only, so reusing the setup's parent would hand the owner back the staff's
-    # existing thread rather than opening one of their own — see the follow-up issue
-    # filed alongside #746.
+    # The SAME parent the staff member already messaged, on purpose. This used to be
+    # impossible: identity was keyed on provider + parent, so the owner was handed the
+    # staff member's thread and `SendMessage` then refused them as `:not_participant`
+    # (#1521). The principal pair keys on both parties, so each gets their own thread.
     test "the owner's own threads stay on their own tab", %{
       owner_user: owner_user,
-      provider: provider
+      provider: provider,
+      parent_user: parent_user,
+      conversation: staff_thread
     } do
-      other_parent = user_fixture(%{name: "Robin Other", intended_roles: [:parent]})
-      insert(:parent_profile_schema, identity_id: other_parent.id)
-
       owner_scope = owner_user |> Scope.for_user() |> Scope.resolve_roles()
 
       mine =
@@ -120,14 +119,16 @@ defmodule KlassHeroWeb.Flows.ProviderStaffConversationsTest do
             Messaging.start_conversation_with_message(
               owner_scope,
               provider.id,
-              other_parent.id,
+              parent_user.id,
               "Following up myself"
             )
 
           conversation
         end)
 
+      assert mine.id != staff_thread.id
       assert Messaging.participant?(mine.id, owner_user.id)
+      refute Messaging.participant?(staff_thread.id, owner_user.id)
 
       build_conn()
       |> log_in_user(owner_user)

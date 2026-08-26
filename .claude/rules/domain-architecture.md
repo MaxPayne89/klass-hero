@@ -101,6 +101,19 @@ not copy this into one.
 - For cross-context **reads**: **call the owning context's root facade directly** (ADR 0015). This is the default at every layer — a projection, event handler, worker or web helper calls the facade with no adapter in between. Reach for something heavier only when it earns its place:
   - an **ACL adapter** (`acl/`) when there is genuine translation to do — remapping the other context's errors into your vocabulary, masking fields behind a business rule, cycle-breaking direct table access, or a query no facade expresses. An ACL that only forwards a call is indirection without a payer; fold it into the caller.
   - a **projection** when a per-render facade call cannot serve the read path.
+- **One-shot migration backfills are exempt**, and only they. A module under
+  `lib/klass_hero/release/` called from a migration's `up/0` may read another
+  context's tables directly in raw SQL, with no facade and no `acl_span`. A facade
+  is compiled against *today's* schema and is the wrong shape to point at a
+  mid-migration database, and a per-row round-trip would turn one statement into N.
+  The rules that keep it honest: the transform lives outside the migration so it is
+  unit-tested (#966), it is idempotent, and it raises rather than guessing on a row
+  it cannot resolve. Each one states its reasoning in a "Why this bypasses…"
+  moduledoc section — precedent: `dedup_active_staff_memberships.ex` (#969),
+  `backfill_direct_conversation_principals.ex` (#747).
+  **`mix lint_acl_boundary` cannot see these reads** — it matches Ecto's schemaless
+  `in "table"` binding, not a table name inside a SQL heredoc — so the moduledoc is
+  the only record that the exemption was taken deliberately.
 - There is **no** per-context *aggregate* `config :klass_hero, :<context>, for_managing_*: Adapter` DI wiring anymore. Call collaborators directly. (Shared is the exception: its genuine env-swapped adapter seams — `outbox`, `feature_flags`, `storage`, `for_tracking_processed_events` — keep a slim behaviour at the Shared root + a config-selected impl. That is idiomatic Elixir DI, not ceremony; see ADR 0006.)
 
 ## Event System

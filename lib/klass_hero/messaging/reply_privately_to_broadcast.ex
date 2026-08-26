@@ -11,15 +11,10 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
 
   alias KlassHero.Accounts.Scope
   alias KlassHero.Messaging
-  alias KlassHero.Messaging.AddAssignedStaff
   alias KlassHero.Messaging.Authorization
-  alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.Events
-  alias KlassHero.Shared.Outbox
+  alias KlassHero.Messaging.CreateDirectConversation
 
   require Logger
-
-  @context KlassHero.Messaging
 
   @doc """
   Orchestrates a private reply to a broadcast.
@@ -74,53 +69,15 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
     end
   end
 
-  # Lookup by parent's user_id (not provider's) — uniquely identifies this (parent, provider)
-  # pair. Provider-user lookup would collide across multiple parents.
+  # The entitlement check is skipped, not bypassed by accident: the provider
+  # opened the conversation by broadcasting, so the parent may answer it even on
+  # a plan that would not let them start one.
   defp find_or_create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
-    case KlassHero.Messaging.find_direct_conversation(provider_id, scope.user.id) do
-      {:ok, existing} ->
-        {:ok, existing}
-
-      {:error, :not_found} ->
-        create_direct_conversation(scope, provider_id, provider_user_id, program_id)
-    end
+    CreateDirectConversation.execute(scope, provider_id, provider_user_id,
+      program_id: program_id,
+      skip_entitlement_check: true
+    )
   end
-
-  defp create_direct_conversation(scope, provider_id, provider_user_id, program_id) do
-    Outbox.transact(@context, fn ->
-      attrs = Conversation.direct_attrs(provider_id, program_id)
-
-      with {:ok, conversation} <- KlassHero.Messaging.create_conversation(attrs),
-           {:ok, _} <-
-             KlassHero.Messaging.add_participant(%{
-               conversation_id: conversation.id,
-               user_id: scope.user.id
-             }),
-           {:ok, _} <-
-             KlassHero.Messaging.add_participant(%{
-               conversation_id: conversation.id,
-               user_id: provider_user_id
-             }),
-           {:ok, {_staff_ids, staff_events}} <-
-             AddAssignedStaff.execute(conversation.id, program_id, provider_user_id) do
-        created_event =
-          Events.conversation_created(
-            conversation.id,
-            conversation.type,
-            provider_id,
-            [scope.user.id, provider_user_id],
-            conversation.program_id
-          )
-
-        {:ok, conversation, [created_event | staff_events]}
-      end
-    end)
-    |> handle_commit()
-  end
-
-  defp handle_commit({:ok, conversation}), do: {:ok, conversation}
-
-  defp handle_commit({:error, reason}), do: {:error, reason}
 
   # Inserts a system note referencing the broadcast so the provider knows context.
   # Dedup prevents duplicate notes if the parent taps "Reply privately" multiple times.

@@ -139,19 +139,32 @@ defmodule KlassHero.Messaging.Queries.ConversationQueriesTest do
     end
   end
 
-  describe "find_direct/2" do
-    test "returns composite query with provider, type, active, and participant filters" do
-      provider_id = Ecto.UUID.generate()
-      user_id = Ecto.UUID.generate()
+  describe "between_principals/3" do
+    test "matches the pair in either argument order" do
+      a = "00000000-0000-0000-0000-00000000000a"
+      b = "00000000-0000-0000-0000-00000000000b"
 
-      query = ConversationQueries.find_direct(provider_id, user_id)
+      assert inspect(ConversationQueries.between_principals(a, b)) ==
+               inspect(ConversationQueries.between_principals(b, a))
+    end
+  end
+
+  describe "find_direct/3" do
+    test "filters on provider, type, active, and the principal pair" do
+      provider_id = Ecto.UUID.generate()
+      user_a = Ecto.UUID.generate()
+      user_b = Ecto.UUID.generate()
+
+      query = ConversationQueries.find_direct(provider_id, user_a, user_b)
 
       assert %Ecto.Query{} = query
       assert query.from.source == {"conversations", Conversation}
-      # by_provider + by_type(:direct) + active_only
-      assert length(query.wheres) == 3
-      # where_user_is_participant
-      assert length(query.joins) == 1
+      # by_provider + by_type(:direct) + active_only + between_principals
+      assert length(query.wheres) == 4
+      # Identity is a column pair now, so no participant join is needed. That is
+      # the point: a membership join could never tell a provider-staff thread
+      # from a parent thread the staff member happens to sit in.
+      assert query.joins == []
     end
   end
 

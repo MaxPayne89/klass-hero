@@ -150,7 +150,7 @@ defmodule KlassHero.Messaging.ListStaffConversations do
 
   defp build_row(conversation, context) do
     active = Enum.filter(conversation.participants, &is_nil(&1.left_at))
-    {staff, others} = Enum.split_with(active, &MapSet.member?(context.staff_ids, &1.user_id))
+    {staff, _others} = Enum.split_with(active, &MapSet.member?(context.staff_ids, &1.user_id))
     latest = Map.get(context.latest_messages, conversation.id)
 
     %StaffConversation{
@@ -159,7 +159,7 @@ defmodule KlassHero.Messaging.ListStaffConversations do
       provider_id: conversation.provider_id,
       program_id: conversation.program_id,
       program_name: broadcast_program_name(conversation, context.program_names),
-      other_participant_name: other_participant_name(conversation.type, others, context.user_names),
+      other_participant_name: other_participant_name(conversation, context),
       staff_member_names: named(staff, context.user_names),
       latest_message_content: latest && latest.content,
       latest_message_at: latest && latest.inserted_at,
@@ -174,11 +174,40 @@ defmodule KlassHero.Messaging.ListStaffConversations do
 
   defp broadcast_program_name(_conversation, _names), do: nil
 
-  # A direct thread with anything other than exactly one non-staff party is ambiguous
-  # (two staff DMing, or a parent who left). `nil` lets the card fall back to its own
-  # "Unknown" rather than picking a party arbitrarily.
-  defp other_participant_name(:direct, [%{user_id: id}], names), do: Map.get(names, id)
-  defp other_participant_name(_type, _others, _names), do: nil
+  # Read off the principals, not the participant list. Membership could not answer
+  # this: a thread seats assigned staff too, and a parent who has left stops being
+  # a participant while remaining who the thread is with. The principals are the
+  # two people the thread is between and never change.
+  #
+  # An all-staff thread has no non-staff side, so it is named after both — the card
+  # renders this field as the title, and `nil` would show "Unknown" instead.
+  defp other_participant_name(%{type: :direct} = conversation, context) do
+    case Enum.reject([conversation.principal_a_id, conversation.principal_b_id], &is_nil/1) do
+      [] -> nil
+      principals -> name_from_principals(principals, context)
+    end
+  end
+
+  defp other_participant_name(_conversation, _context), do: nil
+
+  defp name_from_principals(principals, context) do
+    case Enum.reject(principals, &MapSet.member?(context.staff_ids, &1)) do
+      [id] -> Map.get(context.user_names, id)
+      [] -> join_names(principals, context)
+      _many -> nil
+    end
+  end
+
+  defp join_names(principals, context) do
+    principals
+    |> Enum.map(&Map.get(context.user_names, &1))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.sort()
+    |> case do
+      [] -> nil
+      names -> Enum.join(names, " & ")
+    end
+  end
 
   defp named(participants, names) do
     participants

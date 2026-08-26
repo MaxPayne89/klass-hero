@@ -11,7 +11,7 @@ defmodule KlassHero.Messaging.StartConversationWithMessage do
   the very row this exists to avoid.
 
   Creation and send commit separately. A send that fails after creation leaves an
-  empty conversation, which `find_direct_conversation/2` makes the user's retry
+  empty conversation, which `find_direct_conversation/3` makes the user’s retry
   reuse and fill; `Messaging.list_conversations/2` hides it in the meantime.
   """
 
@@ -20,7 +20,6 @@ defmodule KlassHero.Messaging.StartConversationWithMessage do
   alias KlassHero.Messaging.CreateDirectConversation
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.SendMessage
-  alias KlassHero.Messaging.StartProgramConversation
 
   @doc """
   Creates or reuses the direct conversation for the target, then sends `content`.
@@ -66,14 +65,11 @@ defmodule KlassHero.Messaging.StartConversationWithMessage do
 
   defp maybe_skip_entitlement(_scope, _provider_id, opts), do: opts
 
-  # A parent's conversation is looked up by their own user id, a provider's by the
-  # target's — the two commands differ only in that key, and using the wrong one
-  # collides across parents (see StartProgramConversation's moduledoc).
-  defp find_or_create(%Scope{provider: nil, parent: parent} = scope, provider_id, _target_user_id, opts)
-       when not is_nil(parent) do
-    StartProgramConversation.execute(scope, provider_id, Keyword.get(opts, :program_id))
-  end
-
+  # One path for everyone. There used to be two, split on the shape of the scope,
+  # because a thread was keyed on a single participant and each side knew a
+  # different one of the two. The principal pair keys on both, so the initiator's
+  # role no longer decides which command runs — `build_compose_target/3` has
+  # already resolved who the other party is.
   defp find_or_create(scope, provider_id, target_user_id, opts) do
     CreateDirectConversation.execute(scope, provider_id, target_user_id, opts)
   end
