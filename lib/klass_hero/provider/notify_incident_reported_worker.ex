@@ -2,9 +2,11 @@ defmodule KlassHero.Provider.NotifyIncidentReportedWorker do
   @moduledoc """
   Oban worker that delivers the incident-report email for a single report.
 
-  Runs on the `:email` queue (concurrency 1) so Resend rate limits are
-  respected globally. Delegates the actual orchestration to the
-  `NotifyIncidentReported` use case.
+  Runs on the shared `:email` queue, whose concurrency and retry budget are one
+  decision documented in `config/config.exs` — not restated here, because this
+  file said "concurrency 1" for a while after that stopped being true. Rate
+  limiting is `RateLimitedEmailWorker`'s 429-aware backoff, not the queue width.
+  Delegates the actual orchestration to the `NotifyIncidentReported` use case.
   """
 
   use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 5
