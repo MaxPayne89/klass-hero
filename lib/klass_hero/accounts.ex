@@ -13,6 +13,7 @@ defmodule KlassHero.Accounts do
   alias KlassHero.Provider
   alias KlassHero.Provider.StaffMember
   alias KlassHero.Repo
+  alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -363,6 +364,78 @@ defmodule KlassHero.Accounts do
       |> User.locale_changeset(attrs)
       |> Repo.update()
     end
+  end
+
+  @doc """
+  Whether `user_or_id` currently wants `kind` emailed to them.
+
+  The gate every producing context asks before sending. Answers `false` for a
+  user that cannot be found: a notification worker holding an id whose account
+  has since gone should skip, not send and not raise.
+
+  Callers speak in "enabled?"; that the column stores the *disabled* kinds is
+  this context's business alone.
+  """
+  @spec email_notification_enabled?(User.t() | String.t(), atom()) :: boolean()
+  def email_notification_enabled?(%User{disabled_email_notifications: disabled}, kind) do
+    kind not in (disabled || [])
+  end
+
+  def email_notification_enabled?(user_id, kind) when is_binary(user_id) do
+    case RepositoryHelpers.get_schema_by_uuid(User, user_id) do
+      {:ok, user} -> email_notification_enabled?(user, kind)
+      {:error, :not_found} -> false
+    end
+  end
+
+  @doc """
+  Narrows `user_ids` to those who want `kind`, as `%{user_id => %{email:, name:}}`.
+
+  Bulk counterpart to `email_notification_enabled?/2`, shaped like
+  `get_display_names/1`: ids that match no user are simply absent, so a caller
+  building a recipient list from a participants query never has to pre-validate
+  them.
+  """
+  @spec notifiable_recipients([String.t()], atom()) :: %{String.t() => %{email: String.t(), name: String.t()}}
+  def notifiable_recipients([], _kind), do: %{}
+
+  def notifiable_recipients(user_ids, kind) when is_list(user_ids) do
+    kind_string = Atom.to_string(kind)
+
+    from(u in User,
+      where: u.id in ^user_ids and ^kind_string not in u.disabled_email_notifications,
+      select: {u.id, %{email: u.email, name: u.name}}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  Switches one email notification on or off for a user.
+
+  Owns the disabled-list inversion so no caller sees it, and is idempotent in
+  both directions — opting out twice stores one entry, opting in when already
+  enabled writes nothing.
+  """
+  @spec update_user_email_notification_preference(User.t(), atom(), boolean()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_email_notification_preference(%User{} = user, kind, enabled?) do
+    context_span entity: "user" do
+      current = user.disabled_email_notifications || []
+      next = if enabled?, do: List.delete(current, kind), else: Enum.uniq([kind | current])
+
+      user
+      |> User.email_notification_preferences_changeset(%{disabled_email_notifications: next})
+      |> Repo.update()
+    end
+  end
+
+  @doc """
+  Changeset for the settings form's notification preferences section.
+  """
+  @spec change_user_email_notification_preferences(User.t(), map()) :: Ecto.Changeset.t()
+  def change_user_email_notification_preferences(user, attrs \\ %{}) do
+    User.email_notification_preferences_changeset(user, attrs)
   end
 
   @doc """
