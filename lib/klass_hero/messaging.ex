@@ -30,10 +30,10 @@ defmodule KlassHero.Messaging do
 
   alias KlassHero.Accounts
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Enrollment
 
   alias KlassHero.Messaging.{
     AnonymizeUserData,
+    Authorization,
     BroadcastToProgram,
     CreateDirectConversation,
     GetConversation,
@@ -124,52 +124,39 @@ defmodule KlassHero.Messaging do
   """
   @spec build_compose_target(map(), String.t(), keyword()) ::
           {:ok, ComposeTarget.t()} | {:error, :not_found | :unauthorized}
-  def build_compose_target(scope, provider_id, opts \\ [])
-
-  def build_compose_target(%{provider: nil, parent: parent} = scope, provider_id, opts) when not is_nil(parent) do
-    if can_initiate_messaging?(scope) do
-      build_provider_target(provider_id, Keyword.get(opts, :program_id))
-    else
-      {:error, :unauthorized}
-    end
-  end
-
-  def build_compose_target(scope, provider_id, opts) do
-    target_user_id = Keyword.get(opts, :target_user_id)
+  def build_compose_target(scope, provider_id, opts \\ []) do
     program_id = Keyword.get(opts, :program_id)
 
-    if is_binary(target_user_id) and is_binary(program_id) and
-         can_message_parent?(scope, provider_id, program_id, target_user_id) do
+    with {:ok, target_user_id, target_name} <-
+           resolve_compose_target(provider_id, Keyword.get(opts, :target_user_id)),
+         :ok <- Authorization.authorize_compose(scope, provider_id, target_user_id, program_id) do
       {:ok,
        %ComposeTarget{
          provider_id: provider_id,
          target_user_id: target_user_id,
          program_id: program_id,
-         target_name: Map.get(Accounts.get_display_names([target_user_id]), target_user_id)
+         target_name: target_name
        }}
-    else
-      {:error, :unauthorized}
     end
   end
 
-  # One lookup covers both fields — the owner to converse with and the name to show.
-  defp build_provider_target(provider_id, program_id) do
+  # No named target means the business itself. One rule covers a parent writing to
+  # a provider and a staff member writing to their employer; the business name is
+  # what either of them expects to see at the top of the thread.
+  defp resolve_compose_target(provider_id, nil) do
     acl_span source: "messaging", target: "provider" do
       case KlassHero.Provider.get_provider_profile(provider_id) do
-        {:ok, provider} ->
-          {:ok,
-           %ComposeTarget{
-             provider_id: provider_id,
-             target_user_id: provider.identity_id,
-             program_id: program_id,
-             target_name: provider.business_name
-           }}
-
-        {:error, _reason} ->
-          {:error, :not_found}
+        {:ok, provider} -> {:ok, provider.identity_id, provider.business_name}
+        {:error, _reason} -> {:error, :not_found}
       end
     end
   end
+
+  defp resolve_compose_target(_provider_id, target_user_id) when is_binary(target_user_id) do
+    {:ok, target_user_id, Map.get(Accounts.get_display_names([target_user_id]), target_user_id)}
+  end
+
+  defp resolve_compose_target(_provider_id, _target_user_id), do: {:error, :unauthorized}
 
   @doc """
   Opens a direct conversation and sends its first message in one call.
@@ -199,8 +186,7 @@ defmodule KlassHero.Messaging do
   @spec can_message_parent?(map(), String.t(), String.t(), String.t()) :: boolean()
   def can_message_parent?(scope, provider_id, program_id, parent_user_id)
       when is_binary(provider_id) and is_binary(program_id) and is_binary(parent_user_id) do
-    acting_provider_id(scope) == provider_id and
-      Enrollment.confirmed_enrollment?(program_id, parent_user_id)
+    Authorization.authorize_compose(scope, provider_id, parent_user_id, program_id) == :ok
   end
 
   def can_message_parent?(_scope, _provider_id, _program_id, _parent_user_id), do: false

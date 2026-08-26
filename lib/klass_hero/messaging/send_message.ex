@@ -266,33 +266,25 @@ defmodule KlassHero.Messaging.SendMessage do
     end
   end
 
+  # The same primitive the compose gate is built from, so who may write and how the
+  # message is attributed cannot disagree. They used to be separate computations
+  # over different staff sets — provider-wide here, program-scoped in the renderer —
+  # which is how an unassigned staff member came to be allowed to send a message
+  # that rendered as if a parent had sent it (#1348).
+  #
+  # `:outsider` becomes `:parent` here because that is what the stored `sender_role`
+  # has always meant on this side: everyone who is not the business.
+  #
+  # Current employment is the whole authorization fact — staff may follow up on any
+  # program of their provider (bug #669), so a per-program check would only ever
+  # narrow this for people a mirror has drifted on, which is exactly what happened
+  # (#1237, #1292, #1320). Deriving from `staff_members.active` also means
+  # reactivation restores access with no event, replay, or backfill.
   defp resolve_sender_role(provider_id, sender_id) do
-    cond do
-      provider_owner?(provider_id, sender_id) -> :provider
-      active_staff_for_provider?(provider_id, sender_id) -> :staff
-      true -> :parent
-    end
-  end
-
-  defp provider_owner?(provider_id, sender_id) do
-    owner =
-      acl_span source: "messaging", target: "provider" do
-        KlassHero.Provider.get_identity_id_for_provider(provider_id)
-      end
-
-    match?({:ok, ^sender_id}, owner)
-  end
-
-  # Current employment at the provider is the whole authorization fact — staff may
-  # follow up on any program of their provider (bug #669), so a per-program check
-  # against `program_staff_participants` would only ever narrow this for people the
-  # mirror has drifted on. That is exactly what it did: the mirror is never told
-  # about deactivation (#1237) or hard removal (#1292), so it kept authorizing both
-  # (#1320). Deriving from `staff_members.active` also means reactivation restores
-  # access with no event, replay, or backfill.
-  defp active_staff_for_provider?(provider_id, sender_id) do
-    acl_span source: "messaging", target: "provider" do
-      KlassHero.Provider.active_staff_for_provider?(provider_id, sender_id)
+    case Authorization.provider_relation(provider_id, sender_id) do
+      :owner -> :provider
+      :staff -> :staff
+      :outsider -> :parent
     end
   end
 
