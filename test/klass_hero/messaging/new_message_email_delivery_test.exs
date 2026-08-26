@@ -43,18 +43,19 @@ defmodule KlassHero.Messaging.NewMessageEmailDeliveryTest do
   test "a sent message reaches the other participant's mailbox as a link", ctx do
     send_and_deliver(ctx.conversation.id, ctx.sender.id)
 
-    # assert_email_sent/1 asserts on this callback's return value, and ExUnit's
-    # refute/2 returns false when it passes — so the last expression here has to
-    # be an assert, or the whole assertion fails whatever the email says.
-    assert_email_sent(fn email ->
-      assert [{_name, address}] = email.to
-      assert address == ctx.recipient.email
+    # Bound directly rather than through assert_email_sent/1, which asserts on
+    # its callback's *return value* — and ExUnit's refute/2 returns false when it
+    # passes, so a callback ending on a refute fails whatever the email says.
+    assert_received {:email, email}
 
-      refute email.text_body =~ "the actual message text",
-             "the notification quoted the message body"
+    assert [{_name, address}] = email.to
+    assert address == ctx.recipient.email
 
-      assert email.text_body =~ "/messages/#{ctx.conversation.id}"
-    end)
+    assert email.text_body =~ "/messages/#{ctx.conversation.id}",
+           "the notification carried no link back to the conversation"
+
+    refute email.text_body =~ "the actual message text",
+           "the notification quoted the message body"
   end
 
   test "nothing is sent to someone who switched the notification off", ctx do
