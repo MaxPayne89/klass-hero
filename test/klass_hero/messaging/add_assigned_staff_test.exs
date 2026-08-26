@@ -47,7 +47,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
 
       assert {:ok, {:ok, {added_ids, events}}} =
                Repo.transaction(fn ->
-                 AddAssignedStaff.execute(conversation_id, program.id, owner.id)
+                 AddAssignedStaff.execute(conversation_id, program.id, [owner.id])
                end)
 
       assert Enum.sort(added_ids) == Enum.sort([staff_a.id, staff_b.id])
@@ -99,7 +99,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
 
       assert {:ok, {:ok, {added_ids, [event]}}} =
                Repo.transaction(fn ->
-                 AddAssignedStaff.execute(conversation_id, program.id, owner.id)
+                 AddAssignedStaff.execute(conversation_id, program.id, [owner.id])
                end)
 
       assert added_ids == [staff.id]
@@ -123,7 +123,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
 
       assert {:ok, {:ok, {[], []}}} =
                Repo.transaction(fn ->
-                 AddAssignedStaff.execute(conversation_id, program.id, owner.id)
+                 AddAssignedStaff.execute(conversation_id, program.id, [owner.id])
                end)
     end
 
@@ -131,7 +131,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
       owner = AccountsFixtures.user_fixture()
       conversation_id = Ecto.UUID.generate()
 
-      assert {:ok, {[], []}} = AddAssignedStaff.execute(conversation_id, nil, owner.id)
+      assert {:ok, {[], []}} = AddAssignedStaff.execute(conversation_id, nil, [owner.id])
     end
 
     # #784: `assign_staff_to_session/1` requires only active employment, so a
@@ -169,7 +169,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
 
       assert {:ok, {:ok, {added_ids, [event]}}} =
                Repo.transaction(fn ->
-                 AddAssignedStaff.execute(conversation_id, program.id, owner.id)
+                 AddAssignedStaff.execute(conversation_id, program.id, [owner.id])
                end)
 
       assert added_ids == [substitute.id]
@@ -199,7 +199,7 @@ defmodule KlassHero.Messaging.AddAssignedStaffTest do
 
       assert {:ok, {:ok, {[], []}}} =
                Repo.transaction(fn ->
-                 AddAssignedStaff.execute(conversation_id, program.id, owner.id)
+                 AddAssignedStaff.execute(conversation_id, program.id, [owner.id])
                end)
     end
   end

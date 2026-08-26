@@ -50,8 +50,7 @@ defmodule KlassHero.Messaging do
     ReplyToEmail,
     ScheduleEmailContentFetch,
     SendMessage,
-    StartConversationWithMessage,
-    StartProgramConversation
+    StartConversationWithMessage
   }
 
   alias KlassHero.Messaging.Attachment
@@ -217,30 +216,6 @@ defmodule KlassHero.Messaging do
   def acting_provider_id(%{provider: %{id: id}}), do: id
   def acting_provider_id(%{staff_member: %{provider_id: id}}), do: id
   def acting_provider_id(_scope), do: nil
-
-  @doc """
-  Starts (or retrieves) a direct conversation between a parent and a provider
-  in the context of a specific program.
-
-  Resolves the provider owner automatically and auto-adds program-assigned
-  staff as participants. Intended for parent-initiated flows where the UI
-  only knows the `program_id` and `provider_id`.
-
-  ## Parameters
-  - scope: The parent's scope (for entitlement checks)
-  - provider_id: The provider profile ID
-  - program_id: The program being discussed
-
-  ## Returns
-  - `{:ok, conversation}` - New or existing direct conversation
-  - `{:error, :not_found}` - Provider does not exist
-  - `{:error, :not_entitled}` - Parent cannot initiate messaging
-  """
-  @spec start_program_conversation(Scope.t(), String.t(), String.t()) ::
-          {:ok, Conversation.t()} | {:error, :not_found | :not_entitled | term()}
-  defdelegate start_program_conversation(scope, provider_id, program_id),
-    to: StartProgramConversation,
-    as: :execute
 
   @doc """
   Sends a message to a conversation.
@@ -896,7 +871,15 @@ defmodule KlassHero.Messaging do
           {:ok, Conversation.t()} | {:error, :duplicate_broadcast | Ecto.Changeset.t()}
   def create_conversation(attrs) do
     context_span entity: "conversation" do
-      create_attrs = Map.take(attrs, [:type, :provider_id, :program_id, :subject])
+      create_attrs =
+        Map.take(attrs, [
+          :type,
+          :provider_id,
+          :program_id,
+          :subject,
+          :principal_a_id,
+          :principal_b_id
+        ])
 
       %Conversation{}
       |> Conversation.create_changeset(create_attrs)
@@ -989,11 +972,11 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Finds the direct conversation between a provider and a user, if any."
-  @spec find_direct_conversation(String.t(), String.t()) ::
+  @doc "Finds the direct conversation between two users at a provider, if any."
+  @spec find_direct_conversation(String.t(), String.t(), String.t()) ::
           {:ok, Conversation.t()} | {:error, :not_found}
-  def find_direct_conversation(provider_id, user_id) do
-    ConversationQueries.find_direct(provider_id, user_id)
+  def find_direct_conversation(provider_id, user_id_1, user_id_2) do
+    ConversationQueries.find_direct(provider_id, user_id_1, user_id_2)
     |> Repo.one()
     |> case do
       nil -> {:error, :not_found}

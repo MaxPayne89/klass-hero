@@ -96,14 +96,28 @@ defmodule KlassHero.Messaging.Queries.ConversationQueries do
   end
 
   @doc """
-  Find direct conversation between provider and user.
+  Filter to the conversation whose principal pair is these two, in either order.
   """
-  def find_direct(provider_id, user_id) do
+  def between_principals(query \\ base(), user_id_1, user_id_2) do
+    {a, b} = Conversation.principal_pair(user_id_1, user_id_2)
+
+    where(query, [conversation: c], c.principal_a_id == ^a and c.principal_b_id == ^b)
+  end
+
+  @doc """
+  Find the direct conversation between two specific users at a provider.
+
+  Keyed on identity, not membership. Keying on "is a participant" cannot tell a
+  provider-staff thread from a parent thread that staff member happens to sit in
+  (`AddAssignedStaff` seats them), and hands an owner their staff member's thread
+  with a parent — #1521.
+  """
+  def find_direct(provider_id, user_id_1, user_id_2) do
     base()
     |> by_provider(provider_id)
     |> by_type(:direct)
     |> active_only()
-    |> where_user_is_participant(user_id)
+    |> between_principals(user_id_1, user_id_2)
   end
 
   @doc """

@@ -133,7 +133,7 @@ defmodule KlassHero.Messaging.BroadcastToProgram do
     Outbox.transact(@context, fn ->
       with {:ok, inserted} <- KlassHero.Messaging.add_participants(conversation.id, candidate_ids),
            {:ok, {_staff_ids, staff_events}} <-
-             AddAssignedStaff.execute(conversation.id, conversation.program_id, scope.user.id) do
+             AddAssignedStaff.execute(conversation.id, conversation.program_id, [scope.user.id]) do
         {:ok, :ok, build_broadcast_event(conversation.id, inserted) ++ staff_events}
       end
     end)
