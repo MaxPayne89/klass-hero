@@ -137,6 +137,7 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
           |> assign(:conversation, conversation)
           |> assign(:compose_target, nil)
           |> assign(:broadcast?, conversation.type == :program_broadcast)
+          |> assign(:internal?, Messaging.internal_conversation?(conversation))
           |> assign(:has_more, has_more)
           |> assign(:messages_empty?, Enum.empty?(messages))
           |> assign(:sender_names, sender_names)
@@ -190,6 +191,10 @@ defmodule KlassHeroWeb.MessagingLiveHelper do
           |> assign(:conversation, nil)
           |> assign(:compose_target, target)
           |> assign(:broadcast?, false)
+          |> assign(
+            :internal?,
+            Messaging.internal_pair?(target.provider_id, scope.user.id, target.target_user_id)
+          )
           |> assign(:has_more, false)
           |> assign(:messages_empty?, true)
           |> assign(:sender_names, %{})

@@ -192,6 +192,28 @@ defmodule KlassHero.Messaging do
   def can_message_parent?(_scope, _provider_id, _program_id, _parent_user_id), do: false
 
   @doc """
+  Is this thread between two of the provider's own people (owner and/or staff)?
+
+  Exists for the standing monitoring disclosure, which is written for a thread with
+  a parent on one side. On an internal thread it would tell a provider owner that
+  "the activity provider" may review their own message, and invoke child
+  safeguarding over a thread containing no child.
+
+  Classified here rather than in the web layer so the rule stays beside
+  `provider_relation/2`, the primitive the compose gate and sender attribution
+  already share.
+  """
+  @spec internal_conversation?(Conversation.t()) :: boolean()
+  defdelegate internal_conversation?(conversation), to: Authorization
+
+  @doc """
+  The same question for two users, for the compose screen — where the thread does
+  not exist yet but the pair about to be written is known.
+  """
+  @spec internal_pair?(String.t(), String.t() | nil, String.t() | nil) :: boolean()
+  defdelegate internal_pair?(provider_id, user_a_id, user_b_id), to: Authorization
+
+  @doc """
   The provider a scope acts for — its own profile, or the one employing it.
 
   A staff scope carries no `:provider`; the employer lives on `:staff_member`, and
