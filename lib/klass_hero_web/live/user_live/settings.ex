@@ -202,6 +202,25 @@ defmodule KlassHeroWeb.UserLive.Settings do
                 </div>
               </.form>
             </div>
+            <div class="p-5 border-t border-[var(--border-light)]">
+              <h3 class="text-sm font-semibold mb-3 text-hero-black">
+                {gettext("Email notifications")}
+              </h3>
+              <p class="text-sm mb-4 text-[var(--fg-muted)]">
+                {gettext("Choose which emails you want us to send you")}
+              </p>
+              <.form
+                for={@notification_form}
+                id="notification_preferences_form"
+                phx-change="update_notification_preferences"
+              >
+                <.input
+                  field={@notification_form[:new_message_email]}
+                  type="checkbox"
+                  label={gettext("Email me when I receive a new message")}
+                />
+              </.form>
+            </div>
           </.kh_card>
 
           <%!-- Profiles --%>
@@ -433,6 +452,7 @@ defmodule KlassHeroWeb.UserLive.Settings do
       |> assign(:email_form, to_form(email_changeset))
       |> assign(:password_form, to_form(password_changeset))
       |> assign(:locale_form, to_form(locale_changeset))
+      |> assign_notification_form(user)
       |> assign(:delete_form, to_form(%{"password" => ""}, as: :delete))
       |> assign(:trigger_submit, false)
       |> assign(:user_initials, get_user_initials(user.email))
@@ -457,6 +477,17 @@ defmodule KlassHeroWeb.UserLive.Settings do
   # Only these two are self-grantable. :staff is an employment link to someone
   # else's business (ADR-0005) — a provider adds themselves to their own team
   # from the team page, and nobody can hire themselves into another's.
+  # One boolean per notification kind, keyed the way the checkbox reads: on
+  # means "send me this". The stored column is the inverse — that inversion is
+  # Accounts' business, and nothing here should learn it.
+  defp assign_notification_form(socket, user) do
+    params = %{
+      "new_message_email" => Accounts.email_notification_enabled?(user, :new_message_email)
+    }
+
+    assign(socket, :notification_form, to_form(params, as: :notifications))
+  end
+
   @self_grantable [:parent, :provider]
 
   defp addable_personas(scope), do: @self_grantable -- Persona.available(scope)
@@ -644,6 +675,23 @@ defmodule KlassHeroWeb.UserLive.Settings do
   # first, and only its redirect re-renders the root layout's <html lang>.
   def handle_event("update_locale", %{"user" => %{"locale" => locale}}, socket) do
     {:noreply, redirect(socket, to: ~p"/locale/#{locale}?return_to=/users/settings")}
+  end
+
+  # Unlike update_locale above, this persists in place — there is no session to
+  # write, so nothing forces a redirect. The form renders from its own assign
+  # rather than @current_scope.user, which no handler on this page refreshes.
+  def handle_event("update_notification_preferences", %{"notifications" => %{"new_message_email" => enabled}}, socket) do
+    case Accounts.update_user_email_notification_preference(
+           socket.assigns.current_scope.user,
+           :new_message_email,
+           enabled == "true"
+         ) do
+      {:ok, user} ->
+        {:noreply, assign_notification_form(socket, user)}
+
+      {:error, %Ecto.Changeset{}} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not update your notification preferences."))}
+    end
   end
 
   def handle_event("delete_account", %{"delete" => %{"password" => password}}, socket) do

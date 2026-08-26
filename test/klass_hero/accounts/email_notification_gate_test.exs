@@ -107,15 +107,4 @@ defmodule KlassHero.Accounts.EmailNotificationGateTest do
       assert Accounts.notifiable_recipients([], @kind) == %{}
     end
   end
-
-  describe "change_user_email_notification_preferences/2" do
-    test "builds a changeset the settings form can render" do
-      user = user_fixture()
-
-      changeset = Accounts.change_user_email_notification_preferences(user)
-
-      assert %Ecto.Changeset{} = changeset
-      assert Ecto.Changeset.get_field(changeset, :disabled_email_notifications) == []
-    end
-  end
 end

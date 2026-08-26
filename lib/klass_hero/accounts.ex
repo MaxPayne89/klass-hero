@@ -431,14 +431,6 @@ defmodule KlassHero.Accounts do
   end
 
   @doc """
-  Changeset for the settings form's notification preferences section.
-  """
-  @spec change_user_email_notification_preferences(User.t(), map()) :: Ecto.Changeset.t()
-  def change_user_email_notification_preferences(user, attrs \\ %{}) do
-    User.email_notification_preferences_changeset(user, attrs)
-  end
-
-  @doc """
   Remembers the surface this user last chose to work in (ADR-0005).
 
   A preference, not a grant: the caller is responsible for having checked that
