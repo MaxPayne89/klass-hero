@@ -6,6 +6,7 @@ defmodule KlassHero.Messaging.ListStaffConversationsTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Messaging
+  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ListStaffConversations
   alias KlassHero.Messaging.StaffConversation
   alias KlassHero.ProviderFixtures
@@ -32,12 +33,25 @@ defmodule KlassHero.Messaging.ListStaffConversationsTest do
     }
   end
 
+  # A fresh parent per thread, all named the same. One staff member cannot hold two
+  # live threads with one parent — `conversations_active_direct_per_pair` forbids it —
+  # so the pagination and batching tests below need distinct counterparties, which is
+  # also what a real inbox holds.
   defp staff_thread(ctx, attrs \\ []) do
+    parent = AccountsFixtures.user_fixture(name: "Pat Parent")
+    {a, b} = Conversation.principal_pair(ctx.staff_user.id, parent.id)
+
     conversation =
-      insert(:conversation_schema, Keyword.merge([provider_id: ctx.provider.id], attrs))
+      insert(
+        :conversation_schema,
+        Keyword.merge(
+          [provider_id: ctx.provider.id, principal_a_id: a, principal_b_id: b],
+          attrs
+        )
+      )
 
     insert(:participant_schema, conversation_id: conversation.id, user_id: ctx.staff_user.id)
-    insert(:participant_schema, conversation_id: conversation.id, user_id: ctx.parent.id)
+    insert(:participant_schema, conversation_id: conversation.id, user_id: parent.id)
 
     conversation
   end

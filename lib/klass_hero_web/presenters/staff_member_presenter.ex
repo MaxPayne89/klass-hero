@@ -32,7 +32,9 @@ defmodule KlassHeroWeb.Presenters.StaffMemberPresenter do
       active: staff.active,
       invitation_status: staff.invitation_status,
       invitation_status_label: invitation_status_label(staff.invitation_status),
-      can_resend?: staff.invitation_status in [:failed, :expired]
+      can_resend?: staff.invitation_status in [:failed, :expired],
+      user_id: staff.user_id,
+      can_message?: not is_nil(staff.user_id)
     }
   end
 

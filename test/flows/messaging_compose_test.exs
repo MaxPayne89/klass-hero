@@ -126,4 +126,48 @@ defmodule KlassHeroWeb.Flows.MessagingComposeTest do
     |> click_link("Welcome aboard!")
     |> assert_has("[data-role=message]", text: "Welcome aboard!")
   end
+
+  # #747 end to end, from the team page rather than a hand-built URL, because the
+  # entry point is half of what the issue asks for. No program is involved: an
+  # internal thread carries none, which is what keeps assigned staff out of it.
+  test "a provider messages their own staff member from the team page", %{
+    conn: conn,
+    provider_user: provider_user,
+    provider: provider,
+    program: program
+  } do
+    staff_user = user_fixture(%{name: "Sam Staff", intended_roles: [:staff]})
+
+    assign_active_staff(%{
+      provider_id: provider.id,
+      program_id: program.id,
+      staff_user_id: staff_user.id
+    })
+
+    with_real_outbox(fn ->
+      conn
+      |> log_in_user(provider_user)
+      |> visit(~p"/provider/dashboard/team")
+      |> click_button("Message")
+      |> fill_in("#message-input", "Message", with: "Can you cover Tuesday?")
+      |> submit()
+    end)
+
+    # Found by the pair, which is the property the whole change turns on.
+    assert {:ok, thread} =
+             KlassHero.Messaging.find_direct_conversation(
+               provider.id,
+               provider_user.id,
+               staff_user.id
+             )
+
+    assert thread.type == :direct
+    assert thread.program_id == nil
+
+    build_conn()
+    |> log_in_user(staff_user)
+    |> visit(~p"/staff/messages")
+    |> click_link("Can you cover Tuesday?")
+    |> assert_has("[data-role=message]", text: "Can you cover Tuesday?")
+  end
 end
