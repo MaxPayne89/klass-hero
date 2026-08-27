@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
+  alias KlassHero.Accounts.Scope
   alias KlassHero.Participation
   alias KlassHero.ProviderFixtures
 
@@ -121,6 +122,31 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
       send(view.pid, {:session_changed, future.id})
 
       refute has_element?(view, "button[phx-value-session_id='#{future.id}']")
+    end
+
+    # The sibling case, and the one that actually regressed: a session this staff
+    # member *is* on, rendered on today's list, then rescheduled away. The test
+    # above only ever covered a session that was never inserted, so the off-date
+    # branch could return the socket unchanged and still look correct (#1074).
+    # `SessionsLive` has the same test — this pair has drifted before (#921).
+    test "removes a rendered session once it is rescheduled off the day on screen",
+         %{conn: conn} = ctx do
+      program = assigned_program(ctx, title: "Soccer Training")
+      session = session_on(program, Date.utc_today(), :scheduled)
+
+      {:ok, view, _html} = live(conn, ~p"/staff/sessions")
+      assert has_element?(view, "button[phx-value-session_id='#{session.id}']")
+
+      {:ok, _moved} =
+        Participation.update_session(
+          %Scope{provider: ctx.provider},
+          session.id,
+          %{session_date: Date.add(Date.utc_today(), 4)}
+        )
+
+      send(view.pid, {:session_changed, session.id})
+
+      refute has_element?(view, "button[phx-value-session_id='#{session.id}']")
     end
 
     test "shows sessions of assigned programs only, whatever the staff member's Specialties",
