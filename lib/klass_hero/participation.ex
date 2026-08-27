@@ -60,26 +60,46 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   @doc """
-  Creates a new program session.
+  Schedules a new session on `params.program_id`, on behalf of `scope`.
 
   Required params: `program_id`, `session_date`, `start_time`, `end_time`.
 
-  Returns `{:ok, session}`, `{:error, :invalid_time_range}`, or `{:error, :duplicate_session}`.
+  Gated like `start_session/2` and `complete_session/2`, and for the same reason
+  (#1373, ADR-0019): this took bare params until #1074, with the ownership check
+  spelled out in `SessionsLive` as a `provider_program_ids` MapSet test. A second
+  create surface in Program Inventory would have been a second copy of that rule,
+  and a rule respelled per surface is one a surface eventually omits.
+
+  Authorization runs before validation, so a caller with no standing on the
+  program learns nothing about whether their params would have been accepted.
+
+  Returns `{:ok, session}`, `{:error, :unauthorized}`, `{:error, :invalid_time_range}`,
+  or `{:error, :duplicate_session}`.
   """
-  def create_session(params) when is_map(params) do
+  @spec create_session(Scope.t(), map()) ::
+          {:ok, ProgramSession.t()} | {:error, :unauthorized | :invalid_time_range | :duplicate_session}
+  def create_session(%Scope{} = scope, params) when is_map(params) do
     context_span entity: "session" do
       session_attrs =
         params
         |> Map.put(:id, Ecto.UUID.generate())
         |> Map.put(:status, :scheduled)
 
-      with {:ok, session} <- ProgramSession.new(session_attrs),
+      with {:ok, _role} <- authorize_creation(scope, params),
+           {:ok, session} <- ProgramSession.new(session_attrs),
            {:ok, {persisted, events}} <- insert_session_with_event(session) do
         Notifications.notify_all(events)
         {:ok, persisted}
       end
     end
   end
+
+  # A missing program_id can never be owned, so it refuses here rather than
+  # reaching the changeset's `validate_required` — same reasoning as above.
+  defp authorize_creation(scope, %{program_id: program_id}) when is_binary(program_id),
+    do: SessionAuthorization.authorize_creation(scope, program_id)
+
+  defp authorize_creation(_scope, _params), do: {:error, :unauthorized}
 
   @doc """
   Brings a program's generated sessions into agreement with its recurring schedule.

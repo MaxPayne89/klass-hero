@@ -108,7 +108,7 @@ defmodule KlassHero.Participation.SyncSessionsForProgramTest do
       program = fortnightly_program()
 
       {:ok, manual} =
-        Participation.create_session(%{
+        Participation.create_session(admin_scope(), %{
           program_id: program.id,
           session_date: Date.add(Date.utc_today(), 3),
           start_time: ~T[09:00:00],

@@ -40,8 +40,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     provider_programs =
       TaskHelpers.safe_await(programs_task, [], label: "SessionsLive.programs")
 
-    provider_program_ids = MapSet.new(provider_programs, & &1.id)
-
     docs = unwrap(TaskHelpers.safe_await(docs_task, {:ok, []}, label: "SessionsLive.docs"))
 
     business = build_business_view(provider, docs)
@@ -53,7 +51,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
       |> assign(:provider_id, provider_id)
       |> assign(:selected_date, selected_date)
       |> assign(:provider_programs, provider_programs)
-      |> assign(:provider_program_ids, provider_program_ids)
       |> assign(:program_names, program_names(provider_programs))
       |> assign(:business, business)
       |> assign(:form, nil)
@@ -178,19 +175,14 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   end
 
   @impl true
+  # Ownership is no longer checked here. `Participation.create_session/2` asks
+  # `SessionAuthorization` itself (#1074), so a tampered program_id is refused for
+  # every caller rather than for whichever surface remembered to look.
   def handle_event("save_session", %{"session" => params}, socket) do
-    program_id = params["program_id"]
-
-    cond do
-      program_id in [nil, ""] ->
-        {:noreply, put_flash(socket, :error, gettext("Program is required"))}
-
-      not MapSet.member?(socket.assigns.provider_program_ids, program_id) ->
-        # Verify ownership server-side — the dropdown only shows their programs but form data can be tampered.
-        {:noreply, put_flash(socket, :error, gettext("Unauthorized"))}
-
-      true ->
-        do_create_session(params, socket)
+    if params["program_id"] in [nil, ""] do
+      {:noreply, put_flash(socket, :error, gettext("Program is required"))}
+    else
+      do_create_session(params, socket)
     end
   end
 
@@ -338,7 +330,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     socket =
       socket
       |> assign(:provider_programs, programs)
-      |> assign(:provider_program_ids, MapSet.new(programs, & &1.id))
       |> assign(:program_names, program_names(programs))
       |> load_sessions()
 
@@ -501,14 +492,14 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   defp do_create_session(params, socket) do
     case coerce_session_params(params) do
       {:ok, coerced} ->
-        case Participation.create_session(coerced) do
+        case Participation.create_session(socket.assigns.current_scope, coerced) do
           {:ok, _session} ->
             {:noreply,
              socket
              |> put_flash(:info, gettext("Session created successfully"))
              |> push_patch(to: ~p"/provider/sessions")}
 
-          {:error, reason} when reason in [:invalid_time_range, :duplicate_session] ->
+          {:error, reason} when reason in [:invalid_time_range, :duplicate_session, :unauthorized] ->
             # User-correctable domain error: show humanized message without "Failed" prefix.
             {:noreply, put_flash(socket, :error, humanize_error(reason))}
 
@@ -588,6 +579,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   defp humanize_error(:invalid_time_range), do: gettext("End time must be after start time")
   defp humanize_error(:duplicate_session), do: gettext("A session already exists at this time")
+  defp humanize_error(:unauthorized), do: gettext("Unauthorized")
 
   defp humanize_error(:missing_required_fields), do: gettext("Please fill in all required fields")
 
