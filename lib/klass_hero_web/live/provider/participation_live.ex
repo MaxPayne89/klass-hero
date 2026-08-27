@@ -9,10 +9,13 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       find_participation_record: 2
     ]
 
+  import KlassHeroWeb.ProviderComponents, only: [session_form: 1]
+
   alias KlassHero.Participation
   alias KlassHero.ProgramCatalog
   alias KlassHeroWeb.Helpers.ParticipationEditHelpers
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
+  alias KlassHeroWeb.Helpers.SessionFormHandlers
   alias KlassHeroWeb.Theme
 
   require Logger
@@ -44,6 +47,7 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
       |> assign(:edit_forms, %{})
       |> assign(:provider_notes, %{})
       |> assign(:record_note_map, %{})
+      |> assign(:session_form, nil)
 
     if connected?(socket) do
       # One topic for everything this provider does — attendance and session notes
@@ -65,6 +69,52 @@ defmodule KlassHeroWeb.Provider.ParticipationLive do
   @impl true
   def handle_event("complete_session", _params, socket) do
     ParticipationLiveHandlers.complete_session(socket, &load_session_data/1)
+  end
+
+  # --- Session editing (#1074) --------------------------------------------
+  #
+  # The session id comes from the socket, not the client, and
+  # `Participation.update_session/3` authorizes it again regardless.
+
+  @impl true
+  def handle_event("edit_session", _params, socket) do
+    form = socket.assigns.session |> SessionFormHandlers.form_from_session() |> to_form(as: :session)
+
+    {:noreply, assign(socket, :session_form, form)}
+  end
+
+  @impl true
+  def handle_event("cancel_edit_session", _params, socket) do
+    {:noreply, assign(socket, :session_form, nil)}
+  end
+
+  @impl true
+  def handle_event("validate_session", %{"session" => params}, socket) do
+    {:noreply, assign(socket, :session_form, to_form(params, as: :session))}
+  end
+
+  @impl true
+  def handle_event("save_session", %{"session" => params}, socket) do
+    case SessionFormHandlers.submit_update(socket.assigns.current_scope, socket.assigns.session_id, params) do
+      {:ok, _session} ->
+        {:noreply,
+         socket
+         |> assign(:session_form, nil)
+         |> put_flash(:info, gettext("Session updated"))
+         |> load_session_data()}
+
+      {:error, reason} ->
+        if !SessionFormHandlers.user_correctable?(reason) do
+          Logger.error(
+            "[ParticipationLive.save_session] Failed to update session",
+            session_id: socket.assigns.session_id,
+            reason: inspect(reason),
+            provider_id: socket.assigns.provider_id
+          )
+        end
+
+        {:noreply, put_flash(socket, :error, SessionFormHandlers.humanize_error(reason))}
+    end
   end
 
   @impl true

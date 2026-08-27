@@ -57,6 +57,7 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
   use KlassHero.Shared.Projection,
     topics: [
       "integration:participation:session_created",
+      "integration:participation:session_updated",
       "integration:participation:sessions_generated",
       "integration:participation:session_started",
       "integration:participation:session_completed",
@@ -101,6 +102,24 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetails do
   # rather than once per session as the per-session clause above does.
   def handle_event(:sessions_generated, %Event{payload: %{program_id: program_id, sessions: sessions}}) do
     Enum.each(sessions, &project_session_created(Map.put(&1, :program_id, program_id)))
+  end
+
+  # The schedule, and only the schedule. Status, staffing and the attendance
+  # counters are each owned by their own event, and re-deriving them from an edit
+  # would let a stale field in the payload overwrite a fresher one projected since.
+  def handle_event(:session_updated, %Event{payload: payload} = event) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    from(d in SessionDetail, where: d.session_id == ^event.entity_id)
+    |> Repo.update_all(
+      set: [
+        session_date: payload.session_date,
+        start_time: payload.start_time,
+        end_time: payload.end_time,
+        updated_at: now
+      ]
+    )
+    |> warn_if_missing("session update", session_id: event.entity_id)
   end
 
   def handle_event(:session_started, %Event{} = event) do

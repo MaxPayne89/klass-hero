@@ -39,7 +39,18 @@ defmodule KlassHero.Participation.Notifications do
 
   require Logger
 
-  @session_events [:session_created, :session_started, :session_completed, :session_cancelled, :roster_seeded]
+  # A session event missing from this list is not a smaller broadcast — it is no
+  # broadcast at all: `message/1` falls through to the catch-all `nil` and `notify/1`
+  # returns `:ok` having told nobody. The write lands, the projection lands, and
+  # every already-mounted LiveView keeps rendering the old row (#1074).
+  @session_events [
+    :session_created,
+    :session_updated,
+    :session_started,
+    :session_completed,
+    :session_cancelled,
+    :roster_seeded
+  ]
 
   @attendance_kinds %{
     child_checked_in: :checked_in,

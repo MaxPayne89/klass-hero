@@ -317,6 +317,10 @@ config :klass_hero, :event_consumers, %{
     {SeedSessionRosterHandler, :handle_event},
     {ProviderSessionDetails, :project}
   ],
+  # No roster handler: an edit moves a session that already has one.
+  "integration:participation:session_updated" => [
+    {ProviderSessionDetails, :project}
+  ],
   "integration:participation:sessions_generated" => [
     {SeedSessionRosterHandler, :handle_event},
     {ProviderSessionDetails, :project}

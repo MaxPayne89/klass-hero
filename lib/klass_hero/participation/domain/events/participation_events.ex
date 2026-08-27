@@ -29,6 +29,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
   # call site, so a new factory cannot invent one.
   @event_entities %{
     session_created: :session,
+    session_updated: :session,
     sessions_generated: :program,
     session_started: :session,
     session_completed: :session,
@@ -61,6 +62,29 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
     }
 
     new_event(:session_created, session.id, payload, opts)
+  end
+
+  @doc """
+  Creates a session_updated event.
+
+  Carries the same full snapshot as `session_created/2` rather than a diff, and
+  is built from the same fields for the same reason: two builders of one shape
+  drift, and when #1450 let them, the catalog showed €0.00 for months. A consumer
+  can therefore project an update with the clause it already has for a create.
+  """
+  @spec session_updated(ProgramSession.t(), keyword()) :: Event.t()
+  def session_updated(%ProgramSession{} = session, opts \\ []) do
+    payload = %{
+      session_id: session.id,
+      program_id: session.program_id,
+      session_date: session.session_date,
+      start_time: session.start_time,
+      end_time: session.end_time,
+      location: session.location,
+      max_capacity: session.max_capacity
+    }
+
+    new_event(:session_updated, session.id, payload, opts)
   end
 
   @doc """

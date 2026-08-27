@@ -15,6 +15,7 @@ defmodule KlassHero.Participation.OutboxStagingTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Participation
+  alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Shared.Adapters.Driven.Events.TestOutbox
 
   setup do
@@ -30,9 +31,14 @@ defmodule KlassHero.Participation.OutboxStagingTest do
 
   defp staged_types, do: Enum.map(TestOutbox.staged(), & &1.event_type)
 
+  # A bare struct, not `admin_scope()`: this runs *after* the outbox is armed, and
+  # the admin fixture creates a User, which stages user_registered/user_confirmed of
+  # its own. Only `provider.id` is read on the creation path, so no row is needed.
+  defp owner_scope(program), do: %Scope{provider: %ProviderProfile{id: program.provider_id}}
+
   defp create_session(program) do
     {:ok, session} =
-      Participation.create_session(%{
+      Participation.create_session(owner_scope(program), %{
         program_id: program.id,
         session_date: Date.utc_today(),
         start_time: ~T[09:00:00],
@@ -46,6 +52,21 @@ defmodule KlassHero.Participation.OutboxStagingTest do
     session = create_session(program)
 
     assert [:session_created] = staged_types()
+    assert [%{entity_id: entity_id}] = TestOutbox.staged()
+    assert entity_id == session.id
+  end
+
+  # `Outbox.stage/2` drops an event with no `:event_consumers` entry, so this
+  # fails loudly if the registry line is ever removed — the failure mode that is
+  # otherwise a silently unmaintained read table.
+  test "update_session stages session_updated", %{program: program} do
+    session = create_session(program)
+    TestOutbox.setup()
+
+    {:ok, _updated} =
+      Participation.update_session(owner_scope(program), session.id, %{session_date: ~D[2026-12-01]})
+
+    assert [:session_updated] = staged_types()
     assert [%{entity_id: entity_id}] = TestOutbox.staged()
     assert entity_id == session.id
   end

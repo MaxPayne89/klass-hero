@@ -258,6 +258,36 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       # Session still present in the stream afterwards (no crash)
       assert has_element?(view, "button", "Start Session")
     end
+
+    # Before #1074 a session's date could not change, so a `:session_changed` for
+    # another day was correctly ignored. A reschedule can move one now, and an
+    # ignored message would leave the row rendered under a day it is not on.
+    test "removes a session from the stream once it is rescheduled off the day on screen", %{
+      conn: conn,
+      provider: provider,
+      scope: scope
+    } do
+      program = insert(:program_schema, provider_id: provider.id)
+      _listing = insert(:program_listing_schema, id: program.id, provider_id: provider.id)
+
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      assert has_element?(view, "button", "Start Session")
+
+      {:ok, _moved} =
+        Participation.update_session(scope, session.id, %{session_date: Date.add(Date.utc_today(), 3)})
+
+      send(view.pid, {:session_changed, session.id})
+
+      refute has_element?(view, "button", "Start Session")
+    end
   end
 
   describe "create session modal" do
@@ -580,10 +610,21 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   describe "Create Session button" do
     setup :register_and_log_in_provider
 
-    test "shows 'Create Session' button on sessions page", %{conn: conn} do
+    # Moved to Program Inventory's Sessions popup (#1074), where a program is
+    # already in hand. This page becomes the read-only Schedule in #1501, so the
+    # CTA had to leave before the page does.
+    test "no longer offers session creation from My Sessions", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/sessions")
 
-      assert has_element?(view, ~s(a[href="/provider/sessions/new"]), "Create Session")
+      refute has_element?(view, ~s(a[href="/provider/sessions/new"]))
+    end
+
+    # The route survives the button: #1501 owns removing it, and a URL that 500s
+    # in the meantime would be a worse regression than an unlinked page.
+    test "the /new route still renders for anyone holding the URL", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
+
+      assert has_element?(view, "#create-session-form")
     end
   end
 
