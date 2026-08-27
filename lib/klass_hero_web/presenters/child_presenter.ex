@@ -15,7 +15,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
     %{
       id: child.id,
       name: Child.full_name(child),
-      age: calculate_age(child.date_of_birth)
+      age: age_in_years(child.date_of_birth, Date.utc_today())
     }
   end
 
@@ -35,7 +35,7 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
     %{
       id: child.id,
       name: Child.full_name(child),
-      age: calculate_age(child.date_of_birth),
+      age: age_in_years(child.date_of_birth, Date.utc_today()),
       initials: NameUtils.initials_from_name(Child.full_name(child))
     }
   end
@@ -59,21 +59,32 @@ defmodule KlassHeroWeb.Presenters.ChildPresenter do
   def children_summary(children) when is_list(children) do
     Enum.map_join(children, ", ", fn child ->
       view = to_simple_view(child)
-      "#{view.name} (#{view.age})"
+
+      # Interpolating a nil age renders "Emma Smith ()" — `to_string(nil)` is "".
+      # Drop the parenthetical instead, the way format_birth_date/1 drops the date.
+      if view.age, do: "#{view.name} (#{view.age})", else: view.name
     end)
   end
 
-  defp calculate_age(date_of_birth) do
-    today = Date.utc_today()
-    years = today.year - date_of_birth.year
+  @doc """
+  Age in whole years from `date_of_birth` to `reference_date`.
 
-    if Date.after?(
-         Date.new!(today.year, date_of_birth.month, date_of_birth.day),
-         today
-       ) do
-      years - 1
-    else
-      years
-    end
+  Returns nil for an unknown date of birth — a GDPR-anonymized child keeps its
+  enrolments, so a roster can carry one.
+
+  The reference date is a parameter rather than `Date.utc_today()` so callers
+  that need a deterministic answer (tests, backdated reports) can supply one.
+  """
+  @spec age_in_years(Date.t() | nil, Date.t()) :: non_neg_integer() | nil
+  def age_in_years(nil, _reference_date), do: nil
+
+  def age_in_years(date_of_birth, reference_date) do
+    years = reference_date.year - date_of_birth.year
+
+    # Tuple comparison rather than Date.new!/3, which raises on a Feb-29 date of
+    # birth in a non-leap reference year.
+    if {reference_date.month, reference_date.day} < {date_of_birth.month, date_of_birth.day},
+      do: years - 1,
+      else: years
   end
 end

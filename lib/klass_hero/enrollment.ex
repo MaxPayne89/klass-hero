@@ -611,8 +611,8 @@ defmodule KlassHero.Enrollment do
   @doc """
   Lists enriched enrollment roster entries for a program.
 
-  Returns a list of maps with child_name, enrollment status, and enrolled_at.
-  Used by the provider dashboard to display the program roster.
+  Returns a list of maps with child_name, date_of_birth, enrollment status, and
+  enrolled_at. Used by the provider dashboard to display the program roster.
   """
   def list_program_enrollments(program_id) when is_binary(program_id) do
     case list_active_by_program(program_id) do
@@ -676,11 +676,9 @@ defmodule KlassHero.Enrollment do
   end
 
   defp build_roster_entry(enrollment, child_map, parent_map, waiver_status) do
-    child_name =
-      case Map.get(child_map, enrollment.child_id) do
-        nil -> "Unknown"
-        child -> "#{child.first_name} #{child.last_name}"
-      end
+    child = Map.get(child_map, enrollment.child_id)
+
+    child_name = if child, do: "#{child.first_name} #{child.last_name}", else: "Unknown"
 
     # nil parent_user_id disables the message button in UI (orphaned/deleted parent profile)
     parent_user_id =
@@ -693,6 +691,8 @@ defmodule KlassHero.Enrollment do
       enrollment_id: enrollment.id,
       child_id: enrollment.child_id,
       child_name: child_name,
+      # nil for a GDPR-anonymized child, which keeps its enrollments
+      date_of_birth: child && child.date_of_birth,
       parent_id: enrollment.parent_id,
       parent_user_id: parent_user_id,
       status: enrollment.status,

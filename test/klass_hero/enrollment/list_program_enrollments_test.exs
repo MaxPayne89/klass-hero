@@ -126,6 +126,40 @@ defmodule KlassHero.Enrollment.ListProgramEnrollmentsTest do
       assert entry.parent_id == to_string(parent.id)
       assert entry.parent_user_id == nil
     end
+
+    test "includes the child's date of birth" do
+      program = insert(:program_schema)
+      {child, parent} = insert_child_with_guardian(date_of_birth: ~D[2015-03-04])
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        child_id: child.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      [entry] = KlassHero.Enrollment.list_program_enrollments(program.id)
+
+      assert entry.date_of_birth == ~D[2015-03-04]
+    end
+
+    # A GDPR-anonymized child keeps its row and its enrollments, but loses its
+    # date of birth — so nil is a value the roster must survive, not an oddity.
+    test "returns a nil date of birth for an anonymized child" do
+      program = insert(:program_schema)
+      {child, parent} = insert_child_with_guardian(date_of_birth: nil)
+
+      insert(:enrollment_schema,
+        program_id: program.id,
+        child_id: child.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+
+      [entry] = KlassHero.Enrollment.list_program_enrollments(program.id)
+
+      assert entry.date_of_birth == nil
+    end
   end
 
   describe "waiver status" do

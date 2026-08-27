@@ -454,6 +454,49 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
       assert has_element?(view, "#invites-empty")
     end
+
+    # A Jan-1 birthday has always already passed, so the expected age is exactly
+    # the number of years subtracted — no clock arithmetic in the assertion, and
+    # nothing that rots at the next birthday.
+    test "enrolled row shows the child's date of birth and age", %{conn: conn, program: program} do
+      date_of_birth = Date.new!(Date.utc_today().year - 11, 1, 1)
+      enrollment = enroll_child(program, date_of_birth: date_of_birth)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+      view |> element("#view-roster-#{program.id}") |> render_click()
+
+      expected = "#{Calendar.strftime(date_of_birth, "%b %d, %Y")} (11)"
+
+      assert has_element?(view, "#child-dob-#{enrollment.id}", expected)
+
+      # The column is hidden below `sm`, where the same value rides under the
+      # child's name instead — so both have to carry it.
+      assert has_element?(view, "#child-dob-mobile-#{enrollment.id}", expected)
+    end
+
+    test "enrolled row shows a dash when the child has no date of birth", %{
+      conn: conn,
+      program: program
+    } do
+      enrollment = enroll_child(program, date_of_birth: nil)
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+      view |> element("#view-roster-#{program.id}") |> render_click()
+
+      assert has_element?(view, "#child-dob-#{enrollment.id}", "—")
+    end
+
+    defp enroll_child(program, child_attrs) do
+      parent = KlassHero.Factory.insert(:parent_profile_schema)
+      child = KlassHero.Factory.insert(:child_schema, child_attrs)
+
+      KlassHero.Factory.insert(:enrollment_schema,
+        program_id: program.id,
+        child_id: child.id,
+        parent_id: parent.id,
+        status: "confirmed"
+      )
+    end
   end
 
   describe "invites tab content" do
