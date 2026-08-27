@@ -8,6 +8,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   alias KlassHero.Provider
   alias KlassHero.Provider.ReadModels.SessionStaffing
   alias KlassHeroWeb.Helpers.ParticipationLiveHandlers
+  alias KlassHeroWeb.Helpers.SessionFormHandlers
   alias KlassHeroWeb.Helpers.TaskHelpers
   alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
@@ -93,7 +94,7 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
   end
 
   defp apply_action(socket, :new, _params) do
-    form_data = build_initial_form_data(socket.assigns.selected_date)
+    form_data = SessionFormHandlers.blank_form(socket.assigns.selected_date)
 
     assign(socket, :form, to_form(form_data, as: :session))
   end
@@ -168,10 +169,9 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
 
   @impl true
   def handle_event("validate_session", %{"session" => params}, socket) do
-    params = maybe_prefill_from_program(params, socket.assigns.provider_programs)
-    form = to_form(params, as: :session)
+    params = SessionFormHandlers.prefill_from_program(params, socket.assigns.provider_programs)
 
-    {:noreply, assign(socket, :form, form)}
+    {:noreply, assign(socket, :form, to_form(params, as: :session))}
   end
 
   @impl true
@@ -184,6 +184,11 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     else
       do_create_session(params, socket)
     end
+  end
+
+  @impl true
+  def handle_event("close_new_session", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/provider/sessions")}
   end
 
   # --- Session staffing panel (#782) ---------------------------------------
@@ -422,18 +427,6 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     |> put_flash(:error, gettext("That session could not be found."))
   end
 
-  defp build_initial_form_data(selected_date) do
-    %{
-      "program_id" => "",
-      "session_date" => Date.to_iso8601(selected_date),
-      "start_time" => "",
-      "end_time" => "",
-      "location" => "",
-      "notes" => "",
-      "max_capacity" => ""
-    }
-  end
-
   defp load_sessions(socket) do
     result =
       Participation.list_provider_sessions(
@@ -461,129 +454,26 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
     assign(socket, :sessions_error, reason)
   end
 
-  defp maybe_prefill_from_program(params, programs) do
-    program_id = params["program_id"]
-
-    case Enum.find(programs, &(&1.id == program_id)) do
-      nil ->
-        params
-
-      program ->
-        # Pre-fill time/location from program defaults; provider can still override any value.
-        params
-        |> maybe_set_default("start_time", format_time(program.meeting_start_time))
-        |> maybe_set_default("end_time", format_time(program.meeting_end_time))
-        |> maybe_set_default("location", program.location || "")
-    end
-  end
-
-  # Don't overwrite values the provider has already typed.
-  defp maybe_set_default(params, key, default) do
-    if params[key] in [nil, ""] do
-      Map.put(params, key, default)
-    else
-      params
-    end
-  end
-
-  defp format_time(nil), do: ""
-  defp format_time(%Time{} = time), do: Calendar.strftime(time, "%H:%M")
-
   defp do_create_session(params, socket) do
-    case coerce_session_params(params) do
-      {:ok, coerced} ->
-        case Participation.create_session(socket.assigns.current_scope, coerced) do
-          {:ok, _session} ->
-            {:noreply,
-             socket
-             |> put_flash(:info, gettext("Session created successfully"))
-             |> push_patch(to: ~p"/provider/sessions")}
+    case SessionFormHandlers.submit(socket.assigns.current_scope, params) do
+      {:ok, _session} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Session created successfully"))
+         |> push_patch(to: ~p"/provider/sessions")}
 
-          {:error, reason} when reason in [:invalid_time_range, :duplicate_session, :unauthorized] ->
-            # User-correctable domain error: show humanized message without "Failed" prefix.
-            {:noreply, put_flash(socket, :error, humanize_error(reason))}
-
-          {:error, reason} ->
-            Logger.error(
-              "[SessionsLive.save_session] Failed to create session",
-              reason: inspect(reason),
-              provider_id: socket.assigns.provider_id
-            )
-
-            {:noreply,
-             put_flash(
-               socket,
-               :error,
-               gettext("Failed to create session: %{reason}", reason: humanize_error(reason))
-             )}
+      {:error, reason} ->
+        if !SessionFormHandlers.user_correctable?(reason) do
+          Logger.error(
+            "[SessionsLive.save_session] Failed to create session",
+            reason: inspect(reason),
+            provider_id: socket.assigns.provider_id
+          )
         end
 
-      {:error, message} ->
-        {:noreply, put_flash(socket, :error, message)}
+        {:noreply, put_flash(socket, :error, SessionFormHandlers.humanize_error(reason))}
     end
   end
-
-  defp coerce_session_params(params) do
-    with {:ok, date} <- parse_date(params["session_date"]),
-         {:ok, start_time} <- parse_time(params["start_time"]),
-         {:ok, end_time} <- parse_time(params["end_time"]) do
-      coerced = %{
-        program_id: params["program_id"],
-        session_date: date,
-        start_time: start_time,
-        end_time: end_time
-      }
-
-      coerced =
-        if params["location"] in [nil, ""],
-          do: coerced,
-          else: Map.put(coerced, :location, params["location"])
-
-      coerced =
-        if params["notes"] in [nil, ""],
-          do: coerced,
-          else: Map.put(coerced, :notes, params["notes"])
-
-      coerced =
-        case Integer.parse(params["max_capacity"] || "") do
-          {value, ""} when value > 0 -> Map.put(coerced, :max_capacity, value)
-          _ -> coerced
-        end
-
-      {:ok, coerced}
-    end
-  end
-
-  defp parse_date(nil), do: {:error, gettext("Date is required")}
-  defp parse_date(""), do: {:error, gettext("Date is required")}
-
-  defp parse_date(date_string) do
-    case Date.from_iso8601(date_string) do
-      {:ok, _date} = ok -> ok
-      {:error, _} -> {:error, gettext("Invalid date format")}
-    end
-  end
-
-  defp parse_time(nil), do: {:error, gettext("Time is required")}
-  defp parse_time(""), do: {:error, gettext("Time is required")}
-
-  defp parse_time(time_string) do
-    # HTML time inputs produce "HH:MM"; Time.from_iso8601/1 requires "HH:MM:SS".
-    normalized = if byte_size(time_string) == 5, do: time_string <> ":00", else: time_string
-
-    case Time.from_iso8601(normalized) do
-      {:ok, _time} = ok -> ok
-      {:error, _} -> {:error, gettext("Invalid time format")}
-    end
-  end
-
-  defp humanize_error(:invalid_time_range), do: gettext("End time must be after start time")
-  defp humanize_error(:duplicate_session), do: gettext("A session already exists at this time")
-  defp humanize_error(:unauthorized), do: gettext("Unauthorized")
-
-  defp humanize_error(:missing_required_fields), do: gettext("Please fill in all required fields")
-
-  defp humanize_error(reason), do: inspect(reason)
 
   defp update_session_in_stream(socket, session_id) do
     case Participation.get_session_with_roster(session_id) do

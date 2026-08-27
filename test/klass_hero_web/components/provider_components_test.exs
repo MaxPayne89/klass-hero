@@ -158,7 +158,8 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
             checked_in_count: 0,
             total_count: 0
           }
-        ]
+        ],
+        form: nil
       }
 
       html = render_component(&KlassHeroWeb.ProviderComponents.sessions_modal/1, modal: modal)
@@ -172,7 +173,7 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
     end
 
     test "shows empty state when sessions is []" do
-      modal = %{program_id: "p", program_title: "T", sessions: []}
+      modal = %{program_id: "p", program_title: "T", sessions: [], form: nil}
       html = render_component(&KlassHeroWeb.ProviderComponents.sessions_modal/1, modal: modal)
       assert html =~ "No sessions scheduled yet"
     end
@@ -184,7 +185,8 @@ defmodule KlassHeroWeb.ProviderComponentsTest do
         modal = %{
           program_id: "prog-1",
           program_title: "Judo",
-          sessions: [session_detail(session_id: "s-42", status: unquote(status))]
+          sessions: [session_detail(session_id: "s-42", status: unquote(status))],
+          form: nil
         }
 
         html = render_component(&KlassHeroWeb.ProviderComponents.sessions_modal/1, modal: modal)

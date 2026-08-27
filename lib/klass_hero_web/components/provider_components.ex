@@ -1811,11 +1811,102 @@ defmodule KlassHeroWeb.ProviderComponents do
   end
 
   @doc """
+  Renders the create-session form.
+
+  The *form* is what the surfaces share; the modal chrome around it is not, so
+  each caller supplies its own and this renders only what is genuinely common.
+
+  When `program_locked?` is true the program `<select>` is replaced by static text
+  and a hidden input. The Sessions popup opens from one program's row, so asking
+  again would be a step that answers a question already answered — and the hidden
+  field is not the guard: `Participation.create_session/2` authorizes the program
+  id whatever the client sends.
+
+  ## Example
+
+      <.session_form form={@form} programs={@provider_programs} cancel_event="close_new_session" />
+  """
+  attr :form, :any, required: true
+  attr :programs, :list, default: []
+  attr :program_locked?, :boolean, default: false
+  attr :program_title, :string, default: nil
+  attr :cancel_event, :string, required: true
+
+  def session_form(assigns) do
+    ~H"""
+    <.form
+      for={@form}
+      id="create-session-form"
+      phx-change="validate_session"
+      phx-submit="save_session"
+      class="space-y-4"
+    >
+      <%= if @program_locked? do %>
+        <div>
+          <p class={["mb-1 block text-sm font-semibold", Theme.text_color(:heading)]}>
+            {gettext("Program")}
+          </p>
+          <p class="text-sm text-[var(--fg-muted)]">{@program_title}</p>
+        </div>
+        <input type="hidden" name={@form[:program_id].name} value={@form[:program_id].value} />
+      <% else %>
+        <.input
+          field={@form[:program_id]}
+          type="select"
+          label={gettext("Program")}
+          prompt={gettext("Select a program...")}
+          options={Enum.map(@programs, &{&1.title, &1.id})}
+          required
+        />
+      <% end %>
+
+      <.input field={@form[:session_date]} type="date" label={gettext("Date")} required />
+
+      <div class="grid grid-cols-2 gap-4">
+        <.input field={@form[:start_time]} type="time" label={gettext("Start Time")} required />
+        <.input field={@form[:end_time]} type="time" label={gettext("End Time")} required />
+      </div>
+
+      <.input field={@form[:location]} type="text" label={gettext("Location")} phx-debounce="blur" />
+      <.input field={@form[:notes]} type="textarea" label={gettext("Notes")} phx-debounce="blur" />
+      <.input field={@form[:max_capacity]} type="number" label={gettext("Max Capacity")} />
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button
+          type="button"
+          phx-click={@cancel_event}
+          class={[
+            "px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50",
+            Theme.rounded(:lg)
+          ]}
+        >
+          {gettext("Cancel")}
+        </button>
+        <button
+          type="submit"
+          class={[
+            "px-4 py-2 text-sm font-medium text-white bg-hero-blue-600 hover:bg-hero-blue-700",
+            Theme.rounded(:lg)
+          ]}
+        >
+          {gettext("Create Session")}
+        </button>
+      </div>
+    </.form>
+    """
+  end
+
+  @doc """
   Renders a modal listing every session of a program with date/time, assigned
   staff, attendance count, and status.
 
   "Assigned staff" is the session's *effective* staffing: its own override roster
   where the provider set one, the program roster otherwise (#782).
+
+  Since #1074 this is a management surface, not a read-only summary: rows navigate
+  into a session, and `modal.form` swaps the body for the create-session form.
+  The form replaces the list rather than stacking a second modal on top of this
+  one — nesting dialogs is how a flash ends up behind its own overlay.
 
   ## Example
 
@@ -1838,16 +1929,45 @@ defmodule KlassHeroWeb.ProviderComponents do
         class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden flex flex-col"
         phx-click-away="close_sessions"
       >
-        <div class="flex items-center justify-between px-6 py-4 border-b">
+        <div class="flex items-center justify-between gap-3 px-6 py-4 border-b">
           <h2 id="sessions-modal-title" class={Theme.typography(:section_title)}>
-            {gettext("Sessions — %{title}", title: @modal.program_title)}
+            <%= if @modal.form do %>
+              {gettext("New session — %{title}", title: @modal.program_title)}
+            <% else %>
+              {gettext("Sessions — %{title}", title: @modal.program_title)}
+            <% end %>
           </h2>
-          <button type="button" phx-click="close_sessions" aria-label={gettext("Close")}>
-            <.icon name="hero-x-mark" class="w-5 h-5" />
-          </button>
+          <div class="flex items-center gap-3">
+            <button
+              :if={!@modal.form}
+              type="button"
+              id="new-session-button"
+              phx-click="new_session"
+              class={[
+                "px-3 py-2 text-sm font-medium text-white bg-hero-blue-600 hover:bg-hero-blue-700",
+                Theme.rounded(:lg),
+                Theme.transition(:normal)
+              ]}
+            >
+              <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" />
+              {gettext("Create Session")}
+            </button>
+            <button type="button" phx-click="close_sessions" aria-label={gettext("Close")}>
+              <.icon name="hero-x-mark" class="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto">
+        <div :if={@modal.form} class="flex-1 overflow-y-auto p-6">
+          <.session_form
+            form={@modal.form}
+            program_locked?={true}
+            program_title={@modal.program_title}
+            cancel_event="close_new_session"
+          />
+        </div>
+
+        <div :if={!@modal.form} class="flex-1 overflow-y-auto">
           <%= if @modal.sessions == [] do %>
             <div class="text-center py-12">
               <.icon name="hero-calendar-days" class="w-12 h-12 text-hero-grey-300 mx-auto" />

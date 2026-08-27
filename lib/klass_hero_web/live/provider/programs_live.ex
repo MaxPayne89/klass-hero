@@ -24,6 +24,7 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Provider.ReadModels.ProgramStaffing
+  alias KlassHeroWeb.Helpers.SessionFormHandlers
   alias KlassHeroWeb.Presenters.ProgramPresenter
   alias KlassHeroWeb.Presenters.ProgramStaffingPresenter
   alias KlassHeroWeb.Presenters.StaffMemberPresenter
@@ -230,13 +231,72 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
      assign(socket, :sessions_modal, %{
        program_id: program_id,
        program_title: program_title,
-       sessions: sessions
+       sessions: sessions,
+       form: nil
      })}
   end
 
   @impl true
   def handle_event("close_sessions", _params, socket) do
     {:noreply, assign(socket, :sessions_modal, nil)}
+  end
+
+  # The popup already names one program, so the form opens with it filled in and
+  # the select replaced by static text. `get_program_for_provider/2` is the
+  # tenancy-safe getter, which is also what makes the program's meeting times
+  # available to pre-fill — the `provider_programs` projection carries only a name.
+  @impl true
+  def handle_event("new_session", _params, socket) do
+    %{program_id: program_id} = socket.assigns.sessions_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    case ProgramCatalog.get_program_for_provider(provider_id, program_id) do
+      {:ok, program} ->
+        form =
+          Date.utc_today()
+          |> SessionFormHandlers.blank_form(program_id)
+          |> SessionFormHandlers.prefill_from_program([program])
+          |> to_form(as: :session)
+
+        {:noreply, assign_sessions_modal(socket, form: form)}
+
+      {:error, :not_found} ->
+        {:noreply, put_flash(socket, :error, gettext("That program could not be found."))}
+    end
+  end
+
+  @impl true
+  def handle_event("close_new_session", _params, socket) do
+    {:noreply, assign_sessions_modal(socket, form: nil)}
+  end
+
+  @impl true
+  def handle_event("validate_session", %{"session" => params}, socket) do
+    # No re-prefill: the program cannot change here, so its defaults were applied
+    # once when the form opened and re-applying would fight the provider's edits.
+    {:noreply, assign_sessions_modal(socket, form: to_form(params, as: :session))}
+  end
+
+  @impl true
+  def handle_event("save_session", %{"session" => params}, socket) do
+    case SessionFormHandlers.submit(socket.assigns.current_scope, params) do
+      {:ok, _session} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Session created successfully"))
+         |> reload_sessions_modal()}
+
+      {:error, reason} ->
+        if !SessionFormHandlers.user_correctable?(reason) do
+          Logger.error(
+            "[ProgramsLive.save_session] Failed to create session",
+            reason: inspect(reason),
+            provider_id: socket.assigns.current_scope.provider.id
+          )
+        end
+
+        {:noreply, put_flash(socket, :error, SessionFormHandlers.humanize_error(reason))}
+    end
   end
 
   @impl true
@@ -933,6 +993,25 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
 
   defp waiver_form_errors(%Ecto.Changeset{} = changeset), do: changeset.errors
   defp waiver_form_errors(_reason), do: []
+
+  defp assign_sessions_modal(socket, updates) do
+    assign(socket, :sessions_modal, Enum.into(updates, socket.assigns.sessions_modal))
+  end
+
+  # The new row reaches `provider_session_details` through session_created and an
+  # Oban job, so this re-read can legitimately come back without it. That is the
+  # projection's normal lag, not a failure — the row appears on the next open. An
+  # optimistic insert here would be a second writer to a read table the projection
+  # owns, which is the drift #1321 deleted.
+  defp reload_sessions_modal(socket) do
+    %{program_id: program_id} = socket.assigns.sessions_modal
+    provider_id = socket.assigns.current_scope.provider.id
+
+    assign_sessions_modal(socket,
+      form: nil,
+      sessions: Provider.list_program_sessions(provider_id, program_id)
+    )
+  end
 
   defp build_staffing_modal(program_id, program_name, provider_id) do
     lead_id =

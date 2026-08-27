@@ -580,10 +580,21 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
   describe "Create Session button" do
     setup :register_and_log_in_provider
 
-    test "shows 'Create Session' button on sessions page", %{conn: conn} do
+    # Moved to Program Inventory's Sessions popup (#1074), where a program is
+    # already in hand. This page becomes the read-only Schedule in #1501, so the
+    # CTA had to leave before the page does.
+    test "no longer offers session creation from My Sessions", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/provider/sessions")
 
-      assert has_element?(view, ~s(a[href="/provider/sessions/new"]), "Create Session")
+      refute has_element?(view, ~s(a[href="/provider/sessions/new"]))
+    end
+
+    # The route survives the button: #1501 owns removing it, and a URL that 500s
+    # in the meantime would be a worse regression than an unlinked page.
+    test "the /new route still renders for anyone holding the URL", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions/new")
+
+      assert has_element?(view, "#create-session-form")
     end
   end
 
