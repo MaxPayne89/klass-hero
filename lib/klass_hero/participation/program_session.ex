@@ -144,6 +144,30 @@ defmodule KlassHero.Participation.ProgramSession do
   def in_progress?(%__MODULE__{status: :in_progress}), do: true
   def in_progress?(%__MODULE__{}), do: false
 
+  @doc """
+  How a roster of `count` children sits against this Session's Session Capacity.
+
+  A Session with no Session Capacity is `:uncapped` — never `:within`, because
+  "inside a limit" is a different claim from "there is no limit".
+
+  Matches on the field rather than on `%__MODULE__{}` deliberately.
+  `Participation.get_session_with_roster_enriched/1` hands the roster detail pages
+  a `Map.from_struct`'d session so presentation fields can be merged onto it, so
+  half the callers ask this about a plain map.
+
+  A map carrying no `:max_capacity` at all still raises — answering `:uncapped`
+  for something which is not a session would be a fabricated reassurance. That
+  case has no test on purpose: the type checker proves such a map matches no
+  clause and warns at the call site, so `--warnings-as-errors` fails the build
+  before any test could run, and pinning it at runtime means defeating the
+  analysis that provides the stronger guarantee.
+  """
+  @spec occupancy(t() | map(), non_neg_integer()) :: :uncapped | :within | :full | :over
+  def occupancy(%{max_capacity: nil}, _count), do: :uncapped
+  def occupancy(%{max_capacity: cap}, count) when count > cap, do: :over
+  def occupancy(%{max_capacity: cap}, count) when count == cap, do: :full
+  def occupancy(%{max_capacity: _}, _count), do: :within
+
   @doc "Returns the duration of the session in minutes."
   @spec duration_minutes(t()) :: non_neg_integer()
   def duration_minutes(%__MODULE__{start_time: start_time, end_time: end_time}) do

@@ -94,11 +94,15 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       program = insert(:program_schema, provider_id: provider.id, title: "Junior Choir")
       insert(:program_listing_schema, id: program.id, provider_id: provider.id, title: "Junior Choir")
 
+      # Explicitly uncapped, overriding the factory's default Session Capacity:
+      # this pins the plain-count wording, which is what most sessions in
+      # production render. The staff mirror covers the capped "N of M" branch.
       session =
         insert(:program_session_schema,
           program_id: program.id,
           session_date: Date.utc_today(),
-          status: :scheduled
+          status: :scheduled,
+          max_capacity: nil
         )
 
       for _ <- 1..2 do

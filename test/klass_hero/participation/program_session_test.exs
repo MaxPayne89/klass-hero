@@ -283,4 +283,40 @@ defmodule KlassHero.Participation.ProgramSessionTest do
       assert length(statuses) == 4
     end
   end
+
+  describe "occupancy/2" do
+    # {Session Capacity, roster count, expected}. The 5/6 row is the shape live in
+    # production: four completed sessions hold six children on a capacity of five.
+    @occupancy_cases [
+      {nil, 0, :uncapped},
+      {nil, 99, :uncapped},
+      {5, 4, :within},
+      {5, 5, :full},
+      {5, 6, :over},
+      {12, 0, :within}
+    ]
+
+    # `get_session_with_roster_enriched/1` hands the card a `Map.from_struct`'d
+    # session so presentation fields can be merged onto it, so the roster detail
+    # pages ask this question about a plain map, never a `%ProgramSession{}`.
+    test "answers for the enriched plain map the roster detail pages carry" do
+      enriched =
+        :program_session
+        |> build(max_capacity: 5)
+        |> Map.from_struct()
+        |> Map.put(:program_name, "After-School Club")
+
+      assert ProgramSession.occupancy(enriched, 6) == :over
+    end
+
+    for {capacity, count, expected} <- @occupancy_cases do
+      test "capacity #{inspect(capacity)} with #{count} on the roster is #{inspect(expected)}" do
+        session = build(:program_session, max_capacity: unquote(capacity))
+
+        assert ProgramSession.occupancy(session, unquote(count)) == unquote(expected),
+               "expected a roster of #{unquote(count)} against a Session Capacity of " <>
+                 "#{inspect(unquote(capacity))} to read #{inspect(unquote(expected))}"
+      end
+    end
+  end
 end
