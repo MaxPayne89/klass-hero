@@ -243,12 +243,6 @@ A session-launch instruction may state that the Agent tool and Workflows are opt
 Topic-specific guidelines live in `.claude/rules/` and are auto-loaded into context. **Do not duplicate those rules here.**
 
 <!-- usage-rules-start -->
-<!-- igniter-start -->
-## igniter usage
-_A code generation and project patching framework_
-
-[igniter usage rules](deps/igniter/usage-rules.md)
-<!-- igniter-end -->
 <!-- usage_rules-start -->
 ## usage_rules usage
 _A config-driven dev tool for Elixir projects to manage AGENTS.md files and agent skills from dependencies_

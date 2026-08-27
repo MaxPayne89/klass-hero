@@ -35,7 +35,7 @@ if [[ "${1:-}" == "--port" ]]; then
 fi
 
 if [[ "${1:-}" != "--detach" ]]; then
-  echo "Starting dev server on http://localhost:${port} (live_debugger on $((port + 100)))"
+  echo "Starting dev server on http://localhost:${port}"
   exec env PORT="$port" iex -S mix phx.server
 fi
 
@@ -65,7 +65,7 @@ esac
 mkdir -p "$RUN_DIR"
 : >"$LOG_FILE"
 
-echo "Starting dev server on http://localhost:${port} (live_debugger on $((port + 100)))" >&2
+echo "Starting dev server on http://localhost:${port}" >&2
 PORT="$port" nohup mix phx.server >>"$LOG_FILE" 2>&1 &
 disown
 

@@ -83,12 +83,6 @@ config :klass_hero, :storage,
 # Enable dev routes for dashboard and mailbox
 config :klass_hero, dev_routes: true
 
-# live_debugger runs its own endpoint and defaults to 4007, so a second concurrent
-# dev server would hit :eaddrinuse. Offsetting by 100 keeps it collision-free without
-# per-worktree config. Deliberately not `auto_port: true` — its upward scan could
-# wander onto a neighbouring worktree's port.
-config :live_debugger, port: dev_port + 100
-
 # Do not include metadata nor timestamps in development logs
 # debugging and code reloading.
 #

@@ -469,3 +469,73 @@ jobs:
             echo "::error::Site icons are stale. Run 'node priv/brand/generate_icons.mjs' and commit the result."
             exit 1
           }
+
+  # Report-only by intent, like site-icons above and hex-audit in security.yml: it gets its
+  # own red PR entry, but must stay OUT of the required-status-checks ruleset on `main`.
+  # Coverage moves for reasons unrelated to whether a change is correct — deleting a
+  # well-covered module lowers it — and a merge should not be blocked on that.
+  #
+  # The floor in coveralls.json is a measured ratchet, not an aspiration: it was set just
+  # under the number this job actually produced (85.7% when it landed) so the check is green
+  # from day one. Raise it when the real number rises; never set it to a figure nobody has
+  # observed, which is how a check lands permanently red and teaches everyone to skim past
+  # its whole category.
+  #
+  # `mix coveralls` runs the full suite a second time, in parallel with `test`, so it adds a
+  # job but not PR latency. It reaches the `test` alias (ExCoveralls calls Mix.Task.run/2 on
+  # the configured test task), which in CI prepends ecto.create + ecto.migrate — hence no
+  # explicit database steps here.
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.head_ref != 'release-please--branches--main'
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: klass_hero_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      MIX_ENV: test
+
+    steps:
+      # actions/checkout@v7.0.1
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # erlef/setup-beam@v1.24.1
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+          version-type: strict
+
+      # Restore-only — deps-cache.yml is the sole writer. See its header.
+      # actions/cache/restore@v6.1.0 (same commit as actions/cache, sub-action path)
+      - name: Restore dependencies cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            deps
+            _build
+          key: v2-${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            v2-${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Measure coverage against the floor in coveralls.json
+        run: mix coveralls

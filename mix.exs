@@ -20,15 +20,9 @@ defmodule KlassHero.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
-      # Test coverage configuration
+      # Test coverage configuration. The env preferences live in cli/0, not here —
+      # see the comment there.
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.post": :test,
-        "coveralls.html": :test,
-        "coveralls.json": :test
-      ],
       usage_rules: usage_rules()
     ]
   end
@@ -43,9 +37,20 @@ defmodule KlassHero.MixProject do
     ]
   end
 
+  # Defining cli/0 makes Mix ignore project/0's :preferred_cli_env entirely, so every
+  # env preference has to live here or it is silently dead config — which is what had
+  # happened to the coveralls tasks: `mix coveralls` resolved in :dev, where excoveralls
+  # is not loaded, and failed with "task could not be found".
   def cli do
     [
-      preferred_envs: ["test.e2e": :test]
+      preferred_envs: [
+        "test.e2e": :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ]
     ]
   end
 
@@ -62,8 +67,6 @@ defmodule KlassHero.MixProject do
       {:fun_with_flags, "~> 1.12"},
       {:usage_rules, "~> 1.0", only: [:dev]},
       {:bcrypt_elixir, "~> 3.0"},
-      {:live_debugger, "~> 1.0", only: [:dev]},
-      {:igniter, "~> 0.6", only: [:dev, :test]},
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
@@ -206,7 +209,6 @@ defmodule KlassHero.MixProject do
     [
       file: "CLAUDE.md",
       usage_rules: [
-        {:igniter, link: :markdown},
         {:usage_rules, link: :markdown},
         {~r/^phoenix/, link: :markdown}
       ]
