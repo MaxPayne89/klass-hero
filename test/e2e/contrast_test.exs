@@ -44,9 +44,11 @@ defmodule KlassHeroWeb.E2E.ContrastTest do
     end
 
     test "the provider profile clears AA over a dark cover", %{session: session} do
-      # A solid black cover behind the hero's bg-white/90 scrim: the worst case the
-      # scrim exists to bound, and unreachable through the declared-token lint
-      # because the cover is an arbitrary upload rather than a palette colour.
+      # A solid black cover. The hero no longer scrims it — the band carries no
+      # text and the identity card below is opaque — so this case should now be
+      # green by construction. That is the point of keeping it: it fails the day
+      # a text node drifts back onto the band, which no declared-token lint can
+      # see, the cover being an arbitrary upload rather than a palette colour.
       # Inserted through the factory, which skips the https-only URL validation.
       provider =
         insert(:provider_profile_schema,

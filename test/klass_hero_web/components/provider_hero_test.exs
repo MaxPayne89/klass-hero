@@ -4,6 +4,7 @@ defmodule KlassHeroWeb.ProviderHeroTest do
   import Phoenix.LiveViewTest
 
   alias KlassHeroWeb.CompositeComponents
+  alias KlassHeroWeb.Theme
 
   @provider_id "11111111-2222-3333-4444-555555555555"
 
@@ -68,35 +69,81 @@ defmodule KlassHeroWeb.ProviderHeroTest do
   end
 
   describe "full variant" do
-    test "renders the cover image as the background band" do
+    # data-band, not a bare "gradient" match: the avatar fallback carries the same
+    # gradient class, so a looser assertion would pass with no band at all.
+    test "paints exactly one band, chosen by whether a cover is set" do
+      for {provider, present, absent} <- [
+            {@filled, "cover", "gradient"},
+            {@bare, "gradient", "cover"}
+          ] do
+        html = render_hero(provider, variant: :full)
+
+        assert html =~ ~s(data-band="#{present}"),
+               "expected a #{present} band for #{inspect(provider.business_name)}"
+
+        refute html =~ ~s(data-band="#{absent}"),
+               "expected no #{absent} band alongside the #{present} one"
+      end
+    end
+
+    test "renders the cover image and keeps the variant marker" do
       html = render_hero(@filled, variant: :full)
 
       assert html =~ "https://cdn.example.com/cover.png"
-      assert html =~ ~s(data-band="cover")
-      refute html =~ ~s(data-band="gradient")
       assert html =~ ~s(data-variant="full")
     end
 
-    test "falls back to a gradient band when there is no cover" do
-      html = render_hero(@bare, variant: :full)
+    test "keeps every text node out of the band" do
+      # This is what replaces the scrim. ContrastAudit only samples leaf elements
+      # that carry text, so a band holding none is never measured against an
+      # arbitrary upload — the cover can be shown at full contrast.
+      band =
+        @filled
+        |> render_hero(variant: :full)
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("[data-band]")
+        |> LazyHTML.text()
+        |> String.trim()
 
-      # data-band, not a bare "gradient" match: the avatar fallback carries the
-      # same gradient class, so a looser assertion would pass with no band at all.
-      assert html =~ ~s(data-band="gradient")
-      refute html =~ ~s(data-band="cover")
+      assert band == "", "the cover band must carry no text, got: #{inspect(band)}"
     end
 
-    test "keeps the scrim that bounds contrast over an arbitrary cover" do
-      assert render_hero(@filled, variant: :full) =~ "bg-white/90"
+    test "drops the scrim, so the cover paints at full contrast" do
+      refute render_hero(@filled, variant: :full) =~ "bg-white/90"
+    end
+
+    test "paints the identity card opaque" do
+      # The precondition for dropping the scrim. ContrastAudit resolves a text
+      # node's background by walking its ancestors, so an opaque card is what
+      # stands between the reader and an arbitrary photo. A transparent one
+      # would leave both the audit and the reader looking at the cover.
+      card =
+        @filled
+        |> render_hero(variant: :full)
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query(~s([data-testid="provider-identity-card"]))
+        |> LazyHTML.attribute("class")
+
+      assert [class] = card
+      assert class =~ Theme.bg(:surface)
+    end
+
+    test "seats the avatar in the identity card, not in the band" do
+      # What makes the medallion straddle the seam: the avatar is positioned
+      # against the card, so the band keeps overflow-hidden for its own
+      # rounding without clipping it.
+      doc = @filled |> render_hero(variant: :full) |> LazyHTML.from_fragment()
+
+      assert Enum.any?(LazyHTML.query(doc, ~s([data-testid="provider-identity-card"] img[src="#{@filled.logo_url}"])))
     end
 
     test "uses the on-light token for the tagline, not the plain muted one" do
-      # Measured over a black cover behind the bg-white/90 scrim:
-      #   hero-grey-600 (:secondary)      2.92:1  fails
-      #   hero-grey-700 (:secondary_dark) 4.40:1  fails
-      #   hero-grey-800 (--fg-muted-on-light) 6.77:1  passes
-      # Only the third clears AA, so this token is not interchangeable with the
-      # ones the rest of the component uses.
+      # The tagline sits on the opaque identity card now, not over a scrimmed
+      # cover, so the old measurement behind bg-white/90 no longer describes it.
+      # The token stays because :secondary and :secondary_dark both resolve to
+      # --fg-muted, which the palette marks unsafe on the warm surfaces this
+      # hero sits on; --fg-muted-on-light (hero-grey-800) is the one that holds
+      # wherever the card is placed.
       html = render_hero(@filled, variant: :full)
 
       assert html =~ "text-[var(--fg-muted-on-light)]"
