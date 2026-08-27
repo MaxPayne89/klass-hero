@@ -9,6 +9,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
   import KlassHeroWeb.UIComponents
 
   alias KlassHero.Participation.Domain.Services.ParticipationCollection
+  alias KlassHero.Participation.ProgramSession
   alias KlassHeroWeb.Theme
   alias Phoenix.HTML.Form
 
@@ -85,13 +86,26 @@ defmodule KlassHeroWeb.ParticipationComponents do
         </div>
 
         <%= if @role in [:provider, :staff] && @attendance do %>
-          <div class="flex items-center gap-2 text-sm text-hero-black-100">
+          <%!-- `flex-wrap` because the occupancy mark is a third element on this
+                line: at 375px a two-digit "12 of 10" plus the German "Überbelegt"
+                would otherwise have to fit beside the icon and the count. --%>
+          <div class="flex items-center flex-wrap gap-2 text-sm text-hero-black-100">
             <.icon name="hero-user-group" class="w-4 h-4 text-hero-grey-400" />
             <span>
               <%= if @session.status == :scheduled do %>
-                {ngettext("%{count} child enrolled", "%{count} children enrolled", @attendance.roster,
-                  count: @attendance.roster
-                )}
+                <%= if @session.max_capacity do %>
+                  {gettext("%{roster} of %{capacity}",
+                    roster: @attendance.roster,
+                    capacity: @session.max_capacity
+                  )}
+                <% else %>
+                  {ngettext(
+                    "%{count} child enrolled",
+                    "%{count} children enrolled",
+                    @attendance.roster,
+                    count: @attendance.roster
+                  )}
+                <% end %>
               <% else %>
                 {gettext("%{checked_in} of %{roster} checked in",
                   checked_in: @attendance.checked_in,
@@ -99,6 +113,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
                 )}
               <% end %>
             </span>
+            <.occupancy_mark state={ProgramSession.occupancy(@session, @attendance.roster)} />
           </div>
         <% end %>
       </div>
@@ -156,6 +171,37 @@ defmodule KlassHeroWeb.ParticipationComponents do
     </span>
     """
   end
+
+  @doc """
+  Marks a Session whose Roster has outgrown its Session Capacity.
+
+  Only `:over` renders anything. `:uncapped` is the common case — most Sessions
+  carry no Session Capacity at all — and `:within`/`:full` are unremarkable, so
+  each returns empty rather than a reassurance nobody asked for.
+
+  Colours come from `Theme.status_badge/1` rather than `kh_pill`'s tones, which
+  measure below WCAG AA for text this size — the same reason `kh_trust_mark/1`
+  takes them from there.
+  """
+  attr :state, :atom, required: true, values: [:uncapped, :within, :full, :over]
+
+  def occupancy_mark(%{state: :over} = assigns) do
+    ~H"""
+    <.kh_pill
+      tone={:none}
+      size={:xs}
+      class={Theme.status_badge(:full)}
+      data-testid="session-occupancy-mark"
+      data-occupancy="over"
+      title={gettext("More children are on this session's roster than its capacity allows")}
+    >
+      <.icon name="hero-exclamation-triangle-mini" class="w-3.5 h-3.5" />
+      <span>{gettext("Over capacity")}</span>
+    </.kh_pill>
+    """
+  end
+
+  def occupancy_mark(assigns), do: ~H""
 
   @doc """
   Renders a session roster list with participation status.
