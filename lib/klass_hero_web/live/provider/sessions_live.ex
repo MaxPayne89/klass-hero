@@ -491,7 +491,10 @@ defmodule KlassHeroWeb.Provider.SessionsLive do
           )
           |> stream_insert(:sessions, session)
         else
-          socket
+          # It moved off the day on screen. Before #1074 nothing could move a
+          # session's date, so falling through here was harmless; now a reschedule
+          # can, and leaving the row would show it under a day it is no longer on.
+          stream_delete(socket, :sessions, session)
         end
 
       {:error, reason} ->

@@ -139,10 +139,18 @@ defmodule KlassHeroWeb.Helpers.SessionFormHandlers do
         |> Map.delete(:program_id)
         |> Map.put(:location, blank_to_nil(params["location"]))
         |> Map.put(:notes, blank_to_nil(params["notes"]))
+        |> clear_blank_capacity(params["max_capacity"])
 
       Participation.update_session(scope, session_id, attrs)
     end
   end
+
+  # `put_capacity/2` omits the key whenever `Integer.parse` fails, which on a
+  # create is right — there is nothing to clear — but on an edit makes a blanked
+  # capacity silently keep its old value. Blank clears; garbage still omits, so a
+  # typo does not wipe a real limit.
+  defp clear_blank_capacity(attrs, raw) when raw in [nil, ""], do: Map.put(attrs, :max_capacity, nil)
+  defp clear_blank_capacity(attrs, _raw), do: attrs
 
   defp blank_to_nil(value) when value in [nil, ""], do: nil
   defp blank_to_nil(value), do: value

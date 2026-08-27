@@ -87,6 +87,32 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
       refute has_element?(view, "#edit-session-panel")
     end
 
+    # The moduledoc promises a blank optional field clears it. `put_capacity/2`
+    # omits the key whenever Integer.parse fails, which made that false for
+    # max_capacity alone — it silently kept its old value.
+    test "blanking max capacity clears it", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      view |> element("#edit-session-btn") |> render_click()
+
+      view
+      |> form("#create-session-form", %{
+        "session" => %{
+          "session_date" => Date.to_iso8601(session.session_date),
+          "start_time" => Calendar.strftime(session.start_time, "%H:%M"),
+          "end_time" => Calendar.strftime(session.end_time, "%H:%M"),
+          "location" => "",
+          "notes" => "",
+          "max_capacity" => ""
+        }
+      })
+      |> render_submit()
+
+      assert {:ok, updated} = Participation.get_session(session.id)
+      assert is_nil(updated.max_capacity)
+      assert is_nil(updated.location)
+    end
+
     # The fixture session is :in_progress, so the schedule is frozen. Disabling
     # the inputs is the affordance; the context is the guard, and this asserts the
     # guard by submitting the change the disabled input would have prevented.

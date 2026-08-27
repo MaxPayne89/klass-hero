@@ -258,6 +258,36 @@ defmodule KlassHeroWeb.Provider.SessionsLiveTest do
       # Session still present in the stream afterwards (no crash)
       assert has_element?(view, "button", "Start Session")
     end
+
+    # Before #1074 a session's date could not change, so a `:session_changed` for
+    # another day was correctly ignored. A reschedule can move one now, and an
+    # ignored message would leave the row rendered under a day it is not on.
+    test "removes a session from the stream once it is rescheduled off the day on screen", %{
+      conn: conn,
+      provider: provider,
+      scope: scope
+    } do
+      program = insert(:program_schema, provider_id: provider.id)
+      _listing = insert(:program_listing_schema, id: program.id, provider_id: provider.id)
+
+      session =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: Date.utc_today(),
+          status: :scheduled
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/sessions")
+
+      assert has_element?(view, "button", "Start Session")
+
+      {:ok, _moved} =
+        Participation.update_session(scope, session.id, %{session_date: Date.add(Date.utc_today(), 3)})
+
+      send(view.pid, {:session_changed, session.id})
+
+      refute has_element?(view, "button", "Start Session")
+    end
   end
 
   describe "create session modal" do

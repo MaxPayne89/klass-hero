@@ -6,8 +6,20 @@ defmodule KlassHero.Participation.NotificationsTest do
   alias KlassHero.Shared.Domain.Events.Event
 
   # Every session-lifecycle event says the same thing to a LiveView — "this session
-  # is not what you rendered" — so they collapse to one message rather than nine.
-  @session_events [:session_created, :session_started, :session_completed, :session_cancelled, :roster_seeded]
+  # is not what you rendered" — so they collapse to one message rather than one each.
+  #
+  # This list is a deliberate second copy of `Notifications`' own `@session_events`.
+  # A new session event added there and not here is untested; added here and not
+  # there, this test fails — which is the direction that matters, and is how
+  # `:session_updated` was caught shipping mute in #1074.
+  @session_events [
+    :session_created,
+    :session_updated,
+    :session_started,
+    :session_completed,
+    :session_cancelled,
+    :roster_seeded
+  ]
 
   @attendance_kinds %{
     child_checked_in: :checked_in,
