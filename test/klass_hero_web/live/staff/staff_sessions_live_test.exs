@@ -102,7 +102,10 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLiveTest do
       {:ok, view, _html} = live(conn, ~p"/staff/sessions")
 
       assert has_element?(view, "h3", "Soccer Training")
-      assert has_element?(view, "span", "1 child enrolled")
+      # The factory gives every session a Session Capacity, so the headcount reads
+      # against it. `participation_components_test.exs` pins the uncapped wording.
+      assert has_element?(view, "span", "1 of 20")
+      refute has_element?(view, "[data-occupancy]")
     end
 
     test "an event for another date does not inject that session into today's list",

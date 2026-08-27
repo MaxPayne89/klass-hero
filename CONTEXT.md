@@ -57,6 +57,10 @@ _Avoid_: Capacity as a noun for the row itself ("the capacity" is the number), L
 The set of children expected at a given **Session**, seeded from the Program's active **Enrollments**. A roster belongs to one Session.
 _Avoid_: Attendance list, Class list, Sign-in sheet
 
+**Session Capacity**:
+The most children one **Session** can hold — the room, or what the staffing on that date can supervise. Optional, and set only on manually-created Sessions; a schedule-generated one has none, because a Program carries no per-date number to derive it from. Distinct from the **Enrollment Policy**'s *cap*, which bounds bookings across the whole Program: the cap is a gate Enrollment enforces before a place is taken, while Session Capacity is checked by nothing. A **Roster** may exceed it, and does — the Roster is seeded from Enrollments that were already accepted, so by the time a child reaches a Session the place is paid for and cannot be refused. Exceeding it is therefore shown to the Provider to act on, never prevented.
+_Avoid_: bare "Capacity" (ambiguous with the Program's cap), Limit, Quota, Max
+
 **Participation Record**:
 One child's row on one Session's Roster, tracking presence through `registered → checked_in → checked_out`, or `absent`. `registered` here means "on the roster, not yet arrived" — it is not the **Enrollment**.
 _Avoid_: Attendance record, Booking
