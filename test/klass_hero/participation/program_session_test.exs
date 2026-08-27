@@ -319,4 +319,75 @@ defmodule KlassHero.Participation.ProgramSessionTest do
       end
     end
   end
+
+  # Until #1074 this changeset cast only the optional fields plus :status, so
+  # rescheduling was impossible by construction — there was no command to do it
+  # and no changeset that would have accepted it.
+  describe "update_changeset/2" do
+    test "casts the schedule fields" do
+      changeset =
+        ProgramSession.update_changeset(%ProgramSession{}, %{
+          session_date: ~D[2026-09-02],
+          start_time: ~T[10:00:00],
+          end_time: ~T[11:30:00]
+        })
+
+      assert changeset.valid?
+      assert Ecto.Changeset.get_change(changeset, :session_date) == ~D[2026-09-02]
+      assert Ecto.Changeset.get_change(changeset, :start_time) == ~T[10:00:00]
+      assert Ecto.Changeset.get_change(changeset, :end_time) == ~T[11:30:00]
+    end
+
+    test "rejects an end time at or before the start time" do
+      session = %ProgramSession{start_time: ~T[09:00:00], end_time: ~T[10:00:00]}
+
+      changeset = ProgramSession.update_changeset(session, %{end_time: ~T[08:00:00]})
+
+      refute changeset.valid?
+      assert %{end_time: ["must be after start time"]} = errors_on(changeset)
+    end
+
+    # The half a partial edit gets wrong: changing only the start time has to be
+    # compared against the *stored* end time, not against nothing.
+    test "compares a changed start time against the session's existing end time" do
+      session = %ProgramSession{start_time: ~T[09:00:00], end_time: ~T[10:00:00]}
+
+      changeset = ProgramSession.update_changeset(session, %{start_time: ~T[11:00:00]})
+
+      refute changeset.valid?
+    end
+
+    test "still rejects a non-positive capacity" do
+      changeset = ProgramSession.update_changeset(%ProgramSession{}, %{max_capacity: 0})
+
+      refute changeset.valid?
+    end
+
+    # A reschedule can land on a slot another session already holds. Without the
+    # constraint declared here that surfaces as an Ecto.ConstraintError — a 500,
+    # not a form error the provider can act on.
+    test "declares the slot uniqueness constraint so a collision is an error tuple" do
+      program = insert(:program_schema)
+
+      insert(:program_session_schema,
+        program_id: program.id,
+        session_date: ~D[2026-09-03],
+        start_time: ~T[09:00:00]
+      )
+
+      clash =
+        insert(:program_session_schema,
+          program_id: program.id,
+          session_date: ~D[2026-09-04],
+          start_time: ~T[09:00:00]
+        )
+
+      assert {:error, changeset} =
+               clash
+               |> ProgramSession.update_changeset(%{session_date: ~D[2026-09-03]})
+               |> Repo.update()
+
+      assert %{program_id: ["session already exists at this time"]} = errors_on(changeset)
+    end
+  end
 end

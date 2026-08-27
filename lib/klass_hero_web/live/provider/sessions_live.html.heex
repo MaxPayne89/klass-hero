@@ -1,22 +1,12 @@
 <.pv_dashboard_chrome business={@business} current_tab={:sessions}>
-  <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
-    <div>
-      <h2 class={["mb-1", Theme.typography(:section_title)]}>{gettext("My Sessions")}</h2>
-      <p class="text-sm text-[var(--fg-muted)]">
-        {gettext("Manage your scheduled sessions and attendance")}
-      </p>
-    </div>
-    <.link
-      patch={~p"/provider/sessions/new"}
-      class={[
-        "px-4 py-2 text-sm font-medium text-white bg-hero-blue-600 hover:bg-hero-blue-700 focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2",
-        Theme.rounded(:lg),
-        Theme.transition(:normal)
-      ]}
-    >
-      <.icon name="hero-plus" class="w-4 h-4 mr-1 inline" />
-      {gettext("Create Session")}
-    </.link>
+  <%!-- Sessions are created from Program Inventory's Sessions popup as of #1074:
+  creation belongs where a program is already in hand, and #1501 turns this page
+  into a read-only Schedule. The /new route stays reachable by URL until then. --%>
+  <div class="mb-6">
+    <h2 class={["mb-1", Theme.typography(:section_title)]}>{gettext("My Sessions")}</h2>
+    <p class="text-sm text-[var(--fg-muted)]">
+      {gettext("Manage your scheduled sessions and attendance")}
+    </p>
   </div>
 
   <div class="mb-6">
@@ -162,64 +152,11 @@
       </div>
 
       <div class="p-4">
-        <.form
-          for={@form}
-          id="create-session-form"
-          phx-change="validate_session"
-          phx-submit="save_session"
-          class="space-y-4"
-        >
-          <.input
-            field={@form[:program_id]}
-            type="select"
-            label={gettext("Program")}
-            prompt={gettext("Select a program...")}
-            options={Enum.map(@provider_programs, &{&1.title, &1.id})}
-            required
-          />
-
-          <.input field={@form[:session_date]} type="date" label={gettext("Date")} required />
-
-          <div class="grid grid-cols-2 gap-4">
-            <.input field={@form[:start_time]} type="time" label={gettext("Start Time")} required />
-            <.input field={@form[:end_time]} type="time" label={gettext("End Time")} required />
-          </div>
-
-          <.input
-            field={@form[:location]}
-            type="text"
-            label={gettext("Location")}
-            phx-debounce="blur"
-          />
-          <.input
-            field={@form[:notes]}
-            type="textarea"
-            label={gettext("Notes")}
-            phx-debounce="blur"
-          />
-          <.input field={@form[:max_capacity]} type="number" label={gettext("Max Capacity")} />
-
-          <div class="flex justify-end gap-3 pt-2">
-            <.link
-              patch={~p"/provider/sessions"}
-              class={[
-                "px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50",
-                Theme.rounded(:lg)
-              ]}
-            >
-              {gettext("Cancel")}
-            </.link>
-            <button
-              type="submit"
-              class={[
-                "px-4 py-2 text-sm font-medium text-white bg-hero-blue-600 hover:bg-hero-blue-700",
-                Theme.rounded(:lg)
-              ]}
-            >
-              {gettext("Create Session")}
-            </button>
-          </div>
-        </.form>
+        <.session_form
+          form={@form}
+          programs={@provider_programs}
+          cancel_event="close_new_session"
+        />
       </div>
     </div>
   <% end %>

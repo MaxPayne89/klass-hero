@@ -68,13 +68,14 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     program = insert_program_with_listing(provider_id: provider.id, title: title)
 
-    KlassHero.Factory.insert(:program_session_schema,
-      program_id: program.id,
-      session_date: ~D[2026-05-01],
-      start_time: ~T[15:00:00],
-      end_time: ~T[16:00:00],
-      status: "scheduled"
-    )
+    session =
+      KlassHero.Factory.insert(:program_session_schema,
+        program_id: program.id,
+        session_date: ~D[2026-05-01],
+        start_time: ~T[15:00:00],
+        end_time: ~T[16:00:00],
+        status: "scheduled"
+      )
 
     name = :"provider_session_details_#{System.unique_integer([:positive])}"
     pid = start_supervised!({ProviderSessionDetails, name: name})
@@ -90,7 +91,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     :ok = Sandbox.allow(Repo, self(), pid)
     :ok = ProviderSessionDetails.rebuild(name)
 
-    program
+    {program, session}
   end
 
   describe "overview section" do
@@ -885,7 +886,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       conn: conn,
       provider: provider
     } do
-      program = seed_program_with_session!(provider, title: "Judo")
+      {program, _session} = seed_program_with_session!(provider, title: "Judo")
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
@@ -899,6 +900,90 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       view |> element("#sessions-modal button[phx-click='close_sessions']") |> render_click()
       refute has_element?(view, "#sessions-modal")
     end
+
+    test "a session row is a working entry point into that session's detail page", %{
+      conn: conn,
+      provider: provider
+    } do
+      {program, session} = seed_program_with_session!(provider, title: "Judo")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s|button[phx-click="view_sessions"][phx-value-program-id="#{program.id}"]|)
+      |> render_click()
+
+      assert has_element?(view, ~s|#sessions-modal a[href="/provider/participation/#{session.id}"]|)
+
+      # Following it must actually land: ParticipationLive re-guards ownership at
+      # mount and push_navigates away on refusal, so a redirect here would fail
+      # this match rather than pass quietly.
+      assert {:ok, _detail, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+    end
+
+    test "Create Session opens the form with this popup's program locked in", %{
+      conn: conn,
+      provider: provider
+    } do
+      {program, _session} = seed_program_with_session!(provider, title: "Judo")
+
+      view = open_sessions_popup(conn, program)
+
+      view |> element("#new-session-button") |> render_click()
+
+      assert has_element?(view, "#create-session-form")
+      # No program picker: the popup opened from one program, so the id rides a
+      # hidden field instead of a question the provider already answered.
+      refute has_element?(view, "#create-session-form select[name='session[program_id]']")
+
+      program_id = program.id
+
+      assert [^program_id] =
+               view
+               |> render()
+               |> LazyHTML.from_fragment()
+               |> LazyHTML.query(~s|input[name="session[program_id]"]|)
+               |> LazyHTML.attribute("value")
+    end
+
+    test "submitting the popup form creates a session for that program", %{
+      conn: conn,
+      provider: provider
+    } do
+      {program, _session} = seed_program_with_session!(provider, title: "Judo")
+
+      view = open_sessions_popup(conn, program)
+      view |> element("#new-session-button") |> render_click()
+
+      view
+      |> form("#create-session-form", %{
+        "session" => %{
+          "program_id" => program.id,
+          "session_date" => "2026-09-01",
+          "start_time" => "09:00",
+          "end_time" => "11:00"
+        }
+      })
+      |> render_submit()
+
+      assert Enum.any?(
+               KlassHero.Participation.list_sessions(%{program_id: program.id}),
+               &(&1.session_date == ~D[2026-09-01] and &1.start_time == ~T[09:00:00])
+             )
+
+      # Back to the list, not left on a form the provider has already submitted.
+      refute has_element?(view, "#create-session-form")
+    end
+  end
+
+  defp open_sessions_popup(conn, program) do
+    {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+    view
+    |> element(~s|button[phx-click="view_sessions"][phx-value-program-id="#{program.id}"]|)
+    |> render_click()
+
+    view
   end
 
   describe "invite error paths" do

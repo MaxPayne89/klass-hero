@@ -60,26 +60,46 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   @doc """
-  Creates a new program session.
+  Schedules a new session on `params.program_id`, on behalf of `scope`.
 
   Required params: `program_id`, `session_date`, `start_time`, `end_time`.
 
-  Returns `{:ok, session}`, `{:error, :invalid_time_range}`, or `{:error, :duplicate_session}`.
+  Gated like `start_session/2` and `complete_session/2`, and for the same reason
+  (#1373, ADR-0019): this took bare params until #1074, with the ownership check
+  spelled out in `SessionsLive` as a `provider_program_ids` MapSet test. A second
+  create surface in Program Inventory would have been a second copy of that rule,
+  and a rule respelled per surface is one a surface eventually omits.
+
+  Authorization runs before validation, so a caller with no standing on the
+  program learns nothing about whether their params would have been accepted.
+
+  Returns `{:ok, session}`, `{:error, :unauthorized}`, `{:error, :invalid_time_range}`,
+  or `{:error, :duplicate_session}`.
   """
-  def create_session(params) when is_map(params) do
+  @spec create_session(Scope.t(), map()) ::
+          {:ok, ProgramSession.t()} | {:error, :unauthorized | :invalid_time_range | :duplicate_session}
+  def create_session(%Scope{} = scope, params) when is_map(params) do
     context_span entity: "session" do
       session_attrs =
         params
         |> Map.put(:id, Ecto.UUID.generate())
         |> Map.put(:status, :scheduled)
 
-      with {:ok, session} <- ProgramSession.new(session_attrs),
+      with {:ok, _role} <- authorize_creation(scope, params),
+           {:ok, session} <- ProgramSession.new(session_attrs),
            {:ok, {persisted, events}} <- insert_session_with_event(session) do
         Notifications.notify_all(events)
         {:ok, persisted}
       end
     end
   end
+
+  # A missing program_id can never be owned, so it refuses here rather than
+  # reaching the changeset's `validate_required` — same reasoning as above.
+  defp authorize_creation(scope, %{program_id: program_id}) when is_binary(program_id),
+    do: SessionAuthorization.authorize_creation(scope, program_id)
+
+  defp authorize_creation(_scope, _params), do: {:error, :unauthorized}
 
   @doc """
   Brings a program's generated sessions into agreement with its recurring schedule.
@@ -174,6 +194,82 @@ defmodule KlassHero.Participation do
         Notifications.notify_all(events)
         {:ok, persisted}
       end
+    end
+  end
+
+  @doc """
+  Edits an existing session on behalf of `scope`.
+
+  Accepts `session_date`, `start_time`, `end_time`, `location`, `notes` and
+  `max_capacity`. Before #1074 none of this was possible: there was no command,
+  and `update_changeset/2` could not cast a date or a time, so a session typed
+  with the wrong hour stayed wrong.
+
+  **The schedule freezes once the session leaves `:scheduled`.** Attendance
+  records are keyed to the session, so moving a completed one rewrites history
+  its roster cannot follow. Details stay editable at every status — a wrong
+  location on a session that already ran is still worth fixing. A schedule key
+  submitted with its current value is not a change, so re-submitting an unchanged
+  form is allowed rather than refused on the shape of the params.
+
+  Staff are refused even when assigned, matching `create_session/2`: assignment is
+  permission to run a session, not to move it.
+
+  Returns `{:ok, session}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  `{:error, :session_started}`, `{:error, :invalid_time_range}`, or
+  `{:error, :duplicate_session}`.
+  """
+  @spec update_session(Scope.t(), String.t(), map()) ::
+          {:ok, ProgramSession.t()}
+          | {:error, :not_found | :unauthorized | :session_started | :invalid_time_range | :duplicate_session}
+  def update_session(%Scope{} = scope, session_id, attrs) when is_binary(session_id) and is_map(attrs) do
+    context_span entity: "session" do
+      with {:ok, session} <- fetch_session(session_id),
+           {:ok, _role} <- authorize_session_edit(scope, session),
+           :ok <- allow_schedule_change?(session, attrs),
+           {:ok, {persisted, events}} <- persist_session_update(session, attrs) do
+        Notifications.notify_all(events)
+        {:ok, persisted}
+      end
+    end
+  end
+
+  # `authorize_lifecycle/2` grants :staff on an assigned session; editing does not.
+  defp authorize_session_edit(scope, session) do
+    case SessionAuthorization.authorize_lifecycle(scope, session) do
+      {:ok, :staff} -> {:error, :unauthorized}
+      {:ok, role} -> {:ok, role}
+      {:error, _reason} -> {:error, :unauthorized}
+    end
+  end
+
+  @schedule_fields [:session_date, :start_time, :end_time]
+
+  defp allow_schedule_change?(%ProgramSession{status: :scheduled}, _attrs), do: :ok
+
+  defp allow_schedule_change?(%ProgramSession{} = session, attrs) do
+    changed? = Enum.any?(@schedule_fields, &(Map.has_key?(attrs, &1) and Map.get(attrs, &1) != Map.get(session, &1)))
+
+    if changed?, do: {:error, :session_started}, else: :ok
+  end
+
+  defp persist_session_update(session, attrs) do
+    Outbox.transact_with_events(@context, fn ->
+      session
+      |> ProgramSession.update_changeset(attrs)
+      |> Repo.update()
+      |> case do
+        {:ok, persisted} -> {:ok, persisted, [ParticipationEvents.session_updated(persisted)]}
+        {:error, changeset} -> {:error, update_refusal(changeset)}
+      end
+    end)
+  end
+
+  defp update_refusal(%Ecto.Changeset{errors: errors}) do
+    cond do
+      Keyword.has_key?(errors, :program_id) -> :duplicate_session
+      Keyword.has_key?(errors, :end_time) -> :invalid_time_range
+      true -> :invalid_session
     end
   end
 

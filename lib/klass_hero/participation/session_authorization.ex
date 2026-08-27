@@ -120,6 +120,32 @@ defmodule KlassHero.Participation.SessionAuthorization do
   @spec authorize_lifecycle(Scope.t(), ProgramSession.t()) :: {:ok, role()} | {:error, refusal()}
   def authorize_lifecycle(%Scope{} = scope, %ProgramSession{} = session), do: resolve(scope, session)
 
+  @doc """
+  Who may schedule a **new** session on `program_id`.
+
+  Asked at program grain because there is no session yet to ask about, which is
+  also why it cannot go through `resolve/2`: two of that function's three
+  branches read a session.
+
+  Staff are refused even when assigned. The staff rule elsewhere answers "are you
+  on this session", and a session that does not exist has nobody on it; assignment
+  to the program is permission to *run* sessions, not to add them to the calendar.
+  A refused staff member is `:unauthorized` like any other — creation has no
+  closure case to distinguish, since a closed program is one you should not be
+  adding sessions to either.
+
+  An unknown `program_id` refuses rather than raising: `provider_owns?/2` compares
+  against a resolver result, so a program that resolves to nothing matches no one.
+  """
+  @spec authorize_creation(Scope.t(), String.t()) :: {:ok, :provider | :admin} | {:error, :unauthorized}
+  def authorize_creation(%Scope{} = scope, program_id) when is_binary(program_id) do
+    if provider_owns?(scope, program_id) do
+      {:ok, :provider}
+    else
+      admin_or_refuse(scope)
+    end
+  end
+
   # The one place a scope's standing on a session is decided.
   defp resolve(%Scope{} = scope, %ProgramSession{} = session) do
     cond do

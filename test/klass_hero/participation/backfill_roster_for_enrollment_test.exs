@@ -21,7 +21,7 @@ defmodule KlassHero.Participation.BackfillRosterForEnrollmentTest do
       {child, _parent} = insert_child_with_guardian()
 
       {:ok, session} =
-        Participation.create_session(%{
+        Participation.create_session(admin_scope(), %{
           program_id: program.id,
           session_date: Date.add(Date.utc_today(), 7),
           start_time: ~T[15:00:00],
@@ -46,7 +46,7 @@ defmodule KlassHero.Participation.BackfillRosterForEnrollmentTest do
       {child, _parent} = insert_child_with_guardian()
 
       {:ok, session} =
-        Participation.create_session(%{
+        Participation.create_session(admin_scope(), %{
           program_id: program.id,
           session_date: Date.add(Date.utc_today(), 7),
           start_time: ~T[15:00:00],
@@ -67,7 +67,7 @@ defmodule KlassHero.Participation.BackfillRosterForEnrollmentTest do
       {child, _parent} = insert_child_with_guardian()
 
       {:ok, past_session} =
-        Participation.create_session(%{
+        Participation.create_session(admin_scope(), %{
           program_id: program.id,
           session_date: Date.add(Date.utc_today(), -7),
           start_time: ~T[15:00:00],
@@ -82,4 +82,8 @@ defmodule KlassHero.Participation.BackfillRosterForEnrollmentTest do
       assert {:ok, %{roster: []}} = Participation.get_session_with_roster(past_session.id)
     end
   end
+
+  # An admin is authorized everywhere, so the scope stays out of a test whose
+  # subject is not authorization.
+  defp admin_scope, do: KlassHero.AccountsFixtures.admin_scope_fixture()
 end

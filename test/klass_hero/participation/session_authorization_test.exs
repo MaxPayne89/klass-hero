@@ -294,6 +294,50 @@ defmodule KlassHero.Participation.SessionAuthorizationTest do
     end
   end
 
+  # Creation is asked at *program* grain: there is no session yet to ask about.
+  # Staff are refused outright — scheduling is an owner concern, and staff have
+  # never had a create-session surface (#1074).
+  describe "authorize_creation/2" do
+    test "a provider owning the program is authorized as :provider" do
+      %{provider: provider, program: program} = provider_with_program()
+      scope = scope_for(provider_profile: provider)
+
+      assert {:ok, :provider} = SessionAuthorization.authorize_creation(scope, program.id)
+    end
+
+    test "a provider is refused on another provider's program" do
+      %{provider: provider} = provider_with_program()
+      %{program: foreign_program} = provider_with_program()
+      scope = scope_for(provider_profile: provider)
+
+      assert {:error, :unauthorized} =
+               SessionAuthorization.authorize_creation(scope, foreign_program.id)
+    end
+
+    test "a platform admin is authorized as :admin" do
+      %{program: program} = provider_with_program()
+      scope = scope_for(user: AccountsFixtures.user_fixture(is_admin: true))
+
+      assert {:ok, :admin} = SessionAuthorization.authorize_creation(scope, program.id)
+    end
+
+    test "a staff member assigned to the program is still refused" do
+      %{provider: provider, program: program} = provider_with_program()
+      staff = assigned_staff(provider, program)
+      scope = scope_for(staff_member: staff)
+
+      assert {:error, :unauthorized} =
+               SessionAuthorization.authorize_creation(scope, program.id)
+    end
+
+    test "an unknown program id is refused, not raised" do
+      scope = scope_for(provider_profile: ProviderFixtures.provider_profile_fixture())
+
+      assert {:error, :unauthorized} =
+               SessionAuthorization.authorize_creation(scope, Ecto.UUID.generate())
+    end
+  end
+
   defp provider_with_program do
     provider = ProviderFixtures.provider_profile_fixture()
     program = insert(:program_schema, provider_id: provider.id)

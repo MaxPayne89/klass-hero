@@ -191,16 +191,24 @@ defmodule KlassHeroWeb.Staff.StaffSessionsLive do
         # `staffs_session?/2` costs a round trip, and this topic carries every
         # participation message for the provider, not only the ones this view
         # renders. `and` short-circuits, so an off-date message never queries.
-        if session.session_date == socket.assigns.selected_date and
-             staffs_session?(socket, session.id) do
-          socket
-          |> assign(
-            :attendance,
-            Map.put(socket.assigns.attendance, session.id, Participation.attendance_from_roster(roster))
-          )
-          |> stream_insert(:sessions, session)
-        else
-          socket
+        cond do
+          session.session_date != socket.assigns.selected_date ->
+            # It moved off the day on screen. Before #1074 nothing could move a
+            # session's date, so falling through was harmless; a reschedule can
+            # now, and the row would otherwise sit under a day it is not on.
+            # A delete for a row never inserted (an unstaffed session) is a no-op.
+            stream_delete(socket, :sessions, session)
+
+          staffs_session?(socket, session.id) ->
+            socket
+            |> assign(
+              :attendance,
+              Map.put(socket.assigns.attendance, session.id, Participation.attendance_from_roster(roster))
+            )
+            |> stream_insert(:sessions, session)
+
+          true ->
+            socket
         end
 
       {:error, reason} ->
