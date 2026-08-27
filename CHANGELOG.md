@@ -5,6 +5,13 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.93.0](https://github.com/MaxPayne89/klass-hero/compare/v0.92.0...v0.93.0) (2026-08-27)
+
+
+### Features
+
+* show date of birth and age in the program roster ([#1535](https://github.com/MaxPayne89/klass-hero/issues/1535)) ([0f41f29](https://github.com/MaxPayne89/klass-hero/commit/0f41f2912d8ba904fcc593b750310e77c8d6073c)), closes [#1075](https://github.com/MaxPayne89/klass-hero/issues/1075)
+
 ## [0.92.0](https://github.com/MaxPayne89/klass-hero/compare/v0.91.0...v0.92.0) (2026-08-27)
 
 
