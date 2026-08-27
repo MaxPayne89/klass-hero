@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.92.0](https://github.com/MaxPayne89/klass-hero/compare/v0.91.0...v0.92.0) (2026-08-27)
+
+
+### Features
+
+* email participants when a new message arrives ([#1529](https://github.com/MaxPayne89/klass-hero/issues/1529)) ([791ed7a](https://github.com/MaxPayne89/klass-hero/commit/791ed7a2c0748e964d5c0df4a1b2eec749915888))
+* provider ↔ staff conversations, via a symmetric conversation identity ([#1527](https://github.com/MaxPayne89/klass-hero/issues/1527)) ([0b8180b](https://github.com/MaxPayne89/klass-hero/commit/0b8180bceed29f7c8ffd24c4471e3e9c4dfa8ee7))
+
+
+### Bug Fixes
+
+* address the design-review findings on [#1527](https://github.com/MaxPayne89/klass-hero/issues/1527) ([#1533](https://github.com/MaxPayne89/klass-hero/issues/1533)) ([cbd72c7](https://github.com/MaxPayne89/klass-hero/commit/cbd72c7bf53ab2fe5638e83889a2dd686bd22b17))
+
 ## [0.91.0](https://github.com/MaxPayne89/klass-hero/compare/v0.90.0...v0.91.0) (2026-08-25)
 
 
