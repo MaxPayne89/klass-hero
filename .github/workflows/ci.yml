@@ -92,11 +92,8 @@ jobs:
       - name: Check for unused dependencies
         run: mix deps.unlock --check-unused
 
-      # Keeps a runtime dependency from silently becoming a compile-time one, which
-      # balloons recompiles across a 7-context app. Threshold is the count at the time
-      # this landed — see the note in mix.exs's precommit alias.
       - name: No new compile-time coupling
-        run: mix xref graph --label compile-connected --fail-above 32
+        run: mix lint_compile_coupling
 
       - name: Credo
         run: mix credo --strict

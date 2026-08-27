@@ -88,7 +88,15 @@ parent_user_data = [
   %{name: "Michael Wagner", email: "michael.wagner@example.com"},
   %{name: "Julia Hoffmann", email: "julia.hoffmann@example.com"},
   %{name: "Stefan Schäfer", email: "stefan.schaefer@example.com"},
-  %{name: "Monika Koch", email: "monika.koch@example.com"},
+  # Opted out of the new-message notification, so /users/settings shows the
+  # toggle already off and the preference gate is demonstrable on its own. She is
+  # caught up in every thread she is in, so nothing else can be the reason she is
+  # skipped.
+  %{
+    name: "Monika Koch",
+    email: "monika.koch@example.com",
+    disabled_email_notifications: [:new_message_email]
+  },
   %{name: "Andreas Bauer", email: "andreas.bauer@example.com"}
 ]
 
@@ -100,7 +108,8 @@ parent_users =
       email: data.email,
       hashed_password: hashed_pw,
       confirmed_at: now,
-      intended_roles: [:parent]
+      intended_roles: [:parent],
+      disabled_email_notifications: Map.get(data, :disabled_email_notifications, [])
     })
     |> Repo.insert!()
   end)
@@ -1496,6 +1505,32 @@ Logger.info("Created #{length(all_conversations)} conversations (3 direct, 2 bro
 
 Logger.info("Seeding conversation participants and messages...")
 
+# Read state has to be stamped *after* the messages exist. Participants are
+# inserted first, so a last_read_at written at insert time would still predate
+# every message and leave everyone permanently "behind" — which is what seeded
+# data used to do, showing every thread unread for every user and suppressing the
+# new-message notification for almost all of them.
+mark_caught_up = fn participants, msgs ->
+  # The real maximum, not the last inserted: :utc_datetime truncates to the
+  # second, so "caught up" should hold by construction rather than by luck of
+  # insertion order.
+  caught_up_at = msgs |> Enum.map(& &1.inserted_at) |> Enum.max(DateTime)
+
+  for participant <- participants do
+    participant
+    |> Participant.mark_read_changeset(%{last_read_at: caught_up_at})
+    |> Repo.update!()
+  end
+end
+
+# Left at last_read_at: nil in the broadcast conversations only — "seated but
+# never opened it", which is a state a real broadcast participant reaches. Keeps
+# one unread badge in the seeded inbox, exercises the is_nil branch of
+# NewMessageEmailHandler's read-up filter, and stays caught up in his own direct
+# thread so the suppression is visibly per-conversation. Deliberate: do not
+# "tidy" this into the uniform case.
+behind_in_broadcasts = Enum.at(parent_users, 7)
+
 participant_count = 0
 message_count = 0
 
@@ -1513,19 +1548,15 @@ message_count = 0
       end
 
     # Add both participants
-    Participant.create_changeset(%{
-      conversation_id: convo.id,
-      user_id: provider_user.id,
-      joined_at: now
-    })
-    |> Repo.insert!()
-
-    Participant.create_changeset(%{
-      conversation_id: convo.id,
-      user_id: data.parent_user.id,
-      joined_at: now
-    })
-    |> Repo.insert!()
+    participants =
+      for user_id <- [provider_user.id, data.parent_user.id] do
+        Participant.create_changeset(%{
+          conversation_id: convo.id,
+          user_id: user_id,
+          joined_at: now
+        })
+        |> Repo.insert!()
+      end
 
     # Generate 4-6 messages alternating between participants
     msg_count = 4 + :rand.uniform(3) - 1
@@ -1551,6 +1582,8 @@ message_count = 0
         |> Repo.insert!()
       end)
 
+    mark_caught_up.(participants, msgs)
+
     {pc + 2, mc + length(msgs)}
   end)
 
@@ -1566,12 +1599,13 @@ message_count = 0
       end
 
     # Provider is always a participant in broadcasts
-    Participant.create_changeset(%{
-      conversation_id: convo.id,
-      user_id: provider_user.id,
-      joined_at: now
-    })
-    |> Repo.insert!()
+    provider_participant =
+      Participant.create_changeset(%{
+        conversation_id: convo.id,
+        user_id: provider_user.id,
+        joined_at: now
+      })
+      |> Repo.insert!()
 
     # Add 2-3 parent users as participants
     broadcast_parent_users = Enum.take(Enum.drop(parent_users, 6), 3)
@@ -1623,6 +1657,10 @@ message_count = 0
         })
         |> Repo.insert!()
       end)
+
+    ([provider_participant] ++ added_parents ++ added_staff)
+    |> Enum.reject(&(&1.user_id == behind_in_broadcasts.id))
+    |> mark_caught_up.(msgs)
 
     {pc + 1 + length(added_parents) + length(added_staff), mc + length(msgs)}
   end)

@@ -34,6 +34,7 @@ defmodule KlassHero.Accounts.User do
     field :locale, :string, default: "en"
     field :active_persona, Ecto.Enum, values: UserRole.valid_roles()
     field :is_admin, :boolean, default: false
+    field :disabled_email_notifications, {:array, Ecto.Enum}, values: [:new_message_email], default: []
 
     has_one :parent_profile, ParentProfile, foreign_key: :identity_id
     has_one :provider_profile, ProviderProfile, foreign_key: :identity_id
@@ -253,6 +254,29 @@ defmodule KlassHero.Accounts.User do
     |> cast(attrs, [:locale])
     |> validate_required([:locale])
     |> validate_inclusion(:locale, Locales.supported())
+  end
+
+  @doc """
+  Every email notification a user can switch off.
+
+  Derived from the field's own `Ecto.Enum` values rather than restated, so the
+  vocabulary the UI offers and the vocabulary the changeset accepts cannot drift.
+  """
+  @spec email_notification_kinds() :: [atom()]
+  def email_notification_kinds, do: Ecto.Enum.values(__MODULE__, :disabled_email_notifications)
+
+  @doc """
+  A user changeset for the email notification preferences.
+
+  The column stores what is **disabled**. Absence therefore means enabled, which
+  is what gives every existing row — and every kind added later — a default of
+  ON with no backfill. `[]` is the ordinary starting state and stays valid; `nil`
+  does not, because the column is `null: false`.
+  """
+  def email_notification_preferences_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:disabled_email_notifications])
+    |> validate_required([:disabled_email_notifications])
   end
 
   @doc """

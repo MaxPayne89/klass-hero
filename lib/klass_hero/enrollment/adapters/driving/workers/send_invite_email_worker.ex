@@ -6,7 +6,7 @@ defmodule KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker do
   and transitions the invite status from `pending` to `invite_sent`.
   """
 
-  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
+  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 5
 
   alias KlassHero.Enrollment
   alias KlassHero.Enrollment.Adapters.Driven.Notifications.InviteEmailNotifier

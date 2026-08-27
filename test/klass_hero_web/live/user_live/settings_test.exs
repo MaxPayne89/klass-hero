@@ -343,4 +343,68 @@ defmodule KlassHeroWeb.UserLive.SettingsTest do
       assert KlassHero.Repo.reload!(user).locale == "de"
     end
   end
+
+  describe "email notification preferences" do
+    setup %{conn: conn} do
+      user = user_fixture()
+
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    test "renders the toggle on, because the preference defaults on", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      assert has_element?(lv, "#notification_preferences_form")
+      assert has_element?(lv, "#notifications_new_message_email[checked]")
+    end
+
+    test "switching it off persists the opt-out", %{conn: conn, user: user} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      lv
+      |> form("#notification_preferences_form", notifications: %{new_message_email: "false"})
+      |> render_change()
+
+      refute KlassHero.Accounts.email_notification_enabled?(
+               KlassHero.Repo.reload!(user),
+               :new_message_email
+             )
+    end
+
+    # The toggle renders from its own assign rather than @current_scope.user,
+    # because nothing on this page refreshes the scope in place. If it ever
+    # reads the scope again, this goes stale-but-green until a remount.
+    test "the rendered state follows the change without a reload", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+
+      assert has_element?(lv, "#notifications_new_message_email[checked]")
+
+      lv
+      |> form("#notification_preferences_form", notifications: %{new_message_email: "false"})
+      |> render_change()
+
+      refute has_element?(lv, "#notifications_new_message_email[checked]")
+    end
+
+    test "switching it back on clears the opt-out", %{conn: conn, user: user} do
+      {:ok, _} =
+        KlassHero.Accounts.update_user_email_notification_preference(
+          user,
+          :new_message_email,
+          false
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/users/settings")
+      refute has_element?(lv, "#notifications_new_message_email[checked]")
+
+      lv
+      |> form("#notification_preferences_form", notifications: %{new_message_email: "true"})
+      |> render_change()
+
+      assert KlassHero.Accounts.email_notification_enabled?(
+               KlassHero.Repo.reload!(user),
+               :new_message_email
+             )
+    end
+  end
 end

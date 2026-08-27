@@ -20,8 +20,7 @@ defmodule KlassHero.Family.ParentProfilesTest do
         identity_id: identity_id(),
         display_name: "John Doe",
         phone: "+1234567890",
-        location: "Berlin",
-        notification_preferences: %{email: true, sms: false}
+        location: "Berlin"
       }
 
       assert {:ok, %ParentProfile{} = profile} = Family.create_parent_profile(attrs)

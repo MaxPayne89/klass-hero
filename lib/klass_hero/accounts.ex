@@ -366,6 +366,72 @@ defmodule KlassHero.Accounts do
   end
 
   @doc """
+  Whether `user` currently wants `kind` emailed to them.
+
+  The gate every producing context asks before sending. Callers speak in
+  "enabled?"; that the column stores the *disabled* kinds is this context's
+  business alone.
+
+  Takes a loaded user because that is what every caller has. Working from an id
+  is `notifiable_recipients/2`'s job — it answers for a list of them in one
+  query, and an id matching no user is simply absent from the result.
+  """
+  @spec email_notification_enabled?(User.t(), atom()) :: boolean()
+  def email_notification_enabled?(%User{disabled_email_notifications: disabled}, kind) do
+    kind not in (disabled || [])
+  end
+
+  @doc """
+  Narrows `user_ids` to those who want `kind`, as `%{user_id => %{email:, name:}}`.
+
+  Bulk counterpart to `email_notification_enabled?/2`, shaped like
+  `get_display_names/1`: ids that match no user are simply absent, so a caller
+  building a recipient list from a participants query never has to pre-validate
+  them.
+  """
+  @spec notifiable_recipients([String.t()], atom()) :: %{String.t() => %{email: String.t(), name: String.t()}}
+  def notifiable_recipients([], _kind), do: %{}
+
+  def notifiable_recipients(user_ids, kind) when is_list(user_ids) do
+    kind_string = Atom.to_string(kind)
+
+    from(u in User,
+      where: u.id in ^user_ids and ^kind_string not in u.disabled_email_notifications,
+      select: {u.id, %{email: u.email, name: u.name}}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  Switches one email notification on or off for a user.
+
+  Owns the disabled-list inversion so no caller sees it, and is idempotent in
+  both directions — opting out twice stores one entry, opting in when already
+  enabled writes nothing.
+
+  The other kinds are read back from the row rather than taken from the passed
+  struct, which is the whole reason this reloads. One column holds every kind,
+  so a list computed from a stale struct silently re-enables whatever changed
+  since it was loaded — and the settings page holds a user in `@current_scope`
+  that nothing refreshes in place. Harmless while one kind exists; a lost update
+  the moment there are two.
+  """
+  @spec update_user_email_notification_preference(User.t(), atom(), boolean()) ::
+          {:ok, User.t()} | {:error, Ecto.Changeset.t()}
+  def update_user_email_notification_preference(%User{} = user, kind, enabled?) do
+    context_span entity: "user" do
+      user = Repo.reload!(user)
+      current = user.disabled_email_notifications || []
+      next = if enabled?, do: List.delete(current, kind), else: Enum.uniq([kind | current])
+
+      user
+      |> User.email_notification_preferences_changeset(%{disabled_email_notifications: next})
+      |> Repo.update()
+    end
+  end
+
+  @doc """
   Remembers the surface this user last chose to work in (ADR-0005).
 
   A preference, not a grant: the caller is responsible for having checked that

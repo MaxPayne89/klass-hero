@@ -6,7 +6,7 @@ defmodule KlassHero.Messaging.Workers.SendEmailReplyWorker do
   with proper threading headers, delivers, and updates reply status.
   """
 
-  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 3
+  use KlassHero.Shared.RateLimitedEmailWorker, queue: :email, max_attempts: 5
   use KlassHero.Shared.Interaction
 
   alias KlassHero.Messaging
