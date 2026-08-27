@@ -683,7 +683,7 @@ msgstr ""
 msgid "Introduction"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:165
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:173
 #: lib/klass_hero_web/live/provider/sessions_live.ex:114
 #: lib/klass_hero_web/live/staff/staff_sessions_live.ex:66
 #, elixir-autogen, elixir-format
@@ -3688,7 +3688,7 @@ msgstr ""
 msgid "%{count} unread"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:169
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:177
 #, elixir-autogen, elixir-format
 msgid "A session already exists at this time"
 msgstr ""
@@ -3861,7 +3861,7 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:164
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:172
 #, elixir-autogen, elixir-format
 msgid "Date is required"
 msgstr ""
@@ -3904,7 +3904,7 @@ msgstr ""
 msgid "Emergency: %{details}"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:168
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:176
 #, elixir-autogen, elixir-format
 msgid "End time must be after start time"
 msgstr ""
@@ -3919,7 +3919,7 @@ msgstr ""
 msgid "Failed to archive email"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:177
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:185
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Failed to create session: %{reason}"
 msgstr ""
@@ -3975,7 +3975,7 @@ msgstr ""
 msgid "Invalid Invitation"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:167
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:175
 #: lib/klass_hero_web/live/admin/sessions_live.ex:255
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Invalid time format"
@@ -4110,7 +4110,7 @@ msgstr ""
 msgid "Please explain why you're rejecting this note..."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:171
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:179
 #, elixir-autogen, elixir-format
 msgid "Please fill in all required fields"
 msgstr ""
@@ -4277,7 +4277,7 @@ msgstr ""
 msgid "This invite link is invalid or has expired."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:166
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:174
 #, elixir-autogen, elixir-format
 msgid "Time is required"
 msgstr ""
@@ -4293,7 +4293,7 @@ msgid "Type your reply..."
 msgstr ""
 
 #: lib/klass_hero_web/helpers/participation_live_handlers.ex:227
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:170
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:178
 #: lib/klass_hero_web/live/staff/staff_dashboard_live.ex:126
 #, elixir-autogen, elixir-format
 msgid "Unauthorized"
@@ -7438,7 +7438,7 @@ msgstr ""
 msgid "Staffing — %{date}"
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:172
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:180
 #: lib/klass_hero_web/live/provider/sessions_live.ex:427
 #, elixir-autogen, elixir-format
 msgid "That session could not be found."
@@ -8245,7 +8245,7 @@ msgstr ""
 msgid "That program could not be found."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:173
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:181
 #, elixir-autogen, elixir-format, fuzzy
 msgid "That session could not be saved."
 msgstr ""
@@ -8255,7 +8255,7 @@ msgstr ""
 msgid "The date and time are fixed once a session has started — its attendance records are keyed to it."
 msgstr ""
 
-#: lib/klass_hero_web/helpers/session_form_handlers.ex:175
+#: lib/klass_hero_web/helpers/session_form_handlers.ex:183
 #, elixir-autogen, elixir-format
 msgid "The date and time are fixed once a session has started."
 msgstr ""

@@ -139,7 +139,7 @@ defmodule KlassHeroWeb.Helpers.SessionFormHandlers do
         |> Map.delete(:program_id)
         |> Map.put(:location, blank_to_nil(params["location"]))
         |> Map.put(:notes, blank_to_nil(params["notes"]))
-        |> clear_blank_capacity(params["max_capacity"])
+        |> clear_blank_capacity(params)
 
       Participation.update_session(scope, session_id, attrs)
     end
@@ -149,8 +149,16 @@ defmodule KlassHeroWeb.Helpers.SessionFormHandlers do
   # create is right — there is nothing to clear — but on an edit makes a blanked
   # capacity silently keep its old value. Blank clears; garbage still omits, so a
   # typo does not wipe a real limit.
-  defp clear_blank_capacity(attrs, raw) when raw in [nil, ""], do: Map.put(attrs, :max_capacity, nil)
-  defp clear_blank_capacity(attrs, _raw), do: attrs
+  #
+  # `Map.fetch/2` rather than `params["max_capacity"]`, so an *absent* key is not
+  # read as a blank one: a surface that does not render the input at all must
+  # leave the stored capacity alone, not null it.
+  defp clear_blank_capacity(attrs, params) do
+    case Map.fetch(params, "max_capacity") do
+      {:ok, raw} when raw in [nil, ""] -> Map.put(attrs, :max_capacity, nil)
+      _present_or_absent -> attrs
+    end
+  end
 
   defp blank_to_nil(value) when value in [nil, ""], do: nil
   defp blank_to_nil(value), do: value

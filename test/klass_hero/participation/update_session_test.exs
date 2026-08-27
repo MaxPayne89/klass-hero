@@ -136,6 +136,28 @@ defmodule KlassHero.Participation.UpdateSessionTest do
                })
     end
 
+    # Guards the asymmetry `SessionFormHandlers.clear_blank_capacity/2` relies on:
+    # a submitted-blank capacity clears, an omitted one must not. Today only one
+    # surface calls it and that surface always renders the input, so this pins the
+    # contract for the next one.
+    test "leaves max_capacity alone when the attr is absent" do
+      %{scope: scope, session: session} = provider_with_session()
+      {:ok, _} = Participation.update_session(scope, session.id, %{max_capacity: 25})
+
+      assert {:ok, updated} = Participation.update_session(scope, session.id, %{location: "Gym B"})
+
+      assert updated.max_capacity == 25
+    end
+
+    test "clears max_capacity when the attr is present and nil" do
+      %{scope: scope, session: session} = provider_with_session()
+      {:ok, _} = Participation.update_session(scope, session.id, %{max_capacity: 25})
+
+      assert {:ok, updated} = Participation.update_session(scope, session.id, %{max_capacity: nil})
+
+      assert is_nil(updated.max_capacity)
+    end
+
     test "rejects an end time before the start time" do
       %{scope: scope, session: session} = provider_with_session()
 
