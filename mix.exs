@@ -89,7 +89,7 @@ defmodule KlassHero.MixProject do
       {:expo, "~> 1.0"},
       {:nimble_csv, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:dns_cluster, "~> 0.2.0"},
+      {:dns_cluster, "~> 0.3"},
       {:bandit, "~> 1.5"},
       {:tz, "~> 0.28"},
       {:tidewave, "~> 0.5", only: :dev},
