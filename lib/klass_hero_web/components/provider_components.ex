@@ -1088,6 +1088,23 @@ defmodule KlassHeroWeb.ProviderComponents do
               label={gettext("End Date")}
             />
           </div>
+
+          <%!-- Sits with the schedule, not with Enrollment Capacity: it is what each
+                generated session inherits, alongside its times and location. Placing it
+                beside "Maximum Enrollment" would invite exactly the confusion between a
+                per-session number and the program-wide booking cap that CONTEXT.md
+                warns against. --%>
+          <.input
+            field={@form[:default_session_capacity]}
+            type="number"
+            label={gettext("Usual capacity per session")}
+            min="1"
+          />
+          <p class="text-xs text-[var(--fg-muted)]">
+            {gettext(
+              "How many children fit in one session. Applied to sessions created from this schedule; a session you add by hand keeps its own number."
+            )}
+          </p>
         </div>
 
         <div class="space-y-3">

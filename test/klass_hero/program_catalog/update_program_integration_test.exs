@@ -22,6 +22,36 @@ defmodule KlassHero.ProgramCatalog.UpdateProgramIntegrationTest do
       %{program: program, provider: provider}
     end
 
+    test "sets, changes and clears the default Session Capacity", %{program: program, provider: provider} do
+      assert program.default_session_capacity == nil
+
+      assert {:ok, capped} =
+               ProgramCatalog.update_program(provider.id, program.id, %{default_session_capacity: 12})
+
+      assert capped.default_session_capacity == 12
+
+      assert {:ok, recapped} =
+               ProgramCatalog.update_program(provider.id, capped.id, %{default_session_capacity: 8})
+
+      assert recapped.default_session_capacity == 8
+
+      assert {:ok, cleared} =
+               ProgramCatalog.update_program(provider.id, recapped.id, %{default_session_capacity: nil})
+
+      assert cleared.default_session_capacity == nil
+    end
+
+    test "refuses a default Session Capacity of zero or less", %{program: program, provider: provider} do
+      for invalid <- [0, -3] do
+        assert {:error, changeset} =
+                 ProgramCatalog.update_program(provider.id, program.id, %{
+                   default_session_capacity: invalid
+                 })
+
+        assert "must be greater than 0" in errors_on(changeset).default_session_capacity
+      end
+    end
+
     test "updates title successfully", %{program: program, provider: provider} do
       assert {:ok, updated} =
                ProgramCatalog.update_program(provider.id, program.id, %{title: "New Title"})
