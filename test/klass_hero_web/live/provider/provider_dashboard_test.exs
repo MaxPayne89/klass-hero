@@ -68,13 +68,14 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
     program = insert_program_with_listing(provider_id: provider.id, title: title)
 
-    KlassHero.Factory.insert(:program_session_schema,
-      program_id: program.id,
-      session_date: ~D[2026-05-01],
-      start_time: ~T[15:00:00],
-      end_time: ~T[16:00:00],
-      status: "scheduled"
-    )
+    session =
+      KlassHero.Factory.insert(:program_session_schema,
+        program_id: program.id,
+        session_date: ~D[2026-05-01],
+        start_time: ~T[15:00:00],
+        end_time: ~T[16:00:00],
+        status: "scheduled"
+      )
 
     name = :"provider_session_details_#{System.unique_integer([:positive])}"
     pid = start_supervised!({ProviderSessionDetails, name: name})
@@ -90,7 +91,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
     :ok = Sandbox.allow(Repo, self(), pid)
     :ok = ProviderSessionDetails.rebuild(name)
 
-    program
+    {program, session}
   end
 
   describe "overview section" do
@@ -885,7 +886,7 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
       conn: conn,
       provider: provider
     } do
-      program = seed_program_with_session!(provider, title: "Judo")
+      {program, _session} = seed_program_with_session!(provider, title: "Judo")
 
       {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
 
@@ -898,6 +899,26 @@ defmodule KlassHeroWeb.Provider.ProviderDashboardTest do
 
       view |> element("#sessions-modal button[phx-click='close_sessions']") |> render_click()
       refute has_element?(view, "#sessions-modal")
+    end
+
+    test "a session row is a working entry point into that session's detail page", %{
+      conn: conn,
+      provider: provider
+    } do
+      {program, session} = seed_program_with_session!(provider, title: "Judo")
+
+      {:ok, view, _html} = live(conn, ~p"/provider/dashboard/programs")
+
+      view
+      |> element(~s|button[phx-click="view_sessions"][phx-value-program-id="#{program.id}"]|)
+      |> render_click()
+
+      assert has_element?(view, ~s|#sessions-modal a[href="/provider/participation/#{session.id}"]|)
+
+      # Following it must actually land: ParticipationLive re-guards ownership at
+      # mount and push_navigates away on refusal, so a redirect here would fail
+      # this match rather than pass quietly.
+      assert {:ok, _detail, _html} = live(conn, ~p"/provider/participation/#{session.id}")
     end
   end
 
