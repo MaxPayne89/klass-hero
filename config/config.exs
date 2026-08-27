@@ -131,24 +131,32 @@ config :klass_hero, KlassHeroWeb.Gettext,
 # Configure Oban for background jobs
 config :klass_hero, Oban,
   repo: KlassHero.Repo,
-  plugins: [
-    # max_age is in seconds and defaults to 60, which deletes a permanently-failed job before anyone
-    # can open /oban to see what happened.
-    {Oban.Plugins.Pruner, max_age: 604_800},
-    # Rescues jobs left `executing` by a machine that went away — routine under
-    # auto_stop_machines = "suspend". Rescuing is time-based with no liveness check, so the 60-minute
-    # default is really a duplicate-execution budget: no job here runs anywhere near that long. Do not
-    # lower it without bounding worker runtime via `timeout/1`.
-    Oban.Plugins.Lifeline,
-    {Oban.Plugins.Cron,
-     crontab: [
-       {"0 3 * * *", MessageCleanupWorker},
-       {"0 4 * * *", RetentionPolicyWorker},
-       # Every 5 minutes, not daily: this is what makes a permanently-failed invite or
-       # email visible to the provider when the job died without running its own gate.
-       # A day's delay would leave the row looking pending for a day.
-       {"*/5 * * * *", CompensationSweepWorker}
-     ]}
+  # Since 2.24 pruning, rescuing and cron are first-class services rather than entries in a
+  # `plugins:` list, so each gets a top-level key. They are opt-in, not default-on:
+  # Oban.Config.normalize_services/1 adds nothing for a key that is absent, so deleting one of
+  # these lines silently turns that service off rather than falling back to a default.
+  #
+  # max_age defaults to 60 *seconds*, which deletes a permanently-failed job before anyone can
+  # open /oban to see what happened. Integer seconds still work; the duration tuple is the same
+  # 604_800 written so the unit cannot be misread.
+  pruner: [max_age: {7, :days}],
+  # Rescues jobs left `executing` by a machine that went away — routine under
+  # auto_stop_machines = "suspend". Rescuing is time-based with no liveness check, so the 60-minute
+  # default is really a duplicate-execution budget: no job here runs anywhere near that long. Do not
+  # lower it without bounding worker runtime via `timeout/1`.
+  #
+  # `[]` means "on, with defaults", and unlike an absent key it reads back truthy — which is what
+  # test/config/oban_config_test.exs relies on to tell "configured" from "dropped".
+  lifeline: [],
+  cron: [
+    crontab: [
+      {"0 3 * * *", MessageCleanupWorker},
+      {"0 4 * * *", RetentionPolicyWorker},
+      # Every 5 minutes, not daily: this is what makes a permanently-failed invite or
+      # email visible to the provider when the job died without running its own gate.
+      # A day's delay would leave the row looking pending for a day.
+      {"*/5 * * * *", CompensationSweepWorker}
+    ]
   ],
   # email: 5 — raised from 1 when new-message notifications landed (#1071). One
   #   program broadcast is a single message to every enrolled family, so it can
