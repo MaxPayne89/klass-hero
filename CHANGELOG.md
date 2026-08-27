@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.94.0](https://github.com/MaxPayne89/klass-hero/compare/v0.93.0...v0.94.0) (2026-08-27)
+
+
+### Features
+
+* make the Program Inventory sessions popup a management surface ([#1542](https://github.com/MaxPayne89/klass-hero/issues/1542)) ([36634bf](https://github.com/MaxPayne89/klass-hero/commit/36634bf2c1edc3b4ba810bb90309652e81425c9b))
+* show a session's capacity on its roster and flag overflow ([#1539](https://github.com/MaxPayne89/klass-hero/issues/1539)) ([d025355](https://github.com/MaxPayne89/klass-hero/commit/d0253556092e6d54aba83add63aff5dde060c5a9))
+
 ## [0.93.0](https://github.com/MaxPayne89/klass-hero/compare/v0.92.0...v0.93.0) (2026-08-27)
 
 
