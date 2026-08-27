@@ -49,7 +49,10 @@ defmodule KlassHeroWeb.Helpers.SessionFormHandlers do
     :invalid_time,
     :invalid_time_range,
     :duplicate_session,
-    :unauthorized
+    :unauthorized,
+    :session_started,
+    :invalid_session,
+    :not_found
   ]
 
   @doc """
@@ -98,6 +101,52 @@ defmodule KlassHeroWeb.Helpers.SessionFormHandlers do
     end
   end
 
+  @doc """
+  Form params for editing an existing session.
+
+  Takes the enriched map `Participation.get_session_with_roster_enriched/1`
+  returns, not a struct — that path has already been through `Map.from_struct/1`.
+  """
+  @spec form_from_session(map()) :: form_data()
+  def form_from_session(session) do
+    %{
+      "program_id" => session.program_id,
+      "session_date" => Date.to_iso8601(session.session_date),
+      "start_time" => format_time(session.start_time),
+      "end_time" => format_time(session.end_time),
+      "location" => session.location || "",
+      "notes" => session.notes || "",
+      "max_capacity" => to_string(session.max_capacity || "")
+    }
+  end
+
+  @doc """
+  Coerces the form's strings and edits `session_id` on behalf of `scope`.
+
+  Unlike creation, a blank optional field here means *clear it*, not *omit it*:
+  on a create there is nothing to clear, but a provider editing a session must be
+  able to remove a location they typed by mistake.
+
+  `program_id` is dropped — a session cannot change programs, and passing it would
+  invite `update_changeset/2` to start casting it.
+  """
+  @spec submit_update(Scope.t(), String.t(), form_data()) ::
+          {:ok, Participation.ProgramSession.t()} | {:error, refusal() | atom()}
+  def submit_update(%Scope{} = scope, session_id, params) do
+    with {:ok, coerced} <- coerce_params(params) do
+      attrs =
+        coerced
+        |> Map.delete(:program_id)
+        |> Map.put(:location, blank_to_nil(params["location"]))
+        |> Map.put(:notes, blank_to_nil(params["notes"]))
+
+      Participation.update_session(scope, session_id, attrs)
+    end
+  end
+
+  defp blank_to_nil(value) when value in [nil, ""], do: nil
+  defp blank_to_nil(value), do: value
+
   @doc "Whether a refusal is the provider's to correct, or ours to log."
   @spec user_correctable?(atom()) :: boolean()
   def user_correctable?(reason), do: reason in @correctable
@@ -112,6 +161,11 @@ defmodule KlassHeroWeb.Helpers.SessionFormHandlers do
   def humanize_error(:duplicate_session), do: gettext("A session already exists at this time")
   def humanize_error(:unauthorized), do: gettext("Unauthorized")
   def humanize_error(:missing_required_fields), do: gettext("Please fill in all required fields")
+  def humanize_error(:not_found), do: gettext("That session could not be found.")
+  def humanize_error(:invalid_session), do: gettext("That session could not be saved.")
+
+  def humanize_error(:session_started), do: gettext("The date and time are fixed once a session has started.")
+
   def humanize_error(reason), do: gettext("Failed to create session: %{reason}", reason: inspect(reason))
 
   defp coerce_params(params) do

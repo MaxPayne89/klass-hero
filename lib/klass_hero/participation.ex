@@ -197,6 +197,82 @@ defmodule KlassHero.Participation do
     end
   end
 
+  @doc """
+  Edits an existing session on behalf of `scope`.
+
+  Accepts `session_date`, `start_time`, `end_time`, `location`, `notes` and
+  `max_capacity`. Before #1074 none of this was possible: there was no command,
+  and `update_changeset/2` could not cast a date or a time, so a session typed
+  with the wrong hour stayed wrong.
+
+  **The schedule freezes once the session leaves `:scheduled`.** Attendance
+  records are keyed to the session, so moving a completed one rewrites history
+  its roster cannot follow. Details stay editable at every status — a wrong
+  location on a session that already ran is still worth fixing. A schedule key
+  submitted with its current value is not a change, so re-submitting an unchanged
+  form is allowed rather than refused on the shape of the params.
+
+  Staff are refused even when assigned, matching `create_session/2`: assignment is
+  permission to run a session, not to move it.
+
+  Returns `{:ok, session}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
+  `{:error, :session_started}`, `{:error, :invalid_time_range}`, or
+  `{:error, :duplicate_session}`.
+  """
+  @spec update_session(Scope.t(), String.t(), map()) ::
+          {:ok, ProgramSession.t()}
+          | {:error, :not_found | :unauthorized | :session_started | :invalid_time_range | :duplicate_session}
+  def update_session(%Scope{} = scope, session_id, attrs) when is_binary(session_id) and is_map(attrs) do
+    context_span entity: "session" do
+      with {:ok, session} <- fetch_session(session_id),
+           {:ok, _role} <- authorize_session_edit(scope, session),
+           :ok <- allow_schedule_change?(session, attrs),
+           {:ok, {persisted, events}} <- persist_session_update(session, attrs) do
+        Notifications.notify_all(events)
+        {:ok, persisted}
+      end
+    end
+  end
+
+  # `authorize_lifecycle/2` grants :staff on an assigned session; editing does not.
+  defp authorize_session_edit(scope, session) do
+    case SessionAuthorization.authorize_lifecycle(scope, session) do
+      {:ok, :staff} -> {:error, :unauthorized}
+      {:ok, role} -> {:ok, role}
+      {:error, _reason} -> {:error, :unauthorized}
+    end
+  end
+
+  @schedule_fields [:session_date, :start_time, :end_time]
+
+  defp allow_schedule_change?(%ProgramSession{status: :scheduled}, _attrs), do: :ok
+
+  defp allow_schedule_change?(%ProgramSession{} = session, attrs) do
+    changed? = Enum.any?(@schedule_fields, &(Map.has_key?(attrs, &1) and Map.get(attrs, &1) != Map.get(session, &1)))
+
+    if changed?, do: {:error, :session_started}, else: :ok
+  end
+
+  defp persist_session_update(session, attrs) do
+    Outbox.transact_with_events(@context, fn ->
+      session
+      |> ProgramSession.update_changeset(attrs)
+      |> Repo.update()
+      |> case do
+        {:ok, persisted} -> {:ok, persisted, [ParticipationEvents.session_updated(persisted)]}
+        {:error, changeset} -> {:error, update_refusal(changeset)}
+      end
+    end)
+  end
+
+  defp update_refusal(%Ecto.Changeset{errors: errors}) do
+    cond do
+      Keyword.has_key?(errors, :program_id) -> :duplicate_session
+      Keyword.has_key?(errors, :end_time) -> :invalid_time_range
+      true -> :invalid_session
+    end
+  end
+
   @doc "Lists sessions, optionally filtered by `program_id` or `date`."
   def list_sessions(params \\ %{})
 

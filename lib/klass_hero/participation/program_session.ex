@@ -64,12 +64,26 @@ defmodule KlassHero.Participation.ProgramSession do
     |> optimistic_lock(:lock_version)
   end
 
-  @doc "Creates a changeset for updating an existing session."
+  @doc """
+  Creates a changeset for updating an existing session.
+
+  The schedule fields are castable here as of #1074. They were not before, which
+  is why rescheduling was impossible by construction rather than by rule — and why
+  `validate_time_range/1` and the slot `unique_constraint` had to come with them:
+  a reschedule can invert the times, and it can land on a slot a sibling session
+  already holds. Without the constraint declared, that collision raises
+  `Ecto.ConstraintError` instead of returning a changeset the provider can fix.
+  """
   def update_changeset(session, attrs) do
     session
-    |> cast(attrs, @optional_fields ++ [:status])
+    |> cast(attrs, @optional_fields ++ [:status, :session_date, :start_time, :end_time])
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_number(:max_capacity, greater_than: 0)
+    |> validate_time_range()
+    |> unique_constraint([:program_id, :session_date, :start_time],
+      name: :program_sessions_program_id_session_date_start_time_index,
+      message: "session already exists at this time"
+    )
     |> optimistic_lock(:lock_version)
   end
 

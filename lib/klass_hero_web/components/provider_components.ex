@@ -1831,6 +1831,17 @@ defmodule KlassHeroWeb.ProviderComponents do
   attr :program_locked?, :boolean, default: false
   attr :program_title, :string, default: nil
   attr :cancel_event, :string, required: true
+  attr :submit_label, :string, default: nil
+
+  attr :schedule_locked?, :boolean,
+    default: false,
+    doc: """
+    makes date and time read-only once the session has started — see
+    `KlassHero.Participation.update_session/3`. `readonly`, deliberately not
+    `disabled`: a disabled input is not submitted, so locking the schedule that
+    way would strip the date and time from the payload and make even a *details*
+    edit fail coercion.
+    """
 
   def session_form(assigns) do
     ~H"""
@@ -1860,12 +1871,36 @@ defmodule KlassHeroWeb.ProviderComponents do
         />
       <% end %>
 
-      <.input field={@form[:session_date]} type="date" label={gettext("Date")} required />
+      <.input
+        field={@form[:session_date]}
+        type="date"
+        label={gettext("Date")}
+        required
+        readonly={@schedule_locked?}
+      />
 
       <div class="grid grid-cols-2 gap-4">
-        <.input field={@form[:start_time]} type="time" label={gettext("Start Time")} required />
-        <.input field={@form[:end_time]} type="time" label={gettext("End Time")} required />
+        <.input
+          field={@form[:start_time]}
+          type="time"
+          label={gettext("Start Time")}
+          required
+          readonly={@schedule_locked?}
+        />
+        <.input
+          field={@form[:end_time]}
+          type="time"
+          label={gettext("End Time")}
+          required
+          readonly={@schedule_locked?}
+        />
       </div>
+
+      <p :if={@schedule_locked?} class="text-xs text-[var(--fg-muted)]">
+        {gettext(
+          "The date and time are fixed once a session has started — its attendance records are keyed to it."
+        )}
+      </p>
 
       <.input field={@form[:location]} type="text" label={gettext("Location")} phx-debounce="blur" />
       <.input field={@form[:notes]} type="textarea" label={gettext("Notes")} phx-debounce="blur" />
@@ -1889,7 +1924,7 @@ defmodule KlassHeroWeb.ProviderComponents do
             Theme.rounded(:lg)
           ]}
         >
-          {gettext("Create Session")}
+          {@submit_label || gettext("Create Session")}
         </button>
       </div>
     </.form>

@@ -56,6 +56,21 @@ defmodule KlassHero.Participation.OutboxStagingTest do
     assert entity_id == session.id
   end
 
+  # `Outbox.stage/2` drops an event with no `:event_consumers` entry, so this
+  # fails loudly if the registry line is ever removed — the failure mode that is
+  # otherwise a silently unmaintained read table.
+  test "update_session stages session_updated", %{program: program} do
+    session = create_session(program)
+    TestOutbox.setup()
+
+    {:ok, _updated} =
+      Participation.update_session(owner_scope(program), session.id, %{session_date: ~D[2026-12-01]})
+
+    assert [:session_updated] = staged_types()
+    assert [%{entity_id: entity_id}] = TestOutbox.staged()
+    assert entity_id == session.id
+  end
+
   test "start_session stages session_started", %{program: program} do
     session = create_session(program)
     # Built before the outbox is armed: the fixture creates a User, and user

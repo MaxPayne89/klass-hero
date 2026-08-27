@@ -234,6 +234,70 @@ defmodule KlassHero.Provider.Projections.ProviderSessionDetailsTest do
     end
   end
 
+  # The popup reads this table, so an edit that never lands here shows the old
+  # date forever. Both halves matter: the topic in `use Projection` and the clause
+  # below — either alone is the silent no-op from #1481.
+  describe "session_updated" do
+    setup :insert_seed_session
+
+    test "reprojects the schedule", %{session_id: session_id} do
+      broadcast(:session_updated, session_id, %{
+        session_id: session_id,
+        program_id: "prog",
+        session_date: ~D[2026-11-11],
+        start_time: ~T[16:30:00],
+        end_time: ~T[18:00:00],
+        location: "Gym B",
+        max_capacity: 12
+      })
+
+      assert %{
+               session_date: ~D[2026-11-11],
+               start_time: ~T[16:30:00],
+               end_time: ~T[18:00:00]
+             } = reload(session_id)
+    end
+
+    # Status, staffing and the counters each have their own event. Re-deriving
+    # them from an edit would let a stale payload overwrite a fresher projection.
+    test "leaves status and the attendance counters alone", %{session_id: session_id} do
+      broadcast(:session_started, session_id, %{session_id: session_id, program_id: "prog"})
+      broadcast(:roster_seeded, session_id, %{session_id: session_id, seeded_count: 3})
+
+      broadcast(:session_updated, session_id, %{
+        session_id: session_id,
+        program_id: "prog",
+        session_date: ~D[2026-11-11],
+        start_time: ~T[16:30:00],
+        end_time: ~T[18:00:00],
+        location: nil,
+        max_capacity: nil
+      })
+
+      assert %{status: :in_progress, total_count: 3} = reload(session_id)
+    end
+
+    test "logs a warning when the session row is missing" do
+      unknown_id = Ecto.UUID.generate()
+
+      log =
+        capture_log(fn ->
+          broadcast(:session_updated, unknown_id, %{
+            session_id: unknown_id,
+            program_id: "prog",
+            session_date: ~D[2026-11-11],
+            start_time: ~T[16:30:00],
+            end_time: ~T[18:00:00],
+            location: nil,
+            max_capacity: nil
+          })
+        end)
+
+      assert log =~ "session update skipped"
+      assert log =~ unknown_id
+    end
+  end
+
   describe "roster_seeded" do
     setup :insert_seed_session
 

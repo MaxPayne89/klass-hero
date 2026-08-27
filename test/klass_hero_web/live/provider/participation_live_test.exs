@@ -43,6 +43,78 @@ defmodule KlassHeroWeb.Provider.ParticipationLiveTest do
     %{session: session, parent: parent, child: child, record: record, scope: scope}
   end
 
+  # This is what makes the Sessions popup a management surface rather than a
+  # list: the row leads here, and here the session can actually be corrected.
+  describe "editing the session" do
+    setup [:create_session_with_child]
+
+    test "the form opens seeded from the session", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      refute has_element?(view, "#edit-session-panel")
+
+      view |> element("#edit-session-btn") |> render_click()
+
+      assert has_element?(view, "#edit-session-panel")
+      assert has_element?(view, "#create-session-form")
+    end
+
+    test "saving a detail edit persists it", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      view |> element("#edit-session-btn") |> render_click()
+
+      # The session is :in_progress, so its schedule must round-trip unchanged —
+      # submitting different times would be a reschedule and get refused.
+      view
+      |> form("#create-session-form", %{
+        "session" => %{
+          "session_date" => Date.to_iso8601(session.session_date),
+          "start_time" => Calendar.strftime(session.start_time, "%H:%M"),
+          "end_time" => Calendar.strftime(session.end_time, "%H:%M"),
+          "location" => "Gym B",
+          "notes" => "",
+          "max_capacity" => "15"
+        }
+      })
+      |> render_submit()
+
+      assert {:ok, updated} = Participation.get_session(session.id)
+      assert updated.location == "Gym B"
+      assert updated.max_capacity == 15
+
+      # Panel closes on success rather than leaving a submitted form on screen.
+      refute has_element?(view, "#edit-session-panel")
+    end
+
+    # The fixture session is :in_progress, so the schedule is frozen. Disabling
+    # the inputs is the affordance; the context is the guard, and this asserts the
+    # guard by submitting the change the disabled input would have prevented.
+    test "refuses a schedule change on a started session", %{conn: conn, session: session} do
+      {:ok, view, _html} = live(conn, ~p"/provider/participation/#{session.id}")
+
+      view |> element("#edit-session-btn") |> render_click()
+
+      html =
+        view
+        |> form("#create-session-form", %{
+          "session" => %{
+            "session_date" => "2027-01-01",
+            "start_time" => "09:00",
+            "end_time" => "11:00",
+            "location" => "",
+            "notes" => "",
+            "max_capacity" => ""
+          }
+        })
+        |> render_submit()
+
+      assert html =~ "fixed once a session has started"
+      assert {:ok, unchanged} = Participation.get_session(session.id)
+      assert unchanged.session_date == session.session_date
+    end
+  end
+
   describe "cross-provider authorization" do
     test "redirects when the session belongs to another provider (IDOR guard)", %{conn: conn} do
       foreign_provider = insert(:provider_profile_schema)

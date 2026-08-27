@@ -32,8 +32,31 @@
           >
             {gettext("Complete Session")}
           </.kh_button>
+          <.kh_button
+            :if={!@session_form}
+            id="edit-session-btn"
+            variant={:secondary}
+            phx-click="edit_session"
+          >
+            {gettext("Edit Session")}
+          </.kh_button>
         </:actions>
       </.participation_card>
+    </div>
+
+    <%!-- Schedule fields lock once the session leaves :scheduled; the details do
+    not. Participation.update_session/3 enforces the same rule, so disabling here
+    is the affordance rather than the guard. --%>
+    <div :if={@session_form} id="edit-session-panel" class="mb-6 rounded-lg border p-4">
+      <h2 class={["mb-4", Theme.typography(:card_title)]}>{gettext("Edit Session")}</h2>
+      <.session_form
+        form={@session_form}
+        program_locked?={true}
+        program_title={Map.get(@session, :program_name, gettext("Session"))}
+        schedule_locked?={@session.status != :scheduled}
+        submit_label={gettext("Save Session")}
+        cancel_event="cancel_edit_session"
+      />
     </div>
 
     <div class="mt-6">
