@@ -16,6 +16,7 @@ defmodule KlassHeroWeb.ProviderComponents do
   import KlassHeroWeb.UIComponents
 
   alias KlassHero.Shared.ChangesetErrors
+  alias KlassHeroWeb.Presenters.ChildPresenter
   alias KlassHeroWeb.Presenters.ProviderPresenter
   alias KlassHeroWeb.Theme
   alias Phoenix.HTML.Form
@@ -2426,93 +2427,116 @@ defmodule KlassHeroWeb.ProviderComponents do
       <p class="text-[var(--fg-muted)]">{gettext("No enrollments yet.")}</p>
     </div>
 
-    <table :if={@entries != []} id="roster-table" class="w-full">
-      <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
-        <tr>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
-            {gettext("Child Name")}
-          </th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
-            {gettext("Status")}
-          </th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
-            {gettext("Waivers")}
-          </th>
-          <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
-            {gettext("Enrolled")}
-          </th>
-          <th class="px-3 py-2 text-right text-xs font-semibold text-[var(--fg-muted)] uppercase">
-            <span class="sr-only">{gettext("Actions")}</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-hero-grey-200">
-        <tr :for={entry <- @entries} class="hover:bg-hero-grey-50">
-          <td class="px-3 py-3 text-sm text-hero-black-100 font-medium">
-            {entry.child_name}
-          </td>
-          <td class="px-3 py-3">
-            <.status_pill color={enrollment_status_color(entry.status)}>
-              {enrollment_status_label(entry.status)}
-            </.status_pill>
-          </td>
-          <td class="px-3 py-3">
-            <%!-- A dash rather than "Signed" when the program requires nothing: a provider
+    <div :if={@entries != []} class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      <table id="roster-table" class="w-full min-w-[500px]">
+        <thead class="bg-hero-grey-50 border-b border-hero-grey-200">
+          <tr>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
+              {gettext("Child Name")}
+            </th>
+            <%!-- Hidden below `sm` for the same reason as invite_table's Program column:
+                  a sixth column pushes Actions off a 375px viewport, so on mobile the
+                  date of birth rides under the child's name instead. --%>
+            <th class="hidden sm:table-cell px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
+              {gettext("Date of birth")}
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
+              {gettext("Status")}
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
+              {gettext("Waivers")}
+            </th>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-[var(--fg-muted)] uppercase">
+              {gettext("Enrolled")}
+            </th>
+            <th class="px-3 py-2 text-right text-xs font-semibold text-[var(--fg-muted)] uppercase">
+              <span class="sr-only">{gettext("Actions")}</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-hero-grey-200">
+          <tr :for={entry <- @entries} class="hover:bg-hero-grey-50">
+            <td class="px-3 py-3 text-sm text-hero-black-100 font-medium">
+              {entry.child_name}
+              <span
+                id={"child-dob-mobile-#{entry.enrollment_id}"}
+                class="block sm:hidden text-xs font-normal text-[var(--fg-muted)]"
+              >
+                {format_birth_date(entry.date_of_birth)}
+              </span>
+            </td>
+            <td
+              id={"child-dob-#{entry.enrollment_id}"}
+              class="hidden sm:table-cell px-3 py-3 text-sm text-[var(--fg-muted)] whitespace-nowrap"
+            >
+              {format_birth_date(entry.date_of_birth)}
+            </td>
+            <td class="px-3 py-3">
+              <.status_pill color={enrollment_status_color(entry.status)}>
+                {enrollment_status_label(entry.status)}
+              </.status_pill>
+            </td>
+            <td class="px-3 py-3">
+              <%!-- A dash rather than "Signed" when the program requires nothing: a provider
                   scanning for who still owes them a form should not see a green tick that
                   means "there was never anything to sign". --%>
-            <span id={"waiver-status-#{entry.enrollment_id}"} data-status={entry.waiver_status}>
-              <span :if={entry.waiver_status == :not_required} class="text-sm text-[var(--fg-muted)]">
-                —
+              <span id={"waiver-status-#{entry.enrollment_id}"} data-status={entry.waiver_status}>
+                <span
+                  :if={entry.waiver_status == :not_required}
+                  class="text-sm text-[var(--fg-muted)]"
+                >
+                  —
+                </span>
+                <.status_pill
+                  :if={entry.waiver_status != :not_required}
+                  color={if entry.waiver_status == :signed, do: "success", else: "warning"}
+                >
+                  {if entry.waiver_status == :signed, do: gettext("Signed"), else: gettext("Unsigned")}
+                </.status_pill>
               </span>
-              <.status_pill
-                :if={entry.waiver_status != :not_required}
-                color={if entry.waiver_status == :signed, do: "success", else: "warning"}
-              >
-                {if entry.waiver_status == :signed, do: gettext("Signed"), else: gettext("Unsigned")}
-              </.status_pill>
-            </span>
-          </td>
-          <td class="px-3 py-3 text-sm text-[var(--fg-muted)]">
-            {format_enrollment_date(entry.enrolled_at)}
-          </td>
-          <td class="px-3 py-3 text-right">
-            <%= if @can_message? and entry.status == :confirmed and entry.parent_user_id do %>
-              <button
-                id={"send-message-#{entry.enrollment_id}"}
-                type="button"
-                phx-click="send_message_to_parent"
-                phx-value-parent-user-id={entry.parent_user_id}
-                title={gettext("Send Message")}
-                aria-label={gettext("Send Message")}
-                class={[
-                  "p-2 inline-flex",
-                  Theme.rounded(:lg),
-                  Theme.transition(:normal),
-                  "text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100"
-                ]}
-              >
-                <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />
-              </button>
-            <% else %>
-              <button
-                id={"send-message-#{entry.enrollment_id}"}
-                type="button"
-                disabled
-                title={message_button_title(entry)}
-                aria-label={message_button_title(entry)}
-                class={[
-                  "p-2 inline-flex",
-                  Theme.rounded(:lg),
-                  "text-hero-grey-300 cursor-not-allowed"
-                ]}
-              >
-                <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />
-              </button>
-            <% end %>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </td>
+            <td class="px-3 py-3 text-sm text-[var(--fg-muted)]">
+              {format_enrollment_date(entry.enrolled_at)}
+            </td>
+            <td class="px-3 py-3 text-right">
+              <%= if @can_message? and entry.status == :confirmed and entry.parent_user_id do %>
+                <button
+                  id={"send-message-#{entry.enrollment_id}"}
+                  type="button"
+                  phx-click="send_message_to_parent"
+                  phx-value-parent-user-id={entry.parent_user_id}
+                  title={gettext("Send Message")}
+                  aria-label={gettext("Send Message")}
+                  class={[
+                    "p-2 inline-flex",
+                    Theme.rounded(:lg),
+                    Theme.transition(:normal),
+                    "text-[var(--fg-muted)] hover:text-hero-black-100 hover:bg-hero-grey-100"
+                  ]}
+                >
+                  <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />
+                </button>
+              <% else %>
+                <button
+                  id={"send-message-#{entry.enrollment_id}"}
+                  type="button"
+                  disabled
+                  title={message_button_title(entry)}
+                  aria-label={message_button_title(entry)}
+                  class={[
+                    "p-2 inline-flex",
+                    Theme.rounded(:lg),
+                    "text-hero-grey-300 cursor-not-allowed"
+                  ]}
+                >
+                  <.icon name="hero-chat-bubble-left-mini" class="w-5 h-5" />
+                </button>
+              <% end %>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
     """
   end
 
@@ -2935,6 +2959,15 @@ defmodule KlassHeroWeb.ProviderComponents do
   end
 
   defp format_enrollment_date(_), do: "\u2014"
+
+  # Same format as the adjacent Enrolled column \u2014 two date columns side by side in
+  # different formats read as a bug. A GDPR-anonymized child has no date of birth.
+  defp format_birth_date(%Date{} = date) do
+    age = ChildPresenter.age_in_years(date, Date.utc_today())
+    "#{Calendar.strftime(date, "%b %d, %Y")} (#{age})"
+  end
+
+  defp format_birth_date(_), do: "\u2014"
 
   # Invite lifecycle differs from enrollment lifecycle (pending → invite_sent → registered → enrolled)
   defp invite_status_color(:pending), do: "warning"

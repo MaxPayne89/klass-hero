@@ -162,5 +162,42 @@ defmodule KlassHeroWeb.Presenters.ChildPresenterTest do
       result = ChildPresenter.children_summary([child1, child2])
       assert result == "Emma Schmidt (7), Luca Bauer (5)"
     end
+
+    test "omits the age parenthetical when the date of birth is unknown" do
+      child = build_child(%{first_name: "Emma", last_name: "Schmidt", date_of_birth: nil})
+      assert ChildPresenter.children_summary([child]) == "Emma Schmidt"
+    end
+  end
+
+  # age_in_years/2
+
+  # Fixed reference dates, not Date.utc_today() — an assertion that recomputes its
+  # own expected value just re-implements the code under test.
+  @age_cases [
+    {~D[2015-03-04], ~D[2026-08-27], 11, "birthday already passed this year"},
+    {~D[2015-12-31], ~D[2026-08-27], 10, "birthday still upcoming this year"},
+    {~D[2026-08-27], ~D[2026-08-27], 0, "born on the reference date"},
+    {~D[2015-08-27], ~D[2026-08-27], 11, "birthday falls exactly on the reference date"},
+    {~D[2016-02-29], ~D[2025-02-28], 8, "leap-day birth, non-leap reference year, birthday not reached"},
+    {~D[2016-02-29], ~D[2025-03-01], 9, "leap-day birth, non-leap reference year, birthday passed"},
+    {nil, ~D[2026-08-27], nil, "unknown date of birth (GDPR-anonymized child)"}
+  ]
+
+  describe "age_in_years/2" do
+    test "computes whole years across the calendar edges" do
+      for {dob, reference_date, expected, label} <- @age_cases do
+        actual = ChildPresenter.age_in_years(dob, reference_date)
+
+        assert actual == expected,
+               "#{label}: age_in_years(#{inspect(dob)}, #{inspect(reference_date)}) " <>
+                 "returned #{inspect(actual)}, expected #{inspect(expected)}"
+      end
+    end
+
+    property "reports exactly the elapsed years for a Jan-1 birthday" do
+      check all(years <- StreamData.integer(0..18)) do
+        assert ChildPresenter.age_in_years(birthday_in_past(years), Date.utc_today()) == years
+      end
+    end
   end
 end
