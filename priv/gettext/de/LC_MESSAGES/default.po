@@ -2646,8 +2646,6 @@ msgid "Read our founding story →"
 msgstr "Lesen Sie unsere Gründungsgeschichte →"
 
 #: lib/klass_hero_web/components/participation_components.ex:796
-#: lib/klass_hero_web/components/provider_components.ex:2982
-#: lib/klass_hero_web/components/participation_components.ex:750
 #: lib/klass_hero_web/components/provider_components.ex:3162
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:198
 #, elixir-autogen, elixir-format
@@ -3493,7 +3491,6 @@ msgid "No risk of non-payment"
 msgstr "Kein Risiko von Zahlungsausfällen"
 
 #: lib/klass_hero_web/components/participation_components.ex:821
-#: lib/klass_hero_web/components/participation_components.ex:775
 #: lib/klass_hero_web/components/provider_components.ex:1906
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:155
 #, elixir-autogen, elixir-format
@@ -8236,6 +8233,7 @@ msgstr "Auf der Teilnehmerliste dieser Sitzung stehen mehr Kinder, als die Kapaz
 #, elixir-autogen, elixir-format
 msgid "Over capacity"
 msgstr "Überbelegt"
+
 #: lib/klass_hero_web/live/provider/participation_live.html.heex:41
 #: lib/klass_hero_web/live/provider/participation_live.html.heex:51
 #, elixir-autogen, elixir-format

@@ -2646,8 +2646,6 @@ msgid "Read our founding story →"
 msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:796
-#: lib/klass_hero_web/components/provider_components.ex:2982
-#: lib/klass_hero_web/components/participation_components.ex:750
 #: lib/klass_hero_web/components/provider_components.ex:3162
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:198
 #, elixir-autogen, elixir-format
@@ -3493,7 +3491,6 @@ msgid "No risk of non-payment"
 msgstr ""
 
 #: lib/klass_hero_web/components/participation_components.ex:821
-#: lib/klass_hero_web/components/participation_components.ex:775
 #: lib/klass_hero_web/components/provider_components.ex:1906
 #: lib/klass_hero_web/live/admin/sessions_live.html.heex:155
 #, elixir-autogen, elixir-format
