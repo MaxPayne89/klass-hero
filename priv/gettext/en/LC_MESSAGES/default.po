@@ -7997,7 +7997,7 @@ msgstr ""
 msgid "e.g. Mum called — off sick today"
 msgstr ""
 
-#: lib/klass_hero_web/components/composite_components.ex:651
+#: lib/klass_hero_web/components/composite_components.ex:678
 #, elixir-autogen, elixir-format
 msgid "%{business} on %{network}"
 msgstr ""

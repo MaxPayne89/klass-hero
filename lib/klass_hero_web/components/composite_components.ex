@@ -556,54 +556,81 @@ defmodule KlassHeroWeb.CompositeComponents do
 
   def provider_hero(%{variant: :full} = assigns) do
     ~H"""
-    <section
-      id="provider-hero"
-      data-variant="full"
-      class={[
-        Theme.rounded(:xl),
-        "relative overflow-hidden shadow-sm border",
-        Theme.border_color(:light)
-      ]}
-    >
-      <div class="absolute inset-0" aria-hidden="true">
+    <section id="provider-hero" data-variant="full">
+      <%!-- The band carries no text, which is what lets the cover paint at full
+            contrast: there is nothing here for a scrim to protect. Keep it that
+            way — text over an arbitrary upload has unbounded contrast. --%>
+      <div class={[Theme.rounded(:xl), "overflow-hidden"]}>
         <img
           :if={present?(@provider[:cover_image_url])}
           src={@provider.cover_image_url}
           alt=""
           data-band="cover"
-          class="w-full h-full object-cover"
+          class="w-full h-32 sm:h-44 object-cover"
         />
+        <%!-- Shorter than the cover band on purpose. A photo earns the height; an
+              empty gradient at the same size outgrows the identity card beneath
+              it (176px of colour above 154px of content), and reads as a slot
+              waiting to be filled — which is most profiles today. --%>
         <div
           :if={!present?(@provider[:cover_image_url])}
           data-band="gradient"
-          class={["w-full h-full", Theme.gradient(:primary)]}
+          class={["w-full h-20 sm:h-28", Theme.gradient(:primary)]}
         >
         </div>
-        <%!-- Scrim. The cover is an arbitrary upload; without this, contrast is
-              unbounded. Don't lower the opacity to show the photo better. --%>
-        <div class="absolute inset-0 bg-white/90"></div>
       </div>
 
-      <div class="relative p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 text-center sm:text-left">
-        <.provider_avatar provider={@provider} size="w-20 h-20 sm:w-24 sm:h-24" text="text-2xl" />
-        <div class="flex-1 min-w-0">
-          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-            <h1 class={[Theme.typography(:section_title), Theme.text_color(:heading)]}>
-              {@provider.business_name}
-            </h1>
-            <.kh_trust_mark state={trust_state(@provider)} />
-          </div>
-          <p
-            :if={present?(@provider[:tagline])}
-            class={["mt-2", Theme.typography(:body), "text-[var(--fg-muted-on-light)]"]}
-          >
-            {@provider.tagline}
-          </p>
-          <.provider_social_row
-            provider={@provider}
-            class="mt-4 justify-center sm:justify-start"
-          />
+      <%!-- Opaque by contract, not by taste: the contrast audit resolves a text
+            node's background by walking its ancestors, and this card is the
+            ancestor standing between every string below and the photo. --%>
+      <div
+        data-testid="provider-identity-card"
+        class={[
+          Theme.bg(:surface),
+          Theme.rounded(:xl),
+          "relative z-10 -mt-6 mx-4 sm:mx-8 px-6 pt-14 sm:pt-16 pb-6",
+          "flex flex-col items-center gap-2 text-center shadow-sm border",
+          Theme.border_color(:light)
+        ]}
+      >
+        <%!-- Anchored to the card, not the band, so the band keeps overflow-hidden
+              for its own rounding without clipping the avatar. The -top offset is
+              half the avatar's height at each breakpoint (40 of 80, 48 of 96) —
+              that is what centres the medallion on the seam, so the two pairs move
+              together or not at all.
+
+              Elevation is load-bearing here, not decoration: with no cover the band
+              and the initials fallback both carry gradient(:primary), and they read
+              apart only because each interpolates across its own box. --%>
+        <div class={[
+          "absolute -top-10 sm:-top-12 left-1/2 -translate-x-1/2 flex border-4 border-white",
+          Theme.rounded(:full),
+          Theme.shadow(:md)
+        ]}>
+          <.provider_avatar provider={@provider} size="w-20 h-20 sm:w-24 sm:h-24" text="text-2xl" />
         </div>
+
+        <%!-- :page_title, not :section_title — the latter is what "About the
+              Provider" further down the page uses, and the name must not tie with
+              it. Matches program_detail_live.ex, the sibling hero. --%>
+        <h1 class={[Theme.typography(:page_title), Theme.text_color(:heading)]}>
+          {@provider.business_name}
+        </h1>
+
+        <%!-- No guard, no per-child margins: `gap` falls only between children that
+              actually render, and both the trust mark and the social row render
+              nothing when they have nothing to say. Re-checking :unverified here
+              would be a second copy of a rule kh_trust_mark already owns. --%>
+        <.kh_trust_mark state={trust_state(@provider)} />
+
+        <p
+          :if={present?(@provider[:tagline])}
+          class={[Theme.typography(:body), "text-[var(--fg-muted-on-light)]"]}
+        >
+          {@provider.tagline}
+        </p>
+
+        <.provider_social_row provider={@provider} class="mt-2 justify-center" />
       </div>
     </section>
     """
