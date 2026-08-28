@@ -19,7 +19,6 @@ defmodule KlassHero.Provider.VerificationStep do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.User
   alias KlassHero.Provider.CompletedVia
   alias KlassHero.Provider.StepDefinition
   alias KlassHero.Provider.StepKey
@@ -42,8 +41,10 @@ defmodule KlassHero.Provider.VerificationStep do
     field :reviewed_at, :utc_datetime_usec
     field :submitted_at, :utc_datetime_usec
 
+    # Accounts owns the reviewer; correlation id only, no association (#1434).
+    field :reviewed_by_id, :binary_id
+
     belongs_to :vetting_case, VettingCase
-    belongs_to :reviewed_by, User
 
     timestamps()
   end

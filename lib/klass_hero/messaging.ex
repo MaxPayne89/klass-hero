@@ -1417,7 +1417,7 @@ defmodule KlassHero.Messaging do
       |> MessageQueries.not_deleted()
       |> MessageQueries.order_by_newest()
       |> MessageQueries.paginate(opts)
-      |> MessageQueries.preload_assocs([:sender, :attachments])
+      |> MessageQueries.preload_assocs([:attachments])
       |> Repo.all()
 
     messages = Enum.take(results, limit)
@@ -1443,14 +1443,14 @@ defmodule KlassHero.Messaging do
     |> Kernel.||(0)
   end
 
-  # Builds a sender_id => display-name map from preloaded messages, skipping
-  # messages whose sender wasn't loaded (last-write-wins on duplicate senders).
+  # Builds a sender_id => display-name map. Ids Accounts cannot resolve are
+  # omitted rather than raising, so a dangling correlation id degrades to
+  # "Unknown" at the call site instead of failing the whole page.
   defp build_sender_names_map(messages) do
     messages
-    |> Enum.reject(fn m ->
-      match?(%Ecto.Association.NotLoaded{}, m.sender) or is_nil(m.sender)
-    end)
-    |> Map.new(fn m -> {m.sender_id, m.sender.name} end)
+    |> Enum.map(& &1.sender_id)
+    |> Enum.uniq()
+    |> Accounts.get_display_names()
   end
 
   # === Persistence — participants ===

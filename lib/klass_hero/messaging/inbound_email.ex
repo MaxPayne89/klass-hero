@@ -16,8 +16,6 @@ defmodule KlassHero.Messaging.InboundEmail do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.User
-
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   @timestamps_opts [type: :utc_datetime]
@@ -38,8 +36,6 @@ defmodule KlassHero.Messaging.InboundEmail do
     field :read_by_id, :binary_id
     field :read_at, :utc_datetime_usec
     field :received_at, :utc_datetime_usec
-
-    belongs_to :read_by, User, foreign_key: :read_by_id, define_field: false
 
     timestamps()
   end
