@@ -5,6 +5,19 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.96.0](https://github.com/MaxPayne89/klass-hero/compare/v0.95.0...v0.96.0) (2026-08-28)
+
+
+### Features
+
+* add "Meet the Heroes" to the provider profile ([#1554](https://github.com/MaxPayne89/klass-hero/issues/1554)) ([1ec446f](https://github.com/MaxPayne89/klass-hero/commit/1ec446f47ba7dbf58e8e89bae9a46fa21975a59c)), closes [#1509](https://github.com/MaxPayne89/klass-hero/issues/1509)
+* give a program a default capacity its generated sessions inherit ([#1546](https://github.com/MaxPayne89/klass-hero/issues/1546)) ([3167f2b](https://github.com/MaxPayne89/klass-hero/commit/3167f2ba558b49722552b08d91aecbad24512b87))
+
+
+### Code Refactoring
+
+* retire the four CQRS projections that don't earn their keep ([#1557](https://github.com/MaxPayne89/klass-hero/issues/1557)) ([59104de](https://github.com/MaxPayne89/klass-hero/commit/59104de5ecdf336c3bb561310425c2cb09d144c4))
+
 ## [0.95.0](https://github.com/MaxPayne89/klass-hero/compare/v0.94.0...v0.95.0) (2026-08-27)
 
 
