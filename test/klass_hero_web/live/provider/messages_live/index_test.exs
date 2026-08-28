@@ -37,7 +37,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.IndexTest do
     setup :register_and_log_in_provider
 
     test "renders conversation list", %{conn: conn, user: user} do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      now = DateTime.utc_now()
 
       insert_summary(%{
         user_id: user.id,
@@ -55,7 +55,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.IndexTest do
 
     test "clicking conversation navigates to provider show page", %{conn: conn, user: user} do
       conversation_id = Ecto.UUID.generate()
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
+      now = DateTime.utc_now()
 
       insert_summary(%{
         conversation_id: conversation_id,
@@ -82,7 +82,7 @@ defmodule KlassHeroWeb.Provider.MessagesLive.IndexTest do
   end
 
   defp insert_summary(attrs) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    now = DateTime.utc_now()
 
     defaults = %{
       id: Ecto.UUID.generate(),

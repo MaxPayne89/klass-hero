@@ -1374,7 +1374,16 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
 
   # ── Seed + dispatch helpers ────────────────────────────────────────────────
 
+  # Second precision, because most of what it feeds is this read table and the event
+  # payloads that fill it. The two write-side columns the inbox compares —
+  # `messages.inserted_at` and `conversation_participants.last_read_at` — are
+  # microsecond, so the helpers below widen anything headed for those.
   defp now, do: DateTime.utc_now() |> DateTime.truncate(:second)
+
+  # Not `DateTime.truncate(at, :microsecond)`: truncate only ever *lowers* precision, so
+  # on a second-precision value it is a no-op and Ecto still rejects it.
+  defp usec(nil), do: nil
+  defp usec(%DateTime{microsecond: {value, _}} = at), do: %{at | microsecond: {value, 6}}
 
   defp summary_for(conversation_id, user_id) do
     Repo.one!(
@@ -1393,20 +1402,21 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
       attrs
       |> Keyword.put_new(:id, Ecto.UUID.generate())
       |> Keyword.put(:conversation_id, conversation_id)
+      |> Keyword.replace_lazy(:last_read_at, &usec/1)
 
     Repo.insert!(struct!(Participant, attrs))
   end
 
   defp insert_message(conversation_id, attrs) do
-    ts = Keyword.get(attrs, :inserted_at, now())
+    ts = attrs |> Keyword.get(:inserted_at, now()) |> usec()
 
     attrs =
       attrs
       |> Keyword.put_new(:id, Ecto.UUID.generate())
       |> Keyword.put(:conversation_id, conversation_id)
       |> Keyword.put_new(:message_type, :text)
-      |> Keyword.put_new(:inserted_at, ts)
-      |> Keyword.put_new(:updated_at, ts)
+      |> Keyword.put(:inserted_at, ts)
+      |> Keyword.put(:updated_at, ts)
 
     Repo.insert!(struct!(Message, attrs))
   end

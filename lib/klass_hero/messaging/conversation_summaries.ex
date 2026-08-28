@@ -246,7 +246,7 @@ defmodule KlassHero.Messaging.ConversationSummaries do
       latest_message_at: latest_message && latest_message.inserted_at,
       has_attachments: has_attachments,
       unread_count: unread_count,
-      last_read_at: participant.last_read_at,
+      last_read_at: to_read_table_precision(participant.last_read_at),
       archived_at: conversation.archived_at,
       system_notes: conv_system_notes,
       enrolled_child_names: resolve_enrolled_child_names(conversation, Enum.map(active_participants, & &1.user_id)),
@@ -521,11 +521,19 @@ defmodule KlassHero.Messaging.ConversationSummaries do
     |> Repo.update_all(
       set: [
         unread_count: 0,
-        last_read_at: read_at,
+        last_read_at: to_read_table_precision(read_at),
         updated_at: now
       ]
     )
   end
+
+  # `conversation_participants.last_read_at` is microsecond-precision; this read table's
+  # copy of it is not, and cannot be — a read table has no changeset, so a precision
+  # mismatch surfaces as a dump crash that rolls back the whole event transaction,
+  # taking the participant seating with it. Both columns die together in this
+  # projection's retirement; until then the copy is truncated at the boundary.
+  defp to_read_table_precision(nil), do: nil
+  defp to_read_table_precision(%DateTime{} = at), do: DateTime.truncate(at, :second)
 
   defp project_conversations_archived(event) do
     # Destructured, not `Map.get`-ed: `project/1` discards this function's return, so a

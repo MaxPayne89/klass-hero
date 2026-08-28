@@ -83,8 +83,9 @@ defmodule KlassHero.Messaging.ParticipantSeatingTest do
     )
   end
 
-  # Distinguished by presence, not by clock: `messages.inserted_at` is second-precision,
-  # so two messages written in one test would share a timestamp and prove nothing.
+  # Distinguished by presence, not by clock. `messages.inserted_at` is microsecond-
+  # precision now, so two messages written in one test would differ — but a cursor that
+  # merely *differs* proves less than one conversation having a cursor and the other none.
   test "each conversation in a batch gets its own cursor" do
     spoken = insert(:conversation_schema)
     speaker = insert(:participant_schema, conversation_id: spoken.id)
@@ -120,7 +121,7 @@ defmodule KlassHero.Messaging.ParticipantSeatingTest do
 
   test "add_participant/1 honours an explicit last_read_at", ctx do
     insert(:message_schema, conversation_id: ctx.conversation.id, sender_id: ctx.speaker.user_id)
-    explicit = ~U[2026-01-01 00:00:00Z]
+    explicit = ~U[2026-01-01 00:00:00.000000Z]
 
     assert {:ok, participant} =
              Messaging.add_participant(%{
@@ -135,7 +136,7 @@ defmodule KlassHero.Messaging.ParticipantSeatingTest do
   # Rejoining is joining: someone re-added was not entitled to the conversation while
   # away, so what happened in the meantime is history, not a backlog.
   test "re-activating a departed participant re-stamps the cursor", ctx do
-    departed_at = ~U[2026-01-01 00:00:00Z]
+    departed_at = ~U[2026-01-01 00:00:00.000000Z]
 
     participant =
       insert(:participant_schema, conversation_id: ctx.conversation.id, user_id: ctx.user.id)

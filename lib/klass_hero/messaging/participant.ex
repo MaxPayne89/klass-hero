@@ -20,7 +20,7 @@ defmodule KlassHero.Messaging.Participant do
   schema "conversation_participants" do
     field :conversation_id, :binary_id
     field :user_id, :binary_id
-    field :last_read_at, :utc_datetime
+    field :last_read_at, :utc_datetime_usec
     field :joined_at, :utc_datetime
     field :left_at, :utc_datetime
 
