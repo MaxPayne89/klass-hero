@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver do
+defmodule KlassHero.Participation.ChildInfoResolver do
   @moduledoc """
   ACL adapter resolving child info from the Family context.
 

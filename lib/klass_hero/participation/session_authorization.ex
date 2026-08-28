@@ -84,7 +84,7 @@ defmodule KlassHero.Participation.SessionAuthorization do
   """
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
+  alias KlassHero.Participation.ProgramProviderResolver
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Provider
   alias KlassHero.Provider.ReadModels.SessionStaffing

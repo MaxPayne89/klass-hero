@@ -10,7 +10,7 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Participation
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Events
   alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.SessionNote
   alias KlassHero.ProviderFixtures
@@ -288,7 +288,7 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
 
     for event_type <- @note_events do
       test "#{event_type} reaches the provider topic the LiveViews subscribe to", %{note: note} do
-        ParticipationEvents
+        Events
         |> apply(unquote(event_type), [note])
         |> Notifications.notify()
 
@@ -301,7 +301,7 @@ defmodule KlassHero.Participation.SubmitSessionNoteTest do
       Phoenix.PubSub.subscribe(KlassHero.PubSub, Participation.provider_topic(other_provider_id))
 
       note
-      |> ParticipationEvents.session_note_submitted()
+      |> Events.session_note_submitted()
       |> Notifications.notify()
 
       # One message, for this note's own provider — not two.

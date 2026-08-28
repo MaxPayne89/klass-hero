@@ -8,7 +8,7 @@ defmodule KlassHeroWeb.ParticipationComponents do
   import KlassHeroWeb.CoreComponents, only: [input: 1]
   import KlassHeroWeb.UIComponents
 
-  alias KlassHero.Participation.Domain.Services.ParticipationCollection
+  alias KlassHero.Participation.ParticipationCollection
   alias KlassHero.Participation.ProgramSession
   alias KlassHeroWeb.Theme
   alias Phoenix.HTML.Form

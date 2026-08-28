@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandlerTest do
+defmodule KlassHero.Participation.ParticipationEventHandlerTest do
   @moduledoc """
   Tests for ParticipationEventHandler handling of child_data_anonymized integration events.
   """
@@ -7,7 +7,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
+  alias KlassHero.Participation.ParticipationEventHandler
   alias KlassHero.Participation.SessionNote
   alias KlassHero.Shared.Domain.Events.Event
 

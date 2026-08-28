@@ -20,17 +20,17 @@ defmodule KlassHero.Participation do
   alias KlassHero.Accounts.Scope
   alias KlassHero.Enrollment
   alias KlassHero.Family
-  alias KlassHero.Participation.Adapters.Driven.ACL.ChildInfoResolver
-  alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
   alias KlassHero.Participation.AttendanceTransition
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.ChildInfoResolver
+  alias KlassHero.Participation.Events
   alias KlassHero.Participation.Notifications
+  alias KlassHero.Participation.ParticipationQueries
   alias KlassHero.Participation.ParticipationRecord
+  alias KlassHero.Participation.ProgramProviderResolver
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionAuthorization
   alias KlassHero.Participation.SessionNote
+  alias KlassHero.Participation.SessionNoteQueries
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Repo
@@ -135,7 +135,7 @@ defmodule KlassHero.Participation do
 
             events =
               sessions_generated_events(program_id, inserted) ++
-                Enum.map(cancelled, &ParticipationEvents.session_cancelled/1)
+                Enum.map(cancelled, &Events.session_cancelled/1)
 
             {:ok, {inserted, cancelled, revived}, events}
           end)
@@ -164,7 +164,7 @@ defmodule KlassHero.Participation do
       with {:ok, session} <- fetch_session(session_id),
            {:ok, _role} <- SessionAuthorization.authorize_lifecycle(scope, session),
            {:ok, started} <- ProgramSession.start(session),
-           {:ok, {persisted, events}} <- update_session_with_event(started, &ParticipationEvents.session_started/1) do
+           {:ok, {persisted, events}} <- update_session_with_event(started, &Events.session_started/1) do
         Notifications.notify_all(events)
         {:ok, persisted}
       end
@@ -261,7 +261,7 @@ defmodule KlassHero.Participation do
       |> mark_capacity_explicit(attrs)
       |> Repo.update()
       |> case do
-        {:ok, persisted} -> {:ok, persisted, [ParticipationEvents.session_updated(persisted)]}
+        {:ok, persisted} -> {:ok, persisted, [Events.session_updated(persisted)]}
         {:error, changeset} -> {:error, update_refusal(changeset)}
       end
     end)
@@ -725,7 +725,7 @@ defmodule KlassHero.Participation do
       {:ok, {seeded_ids, backfill_events}} =
         Outbox.transact_with_events(@context, fn ->
           {:ok, seeded_ids} = seed_child_records(session_ids, child_id)
-          {:ok, seeded_ids, Enum.map(seeded_ids, &ParticipationEvents.roster_seeded(&1, program_id, 1))}
+          {:ok, seeded_ids, Enum.map(seeded_ids, &Events.roster_seeded(&1, program_id, 1))}
         end)
 
       Logger.info(
@@ -773,7 +773,7 @@ defmodule KlassHero.Participation do
         record_id,
         Keyword.get(opts, :notes),
         &ParticipationRecord.check_in/3,
-        &ParticipationEvents.child_checked_in/2
+        &Events.child_checked_in/2
       )
     end
   end
@@ -793,7 +793,7 @@ defmodule KlassHero.Participation do
         record_id,
         Keyword.get(opts, :notes),
         &ParticipationRecord.check_out/3,
-        &ParticipationEvents.child_checked_out/2
+        &Events.child_checked_out/2
       )
     end
   end
@@ -817,7 +817,7 @@ defmodule KlassHero.Participation do
         record_id,
         Keyword.get(opts, :reason),
         &ParticipationRecord.mark_absent/3,
-        &ParticipationEvents.child_marked_absent/2
+        &Events.child_marked_absent/2
       )
     end
   end
@@ -924,7 +924,7 @@ defmodule KlassHero.Participation do
            true <- ParticipationRecord.allows_session_note?(record),
            {:ok, note} <- build_note(record, provider_id, content),
            {:ok, persisted} <- insert_note(note) do
-        Notifications.notify(ParticipationEvents.session_note_submitted(persisted))
+        Notifications.notify(Events.session_note_submitted(persisted))
 
         {:ok, persisted}
       else
@@ -976,7 +976,7 @@ defmodule KlassHero.Participation do
            :ok <- authorize_note_for_author(scope, note),
            {:ok, revised} <- SessionNote.revise(note, content),
            {:ok, persisted} <- update_note(revised) do
-        Notifications.notify(ParticipationEvents.session_note_submitted(persisted))
+        Notifications.notify(Events.session_note_submitted(persisted))
 
         {:ok, persisted}
       else
@@ -1109,7 +1109,7 @@ defmodule KlassHero.Participation do
     {:ok, _logged} = log_batch_absences(registered)
 
     events =
-      Enum.map(registered, &ParticipationEvents.child_marked_absent(%{&1 | status: :absent}, session))
+      Enum.map(registered, &Events.child_marked_absent(%{&1 | status: :absent}, session))
 
     {:ok, events}
   end
@@ -1273,7 +1273,7 @@ defmodule KlassHero.Participation do
 
   defp session_completed_event(session) do
     extra_payload = resolve_provider_details(session.program_id)
-    ParticipationEvents.session_completed(session, extra_payload: extra_payload)
+    Events.session_completed(session, extra_payload: extra_payload)
   end
 
   defp resolve_provider_details(program_id) do
@@ -1294,7 +1294,7 @@ defmodule KlassHero.Participation do
   defp insert_session_with_event(session) do
     Outbox.transact_with_events(@context, fn ->
       with {:ok, persisted} <- insert_session(session) do
-        {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
+        {:ok, persisted, [Events.session_created(persisted)]}
       end
     end)
   end
@@ -1330,7 +1330,7 @@ defmodule KlassHero.Participation do
       with {:ok, persisted} <- update_record(corrected),
            :ok <- insert_transition(AttendanceTransition.between(record, persisted, actor_id, reason)) do
         session = resolve_session_best_effort(persisted.session_id)
-        {:ok, persisted, [ParticipationEvents.attendance_corrected(persisted, session, record.status)]}
+        {:ok, persisted, [Events.attendance_corrected(persisted, session, record.status)]}
       end
     end)
   end
@@ -1352,18 +1352,18 @@ defmodule KlassHero.Participation do
   defp seed_roster_records(session_id, program_id, child_ids) do
     Outbox.transact_with_events(@context, fn ->
       {:ok, count} = seed_records(session_id, child_ids)
-      {:ok, count, [ParticipationEvents.roster_seeded(session_id, program_id, count)]}
+      {:ok, count, [Events.roster_seeded(session_id, program_id, count)]}
     end)
   end
 
   defp sessions_generated_events(_program_id, []), do: []
 
   defp sessions_generated_events(program_id, sessions) do
-    [ParticipationEvents.sessions_generated(program_id, sessions)]
+    [Events.sessions_generated(program_id, sessions)]
   end
 
-  defp review_event(note, :approve), do: ParticipationEvents.session_note_approved(note)
-  defp review_event(note, :reject), do: ParticipationEvents.session_note_rejected(note)
+  defp review_event(note, :approve), do: Events.session_note_approved(note)
+  defp review_event(note, :reject), do: Events.session_note_rejected(note)
 
   # ============================================================================
   # Persistence — sessions

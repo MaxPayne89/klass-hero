@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueriesTest do
+defmodule KlassHero.Participation.ParticipationQueriesTest do
   @moduledoc """
   Tests for ParticipationQueries composable query functions.
 
@@ -8,7 +8,7 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.Participat
 
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries
+  alias KlassHero.Participation.ParticipationQueries
   alias KlassHero.Participation.ParticipationRecord
 
   describe "base/0" do

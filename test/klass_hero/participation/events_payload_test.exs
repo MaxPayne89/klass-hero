@@ -1,7 +1,7 @@
-defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest do
+defmodule KlassHero.Participation.EventsPayloadTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Events
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionNote
@@ -47,7 +47,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "sets event_type, entity_id, and entity_type" do
       session = build_session()
 
-      event = ParticipationEvents.session_created(session)
+      event = Events.session_created(session)
 
       assert event.event_type == :session_created
       assert event.entity_id == session.id
@@ -57,7 +57,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "payload includes session fields" do
       session = %{build_session() | location: "Gym", max_capacity: 20}
 
-      event = ParticipationEvents.session_created(session)
+      event = Events.session_created(session)
 
       assert event.payload.session_id == session.id
       assert event.payload.program_id == session.program_id
@@ -73,7 +73,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "sets event_type and includes started_at in payload" do
       session = build_session()
 
-      event = ParticipationEvents.session_started(session)
+      event = Events.session_started(session)
 
       assert event.event_type == :session_started
       assert event.entity_id == session.id
@@ -87,7 +87,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "sets event_type and includes completed_at in payload" do
       session = %{build_session() | status: :completed}
 
-      event = ParticipationEvents.session_completed(session)
+      event = Events.session_completed(session)
 
       assert event.event_type == :session_completed
       assert event.entity_id == session.id
@@ -100,7 +100,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       session = %{build_session() | status: :completed}
 
       event =
-        ParticipationEvents.session_completed(session,
+        Events.session_completed(session,
           extra_payload: %{provider_id: "prov-1", program_title: "Art Class"}
         )
 
@@ -115,7 +115,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       session_id = Ecto.UUID.generate()
       program_id = Ecto.UUID.generate()
 
-      event = ParticipationEvents.roster_seeded(session_id, program_id, 12)
+      event = Events.roster_seeded(session_id, program_id, 12)
 
       assert event.event_type == :roster_seeded
       assert event.entity_id == session_id
@@ -130,7 +130,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "sets event_type, entity_id as note id, and entity_type as :session_note" do
       note = build_note()
 
-      event = ParticipationEvents.session_note_submitted(note)
+      event = Events.session_note_submitted(note)
 
       assert event.event_type == :session_note_submitted
       assert event.entity_id == note.id
@@ -140,7 +140,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "payload contains all session note fields" do
       note = build_note()
 
-      event = ParticipationEvents.session_note_submitted(note)
+      event = Events.session_note_submitted(note)
 
       assert event.payload.note_id == note.id
       assert event.payload.participation_record_id == note.participation_record_id
@@ -154,7 +154,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "sets event_type :session_note_approved with correct payload" do
       note = %{build_note() | status: :approved}
 
-      event = ParticipationEvents.session_note_approved(note)
+      event = Events.session_note_approved(note)
 
       assert event.event_type == :session_note_approved
       assert event.entity_id == note.id
@@ -167,7 +167,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
     test "sets event_type :session_note_rejected with correct payload" do
       note = %{build_note() | status: :rejected}
 
-      event = ParticipationEvents.session_note_rejected(note)
+      event = Events.session_note_rejected(note)
 
       assert event.event_type == :session_note_rejected
       assert event.entity_id == note.id
@@ -181,7 +181,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       record = build_record()
       session = build_session()
 
-      event = ParticipationEvents.child_checked_in(record, session)
+      event = Events.child_checked_in(record, session)
 
       assert event.payload.program_id == @program_id
     end
@@ -190,7 +190,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       record = build_record()
       session = build_session()
 
-      event = ParticipationEvents.child_checked_in(record, session)
+      event = Events.child_checked_in(record, session)
 
       assert event.payload.record_id == record.id
       assert event.payload.session_id == record.session_id
@@ -209,7 +209,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
 
       session = build_session()
 
-      event = ParticipationEvents.child_checked_out(record, session)
+      event = Events.child_checked_out(record, session)
 
       assert event.payload.program_id == @program_id
     end
@@ -220,7 +220,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsPayloadTest d
       record = %{build_record() | status: :absent}
       session = build_session()
 
-      event = ParticipationEvents.child_marked_absent(record, session)
+      event = Events.child_marked_absent(record, session)
 
       assert event.payload.program_id == @program_id
     end

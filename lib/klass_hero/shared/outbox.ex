@@ -8,7 +8,7 @@ defmodule KlassHero.Shared.Outbox do
 
       Repo.transaction(fn ->
         {:ok, session} = insert_session(attrs)
-        Outbox.stage(@context, ParticipationEvents.session_created(session))
+        Outbox.stage(@context, Events.session_created(session))
         session
       end)
 
@@ -61,7 +61,7 @@ defmodule KlassHero.Shared.Outbox do
         with {:ok, session} <- ProgramSession.new(attrs) do
           Outbox.transact(@context, fn ->
             with {:ok, persisted} <- insert_session(session) do
-              {:ok, persisted, [ParticipationEvents.session_created(persisted)]}
+              {:ok, persisted, [Events.session_created(persisted)]}
             end
           end)
         end

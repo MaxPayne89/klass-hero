@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.ParticipationQueries do
+defmodule KlassHero.Participation.ParticipationQueries do
   @moduledoc """
   Composable Ecto query functions for participation records.
 

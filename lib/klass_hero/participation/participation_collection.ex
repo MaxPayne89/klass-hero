@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Domain.Services.ParticipationCollection do
+defmodule KlassHero.Participation.ParticipationCollection do
   @moduledoc """
   Domain service for collection-level operations on participation records.
 

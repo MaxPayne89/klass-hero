@@ -8,7 +8,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
   import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Events
   alias KlassHero.Participation.Notifications
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -140,7 +140,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       {:ok, view, _html} = live(conn, ~p"/parent/participation")
       record = insert(:participation_record_schema, child_id: child.id, status: :checked_in)
 
-      broadcast_on_child_topic(ParticipationEvents.child_checked_in(record, []))
+      broadcast_on_child_topic(Events.child_checked_in(record, []))
 
       assert render(view) =~ record.id
       assert has_element?(view, "#participation_records-#{record.id}")
@@ -150,7 +150,7 @@ defmodule KlassHeroWeb.Parent.ParticipationHistoryLiveTest do
       {:ok, view, _html} = live(conn, ~p"/parent/participation")
       record = insert(:participation_record_schema, child_id: child.id, status: :absent)
 
-      broadcast_on_child_topic(ParticipationEvents.child_marked_absent(record, []))
+      broadcast_on_child_topic(Events.child_marked_absent(record, []))
 
       assert render(view) =~ record.id
       assert has_element?(view, "#participation_records-#{record.id}")

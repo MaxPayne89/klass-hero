@@ -1,7 +1,7 @@
 defmodule KlassHero.Participation.NotificationsTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Events
   alias KlassHero.Participation.Notifications
   alias KlassHero.Shared.Domain.Events.Event
 
@@ -39,7 +39,7 @@ defmodule KlassHero.Participation.NotificationsTest do
   end
 
   defp event(type, payload) do
-    Event.new(type, :participation, ParticipationEvents.entity_type_for(type), Ecto.UUID.generate(), payload)
+    Event.new(type, :participation, Events.entity_type_for(type), Ecto.UUID.generate(), payload)
   end
 
   describe "session lifecycle" do

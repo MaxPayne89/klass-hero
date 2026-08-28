@@ -1,7 +1,7 @@
-defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandlerTest do
+defmodule KlassHero.Participation.SeedSessionRosterHandlerTest do
   use KlassHero.DataCase, async: true
 
-  alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
+  alias KlassHero.Participation.SeedSessionRosterHandler
   alias KlassHero.Shared.Domain.Events.Event
 
   describe "handle_event/1" do

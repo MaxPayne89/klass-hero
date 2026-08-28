@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler do
+defmodule KlassHero.Participation.ParticipationEventHandler do
   @moduledoc """
   Integration event handler for Participation context.
 
