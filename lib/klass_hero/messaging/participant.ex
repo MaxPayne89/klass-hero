@@ -11,7 +11,6 @@ defmodule KlassHero.Messaging.Participant do
 
   import Ecto.Changeset
 
-  alias KlassHero.Accounts.User
   alias KlassHero.Messaging.Conversation
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -26,7 +25,6 @@ defmodule KlassHero.Messaging.Participant do
     field :left_at, :utc_datetime
 
     belongs_to :conversation, Conversation, define_field: false
-    belongs_to :user, User, define_field: false
 
     timestamps()
   end
