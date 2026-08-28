@@ -121,6 +121,17 @@ not copy this into one.
   `field :x_id, :binary_id`, not deleted — deleting it silently drops a column the changeset
   still casts; and `foreign_key_constraint/2` and `unique_constraint/2` keep working either
   way, since both key off the field name rather than the association.
+  **One survives, on the cycle-breaking ground ADR 0015 already grants:**
+  `Enrollment.program` → `ProgramCatalog.Program`. ProgramCatalog depends on Enrollment for
+  capacity, so Enrollment cannot call its facade, and direct `programs` access is sanctioned
+  for that pair (`enrollment/…/acl/program_catalog_acl.ex`). `Admin.BookingLive` needs a real
+  association for its Backpex `Fields.BelongsTo` to search and sort by title. The test is the
+  ADR-0015 justification, not the module name — no other pair currently has one, and a new
+  association still has to earn it.
+  **A Backpex `Fields.BelongsTo` is a consumer no grep will find.** It names the association
+  declaratively — no `preload`, no `Repo.preload`, no `assoc/2` — and joins the other table to
+  search and sort. Check `lib/klass_hero_web/live/admin/` before concluding an association is
+  unused.
 - **One-shot migration backfills are exempt**, and only they. A module under
   `lib/klass_hero/release/` called from a migration's `up/0` may read another
   context's tables directly in raw SQL, with no facade and no `acl_span`. A facade

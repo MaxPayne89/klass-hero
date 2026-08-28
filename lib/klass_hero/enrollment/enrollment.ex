@@ -18,6 +18,8 @@ defmodule KlassHero.Enrollment.Enrollment do
 
   import Ecto.Changeset
 
+  alias KlassHero.ProgramCatalog.Program
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
   @timestamps_opts [type: :utc_datetime]
@@ -26,8 +28,13 @@ defmodule KlassHero.Enrollment.Enrollment do
   @valid_payment_methods ~w(card transfer)
 
   schema "enrollments" do
-    # ProgramCatalog owns the program; correlation id only, no association (#1434).
-    field :program_id, :binary_id
+    # The one cross-context association that survives #1434's clause 2, on ADR
+    # 0015's cycle-breaking ground: ProgramCatalog depends on Enrollment for
+    # capacity, so Enrollment cannot call its facade, and direct `programs`
+    # access is already sanctioned for this pair (see acl/program_catalog_acl.ex).
+    # Admin.BookingLive's Backpex BelongsTo field needs a real association to
+    # search and sort by title. Do not copy this to another context pair.
+    belongs_to :program, Program
     field :child_id, :binary_id
     field :parent_id, :binary_id
 

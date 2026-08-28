@@ -6,9 +6,10 @@ defmodule KlassHeroWeb.Admin.AccountLive do
   Creation and deletion are intentionally disabled — users register
   themselves, and account deletion follows the GDPR anonymization flow.
 
-  Note: Backpex operates directly on Ecto schemas and Repo, bypassing
-  the Ports & Adapters layering used elsewhere. This is a pragmatic
-  exception scoped to admin-only read + limited edit operations.
+  Note: Backpex operates directly on the `Accounts.User` schema and Repo. That is
+  a pragmatic exception scoped to admin-only read + limited edit operations.
+  Facts owned by *other* contexts are not: the roles badges ask Family and
+  Provider through their facades (#1434).
   """
 
   # Backpex requires FQ refs in `use` args — alias can't precede `use` per formatter rules
@@ -19,17 +20,16 @@ defmodule KlassHeroWeb.Admin.AccountLive do
       repo: KlassHero.Repo,
       update_changeset: &KlassHero.Accounts.User.admin_update_changeset/3,
       # Required by Backpex even though :new is disabled via can?/3
-      create_changeset: &KlassHero.Accounts.User.admin_update_changeset/3,
-      item_query: &__MODULE__.item_query/3
+      create_changeset: &KlassHero.Accounts.User.admin_update_changeset/3
     ],
     pubsub: [server: KlassHero.PubSub],
     init_order: %{by: :inserted_at, direction: :desc},
     persist: [:columns]
 
-  import Ecto.Query
-
   alias Backpex.Fields.Boolean
   alias Backpex.Fields.Text
+  alias KlassHero.Family
+  alias KlassHero.Provider
 
   @impl Backpex.LiveResource
   def layout(_assigns), do: {KlassHeroWeb.Layouts, :admin}
@@ -44,14 +44,6 @@ defmodule KlassHeroWeb.Admin.AccountLive do
   def can?(assigns, :edit, item), do: item.id != assigns.current_scope.user.id
 
   def can?(_assigns, _action, _item), do: false
-
-  @doc false
-  # Edit only needs is_admin toggle; roles/subscription fields are index/show-only, so skip preloads.
-  def item_query(query, :edit, _assigns), do: query
-
-  def item_query(query, _live_action, _assigns) do
-    from u in query, preload: [:parent_profile, :provider_profile]
-  end
 
   @impl Backpex.LiveResource
   def singular_name, do: "Account"
@@ -82,14 +74,24 @@ defmodule KlassHeroWeb.Admin.AccountLive do
         readonly: true,
         only: [:index, :show],
         render: fn assigns ->
+          # Family and Provider own these facts; ask them per row rather than
+          # declaring an association onto their tables (#1434). Backpex exposes
+          # no page-scoped hook to batch through, so this is one indexed EXISTS
+          # per context per row, bounded by the page size.
+          assigns =
+            assign(assigns,
+              parent?: Family.has_parent_profile?(assigns.item.id),
+              provider?: Provider.has_provider_profile?(assigns.item.id)
+            )
+
           ~H"""
           <div class="flex flex-wrap gap-1">
-            <%= if @item.parent_profile do %>
+            <%= if @parent? do %>
               <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">
                 Parent
               </span>
             <% end %>
-            <%= if @item.provider_profile do %>
+            <%= if @provider? do %>
               <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700">
                 Provider
               </span>
@@ -99,7 +101,7 @@ defmodule KlassHeroWeb.Admin.AccountLive do
                 Admin
               </span>
             <% end %>
-            <%= if !@item.parent_profile && !@item.provider_profile && !@item.is_admin do %>
+            <%= if !@parent? && !@provider? && !@item.is_admin do %>
               <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700">
                 User
               </span>
