@@ -135,6 +135,89 @@ defmodule KlassHeroWeb.ProviderProfileLiveTest do
     end
   end
 
+  describe "heroes" do
+    test "lists the provider's claimed, active staff", %{conn: conn} do
+      provider = active_provider()
+
+      staff =
+        claimed_staff(provider,
+          first_name: "Marie",
+          last_name: "Curie",
+          role: "Head Coach",
+          bio: "Two Nobel prizes, one whistle."
+        )
+
+      {:ok, view, html} = live(conn, ~p"/providers/#{provider.id}")
+
+      assert has_element?(view, "#provider-heroes")
+      assert has_element?(view, "#hero-card-staff-#{staff.id}")
+      assert html =~ "Marie Curie"
+      assert html =~ "Head Coach"
+      assert html =~ "Two Nobel prizes, one whistle."
+    end
+
+    test "pluralises the heading with the roster size", %{conn: conn} do
+      provider = active_provider()
+
+      for name <- ["Ada", "Grace"], do: claimed_staff(provider, first_name: name)
+
+      {:ok, view, _html} = live(conn, ~p"/providers/#{provider.id}")
+
+      assert has_element?(view, "#provider-heroes h2", "Meet the Heroes")
+    end
+
+    test "names nobody who has not claimed their seat", %{conn: conn} do
+      provider = active_provider()
+
+      unclaimed =
+        staff_member_fixture(
+          provider_id: provider.id,
+          first_name: "Never",
+          last_name: "Onboarded"
+        )
+
+      {:ok, view, html} = live(conn, ~p"/providers/#{provider.id}")
+
+      refute has_element?(view, "#hero-card-staff-#{unclaimed.id}")
+      refute html =~ "Never Onboarded"
+    end
+
+    test "drops a staff member whose employment has ended", %{conn: conn} do
+      provider = active_provider()
+      departed = claimed_staff(provider, first_name: "Gone", last_name: "Away")
+
+      {:ok, _} = KlassHero.Provider.deactivate_staff_member(departed)
+
+      {:ok, view, html} = live(conn, ~p"/providers/#{provider.id}")
+
+      refute has_element?(view, "#hero-card-staff-#{departed.id}")
+      refute html =~ "Gone Away"
+    end
+
+    # A roster nobody qualifies for is an absent section, not an empty one. The
+    # page already carries a "no programs" empty state, and two would read as
+    # two failures rather than one quiet footnote.
+    test "omits the section entirely when nobody qualifies", %{conn: conn} do
+      provider = active_provider()
+      staff_member_fixture(provider_id: provider.id)
+
+      {:ok, view, html} = live(conn, ~p"/providers/#{provider.id}")
+
+      refute has_element?(view, "#provider-heroes")
+      refute html =~ "Meet the Hero"
+    end
+
+    test "never exposes a staff member's email", %{conn: conn} do
+      provider = active_provider()
+      staff = claimed_staff(provider, email: "private@example.com")
+
+      {:ok, view, html} = live(conn, ~p"/providers/#{provider.id}")
+
+      assert has_element?(view, "#hero-card-staff-#{staff.id}")
+      refute html =~ "private@example.com"
+    end
+  end
+
   describe "message CTA" do
     test "points at compose for this provider", %{conn: conn} do
       provider = active_provider()
@@ -166,5 +249,18 @@ defmodule KlassHeroWeb.ProviderProfileLiveTest do
   defp elem_view(conn, provider) do
     {:ok, view, _html} = live(conn, ~p"/providers/#{provider.id}")
     view
+  end
+
+  # A seat someone actually took. The bare `staff_member_fixture/1` leaves
+  # `user_id` nil, which is the unclaimed case this page must not name — so the
+  # tests above spell out which of the two they mean rather than inheriting one.
+  defp claimed_staff(provider, attrs) do
+    attrs
+    |> Keyword.merge(
+      provider_id: provider.id,
+      user_id: KlassHero.AccountsFixtures.user_fixture().id,
+      invitation_status: :accepted
+    )
+    |> staff_member_fixture()
   end
 end

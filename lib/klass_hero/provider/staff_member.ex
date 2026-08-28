@@ -393,6 +393,28 @@ defmodule KlassHero.Provider.StaffMember do
     from s in query, where: s.active == true
   end
 
+  @doc """
+  Narrows a query to staff who have claimed their seat — a `User` is attached,
+  so there is a real person to name.
+
+  A third question again, separate for the same reason `active/1` is separate
+  from `owned_by/2`: tenancy, employment and identity are independent. A row can
+  be owned and live and still be nothing but a name a provider typed into an
+  invitation nobody accepted.
+
+  `user_id`, not `invitation_status`, is the predicate: founder self-staffing
+  mints a row already linked and `:accepted` with no invitation token at all
+  (ADR-0005), so keying on the status would work while keying on the token
+  would silently hide every owner who teaches.
+
+  Compose it on **public** reads only. A provider must still see the people they
+  invited, so management surfaces deliberately do not narrow by this.
+  """
+  @spec claimed(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def claimed(query \\ __MODULE__) do
+    from s in query, where: not is_nil(s.user_id)
+  end
+
   # ── Functional core (ported domain validator + helpers) ──────────────────
 
   @doc """
