@@ -134,22 +134,43 @@ defmodule KlassHero.Messaging.ConversationSummaryTest do
     end
   end
 
-  describe "has_system_note?/2 and write_system_note_token/2" do
-    test "false before, true after stamping a token on existing rows" do
-      conversation_id = Ecto.UUID.generate()
-      insert(:conversation_summary_schema, conversation_id: conversation_id)
+  describe "has_system_note?/2" do
+    test "true only once a system message carrying the token exists" do
+      conversation = insert(:conversation_schema)
 
-      refute Messaging.has_system_note?(conversation_id, "welcome")
-      assert :ok = Messaging.write_system_note_token(conversation_id, "welcome")
-      assert Messaging.has_system_note?(conversation_id, "welcome")
+      refute Messaging.has_system_note?(conversation.id, "[broadcast:abc]")
+
+      insert(:message_schema,
+        conversation_id: conversation.id,
+        message_type: "system",
+        content: "[broadcast:abc] Re: Schedule Change"
+      )
+
+      assert Messaging.has_system_note?(conversation.id, "[broadcast:abc]")
     end
 
-    test "seeds summary rows when the projection has not created them yet" do
+    test "ignores an ordinary message that happens to quote the token" do
       conversation = insert(:conversation_schema)
-      insert(:participant_schema, conversation_id: conversation.id)
 
-      assert :ok = Messaging.write_system_note_token(conversation.id, "reply-context")
-      assert Messaging.has_system_note?(conversation.id, "reply-context")
+      insert(:message_schema,
+        conversation_id: conversation.id,
+        message_type: "text",
+        content: "[broadcast:abc] is what the note said"
+      )
+
+      refute Messaging.has_system_note?(conversation.id, "[broadcast:abc]")
+    end
+
+    test "does not confuse one broadcast's token with another's" do
+      conversation = insert(:conversation_schema)
+
+      insert(:message_schema,
+        conversation_id: conversation.id,
+        message_type: "system",
+        content: "[broadcast:aaa] Re: One"
+      )
+
+      refute Messaging.has_system_note?(conversation.id, "[broadcast:bbb]")
     end
   end
 

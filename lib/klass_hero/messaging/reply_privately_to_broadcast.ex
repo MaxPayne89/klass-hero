@@ -90,27 +90,13 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcast do
       subject = broadcast.subject || "broadcast"
       content = "#{token} Re: #{subject}"
 
+      # Sending the message *is* recording the token, so there is no second write
+      # to race: the dedup check reads the message back.
       with {:ok, _message} <-
              Messaging.send_message(direct_conversation.id, sender_id, content,
                message_type: :system,
                conversation: direct_conversation
              ) do
-        # Write-through: projection processes message_sent asynchronously; without
-        # this, a rapid second call could miss the token and insert a duplicate.
-        # Projection's async handler is idempotent, so the double-write is harmless.
-        try do
-          KlassHero.Messaging.write_system_note_token(
-            direct_conversation.id,
-            token
-          )
-        rescue
-          error ->
-            Logger.warning("write_system_note_token failed — projection will catch up",
-              conversation_id: direct_conversation.id,
-              error: Exception.message(error)
-            )
-        end
-
         :ok
       end
     end

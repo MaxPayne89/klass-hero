@@ -1129,14 +1129,20 @@ defmodule KlassHero.Messaging do
     |> Repo.one()
   end
 
-  @doc "True if any summary row for the conversation carries the given system-note token."
+  @doc "True if the conversation already carries a system message stamped with this token."
   @spec has_system_note?(String.t(), String.t()) :: boolean()
   def has_system_note?(conversation_id, token) do
-    # The PostgreSQL `?` key-exists operator is backed by the GIN index on system_notes.
-    from(s in ConversationSummary,
+    # The system message *is* the record — its content is "<token> Re: <subject>",
+    # so there is nothing to denormalise and nothing to keep in sync. Served by
+    # the (conversation_id, inserted_at) index, and bounded by one conversation,
+    # which is what #431 needed when the old check scanned only 100 messages.
+    #
+    # Not filtered on deleted_at, deliberately: a note whose message was later
+    # soft-deleted still counts as posted, so a second tap must not re-add it.
+    from(m in Message,
       where:
-        s.conversation_id == ^conversation_id and
-          fragment("? \\? ?", s.system_notes, ^token)
+        m.conversation_id == ^conversation_id and m.message_type == :system and
+          like(m.content, ^(token <> "%"))
     )
     |> Repo.exists?()
   end
@@ -1161,106 +1167,6 @@ defmodule KlassHero.Messaging do
 
       %{enrolled_child_names: names, other_participant_name: other} ->
         %{enrolled_child_names: names || [], other_participant_name: other}
-    end
-  end
-
-  @doc """
-  Synchronously stamps a system-note token onto a conversation's summary rows.
-
-  Complements the async projection: if the write-through races ahead of the
-  projection, seed minimal rows so the token isn't lost (the projection's upsert
-  merges the remaining fields when it catches up).
-  """
-  @spec write_system_note_token(String.t(), String.t()) :: :ok
-  def write_system_note_token(conversation_id, token) do
-    context_span entity: "conversation_summary" do
-      now = DateTime.utc_now() |> DateTime.truncate(:second)
-      token_json = %{token => DateTime.to_iso8601(now)}
-
-      {updated, _} =
-        from(s in ConversationSummary,
-          where: s.conversation_id == ^conversation_id,
-          update: [
-            set: [
-              system_notes: fragment("coalesce(system_notes, '{}')::jsonb || ?::jsonb", ^token_json),
-              updated_at: ^now
-            ]
-          ]
-        )
-        |> Repo.update_all([])
-
-      if updated == 0 do
-        seed_conversation_summary_rows_with_token(conversation_id, token_json, now)
-      end
-
-      :ok
-    end
-  end
-
-  defp seed_conversation_summary_rows_with_token(conversation_id, token_json, now) do
-    conversation =
-      from(c in Conversation,
-        where: c.id == ^conversation_id,
-        select: %{type: c.type, provider_id: c.provider_id, subject: c.subject}
-      )
-      |> Repo.one()
-
-    participant_user_ids =
-      from(p in Participant,
-        where: p.conversation_id == ^conversation_id and is_nil(p.left_at),
-        select: p.user_id
-      )
-      |> Repo.all()
-
-    cond do
-      is_nil(conversation) ->
-        Logger.warning(
-          "seed_conversation_summary_rows_with_token: conversation not found, projection will handle",
-          conversation_id: conversation_id
-        )
-
-      participant_user_ids == [] ->
-        Logger.warning(
-          "seed_conversation_summary_rows_with_token: no active participants, projection will handle",
-          conversation_id: conversation_id
-        )
-
-      true ->
-        entries =
-          Enum.map(participant_user_ids, fn user_id ->
-            %{
-              id: Ecto.UUID.generate(),
-              conversation_id: conversation_id,
-              user_id: user_id,
-              conversation_type: conversation.type,
-              provider_id: conversation.provider_id,
-              subject: conversation.subject,
-              system_notes: token_json,
-              unread_count: 0,
-              participant_count: length(participant_user_ids),
-              inserted_at: now,
-              updated_at: now
-            }
-          end)
-
-        # JSONB || merge preserves tokens the projection wrote between our
-        # update_all and this insert_all.
-        Repo.insert_all(ConversationSummary, entries,
-          on_conflict:
-            from(s in ConversationSummary,
-              update: [
-                set: [
-                  system_notes:
-                    fragment(
-                      "coalesce(?.system_notes, '{}')::jsonb || excluded.system_notes::jsonb",
-                      s
-                    ),
-                  updated_at: fragment("excluded.updated_at")
-                ]
-              ]
-            ),
-          conflict_target: [:conversation_id, :user_id]
-        )
     end
   end
 
