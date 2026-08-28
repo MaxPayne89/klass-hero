@@ -213,7 +213,7 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
     test "adds preloads for non-empty list" do
       query =
         MessageQueries.base()
-        |> MessageQueries.preload_assocs([:sender])
+        |> MessageQueries.preload_assocs([:attachments])
 
       assert %Ecto.Query{} = query
       assert length(query.preloads) == 1

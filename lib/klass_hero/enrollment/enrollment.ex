@@ -31,7 +31,7 @@ defmodule KlassHero.Enrollment.Enrollment do
     # The one cross-context association that survives #1434's clause 2, on ADR
     # 0015's cycle-breaking ground: ProgramCatalog depends on Enrollment for
     # capacity, so Enrollment cannot call its facade, and direct `programs`
-    # access is already sanctioned for this pair (see acl/program_catalog_acl.ex).
+    # access is already sanctioned for this pair (Enrollment's ACL for ProgramCatalog).
     # Admin.BookingLive's Backpex BelongsTo field needs a real association to
     # search and sort by title. Do not copy this to another context pair.
     belongs_to :program, Program
