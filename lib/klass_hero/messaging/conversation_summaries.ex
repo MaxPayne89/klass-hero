@@ -40,7 +40,11 @@ defmodule KlassHero.Messaging.ConversationSummaries do
       "integration:messaging:conversations_archived",
       "integration:messaging:message_data_anonymized",
       "integration:messaging:participant_added",
-      "integration:messaging:participant_removed"
+      "integration:messaging:participant_removed",
+      "integration:enrollment:enrollment_created",
+      "integration:enrollment:enrollment_cancelled",
+      "integration:family:child_created",
+      "integration:family:child_updated"
     ]
 
   use KlassHero.Shared.Projection.WithBootstrapRetry
@@ -125,6 +129,12 @@ defmodule KlassHero.Messaging.ConversationSummaries do
     )
 
     project_participant_removed(event)
+  end
+
+  @impl Projection
+  def handle_event(type, %Event{} = event)
+      when type in [:enrollment_created, :enrollment_cancelled, :child_created, :child_updated] do
+    refresh_enrolled_child_names(event.payload)
   end
 
   # Private Functions — Bootstrap
@@ -648,6 +658,57 @@ defmodule KlassHero.Messaging.ConversationSummaries do
   end
 
   defp resolve_enrolled_child_names(_, _), do: []
+
+  # `enrolled_child_names` is written when a conversation is created, so every
+  # later change to the roster has to reach the row that already exists — a
+  # sibling enrolled next term, a cancellation, a corrected spelling. Without
+  # this the provider's thread keeps the roster it opened with until the next
+  # deploy re-bootstraps it.
+  defp refresh_enrolled_child_names(payload) do
+    for {parent_user_id, program_id} <- affected_rosters(payload) do
+      names = resolve_enrolled_child_names(%{type: :direct, program_id: program_id}, [parent_user_id])
+      stamp_child_names(parent_user_id, program_id, names)
+    end
+
+    :ok
+  end
+
+  # Every (parent identity, program) the child is attached to, whatever the
+  # enrollment's status: a cancellation still has to refresh the thread it just
+  # left, and an active-only lookup would skip exactly that case.
+  defp affected_rosters(%{child_id: child_id}) when is_binary(child_id) do
+    acl_span source: "messaging", target: "enrollment" do
+      from(e in "enrollments",
+        join: pp in "parents",
+        on: pp.id == e.parent_id,
+        where: e.child_id == type(^child_id, :binary_id),
+        select: {type(pp.identity_id, :binary_id), type(e.program_id, :binary_id)},
+        distinct: true
+      )
+      |> Repo.all()
+    end
+  end
+
+  defp affected_rosters(_), do: []
+
+  defp stamp_child_names(parent_user_id, program_id, names) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    conversation_ids =
+      from(s in ConversationSummary,
+        where:
+          s.user_id == ^parent_user_id and s.program_id == ^program_id and
+            s.conversation_type == ^:direct,
+        select: s.conversation_id,
+        distinct: true
+      )
+      |> Repo.all()
+
+    # Both sides of the thread carry the same roster, so the update is keyed on
+    # the conversation rather than the parent's own row.
+    from(s in ConversationSummary, where: s.conversation_id in ^conversation_ids)
+    |> Repo.update_all(set: [enrolled_child_names: names, updated_at: now])
+  end
 
   # Private Functions — Helpers
 

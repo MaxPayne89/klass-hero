@@ -242,6 +242,12 @@ config :klass_hero, :event_consumers, %{
   "integration:family:invite_family_ready" => [
     {InviteFamilyReadyHandler, :handle_event}
   ],
+  "integration:family:child_created" => [
+    {ConversationSummaries, :project}
+  ],
+  "integration:family:child_updated" => [
+    {ConversationSummaries, :project}
+  ],
 
   # Program Catalog
   "integration:program_catalog:program_created" => [
@@ -254,7 +260,11 @@ config :klass_hero, :event_consumers, %{
   # Enrollment
   "integration:enrollment:enrollment_created" => [
     {ParticipationEventHandler, :handle_event},
+    {ConversationSummaries, :project},
     {EnrollmentParticipationHandler, :handle_event}
+  ],
+  "integration:enrollment:enrollment_cancelled" => [
+    {ConversationSummaries, :project}
   ],
   "integration:enrollment:participant_policy_set" => [
     {EnrollmentEventHandler, :handle_event}

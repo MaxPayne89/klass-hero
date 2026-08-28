@@ -57,10 +57,18 @@ part that had not caught up.
   a second one. Where a distinct read type earns its place, the `read_models/` kind
   already exists — a query-shaped struct with no table behind it.
 - **Deleting a mirror moves work to read time, and that is the trade.** The catalog
-  page now queries `programs`; the provider overview counts `program_sessions`
-  through an ACL; a conversation summary joins `enrollments`/`children`/`parents`
-  when it is built. At current volumes these are indistinguishable from a table read,
-  and every index the read tables carried already existed on the write side.
+  page queries `programs`; the provider overview asks ProgramCatalog for its programs
+  and Participation how many of their sessions completed; a conversation summary joins
+  `enrollments`/`children`/`parents` when it is built. At current volumes these are
+  indistinguishable from a table read, and every index the read tables carried already
+  existed on the write side.
+- **Retiring a projection can retire the ACL that fed it.**
+  `ParticipationSessionStatsACL` was justified under ADR-0015's "a query no facade
+  expresses" — true while it computed a grouped count across every provider for a
+  bootstrap. Narrowed to one provider read per render, the facade composition was two
+  cheap calls, and the ACL no longer earned its place. Check the justification of
+  anything a deleted projection was the sole caller of; it was written for a workload
+  that no longer exists.
 - **Consistency improves where it used to be eventual.** `SubmitIncidentReport`
   validated program ownership against `provider_programs`, which the projection's own
   moduledoc warned was unsuitable for a write-path guard; a report filed against a
@@ -71,11 +79,18 @@ part that had not caught up.
   `provider_session_stats` broadcast `:session_stats_updated` from inside the
   projection; that broadcast now comes from Participation's session-completion path,
   which is what the "UI updates are not events" rule prescribed all along.
-- **Three topics lost their only consumer** — `integration:family:child_created`,
-  `child_updated`, and `integration:enrollment:enrollment_cancelled`. `Outbox.stage/2`
-  filters on the consumer registry, so they stop being staged with no producer
-  change. #1511 will want `enrollment_cancelled` consumed again; adding a registry
-  entry resumes staging.
+- **A mirror can be a trigger as well as a cache, and that is easy to miss.**
+  `messaging_enrolled_children` looked like a cached join, so removing it looked
+  like replacing a read. It was also the thing that *refreshed*
+  `conversation_summaries.enrolled_child_names` whenever a roster changed —
+  re-deriving on `enrollment_created`, `enrollment_cancelled`, `child_created` and
+  `child_updated` and stamping every existing summary row. Deleting it initially
+  left that column frozen at conversation-creation time, so a provider's thread
+  would have kept the roster it opened with until the next deploy re-bootstrapped
+  it. Caught in review; the four subscriptions now sit on `ConversationSummaries`
+  itself, which owns the column, rather than on a second projection calling back
+  into the first. When reviewing a projection deletion, ask what *else* subscribed
+  to those topics, not only what read that table.
 - **The two survivors are on notice, not exempt.** `conversation_summaries` is the
   largest projection in the tree and the site of #1513, where it supplies the third
   of three disagreeing unread counters and the one users see is the wrong one.
