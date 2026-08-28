@@ -17,7 +17,6 @@ alias KlassHero.Family.FamilyEventHandler
 alias KlassHero.Family.InviteClaimedHandler
 alias KlassHero.Family.ProcessInviteClaimWorker
 alias KlassHero.Messaging.ConversationSummaries
-alias KlassHero.Messaging.EnrolledChildren
 alias KlassHero.Messaging.EnrollmentParticipationHandler
 alias KlassHero.Messaging.MessagingEventHandler
 alias KlassHero.Messaging.NewMessageEmailHandler
@@ -243,12 +242,6 @@ config :klass_hero, :event_consumers, %{
   "integration:family:invite_family_ready" => [
     {InviteFamilyReadyHandler, :handle_event}
   ],
-  "integration:family:child_created" => [
-    {EnrolledChildren, :project}
-  ],
-  "integration:family:child_updated" => [
-    {EnrolledChildren, :project}
-  ],
 
   # Program Catalog
   "integration:program_catalog:program_created" => [
@@ -261,11 +254,7 @@ config :klass_hero, :event_consumers, %{
   # Enrollment
   "integration:enrollment:enrollment_created" => [
     {ParticipationEventHandler, :handle_event},
-    {EnrolledChildren, :project},
     {EnrollmentParticipationHandler, :handle_event}
-  ],
-  "integration:enrollment:enrollment_cancelled" => [
-    {EnrolledChildren, :project}
   ],
   "integration:enrollment:participant_policy_set" => [
     {EnrollmentEventHandler, :handle_event}
@@ -353,8 +342,7 @@ config :klass_hero, :event_consumers, %{
 
   # Messaging
   "integration:messaging:conversation_created" => [
-    {ConversationSummaries, :project},
-    {EnrolledChildren, :project}
+    {ConversationSummaries, :project}
   ],
   # Order is not load-bearing here: NewMessageEmailHandler deliberately reads
   # conversation_participants rather than the unread_count ConversationSummaries

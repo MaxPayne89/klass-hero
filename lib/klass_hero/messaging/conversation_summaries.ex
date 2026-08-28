@@ -44,13 +44,13 @@ defmodule KlassHero.Messaging.ConversationSummaries do
     ]
 
   use KlassHero.Shared.Projection.WithBootstrapRetry
+  use KlassHero.Shared.Tracing
 
   import Ecto.Query
 
   alias KlassHero.Accounts
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Queries.MessageQueries
@@ -125,24 +125,6 @@ defmodule KlassHero.Messaging.ConversationSummaries do
     )
 
     project_participant_removed(event)
-  end
-
-  @doc """
-  Refreshes the enrolled-child names shown on a conversation's summary rows.
-
-  Called directly by `EnrolledChildren` after it recomputes them. This used to be
-  a domain event broadcast over PubSub between two projections in the same
-  context — persistent state riding an ephemeral channel, so a dropped message
-  left the summary permanently stale with nothing to retry it.
-  """
-  @spec update_enrolled_child_names(String.t(), [String.t()]) :: :ok
-  def update_enrolled_child_names(conversation_id, child_names) do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    from(s in ConversationSummary, where: s.conversation_id == ^conversation_id)
-    |> Repo.update_all(set: [enrolled_child_names: child_names, updated_at: now])
-
-    :ok
   end
 
   # Private Functions — Bootstrap
@@ -278,6 +260,15 @@ defmodule KlassHero.Messaging.ConversationSummaries do
     user_names = fetch_user_names(participant_ids)
     program_name = resolve_program_name(conversation_type, program_id)
 
+    # Computed here rather than left to a second handler. It used to be filled in
+    # afterwards by the `EnrolledChildren` projection calling back into this module,
+    # which is why it was excluded from the conflict list below.
+    enrolled_child_names =
+      resolve_enrolled_child_names(
+        %{type: conversation_type, program_id: program_id},
+        participant_ids
+      )
+
     # Atomic insert: a mid-loop crash without a transaction would leave partial rows.
     Repo.transaction(fn ->
       Enum.each(participant_ids, fn user_id ->
@@ -300,6 +291,7 @@ defmodule KlassHero.Messaging.ConversationSummaries do
           other_participant_name: other_name,
           program_name: program_name,
           participant_count: participant_count,
+          enrolled_child_names: enrolled_child_names,
           unread_count: 0
         }
 
@@ -307,11 +299,15 @@ defmodule KlassHero.Messaging.ConversationSummaries do
         |> Ecto.Changeset.change(attrs)
         |> Repo.insert!(
           # Idempotency: on replay, refresh conversation metadata only.
-          # Read-state fields (unread_count, last_read_at), message-state
-          # fields (latest_message_*, has_attachments, system_notes,
-          # enrolled_child_names) and archived_at MUST be preserved —
-          # those are owned by other event handlers (:message_sent,
+          # Read-state fields (unread_count, last_read_at), message-state fields
+          # (latest_message_*, has_attachments, system_notes) and archived_at MUST
+          # be preserved — those are owned by other event handlers (:message_sent,
           # :messages_read, :conversations_archived).
+          #
+          # `enrolled_child_names` is replaced rather than preserved: this handler
+          # now computes it, where it used to be written afterwards by the deleted
+          # `EnrolledChildren` projection. Preserving a value this insert supplies
+          # would pin the first roster a conversation ever saw.
           on_conflict:
             {:replace,
              [
@@ -322,6 +318,7 @@ defmodule KlassHero.Messaging.ConversationSummaries do
                :other_participant_name,
                :program_name,
                :participant_count,
+               :enrolled_child_names,
                :updated_at
              ]},
           conflict_target: [:conversation_id, :user_id]
@@ -624,18 +621,30 @@ defmodule KlassHero.Messaging.ConversationSummaries do
 
   # Query across all participant_user_ids (not just the current row's) so provider-side
   # summary rows receive the same child list as parent-side rows.
+  #
+  # Read live from Enrollment's and Family's write tables. This used to read a
+  # `messaging_enrolled_children` mirror maintained by its own projection — a read
+  # table whose only consumer was this function, kept in step by five event
+  # subscriptions. The join it ran at bootstrap is the query below.
   defp resolve_enrolled_child_names(%{type: type, program_id: program_id}, participant_user_ids)
        when type in ["direct", :direct] and not is_nil(program_id) and participant_user_ids != [] do
-    from(e in EnrolledChild,
-      where:
-        e.parent_user_id in ^participant_user_ids and
-          e.program_id == ^program_id and
-          not is_nil(e.child_first_name),
-      select: e.child_first_name,
-      distinct: true,
-      order_by: e.child_first_name
-    )
-    |> Repo.all()
+    acl_span source: "messaging", target: "enrollment" do
+      from(e in "enrollments",
+        join: c in "children",
+        on: c.id == e.child_id,
+        join: pp in "parents",
+        on: pp.id == e.parent_id,
+        where:
+          e.status in ["pending", "confirmed"] and
+            e.program_id == type(^program_id, :binary_id) and
+            pp.identity_id in type(^participant_user_ids, {:array, :binary_id}) and
+            not is_nil(c.first_name),
+        select: c.first_name,
+        distinct: true,
+        order_by: c.first_name
+      )
+      |> Repo.all()
+    end
   end
 
   defp resolve_enrolled_child_names(_, _), do: []

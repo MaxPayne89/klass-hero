@@ -9,7 +9,6 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationSummaries
   alias KlassHero.Messaging.ConversationSummary
-  alias KlassHero.Messaging.EnrolledChild
   alias KlassHero.Messaging.Events
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
@@ -149,15 +148,12 @@ defmodule KlassHero.Messaging.ConversationSummariesTest do
       insert_participant(conversation_id, user_id: parent_user.id, joined_at: now())
       insert_participant(conversation_id, user_id: provider_user.id, joined_at: now())
 
-      Repo.insert!(%EnrolledChild{
-        id: Ecto.UUID.generate(),
-        parent_user_id: parent_user.id,
+      insert(:enrollment_schema,
         program_id: program.id,
         child_id: child.id,
-        child_first_name: "Emma",
-        inserted_at: now(),
-        updated_at: now()
-      })
+        parent_id: parent.id,
+        status: :confirmed
+      )
 
       _ = restart_for_bootstrap(:bootstrap_enrolled_children)
 
