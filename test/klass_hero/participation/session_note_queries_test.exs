@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueriesTest do
+defmodule KlassHero.Participation.SessionNoteQueriesTest do
   @moduledoc """
   Tests for SessionNoteQueries composable query functions.
 
@@ -10,8 +10,8 @@ defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNot
 
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries
   alias KlassHero.Participation.SessionNote
+  alias KlassHero.Participation.SessionNoteQueries
 
   describe "base/0" do
     test "returns base query for SessionNote" do

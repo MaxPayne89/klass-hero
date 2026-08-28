@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Domain.Services.ParticipationCollectionTest do
+defmodule KlassHero.Participation.ParticipationCollectionTest do
   @moduledoc """
   Tests for the ParticipationCollection domain service.
 
@@ -8,7 +8,7 @@ defmodule KlassHero.Participation.Domain.Services.ParticipationCollectionTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias KlassHero.Participation.Domain.Services.ParticipationCollection
+  alias KlassHero.Participation.ParticipationCollection
   alias KlassHero.Participation.ParticipationRecord
 
   doctest ParticipationCollection

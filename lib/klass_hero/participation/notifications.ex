@@ -34,7 +34,7 @@ defmodule KlassHero.Participation.Notifications do
   allowed to take (ADR-0014).
   """
 
-  alias KlassHero.Participation.Adapters.Driven.ACL.ProgramProviderResolver
+  alias KlassHero.Participation.ProgramProviderResolver
   alias KlassHero.Shared.Domain.Events.Event
 
   require Logger

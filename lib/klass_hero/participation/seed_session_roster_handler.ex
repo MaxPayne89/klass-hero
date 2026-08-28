@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler do
+defmodule KlassHero.Participation.SeedSessionRosterHandler do
   @moduledoc """
   Integration event handler that seeds session rosters when sessions are created.
 

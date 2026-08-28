@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Domain.Events.ParticipationEvents do
+defmodule KlassHero.Participation.Events do
   @moduledoc """
   Factory module for creating participation domain events.
 

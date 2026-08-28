@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandlerScheduleTest do
+defmodule KlassHero.Participation.ParticipationEventHandlerScheduleTest do
   @moduledoc """
   The seam that makes schedule-derived sessions actually happen: a program write
   in another context reaching Participation's reconcile.
@@ -9,7 +9,7 @@ defmodule KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHand
   import Ecto.Query
   import KlassHero.Factory
 
-  alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
+  alias KlassHero.Participation.ParticipationEventHandler
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Repo
   alias KlassHero.Shared.Domain.Events.Event

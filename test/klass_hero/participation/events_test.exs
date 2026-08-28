@@ -1,7 +1,7 @@
-defmodule KlassHero.Participation.Domain.Events.ParticipationEventsTest do
+defmodule KlassHero.Participation.EventsTest do
   use ExUnit.Case, async: true
 
-  alias KlassHero.Participation.Domain.Events.ParticipationEvents
+  alias KlassHero.Participation.Events
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.SessionNote
 
@@ -24,19 +24,19 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsTest do
   describe "entity_type_for/1" do
     for {event_type, entity} <- @entity_table do
       test "#{event_type} => #{entity}" do
-        assert ParticipationEvents.entity_type_for(unquote(event_type)) == unquote(entity)
+        assert Events.entity_type_for(unquote(event_type)) == unquote(entity)
       end
     end
 
     test "raises on an unregistered event type" do
-      assert_raise KeyError, fn -> ParticipationEvents.entity_type_for(:not_an_event) end
+      assert_raise KeyError, fn -> Events.entity_type_for(:not_an_event) end
     end
   end
 
   describe "constructors derive entity_type from the registry" do
     test "attendance event carries :participation_record" do
       record = %ParticipationRecord{id: "rec-1", session_id: "sess-1", child_id: "child-1"}
-      event = ParticipationEvents.child_checked_in(record, [])
+      event = Events.child_checked_in(record, [])
 
       assert event.event_type == :child_checked_in
       assert event.entity_type == :participation_record
@@ -51,7 +51,7 @@ defmodule KlassHero.Participation.Domain.Events.ParticipationEventsTest do
         parent_id: "parent-1"
       }
 
-      event = ParticipationEvents.session_note_submitted(note)
+      event = Events.session_note_submitted(note)
 
       assert event.event_type == :session_note_submitted
       assert event.entity_type == :session_note

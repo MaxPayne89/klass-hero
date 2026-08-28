@@ -25,8 +25,8 @@ alias KlassHero.Messaging.Workers.FetchEmailContentWorker
 alias KlassHero.Messaging.Workers.MessageCleanupWorker
 alias KlassHero.Messaging.Workers.RetentionPolicyWorker
 alias KlassHero.Messaging.Workers.SendEmailReplyWorker
-alias KlassHero.Participation.Adapters.Driving.Events.EventHandlers.SeedSessionRosterHandler
-alias KlassHero.Participation.Adapters.Driving.Events.ParticipationEventHandler
+alias KlassHero.Participation.ParticipationEventHandler
+alias KlassHero.Participation.SeedSessionRosterHandler
 alias KlassHero.ProgramCatalog.Adapters.Driving.Events.EnrollmentEventHandler
 alias KlassHero.Provider.Projections.ProviderSessionDetails
 alias KlassHero.Provider.ProviderEventHandler

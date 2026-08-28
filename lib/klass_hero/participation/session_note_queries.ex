@@ -1,4 +1,4 @@
-defmodule KlassHero.Participation.Adapters.Driven.Persistence.Queries.SessionNoteQueries do
+defmodule KlassHero.Participation.SessionNoteQueries do
   @moduledoc """
   Composable Ecto query functions for session notes.
 
