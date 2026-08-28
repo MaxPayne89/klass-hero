@@ -5,7 +5,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
   Workers compensate inline when Oban tells them the attempt is the last one. Three
   routes reach a terminal job without that branch ever evaluating:
 
-    * `Oban.Plugins.Lifeline` discards an orphan left `executing` by a machine that
+    * `Oban.Lifeline` discards an orphan left `executing` by a machine that
       went away. Its rescue is a bare `update_all`, so `perform/1` is never invoked.
     * A raised exception bypasses the `{:error, _}` branch the gate lives in, and
       lands the job in `discarded` once attempts are spent.
@@ -75,7 +75,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Workers.CompensationSweepWorker do
   @doc """
   How long a compensation marker is kept, in days.
 
-  Public because the coupling to `Oban.Plugins.Pruner`'s window is asserted in
+  Public because the coupling to `Oban.Pruner`'s window is asserted in
   `KlassHero.ObanConfigTest`, which reads config rather than module attributes.
   """
   @spec job_compensation_retention_days() :: pos_integer()
