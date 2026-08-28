@@ -115,10 +115,14 @@ defmodule KlassHeroWeb.Provider.StaffConversationsLive do
   defp cursor_from([]), do: nil
   defp cursor_from(conversations), do: List.last(conversations).inserted_at
 
-  # No enrolled child names and no other-party name: both are participant-relative,
-  # and the owner has no participant row here, so `get_conversation_context/2` — which
-  # reads `conversation_summaries`, keyed (conversation_id, user_id) — has nothing for
-  # them. A direct thread therefore titles generically. Deriving the parent's name from
-  # the owner's viewpoint needs Provider's staff list, as the index already does — #1523.
+  # No enrolled child names and no other-party name: both are participant-relative, and
+  # the owner is neither a principal of a staff member's thread nor seated in it, so
+  # `ConversationContext` returns the empty context for them. A direct thread therefore
+  # titles generically.
+  #
+  # That used to be a consequence — no `conversation_summaries` row existed under the
+  # key (conversation_id, owner_id). Derived live off the principals it is a choice,
+  # made in `ConversationContext.visible_to?/2`, because the parent's name is sitting
+  # right there. Showing it to the owner is #1523, and that guard is the line to move.
   defp thread_title(conversation), do: get_conversation_title(conversation, [], nil)
 end

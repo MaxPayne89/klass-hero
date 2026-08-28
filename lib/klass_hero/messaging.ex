@@ -56,7 +56,6 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.Attachment
   alias KlassHero.Messaging.ComposeTarget
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.EmailReply
   alias KlassHero.Messaging.EmailSanitizer
   alias KlassHero.Messaging.InboundEmail
@@ -1076,23 +1075,23 @@ defmodule KlassHero.Messaging do
     |> Repo.all()
   end
 
-  # === Persistence — conversation summaries (read model) ===
+  # === Reads — the inbox ===
 
   @doc """
-  Lists a user's non-archived conversation summaries, newest first. Limit+1 paginated.
+  Lists a user's non-archived conversations, newest message first. Limit+1 paginated.
 
-  Returns the `ConversationSummary` read-table structs themselves: the schema is the
-  DTO (`KlassHero.Shared.ReadTable`), so callers read its flat fields directly.
+  Read live from the write model (ADR-0023) and returned as `InboxConversation`
+  structs, which carry the field names `MessagingComponents.conversation_card/1`
+  renders — the same shape `ListStaffConversations` returns, which is why one
+  component serves both inboxes.
 
-  Rows with no message are excluded — the SQL form of
-  `ConversationSummary.has_latest_message?/1`. Creation now waits for the first
-  message, so this only catches rows predating that and the window where a send
-  failed after its conversation committed.
+  A conversation with no message does not appear: the page query's lateral join onto
+  the newest message is INNER.
 
   ## Examples
 
       Messaging.list_conversations(user_id)
-      #=> {:ok, [%ConversationSummary{conversation_id: "…", unread_count: 2}], false}
+      #=> {:ok, [%InboxConversation{conversation_id: "…", unread_count: 2}], false}
 
   """
   @spec list_conversations(String.t(), keyword()) ::
@@ -1115,29 +1114,6 @@ defmodule KlassHero.Messaging do
           like(m.content, ^(token <> "%"))
     )
     |> Repo.exists?()
-  end
-
-  @doc "Returns the enrolled child names and other-participant name for a conversation summary row."
-  @spec get_conversation_summary_context(String.t(), String.t()) :: %{
-          enrolled_child_names: [String.t()],
-          other_participant_name: String.t() | nil
-        }
-  def get_conversation_summary_context(conversation_id, user_id) do
-    from(s in ConversationSummary,
-      where: s.conversation_id == ^conversation_id and s.user_id == ^user_id,
-      select: %{
-        enrolled_child_names: s.enrolled_child_names,
-        other_participant_name: s.other_participant_name
-      }
-    )
-    |> Repo.one()
-    |> case do
-      nil ->
-        %{enrolled_child_names: [], other_participant_name: nil}
-
-      %{enrolled_child_names: names, other_participant_name: other} ->
-        %{enrolled_child_names: names || [], other_participant_name: other}
-    end
   end
 
   # === Persistence — messages ===

@@ -42,8 +42,8 @@ defmodule KlassHero.Messaging.ListConversations do
 
   import Ecto.Query
 
-  alias KlassHero.Accounts
   alias KlassHero.Messaging.Conversation
+  alias KlassHero.Messaging.ConversationContext
   alias KlassHero.Messaging.InboxConversation
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
@@ -104,12 +104,10 @@ defmodule KlassHero.Messaging.ListConversations do
     conversations = Enum.map(rows, & &1.conversation)
 
     context = %{
-      user_id: user_id,
       unread: unread_counts(rows, user_id),
       attachment_ids: attachment_ids(rows),
-      user_names: user_names(conversations),
       program_names: program_names(conversations),
-      child_names: child_names(conversations)
+      titling: ConversationContext.for_conversations(conversations, user_id)
     }
 
     Enum.map(rows, &build_row(&1, context))
@@ -142,75 +140,23 @@ defmodule KlassHero.Messaging.ListConversations do
     |> MapSet.new()
   end
 
-  defp user_names(conversations) do
-    conversations
-    |> Enum.flat_map(fn c -> Enum.map(c.participants, & &1.user_id) end)
-    |> Enum.uniq()
-    |> Accounts.get_display_names()
-  end
-
   # Skipped entirely on a page with no broadcast — `get_titles/1` has an empty clause.
   defp program_names(conversations) do
     for(%{type: :program_broadcast, program_id: id} <- conversations, not is_nil(id), uniq: true, do: id)
     |> ProgramCatalog.get_titles()
   end
 
-  # The children a direct thread is about, keyed by {program_id, parent identity}.
-  # Status-agnostic on purpose beyond pending/confirmed: a cancelled enrollment stops
-  # being part of the thread's subject, which is what the retired projection did.
-  defp child_names(conversations) do
-    program_ids =
-      for(%{type: :direct, program_id: id} <- conversations, not is_nil(id), uniq: true, do: id)
-
-    user_ids =
-      for(
-        %{type: :direct, program_id: id} = c <- conversations,
-        not is_nil(id),
-        participant <- c.participants,
-        uniq: true,
-        do: participant.user_id
-      )
-
-    fetch_child_names(program_ids, user_ids)
-  end
-
-  defp fetch_child_names([], _user_ids), do: %{}
-  defp fetch_child_names(_program_ids, []), do: %{}
-
-  defp fetch_child_names(program_ids, user_ids) do
-    acl_span source: "messaging", target: "enrollment" do
-      from(e in "enrollments",
-        join: c in "children",
-        on: c.id == e.child_id,
-        join: pp in "parents",
-        on: pp.id == e.parent_id,
-        where:
-          e.status in ["pending", "confirmed"] and
-            e.program_id in type(^program_ids, {:array, :binary_id}) and
-            pp.identity_id in type(^user_ids, {:array, :binary_id}) and
-            not is_nil(c.first_name),
-        select: {
-          type(e.program_id, :binary_id),
-          type(pp.identity_id, :binary_id),
-          c.first_name
-        },
-        distinct: true
-      )
-      |> Repo.all()
-      |> Enum.group_by(fn {program_id, user_id, _name} -> {program_id, user_id} end, &elem(&1, 2))
-      |> Map.new(fn {key, names} -> {key, Enum.sort(names)} end)
-    end
-  end
-
   defp build_row(%{conversation: conversation, message: message}, context) do
+    titling = Map.fetch!(context.titling, conversation.id)
+
     %InboxConversation{
       conversation_id: conversation.id,
       conversation_type: conversation.type,
       provider_id: conversation.provider_id,
       program_id: conversation.program_id,
       program_name: program_name(conversation, context.program_names),
-      other_participant_name: other_participant_name(conversation, context),
-      enrolled_child_names: enrolled_child_names(conversation, context),
+      other_participant_name: titling.other_participant_name,
+      enrolled_child_names: titling.enrolled_child_names,
       latest_message_content: message.content,
       latest_message_sender_id: message.sender_id,
       latest_message_at: message.inserted_at,
@@ -224,36 +170,4 @@ defmodule KlassHero.Messaging.ListConversations do
   end
 
   defp program_name(_conversation, _names), do: nil
-
-  # Read off the principals rather than the participant list: a thread seats assigned
-  # staff too, and a parent who has left stops being a participant while remaining who
-  # the thread is with.
-  defp other_participant_name(%{type: :direct} = conversation, context) do
-    [conversation.principal_a_id, conversation.principal_b_id]
-    |> Enum.reject(&(is_nil(&1) or &1 == context.user_id))
-    |> case do
-      [other | _] -> Map.get(context.user_names, other)
-      [] -> fallback_participant_name(conversation, context)
-    end
-  end
-
-  defp other_participant_name(_conversation, _context), do: nil
-
-  # Threads predating the principal pair (#747) carry neither principal, so the only
-  # answer left is the other active participant.
-  defp fallback_participant_name(conversation, context) do
-    conversation.participants
-    |> Enum.filter(&(is_nil(&1.left_at) and &1.user_id != context.user_id))
-    |> Enum.find_value(&Map.get(context.user_names, &1.user_id))
-  end
-
-  defp enrolled_child_names(%{type: :direct, program_id: program_id} = conversation, context)
-       when not is_nil(program_id) do
-    conversation.participants
-    |> Enum.flat_map(&Map.get(context.child_names, {program_id, &1.user_id}, []))
-    |> Enum.uniq()
-    |> Enum.sort()
-  end
-
-  defp enrolled_child_names(_conversation, _context), do: []
 end

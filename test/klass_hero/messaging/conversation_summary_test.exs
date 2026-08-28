@@ -79,22 +79,4 @@ defmodule KlassHero.Messaging.ConversationSummaryTest do
       refute Messaging.has_system_note?(conversation.id, "[broadcast:bbb]")
     end
   end
-
-  describe "get_conversation_summary_context/2" do
-    test "returns the enrolled child names and other-participant name" do
-      summary =
-        insert(:conversation_summary_schema,
-          other_participant_name: "Alice Parent",
-          enrolled_child_names: ["Bob", "Cara"]
-        )
-
-      assert %{enrolled_child_names: ["Bob", "Cara"], other_participant_name: "Alice Parent"} =
-               Messaging.get_conversation_summary_context(summary.conversation_id, summary.user_id)
-    end
-
-    test "defaults when no summary row exists" do
-      assert %{enrolled_child_names: [], other_participant_name: nil} =
-               Messaging.get_conversation_summary_context(Ecto.UUID.generate(), Ecto.UUID.generate())
-    end
-  end
 end
