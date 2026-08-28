@@ -60,6 +60,8 @@ defmodule KlassHero.Messaging do
   alias KlassHero.Messaging.EmailReply
   alias KlassHero.Messaging.EmailSanitizer
   alias KlassHero.Messaging.InboundEmail
+  alias KlassHero.Messaging.InboxConversation
+  alias KlassHero.Messaging.ListConversations
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Notifications
   alias KlassHero.Messaging.Participant
@@ -1102,22 +1104,8 @@ defmodule KlassHero.Messaging do
 
   """
   @spec list_conversations(String.t(), keyword()) ::
-          {:ok, [ConversationSummary.t()], boolean()}
-  def list_conversations(user_id, opts \\ []) do
-    limit = Keyword.get(opts, :limit, 25)
-
-    schemas =
-      from(s in ConversationSummary,
-        where:
-          s.user_id == ^user_id and is_nil(s.archived_at) and
-            (not is_nil(s.latest_message_content) or s.has_attachments),
-        order_by: [desc: s.latest_message_at, desc: s.id],
-        limit: ^(limit + 1)
-      )
-      |> Repo.all()
-
-    {:ok, Enum.take(schemas, limit), length(schemas) > limit}
-  end
+          {:ok, [InboxConversation.t()], boolean()}
+  defdelegate list_conversations(user_id, opts \\ []), to: ListConversations, as: :execute
 
   @doc "Sum of unread counts across a user's non-archived conversation summaries."
   @spec summaries_total_unread_count(String.t()) :: non_neg_integer()
