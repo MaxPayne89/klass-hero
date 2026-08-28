@@ -224,10 +224,12 @@ defmodule KlassHero.Participation.SessionNotes do
   defp apply_review_decision(note, :reject, reason), do: SessionNote.reject(note, reason)
   defp apply_review_decision(_note, _decision, _reason), do: {:error, :invalid_decision}
 
-  @doc false
-  def normalize_notes(nil), do: nil
+  # Duplicated rather than shared with `Attendance`: six lines of pure trimming
+  # with no invariant to drift, and a module existing only to hold it would be
+  # the `helpers/` catch-all the layout rules reject.
+  defp normalize_notes(nil), do: nil
 
-  def normalize_notes(notes) when is_binary(notes) do
+  defp normalize_notes(notes) when is_binary(notes) do
     case String.trim(notes) do
       "" -> nil
       trimmed -> trimmed
