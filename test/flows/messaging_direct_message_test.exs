@@ -2,12 +2,14 @@ defmodule KlassHeroWeb.Flows.MessagingDirectMessageTest do
   @moduledoc """
   Flow test for a direct conversation between a provider and a parent.
 
-  Migrated from `test/e2e/messaging/direct_message_test.exs`. The browser bought
-  nothing here — both tests navigated to re-read the page rather than asserting a
-  live push — while costing the projection fidelity the tier was supposed to have:
-  `ConversationSummaries` had to be hand-started and hand-rebuilt because no event
-  was ever delivered. Under `with_real_outbox/1` the projection runs as
-  `{ConversationSummaries, :project}`, the way production runs it.
+  Migrated from `test/e2e/messaging/direct_message_test.exs`, where the browser
+  bought nothing — both tests navigated to re-read the page rather than asserting a
+  live push — while costing fidelity: `ConversationSummaries` had to be hand-started
+  and hand-rebuilt because no event was ever delivered.
+
+  That projection is gone (ADR-0023) and the inbox reads the write model, so there is
+  no read side left to keep in step. `with_real_outbox/1` stays for the events that
+  do still have consumers.
   """
 
   use KlassHeroWeb.FlowCase, async: false

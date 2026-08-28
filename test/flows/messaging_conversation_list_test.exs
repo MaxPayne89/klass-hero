@@ -3,11 +3,15 @@ defmodule KlassHeroWeb.Flows.MessagingConversationListTest do
   Flow tests for the conversation list and its unread badge.
 
   Migrated from `test/e2e/messaging/conversation_list_test.exs` and
-  `mark_as_read_test.exs`. The migration is what makes these assertions mean
-  something: in the browser tier they ran `ConversationSummaries.rebuild/0` before
-  every read, so they asserted the projection's bootstrap query. Here the rows are
-  written by `{ConversationSummaries, :project}` from delivered `message_sent` and
-  `messages_read` events — a projection that dropped one would now fail.
+  `mark_as_read_test.exs`, where they ran `ConversationSummaries.rebuild/0` before
+  every read and so asserted the projection's bootstrap query rather than the path
+  users took.
+
+  There is no projection now (ADR-0023): the list and the badge are queries over
+  `messages` and `conversation_participants`, and the refetch is triggered by the
+  producer post-commit. That makes this file the regression net for both halves —
+  it went green through the retirement with no assertion changed, which is what
+  proved the notification move.
   """
 
   use KlassHeroWeb.FlowCase, async: false

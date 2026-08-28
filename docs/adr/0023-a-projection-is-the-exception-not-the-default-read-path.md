@@ -97,6 +97,29 @@ part that had not caught up.
   `provider_session_details` has the strongest case of any: a six-table join across
   three contexts with two LATERALs, sixteen topics, and attendance counters that are
   genuinely incremental.
+
+  **Amended:** `conversation_summaries` was subsequently retired, leaving
+  `provider_session_details` as the only projection. Three findings from that
+  retirement, none of which this ADR anticipated:
+
+  - **A projection also captures the live-update notification.** Being the last
+    writer, it is the only place that knows the read is current, so it ends up
+    owning the PubSub message that tells a mounted view to refetch. That reasoning
+    inverts when the read goes live — the producer's write has committed, so the
+    producer is the right notifier — but nothing *makes* you notice. No test of the
+    projection can see it, and deleting one without moving the broadcast leaves
+    views that simply stop updating. Retiring a projection always has a PubSub half.
+  - **Topics can lose their last consumer, and `Outbox.stage/2` then drops the
+    event — in tests too.** Nine of eleven did here, turning ten assertions red
+    across eight files. That is the filter working as designed, but it reaches
+    beyond the context: a Shared test had borrowed one of those topics purely as a
+    vehicle for a payload. Unconsumed producers were left in place and filed
+    (#1562) rather than unwound inside the retirement.
+  - **Reading live can expose a latent write-model defect.** The incremental counter
+    never compared timestamps, so second-precision columns and random-UUID message
+    ids left the unread comparison without a total order. Nothing observed it until
+    the read became a comparison. A projection can be *hiding* a bug rather than
+    merely duplicating a fact.
 - **The tables were dropped in the same release as the code.** Fly runs migrations as
   a `release_command`, before new machines take traffic, so the drop executes while
   the previous release is still reading those tables. #1321 split its equivalent drop

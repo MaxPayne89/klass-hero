@@ -2,9 +2,10 @@ defmodule KlassHeroWeb.Flows.MessagingComposeTest do
   @moduledoc """
   Flow test for #1446: opening compose must not create a `Conversation`.
 
-  Runs under `with_real_outbox/1` so the send path goes all the way through the
-  `ConversationSummaries` projection — the inbox reads that read table, so a
-  test that stops at the write side would not see what the parent sees.
+  Runs under `with_real_outbox/1` so the send path goes all the way through event
+  delivery. That once mattered because the inbox read a projection; since it reads
+  the write model (ADR-0023) the outbox is here for the consumers that remain —
+  notably the new-message email — and for the sequencing `testing: :inline` fakes.
   """
 
   use KlassHeroWeb.FlowCase, async: false
