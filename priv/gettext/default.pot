@@ -8268,17 +8268,17 @@ msgstr ""
 msgid "Usual capacity per session"
 msgstr ""
 
+#: lib/klass_hero_web/live/provider_profile_live.ex:194
+#, elixir-autogen, elixir-format
+msgid "Messages sent through Klass Hero can be reviewed if something goes wrong."
+msgstr ""
+
 #: lib/klass_hero_web/components/messaging_components.ex:858
 #, elixir-autogen, elixir-format
-msgid "Keep conversations with families on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
+msgid "Keep conversations with families on Klass Hero. Messages moved to WhatsApp, email or text cannot be reviewed if something goes wrong."
 msgstr ""
 
 #: lib/klass_hero_web/components/messaging_components.ex:862
 #, elixir-autogen, elixir-format
-msgid "Keep this conversation on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
-msgstr ""
-
-#: lib/klass_hero_web/live/provider_profile_live.ex:194
-#, elixir-autogen, elixir-format
-msgid "Messages sent through Klass Hero can be reviewed if something goes wrong."
+msgid "Keep this conversation on Klass Hero. Messages moved to WhatsApp, email or text cannot be reviewed if something goes wrong."
 msgstr ""

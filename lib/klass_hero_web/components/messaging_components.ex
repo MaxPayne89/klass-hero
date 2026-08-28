@@ -856,11 +856,11 @@ defmodule KlassHeroWeb.MessagingComponents do
       <p class={Theme.typography(:caption)}>
         <%= if @variant == :provider do %>
           {gettext(
-            "Keep conversations with families on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
+            "Keep conversations with families on Klass Hero. Messages moved to WhatsApp, email or text cannot be reviewed if something goes wrong."
           )}
         <% else %>
           {gettext(
-            "Keep this conversation on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
+            "Keep this conversation on Klass Hero. Messages moved to WhatsApp, email or text cannot be reviewed if something goes wrong."
           )}
         <% end %>
       </p>

@@ -8286,17 +8286,17 @@ msgstr "Wie viele Kinder in eine Sitzung passen. Gilt für Sitzungen, die aus di
 msgid "Usual capacity per session"
 msgstr "Übliche Kapazität pro Sitzung"
 
-#: lib/klass_hero_web/components/messaging_components.ex:858
-#, elixir-autogen, elixir-format
-msgid "Keep conversations with families on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
-msgstr "Gespräche mit Familien sollten auf Klass Hero bleiben. Nachrichten hier können bei Problemen eingesehen werden. Nachrichten über WhatsApp, E-Mail oder SMS nicht."
-
-#: lib/klass_hero_web/components/messaging_components.ex:862
-#, elixir-autogen, elixir-format
-msgid "Keep this conversation on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
-msgstr "Dieses Gespräch sollte auf Klass Hero bleiben. Nachrichten hier können bei Problemen eingesehen werden. Nachrichten über WhatsApp, E-Mail oder SMS nicht."
-
 #: lib/klass_hero_web/live/provider_profile_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "Messages sent through Klass Hero can be reviewed if something goes wrong."
 msgstr "Nachrichten über Klass Hero können bei Problemen eingesehen werden."
+
+#: lib/klass_hero_web/components/messaging_components.ex:858
+#, elixir-autogen, elixir-format
+msgid "Keep conversations with families on Klass Hero. Messages moved to WhatsApp, email or text cannot be reviewed if something goes wrong."
+msgstr "Gespräche mit Familien sollten auf Klass Hero bleiben. Nachrichten über WhatsApp, E-Mail oder SMS können bei Problemen nicht eingesehen werden."
+
+#: lib/klass_hero_web/components/messaging_components.ex:862
+#, elixir-autogen, elixir-format
+msgid "Keep this conversation on Klass Hero. Messages moved to WhatsApp, email or text cannot be reviewed if something goes wrong."
+msgstr "Dieses Gespräch sollte auf Klass Hero bleiben. Nachrichten über WhatsApp, E-Mail oder SMS können bei Problemen nicht eingesehen werden."
