@@ -5,6 +5,14 @@ All notable changes to the Klass Hero project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.97.1](https://github.com/MaxPayne89/klass-hero/compare/v0.97.0...v0.97.1) (2026-08-28)
+
+
+### Code Refactoring
+
+* flatten the participation context and split its facade ([#1567](https://github.com/MaxPayne89/klass-hero/issues/1567)) ([bfcc155](https://github.com/MaxPayne89/klass-hero/commit/bfcc15588f5f3010d2646314bf3cb65ebf1faaa4))
+* settle facade return types and cross-context associations ([#1563](https://github.com/MaxPayne89/klass-hero/issues/1563)) ([388771b](https://github.com/MaxPayne89/klass-hero/commit/388771bacb82a96fa6bb0de2802d48b9413f7f2a))
+
 ## [0.97.0](https://github.com/MaxPayne89/klass-hero/compare/v0.96.0...v0.97.0) (2026-08-28)
 
 
