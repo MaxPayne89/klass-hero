@@ -10,17 +10,19 @@ defmodule KlassHero.Messaging.Notifications do
 
   ## Who sends which
 
-  The two are sent from different places on purpose, following the rule that
-  *whoever writes the data a view reads is the one who notifies*.
+  Both are sent by the producer, following the rule that *whoever writes the data
+  a view reads is the one who notifies*.
 
-  A conversation view reads the write model, so `send_message/1` notifies it
-  directly and the message is available the moment the notification lands.
+  That was not always possible for `:conversations_changed`. The list used to read
+  `conversation_summaries`, a projection an outbox job updated some time after the
+  write committed, so the projection had to send this itself — notifying from the
+  producer would have raced, and the list would have refetched the rows it already
+  had. Retiring the projection (ADR-0023) inverted that: the list now reads the
+  write model, so by the time the producer's transaction returns, a refetch sees
+  the change.
 
-  The conversation *list* reads `conversation_summaries` — a projection the
-  outbox job updates after the write commits. So `ConversationSummaries` sends
-  `:conversations_changed` itself, once its rows are actually current. Notifying
-  from the producer instead would race: the list would refetch and re-render the
-  rows it already had.
+  Sent from `SendMessage` (every active participant) and `CreateDirectConversation`
+  (the two principals) — the two places the old projection notified from.
 
   Best-effort, always `:ok` — a dropped refresh costs a stale view until the next
   render (ADR-0014).
@@ -43,8 +45,7 @@ defmodule KlassHero.Messaging.Notifications do
   @doc """
   Tells one user their conversation list is out of date.
 
-  Sent by `ConversationSummaries` after it writes, not by the producer — see the
-  moduledoc.
+  Sent post-commit by whoever wrote the conversation or message — see the moduledoc.
   """
   @spec conversations_changed(String.t()) :: :ok
   def conversations_changed(user_id) do

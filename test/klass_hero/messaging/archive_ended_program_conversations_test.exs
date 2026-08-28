@@ -77,21 +77,26 @@ defmodule KlassHero.Messaging.ArchiveEndedProgramConversationsTest do
       assert result.conversation_ids == []
     end
 
-    test "publishes conversations_archived event on success" do
+    # Was "publishes conversations_archived event on success". `:conversations_archived`
+    # lost its only consumer with `ConversationSummaries` (ADR-0023), so `Outbox.stage/2`
+    # drops it. The archiving is the fact worth pinning, and always was.
+    test "stamps archived_at on the conversations it archives" do
       provider = insert(:provider_profile_schema)
 
       past_end_date = DateTime.utc_now() |> DateTime.add(-40, :day)
       program = insert(:program_schema, end_date: past_end_date)
 
-      insert(:conversation_schema,
-        type: "program_broadcast",
-        provider_id: provider.id,
-        program_id: program.id
-      )
+      conversation =
+        insert(:conversation_schema,
+          type: "program_broadcast",
+          provider_id: provider.id,
+          program_id: program.id
+        )
 
       assert {:ok, _result} = ArchiveEndedProgramConversations.execute()
 
-      EventTestHelper.assert_integration_event_published(:conversations_archived, %{reason: :program_ended})
+      assert {:ok, %{archived_at: %DateTime{}}} =
+               KlassHero.Messaging.get_conversation_by_id(conversation.id)
     end
 
     test "does not publish event when no conversations archived" do

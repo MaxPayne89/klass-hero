@@ -6,10 +6,12 @@ defmodule KlassHero.Messaging.AddAssignedStaff do
 
   ## Why return the event instead of dispatching it?
 
-  The `ConversationSummaries` projection runs in its own GenServer on its
-  own DB connection. Under PostgreSQL READ COMMITTED isolation it cannot
-  see uncommitted writes, so it must not run before the conversation row
-  commits. This command therefore returns its events as data; the caller
+  A consumer runs on its own DB connection, and under PostgreSQL READ COMMITTED
+  isolation cannot see uncommitted writes — so it must not run before the
+  conversation row commits. That held when `ConversationSummaries` consumed these
+  events and holds for whoever consumes them next; today nothing does, so
+  `Outbox.stage/2` drops them (ADR-0023). This command therefore returns its
+  events as data; the caller
   stages them through `Outbox.transact/2`, and the delivery job runs after
   the commit.
 

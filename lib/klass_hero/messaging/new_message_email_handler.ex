@@ -20,13 +20,13 @@ defmodule KlassHero.Messaging.NewMessageEmailHandler do
 
   ## Why the read-up filter queries the write side
 
-  Consumers of one event run **sequentially**, and `ConversationSummaries` is
-  also registered on `message_sent`. Filtering on its `unread_count` would mean
-  reading a number that consumer may or may not have already incremented,
-  depending on registry order — and if it ran first, every recipient would look
-  "already unread" and no email would ever send. So the filter reads
-  `conversation_participants.last_read_at` against `messages` instead, which no
-  consumer mutates.
+  The filter reads `conversation_participants.last_read_at` against `messages`,
+  which no consumer mutates. It once had to: `ConversationSummaries` was also
+  registered on `message_sent`, consumers of one event run **sequentially**, and
+  filtering on its `unread_count` meant reading a number that consumer may or may
+  not have incremented yet — if it ran first, every recipient looked "already
+  unread" and no email ever sent. That projection is gone (ADR-0023), but the rule
+  it forced is the right one for any consumer added here later.
   """
 
   @behaviour KlassHero.Shared.ForHandlingEvents

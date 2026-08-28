@@ -7,6 +7,7 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandlerTest do
   alias KlassHero.Enrollment.Domain.Events.EnrollmentEvents
   alias KlassHero.Messaging
   alias KlassHero.Messaging.EnrollmentParticipationHandler
+  alias KlassHero.Messaging.Participant
 
   setup do
     setup_test_integration_events()
@@ -45,36 +46,24 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandlerTest do
       refute Messaging.participant?(direct.id, parent_user.id)
     end
 
-    test "emits :participant_added with source :later_enrollment" do
-      %{program: program, conversation: conversation} = program_with_broadcast()
-      parent_user = KlassHero.AccountsFixtures.user_fixture()
-
-      assert :ok = handle(program.id, parent_user.id)
-
-      assert_integration_event_published(:participant_added, %{
-        conversation_id: conversation.id,
-        participant_user_ids: [parent_user.id],
-        source: :later_enrollment
-      })
-    end
-
     test "is inert when the program has no broadcast conversation" do
       program = insert(:program_schema)
       parent_user = KlassHero.AccountsFixtures.user_fixture()
 
       assert :ok = handle(program.id, parent_user.id)
 
-      refute_participant_added()
+      assert Messaging.list_active_broadcast_ids_without_participant(program.id, parent_user.id) == []
     end
 
     test "is inert when the enrollee is already an active participant" do
       %{program: program, conversation: conversation} = program_with_broadcast()
       parent_user = KlassHero.AccountsFixtures.user_fixture()
       insert(:participant_schema, conversation_id: conversation.id, user_id: parent_user.id)
+      before = participant_count(conversation.id)
 
       assert :ok = handle(program.id, parent_user.id)
 
-      refute_participant_added()
+      assert participant_count(conversation.id) == before
     end
 
     # `parent_user_id` is resolved late for invite-created enrollments
@@ -82,11 +71,12 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandlerTest do
     # it yields nil. conversation_participants.user_id is NOT NULL with an FK, so
     # an unguarded insert raises past RetryHelpers straight into an Oban discard.
     test "skips when parent_user_id is nil" do
-      %{program: program} = program_with_broadcast()
+      %{program: program, conversation: conversation} = program_with_broadcast()
+      before = participant_count(conversation.id)
 
       assert :ok = handle(program.id, nil)
 
-      refute_participant_added()
+      assert participant_count(conversation.id) == before
     end
 
     test "ignores unrelated events" do
@@ -125,9 +115,12 @@ defmodule KlassHero.Messaging.EnrollmentParticipationHandlerTest do
     end
   end
 
-  defp refute_participant_added do
-    refute Enum.any?(get_published_integration_events(), &(&1.event_type == :participant_added)),
-           "Expected no :participant_added event to be staged."
+  # Was a refutation over staged `:participant_added` events. That topic lost its only
+  # consumer with `ConversationSummaries` (ADR-0023), so nothing is staged for it and
+  # the refutation became vacuously true — three tests would have passed while asserting
+  # nothing (#1142). Counting rows is the claim they were actually making.
+  defp participant_count(conversation_id) do
+    Repo.aggregate(from(p in Participant, where: p.conversation_id == ^conversation_id), :count)
   end
 
   defp handle(program_id, parent_user_id) do

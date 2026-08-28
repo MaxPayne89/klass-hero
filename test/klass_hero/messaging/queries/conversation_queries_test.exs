@@ -12,7 +12,6 @@ defmodule KlassHero.Messaging.Queries.ConversationQueriesTest do
   use KlassHero.DataCase, async: true
 
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.Participant
   alias KlassHero.Messaging.Queries.ConversationQueries
 
   describe "base/0" do

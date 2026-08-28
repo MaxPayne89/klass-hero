@@ -1,13 +1,15 @@
 defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   @moduledoc """
   Regression tests for #817: staff members added to conversations must
-  appear in `/staff/messages` without a server restart. Exercises the full
-  `CreateDirectConversation` → `AddAssignedStaff` → `:participant_added`
-  event flow → `ConversationSummaries` projection → `ListConversations`
-  query → LiveView render.
+  appear in `/staff/messages` without a server restart. Exercises
+  `CreateDirectConversation` → `AddAssignedStaff` → participant rows →
+  `ListStaffConversations` → LiveView render.
 
-  Uses `async: false` so the shared Ecto sandbox lets the supervised
-  projection process see the test's DB writes.
+  "Without a server restart" was the whole difficulty while the inbox read
+  `conversation_summaries`: this file started that projection per test and replayed
+  staged events into it by hand, because a row could only appear once the projection
+  had written one. Reading the write model live (ADR-0023) deletes the question —
+  the participant row *is* the fact the inbox renders.
   """
 
   use KlassHeroWeb.ConnCase, async: false
@@ -19,38 +21,14 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   import Phoenix.LiveViewTest
 
   alias KlassHero.Accounts.Scope
-  alias KlassHero.Messaging.ConversationSummaries
   alias KlassHero.Messaging.StaffAssignmentHandler
   alias KlassHero.Messaging.StartConversationWithMessage
   alias KlassHero.Provider
   alias KlassHero.Provider.ProviderProfile
   alias KlassHero.Provider.StaffMember
 
-  @projection_name :inbox_e2e_projection
-
   setup do
-    # Projections are not started in the test supervision tree by default
-    # (see config/test.exs `start_projections: false`). Start one per test
-    # so the event flow has a live consumer.
-    pid = start_supervised!({ConversationSummaries, name: @projection_name})
-    _ = :sys.get_state(@projection_name)
-
-    # In test env events are recorded rather than delivered (see TestOutbox). For an
-    # end-to-end inbox flow we replay them into the projection the way the delivery
-    # job would.
     setup_test_integration_events()
-
-    {:ok, projection: pid}
-  end
-
-  defp flush_to_projection do
-    topics = ConversationSummaries.topics()
-
-    get_published_integration_events()
-    |> Enum.filter(&("integration:#{&1.source_context}:#{&1.event_type}" in topics))
-    |> Enum.each(&ConversationSummaries.project/1)
-
-    clear_integration_events()
     :ok
   end
 
@@ -109,8 +87,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       assert {:ok, conversation, _message} =
                StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
-      flush_to_projection()
-
       staff_conn = log_in_user(conn, staff_user)
       {:ok, view, _html} = live(staff_conn, ~p"/staff/messages")
 
@@ -144,8 +120,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       assert {:ok, conversation, _message} =
                StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
-      flush_to_projection()
-
       # Now assign staff via the integration event the Provider context would send
       staff_user = user_fixture(intended_roles: [:staff])
 
@@ -167,8 +141,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
                StaffAssignmentHandler.handle_event(
                  Provider.Events.staff_assigned_to_program(assignment, %StaffMember{user_id: staff_user.id})
                )
-
-      flush_to_projection()
 
       staff_conn = log_in_user(conn, staff_user)
       {:ok, view, _html} = live(staff_conn, ~p"/staff/messages")
@@ -214,11 +186,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       assert {:ok, conversation, _message} =
                StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
-      flush_to_projection()
-
       assert :ok = unassign_and_deliver(provider, program, assignment, staff_user)
-
-      flush_to_projection()
 
       staff_conn = log_in_user(conn, staff_user)
       {:ok, view, _html} = live(staff_conn, ~p"/staff/messages")
@@ -265,8 +233,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
       assert {:ok, conversation, _message} =
                StartConversationWithMessage.execute(scope, provider.id, parent.id, "Hello", program_id: program.id)
 
-      flush_to_projection()
-
       staff_conn = log_in_user(conn, staff_user)
       {:ok, view, _html} = live(staff_conn, ~p"/staff/messages")
 
@@ -275,7 +241,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
 
       # ACT 2 — unassign staff; conversation disappears from inbox
       assert :ok = unassign_and_deliver(provider, program, assignment, staff_user)
-      flush_to_projection()
 
       {:ok, view, _html} = live(log_in_user(conn, staff_user), ~p"/staff/messages")
 
@@ -294,8 +259,6 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
                StaffAssignmentHandler.handle_event(
                  Provider.Events.staff_assigned_to_program(reassignment, %StaffMember{user_id: staff_user.id})
                )
-
-      flush_to_projection()
 
       {:ok, view, _html} = live(log_in_user(conn, staff_user), ~p"/staff/messages")
 

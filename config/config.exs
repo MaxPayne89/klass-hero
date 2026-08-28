@@ -16,7 +16,6 @@ alias KlassHero.Enrollment.Adapters.Driving.Workers.SendInviteEmailWorker
 alias KlassHero.Family.FamilyEventHandler
 alias KlassHero.Family.InviteClaimedHandler
 alias KlassHero.Family.ProcessInviteClaimWorker
-alias KlassHero.Messaging.ConversationSummaries
 alias KlassHero.Messaging.EnrollmentParticipationHandler
 alias KlassHero.Messaging.MessagingEventHandler
 alias KlassHero.Messaging.NewMessageEmailHandler
@@ -242,12 +241,6 @@ config :klass_hero, :event_consumers, %{
   "integration:family:invite_family_ready" => [
     {InviteFamilyReadyHandler, :handle_event}
   ],
-  "integration:family:child_created" => [
-    {ConversationSummaries, :project}
-  ],
-  "integration:family:child_updated" => [
-    {ConversationSummaries, :project}
-  ],
 
   # Program Catalog
   "integration:program_catalog:program_created" => [
@@ -260,11 +253,7 @@ config :klass_hero, :event_consumers, %{
   # Enrollment
   "integration:enrollment:enrollment_created" => [
     {ParticipationEventHandler, :handle_event},
-    {ConversationSummaries, :project},
     {EnrollmentParticipationHandler, :handle_event}
-  ],
-  "integration:enrollment:enrollment_cancelled" => [
-    {ConversationSummaries, :project}
   ],
   "integration:enrollment:participant_policy_set" => [
     {EnrollmentEventHandler, :handle_event}
@@ -351,30 +340,15 @@ config :klass_hero, :event_consumers, %{
   ],
 
   # Messaging
-  "integration:messaging:conversation_created" => [
-    {ConversationSummaries, :project}
-  ],
-  # Order is not load-bearing here: NewMessageEmailHandler deliberately reads
-  # conversation_participants rather than the unread_count ConversationSummaries
-  # maintains, so it cannot observe whether that projection has run yet.
+  #
+  # Messaging's other seven topics — conversation_created, messages_read,
+  # conversations_archived, message_data_anonymized, participant_added,
+  # participant_removed, plus family:child_* and enrollment:enrollment_cancelled —
+  # had `ConversationSummaries` as their only consumer and are gone with it
+  # (ADR-0023). Their producers still build the events; `Outbox.stage/2` drops what
+  # nothing consumes, so nothing is staged for them. Re-add a key here to revive one.
   "integration:messaging:message_sent" => [
-    {ConversationSummaries, :project},
     {NewMessageEmailHandler, :handle_event}
-  ],
-  "integration:messaging:messages_read" => [
-    {ConversationSummaries, :project}
-  ],
-  "integration:messaging:conversations_archived" => [
-    {ConversationSummaries, :project}
-  ],
-  "integration:messaging:message_data_anonymized" => [
-    {ConversationSummaries, :project}
-  ],
-  "integration:messaging:participant_added" => [
-    {ConversationSummaries, :project}
-  ],
-  "integration:messaging:participant_removed" => [
-    {ConversationSummaries, :project}
   ]
 }
 

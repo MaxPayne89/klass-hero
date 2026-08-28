@@ -88,32 +88,9 @@ defmodule KlassHero.Messaging.CreateDirectConversationTest do
       assert KlassHero.Messaging.participant?(conversation.id, staff_user.id)
     end
 
-    test "publishes :participant_added integration event when staff are added" do
-      provider = insert(:provider_profile_schema)
-      program = insert(:program_schema, provider_id: provider.id)
-      scope = build_scope_with_provider(provider)
-      target_user = AccountsFixtures.user_fixture()
-      staff_user = AccountsFixtures.user_fixture()
-
-      ProviderFixtures.assign_active_staff(%{
-        provider_id: provider.id,
-        program_id: program.id,
-        staff_user_id: staff_user.id
-      })
-
-      assert {:ok, conversation} =
-               CreateDirectConversation.execute(
-                 scope,
-                 provider.id,
-                 target_user.id,
-                 program_id: program.id
-               )
-
-      event = assert_integration_event_published(:participant_added)
-      assert event.entity_id == conversation.id
-      assert event.payload.participant_user_ids == [staff_user.id]
-      assert event.payload.source == :initial_staff
-    end
+    # A "publishes :participant_added when staff are added" test stood here. That topic
+    # lost its only consumer with `ConversationSummaries` (ADR-0023) and is no longer
+    # staged; the seating it described is asserted directly by the test above.
 
     test "does not add staff when no program_id provided" do
       provider = insert(:provider_profile_schema)

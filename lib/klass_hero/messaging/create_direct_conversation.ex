@@ -33,6 +33,7 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
   alias KlassHero.Messaging.Authorization
   alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.Events
+  alias KlassHero.Messaging.Notifications
   alias KlassHero.Shared.Outbox
 
   require Logger
@@ -113,8 +114,20 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
         {:ok, conversation, [created_event | staff_events]}
       end
     end)
+    |> notify_new_conversation(principals)
     |> handle_commit(scope, provider_id)
   end
+
+  # Post-commit, so a list refetching on this sees the conversation. Principals only:
+  # `AddAssignedStaff` seats staff into the same thread, but the `:conversation_created`
+  # payload the projection notified off carried only the principals, so staff never got
+  # this refresh and still do not.
+  defp notify_new_conversation({:ok, _conversation} = result, principals) do
+    Enum.each(principals, &Notifications.conversations_changed/1)
+    result
+  end
+
+  defp notify_new_conversation(result, _principals), do: result
 
   defp handle_commit({:ok, conversation}, scope, provider_id) do
     Logger.info("Created direct conversation",

@@ -123,8 +123,8 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
 
   A subquery join rather than a `:messages` preload, which would load N×M rows.
 
-  Returns a query. Callers execute and shape it — `ConversationSummaries` and
-  `ListStaffConversations` both key the rows by `conversation_id`.
+  Returns a query. Callers execute and shape it — `ListStaffConversations` keys the
+  rows by `conversation_id`.
 
   Soft-deleted messages are excluded, on both sides of the join: this feeds a card
   **preview**, and a preview of a message the thread view refuses to render is #1513's

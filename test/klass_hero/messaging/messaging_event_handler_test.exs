@@ -65,20 +65,8 @@ defmodule KlassHero.Messaging.MessagingEventHandlerTest do
       assert %DateTime{} = reloaded_participant.left_at
     end
 
-    test "publishes message_data_anonymized integration event" do
-      user = AccountsFixtures.user_fixture()
-
-      event =
-        Accounts.Events.user_anonymized(
-          %{id: user.id, email: "deleted_#{user.id}@anonymized.local"},
-          %{previous_email: user.email}
-        )
-
-      assert :ok == MessagingEventHandler.handle_event(event)
-
-      integration_event = assert_integration_event_published(:message_data_anonymized)
-      assert integration_event.entity_id == user.id
-    end
+    # A "publishes :message_data_anonymized" test stood here — see the note in
+    # `anonymize_user_data_test.exs`. The handler's effect is asserted above.
 
     test "returns :ok for user with no messaging data" do
       user = AccountsFixtures.user_fixture()
