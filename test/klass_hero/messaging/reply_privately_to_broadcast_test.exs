@@ -6,7 +6,6 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
   alias KlassHero.Accounts.Scope
   alias KlassHero.AccountsFixtures
   alias KlassHero.Family.ParentProfile
-  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.ReplyPrivatelyToBroadcast
   alias KlassHero.ProviderFixtures
 
@@ -96,24 +95,6 @@ defmodule KlassHero.Messaging.ReplyPrivatelyToBroadcastTest do
 
       system_messages = Enum.filter(messages, &(&1.message_type == :system))
       assert length(system_messages) == 1
-    end
-
-    # The dedup guard used to read `conversation_summaries`, which meant a
-    # projection that had not caught up let a second tap insert a duplicate note —
-    # the reason a synchronous write-through into that read table existed at all.
-    # The system message itself is the record, so wiping every summary row must
-    # change nothing.
-    test "dedup holds with no summary rows at all", ctx do
-      {:ok, conversation_id} = ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
-
-      KlassHero.Repo.delete_all(ConversationSummary)
-
-      {:ok, ^conversation_id} = ReplyPrivatelyToBroadcast.execute(ctx.scope, ctx.broadcast.id)
-
-      {:ok, messages, _} =
-        KlassHero.Messaging.list_messages_for_conversation(conversation_id, limit: 50)
-
-      assert Enum.count(messages, &(&1.message_type == :system)) == 1
     end
 
     test "works for any parent", ctx do

@@ -34,7 +34,6 @@ defmodule KlassHero.Factory do
   alias KlassHero.Family.Consent
   alias KlassHero.Family.ParentProfile
   alias KlassHero.Messaging.Conversation
-  alias KlassHero.Messaging.ConversationSummary
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Participant
   alias KlassHero.Participation.ParticipationRecord
@@ -1184,37 +1183,6 @@ defmodule KlassHero.Factory do
       archived_at: nil,
       retention_until: nil,
       lock_version: 1
-    }
-  end
-
-  @doc """
-  Factory for creating ConversationSummary rows (CQRS read model).
-
-  Used in tests that interact with the denormalized conversation_summaries read table.
-  No FK constraints — all IDs are plain UUIDs.
-
-  ## Examples
-
-      schema = build(:conversation_summary_schema)
-      schema = insert(:conversation_summary_schema, unread_count: 3)
-  """
-  def conversation_summary_schema_factory do
-    %ConversationSummary{
-      id: Ecto.UUID.generate(),
-      conversation_id: Ecto.UUID.generate(),
-      user_id: Ecto.UUID.generate(),
-      conversation_type: :direct,
-      provider_id: Ecto.UUID.generate(),
-      program_id: nil,
-      subject: nil,
-      other_participant_name: sequence(:summary_other_name, &"Other User #{&1}"),
-      participant_count: 2,
-      latest_message_content: "Hello there",
-      latest_message_sender_id: Ecto.UUID.generate(),
-      latest_message_at: DateTime.utc_now() |> DateTime.truncate(:second),
-      unread_count: 0,
-      last_read_at: nil,
-      archived_at: nil
     }
   end
 
