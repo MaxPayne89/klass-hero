@@ -123,7 +123,7 @@ defmodule KlassHero.Messaging.CreateDirectConversation do
   # payload the projection notified off carried only the principals, so staff never got
   # this refresh and still do not.
   defp notify_new_conversation({:ok, _conversation} = result, principals) do
-    Enum.each(principals, &Notifications.conversations_changed/1)
+    Notifications.conversations_changed_for(principals)
     result
   end
 

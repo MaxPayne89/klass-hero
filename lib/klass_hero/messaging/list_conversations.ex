@@ -42,11 +42,10 @@ defmodule KlassHero.Messaging.ListConversations do
 
   import Ecto.Query
 
-  alias KlassHero.Messaging.Conversation
   alias KlassHero.Messaging.ConversationContext
   alias KlassHero.Messaging.InboxConversation
   alias KlassHero.Messaging.Message
-  alias KlassHero.Messaging.Participant
+  alias KlassHero.Messaging.Queries.ConversationQueries
   alias KlassHero.Messaging.Queries.MessageQueries
   alias KlassHero.ProgramCatalog
   alias KlassHero.Repo
@@ -64,24 +63,17 @@ defmodule KlassHero.Messaging.ListConversations do
   end
 
   defp page_query(user_id, fetch) do
-    from(c in Conversation, as: :conversation)
-    |> join(:inner, [conversation: c], p in Participant,
-      on: p.conversation_id == c.id and p.user_id == ^user_id and is_nil(p.left_at),
-      as: :participant
-    )
+    ConversationQueries.base()
+    |> ConversationQueries.where_user_is_participant(user_id)
+    |> ConversationQueries.active_only()
     |> join(:inner_lateral, [conversation: c], m in subquery(latest_visible_message()),
       on: true,
       as: :latest
     )
-    |> where([conversation: c], is_nil(c.archived_at))
     |> order_by([conversation: c, latest: m], desc: m.inserted_at, desc: c.id)
     |> limit(^fetch)
     |> preload([:participants])
-    |> select([conversation: c, participant: p, latest: m], %{
-      conversation: c,
-      last_read_at: p.last_read_at,
-      message: m
-    })
+    |> select([conversation: c, latest: m], %{conversation: c, message: m})
   end
 
   defp latest_visible_message do
@@ -113,21 +105,14 @@ defmodule KlassHero.Messaging.ListConversations do
     Enum.map(rows, &build_row(&1, context))
   end
 
-  # One grouped count for the whole page. Looping `MessageQueries.count_unread/2`
-  # per row would be the N+1 this read exists to avoid.
+  # One grouped count for the whole page, sharing its unread predicate with the nav
+  # badge rather than restating it — see `ConversationQueries`. Looping
+  # `MessageQueries.count_unread/2` per row would be the N+1 this read exists to avoid.
   defp unread_counts(rows, user_id) do
     conversation_ids = Enum.map(rows, & &1.conversation.id)
 
-    from(p in Participant,
-      join: m in Message,
-      on:
-        m.conversation_id == p.conversation_id and is_nil(m.deleted_at) and
-          m.sender_id != ^user_id and
-          (is_nil(p.last_read_at) or m.inserted_at > p.last_read_at),
-      where: p.user_id == ^user_id and p.conversation_id in ^conversation_ids,
-      group_by: p.conversation_id,
-      select: {p.conversation_id, count(m.id)}
-    )
+    user_id
+    |> ConversationQueries.unread_counts_by_conversation(conversation_ids)
     |> Repo.all()
     |> Map.new()
   end

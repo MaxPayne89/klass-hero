@@ -24,7 +24,7 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   ## Attributes
   - id: DOM id for the card
-  - summary: A `KlassHero.Messaging.ConversationSummary` read-table row, or a
+  - summary: A `KlassHero.Messaging.InboxConversation` row, or a
     `KlassHero.Messaging.StaffConversation` read row. This component matches on field
     *names*, never on a struct name, so any row carrying them renders — that is
     deliberate, and it is what keeps the participant inbox and the owner's staff-
@@ -923,13 +923,13 @@ defmodule KlassHeroWeb.MessagingComponents do
 
   defp derive_display_name(_summary), do: gettext("Unknown")
 
-  # A row with no message at all still carries whatever latest_message_at the
-  # projection last wrote, so the timestamp is gated on the message, not the column.
+  # Gated on the message rather than on `latest_message_at`: a row can carry a
+  # timestamp with nothing to show for it.
   #
-  # Matched on field names rather than through `ConversationSummary.has_latest_message?/1`,
-  # which matches its own struct by name and so would raise on any other row shape.
-  # This is the single change that lets the card render a `StaffConversation` too (#746);
-  # the schema keeps its own copy for its own callers.
+  # Matched on field names rather than through a helper on one of the row structs,
+  # which would match that struct by name and raise on the other shape. This is what
+  # lets the one card render both an `InboxConversation` and a `StaffConversation`
+  # (#746).
   defp latest_message_timestamp(%{latest_message_content: nil, has_attachments: false}), do: ""
 
   defp latest_message_timestamp(summary), do: format_timestamp(summary.latest_message_at)

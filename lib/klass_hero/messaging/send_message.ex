@@ -298,7 +298,8 @@ defmodule KlassHero.Messaging.SendMessage do
   defp notify_conversation_lists(conversation_id) do
     conversation_id
     |> KlassHero.Messaging.list_participants()
-    |> Enum.each(&Notifications.conversations_changed(&1.user_id))
+    |> Enum.map(& &1.user_id)
+    |> Notifications.conversations_changed_for()
   end
 
   defp update_sender_read_status(conversation_id, sender_id) do

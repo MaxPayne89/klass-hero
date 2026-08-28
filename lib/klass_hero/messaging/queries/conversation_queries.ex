@@ -187,28 +187,57 @@ defmodule KlassHero.Messaging.Queries.ConversationQueries do
   end
 
   @doc """
-  Query to get total unread message count across all conversations for a user.
+  Total unread messages for a user, across every active, non-archived conversation.
 
-  The predicate set here must match `KlassHero.Messaging.ListConversations`'s
-  per-conversation count exactly, because the nav badge this feeds renders directly
-  above the card badges that one produces. #1513 was the two disagreeing.
-
-  `m.sender_id != ^user_id` is part of that set and is not redundant with the read
-  cursor. `SendMessage` stamps the sender's own `last_read_at` *after* the insert,
-  outside the transaction, and swallows the failure (`send_message.ex`) — so without
-  this the author's own message is counted whenever that write does not land.
+  Feeds the nav badge. Shares its unread predicate with
+  `unread_counts_by_conversation/2`, which feeds the per-card badges rendered directly
+  beneath it — those two disagreeing is #1513, so they compose one definition rather
+  than each restating it.
   """
   def total_unread_count(user_id) do
     from(p in Participant,
+      as: :participant,
       join: c in Conversation,
       on: c.id == p.conversation_id,
-      join: m in Message,
+      as: :conversation,
+      where: p.user_id == ^user_id and is_nil(p.left_at) and is_nil(c.archived_at)
+    )
+    |> join_unread_messages(user_id)
+    |> select([unread: m], count(m.id))
+  end
+
+  @doc """
+  Unread counts for the given conversations, keyed by conversation id.
+
+  The batched form of `total_unread_count/1`, for an inbox page. It deliberately does
+  not re-filter `left_at` or `archived_at`: the ids come from a page query that already
+  did, and a conversation with nothing unread simply has no row in the result.
+  """
+  def unread_counts_by_conversation(user_id, conversation_ids) do
+    from(p in Participant,
+      as: :participant,
+      where: p.user_id == ^user_id and p.conversation_id in ^conversation_ids
+    )
+    |> join_unread_messages(user_id)
+    |> group_by([participant: p], p.conversation_id)
+    |> select([participant: p, unread: m], {p.conversation_id, count(m.id)})
+  end
+
+  # The one definition of "unread for this participant", joined onto a query that
+  # already binds `:participant`.
+  #
+  # `m.sender_id != ^user_id` belongs to the set and is not redundant with the read
+  # cursor. `SendMessage` stamps the sender's own `last_read_at` *after* the insert,
+  # outside the transaction, and swallows the failure (`send_message.ex`) — so without
+  # this the author's own message is counted whenever that write does not land.
+  defp join_unread_messages(query, user_id) do
+    join(query, :inner, [participant: p], m in Message,
       on:
-        m.conversation_id == c.id and
-          (is_nil(p.last_read_at) or m.inserted_at > p.last_read_at) and
-          is_nil(m.deleted_at) and m.sender_id != ^user_id,
-      where: p.user_id == ^user_id and is_nil(p.left_at) and is_nil(c.archived_at),
-      select: count(m.id)
+        m.conversation_id == p.conversation_id and
+          is_nil(m.deleted_at) and
+          m.sender_id != ^user_id and
+          (is_nil(p.last_read_at) or m.inserted_at > p.last_read_at),
+      as: :unread
     )
   end
 end

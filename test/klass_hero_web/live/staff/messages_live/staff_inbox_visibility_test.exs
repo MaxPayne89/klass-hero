@@ -12,7 +12,7 @@ defmodule KlassHeroWeb.Staff.MessagesLive.StaffInboxVisibilityTest do
   the participant row *is* the fact the inbox renders.
   """
 
-  use KlassHeroWeb.ConnCase, async: false
+  use KlassHeroWeb.ConnCase, async: true
 
   import KlassHero.AccountsFixtures
   import KlassHero.EventTestHelper

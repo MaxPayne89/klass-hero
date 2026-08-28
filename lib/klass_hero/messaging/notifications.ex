@@ -52,6 +52,18 @@ defmodule KlassHero.Messaging.Notifications do
     broadcast(user_messages_topic(user_id), :conversations_changed)
   end
 
+  @doc """
+  The same, for everyone a write touched.
+
+  Both write paths reach for this shape — a message's active participants, a new
+  thread's principals — so who to tell stays at the call site and how to tell them
+  stays here, next to the topic scheme it depends on.
+  """
+  @spec conversations_changed_for([String.t()]) :: :ok
+  def conversations_changed_for(user_ids) do
+    Enum.each(user_ids, &conversations_changed/1)
+  end
+
   defp broadcast(topic, message) do
     Phoenix.PubSub.broadcast(KlassHero.PubSub, topic, message)
     :ok

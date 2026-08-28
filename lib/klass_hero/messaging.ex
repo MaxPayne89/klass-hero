@@ -526,9 +526,9 @@ defmodule KlassHero.Messaging do
   @doc """
   Lists every conversation on the platform, for a platform admin.
 
-  Read-only monitoring (#744). Fails closed for a non-admin scope. Unlike
-  `list_conversations/2` this does not read the per-user `conversation_summaries`
-  projection — an admin has no row there.
+  Read-only monitoring (#744). Fails closed for a non-admin scope. Platform-wide
+  rather than participant-scoped, which is what separates it from
+  `list_conversations/2`.
 
   ## Options
   `:provider_id`, `:type`, `:limit`, `:before`. See
@@ -614,7 +614,8 @@ defmodule KlassHero.Messaging do
   Returns enrolled child names and other participant name for a conversation/user pair.
 
   Used by the web layer to build enriched conversation titles, e.g. "Sarah for Emma, Liam".
-  Reads from the denormalized conversation_summaries read model.
+  Derived live by `KlassHero.Messaging.ConversationContext`, the same derivation the
+  inbox runs over a page, so a thread's title and its card cannot disagree.
 
   ## Parameters
   - conversation_id: The conversation to look up

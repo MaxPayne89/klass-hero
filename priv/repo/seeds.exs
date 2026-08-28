@@ -1674,7 +1674,7 @@ Logger.info("Created #{message_count} messages")
 
 # Trigger: seeds inserted directly into write tables, bypassing integration events
 # Why: projection GenServers only bootstrap on startup — seeding after startup leaves
-#      read tables empty (e.g. program_listings, conversation_summaries)
+#      read tables empty (since ADR-0023 that is just provider_session_details)
 # Outcome: all read tables rebuilt from authoritative write data
 #
 # Read off the supervisor's registry rather than listing modules here: a hand-kept

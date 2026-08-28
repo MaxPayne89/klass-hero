@@ -7,19 +7,21 @@ defmodule KlassHero.Messaging.StaffConversation do
   `conversation_participants`, `messages`), built by
   `KlassHero.Messaging.ListStaffConversations`. Plain struct — no Ecto schema, no
   table, no changeset. It sits at the context root rather than under `read_models/`
-  because that kind earns a directory at three files and Messaging has one.
+  because that kind earns a directory at three files and Messaging has two — this and
+  `KlassHero.Messaging.InboxConversation`.
 
-  It deliberately does **not** read `conversation_summaries`. That projection is keyed
-  `(conversation_id, user_id)`, so an owner who is not a participant has no row in it,
-  and reading it anyway would yield one row per participant per conversation — the
-  same reasoning `MonitorConversations` records for the admin list.
+  Every other read in this context is keyed by a participant, and an owner reading a
+  thread they are not in is not one — the same reasoning `MonitorConversations` records
+  for the admin list. So this is built from the write tables directly.
 
-  ## Why the field names match `ConversationSummary`
+  ## Why the field names match `InboxConversation`
 
   `KlassHeroWeb.MessagingComponents.conversation_card/1` is declared `attr :summary,
   :map` and its helpers match on field *names*, not on a struct name. Carrying the
   same names lets this row render through the identical card as the participant
-  inbox, so the two surfaces cannot drift apart visually.
+  inbox, so the two surfaces cannot drift apart visually. Both sets of names descend
+  from the retired `conversation_summaries` read table, which is why they look like
+  columns.
 
   `unread_count` and `enrolled_child_names` are pinned to `0` and `[]` and exist for
   that reason alone:
