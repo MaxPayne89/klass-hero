@@ -13,8 +13,12 @@
 # shellcheck disable=SC2034  # consumed by the scripts that source this file
 MAIN_PORT=4000
 PORT_MIN=4010
-# live_debugger binds PORT + 100 (config/dev.exs), so the ceiling must stay below
-# PORT_MIN + 100 or a debugger would land on another checkout's server port.
+# An 80-port pool, which is far more concurrent checkouts than anyone runs. The ceiling
+# used to be forced: live_debugger bound PORT + 100, so a range reaching 4090 would have
+# put one checkout's debugger on another's server port. That dependency is gone and
+# nothing binds a derived port any more, so this bound is now a plain choice — raise it
+# freely if the pool ever runs dry, but check first that nothing has reintroduced a
+# port-offset binding.
 PORT_MAX=4089
 
 # Where a detached dev server records itself. Gitignored; per checkout.

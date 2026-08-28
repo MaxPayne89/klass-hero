@@ -209,8 +209,10 @@ bin/worktree-gc  # list stale worktrees (--prune to remove them and free their p
 write-once: an existing claim is re-validated rather than trusted, because a port can
 stop being yours between runs — another checkout claims it, or an orphaned server
 keeps answering on it. Main takes 4000; a worktree takes the lowest free port in
-**4010–4089**. The ceiling matters: `live_debugger` binds `PORT + 100`, so a range
-reaching 4090 or beyond would put one checkout's debugger on another's server port.
+**4010–4089** — 80 ports, far more concurrent checkouts than anyone runs. That ceiling
+was once forced (`live_debugger` bound `PORT + 100`, so reaching 4090 would have put one
+checkout's debugger on another's server port); since that dependency was removed nothing
+binds a derived port, so the bound is now a plain choice.
 
 The port is written to `.claude/run/port`, and `bin/dev` and `bin/tidewave-router`
 both read it from there — so the client and the server it talks to cannot drift.
@@ -224,9 +226,8 @@ It decides "merged" with `git cherry`, which compares patch-ids rather than comm
 ids — necessary because every PR here is squash-merged, so a fully merged branch
 still looks unmerged to `git log origin/main..branch`.
 
-Ports derive from `PORT` in `config/dev.exs`: the endpoint binds it, `url:` and
-`:app_base_url` follow it (so generated links point at the right server), and
-live_debugger takes `PORT + 100`.
+Ports derive from `PORT` in `config/dev.exs`: the endpoint binds it, and `url:` and
+`:app_base_url` follow it, so generated links point at the right server.
 
 ### Why it works this way
 
@@ -270,8 +271,6 @@ ignored until a workspace is trusted, which a fresh worktree isn't yet.
   "untracked working tree files would be overwritten". Delete it first
   (`rm .mcp.json && git rebase origin/main`), or retire the worktree with
   `bin/worktree-gc --prune`. Checkouts created after this landed are unaffected.
-- **live_debugger** binds its own endpoint and defaults to 4007. Before ports were
-  derived, a second concurrent `mix phx.server` died on `:eaddrinuse` here.
 - **A fresh worktree has no dev DB yet.** Isolation is automatic (see the dev DB
   section above), so the first dev-env command in a new worktree hits a database that
   does not exist until `mix ecto.setup` has run. That failure is the design: it is
