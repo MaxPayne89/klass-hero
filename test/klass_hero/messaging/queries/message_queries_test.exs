@@ -4,10 +4,13 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
 
   Tests verify the query builder pattern where each function returns
   an Ecto.Query that can be piped into other query functions.
-  No DB execution required — query shape is inspected directly.
+  Query shape is inspected directly, except where the property under test is what the
+  query *returns* — see the soft-delete split at the bottom.
   """
 
   use KlassHero.DataCase, async: true
+
+  import KlassHero.Factory
 
   alias KlassHero.Messaging.Message
   alias KlassHero.Messaging.Queries.MessageQueries
@@ -252,5 +255,55 @@ defmodule KlassHero.Messaging.Queries.MessageQueriesTest do
       assert length(query.order_bys) == 1
       assert query.limit.params == [{26, :integer}]
     end
+  end
+
+  describe "the two 'newest per conversation' reads disagree on soft-deletes, on purpose" do
+    # These two shared one grouping whose comment said the `deleted_at` decision must
+    # never drift between them. It had no test. The decision has since split — and a
+    # shape assertion could not have told the difference either way, so these execute.
+    setup do
+      conversation = insert(:conversation_schema)
+      sender = KlassHero.AccountsFixtures.user_fixture()
+
+      visible =
+        insert(:message_schema,
+          conversation_id: conversation.id,
+          sender_id: sender.id,
+          content: "still here",
+          inserted_at: ago(600)
+        )
+
+      deleted =
+        insert(:message_schema,
+          conversation_id: conversation.id,
+          sender_id: sender.id,
+          content: "retracted",
+          inserted_at: ago(60),
+          deleted_at: ago(30)
+        )
+
+      %{conversation: conversation, visible: visible, deleted: deleted}
+    end
+
+    test "the preview shows the newest *visible* message", %{conversation: conversation} do
+      assert [%{content: "still here"}] =
+               [conversation.id] |> MessageQueries.latest_per_conversation() |> Repo.all()
+    end
+
+    test "the seating cursor anchors on the newest message of any kind", %{
+      conversation: conversation,
+      deleted: deleted
+    } do
+      assert [{_id, anchored_at}] =
+               [conversation.id]
+               |> MessageQueries.newest_inserted_at_by_conversation()
+               |> Repo.all()
+
+      assert anchored_at == deleted.inserted_at
+    end
+  end
+
+  defp ago(seconds) do
+    DateTime.utc_now() |> DateTime.add(-seconds, :second) |> DateTime.truncate(:second)
   end
 end

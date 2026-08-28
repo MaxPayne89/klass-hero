@@ -102,10 +102,15 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
   Newest `inserted_at` per conversation, as `{conversation_id, inserted_at}` rows.
 
   Counts soft-deleted messages on purpose, so `not_deleted/1` is absent here where
-  every other read applies it. Callers use this as a read cursor, and
-  `ConversationSummaries` counts unread without a `deleted_at` filter — anchoring on
-  the newest *visible* message would badge a soft-deleted newer one as unread, a
-  notification for something the reader cannot open.
+  every other read applies it. This is the cursor someone is seated on when they join
+  a conversation, and it must be **at or after every message already in it** so that
+  nothing pre-existing can ever be badged as new. A soft-deleted newest message is
+  still a message that was there; anchoring on the newest *visible* one would lower
+  the cursor below it.
+
+  That reasoning is now the only one. It used to be paired with a second — that the
+  unread counters did not filter `deleted_at` either, so the anchor had to match them.
+  They do filter it as of #1513, and this stands on its own.
   """
   def newest_inserted_at_by_conversation(conversation_ids) do
     conversation_ids
@@ -120,14 +125,22 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
 
   Returns a query. Callers execute and shape it — `ConversationSummaries` and
   `ListStaffConversations` both key the rows by `conversation_id`.
+
+  Soft-deleted messages are excluded, on both sides of the join: this feeds a card
+  **preview**, and a preview of a message the thread view refuses to render is #1513's
+  bug wearing different clothes. `newest_inserted_at_by_conversation/1` deliberately
+  does not filter them — it answers a different question. The two used to share one
+  grouping that encoded "never filter"; they no longer can.
   """
   def latest_per_conversation(conversation_ids) do
     latest_times =
       conversation_ids
       |> grouped_by_conversation()
+      |> not_deleted()
       |> select([message: m], %{conversation_id: m.conversation_id, max_at: max(m.inserted_at)})
 
     base()
+    |> not_deleted()
     |> join(:inner, [message: m], lt in subquery(latest_times),
       on: m.conversation_id == lt.conversation_id and m.inserted_at == lt.max_at
     )
@@ -140,10 +153,9 @@ defmodule KlassHero.Messaging.Queries.MessageQueries do
     })
   end
 
-  # The grouping both "newest per conversation" reads share. It carries the one
-  # decision that must not drift between them: no `not_deleted/1`. A preview or a
-  # cursor anchored on the newest *visible* message would disagree with the unread
-  # badge rendered beside it, which counts soft-deleted ones.
+  # Just the grouping. The `deleted_at` decision is each caller's — they disagree, and
+  # both are right: a preview must skip soft-deleted messages, a seating cursor must
+  # count them. Encoding either choice here is what coupled them.
   defp grouped_by_conversation(conversation_ids) do
     base()
     |> where([message: m], m.conversation_id in ^conversation_ids)

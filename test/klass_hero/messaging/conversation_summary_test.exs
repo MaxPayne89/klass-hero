@@ -1,11 +1,13 @@
 defmodule KlassHero.Messaging.ConversationSummaryTest do
   @moduledoc """
   Covers what still reads the `conversation_summaries` table through the public
-  `KlassHero.Messaging` API: unread totals and conversation context.
+  `KlassHero.Messaging` API: conversation context.
 
-  The inbox listing moved to `KlassHero.Messaging.ListConversationsTest` when it
-  stopped reading this table — its cases seeded rows here and asserted them back,
-  which cannot fail on a read derived from the write model.
+  Two describe blocks left when their reads did. The inbox listing moved to
+  `KlassHero.Messaging.ListConversationsTest`, the unread total to
+  `KlassHero.Messaging.GetTotalUnreadCountTest` — in both cases the old cases seeded
+  rows here and asserted them back, which cannot fail on a read derived from the
+  write model.
   """
 
   use KlassHero.DataCase, async: true
@@ -35,21 +37,6 @@ defmodule KlassHero.Messaging.ConversationSummaryTest do
                "content=#{inspect(content)} has_attachments=#{has_attachments} " <>
                  "should be #{expected}"
       end
-    end
-  end
-
-  describe "summaries_total_unread_count/1" do
-    test "sums unread across non-archived summaries" do
-      user_id = Ecto.UUID.generate()
-      insert(:conversation_summary_schema, user_id: user_id, unread_count: 2)
-      insert(:conversation_summary_schema, user_id: user_id, unread_count: 3)
-      insert(:conversation_summary_schema, user_id: user_id, unread_count: 5, archived_at: DateTime.utc_now())
-
-      assert Messaging.summaries_total_unread_count(user_id) == 5
-    end
-
-    test "returns 0 when the user has no summaries" do
-      assert Messaging.summaries_total_unread_count(Ecto.UUID.generate()) == 0
     end
   end
 

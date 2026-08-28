@@ -212,32 +212,9 @@ defmodule KlassHero.Messaging.Queries.ConversationQueriesTest do
     end
   end
 
-  describe "total_unread_count/1" do
-    test "returns a query based on conversation_participants table" do
-      user_id = Ecto.UUID.generate()
-
-      query = ConversationQueries.total_unread_count(user_id)
-
-      assert %Ecto.Query{} = query
-      assert query.from.source == {"conversation_participants", Participant}
-    end
-
-    test "includes JOIN to conversations and messages" do
-      user_id = Ecto.UUID.generate()
-
-      query = ConversationQueries.total_unread_count(user_id)
-
-      assert %Ecto.Query{} = query
-      assert length(query.joins) == 2
-    end
-
-    test "includes WHERE clause for user filter" do
-      user_id = Ecto.UUID.generate()
-
-      query = ConversationQueries.total_unread_count(user_id)
-
-      assert %Ecto.Query{} = query
-      assert length(query.wheres) == 1
-    end
-  end
+  # `total_unread_count/1` had three tests here asserting query *shape* — the source
+  # table, `length(query.joins) == 2`, `length(query.wheres) == 1`. All three passed
+  # throughout #1513's lifetime and would have passed after its fix, because none of
+  # them ran the query. Behaviour coverage lives in
+  # `test/klass_hero/messaging/get_total_unread_count_test.exs`.
 end

@@ -188,6 +188,15 @@ defmodule KlassHero.Messaging.Queries.ConversationQueries do
 
   @doc """
   Query to get total unread message count across all conversations for a user.
+
+  The predicate set here must match `KlassHero.Messaging.ListConversations`'s
+  per-conversation count exactly, because the nav badge this feeds renders directly
+  above the card badges that one produces. #1513 was the two disagreeing.
+
+  `m.sender_id != ^user_id` is part of that set and is not redundant with the read
+  cursor. `SendMessage` stamps the sender's own `last_read_at` *after* the insert,
+  outside the transaction, and swallows the failure (`send_message.ex`) — so without
+  this the author's own message is counted whenever that write does not land.
   """
   def total_unread_count(user_id) do
     from(p in Participant,
@@ -197,7 +206,7 @@ defmodule KlassHero.Messaging.Queries.ConversationQueries do
       on:
         m.conversation_id == c.id and
           (is_nil(p.last_read_at) or m.inserted_at > p.last_read_at) and
-          is_nil(m.deleted_at),
+          is_nil(m.deleted_at) and m.sender_id != ^user_id,
       where: p.user_id == ^user_id and is_nil(p.left_at) and is_nil(c.archived_at),
       select: count(m.id)
     )

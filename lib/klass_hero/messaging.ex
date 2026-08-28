@@ -545,8 +545,9 @@ defmodule KlassHero.Messaging do
   Reads one conversation's thread for a platform admin who is not a participant.
 
   Read-only monitoring (#744). Fails closed for a non-admin scope. Deliberately has
-  no `:mark_as_read` option: `last_read_at` feeds three separate unread counters, and
-  an admin viewing a thread must not disturb any of them.
+  no `:mark_as_read` option: `last_read_at` feeds every unread read in the context —
+  the nav total, the per-card badge and the in-thread count — and an admin viewing a
+  thread must not disturb any of them.
   """
   @spec get_monitored_conversation(Scope.t(), String.t(), keyword()) ::
           {:ok, map()} | {:error, :unauthorized | :not_found}
@@ -1010,15 +1011,6 @@ defmodule KlassHero.Messaging do
     end
   end
 
-  @doc "Total unread message count across a user's conversations."
-  @spec conversation_total_unread_count(String.t()) :: non_neg_integer()
-  def conversation_total_unread_count(user_id) do
-    case Repo.one(ConversationQueries.total_unread_count(user_id)) do
-      nil -> 0
-      count -> count
-    end
-  end
-
   @doc """
   Ids of active program conversations the user is NOT a participant of.
 
@@ -1106,16 +1098,6 @@ defmodule KlassHero.Messaging do
   @spec list_conversations(String.t(), keyword()) ::
           {:ok, [InboxConversation.t()], boolean()}
   defdelegate list_conversations(user_id, opts \\ []), to: ListConversations, as: :execute
-
-  @doc "Sum of unread counts across a user's non-archived conversation summaries."
-  @spec summaries_total_unread_count(String.t()) :: non_neg_integer()
-  def summaries_total_unread_count(user_id) do
-    from(s in ConversationSummary,
-      where: s.user_id == ^user_id and is_nil(s.archived_at),
-      select: coalesce(sum(s.unread_count), 0)
-    )
-    |> Repo.one()
-  end
 
   @doc "True if the conversation already carries a system message stamped with this token."
   @spec has_system_note?(String.t(), String.t()) :: boolean()
@@ -1606,8 +1588,9 @@ defmodule KlassHero.Messaging do
   # written in the same second would fall on the wrong side of the `>` comparison every
   # unread counter makes and be silently marked read.
   #
-  # Soft-deleted messages count towards the anchor even though they are invisible — see
-  # `MessageQueries.newest_inserted_at_by_conversation/1` for why.
+  # Soft-deleted messages count towards the anchor even though they are invisible: the
+  # cursor must sit at or after everything already in the conversation, or a newcomer
+  # gets badged for history. See `MessageQueries.newest_inserted_at_by_conversation/1`.
   defp seating_cursors(conversation_ids) do
     conversation_ids
     |> MessageQueries.newest_inserted_at_by_conversation()
