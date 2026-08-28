@@ -1377,11 +1377,11 @@ defmodule KlassHero.Participation do
     |> handle_session_insert()
   end
 
+  # `get_schema_by_uuid/2` rather than a bare `Repo.get/2`: this id comes from the
+  # client, and a value that cannot be cast to a UUID raises against a binary_id
+  # column instead of refusing (#1478).
   defp fetch_session(id) when is_binary(id) do
-    case Repo.get(ProgramSession, id) do
-      nil -> {:error, :not_found}
-      session -> {:ok, session}
-    end
+    RepositoryHelpers.get_schema_by_uuid(ProgramSession, id)
   end
 
   defp update_session(%ProgramSession{} = session) do
@@ -1433,10 +1433,7 @@ defmodule KlassHero.Participation do
   # ============================================================================
 
   defp fetch_record(id) when is_binary(id) do
-    case Repo.get(ParticipationRecord, id) do
-      nil -> {:error, :not_found}
-      record -> {:ok, record}
-    end
+    RepositoryHelpers.get_schema_by_uuid(ParticipationRecord, id)
   end
 
   defp update_record(%ParticipationRecord{} = record) do
@@ -1830,10 +1827,7 @@ defmodule KlassHero.Participation do
   end
 
   defp fetch_note(id) when is_binary(id) do
-    case Repo.get(SessionNote, id) do
-      nil -> {:error, :not_found}
-      schema -> {:ok, schema}
-    end
+    RepositoryHelpers.get_schema_by_uuid(SessionNote, id)
   end
 
   defp fetch_note_by_record_and_provider(record_id, provider_id) do
