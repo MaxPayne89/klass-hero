@@ -726,6 +726,7 @@ defmodule KlassHeroWeb.MessagingComponents do
       </div>
       <.messages_empty_state :if={@messages_empty?} />
     </div>
+    <.safety_notice variant={@variant} />
     <%= cond do %>
       <% @variant == :provider -> %>
         <.message_input form={@form} uploads={@uploads} />
@@ -793,6 +794,73 @@ defmodule KlassHeroWeb.MessagingComponents do
         <% else %>
           {gettext(
             "Messages here may be reviewed by the activity provider and by Klass Hero staff, to keep children safe."
+          )}
+        <% end %>
+      </p>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders the standing off-platform safety notice, above the composer.
+
+  A banner rather than a `:system` message, for the same three reasons
+  `monitoring_notice/1` is one: no write on any conversation-creation path, it
+  covers threads that already exist without a backfill, and being rendered rather
+  than stored it cannot be deleted.
+
+  Placed *below* `#messages-container` and *above* the composer, where
+  `monitoring_notice/1` sits above the stream. Both are outside the scrollable
+  region, so both are permanently visible — the property that notice's docstring
+  argues for. Stacking a second strip on top of the first would cost ~90px above
+  the first message on a phone; here it costs nothing and lands next to the box
+  the reader is about to type into, which is where off-platform steering is
+  answered.
+
+  It renders on the broadcast path too, where the composer is replaced by
+  `broadcast_reply_bar/1`. A broadcast is one-way, but "reply privately" opens a
+  direct thread with the provider — the same exposure, so the same notice.
+
+  Two wordings, split on who is being addressed rather than on who is at risk.
+  Both sides are: a parent can be asked to pay off-platform, and a provider can be
+  asked to accept it. Airbnb warns hosts as well as guests for this reason.
+
+  Deliberately says nothing about payment. Klass Hero cannot take one — there is
+  no Billing context (#1165), and #1171 records that cash or bank transfer paid
+  directly to the provider is the *current* booking flow. "Always pay through
+  Klass Hero" would name a rail that does not exist and promise a protection that
+  does not follow from it. What is true today is the record: a thread here can be
+  reviewed. Add the payment sentence when Billing lands.
+
+  > This wording is PROVISIONAL and must not ship before legal review, on the same
+  > footing as `monitoring_notice/1`'s.
+  """
+  attr :variant, :atom,
+    required: true,
+    values: [:parent, :provider],
+    doc: "who is being addressed — `:provider` also covers a provider's staff"
+
+  def safety_notice(assigns) do
+    ~H"""
+    <div
+      id="safety-notice"
+      data-role="safety-notice"
+      class={[
+        "flex items-start gap-2 px-4 py-2.5 border-t",
+        Theme.bg(:light),
+        Theme.border_color(:light),
+        Theme.text_color(:muted)
+      ]}
+    >
+      <.icon name="hero-shield-check" class="w-4 h-4 shrink-0 mt-0.5" />
+      <p class={Theme.typography(:caption)}>
+        <%= if @variant == :provider do %>
+          {gettext(
+            "Keep conversations with families on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
+          )}
+        <% else %>
+          {gettext(
+            "Keep this conversation on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
           )}
         <% end %>
       </p>

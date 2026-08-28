@@ -191,6 +191,7 @@ defmodule KlassHeroWeb.ProviderProfileLive do
           provider: @provider.business_name
         )
       }
+      footnote={gettext("Messages sent through Klass Hero can be reviewed if something goes wrong.")}
     >
       <:cta>
         <%!-- A link, not a gated button. Messaging.build_compose_target/3 owns who may

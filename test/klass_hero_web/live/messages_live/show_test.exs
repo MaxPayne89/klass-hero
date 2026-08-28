@@ -73,6 +73,19 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
       assert has_element?(view, "h3", "No messages yet")
     end
 
+    test "renders the off-platform safety notice", %{conn: conn, user: user} do
+      conversation = insert(:conversation_schema)
+
+      insert(:participant_schema,
+        conversation_id: conversation.id,
+        user_id: user.id
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/messages/#{conversation.id}")
+
+      assert has_element?(view, "[data-role='safety-notice']")
+    end
+
     test "renders back navigation link", %{conn: conn, user: user} do
       conversation = insert(:conversation_schema)
 
@@ -211,6 +224,26 @@ defmodule KlassHeroWeb.MessagesLive.ShowTest do
       assert has_element?(view, "#broadcast-reply-bar")
       refute has_element?(view, "#message-form")
       assert has_element?(view, "button", "Reply privately")
+    end
+
+    test "renders the safety notice even though there is no composer", %{
+      conn: conn,
+      user: user
+    } do
+      # A broadcast swaps the composer for the reply-privately bar. That reply is
+      # a private thread with the provider — the same place off-platform steering
+      # happens — so the notice must survive the swap.
+      conversation = insert(:broadcast_conversation_schema)
+
+      insert(:participant_schema,
+        conversation_id: conversation.id,
+        user_id: user.id
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/messages/#{conversation.id}")
+
+      assert has_element?(view, "#broadcast-reply-bar")
+      assert has_element?(view, "[data-role='safety-notice']")
     end
 
     test "shows message form for direct conversations", %{conn: conn, user: user} do

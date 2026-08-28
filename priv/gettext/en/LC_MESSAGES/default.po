@@ -1488,7 +1488,7 @@ msgstr ""
 msgid "Unassigned"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:856
+#: lib/klass_hero_web/components/messaging_components.ex:924
 #: lib/klass_hero_web/components/provider_components.ex:53
 #: lib/klass_hero_web/components/provider_components.ex:1632
 #: lib/klass_hero_web/live/admin/messages_live.html.heex:110
@@ -1509,7 +1509,7 @@ msgstr ""
 msgid "%{age} years old"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:877
+#: lib/klass_hero_web/components/messaging_components.ex:945
 #, elixir-autogen, elixir-format
 msgid "%{n}m ago"
 msgstr ""
@@ -1734,7 +1734,7 @@ msgid "No conversations yet"
 msgstr ""
 
 #: lib/klass_hero_web/components/messaging_components.ex:458
-#: lib/klass_hero_web/components/messaging_components.ex:899
+#: lib/klass_hero_web/components/messaging_components.ex:967
 #, elixir-autogen, elixir-format
 msgid "No messages yet"
 msgstr ""
@@ -1766,7 +1766,7 @@ msgstr ""
 msgid "Note resubmitted for review"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:876
+#: lib/klass_hero_web/components/messaging_components.ex:944
 #, elixir-autogen, elixir-format
 msgid "Now"
 msgstr ""
@@ -1806,7 +1806,7 @@ msgstr ""
 msgid "Please set up your parent profile to manage children."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:849
+#: lib/klass_hero_web/components/messaging_components.ex:917
 #: lib/klass_hero_web/live/messaging_live_helper.ex:414
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Program Broadcast"
@@ -2105,7 +2105,7 @@ msgstr ""
 msgid "Confirmed"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:951
+#: lib/klass_hero_web/components/messaging_components.ex:1019
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Contact Provider"
 msgstr ""
@@ -3015,12 +3015,12 @@ msgstr ""
 msgid "e.g., Community Center, Main St"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1501
+#: lib/klass_hero_web/components/marketing_components.ex:1522
 #, elixir-autogen, elixir-format
 msgid "All Heroes must hold or complete a recognized child safeguarding course, ensuring up-to-date knowledge."
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1469
+#: lib/klass_hero_web/components/marketing_components.ex:1490
 #, elixir-autogen, elixir-format
 msgid "All providers must be 18 years or older, ensuring legal accountability and professional responsibility."
 msgstr ""
@@ -3030,12 +3030,12 @@ msgstr ""
 msgid "And at Klass Hero, both come standard."
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1499
+#: lib/klass_hero_web/components/marketing_components.ex:1520
 #, elixir-autogen, elixir-format
 msgid "Child Safeguarding Training"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1507
+#: lib/klass_hero_web/components/marketing_components.ex:1528
 #: lib/klass_hero_web/components/provider_components.ex:3887
 #, elixir-autogen, elixir-format
 msgid "Community Standards Agreement"
@@ -3046,7 +3046,7 @@ msgstr ""
 msgid "Create long-term trust across our community"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1485
+#: lib/klass_hero_web/components/marketing_components.ex:1506
 #, elixir-autogen, elixir-format
 msgid "Each provider submits an extended police background check, confirming their eligibility to work safely with minors."
 msgstr ""
@@ -3056,17 +3056,17 @@ msgstr ""
 msgid "Enforcing platform standards and guidelines"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1509
+#: lib/klass_hero_web/components/marketing_components.ex:1530
 #, elixir-autogen, elixir-format
 msgid "Every provider agrees to follow our Community Guidelines, defining expectations around professionalism."
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1475
+#: lib/klass_hero_web/components/marketing_components.ex:1496
 #, elixir-autogen, elixir-format
 msgid "Experience Validation"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1483
+#: lib/klass_hero_web/components/marketing_components.ex:1504
 #, elixir-autogen, elixir-format
 msgid "Extended Background Checks"
 msgstr ""
@@ -3076,12 +3076,12 @@ msgstr ""
 msgid "From academic tutoring to sports, arts, and enrichment programs, every provider on Klass Hero is carefully reviewed to ensure they meet our high standards for child safety, professionalism, and educational quality."
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1529
+#: lib/klass_hero_web/components/marketing_components.ex:1550
 #, elixir-autogen, elixir-format
 msgid "How We Verify Providers"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1467
+#: lib/klass_hero_web/components/marketing_components.ex:1488
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Identity & Age Verification"
 msgstr ""
@@ -3116,7 +3116,7 @@ msgstr ""
 msgid "Protect children and families"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1477
+#: lib/klass_hero_web/components/marketing_components.ex:1498
 #, elixir-autogen, elixir-format
 msgid "Providers must demonstrate at least one year of experience working with children in their area of expertise."
 msgstr ""
@@ -3181,12 +3181,12 @@ msgstr ""
 msgid "Uphold professional and ethical teaching practices"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1426
+#: lib/klass_hero_web/components/marketing_components.ex:1447
 #, elixir-autogen, elixir-format
 msgid "Vetted with Care"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1491
+#: lib/klass_hero_web/components/marketing_components.ex:1512
 #: lib/klass_hero_web/components/provider_components.ex:3665
 #, elixir-autogen, elixir-format
 msgid "Video Screening"
@@ -3753,7 +3753,7 @@ msgstr ""
 msgid "Back to emails"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:816
+#: lib/klass_hero_web/components/messaging_components.ex:884
 #, elixir-autogen, elixir-format
 msgid "Broadcast messages are one-way"
 msgstr ""
@@ -4159,7 +4159,7 @@ msgstr ""
 msgid "Reply"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:827
+#: lib/klass_hero_web/components/messaging_components.ex:895
 #, elixir-autogen, elixir-format
 msgid "Reply privately"
 msgstr ""
@@ -4441,7 +4441,7 @@ msgstr ""
 msgid "Failed to upload files. Please try again."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:903
+#: lib/klass_hero_web/components/messaging_components.ex:971
 #, elixir-autogen, elixir-format, fuzzy
 msgid "File is too large (max %{mb} MB)"
 msgstr ""
@@ -4451,7 +4451,7 @@ msgstr ""
 msgid "File is too large (max %{mb} MB)."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:906
+#: lib/klass_hero_web/components/messaging_components.ex:974
 #, elixir-autogen, elixir-format, fuzzy
 msgid "File type not accepted (images only)"
 msgstr ""
@@ -4471,8 +4471,8 @@ msgstr ""
 msgid "Only images are accepted (JPG, PNG, GIF, WebP)."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:888
-#: lib/klass_hero_web/components/messaging_components.ex:892
+#: lib/klass_hero_web/components/messaging_components.ex:956
+#: lib/klass_hero_web/components/messaging_components.ex:960
 #, elixir-autogen, elixir-format
 msgid "Photo"
 msgstr ""
@@ -4512,7 +4512,7 @@ msgstr ""
 msgid "Tell parents about your organization and what makes you unique..."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:910
+#: lib/klass_hero_web/components/messaging_components.ex:978
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Too many files (max %{max})"
 msgstr ""
@@ -4522,12 +4522,12 @@ msgstr ""
 msgid "Too many files (max %{max})."
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:914
+#: lib/klass_hero_web/components/messaging_components.ex:982
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Upload error"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:913
+#: lib/klass_hero_web/components/messaging_components.ex:981
 #, elixir-autogen, elixir-format
 msgid "Upload failed"
 msgstr ""
@@ -5804,7 +5804,7 @@ msgstr ""
 msgid "Once your listing is live and you've completed Hero verification (typically 3–5 business days), parents can book immediately. Most providers receive their first inquiry within the first week."
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1577
+#: lib/klass_hero_web/components/marketing_components.ex:1598
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Ongoing Quality"
 msgstr ""
@@ -5829,7 +5829,7 @@ msgstr ""
 msgid "Open menu"
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1405
+#: lib/klass_hero_web/components/marketing_components.ex:1426
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Our Commitment"
 msgstr ""
@@ -6830,7 +6830,7 @@ msgstr ""
 msgid "You have agreed to the Community Guidelines."
 msgstr ""
 
-#: lib/klass_hero_web/components/marketing_components.ex:1493
+#: lib/klass_hero_web/components/marketing_components.ex:1514
 #, elixir-autogen, elixir-format
 msgid "Applicants submit a short recorded video (max 2 minutes) so we can assess communication skills and alignment with our values before approving their profile."
 msgstr ""
@@ -8020,7 +8020,7 @@ msgstr ""
 msgid "Message %{provider} directly about their programs."
 msgstr ""
 
-#: lib/klass_hero_web/live/provider_profile_live.ex:202
+#: lib/klass_hero_web/live/provider_profile_live.ex:203
 #, elixir-autogen, elixir-format
 msgid "Message this provider"
 msgstr ""
@@ -8135,7 +8135,7 @@ msgstr ""
 msgid "← Back to messages"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:794
+#: lib/klass_hero_web/components/messaging_components.ex:795
 #, elixir-autogen, elixir-format
 msgid "Messages here may be reviewed by the activity provider and by Klass Hero staff, to keep children safe."
 msgstr ""
@@ -8177,7 +8177,7 @@ msgstr ""
 msgid "via"
 msgstr ""
 
-#: lib/klass_hero_web/components/messaging_components.ex:792
+#: lib/klass_hero_web/components/messaging_components.ex:793
 #, elixir-autogen, elixir-format
 msgid "Messages here may be reviewed by Klass Hero staff."
 msgstr ""
@@ -8266,4 +8266,19 @@ msgstr ""
 #: lib/klass_hero_web/components/provider_components.ex:1100
 #, elixir-autogen, elixir-format
 msgid "Usual capacity per session"
+msgstr ""
+
+#: lib/klass_hero_web/components/messaging_components.ex:858
+#, elixir-autogen, elixir-format
+msgid "Keep conversations with families on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
+msgstr ""
+
+#: lib/klass_hero_web/components/messaging_components.ex:862
+#, elixir-autogen, elixir-format
+msgid "Keep this conversation on Klass Hero. Messages sent here can be reviewed if something goes wrong. Messages moved to WhatsApp, email or text cannot."
+msgstr ""
+
+#: lib/klass_hero_web/live/provider_profile_live.ex:194
+#, elixir-autogen, elixir-format
+msgid "Messages sent through Klass Hero can be reviewed if something goes wrong."
 msgstr ""

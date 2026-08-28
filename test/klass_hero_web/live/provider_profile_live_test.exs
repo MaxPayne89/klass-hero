@@ -244,6 +244,14 @@ defmodule KlassHeroWeb.ProviderProfileLiveTest do
 
       assert message =~ "log in"
     end
+
+    test "carries the off-platform safety footnote", %{conn: conn} do
+      provider = active_provider()
+
+      {:ok, view, _html} = live(conn, ~p"/providers/#{provider.id}")
+
+      assert has_element?(view, "#provider-cta-footnote")
+    end
   end
 
   defp elem_view(conn, provider) do
