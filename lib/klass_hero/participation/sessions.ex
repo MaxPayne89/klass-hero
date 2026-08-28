@@ -20,11 +20,14 @@ defmodule KlassHero.Participation.Sessions do
   import Ecto.Query
 
   alias KlassHero.Accounts.Scope
+  alias KlassHero.Participation.Attendance
+  alias KlassHero.Participation.ChildInfoResolver
   alias KlassHero.Participation.Events
   alias KlassHero.Participation.Notifications
   alias KlassHero.Participation.ParticipationRecord
   alias KlassHero.Participation.ProgramSession
   alias KlassHero.Participation.SessionAuthorization
+  alias KlassHero.Participation.SessionNotes
   alias KlassHero.ProgramCatalog
   alias KlassHero.Provider
   alias KlassHero.Repo
@@ -507,15 +510,6 @@ defmodule KlassHero.Participation.Sessions do
   @spec upcoming_scheduled_session_ids(String.t()) :: [String.t()]
   def upcoming_scheduled_session_ids(program_id) when is_binary(program_id), do: upcoming_scheduled_ids(program_id)
 
-  @doc """
-  The program's title, or `nil` when it no longer resolves.
-
-  Public for the roster read in `Participation`, which decorates a session with
-  its program name. Folds back to private once that read moves here.
-  """
-  @spec program_name(String.t()) :: String.t() | nil
-  def program_name(program_id), do: fetch_program_name(program_id)
-
   defp fetch_session(id) when is_binary(id) do
     RepositoryHelpers.get_schema_by_uuid(ProgramSession, id)
   end
@@ -711,5 +705,105 @@ defmodule KlassHero.Participation.Sessions do
       select: s.id
     )
     |> Repo.all()
+  end
+
+  @doc """
+  Retrieves a session with its complete roster.
+
+  Returns `{:ok, %{session: session, roster: roster}}` or `{:error, :not_found}`.
+  """
+  def get_session_with_roster(session_id) when is_binary(session_id) do
+    with {:ok, session} <- fetch_session(session_id) do
+      records = Attendance.list_records_by_session(session_id)
+      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
+
+      roster =
+        Enum.map(records, fn record ->
+          info = Map.get(child_info_map, record.child_id, unknown_child_info())
+          notes = Map.get(notes_map, record.child_id, [])
+
+          Map.merge(
+            %{record: record},
+            build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id))
+          )
+        end)
+
+      {:ok, %{session: session, roster: roster}}
+    end
+  end
+
+  @doc """
+  Like `get_session_with_roster/1` but enriches records with resolved child names for UI display.
+
+  Returns `{:ok, session}` (with `participation_records` populated) or `{:error, :not_found}`.
+  """
+  def get_session_with_roster_enriched(session_id) when is_binary(session_id) do
+    with {:ok, session} <- fetch_session(session_id) do
+      records = Attendance.list_records_by_session(session_id)
+      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
+
+      enriched_records =
+        Enum.map(records, fn record ->
+          info = Map.get(child_info_map, record.child_id, unknown_child_info())
+          notes = Map.get(notes_map, record.child_id, [])
+
+          # Convert struct to plain map so presentation fields can be merged without struct enforcement.
+          record
+          |> Map.from_struct()
+          |> Map.merge(build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id)))
+        end)
+
+      enriched_session =
+        session
+        |> Map.from_struct()
+        |> Map.put(:participation_records, enriched_records)
+        |> Map.put(:program_name, fetch_program_name(session.program_id))
+
+      {:ok, enriched_session}
+    end
+  end
+
+  defp batch_resolve_roster(records) do
+    child_ids = records |> Enum.map(& &1.child_id) |> Enum.uniq()
+    child_info_map = ChildInfoResolver.resolve_children_info(child_ids)
+
+    # Session notes are only visible when parent has consented — filter before fetching.
+    consented_child_ids =
+      child_info_map
+      |> Enum.filter(fn {_id, info} -> info.has_consent? end)
+      |> Enum.map(fn {id, _info} -> id end)
+
+    notes_map =
+      if consented_child_ids == [] do
+        %{}
+      else
+        SessionNotes.list_approved_notes_for_children(consented_child_ids)
+      end
+
+    {child_info_map, notes_map, Attendance.absence_reasons_for_records(records)}
+  end
+
+  defp build_enrichment_fields(child_info, notes, absence_reason) do
+    %{
+      child_name: "#{child_info.first_name} #{child_info.last_name}",
+      child_first_name: child_info.first_name,
+      child_last_name: child_info.last_name,
+      allergies: child_info.allergies,
+      support_needs: child_info.support_needs,
+      emergency_contact: child_info.emergency_contact,
+      session_notes: notes,
+      absence_reason: absence_reason
+    }
+  end
+
+  defp unknown_child_info do
+    %{
+      first_name: "Unknown",
+      last_name: "Child",
+      allergies: nil,
+      support_needs: nil,
+      emergency_contact: nil,
+      has_consent?: false
+    }
   end
 end

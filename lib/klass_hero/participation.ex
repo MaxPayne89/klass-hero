@@ -3,33 +3,28 @@ defmodule KlassHero.Participation do
   Public API for the Participation bounded context.
 
   Covers session lifecycle, check-in/check-out, attendance, and session notes.
-  Conventional Phoenix context: orchestration and persistence live here; the
-  state machines live on the schema structs (`ProgramSession`,
+
+  This module is a thin facade: every function delegates to a sub-domain module
+  under `KlassHero.Participation.*` — `Sessions`, `Attendance`, `SessionNotes` —
+  or to the one use case that spans two of them, `CompleteSession`. Consumers
+  call only this module.
+
+  The state machines live on the schema structs (`ProgramSession`,
   `ParticipationRecord`, `SessionNote`). Cross-context reads route through the
   owning contexts' public facades (`ProgramCatalog`, `Provider`) and the local
   `*Resolver` ACL adapters.
 
-  State-changing operations open a `context_span`; the Ecto telemetry bridge
-  nests per-query spans beneath it. Reads stay bare.
+  Tracing lives one level down, in the modules that do the work: a
+  `context_span` opened here would name the facade rather than the operation.
+  They still report `context.name` as `Participation`, which is derived from the
+  second module segment rather than the last (#1424).
   """
 
-  use KlassHero.Shared.Tracing
-
-  alias KlassHero.Accounts.Scope
   alias KlassHero.Participation.Attendance
-  alias KlassHero.Participation.ChildInfoResolver
-  alias KlassHero.Participation.Events
+  alias KlassHero.Participation.CompleteSession
   alias KlassHero.Participation.Notifications
-  alias KlassHero.Participation.ProgramProviderResolver
-  alias KlassHero.Participation.ProgramSession
-  alias KlassHero.Participation.SessionAuthorization
   alias KlassHero.Participation.SessionNotes
   alias KlassHero.Participation.Sessions
-  alias KlassHero.Shared.Outbox
-
-  require Logger
-
-  @context __MODULE__
 
   # ============================================================================
   # Sessions
@@ -62,6 +57,15 @@ defmodule KlassHero.Participation do
   @doc "Counts completed sessions across `program_ids`."
   defdelegate count_completed_sessions(program_ids), to: Sessions
 
+  @doc "Completes an in-progress session, sweeping its roster to absent."
+  defdelegate complete_session(scope, session_id), to: CompleteSession, as: :execute
+
+  @doc "Retrieves a session with its complete roster."
+  defdelegate get_session_with_roster(session_id), to: Sessions
+
+  @doc "Like `get_session_with_roster/1`, with child names resolved for display."
+  defdelegate get_session_with_roster_enriched(session_id), to: Sessions
+
   @doc "Retrieves a session by id. Returns `{:ok, session}` or `{:error, :not_found}`."
   defdelegate get_session(session_id), to: Sessions
 
@@ -70,89 +74,6 @@ defmodule KlassHero.Participation do
 
   @doc "Returns the list of valid session statuses."
   defdelegate session_statuses(), to: Sessions
-
-  @doc """
-  Completes an in-progress session on behalf of `scope`, marking all registered
-  (not checked-in) children as absent.
-
-  Authorized at this boundary rather than by the caller, for the reason ADR-0017
-  gives for attendance: a guard that lives in one of four callers is not a guard.
-  Completing a session marks every remaining registered child absent, and until
-  #1373 the provider sessions list handed this function a client-supplied id with
-  no check at all.
-
-  Returns `{:ok, session}`, `{:error, :not_found}`, `{:error, :unauthorized}`,
-  `{:error, :program_closed}`, or `{:error, :invalid_status_transition}`.
-  """
-  @spec complete_session(Scope.t(), String.t()) ::
-          {:ok, ProgramSession.t()} | {:error, :not_found | SessionAuthorization.refusal() | :invalid_status_transition}
-  def complete_session(%Scope{} = scope, session_id) when is_binary(session_id) do
-    context_span entity: "session" do
-      with {:ok, session} <- Sessions.get_session(session_id),
-           {:ok, _role} <- SessionAuthorization.authorize_lifecycle(scope, session),
-           {:ok, completed} <- ProgramSession.complete(session),
-           {:ok, {persisted, events}} <- complete_session_with_events(completed) do
-        Notifications.notify_all(events)
-        {:ok, persisted}
-      end
-    end
-  end
-
-  @doc """
-  Retrieves a session with its complete roster.
-
-  Returns `{:ok, %{session: session, roster: roster}}` or `{:error, :not_found}`.
-  """
-  def get_session_with_roster(session_id) when is_binary(session_id) do
-    with {:ok, session} <- Sessions.get_session(session_id) do
-      records = Attendance.list_records_by_session(session_id)
-      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
-
-      roster =
-        Enum.map(records, fn record ->
-          info = Map.get(child_info_map, record.child_id, unknown_child_info())
-          notes = Map.get(notes_map, record.child_id, [])
-
-          Map.merge(
-            %{record: record},
-            build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id))
-          )
-        end)
-
-      {:ok, %{session: session, roster: roster}}
-    end
-  end
-
-  @doc """
-  Like `get_session_with_roster/1` but enriches records with resolved child names for UI display.
-
-  Returns `{:ok, session}` (with `participation_records` populated) or `{:error, :not_found}`.
-  """
-  def get_session_with_roster_enriched(session_id) when is_binary(session_id) do
-    with {:ok, session} <- Sessions.get_session(session_id) do
-      records = Attendance.list_records_by_session(session_id)
-      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
-
-      enriched_records =
-        Enum.map(records, fn record ->
-          info = Map.get(child_info_map, record.child_id, unknown_child_info())
-          notes = Map.get(notes_map, record.child_id, [])
-
-          # Convert struct to plain map so presentation fields can be merged without struct enforcement.
-          record
-          |> Map.from_struct()
-          |> Map.merge(build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id)))
-        end)
-
-      enriched_session =
-        session
-        |> Map.from_struct()
-        |> Map.put(:participation_records, enriched_records)
-        |> Map.put(:program_name, Sessions.program_name(session.program_id))
-
-      {:ok, enriched_session}
-    end
-  end
 
   @doc """
   Returns the provider-scoped participation topic — the single topic carrying all
@@ -222,50 +143,6 @@ defmodule KlassHero.Participation do
   @doc "Returns the list of valid participation record statuses."
   defdelegate record_statuses(), to: Attendance
 
-  defp batch_resolve_roster(records) do
-    child_ids = records |> Enum.map(& &1.child_id) |> Enum.uniq()
-    child_info_map = ChildInfoResolver.resolve_children_info(child_ids)
-
-    # Session notes are only visible when parent has consented — filter before fetching.
-    consented_child_ids =
-      child_info_map
-      |> Enum.filter(fn {_id, info} -> info.has_consent? end)
-      |> Enum.map(fn {id, _info} -> id end)
-
-    notes_map =
-      if consented_child_ids == [] do
-        %{}
-      else
-        SessionNotes.list_approved_notes_for_children(consented_child_ids)
-      end
-
-    {child_info_map, notes_map, Attendance.absence_reasons_for_records(records)}
-  end
-
-  defp build_enrichment_fields(child_info, notes, absence_reason) do
-    %{
-      child_name: "#{child_info.first_name} #{child_info.last_name}",
-      child_first_name: child_info.first_name,
-      child_last_name: child_info.last_name,
-      allergies: child_info.allergies,
-      support_needs: child_info.support_needs,
-      emergency_contact: child_info.emergency_contact,
-      session_notes: notes,
-      absence_reason: absence_reason
-    }
-  end
-
-  defp unknown_child_info do
-    %{
-      first_name: "Unknown",
-      last_name: "Child",
-      allergies: nil,
-      support_needs: nil,
-      emergency_contact: nil,
-      has_consent?: false
-    }
-  end
-
   # ============================================================================
   # Session notes
   # ============================================================================
@@ -293,39 +170,4 @@ defmodule KlassHero.Participation do
 
   @doc "Batch sibling of `get_session_note_by_record_and_provider/2`."
   defdelegate list_session_notes_by_records_and_provider(record_ids, provider_id), to: SessionNotes
-
-  # ============================================================================
-  # Event publishing helpers
-  # ============================================================================
-
-  defp session_completed_event(session) do
-    extra_payload = resolve_provider_details(session.program_id)
-    Events.session_completed(session, extra_payload: extra_payload)
-  end
-
-  defp resolve_provider_details(program_id) do
-    case ProgramProviderResolver.resolve_provider_details(program_id) do
-      {:ok, details} ->
-        details
-
-      {:error, reason} ->
-        Logger.warning("Could not resolve provider details for session_completed event",
-          program_id: program_id,
-          reason: inspect(reason)
-        )
-
-        %{provider_id: "00000000-0000-0000-0000-000000000000", program_title: "Unknown Program"}
-    end
-  end
-
-  # The absences and the completion are one fact: a completed session whose
-  # registered children were never marked absent is a half-finished write.
-  defp complete_session_with_events(completed) do
-    Outbox.transact_with_events(@context, fn ->
-      with {:ok, persisted} <- Sessions.persist_lifecycle_update(completed),
-           {:ok, absence_events} <- Attendance.mark_roster_absent_for_session(persisted) do
-        {:ok, persisted, absence_events ++ [session_completed_event(persisted)]}
-      end
-    end)
-  end
 end
