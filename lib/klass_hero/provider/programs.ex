@@ -2,11 +2,10 @@ defmodule KlassHero.Provider.Programs do
   @moduledoc """
   Read-side queries over a provider's programs and sessions.
 
-  Backed by the `provider_programs` and `provider_session_details` projections
-  (fed by Program Catalog / Participation integration events), plus a live
-  cross-context count for completed sessions. Consumers reach these through
-  `KlassHero.Provider`'s public API — this module is internal to the Provider
-  context.
+  Backed by the `provider_session_details` projection (fed by Participation
+  integration events), plus facade reads into ProgramCatalog and Participation.
+  Consumers reach these through `KlassHero.Provider`'s public API — this module
+  is internal to the Provider context.
 
   Queries sit here rather than behind repository modules, matching
   `KlassHero.Provider.Incidents` and the Program Catalog / Messaging read sides.
@@ -14,14 +13,24 @@ defmodule KlassHero.Provider.Programs do
 
   import Ecto.Query
 
-  alias KlassHero.Provider.ParticipationSessionStatsACL
+  alias KlassHero.Participation
+  alias KlassHero.ProgramCatalog
   alias KlassHero.Provider.SessionDetail
   alias KlassHero.Repo
 
-  @doc "Returns the total session count across all of a provider's programs."
+  @doc """
+  Returns the total session count across all of a provider's programs.
+
+  Two facade calls rather than one cross-schema join: ProgramCatalog owns which
+  programs are a provider's, Participation owns which sessions completed, and
+  neither relationship is Provider's to join. `resolve_provider_scope/1` in
+  Participation resolves a provider the same way.
+  """
   @spec get_total_session_count(String.t()) :: non_neg_integer()
   def get_total_session_count(provider_id) when is_binary(provider_id) do
-    ParticipationSessionStatsACL.total_completed_sessions(provider_id)
+    provider_id
+    |> ProgramCatalog.list_program_ids_for_provider()
+    |> Participation.count_completed_sessions()
   end
 
   @doc """
