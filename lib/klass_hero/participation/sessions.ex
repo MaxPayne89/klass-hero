@@ -714,20 +714,7 @@ defmodule KlassHero.Participation.Sessions do
   """
   def get_session_with_roster(session_id) when is_binary(session_id) do
     with {:ok, session} <- fetch_session(session_id) do
-      records = Attendance.list_records_by_session(session_id)
-      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
-
-      roster =
-        Enum.map(records, fn record ->
-          info = Map.get(child_info_map, record.child_id, unknown_child_info())
-          notes = Map.get(notes_map, record.child_id, [])
-
-          Map.merge(
-            %{record: record},
-            build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id))
-          )
-        end)
-
+      roster = decorated_roster(session_id, &Map.merge(%{record: &1}, &2))
       {:ok, %{session: session, roster: roster}}
     end
   end
@@ -739,28 +726,32 @@ defmodule KlassHero.Participation.Sessions do
   """
   def get_session_with_roster_enriched(session_id) when is_binary(session_id) do
     with {:ok, session} <- fetch_session(session_id) do
-      records = Attendance.list_records_by_session(session_id)
-      {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
-
-      enriched_records =
-        Enum.map(records, fn record ->
-          info = Map.get(child_info_map, record.child_id, unknown_child_info())
-          notes = Map.get(notes_map, record.child_id, [])
-
-          # Convert struct to plain map so presentation fields can be merged without struct enforcement.
-          record
-          |> Map.from_struct()
-          |> Map.merge(build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id)))
-        end)
+      # Struct to plain map so presentation fields merge without struct enforcement.
+      records = decorated_roster(session_id, &Map.merge(Map.from_struct(&1), &2))
 
       enriched_session =
         session
         |> Map.from_struct()
-        |> Map.put(:participation_records, enriched_records)
+        |> Map.put(:participation_records, records)
         |> Map.put(:program_name, fetch_program_name(session.program_id))
 
       {:ok, enriched_session}
     end
+  end
+
+  # The two roster reads resolve identically and differ only in the shape they
+  # hand back, so the resolution lives here once and the shape arrives as a
+  # function rather than as a flag on a single merged read.
+  defp decorated_roster(session_id, shape) do
+    records = Attendance.list_records_by_session(session_id)
+    {child_info_map, notes_map, absence_reasons} = batch_resolve_roster(records)
+
+    Enum.map(records, fn record ->
+      info = Map.get(child_info_map, record.child_id, unknown_child_info())
+      notes = Map.get(notes_map, record.child_id, [])
+
+      shape.(record, build_enrichment_fields(info, notes, Map.get(absence_reasons, record.id)))
+    end)
   end
 
   defp batch_resolve_roster(records) do
