@@ -10,13 +10,13 @@ defmodule KlassHero.ProgramCatalog.ListFeaturedProgramsTest do
 
   describe "list_featured_programs/0" do
     test "returns at most 2 active listings" do
-      insert_list(4, :program_listing_schema)
+      insert_list(4, :program_schema)
 
       assert length(ProgramCatalog.list_featured_programs()) == 2
     end
 
     test "fetches at most 2 rows from the database (bounded in SQL, not trimmed in Elixir)" do
-      insert_list(4, :program_listing_schema)
+      insert_list(4, :program_schema)
 
       {result, rows_fetched} =
         QueryCounter.count_rows(fn -> ProgramCatalog.list_featured_programs() end)
@@ -27,16 +27,16 @@ defmodule KlassHero.ProgramCatalog.ListFeaturedProgramsTest do
     end
 
     test "orders by title ascending" do
-      insert(:program_listing_schema, title: "Zebra")
-      insert(:program_listing_schema, title: "Apple")
-      insert(:program_listing_schema, title: "Mango")
+      insert(:program_schema, title: "Zebra")
+      insert(:program_schema, title: "Apple")
+      insert(:program_schema, title: "Mango")
 
       assert [%{title: "Apple"}, %{title: "Mango"}] = ProgramCatalog.list_featured_programs()
     end
 
     test "excludes expired listings (end_date in the past)" do
-      insert(:program_listing_schema, title: "Active", end_date: nil)
-      insert(:program_listing_schema, title: "Expired", end_date: Date.add(Date.utc_today(), -1))
+      insert(:program_schema, title: "Active", end_date: nil)
+      insert(:program_schema, title: "Expired", end_date: Date.add(Date.utc_today(), -1))
 
       titles = ProgramCatalog.list_featured_programs() |> Enum.map(& &1.title)
 

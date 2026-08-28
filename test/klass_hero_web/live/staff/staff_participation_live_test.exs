@@ -37,14 +37,6 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
       # before which a matching category alone would have opened the roster.
       unassigned_program = insert(:program_schema, provider_id: provider.id, category: "sports")
 
-      _listing =
-        insert(:program_listing_schema,
-          id: unassigned_program.id,
-          provider_id: provider.id,
-          category: "sports",
-          title: "Soccer Training"
-        )
-
       session =
         insert(:program_session_schema,
           program_id: unassigned_program.id,
@@ -124,14 +116,6 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
   defp session_in_new_program(provider) do
     program = insert(:program_schema, provider_id: provider.id, category: "sports")
 
-    _listing =
-      insert(:program_listing_schema,
-        id: program.id,
-        provider_id: provider.id,
-        category: "sports",
-        title: "Soccer Training"
-      )
-
     insert(:program_session_schema,
       program_id: program.id,
       session_date: Date.utc_today(),
@@ -144,14 +128,6 @@ defmodule KlassHeroWeb.Staff.StaffParticipationLiveTest do
 
     setup %{provider: provider, staff: staff, user: user} do
       program = insert(:program_schema, provider_id: provider.id, category: "sports")
-
-      _listing =
-        insert(:program_listing_schema,
-          id: program.id,
-          provider_id: provider.id,
-          category: "sports",
-          title: "Soccer Training"
-        )
 
       # The assignment is what lets this staff member manage the session (#1323) —
       # their matching Specialty does not.

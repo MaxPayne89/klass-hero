@@ -1,9 +1,10 @@
 defmodule KlassHeroWeb.ProgramsLiveTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.Factory
   import Phoenix.LiveViewTest
 
-  alias KlassHero.ProgramCatalog.ProgramListing
+  alias KlassHero.ProgramCatalog.Program
   alias KlassHero.Repo
 
   describe "ProgramsLive - Integration with Database (User Story 1)" do
@@ -104,7 +105,7 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
              "Page load time #{load_time_ms}ms exceeds 2000ms performance requirement"
 
       # With pagination only the first 20 (Programs 100..81, DESC) load.
-      programs = Repo.all(ProgramListing)
+      programs = Repo.all(Program)
       program_100 = Enum.find(programs, &(&1.title == "Program 100"))
       program_81 = Enum.find(programs, &(&1.title == "Program 81"))
       program_1 = Enum.find(programs, &(&1.title == "Program 1"))
@@ -333,10 +334,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      program_30 = Repo.get_by!(ProgramListing, title: "Program 30")
-      program_11 = Repo.get_by!(ProgramListing, title: "Program 11")
-      program_10 = Repo.get_by!(ProgramListing, title: "Program 10")
-      program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
+      program_30 = Repo.get_by!(Program, title: "Program 30")
+      program_11 = Repo.get_by!(Program, title: "Program 11")
+      program_10 = Repo.get_by!(Program, title: "Program 10")
+      program_1 = Repo.get_by!(Program, title: "Program 1")
 
       # First 20 (Programs 30..11, DESC); Programs 1-10 wait on page 2.
       assert_program_visible(view, program_30)
@@ -390,10 +391,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      program_30 = Repo.get_by!(ProgramListing, title: "Program 30")
-      program_11 = Repo.get_by!(ProgramListing, title: "Program 11")
-      program_10 = Repo.get_by!(ProgramListing, title: "Program 10")
-      program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
+      program_30 = Repo.get_by!(Program, title: "Program 30")
+      program_11 = Repo.get_by!(Program, title: "Program 11")
+      program_10 = Repo.get_by!(Program, title: "Program 10")
+      program_1 = Repo.get_by!(Program, title: "Program 1")
 
       assert_program_visible(view, program_30)
       assert_program_visible(view, program_11)
@@ -427,9 +428,9 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      soccer_15 = Repo.get_by!(ProgramListing, title: "Soccer Program 15")
-      soccer_11 = Repo.get_by!(ProgramListing, title: "Soccer Program 11")
-      art_30 = Repo.get_by!(ProgramListing, title: "Art Program 30")
+      soccer_15 = Repo.get_by!(Program, title: "Soccer Program 15")
+      soccer_11 = Repo.get_by!(Program, title: "Soccer Program 11")
+      art_30 = Repo.get_by!(Program, title: "Art Program 30")
 
       {:ok, view, _html} = live(conn, ~p"/programs")
       view |> element("button[phx-click='load_more']") |> render_click()
@@ -483,8 +484,8 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       # The loading state is transient (only visible during real async ops);
       # sync tests complete immediately, so we assert the final state.
-      program_5 = Repo.get_by!(ProgramListing, title: "Program 5")
-      program_1 = Repo.get_by!(ProgramListing, title: "Program 1")
+      program_5 = Repo.get_by!(Program, title: "Program 5")
+      program_1 = Repo.get_by!(Program, title: "Program 1")
 
       assert_program_visible(view, program_5)
       assert_program_visible(view, program_1)
@@ -502,8 +503,8 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/programs")
 
-      program_25 = Repo.get_by!(ProgramListing, title: "Program 25")
-      program_6 = Repo.get_by!(ProgramListing, title: "Program 6")
+      program_25 = Repo.get_by!(Program, title: "Program 25")
+      program_6 = Repo.get_by!(Program, title: "Program 6")
 
       assert_program_visible(view, program_25)
       assert_program_visible(view, program_6)
@@ -529,7 +530,6 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       age_range: "6-12 years",
       price: Decimal.new("100.00"),
       pricing_period: "per month",
-      provider_id: Ecto.UUID.generate(),
       inserted_at: now,
       updated_at: now
     }
@@ -539,8 +539,10 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
       |> Map.merge(attrs)
       |> Map.update(:inserted_at, now, &DateTime.truncate(&1, :second))
       |> Map.update(:updated_at, now, &DateTime.truncate(&1, :second))
+      # `programs.provider_id` is a real FK, so a synthetic uuid no longer inserts.
+      |> Map.put_new_lazy(:provider_id, fn -> insert(:provider_profile_schema).id end)
 
-    %ProgramListing{}
+    %Program{}
     |> Ecto.Changeset.change(merged)
     |> Repo.insert!()
   end
@@ -688,8 +690,8 @@ defmodule KlassHeroWeb.ProgramsLiveTest do
         })
       end
 
-      first_page_program = Repo.get_by!(ProgramListing, title: "Pagination Program 25")
-      second_page_program = Repo.get_by!(ProgramListing, title: "Pagination Program 1")
+      first_page_program = Repo.get_by!(Program, title: "Pagination Program 25")
+      second_page_program = Repo.get_by!(Program, title: "Pagination Program 1")
 
       {:ok, view, _html} = live(conn, ~p"/programs")
       assert_program_visible(view, first_page_program)

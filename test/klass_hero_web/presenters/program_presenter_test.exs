@@ -4,7 +4,6 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
   import ExUnit.CaptureLog
 
   alias KlassHero.ProgramCatalog.Program
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.ReadModels.ProgramStaffing
   alias KlassHero.Shared.Categories
   alias KlassHeroWeb.Presenters.ProgramPresenter
@@ -287,7 +286,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
     end
 
     test "builds the same card keys from a read-model listing" do
-      listing = %ProgramListing{
+      listing = %Program{
         id: "listing-1",
         title: "Art Adventures",
         description: "Creative art for kids",
@@ -315,7 +314,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
       # Key-parity assertions cannot see this. Folding the two per-LiveView card
       # builders into one swapped which category formatter backs the card, and
       # "Life Skills" became "Life-skills" on three pages with every test green.
-      listing = %ProgramListing{id: "l", title: "T", category: "life-skills"}
+      listing = %Program{id: "l", title: "T", category: "life-skills"}
       program = build_program(%{category: "life-skills"})
 
       assert ProgramPresenter.to_card_view(listing).category == "Life Skills"
@@ -323,7 +322,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenterTest do
     end
 
     test "threads spots_left through, defaulting to nil" do
-      listing = %ProgramListing{id: "l", title: "T", category: "arts"}
+      listing = %Program{id: "l", title: "T", category: "arts"}
 
       assert ProgramPresenter.to_card_view(listing).spots_left == nil
       assert ProgramPresenter.to_card_view(listing, %{name: nil, trust: :unverified}, 3).spots_left == 3

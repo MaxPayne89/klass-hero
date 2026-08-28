@@ -1099,10 +1099,11 @@ defmodule KlassHeroWeb.Provider.ProgramsLive do
     if row_matches_filters?(socket, program, staffing) do
       sync_program_row(socket, program, enrollment_data, staffing)
     else
-      # The re-stream cannot carry the new row: it reads the `program_listings`
-      # projection, which has not caught up with a program created a moment ago.
-      # Only the domain struct the write returned can show it, so the row is
-      # inserted on top of the freshly unfiltered table.
+      # The re-stream now reads `programs` directly, so it does carry the new row —
+      # it could not while it read the `program_listings` projection, which lagged
+      # a program created a moment ago. The explicit sync stays because it places
+      # the row on top of the freshly unfiltered table rather than in sort order,
+      # which is where the provider is looking after a save.
       socket
       |> assign(search_query: "", selected_staff: "all")
       |> reset_programs_stream()

@@ -7,7 +7,7 @@ defmodule KlassHeroWeb.Flows.ParentBookingTest do
   `program_detail_live_test.exs`, `booking_live_test.exs`). What is new here is the
   chain, and the fact that the program is arranged through
   `Journeys.published_program/1` — so the `/programs` listing is served by a
-  `program_listings` row that `{ProgramListings, :project}` actually wrote, rather
+  `programs` row that the publish path actually wrote, rather
   than one the test inserted into the read table itself.
   """
 

@@ -1,9 +1,8 @@
 defmodule KlassHeroWeb.HomeLiveTest do
   use KlassHeroWeb.ConnCase, async: true
 
+  import KlassHero.Factory
   import Phoenix.LiveViewTest
-
-  alias KlassHero.ProgramCatalog.ProgramListing
 
   describe "home page" do
     test "renders hero section", %{conn: conn} do
@@ -209,23 +208,14 @@ defmodule KlassHeroWeb.HomeLiveTest do
     end
 
     test "renders a featured program's subtitle under its title", %{conn: conn} do
-      now = DateTime.truncate(DateTime.utc_now(), :second)
-      program_id = Ecto.UUID.generate()
-
-      %ProgramListing{}
-      |> Ecto.Changeset.change(%{
-        id: program_id,
+      insert(:program_schema,
         title: "Chess Club",
         subtitle: "For beginners, no experience needed",
         description: "Develop strategic thinking through chess",
-        category: "education",
         meeting_days: [],
         price: Decimal.new("60.00"),
-        provider_id: Ecto.UUID.generate(),
-        inserted_at: now,
-        updated_at: now
-      })
-      |> KlassHero.Repo.insert!()
+        provider_id: insert(:provider_profile_schema).id
+      )
 
       {:ok, view, _html} = live(conn, ~p"/")
 
@@ -233,24 +223,13 @@ defmodule KlassHeroWeb.HomeLiveTest do
     end
 
     test "clicking featured program card navigates to program detail", %{conn: conn} do
-      now = DateTime.truncate(DateTime.utc_now(), :second)
-      program_id = Ecto.UUID.generate()
-
-      %ProgramListing{}
-      |> Ecto.Changeset.change(%{
-        id: program_id,
-        title: "Featured Test Program",
-        description: "A test program for featured display",
-        category: "education",
-        meeting_days: [],
-        age_range: "6-12 years",
-        price: Decimal.new("100.00"),
-        pricing_period: "per month",
-        provider_id: Ecto.UUID.generate(),
-        inserted_at: now,
-        updated_at: now
-      })
-      |> KlassHero.Repo.insert!()
+      %{id: program_id} =
+        insert(:program_schema,
+          title: "Featured Test Program",
+          description: "A test program for featured display",
+          meeting_days: [],
+          provider_id: insert(:provider_profile_schema).id
+        )
 
       {:ok, view, _html} = live(conn, ~p"/")
 

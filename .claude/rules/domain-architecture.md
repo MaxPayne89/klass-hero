@@ -174,7 +174,7 @@ Schema-as-struct itself is covered above under `## Context Layout` and `## Recom
 ## Recommended Reads
 
 - `lib/klass_hero/provider/staff_member.ex` — schema-as-struct with inlined functional core
-- `lib/klass_hero/program_catalog/program_listing.ex` — read-table schema as the display DTO
-- `lib/klass_hero/provider/projections/provider_programs.ex` — projection pattern
+- `lib/klass_hero/provider/session_detail.ex` — read-table schema as the display DTO
+- `lib/klass_hero/provider/projections/provider_session_details.ex` — projection pattern
 - `lib/klass_hero/shared/` — event infrastructure, projection macro, interaction/tracing
 - `config/config.exs` — `:event_consumers` registry (DI port maps are gone)

@@ -12,7 +12,6 @@ defmodule KlassHeroWeb.Provider.IncidentReportLiveTest do
 
     # The program picker still lists from the `program_listings` projection.
     # Drops out with that projection.
-    insert(:program_listing_schema, id: program.id, provider_id: program.provider_id, title: program.title)
 
     program
   end

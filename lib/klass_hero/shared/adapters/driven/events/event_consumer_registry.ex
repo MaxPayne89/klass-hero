@@ -4,7 +4,7 @@ defmodule KlassHero.Shared.Adapters.Driven.Events.EventConsumerRegistry do
 
   Consumers are `{module, function}` pairs taking the event: cross-context handlers
   (`{FamilyEventHandler, :handle_event}`) and projections
-  (`{ProgramListings, :project}`) are the same kind of thing here, because the
+  (`{ProviderSessionDetails, :project}`) are the same kind of thing here, because the
   delivery job calls them the same way.
 
   Replaces the pair of switches that used to decide durability — a per-event

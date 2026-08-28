@@ -12,39 +12,20 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
   # needs, the listing row the dashboard renders, and the Program Staff Assignment
   # that puts it there. Category is arbitrary — since #1323 it gates nothing, so
   # these tests no longer derive it from `staff.tags`.
-  defp assigned_listing(provider, staff, attrs \\ []) do
-    category = Keyword.get(attrs, :category, "sports")
-
-    # `end_date` goes on the **write** row as well as the listing: closure is read
-    # from `programs`, never from the projection, so setting it only on the
-    # listing would leave the program open however long ago it ended (#1082).
-    write =
-      insert(:program_schema,
-        provider_id: provider.id,
-        category: category,
-        end_date: Keyword.get(attrs, :end_date)
-      )
-
-    # `title:` is copied from the write row rather than left to the factory
-    # sequence: the projection keeps the two in step in production, and since
-    # #1082 the dashboard reads the write row, so a fixture that let them drift
-    # would be testing a state that cannot occur.
-    listing =
+  defp assigned_program(provider, staff, attrs \\ []) do
+    program =
       insert(
-        :program_listing_schema,
-        Keyword.merge(
-          [id: write.id, provider_id: provider.id, category: category, title: write.title],
-          attrs
-        )
+        :program_schema,
+        Keyword.merge([provider_id: provider.id, category: "sports"], attrs)
       )
 
     program_assignment_fixture(%{
       provider_id: provider.id,
-      program_id: write.id,
+      program_id: program.id,
       staff_member_id: staff.id
     })
 
-    listing
+    program
   end
 
   describe "staff dashboard" do
@@ -109,7 +90,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      closed = assigned_listing(provider, staff, end_date: Date.add(Date.utc_today(), -20))
+      closed = assigned_program(provider, staff, end_date: Date.add(Date.utc_today(), -20))
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -123,7 +104,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      closed = assigned_listing(provider, staff, end_date: Date.add(Date.utc_today(), -20))
+      closed = assigned_program(provider, staff, end_date: Date.add(Date.utc_today(), -20))
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -137,7 +118,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      recent = assigned_listing(provider, staff, end_date: Date.add(Date.utc_today(), -2))
+      recent = assigned_program(provider, staff, end_date: Date.add(Date.utc_today(), -2))
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -150,7 +131,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      assigned_listing(provider, staff)
+      assigned_program(provider, staff)
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -173,7 +154,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      program = assigned_listing(provider, staff)
+      program = assigned_program(provider, staff)
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -186,7 +167,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
       provider: provider,
       staff: staff
     } do
-      program = assigned_listing(provider, staff)
+      program = assigned_program(provider, staff)
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -199,7 +180,7 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
     end
 
     test "closing roster modal hides it", %{conn: conn, provider: provider, staff: staff} do
-      program = assigned_listing(provider, staff)
+      program = assigned_program(provider, staff)
 
       {:ok, view, _html} = live(conn, ~p"/staff/dashboard")
 
@@ -244,23 +225,17 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
         })
 
       # Write model (programs table) — needed for enrollment FK
-      program_write =
+      program =
         insert(:program_schema,
           provider_id: provider.id,
           category: "sports"
         )
 
       # Read model (program_listings table) — needed for dashboard display
-      program =
-        insert(:program_listing_schema,
-          id: program_write.id,
-          provider_id: provider.id,
-          category: "sports"
-        )
 
       program_assignment_fixture(%{
         provider_id: provider.id,
-        program_id: program_write.id,
+        program_id: program.id,
         staff_member_id: staff.id
       })
 
@@ -362,19 +337,12 @@ defmodule KlassHeroWeb.Staff.StaffDashboardLiveTest do
           tags: ["sports"]
         })
 
-      program_write =
-        insert(:program_schema, provider_id: provider.id, category: "sports")
-
       program =
-        insert(:program_listing_schema,
-          id: program_write.id,
-          provider_id: provider.id,
-          category: "sports"
-        )
+        insert(:program_schema, provider_id: provider.id, category: "sports")
 
       program_assignment_fixture(%{
         provider_id: provider.id,
-        program_id: program_write.id,
+        program_id: program.id,
         staff_member_id: staff.id
       })
 

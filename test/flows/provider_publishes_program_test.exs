@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.Flows.ProviderPublishesProgramTest do
 
   This is the one flow that crosses the CQRS boundary end to end. Today the two
   halves are tested apart and neither can see the seam: `programs_live_test.exs`
-  seeds `program_listings` directly, so the projection never runs, and
+  seeds the catalog read path directly, so the publish path never runs, and
   `program_listing_delivery_test.exs` runs the projection but never renders the
   page. A field the producer stops sending is invisible to both — which is how
   `program_created` came to omit description and price (see the fix in
@@ -53,7 +53,7 @@ defmodule KlassHeroWeb.Flows.ProviderPublishesProgramTest do
       end)
 
       # A second, unauthenticated visitor: the catalog is public, and the row it
-      # reads was written by {ProgramListings, :project}, not by this test.
+      # reads was written by the publish path, not by this test.
       build_conn()
       |> visit(~p"/programs")
       |> assert_has("#mk-programs-stream", text: "Chess Club")

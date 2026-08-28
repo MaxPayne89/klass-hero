@@ -36,7 +36,7 @@ defmodule KlassHero.EventTestHelper do
 
       event
       |> KlassHero.EventTestHelper.through_outbox()
-      |> ProgramListings.project()
+      |> ProviderSessionDetails.project()
   """
   @spec through_outbox(Event.t()) :: Event.t()
   def through_outbox(%Event{} = event) do

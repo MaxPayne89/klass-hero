@@ -22,8 +22,8 @@ defmodule KlassHeroWeb.Helpers.ProviderDisplay do
   @doc """
   Batch-resolves `%{provider_id => %{name:, trust:}}` for the given programs.
 
-  Accepts anything carrying a `provider_id` — `%ProgramListing{}` read models or
-  `%Program{}` write models both work.
+  Accepts anything carrying a `provider_id`; it matches no struct name, so a
+  `%Program{}` or any query-shaped map works.
   """
   @spec for_programs([%{provider_id: String.t()}]) ::
           %{String.t() => %{name: String.t() | nil, trust: Provider.trust_state()}}

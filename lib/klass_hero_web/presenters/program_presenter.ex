@@ -7,7 +7,6 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   alias KlassHero.ProgramCatalog
   alias KlassHero.ProgramCatalog.Program
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Provider.ReadModels.ProgramStaffing
   alias KlassHero.Shared.Money
   alias KlassHero.Shared.NameUtils
@@ -28,16 +27,11 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   `ProgramStaffing.staffed_by?/2` — never this output — so display and
   findability cannot drift apart.
   """
-  @spec to_table_view(Program.t() | ProgramListing.t(), map(), ProgramStaffing.t() | nil) :: map()
+  @spec to_table_view(Program.t(), map(), ProgramStaffing.t() | nil) :: map()
   def to_table_view(program, enrollment_data \\ %{}, staffing \\ nil)
 
   def to_table_view(%Program{} = program, enrollment_data, staffing) do
     to_table_row(program.id, program.title, program.category, program.price, enrollment_data, staffing)
-  end
-
-  # ProgramListing is a flat read-model DTO used by other list surfaces.
-  def to_table_view(%ProgramListing{} = listing, enrollment_data, staffing) do
-    to_table_row(listing.id, listing.title, listing.category, listing.price, enrollment_data, staffing)
   end
 
   defp to_table_row(id, title, category, price, enrollment_data, staffing) do
@@ -69,7 +63,7 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   Returns a map matching the attrs expected by `ProgramComponents.program_card/1`.
   """
   @spec to_card_view(
-          Program.t() | ProgramListing.t(),
+          Program.t(),
           %{name: String.t() | nil, trust: atom()},
           non_neg_integer() | nil
         ) :: map()
@@ -77,13 +71,6 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
 
   def to_card_view(%Program{} = program, provider, spots_left) do
     to_card(program, provider, spots_left)
-  end
-
-  # ProgramListing is the read-model twin every public surface lists from, and both
-  # cards read the same keys — so one builder serves both rather than a private copy
-  # per LiveView, which is how the home and catalog copies drifted apart.
-  def to_card_view(%ProgramListing{} = listing, provider, spots_left) do
-    to_card(listing, provider, spots_left)
   end
 
   defp to_card(program, provider, spots_left) do
@@ -287,8 +274,8 @@ defmodule KlassHeroWeb.Presenters.ProgramPresenter do
   and not the domain — is where `gettext/1` belongs: `mix lint_translations`
   only sees call sites under `lib/klass_hero_web/`.
 
-  Takes the raw price, so a `%Program{}`, a `%ProgramListing{}` and a bare
-  enrollment total all render identically.
+  Takes the raw price, so a `%Program{}` and a bare enrollment total all render
+  identically.
 
   ## Examples
 

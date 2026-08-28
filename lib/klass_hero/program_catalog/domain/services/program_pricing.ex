@@ -27,9 +27,8 @@ defmodule KlassHero.ProgramCatalog.Domain.Services.ProgramPricing do
   @doc """
   Classifies a raw price value.
 
-  Takes the price itself rather than a `%Program{}` so that the write-side
-  schema, the `%ProgramListing{}` read table, and a bare enrollment total all
-  classify through this one function.
+  Takes the price itself rather than a `%Program{}` so that the schema and a bare
+  enrollment total both classify through this one function.
 
   ## Examples
 

@@ -3,14 +3,13 @@ defmodule KlassHero.ProgramCatalog do
   Public API for the Program Catalog bounded context.
 
   Conventional Phoenix context: persistence and orchestration live here directly,
-  calling `Repo`. Writes go to the `programs` table (`Program`); reads are served
-  from the denormalised `program_listings` read model (`ProgramListing`),
-  maintained by the `ProgramListings` projection. Pure display/formatting and
-  category logic live in the `Domain.Services` modules.
+  calling `Repo`. Reads and writes both go to the `programs` table (`Program`) —
+  the listing reads below are ordinary queries over it, not a projection. Pure
+  display/formatting and category logic live in the `Domain.Services` modules.
 
   ## Usage
 
-      # List all programs (read model)
+      # List all programs
       programs = ProgramCatalog.list_all_programs()
 
       # Get a specific program (write model, with nested value objects)
@@ -36,7 +35,6 @@ defmodule KlassHero.ProgramCatalog do
   }
 
   alias KlassHero.ProgramCatalog.Program
-  alias KlassHero.ProgramCatalog.ProgramListing
   alias KlassHero.Repo
   alias KlassHero.Shared.Adapters.Driven.Persistence.RepositoryHelpers
   alias KlassHero.Shared.ErrorIds
@@ -317,34 +315,34 @@ defmodule KlassHero.ProgramCatalog do
     Program.create_changeset(%Program{}, attrs)
   end
 
-  ## Read-model reads (program_listings)
+  ## Catalog listing reads
 
   @doc "Lists all available programs ordered by title."
-  @spec list_all_programs() :: [ProgramListing.t()]
+  @spec list_all_programs() :: [Program.t()]
   def list_all_programs do
-    ProgramListing
+    Program
     |> order_by(asc: :title)
     |> Repo.all()
   end
 
   @doc "Lists featured programs for homepage display (first 2 active, ordered by title)."
-  @spec list_featured_programs() :: [ProgramListing.t()]
+  @spec list_featured_programs() :: [Program.t()]
   def list_featured_programs do
     today = Date.utc_today()
 
-    ProgramListing
-    |> where([l], is_nil(l.end_date) or l.end_date >= ^today)
-    |> order_by([l], asc: l.title)
+    Program
+    |> where([p], is_nil(p.end_date) or p.end_date >= ^today)
+    |> order_by([p], asc: p.title)
     |> limit(2)
     |> Repo.all()
   end
 
   @doc "Lists all programs for a provider, ordered by title (includes expired — #610)."
-  @spec list_programs_for_provider(String.t()) :: [ProgramListing.t()]
+  @spec list_programs_for_provider(String.t()) :: [Program.t()]
   def list_programs_for_provider(provider_id) when is_binary(provider_id) do
-    ProgramListing
-    |> where([l], l.provider_id == ^provider_id)
-    |> order_by([l], asc: l.title)
+    Program
+    |> where([p], p.provider_id == ^provider_id)
+    |> order_by([p], asc: p.title)
     |> Repo.all()
   end
 
@@ -357,12 +355,12 @@ defmodule KlassHero.ProgramCatalog do
   the two differ by this filter alone and are kept apart rather than merged
   behind a boolean, which would make the wrong choice the quiet default.
   """
-  @spec list_current_programs_for_provider(String.t()) :: [ProgramListing.t()]
+  @spec list_current_programs_for_provider(String.t()) :: [Program.t()]
   def list_current_programs_for_provider(provider_id) when is_binary(provider_id) do
-    ProgramListing
-    |> where([l], l.provider_id == ^provider_id)
-    |> where([l], is_nil(l.end_date) or l.end_date >= ^Date.utc_today())
-    |> order_by([l], asc: l.title)
+    Program
+    |> where([p], p.provider_id == ^provider_id)
+    |> where([p], is_nil(p.end_date) or p.end_date >= ^Date.utc_today())
+    |> order_by([p], asc: p.title)
     |> Repo.all()
   end
 
@@ -394,9 +392,7 @@ defmodule KlassHero.ProgramCatalog do
   ## Pure delegations (functional core — display, filtering, categories)
 
   @doc "Filters programs by search query using word-boundary matching. Returns all if query is empty."
-  @spec filter_programs([Program.t() | ProgramListing.t()], String.t()) :: [
-          Program.t() | ProgramListing.t()
-        ]
+  @spec filter_programs([Program.t()], String.t()) :: [Program.t()]
   defdelegate filter_programs(programs, query), to: ProgramFilter, as: :execute
 
   @doc "Trims and length-limits a search query. Returns empty string for nil."
@@ -477,11 +473,11 @@ defmodule KlassHero.ProgramCatalog do
   defp fetch_program(_, _queryable), do: nil
 
   defp listing_page(limit, cursor_data, category) do
-    ProgramListing
+    Program
     |> filter_listing_category(category)
-    |> where([l], is_nil(l.end_date) or l.end_date >= ^Date.utc_today())
+    |> where([p], is_nil(p.end_date) or p.end_date >= ^Date.utc_today())
     |> filter_listing_cursor(cursor_data)
-    |> order_by([l], desc: l.inserted_at, desc: l.id)
+    |> order_by([p], desc: p.inserted_at, desc: p.id)
     |> limit(^(limit + 1))
     |> Repo.all()
   end
@@ -490,7 +486,7 @@ defmodule KlassHero.ProgramCatalog do
   defp filter_listing_category(query, "all"), do: query
 
   defp filter_listing_category(query, category) when is_binary(category) do
-    where(query, [l], l.category == ^category)
+    where(query, [p], p.category == ^category)
   end
 
   defp filter_listing_cursor(query, nil), do: query
@@ -499,9 +495,9 @@ defmodule KlassHero.ProgramCatalog do
     # Seek pagination: skip rows at or before the cursor in (inserted_at DESC, id DESC) order.
     where(
       query,
-      [l],
-      l.inserted_at < ^cursor_ts or
-        (l.inserted_at == ^cursor_ts and l.id < ^cursor_id)
+      [p],
+      p.inserted_at < ^cursor_ts or
+        (p.inserted_at == ^cursor_ts and p.id < ^cursor_id)
     )
   end
 
@@ -513,14 +509,16 @@ defmodule KlassHero.ProgramCatalog do
     ProgramEvents.program_updated(program.id, listing_payload(program))
   end
 
-  # One payload for both events, because ProgramListings reads the same fields from
-  # each. They used to be written out separately and drifted: `program_created`
-  # omitted description, age_range, price, pricing_period, location, cover_image_url
-  # and season, so a brand-new program reached the public catalog blank and priced at
-  # €0.00 until an unrelated edit fired `program_updated` and filled it in.
+  # One payload for both events. It carried the display fields the deleted
+  # `program_listings` projection denormalised, and writing the two events out
+  # separately once let them drift: `program_created` omitted description,
+  # age_range, price, pricing_period, location and cover_image_url, so a new
+  # program reached the public catalog blank and priced at €0.00 until an
+  # unrelated edit fired `program_updated`.
   #
-  # `season` is read on create and deliberately ignored on update — see
-  # `@update_fields` in the projection — so carrying it here is correct for both.
+  # No surviving consumer reads any of it — `ParticipationEventHandler` uses
+  # `entity_id` alone — so pruning these fields is available, but it is a payload
+  # change with its own tests and does not belong in the read-path swap.
   defp listing_payload(program) do
     %{
       provider_id: program.provider_id,

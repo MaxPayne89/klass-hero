@@ -13,7 +13,6 @@ defmodule KlassHeroWeb.Helpers.StaffLiveHelpersTest do
   defp program(provider, category, attrs \\ []) do
     attrs = Keyword.merge([provider_id: provider.id, category: category], attrs)
     program = insert(:program_schema, attrs)
-    insert(:program_listing_schema, id: program.id, provider_id: provider.id, category: category)
     program
   end
 

@@ -43,7 +43,7 @@ defmodule KlassHeroWeb.ProgramCardTrustMarkTest do
     for {trust, expected} <- [verified: "verified", in_progress: "in_progress"] do
       test "renders the #{trust} trust mark", %{conn: conn} do
         provider = provider_with(unquote(trust))
-        program = insert(:program_listing_schema, provider_id: provider.id)
+        program = insert(:program_schema, provider_id: provider.id)
 
         html = card_html(conn, ~p"/programs", program.id)
 
@@ -54,7 +54,7 @@ defmodule KlassHeroWeb.ProgramCardTrustMarkTest do
 
     test "renders the provider name but no trust mark when unverified", %{conn: conn} do
       provider = provider_with(:unverified)
-      program = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, provider_id: provider.id)
 
       html = card_html(conn, ~p"/programs", program.id)
 
@@ -62,8 +62,11 @@ defmodule KlassHeroWeb.ProgramCardTrustMarkTest do
       refute html =~ ~s(data-testid="provider-trust-mark")
     end
 
-    test "hides the provider row entirely when the provider no longer exists", %{conn: conn} do
-      program = insert(:program_listing_schema, provider_id: Ecto.UUID.generate())
+    # `programs.provider_id` is a real FK with `on_delete: :nothing`, so a provider
+    # holding programs cannot be deleted. An unattributed program is the reachable
+    # shape of "no provider to show".
+    test "hides the provider row entirely when the program has no provider", %{conn: conn} do
+      program = insert(:program_schema, provider_id: nil)
 
       html = card_html(conn, ~p"/programs", program.id)
 
@@ -75,7 +78,7 @@ defmodule KlassHeroWeb.ProgramCardTrustMarkTest do
     for {trust, expected} <- [verified: "verified", in_progress: "in_progress"] do
       test "renders the #{trust} trust mark beside the provider name", %{conn: conn} do
         provider = provider_with(unquote(trust))
-        program = insert(:program_listing_schema, provider_id: provider.id)
+        program = insert(:program_schema, provider_id: provider.id)
 
         html = card_html(conn, ~p"/", program.id)
 
@@ -87,7 +90,7 @@ defmodule KlassHeroWeb.ProgramCardTrustMarkTest do
 
     test "uses the short in-progress label, not the listing page's long one", %{conn: conn} do
       provider = provider_with(:in_progress)
-      program = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, provider_id: provider.id)
 
       html = card_html(conn, ~p"/", program.id)
 
@@ -97,7 +100,7 @@ defmodule KlassHeroWeb.ProgramCardTrustMarkTest do
 
     test "renders the provider name but no trust mark when unverified", %{conn: conn} do
       provider = provider_with(:unverified)
-      program = insert(:program_listing_schema, provider_id: provider.id)
+      program = insert(:program_schema, provider_id: provider.id)
 
       html = card_html(conn, ~p"/", program.id)
 
@@ -105,8 +108,8 @@ defmodule KlassHeroWeb.ProgramCardTrustMarkTest do
       refute html =~ ~s(data-testid="provider-trust-mark")
     end
 
-    test "omits the provider entirely when the provider no longer exists", %{conn: conn} do
-      program = insert(:program_listing_schema, provider_id: Ecto.UUID.generate())
+    test "omits the provider entirely when the program has no provider", %{conn: conn} do
+      program = insert(:program_schema, provider_id: nil)
 
       html = card_html(conn, ~p"/", program.id)
 

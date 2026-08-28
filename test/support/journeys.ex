@@ -5,7 +5,7 @@ defmodule KlassHeroWeb.Journeys do
   Two rules this module exists to enforce, both from ADR-0020:
 
   1. **Arrange through the facade, never the read table.** A flow test that seeds
-     `program_listings` directly can never prove a program reached the catalog —
+     the catalog read table directly can never prove a program reached the catalog —
      which is exactly the property the tier is there for. `published_program/1`
      goes through `ProgramCatalog.create_program/1` and lets the real delivery
      chain write the read table.
@@ -89,8 +89,8 @@ defmodule KlassHeroWeb.Journeys do
   `program_created` event.
 
   Both the `programs` write table (read by `ProgramDetailLive` and `BookingLive`)
-  and the `program_listings` read table (read by the public `ProgramsLive`) are
-  current on return, because `{ProgramListings, :project}` ran for real.
+  and every read table its events maintain are current on return, because the
+  registered consumers ran for real.
 
   Pass `:provider` to reuse an existing provider profile; anything else is merged
   into the create attrs.

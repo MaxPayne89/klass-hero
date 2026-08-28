@@ -41,7 +41,7 @@ defmodule KlassHeroWeb.Admin.ProviderVerificationVisibilityTest do
 
   test "verifying a provider makes the trust mark appear on its program cards", %{conn: conn} do
     provider = provider_profile_fixture(business_name: "Verify Me")
-    program = insert(:program_listing_schema, provider_id: provider.id)
+    program = insert(:program_schema, provider_id: provider.id)
 
     refute trust_mark(conn, program.id)
 
@@ -52,7 +52,7 @@ defmodule KlassHeroWeb.Admin.ProviderVerificationVisibilityTest do
 
   test "unverifying a provider removes the trust mark again", %{conn: conn} do
     provider = provider_profile_fixture(business_name: "Unverify Me", verified: true)
-    program = insert(:program_listing_schema, provider_id: provider.id)
+    program = insert(:program_schema, provider_id: provider.id)
 
     assert trust_mark(conn, program.id) =~ ~s(data-trust-state="verified")
 
