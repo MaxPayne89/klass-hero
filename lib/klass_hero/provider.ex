@@ -265,6 +265,9 @@ defmodule KlassHero.Provider do
   @doc "Lists active staff members for a provider."
   defdelegate list_active_staff_members(provider_id), to: Staff
 
+  @doc "The provider's staff safe to name publicly: employed, and claimed."
+  defdelegate list_public_staff(provider_id), to: Staff
+
   @doc "Returns the full name of a staff member."
   defdelegate staff_member_full_name(staff), to: Staff
 
@@ -319,6 +322,9 @@ defmodule KlassHero.Provider do
 
   @doc "Lists active staff members assigned to a program."
   defdelegate list_active_staff_for_program(program_id), to: Assignments
+
+  @doc "A program's staff safe to name publicly: assigned, employed, and claimed."
+  defdelegate list_public_staff_for_program(program_id), to: Assignments
 
   @doc "Lists the user IDs of claimed, active staff assigned to a program."
   defdelegate list_active_staff_user_ids_for_program(program_id), to: Assignments

@@ -203,7 +203,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
         insert(:program_schema, provider_id: provider.id, title: "Soccer Academy")
 
       staff =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Coach",
           last_name: "Smith",
@@ -231,7 +231,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
         insert(:program_schema, provider_id: provider.id, title: "STEM Camp")
 
       alice =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Alice",
           last_name: "Johnson",
@@ -239,7 +239,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
         )
 
       bob =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Bob",
           last_name: "Williams",
@@ -264,7 +264,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       provider = provider_profile_fixture()
 
       instructor =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Dr.",
           last_name: "Strange"
@@ -293,10 +293,10 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       provider = provider_profile_fixture()
 
       lead =
-        staff_member_fixture(provider_id: provider.id, first_name: "Marie", last_name: "Curie")
+        claimed_staff_fixture(provider_id: provider.id, first_name: "Marie", last_name: "Curie")
 
       assistant =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Coach",
           last_name: "Smith",
@@ -338,7 +338,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       provider = provider_profile_fixture()
 
       lead =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Alice",
           last_name: "Lead",
@@ -380,7 +380,7 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       program = insert(:program_schema, provider_id: provider.id)
 
       staff =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Jane",
           last_name: "Doe",
@@ -404,13 +404,13 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
       program = insert(:program_schema, provider_id: provider.id)
 
       assigned =
-        staff_member_fixture(
+        claimed_staff_fixture(
           provider_id: provider.id,
           first_name: "Assigned",
           last_name: "Coach"
         )
 
-      staff_member_fixture(
+      claimed_staff_fixture(
         provider_id: provider.id,
         first_name: "Unassigned",
         last_name: "Bystander"
@@ -426,6 +426,63 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
 
       assert html =~ "Assigned Coach"
       refute html =~ "Unassigned Bystander"
+    end
+
+    test "hides a staff member who has not claimed their invite", %{conn: conn} do
+      provider = provider_profile_fixture()
+      program = insert(:program_schema, provider_id: provider.id)
+
+      unclaimed =
+        staff_member_fixture(
+          provider_id: provider.id,
+          first_name: "Never",
+          last_name: "Onboarded"
+        )
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: unclaimed.id
+      )
+
+      {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
+
+      refute has_element?(view, "#hero-card-staff-#{unclaimed.id}")
+      refute html =~ "Never Onboarded"
+    end
+
+    # The lead flag lives on the assignment, so it survives the staff member
+    # being filtered out. HeroCardsPresenter matches the lead by id against the
+    # roster, so an absent lead simply matches nothing — the badge disappears
+    # with the card rather than orphaning itself onto someone else's.
+    test "an unclaimed lead takes its badge with it", %{conn: conn} do
+      provider = provider_profile_fixture()
+      program = insert(:program_schema, provider_id: provider.id)
+
+      unclaimed_lead =
+        staff_member_fixture(provider_id: provider.id, first_name: "Ghost", last_name: "Lead")
+
+      colleague =
+        claimed_staff_fixture(provider_id: provider.id, first_name: "Real", last_name: "Coach")
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: unclaimed_lead.id,
+        is_lead_instructor: true
+      )
+
+      insert(:program_staff_assignment_schema,
+        provider_id: provider.id,
+        program_id: program.id,
+        staff_member_id: colleague.id
+      )
+
+      {:ok, view, html} = live(conn, ~p"/programs/#{program.id}")
+
+      assert has_element?(view, "#hero-card-staff-#{colleague.id}")
+      refute has_element?(view, "#hero-card-staff-#{unclaimed_lead.id}")
+      refute html =~ "Lead Instructor"
     end
   end
 
@@ -518,5 +575,17 @@ defmodule KlassHeroWeb.ProgramDetailLiveTest do
 
       assert has_element?(view, "#enroll-bottom-cta", "Enroll Now - €149.99")
     end
+  end
+
+  # Every staff member on this public page must have claimed their seat, so the
+  # fixture says so out loud. Before #1509 these tests all used the bare
+  # `staff_member_fixture/1`, which leaves `user_id` nil — so the suite was
+  # pinning "unclaimed staff render" by accident, in eight places, and nowhere
+  # on purpose.
+  defp claimed_staff_fixture(attrs) do
+    attrs
+    |> Keyword.put_new(:user_id, KlassHero.AccountsFixtures.user_fixture().id)
+    |> Keyword.put_new(:invitation_status, :accepted)
+    |> staff_member_fixture()
   end
 end

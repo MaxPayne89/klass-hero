@@ -96,6 +96,17 @@ defmodule KlassHero.MixProject do
       {:bandit, "~> 1.5"},
       {:tz, "~> 0.28"},
       {:tidewave, "~> 0.5", only: :dev},
+      # NOT unused, despite no `mix igniter.*` invocation anywhere — do not prune it again.
+      # A dozen deps ship an installer Mix task guarded by `if Code.ensure_loaded?(Igniter)`
+      # (oban, jump_credo_checks, backpex, error_tracker, tidewave, ...). Those guards read
+      # the code path, and #1548 removed this line believing usage_rules kept igniter "in
+      # the tree" — usage_rules is `only: [:dev]`, so igniter reached dev and nothing else.
+      # A restored dep cache still holding _build/test/lib/igniter then makes the guard
+      # answer *true* and the module compile, right up until Mix prunes that now-stale
+      # directory mid-run: "struct Igniter.Mix.Task.Info is undefined (the module was also
+      # only available but may have been removed during compilation)". Which dep trips
+      # first is partition-dependent, so removing one victim just moves the failure.
+      {:igniter, "~> 0.8", only: [:dev, :test]},
       {:quokka, "~> 2.11", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false},

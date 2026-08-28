@@ -460,6 +460,28 @@ defmodule KlassHero.Provider.Staff do
     {:ok, members}
   end
 
+  @doc """
+  The provider's staff safe to name on a public page: employed, and claimed.
+
+  Narrower than `list_active_staff_members/1` by exactly one gate, and that gate
+  is why this is a separate function rather than an option: the sibling feeds the
+  provider's own team screens, which must keep showing the people they invited
+  while those invitations are still outstanding.
+
+  Returns a bare list, and skips `StaffMember.load_pay_rate/1` — no public
+  surface reads a pay rate, and an anonymous request is the wrong place to
+  hydrate one.
+  """
+  @spec list_public_staff(String.t()) :: [StaffMember.t()]
+  def list_public_staff(provider_id) when is_binary(provider_id) do
+    provider_id
+    |> StaffMember.owned_by()
+    |> StaffMember.active()
+    |> StaffMember.claimed()
+    |> order_by([s], asc: s.inserted_at)
+    |> Repo.all()
+  end
+
   @doc "Returns the full name of a staff member."
   @spec staff_member_full_name(StaffMember.t()) :: String.t()
   def staff_member_full_name(%StaffMember{} = staff) do
