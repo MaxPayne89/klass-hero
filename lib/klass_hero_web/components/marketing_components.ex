@@ -1347,12 +1347,22 @@ defmodule KlassHeroWeb.MarketingComponents do
   Generic peach CTA closer used by Trust & Safety (and reusable by About /
   Contact follow-ups). H2 + lede + primary CTA via slot, with an optional
   tagline + sub-tagline rendered below a horizontal rule.
+
+  `:footnote` is small print under the button, opt-in per caller so the closers
+  that want no small print keep rendering exactly as before. Plain text rather
+  than a slot: every other string here is an attr, and no caller needs markup in
+  it yet.
   """
   attr :id, :string, default: "mk-cta"
   attr :title, :string, required: true
   attr :lede, :string, default: nil
   attr :tagline, :string, default: nil
   attr :sub_tagline, :string, default: nil
+
+  attr :footnote, :string,
+    default: nil,
+    doc: "caption-size small print under the CTA — subordinate to it, never competing"
+
   slot :cta, required: true
 
   def mk_cta_section(assigns) do
@@ -1367,6 +1377,17 @@ defmodule KlassHeroWeb.MarketingComponents do
         <div class="mt-8">
           {render_slot(@cta)}
         </div>
+
+        <p
+          :if={@footnote}
+          id={"#{@id}-footnote"}
+          class={[
+            Theme.typography(:caption),
+            "mt-4 max-w-md mx-auto text-[var(--fg-muted-on-light)]"
+          ]}
+        >
+          {@footnote}
+        </p>
 
         <div :if={@tagline} class="mt-14 pt-10 border-t border-[var(--border-light)]">
           <%!-- typography-lint-ignore: display-font tagline is an intentional non-heading brand callout --%>

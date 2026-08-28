@@ -58,6 +58,14 @@ defmodule KlassHeroWeb.TrustSafetyLiveTest do
       assert html =~ "And at Klass Hero, both come standard."
     end
 
+    test "carries no footnote, since this caller does not opt in", %{conn: conn} do
+      # mk_cta_section/1's :footnote is opt-in per caller (#1510). This is the
+      # guard that adding it for the provider profile left the other callers alone.
+      {:ok, view, _html} = live(conn, ~p"/trust-safety")
+
+      refute has_element?(view, "#mk-trust-cta-footnote")
+    end
+
     test "renders under :marketing chrome (sticky header + dark footer)", %{conn: conn} do
       {:ok, view, html} = live(conn, ~p"/trust-safety")
 

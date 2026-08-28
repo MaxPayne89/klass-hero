@@ -85,6 +85,22 @@ defmodule KlassHeroWeb.Provider.MessagesLive.ShowTest do
       assert has_element?(view, "h3", "No messages yet")
     end
 
+    test "renders the off-platform safety notice with provider wording", %{
+      conn: conn,
+      user: user
+    } do
+      conversation = insert(:conversation_schema)
+
+      insert(:participant_schema,
+        conversation_id: conversation.id,
+        user_id: user.id
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/provider/messages/#{conversation.id}")
+
+      assert has_element?(view, "[data-role='safety-notice']", "conversations with families")
+    end
+
     test "renders back navigation to provider messages", %{conn: conn, user: user} do
       conversation = insert(:conversation_schema)
 
